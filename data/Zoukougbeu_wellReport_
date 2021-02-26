@@ -1,0 +1,69 @@
+Enter the name of Location:        Zoukougbeu
+
+----------------------------- InputData ------------------------------
+well_name :  DHS01
+Coordinates (Easting, Northing)_UTM_49N : 
+   477205.6935,   2830978.218
+Hole Buttom  and dip values (Bottom, dip):
+ 987.25,    -90
+Layers-thickness levels in (meters):
+      0,  240.2,  256.4,    580
+Geology-layers or <stratigraphy> names (Top_To_Buttom):
+     granite,     basalte,     granite,        rock
+
+well_name :  DHS18
+Coordinates (Easting, Northing)_UTM_49N : 
+   477915.4355,   2830555.927
+Hole Buttom  and dip values (Bottom, dip):
+  974.4,    -90
+Layers-thickness levels in (meters):
+      0,  110.3,  520.2,  631.3
+Geology-layers or <stratigraphy> names (Top_To_Buttom):
+        sand,    argilite,     granite,        rock
+
+well_name :  DHT02
+Coordinates (Easting, Northing)_UTM_49N : 
+     477909.52,    2830305.06
+Hole Buttom  and dip values (Bottom, dip):
+  850.6,     60
+Layers-thickness levels in (meters):
+      0,     50,     70,  250.3,  312.3,  425.6,  502.3,  601.8
+Geology-layers or <stratigraphy> names (Top_To_Buttom):
+        sand,    limstone,        mult,      amphib,    argilite,     granite,  alteration,        rock
+
+------------------------------- Report -------------------------------
+WellData:
+     DH_Hole  DH_Easting DH_Northing   DH_Buttom      DH_Dip  DH_Azimuth DH_PlanDepth  DH_Descrip
+       DHS01 477205.6935 2830978.218      987.25         -90         0.0     Zouko01     Wdanxl0
+       DHS18 477915.4355 2830555.927       974.4         -90       2.111     Zouko18     Wdanxl0
+       DHT02   477909.52  2830305.06       850.6          60       -3.12     Zouko02     Wdanxl0
+GeolData :
+     DH_Hole     DH_From       DH_To        Rock
+       DHS01         0.0       240.2     granite
+       DHS01       240.2       256.4     basalte
+       DHS01       256.4       580.0     granite
+       DHS01       580.0      987.25        rock
+       DHS18         0.0       110.3        sand
+       DHS18       110.3       520.2    argilite
+       DHS18       520.2       631.3     granite
+       DHS18       631.3       974.4        rock
+       DHT02         0.0        50.0        sand
+       DHT02        50.0        70.0    limstone
+       DHT02        70.0       250.3        mult
+       DHT02       250.3       312.3      amphib
+       DHT02       312.3       425.6    argilite
+       DHT02       425.6       502.3     granite
+       DHT02       502.3       601.8  alteration
+       DHT02       601.8       850.6        rock
+SampleData
+     DH_Hole     DH_From       DH_To      Sample
+        SX04        12.0        25.0         pup
+        SX04        25.0       125.0         pzs
+        SX04       125.0       200.0         prt
+        SX04       200.0       345.3         pup
+        SX04       345.3       250.0         pzs
+        SX15        52.6       102.3         prt
+        SX15       102.3       425.0         pup
+        SX15       425.0       513.0         pzs
+        SX15       513.0       600.8         pup
+        SX15       600.8       625.0         prt

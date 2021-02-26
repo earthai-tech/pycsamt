@@ -1,0 +1,10 @@
+[workspace]
+restore_data_on_startup = True
+save_data_on_exit = True
+save_history = True
+save_non_project_files = False
+
+[main]
+version = 0.2.0
+recent_files = ['csamtpy\\core\\avg.py', 'csamtpy\\processing\\callffunc.py', 'csamtpy\\processing\\zcalculator.py', 'csamtpy\\utils\\func_utils.py', 'scripts\\Test_plot.py', 'scripts\\geosurface.py', 'csamtpy\\processing\\corr.py', 'csamtpy\\etc\\infos.py', 'csamtpy\\core\\cs.py']
+

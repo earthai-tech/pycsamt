@@ -1,0 +1,159 @@
+CODE,LABEL,__DESCRIPTION,PATTERN,PAT_SIZE,PAT_DENSITY,PAT_THICKNESS,COLOR
+AGLT,AGLT,argillite,315,,,,G
+ALUV,ALUV,alluvium,308,,,,R128
+AMP,AMP,amphibolite,303,,,,R128G128
+ANS,ANS,anorthosite,110,2.0,1.0,,RB128
+ANT,ANT,andesite,121,,,,RB128
+APL,APL,aplite,104,,,,RB
+ARKS,ARKS,arkose,102,,1.5,,G
+ARNT,ARNT,arenite,100,,,,G
+ATRK,ATRK,"altered rock",206,,,,R128B128
+AUGN,AUGN,"augen gneiss",309,,,10,R128G128
+BIF,BIF,"banded iron formation",202,,1.5,7,RG128B64
+BLSH,BLSH,"black shale",200,,5,,R0
+BLT,BLT,basalt,306,,,,G128B128
+BX,BX,breccia,109,,2,,R0
+CALR,CALR,calcarenite,310,,2,,GB
+CAV,CAV,cavity,104,,0.5,,R0
+CBIF,CBIF,"carbonate iron formation",202,,,10,GB
+CBRK,CBRK,"carbonate rock",312,,,,GB
+CBT,CBT,carbonatite,305,,1.5,,R128G128B192
+CHLK,CHLK,chalk,100,,2.5,,GB
+CHRT,CHRT,chert,314,,,,GB
+CHT,CHT,chromitite,114,1,1.5,,G128B128
+CLAS,CLAS,clast,301,,,,R0
+CLBX,CLBX,"clast supported breccia",106,,1.5,,R0
+CLCR,CLCR,calcrete,315,,1.5,,B
+CLY,CLY,clay,103,,1.5,,R128
+CNGL,CNGL,conglomerate,300,,,,R128
+COAL,COAL,coal,212,,,,CMY
+COLV,COLV,colluvium,102,,,10,R128
+CSRK,CSRK,"calc-silicate rock",203,,,,R128G128
+CVN,CVN,"carbonate vein",105,,,,GB
+DAC,DAC,dacite,112,,,,R
+DLST,DLST,dolostone,214,,,,GB
+DLT,DLT,dolerite,113,,,,G128B128
+DRT,DRT,diorite,111,,,,RB128
+DUN,DUN,dunite,111,,,,G128B128
+DUR,DUR,duricrust,204,,,,R128
+EVPT,EVPT,evaporite,309,,,10,B
+FDT,FDT,foidite,110,,,,RGB176
+FIRK,FIRK,"felsic intrusive",110,,,,RG
+FPY,FPY,"feldspar porphyry",106,,,,RG
+FRCT,FRCT,ferricrete,205,,,,R128
+FRK,FRK,"felsic rock",0,,,,RG
+FVOL,FVOL,"felsic volcanic",305,,,,RG
+GAB,GAB,gabbro,112,,,,G128B128
+GNS,GNS,gneiss,309,,1.5,,R128G128
+GO,GO,gossan,0,,,,R128B64
+GOUG,GOUG,gouge,207,,,,R0
+GRD,GRD,granodiorite,110,,,,R
+GRN,GRN,granulite,111,,1.5,,R128G128
+GRP,GRP,granophyre,110,,1.5,,RB
+GRSN,GRSN,greisen,113,,,,R128G128
+GRT,GRT,granite,110,,,,RB
+GSQ,GSQ,"gossanous quartz",105,,,,R128B64
+GST,GST,greenstone,210,,,,R128G128
+GVL,GVL,gravel,102,,,25,R128
+GYWK,GYWK,greywacke,102,,2,,G
+HDG,HDG,"hornblende gabbro",113,,2,,G128B128
+HFL,HFL,hornfels,100,,3,,R128G128
+IGM,IGM,ignimbrite,120,,2,,RG
+IIRK,IIRK,"intermediate intrusive",112,,,,RG128B128
+IRFM,IRFM,"iron formation",210,,,,R
+IRK,IRK,"intermediate rock",0,,,,RG128B128
+IRST,IRST,ironstone,0,,,,RG128
+IVOL,IVOL,"intermediate volcanic",306,,,,RG128B128
+JASP,JASP,jasper,114,,,,B
+KBL,KBL,kimberlite,119,,,,G128B128
+LAG,LAG,lag,102,,,,R128
+LATT,LATT,laterite,312,,,10,R128
+LAVA,LAVA,lava,121,,,,G128B128
+LMST,LMST,limestone,212,,,,GB
+LPR,LPR,lamproite,209,,,,G128B128
+LPY,LPY,lamprophyre,110,,,,G128B128
+MBL,MBL,marble,213,,,,GB
+MDST,MDST,mudstone,315,,,,RG128B64
+METS,METS,metasediment,100,,3,,R128G128
+MGBS,MGBS,"high-Mg basalt",113,,,,G128B128
+MGST,MGST,magnesite,114,,,,B
+MIG,MIG,migmatite,119,,,,R128G128
+MIRK,MIRK,"mafic intrusive",110,,,,G128B128
+MNRK,MNRK,"manganese rock",117,,,,B
+MQZ,MQZ,"massive quartz",206,,,,G128B
+MRK,MRK,"mafic rock",0,,,,G128B128
+MSI,MSI,"massive silica",108,,2,,G128B
+MSU,MSU,"massive sulphide",105,,,,R128B64
+MSYN,MSYN,monzosyenite,111,,,,RG
+MTBX,MTBX,"matrix supported breccia",303,,,,R0
+MTIF,MTIF,"magnetite iron formation",211,,,,RG128
+MTRK,MTRK,"magnetite rock",311,,,,RG128
+MTS,MTS,metasomatite,310,,,,R128G128
+MTX,MTX,matrix,102,,3,,R0
+MUD,MUD,mud,200,,,,R128
+MVOL,MVOL,"mafic volcanic",121,,,,G128B128
+MYL,MYL,mylonite,309,,2,,R128G128
+MZB,MZB,monzogabbro,113,,,,RG128B128
+MZD,MZD,monzodiorite,111,,,,RG128B128
+MZG,MZG,monzogranite,110,,,,R
+MZT,MZT,monzonite,113,,2,,RG128B128
+NRT,NRT,norite,113,,2,,G128B128
+OPHL,OPHL,ophiolite,115,,,,G64B128
+ORE,ORE,ore,0,,,,R
+OXIF,OXIF,"oxide iron formation",104,1,,,RG128
+PEG,PEG,pegmatite,105,,,,RB128
+PELT,PELT,pelite,103,,1.2,,G
+PER,PER,peridotite,119,,,,G128B128
+PHY,PHY,porphyry,306,,,,RG
+PHYL,PHYL,phyllite,202,,,,R128G128
+PIS,PIS,pisolite,102,,,,R128
+PIST,PIST,"pisolitic ironstone",102,,,,R128
+PLDZ,PLDZ,"pallid zone",106,,,,RG206B206
+PRX,PRX,pyroxenite,120,,1.5,,G128B128
+PSAM,PSAM,psammopelite,103,,1.5,,R128G128
+PSMT,PSMT,psammite,103,,,,R128G128
+PYCR,PYCR,"pyroclastic rock",303,,,,RG
+QFPY,QFPY,"quartz feldspar porphyry",104,,,,RG
+QFRK,QFRK,"quartz feldspar rock",105,,,,R236GB26
+QHBX,QHBX,"quartz-hematite breccia",109,,,,R128B128
+QMRK,QMRK,"quartz magnetite rock",105,,,,RG128
+QZBX,QZBX,"quartz breccia",115,,,,R128B128
+QZD,QZD,"quartz diorite",113,,,,RB128
+QZPY,QZPY,"quartz porphyry",107,,,,R236GB26
+QZT,QZT,quartzite,100,,3,,R128G128
+QZVN,QZVN,"quartz vein",105,,,,G128B
+RHY,RHY,rhyolite,121,,,,RG
+ROCK,ROCK,rock,0,,,,R128G128B128
+SCHT,SCHT,schist,309,,,,R128G128
+SCRE,SCRE,scree,118,,,,R128
+SDBX,SDBX,"sedimentary breccia",109,,,,G
+SDST,SDST,sandstone,101,,3,,G
+SED,SED,sediment,100,,,,G
+SHLE,SHLE,shale,103,,,,G
+SHT,SHT,shoshonite,113,,,,G128B128
+SKN,SKN,skarn,207,,,,R128B128
+SLA,SLA,slate,200,,,,R128G128
+SLCT,SLCT,silcrete,115,,1.5,,B
+SLST,SLST,siltstone,312,,,,G
+SLT,SLT,silt,312,,,,R128
+SND,SND,sand,101,,3,,R128
+SOIL,SOIL,soil,101,,,,R128
+SPLT,SPLT,saprolite,105,,,,RG210B210
+SPRK,SPRK,saprock,0,,,,RG206B206
+SRP,SRP,serpentinite,314,,,,R128G128
+SUIF,SUIF,"sulphide iron formation",202,,,,R128B128
+SURK,SURK,"sulphide-rich material",105,,,,R128B128
+SYN,SYN,syenite,110,,,,RG
+TBDT,TBDT,turbidite,117,,,,G
+TNL,TNL,tonalite,112,1,0.5,,RB128
+TOUM,TOUM,tourmalinite,106,,,,R128G128
+TRC,TRC,trachyte,306,,,,RG
+TUF,TUF,tuff,310,,,,RG
+UMRK,UMRK,ultramafic,0,,,,G64B128
+UVOL,UVOL,"ultramafic volcanic",307,,,,G64B128
+VBX,VBX,"volcanic breccia",109,,,,R0
+VCR,VCR,"volcaniclastic rock",304,,,,R0
+VEBX,VEBX,"vein breccia",109,,,,R128B128
+VEIN,VEIN,vein,0,,,,R0
+VOLR,VOLR,"volcanic rock",305,,,,R0
+WD,WD,wood,0,,,,R193G97

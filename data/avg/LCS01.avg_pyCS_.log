@@ -1,0 +1,43 @@
+>Hardware infos
+    AMTAVG:['7.76:', ' "LCS01.fld"']
+    Dated:  99-01-01
+    Processed:  22 Jul 16
+    ASTATIC:['v3.60d', '22/07/16']
+    :5-point TMA Filter at 5-point hertz
+>Survey annotation
+    Job.Name:CSAMT_survey
+    Job.Area:Zhejiang Univ.
+    Job.For:Zonge Engineering"
+    Job.By:Zonge
+    Job.Number:pyCSAMT
+    Job.Date:2020-12-10 20:24:09.198701-UTC
+>Survey configuration
+    Survey.Type:CSAMT
+    Survey.Array:Scalar
+    Line.Name:"LCS01"
+    Line.Number:0
+    Line.Azimuth:0
+    Stn.GdpBeg:0
+    Stn.GdpInc:50
+    Stn.Beg:0
+    Stn.Inc:50
+    Stn.Left:25
+    Stn.Right:1375
+    Unit.Length:m,ft
+    Unit.E:nV/Am
+    Unit.B:pT/A
+    Unit.Phase:mrad
+>Transmitter properties
+    Tx.Type:Natural
+    Tx.GdpStn:20.0
+    Tx.Stn:20.0
+    Tx.Center:TxCX, TxCY
+    Tx.HPR:bipole azimuth, pitch=0, roll=0 for z+up or 180 for z positive down
+    Tx.Length:positive float, length units
+>Receiver properties
+    Rx.GdpStn:1375.0
+    Rx.Stn:1375.0
+    Rx.HPR:None
+    Rx.Length:50.0
+    Rx.Cmp:ExHy
+>end

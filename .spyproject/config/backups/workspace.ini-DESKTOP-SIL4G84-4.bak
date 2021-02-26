@@ -1,0 +1,10 @@
+[workspace]
+restore_data_on_startup = True
+save_data_on_exit = True
+save_history = True
+save_non_project_files = False
+
+[main]
+version = 0.2.0
+recent_files = ['viewer\\plot.py', 'csamtpy\\utils\\plot_utils.py', 'scripts\\plot_res_phase.py', 'scripts\\plot_penetration2D.py', 'scripts\\plot_pseudo_cross_resitivity_and_phase.py', 'csamtpy\\pyCS\\modeling\\occam2d.py', 'scripts\\plot_RMS.py', 'csamtpy\\pyCS\\core\\cs.py', 'scripts\\plot_topo_stn_azim.py']
+

@@ -1,0 +1,17 @@
+
+2020-10-30T 21:49:48 PM - csamtpy.utils.decorator - INFO - Decorated func/methods has been redirected to func:{new_cls_or_func} in {module} line 38.
+2020-10-30T 21:50:18 PM - csamtpy.utils.decorator - INFO - Decorated func/methods has been redirected to func:{new_cls_or_func} in {module} line 38.
+2020-10-30T 21:50:51 PM - csamtpy.utils.decorator - INFO - Decorated func/methods has been redirected to func:{new_cls_or_func} in {module} line 38.
+2020-10-30T 21:51:20 PM - csamtpy.utils.decorator - INFO - Decorated func/methods has been redirected to func:{new_cls_or_func} in {module} line 38.
+2020-10-30T 21:51:20 PM - csamtpy.utils.decorator - INFO - Decorated method has been redirected to func:{new_cls_or_func} in {module} line ['            lineno= inspect.getframeinfo(inspect.currentframe())[-2]\n'].
+2020-10-30T 21:59:21 PM - csamtpy.utils.decorator - INFO - redirected decorated func/methods .{reason} see line 38.
+2020-10-30T 21:59:21 PM - csamtpy.utils.decorator - INFO - redirected decorated method :{reason} see line ['            lineno= inspect.getframeinfo(inspect.currentframe())[-2]\n'].
+2020-10-30T 22:00:40 PM - csamtpy.utils.decorator - INFO - redirected decorated func/methods .{reason} see line 38.
+2020-10-30T 22:00:40 PM - csamtpy.utils.decorator - INFO - redirected decorated method :{reason} see line ['            lineno= inspect.getframeinfo(inspect.currentframe())[-2]\n'].
+2020-10-30T 22:02:21 PM - csamtpy.utils.decorator - INFO - redirected decorated func/methods .<func"recordData" was redirected to func "keepDataInfos" on called it.> see line 38.
+2020-10-30T 22:02:21 PM - csamtpy.utils.decorator - INFO - redirected decorated method :<set_on_dict will redirect to "arrangeData_for_dictapp once called." > see line ['            lineno= inspect.getframeinfo(inspect.currentframe())[-2]\n'].
+2020-10-30T 22:10:29 PM - csamtpy.utils.decorator - INFO - redirected decorated func/methods .<func"recordData" was redirected to func "keepDataInfos" on called it.> see line 38.
+2020-10-30T 22:10:29 PM - csamtpy.utils.decorator - INFO - redirected decorated method :<set_on_dict will redirect to "arrangeData_for_dictapp once called." > see line 197.
+2020-10-30T 22:12:43 PM - csamtpy.utils.decorator - INFO - redirected decorated func/methods .<func"recordData" was redirected to func "keepDataInfos" on called it.> see line 38.
+2020-10-30T 22:20:08 PM - csamtpy.utils.decorator - INFO - redirected decorated method :<func"recordData" was redirected to func "keepDataInfos" on called it.> see line 198.
+2020-10-30T 22:20:08 PM - csamtpy.utils.decorator - INFO - redirected decorated method :<set_on_dict will redirect to "arrangeData_for_dictapp once called." > see line 198.

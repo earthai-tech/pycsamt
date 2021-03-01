@@ -3958,8 +3958,8 @@ class Plot2d (object):
 
             # axePseudodrill.set_xticks([])  
     
-            self.fig.suptitle('Pseudo-stratigraphy log reconstruction\n Station : {0}'.format(stn),
-                         fontsize=  self.font_size/1.2, 
+            self.fig.suptitle('Pseudo-stratigraphy log construction: Station : {0}'.format(stn),
+                         fontsize=  self.font_size *1.2, 
                          verticalalignment='center', 
                          style ='italic',
                          bbox =dict(boxstyle='round',facecolor ='moccasin'), 

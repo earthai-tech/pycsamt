@@ -1205,11 +1205,10 @@ class Recorder_sql(object):
             if name of datatable is providen.
 
         eg ::
-            datapath=r'C:/Users\Administrator\OneDrive\Python\CodesExercices\'\
-                'ex_avgfiles\avgmo_proj\data_A'
-            os.chdir(datapath)
-            filename='nofacies_data.csv'
-            ...recordList0=Recorder_sql.recordData(data=filename,new_tablename='example')
+            >>> from geodrill.geoDB.sql_recorder import recordData
+            >>> filename='nofacies_data.csv'
+            ...recordList0=recordData(data=filename,
+                                    new_tablename='example')
             
         """
         nump_columns=kwargs.pop('columns_of array', None)

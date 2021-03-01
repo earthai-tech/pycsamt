@@ -78,25 +78,21 @@ class ManageDB(object) :
         
         
     e.g ::
-        from sqlrequests import SqlQ
-        path= os.getcwd()
-        nameofDB='memory.sq3'
-        manDB=ManageDB(db_name=nameofDB, 
+        >>> from sqlrequests import SqlQ
+        >>> path= os.getcwd()
+        >>> nameofDB='memory.sq3'
+        >>> manDB=ManageDB(db_name=nameofDB, 
                            db_host=path)
         
-        # print(SqlQ.sql_req[-1])
-        manDB.executeReq(SqlQ.sql_req[2])
-        # ss=manDB.print_last_Query()
-        # # print(ss)
-        # manDB.export_req(SqlQ.sql_req[-1],
-        #                     export_type='.csv')
-        # manDB.dicT_sqlDB(dictTables=Glob.dicoT, 
-        #                   visualize_request=False)
-            nameofDB='memory.sq3'
-            manageDB=ManageDB(db_name=nameofDB, 
-                               db_host=path)
-            print(SqlQ.sql_req[-1])
-            manDB.executeReq(SqlQ.sql_req[2])
+        ... print(SqlQ.sql_req[-1])
+        ... manDB.executeReq(SqlQ.sql_req[2])
+        ... ss=manDB.print_last_Query()
+        ... print(ss)
+        ... manDB.export_req(SqlQ.sql_req[-1],
+                             export_type='.csv')
+        ... manDB.dicT_sqlDB(dictTables=Glob.dicoT, 
+                           visualize_request=False)
+    
 
         """
     def __init__(self, db_name =None, db_host=None): 
@@ -165,7 +161,7 @@ class ManageDB(object) :
         
         Example :
         ********
-            ... mDB=GestionDB (dbname='memory.sq3, 
+            >>>  mDB=GestionDB (dbname='memory.sq3, 
                                db_host =os.getcwd()')
             ...mDB.dicT_sqlDB(dicTables=Glob.dicoT,
                               visualize_request=False)
@@ -232,10 +228,10 @@ class ManageDB(object) :
             1 : int , 
                 the request has been successuful run . 
         e.g. :: 
-                for keys in Glob.dicoT.keys(): 
-                reqst='select * from %s'%keys
-                ss=manageDB.executeReq(query=reqst)
-                print(ss)
+                ... for keys in Glob.dicoT.keys(): 
+                    reqst='select * from %s'%keys
+                ... ss=manageDB.executeReq(query=reqst)
+                ... print(ss)
         """
         
         try :
@@ -361,14 +357,11 @@ class ManageDB(object) :
         None.
         
         e.g.:: 
-            from sqlrequests import SqlQ
-            manageDB=GestionBD(db_name=nameofDB, 
-                   db_host=path)
-            #print(SqlQ.sql_req[-1])
-            manageDB.executeReq(SqlQ.sql_req[2])
-            # ss=manageDB.print_last_Query()
-            # print(ss)
-            manageDB.export_req(SqlQ.sql_req[-1],
+            >>> from sqlrequests import SqlQ
+            ... manageDB.executeReq(SqlQ.sql_req[2])
+            ... ss=manageDB.print_last_Query()
+            ... print(ss)
+            ... manageDB.export_req(SqlQ.sql_req[-1],
                                 export_type='.csv',
                                 )
         """
@@ -427,36 +420,7 @@ class ManageDB(object) :
             print('---> outputDB_file <{0}.xlsx> has been written.'.format(filename))
         
         
-# if __name__ =='__main__':
-    
-#     # from geodrill.geoDB.sqlrequests import SqlQ
-#       from geodrill.geoDB.dict_app import Glob
-#     path=r'C:\Users\Administrator\Desktop\model'
-#     nameofDB=':memory:.sq3'
-#     manDB=ManageDB(db_name=nameofDB, 
-#                        db_host=path)
-    
-    # print(SqlQ.sql_req[-1])
-    # manDB.executeReq(SqlQ.sql_req[2])
-    # # ss=manageDB.print_last_Query()
-    # # # print(ss)
-    # value_DB =[('id_new', 'i', 'new_vision'),
-    #         ('infoTab','k','no comment'), 
-    #         ('collar','d','collarDH')]
-    # Glob.dicoT.__setitem__('NewDb_set',value_DB )
-    # # manageDB.export_req(SqlQ.sql_req[-1],
-    # #                     export_type='.csv')
-    # manageDB.dicT_sqlDB(dictTables=Glob.dicoT, 
-    #                   visualize_request=True)
-    # #set a new new table on dicoT :
-    
-    # for keys in Glob.dicoT.keys(): 
-    #     reqst='select * from %s'%keys
-    #     manDB.executeReq(query=reqst)
-    #     ss=manDB.print_last_Query()
-    #     # for ii in (manageDB.executeReq(query=reqst)):
-    #     print(ss)
- 
+
 
     
     

@@ -1,0 +1,727 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Package GeoDataBase &#8212; pyCSAMT v1.0.01 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Package Utils" href="utils.html" />
+    <link rel="prev" title="Package GeoCore" href="geocore.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="utils.html" title="Package Utils"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="geocore.html" title="Package GeoCore"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyCSAMT v1.0.01 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="package-geodatabase">
+<h1>Package GeoDataBase<a class="headerlink" href="#package-geodatabase" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-geodrill.geoDB.sql_recorder">
+<span id="module-recorder"></span><h2><strong>Module Recorder</strong><a class="headerlink" href="#module-geodrill.geoDB.sql_recorder" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>This file is part of pyCSAMT.</p>
+<p>pyCSAMT is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.</p>
+<p>pyCSAMT is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.</p>
+<p>You should have received a copy of the GNU Lesser General Public License
+along with pyCSAMT.  If not, see &lt;<a class="reference external" href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.</p>
+</div></blockquote>
+<hr class="docutils" />
+<blockquote>
+<div><p>.Special class to manage outputs-input requests from-into  SQL  database .
+!!!Important Note :
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.Please! be sure that if you want to edit  this module you are aware of what you
+are doing. The module is a core of Geodrill subpackages. It is sensible module.
+However the module  is not hard-coding. The way the dataBase is arranged can
+be enhanced  and adapted  for better convenient or other suitable purposes. ‘
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</p>
+</div></blockquote>
+<p>Created on Wed Oct 14 13:38:13 2020</p>
+<p>&#64;author:kkouaoLaurent alias &#64;Daniel03</p>
+<dl class="class">
+<dt id="geodrill.geoDB.sql_recorder.GeoDataBase">
+<em class="property">class </em><code class="sig-prename descclassname">geodrill.geoDB.sql_recorder.</code><code class="sig-name descname">GeoDataBase</code><span class="sig-paren">(</span><em class="sig-param">geo_structure_name=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/sql_recorder.html#GeoDataBase"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.sql_recorder.GeoDataBase" title="Permalink to this definition">¶</a></dt>
+<dd><p>pyCSAMT Geodatabase class . Currently we do not create the specific pattern
+for each geostructures
+we will later do that. The geoDatabase is built following the table :</p>
+<blockquote>
+<div><dl class="simple">
+<dt>codef =[‘code’,’label’,’__description’,’pattern’, ‘pat_size’,   ‘pat_density’,</dt><dd><p>‘pat_thickness’,’RGBA’, electrical_props, hatch, colorMPL’, FGDC ]</p>
+</dd>
+<dt>FGDC<span class="classifier">(Digital cartographic Standard for Geological  Map Symbolisation.</span></dt><dd><p>Will add later others features .</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="class">
+<dt id="geodrill.geoDB.sql_recorder.Recorder_sql">
+<em class="property">class </em><code class="sig-prename descclassname">geodrill.geoDB.sql_recorder.</code><code class="sig-name descname">Recorder_sql</code><span class="sig-paren">(</span><em class="sig-param">database</em>, <em class="sig-param">table=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/sql_recorder.html#Recorder_sql"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.sql_recorder.Recorder_sql" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to record data from file or pd.core.DataFrame and to tranfer
+into SQL database .</p>
+<dl class="simple">
+<dt>database<span class="classifier">str ,</span></dt><dd><p>name of sql database</p>
+</dd>
+<dt>table<span class="classifier">str ,</span></dt><dd><p>name of table in dict_app</p>
+</dd>
+</dl>
+<blockquote>
+<div><p>Glob.dicoT : dict,
+avgmo.sql_db.sql_utils.dict_app import Glob</p>
+<blockquote>
+<div><p>-&gt;dicoT is from dict_app module , Global class for sql variable
+encapsulated on particular dictionnary.</p>
+</div></blockquote>
+</div></blockquote>
+<ul>
+<li><dl class="simple">
+<dt>transferdata_to_sqlDB :</dt><dd><p>transfer Data to SQL Database</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>keepDataInfos<span class="classifier">__staticmethod__</span></dt><dd><p>method to keep informations from datafile ‘<a href="#id1"><span class="problematic" id="id2">*</span></a>csv’
+or pd.core.DataFrame or np.ndarray</p>
+</dd>
+</dl>
+</li>
+<li><dl>
+<dt>arrangeData_for_dictapp<span class="classifier">__staticmethod__</span></dt><dd><p>method to arrange data , acording the dict_app arangement</p>
+<p>—–deprecated methods ——</p>
+</dd>
+</dl>
+</li>
+<li><p>recordData :      ——&gt; keepDataInfos (staticmethod)</p></li>
+<li><p>set_on_dict_app:  ——&gt; arrangeData_for_dictapp(staticmethod)</p></li>
+</ul>
+<p>eg : TEST</p>
+<blockquote>
+<div><dl>
+<dt>if __name__==’__main__’:</dt><dd><p>realpath=os.path.dirname(os.path.realpath(__file__)) #where ‘the file’sql_recorder is located’
+# print(realpath)
+path_to_files =os.path.normpath(os.path.join(realpath,’sql_utils’,’sql_DB’))
+os.chdir(path_to_files)
+filename=’nofacies_data_2.csv’</p>
+<p>memory_DB=’memory.sq3’
+# path_to_memory=os.path.dirname(os.path.realpath(memory_DB))</p>
+<p>Rec=Recorder_sql(database=memory_DB,table=None)
+recordList1=Recorder_sql.recordData(data=filename,new_tablename=’TEST2’,</p>
+<blockquote>
+<div><p>sep=’,’)</p>
+</div></blockquote>
+<p># sdico_app=Recorder_sql.set_on_dict_app( datalist=recordList0)
+# sdico_app=Recorder_sql.arrangeData_for_dictapp( datalist=recordList0)
+# trand_sql= Rec.transferdata_to_sqlDB( filename=filename,record_list= None,
+#                                     table_name=’exam_zju_2’,comments=None,
+#                                     visualize_table_creating_query=True,
+#                                     path_to_sqlDataBase=path_to_files,
+#                                     Drop_DB_Tables=’none’, fetchall=True,
+#                                     ready_to_transfer=’n’,
+#                                     close_connexion =False)</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="method">
+<dt id="geodrill.geoDB.sql_recorder.Recorder_sql.arrangeData_for_dictapp">
+<em class="property">static </em><code class="sig-name descname">arrangeData_for_dictapp</code><span class="sig-paren">(</span><em class="sig-param">datalist</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/sql_recorder.html#Recorder_sql.arrangeData_for_dictapp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.sql_recorder.Recorder_sql.arrangeData_for_dictapp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function overwritten from “set_on_dictapp func”. Reorganise
+data to dict_app model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>datalist</strong> (<em>list</em><em>, </em><em>dict</em>) – list of value providen for fill the dict_app.</p></li>
+<li><p><strong>**kwargs</strong> (<em>TYPE</em>) – DESCRIPTION.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>Povide the dataname compulsory</strong><strong> , </strong><strong>if not</strong><strong>, </strong><strong>error occurs.</strong> – </p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>datalist</strong> – Data arranged according to  dict_app arrangement.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict,</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="geodrill.geoDB.sql_recorder.Recorder_sql.keepDataInfos">
+<em class="property">static </em><code class="sig-name descname">keepDataInfos</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">new_tablename=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/sql_recorder.html#Recorder_sql.keepDataInfos"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.sql_recorder.Recorder_sql.keepDataInfos" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to KeepData from file infos . the function
+is otherwritten fo RecordData. The difference between two function
+is that function organise data from each row of columns</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>str</em><em>, </em><em>np.array</em><em>, </em><em>list</em><em>, or </em><em>pd.core.DataFrame object</em>) – Data ca, be on the format above or filename of data
+if the argument “data” is a filename, we must be convert on “.csv” format.</p></li>
+<li><p><strong>new_tablename</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of database. if name is not given , the
+function return only list . The default is None.</p></li>
+<li><p><strong>**kwargs</strong> (<em>TYPE</em>) – DESCRIPTION.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>Exception</strong> – IndexError. if lengh of number of columns like heads of data
+    does not match the data.shape[0], then errors will occurs.</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>list of value in the case of no name is providen for tablename.
+else : dict,
+if name of datatable is providen.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>list,</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="geodrill.geoDB.sql_recorder.Recorder_sql.recordData">
+<em class="property">static </em><code class="sig-name descname">recordData</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">new_tablename=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/sql_recorder.html#Recorder_sql.recordData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.sql_recorder.Recorder_sql.recordData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to KeepData from file infos . the function
+is otherwritten fo RecordData. The difference between two function
+is that function organise data from each row of columns</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>str</em><em>, </em><em>np.array</em><em>, </em><em>list</em><em>, or </em><em>pd.core.DataFrame object</em>) – Data ca, be on the format above or filename of data
+if the argument “data” is a filename, we must be convert on “.csv” format.</p></li>
+<li><p><strong>new_tablename</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of database. if name is not given , the
+function return only list . The default is None.</p></li>
+<li><p><strong>**kwargs</strong> (<em>TYPE</em>) – DESCRIPTION.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>Exception</strong> – IndexError. if lengh of number of columns like heads of data
+    does not match the data.shape[0], then errors will occurs.</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>list of value in the case of no name is providen for tablename.
+else : dict,
+if name of datatable is providen.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>list,</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="geodrill.geoDB.sql_recorder.Recorder_sql.set_on_dict_app">
+<em class="property">static </em><code class="sig-name descname">set_on_dict_app</code><span class="sig-paren">(</span><em class="sig-param">datalist</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/sql_recorder.html#Recorder_sql.set_on_dict_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.sql_recorder.Recorder_sql.set_on_dict_app" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function overwritten from “set_on_dictapp func”. Reorganise
+data to dict_app model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>datalist</strong> (<em>list</em><em>, </em><em>dict</em>) – list of value providen for fill the dict_app.</p></li>
+<li><p><strong>**kwargs</strong> (<em>TYPE</em>) – DESCRIPTION.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>Povide the dataname compulsory</strong><strong> , </strong><strong>if not</strong><strong>, </strong><strong>error occurs.</strong> – </p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>datalist</strong> – Data arranged according to  dict_app arrangement.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict,</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="geodrill.geoDB.sql_recorder.Recorder_sql.transferdata_to_sqlDB">
+<code class="sig-name descname">transferdata_to_sqlDB</code><span class="sig-paren">(</span><em class="sig-param">record_list=None</em>, <em class="sig-param">filename=None</em>, <em class="sig-param">table_name=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/sql_recorder.html#Recorder_sql.transferdata_to_sqlDB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.sql_recorder.Recorder_sql.transferdata_to_sqlDB" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to transfer Data from Dict_app to SQL DataBase. Users can use this function by
+including several arguments. The function will build the data , arrange  it and put it in
+the dataBase by commit the dataBase. Use only this func is benefit.
+It is better to revise arguments of that function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>record_list</strong> (<em>*</em>) – Dictionnay build according the dict_app model. The default is None.</p></li>
+<li><p><strong>filename</strong> (<em>*</em>) – file must be on “.csv” format. The default is None.</p></li>
+<li><p><strong>table_name</strong> (<em>*</em>) – Name of DataBase Table. The default is None.</p></li>
+<li><p><strong>**kwargs</strong> (<em>TYPE</em>) – <ul>
+<li><dl class="simple">
+<dt>comments<span class="classifier">str ,</span></dt><dd><p>little comment to identify your database table ,</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>path_to_sqlDataBase<span class="classifier">str ,</span></dt><dd><p>path where the SQL dataBase is located .</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>visualize_table_creating_query<span class="classifier">bool</span></dt><dd><p>if the connexion to server is unlikable , User can
+set to True to see whether query entered is right or wrong.</p>
+</dd>
+</dl>
+</li>
+<li><dl>
+<dt>Drop_DB_Tables<span class="classifier">str,</span></dt><dd><blockquote>
+<div><p>way to drop table in SQL Database . set litteral arguments like</p>
+</div></blockquote>
+<p>the name of database user want to drop or [ no “*” or all to drop all tables.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Ready_to_transfer<span class="classifier">str</span></dt><dd><p>process to commit Database , the curso tranfered the dataBase to SQL connexion.
+set litteral ‘no’ or ‘yes’ to do.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>close_connexion<span class="classifier">bool ,</span></dt><dd><p>set True when transfer is done . it seems connexion.close()</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>Exception occurs when Table Name is not set on dict_app.</strong> – </p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>NoteType</strong></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>process to set Data PostgreSQL</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-geodrill.geoDB.interfaceDB">
+<span id="module-interface"></span><h2><strong>Module Interface</strong><a class="headerlink" href="#module-geodrill.geoDB.interfaceDB" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>This file is part of pyCSAMT.</p>
+<p>pyCSAMT is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.</p>
+<p>pyCSAMT is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.</p>
+<p>You should have received a copy of the GNU Lesser General Public License
+along with pyCSAMT.  If not, see &lt;<a class="reference external" href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.</p>
+</div></blockquote>
+<hr class="docutils" />
+<blockquote>
+<div><p>. Specially dedicate to Manage SQL</p>
+</div></blockquote>
+<p>Created on Tue Oct 13 15:28:57 2020</p>
+<p>&#64;author: Daniel03</p>
+<dl class="class">
+<dt id="geodrill.geoDB.interfaceDB.ManageDB">
+<em class="property">class </em><code class="sig-prename descclassname">geodrill.geoDB.interfaceDB.</code><code class="sig-name descname">ManageDB</code><span class="sig-paren">(</span><em class="sig-param">db_name=None</em>, <em class="sig-param">db_host=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/interfaceDB.html#ManageDB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.interfaceDB.ManageDB" title="Permalink to this definition">¶</a></dt>
+<dd><p>build a datable postgre Sql  from dict_app.py
+simple way to make a transit between two objects :</p>
+<blockquote>
+<div><p>One object dict_app to populate DataBase</p>
+</div></blockquote>
+<blockquote>
+<div><ul class="simple">
+<li><p>db_name : str  :name of dataBase</p></li>
+<li><p>db_host : st, :path to database</p></li>
+</ul>
+</div></blockquote>
+<p><a href="#id3"><span class="problematic" id="id4">*</span></a>connex :               object                   DataBase connection
+<a href="#id5"><span class="problematic" id="id6">*</span></a>curs :                 object                   Database cursor
+===========================================================================</p>
+<ul class="simple">
+<li><p>dicT_sqlDB :            send infos as  dictionnary to dataBase</p></li>
+<li><p>execute req :           execute a sql_request</p></li>
+<li><p>drop_TableDB :          drop all Tables in sql memory DB or single Table</p></li>
+<li><p>closeDB :               close after requests the connection and the cursor</p></li>
+</ul>
+<dl class="simple">
+<dt><a href="#id7"><span class="problematic" id="id8">*</span></a>commit<span class="classifier">transfer the data to DataBase. if not the data will</span></dt><dd><p>still in the cursor and  not in the dataBase</p>
+</dd>
+</dl>
+<p><a href="#id9"><span class="problematic" id="id10">*</span></a>print_last_Query :       print the last operating system
+* export_req :            export the request on datasheet like excelsheet .
+=============================================================================</p>
+<dl>
+<dt>e.g ::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sqlrequests</span> <span class="kn">import</span> <span class="n">SqlQ</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span><span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nameofDB</span><span class="o">=</span><span class="s1">&#39;memory.sq3&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">manDB</span><span class="o">=</span><span class="n">ManageDB</span><span class="p">(</span><span class="n">db_name</span><span class="o">=</span><span class="n">nameofDB</span><span class="p">,</span>
+<span class="go">                   db_host=path)</span>
+</pre></div>
+</div>
+<p>… print(SqlQ.sql_req[-1])
+… manDB.executeReq(SqlQ.sql_req[2])
+… ss=manDB.print_last_Query()
+… print(ss)
+… manDB.export_req(SqlQ.sql_req[-1],</p>
+<blockquote>
+<div><p>export_type=’.csv’)</p>
+</div></blockquote>
+<dl class="simple">
+<dt>… manDB.dicT_sqlDB(dictTables=Glob.dicoT,</dt><dd><p>visualize_request=False)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="method">
+<dt id="geodrill.geoDB.interfaceDB.ManageDB.closeDB">
+<code class="sig-name descname">closeDB</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/interfaceDB.html#ManageDB.closeDB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.interfaceDB.ManageDB.closeDB" title="Permalink to this definition">¶</a></dt>
+<dd><p>simple method to close Database.
+:returns:
+:rtype: None.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="geodrill.geoDB.interfaceDB.ManageDB.commit">
+<code class="sig-name descname">commit</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/interfaceDB.html#ManageDB.commit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.interfaceDB.ManageDB.commit" title="Permalink to this definition">¶</a></dt>
+<dd><p>special commit method for the database when cursor  and connexion
+are still open.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="geodrill.geoDB.interfaceDB.ManageDB.connect_DB">
+<code class="sig-name descname">connect_DB</code><span class="sig-paren">(</span><em class="sig-param">db_host=None</em>, <em class="sig-param">db_name=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/interfaceDB.html#ManageDB.connect_DB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.interfaceDB.ManageDB.connect_DB" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Create sqqlite Database :</dt><dd><p>params :
+db_host : str :  DataBase location path
+db_name : str : DataBase name</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="geodrill.geoDB.interfaceDB.ManageDB.dicT_sqlDB">
+<code class="sig-name descname">dicT_sqlDB</code><span class="sig-paren">(</span><em class="sig-param">dicTables</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/interfaceDB.html#ManageDB.dicT_sqlDB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.interfaceDB.ManageDB.dicT_sqlDB" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Method to create Table for sqlDataBase .</dt><dd><p>Enter Data to DataBase from dictionnary.
+Interface objet : Database _Dictionnary :
+to see how dicTable is arranged , may consult dict_app module</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dictTables</strong> (<em>dict</em>) – Rely on dict_app.py module. it populates the  datababse
+from dictionnay app</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul>
+<li><p><em>None.</em> – execute queries from dict_app</p></li>
+<li><p><em>Example</em></p></li>
+<li><p><em>********</em> –</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span> <span class="n">mDB</span><span class="o">=</span><span class="n">GestionDB</span> <span class="p">(</span><span class="n">dbname</span><span class="o">=</span><span class="s1">&#39;memory.sq3,</span>
+<span class="go">                   db_host =os.getcwd()&#39;)</span>
+<span class="go">...mDB.dicT_sqlDB(dicTables=Glob.dicoT,</span>
+<span class="go">                  visualize_request=False)</span>
+<span class="go">...ss=mB.print_last_query()</span>
+<span class="go">...print(ss)</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="geodrill.geoDB.interfaceDB.ManageDB.drop_TableDB">
+<code class="sig-name descname">drop_TableDB</code><span class="sig-paren">(</span><em class="sig-param">dicTables</em>, <em class="sig-param">drop_table_name=None</em>, <em class="sig-param">drop_all=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/interfaceDB.html#ManageDB.drop_TableDB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.interfaceDB.ManageDB.drop_TableDB" title="Permalink to this definition">¶</a></dt>
+<dd><p>Drop the name of table on dataBase or all databases.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dicTables</strong> (<em>*</em>) – application dictionnary. Normally provide from
+dict_app.py module</p></li>
+<li><p><strong>drop_table_name</strong> (<em>*</em>) – field name of dictionnay (Table Name).
+The default is None.</p></li>
+<li><p><strong>drop_all</strong> (<em>*</em>) – Must select if you need to drop all table.
+The default is False.</p></li>
+<li><p><strong>*kwargs</strong> (<em>TYPE</em>) – populate laters.</p></li>
+</ul>
+</dd>
+</dl>
+<p>:raises Exception : Errors occurs ! .:</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p> New_sqlDatBase safe .</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="geodrill.geoDB.interfaceDB.ManageDB.executeReq">
+<code class="sig-name descname">executeReq</code><span class="sig-paren">(</span><em class="sig-param">query</em>, <em class="sig-param">param=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/interfaceDB.html#ManageDB.executeReq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.interfaceDB.ManageDB.executeReq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute request  of dataBase  with detection of error.</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>query<span class="classifier">str ,</span></dt><dd><p>sql_query</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>param<span class="classifier">str,</span></dt><dd><p>Default is None .</p>
+</dd>
+</dl>
+</li>
+</ul>
+<blockquote>
+<div><p>layout the wrong sql queries .</p>
+</div></blockquote>
+<blockquote>
+<div><dl class="simple">
+<dt>1<span class="classifier">int ,</span></dt><dd><p>the request has been successuful run .</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl>
+<dt>e.g. ::</dt><dd><dl class="simple">
+<dt>… for keys in Glob.dicoT.keys():</dt><dd><p>reqst=’select * from %s’%keys</p>
+</dd>
+</dl>
+<p>… ss=manageDB.executeReq(query=reqst)
+… print(ss)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="geodrill.geoDB.interfaceDB.ManageDB.export_req">
+<code class="sig-name descname">export_req</code><span class="sig-paren">(</span><em class="sig-param">query=None</em>, <em class="sig-param">export_type='.csv'</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/interfaceDB.html#ManageDB.export_req"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.interfaceDB.ManageDB.export_req" title="Permalink to this definition">¶</a></dt>
+<dd><p>method to export data  from DataBase</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query</strong> (<em>str</em><em>, </em><em>optional</em>) – Sql requests. You may consult sql_request files.
+The default is None.</p></li>
+<li><p><strong>export_type</strong> (<em>Str</em><em>, </em><em>optional</em>) – file extension. if None , it will export on simple file.
+The default is ‘.csv’.</p></li>
+<li><p><strong>**kwargs</strong> (<em>str</em>) – Others parameters.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>Exception</strong> – Print wrong sqlrequests.</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><ul>
+<li><p><em>None.</em></p></li>
+<li><p><em>e.g.::</em> – &gt;&gt;&gt; from sqlrequests import SqlQ
+… manageDB.executeReq(SqlQ.sql_req[2])
+… ss=manageDB.print_last_Query()
+… print(ss)
+… manageDB.export_req(SqlQ.sql_req[-1],</p>
+<blockquote>
+<div><p>export_type=’.csv’,
+)</p>
+</div></blockquote>
+</li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="geodrill.geoDB.interfaceDB.ManageDB.print_query">
+<code class="sig-name descname">print_query</code><span class="sig-paren">(</span><em class="sig-param">column_name=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geodrill/geoDB/interfaceDB.html#ManageDB.print_query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.interfaceDB.ManageDB.print_query" title="Permalink to this definition">¶</a></dt>
+<dd><p>return the result of the previous query.</p>
+<blockquote>
+<div><ul class="simple">
+<li><dl class="simple">
+<dt>query_table_nam<span class="classifier">str</span></dt><dd><p>name of table to fetch colounm data .</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-geodrill.geoDB.sqlrequests">
+<span id="module-request"></span><h2><strong>Module Request</strong><a class="headerlink" href="#module-geodrill.geoDB.sqlrequests" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>This file is part of pyCSAMT.</p>
+<p>pyCSAMT is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.</p>
+<p>pyCSAMT is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.</p>
+<p>You should have received a copy of the GNU Lesser General Public License
+along with pyCSAMT.  If not, see &lt;<a class="reference external" href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.</p>
+</div></blockquote>
+<hr class="docutils" />
+<p>Created on Tue Oct 13 17:36:35 2020</p>
+<p>&#64;author: &#64;Daniel03</p>
+<dl class="class">
+<dt id="geodrill.geoDB.sqlrequests.SqlQ">
+<em class="property">class </em><code class="sig-prename descclassname">geodrill.geoDB.sqlrequests.</code><code class="sig-name descname">SqlQ</code><a class="reference internal" href="_modules/geodrill/geoDB/sqlrequests.html#SqlQ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.sqlrequests.SqlQ" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build sql _requests : Not use for others
+you may populate request for your purpose. the request in not general ,
+the user must change the request according its will .</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-geodrill.geoDB.dict_app">
+<span id="module-dictapp"></span><h2><strong>Module DictApp</strong><a class="headerlink" href="#module-geodrill.geoDB.dict_app" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>This file is part of pyCSAMT.</p>
+<p>pyCSAMT is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.</p>
+<p>pyCSAMT is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.</p>
+<p>You should have received a copy of the GNU Lesser General Public License
+along with pyCSAMT.  If not, see &lt;<a class="reference external" href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.</p>
+</div></blockquote>
+<hr class="docutils" />
+<p>Created on Tue Oct 13 14:52:08 2020</p>
+<p>&#64;author: Daniel03</p>
+<dl class="simple">
+<dt>use :</dt><dd><p>for sql dataBase works
+dico to sql_database .</p>
+</dd>
+</dl>
+<dl class="class">
+<dt id="geodrill.geoDB.dict_app.Glob">
+<em class="property">class </em><code class="sig-prename descclassname">geodrill.geoDB.dict_app.</code><code class="sig-name descname">Glob</code><a class="reference internal" href="_modules/geodrill/geoDB/dict_app.html#Glob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#geodrill.geoDB.dict_app.Glob" title="Permalink to this definition">¶</a></dt>
+<dd><p>Spaces of variables and fonctions pseudo-globales .
+dictionnary can be set outside the container class Glob,
+following the dicoT datastructuration .</p>
+<blockquote>
+<div><dl>
+<dt>eg :</dt><dd><dl class="simple">
+<dt>value_DB =[(‘id_new’, ‘i’, ‘new_vision’),</dt><dd><p>(‘infoTab’,’k’,’no comment’),
+(‘collar’,’d’,’collarDH’)]</p>
+</dd>
+</dl>
+<p>Glob.dicoT.__setitem__(‘TableDB_set’,value_DB )</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Package GeoDataBase</a><ul>
+<li><a class="reference internal" href="#module-geodrill.geoDB.sql_recorder"><strong>Module Recorder</strong></a></li>
+<li><a class="reference internal" href="#module-geodrill.geoDB.interfaceDB"><strong>Module Interface</strong></a></li>
+<li><a class="reference internal" href="#module-geodrill.geoDB.sqlrequests"><strong>Module Request</strong></a></li>
+<li><a class="reference internal" href="#module-geodrill.geoDB.dict_app"><strong>Module DictApp</strong></a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="geocore.html"
+                        title="previous chapter">Package GeoCore</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="utils.html"
+                        title="next chapter">Package Utils</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/geodb.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="utils.html" title="Package Utils"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="geocore.html" title="Package GeoCore"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyCSAMT v1.0.01 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2021, Kouadio K. Laurent.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.4.0.
+    </div>
+  </body>
+</html>

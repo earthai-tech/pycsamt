@@ -1,0 +1,1130 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>csamtpy.utils.gis_tools &#8212; pyCSAMT v1.0.01 documentation</title>
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyCSAMT v1.0.01 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for csamtpy.utils.gis_tools</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">===============================================================================</span>
+<span class="sd">    Copyright © 2021  Kouadio K.Laurent</span>
+<span class="sd">    </span>
+<span class="sd">    This file is part of pyCSAMT.</span>
+<span class="sd">    </span>
+<span class="sd">    pyCSAMT is free software: you can redistribute it and/or modify</span>
+<span class="sd">    it under the terms of the GNU Lesser General Public License as published by</span>
+<span class="sd">    the Free Software Foundation, either version 3 of the License, or</span>
+<span class="sd">    (at your option) any later version.</span>
+<span class="sd">    </span>
+<span class="sd">    pyCSAMT is distributed in the hope that it will be useful,</span>
+<span class="sd">    but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="sd">    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="sd">    GNU Lesser General Public License for more details.</span>
+<span class="sd">    </span>
+<span class="sd">    You should have received a copy of the GNU Lesser General Public License</span>
+<span class="sd">    along with pyCSAMT.  If not, see &lt;https://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">===============================================================================    </span>
+
+<span class="sd">    Copyright © 2014, 2017  Lars Kriegers, Jared R. Peacock</span>
+<span class="sd"> </span>
+<span class="sd">    MTpy is free software: you can redistribute it and/or modify</span>
+<span class="sd">    it under the terms of the GNU  General Public License as published by</span>
+<span class="sd">    the Free Software Foundation, either version 3 of the License, or</span>
+<span class="sd">    (at your option) any later version.</span>
+<span class="sd">    </span>
+<span class="sd">    MTpy is distributed in the hope that it will be useful,</span>
+<span class="sd">    but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="sd">    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="sd">    GNU  General Public License for more details.</span>
+<span class="sd">    </span>
+<span class="sd">    You should have received a copy of the GNU  General Public License</span>
+<span class="sd">    along with MTpy.  If not, see &lt;https://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">=============================================================================== </span>
+<span class="sd">Created on Fri Apr 14 14:47:48 2017</span>
+
+<span class="sd">@author: jrpeacock</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># ==============================================================================</span>
+<span class="c1"># Imports</span>
+<span class="c1"># ==============================================================================</span>
+
+
+<span class="kn">from</span> <span class="nn">csamtpy.utils.decorator</span> <span class="kn">import</span>  <span class="n">deprecated</span> <span class="c1">#gdal_data_check,</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">csamtpy.utils._csamtpylog</span> <span class="kn">import</span> <span class="n">csamtpylog</span>
+<span class="k">try</span> <span class="p">:</span> 
+    
+    <span class="kn">import</span> <span class="nn">HAS_GDAL</span><span class="o">,</span> <span class="nn">EPSG_DICT</span>
+    <span class="k">if</span> <span class="n">HAS_GDAL</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">osgeo</span> <span class="kn">import</span> <span class="n">osr</span>
+        <span class="kn">from</span> <span class="nn">osgeo.ogr</span> <span class="kn">import</span> <span class="n">OGRERR_NONE</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">pyproj</span>
+<span class="c1"># end if</span>
+<span class="k">except</span> <span class="p">:</span> <span class="k">pass</span> 
+
+
+<span class="n">_logger</span> <span class="o">=</span> <span class="n">csamtpylog</span><span class="o">.</span><span class="n">get_csamtpy_logger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="GIS_ERROR"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.GIS_ERROR">[docs]</a><span class="k">class</span> <span class="nc">GIS_ERROR</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+<span class="c1">#==============================================================================</span>
+<span class="c1"># Make sure lat and lon are in decimal degrees</span>
+<span class="c1">#==============================================================================</span>
+<span class="k">def</span> <span class="nf">_assert_minutes</span><span class="p">(</span><span class="n">minutes</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">minutes</span> <span class="o">&lt;</span> <span class="mf">60.</span><span class="p">,</span> \
+        <span class="s1">&#39;minutes needs to be &lt;60 and &gt;0, currently </span><span class="si">{0:.0f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">minutes</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">minutes</span>
+
+
+<span class="k">def</span> <span class="nf">_assert_seconds</span><span class="p">(</span><span class="n">seconds</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">seconds</span> <span class="o">&lt;</span> <span class="mf">60.</span><span class="p">,</span> \
+        <span class="s1">&#39;seconds needs to be &lt;60 and &gt;0, currently </span><span class="si">{0:.3f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">seconds</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">seconds</span>
+
+
+<div class="viewcode-block" id="convert_position_str2float"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.convert_position_str2float">[docs]</a><span class="k">def</span> <span class="nf">convert_position_str2float</span><span class="p">(</span><span class="n">position_str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert a position string in the format of DD:MM:SS to decimal degrees</span>
+<span class="sd">    </span>
+<span class="sd">    Arguments</span>
+<span class="sd">    -------------</span>
+<span class="sd">        **position_str** : string (&#39;DD:MM:SS.ms&#39;)</span>
+<span class="sd">                           degrees of latitude or longitude</span>
+<span class="sd">                       </span>
+<span class="sd">    Returns</span>
+<span class="sd">    --------------</span>
+<span class="sd">        **position** : float</span>
+<span class="sd">                       latitude or longitude in decimal degrees</span>
+<span class="sd">                          </span>
+<span class="sd">    Example</span>
+<span class="sd">    -------------</span>
+<span class="sd">        &gt;&gt;&gt; import mtpy.utils.gis_tools as gis_tools</span>
+<span class="sd">        &gt;&gt;&gt; gis_tools.convert_position_str2float(&#39;-118:34:56.3&#39;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">position_str</span> <span class="ow">in</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;None&#39;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    
+    <span class="n">p_list</span> <span class="o">=</span> <span class="n">position_str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_list</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1"> not correct format, should be DD:MM:SS&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">position_str</span><span class="p">))</span>
+
+    <span class="n">deg</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">p_list</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">minutes</span> <span class="o">=</span> <span class="n">_assert_minutes</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">p_list</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">sec</span> <span class="o">=</span> <span class="n">_assert_seconds</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">p_list</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+
+    <span class="c1"># get the sign of the position so that when all are added together the</span>
+    <span class="c1"># position is in the correct place</span>
+    <span class="n">sign</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">deg</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">sign</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+    <span class="n">position_value</span> <span class="o">=</span> <span class="n">sign</span> <span class="o">*</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">deg</span><span class="p">)</span> <span class="o">+</span> <span class="n">minutes</span> <span class="o">/</span> <span class="mf">60.</span> <span class="o">+</span> <span class="n">sec</span> <span class="o">/</span> <span class="mf">3600.</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">position_value</span></div>
+
+
+<div class="viewcode-block" id="assert_lat_value"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.assert_lat_value">[docs]</a><span class="k">def</span> <span class="nf">assert_lat_value</span><span class="p">(</span><span class="n">latitude</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    make sure latitude is in decimal degrees</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># if latitude in [None, &#39;None&#39;]:</span>
+    <span class="c1">#     return None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">lat_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">latitude</span><span class="p">)</span>
+
+    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="n">lat_value</span> <span class="o">=</span> <span class="n">convert_position_str2float</span><span class="p">(</span><span class="n">latitude</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">lat_value</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">90</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;==&gt; The lat_value =&quot;</span><span class="p">,</span> <span class="n">lat_value</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;|Latitude| &gt; 90, unacceptable!&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">lat_value</span></div>
+
+
+<div class="viewcode-block" id="assert_lon_value"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.assert_lon_value">[docs]</a><span class="k">def</span> <span class="nf">assert_lon_value</span><span class="p">(</span><span class="n">longitude</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    make sure longitude is in decimal degrees</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">longitude</span> <span class="ow">in</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;None&#39;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">lon_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">longitude</span><span class="p">)</span>
+
+    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="n">lon_value</span> <span class="o">=</span> <span class="n">convert_position_str2float</span><span class="p">(</span><span class="n">longitude</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">lon_value</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">180</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;|Longitude| &gt; 180, unacceptable!&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">lon_value</span></div>
+
+
+<div class="viewcode-block" id="assert_elevation_value"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.assert_elevation_value">[docs]</a><span class="k">def</span> <span class="nf">assert_elevation_value</span><span class="p">(</span><span class="n">elevation</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    make sure elevation is a floating point number</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">elev_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">elevation</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+        <span class="n">elev_value</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">_logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1"> is not a number, setting elevation to 0&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">elevation</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">elev_value</span></div>
+
+
+<div class="viewcode-block" id="convert_position_float2str"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.convert_position_float2str">[docs]</a><span class="k">def</span> <span class="nf">convert_position_float2str</span><span class="p">(</span><span class="n">position</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    convert position float to a string in the format of DD:MM:SS</span>
+<span class="sd">    </span>
+<span class="sd">    Arguments</span>
+<span class="sd">    -------------</span>
+<span class="sd">        **position** : float</span>
+<span class="sd">                       decimal degrees of latitude or longitude</span>
+<span class="sd">                       </span>
+<span class="sd">    Returns</span>
+<span class="sd">    --------------</span>
+<span class="sd">        **position_str** : string</span>
+<span class="sd">                          latitude or longitude in format of DD:MM:SS.ms</span>
+<span class="sd">                          </span>
+<span class="sd">    Example</span>
+<span class="sd">    -------------</span>
+<span class="sd">        &gt;&gt;&gt; import mtpy.utils.gis_tools as gis_tools</span>
+<span class="sd">        &gt;&gt;&gt; gis_tools.convert_position_float2str(-118.34563)</span>
+<span class="sd">        </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">position</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">float</span><span class="p">,</span> <span class="s1">&#39;Given value is not a float&#39;</span>
+
+    <span class="n">deg</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+    <span class="n">sign</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">deg</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">sign</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+    <span class="n">deg</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">deg</span><span class="p">)</span>
+    <span class="n">minutes</span> <span class="o">=</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">position</span><span class="p">)</span> <span class="o">-</span> <span class="n">deg</span><span class="p">)</span> <span class="o">*</span> <span class="mf">60.</span>
+    <span class="c1"># need to round seconds to 4 decimal places otherwise machine precision</span>
+    <span class="c1"># keeps the 60 second roll over and the string is incorrect.</span>
+    <span class="n">sec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">((</span><span class="n">minutes</span> <span class="o">-</span> <span class="nb">int</span><span class="p">(</span><span class="n">minutes</span><span class="p">))</span> <span class="o">*</span> <span class="mf">60.</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">sec</span> <span class="o">&gt;=</span> <span class="mf">60.</span><span class="p">:</span>
+        <span class="n">minutes</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sec</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">minutes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">60</span><span class="p">:</span>
+        <span class="n">deg</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">minutes</span> <span class="o">=</span> <span class="mi">0</span>
+        
+    <span class="n">position_str</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">:</span><span class="si">{1:02.0f}</span><span class="s1">:</span><span class="si">{2:05.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sign</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">deg</span><span class="p">),</span>
+                                                    <span class="nb">int</span><span class="p">(</span><span class="n">minutes</span><span class="p">),</span>
+                                                    <span class="n">sec</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">position_str</span></div>
+
+
+<span class="c1"># ==============================================================================</span>
+<span class="c1"># Project a point</span>
+<span class="c1"># ==============================================================================</span>
+<div class="viewcode-block" id="get_utm_string_from_sr"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.get_utm_string_from_sr">[docs]</a><span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;NATO UTM zone is used in other part of mtpy, this function is for Standard UTM&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">get_utm_string_from_sr</span><span class="p">(</span><span class="n">spatialreference</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    return utm zone string from spatial reference instance</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">zone_number</span> <span class="o">=</span> <span class="n">spatialreference</span><span class="o">.</span><span class="n">GetUTMZone</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">zone_number</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">zone_number</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;N&#39;</span>
+    <span class="k">elif</span> <span class="n">zone_number</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">zone_number</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;S&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">zone_number</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_utm_zone"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.get_utm_zone">[docs]</a><span class="k">def</span> <span class="nf">get_utm_zone</span><span class="p">(</span><span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get utm zone from a given latitude and longitude</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">zone_number</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="p">(</span><span class="n">longitude</span> <span class="o">+</span> <span class="mf">180.0</span><span class="p">)</span> <span class="o">/</span> <span class="mf">6.0</span><span class="p">))</span>
+    <span class="c1">## why is this needed here, GDAL only needs N-orth or S-outh</span>
+    <span class="c1">## n_str = _utm_letter_designator(latitude)</span>
+    <span class="n">is_northern</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">latitude</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+    
+    <span class="c1"># if latitude &lt; 0.0:</span>
+    <span class="c1">#     n_str = &#39;S&#39;</span>
+    <span class="c1"># else:</span>
+    <span class="c1">#     n_str = &#39;N&#39;</span>
+    <span class="n">n_str</span> <span class="o">=</span> <span class="n">_utm_letter_designator</span><span class="p">(</span><span class="n">latitude</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">zone_number</span><span class="p">,</span> <span class="n">is_northern</span><span class="p">,</span> <span class="s1">&#39;</span><span class="si">{0:02.0f}{1}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">zone_number</span><span class="p">,</span> <span class="n">n_str</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="utm_zone_to_epsg"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.utm_zone_to_epsg">[docs]</a><span class="k">def</span> <span class="nf">utm_zone_to_epsg</span><span class="p">(</span><span class="n">zone_number</span><span class="p">,</span> <span class="n">is_northern</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    get epsg code (WGS84 datum) for a given utm zone</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">EPSG_DICT</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">EPSG_DICT</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">if</span> <span class="p">(</span><span class="s1">&#39;+zone=</span><span class="si">{:&lt;2}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">zone_number</span><span class="p">)</span> <span class="ow">in</span> <span class="n">val</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;+datum=WGS84&#39;</span> <span class="ow">in</span> <span class="n">val</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">is_northern</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s1">&#39;+south&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">val</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">key</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s1">&#39;+south&#39;</span> <span class="ow">in</span> <span class="n">val</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">key</span></div>
+    
+<div class="viewcode-block" id="get_epsg"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.get_epsg">[docs]</a><span class="k">def</span> <span class="nf">get_epsg</span><span class="p">(</span><span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    get epsg code for the utm projection (WGS84 datum) of a given latitude</span>
+<span class="sd">    and longitude pair</span>
+<span class="sd">    &quot;&quot;&quot;</span>  
+    <span class="n">zone_no</span><span class="p">,</span><span class="n">is_northern</span><span class="p">,</span><span class="n">utm_str</span> <span class="o">=</span> <span class="n">get_utm_zone</span><span class="p">(</span><span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">utm_zone_to_epsg</span><span class="p">(</span><span class="n">zone_no</span><span class="p">,</span><span class="n">is_northern</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="project_point_ll2utm"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.project_point_ll2utm">[docs]</a><span class="k">def</span> <span class="nf">project_point_ll2utm</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">datum</span><span class="o">=</span><span class="s1">&#39;WGS84&#39;</span><span class="p">,</span> <span class="n">utm_zone</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">epsg</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Project a point that is in Lat, Lon (will be converted to decimal degrees)</span>
+<span class="sd">    into UTM coordinates.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">    ---------------</span>
+<span class="sd">        **lat** : float or string (DD:MM:SS.ms)</span>
+<span class="sd">                  latitude of point</span>
+
+<span class="sd">        **lon** : float or string (DD:MM:SS.ms)</span>
+<span class="sd">                  longitude of point</span>
+
+<span class="sd">        **datum** : string</span>
+<span class="sd">                    well known datum ex. WGS84, NAD27, NAD83, etc.</span>
+
+<span class="sd">        **utm_zone** : string</span>
+<span class="sd">                       zone number and &#39;S&#39; or &#39;N&#39; e.g. &#39;55S&#39;</span>
+
+<span class="sd">        **epsg** : int</span>
+<span class="sd">                   epsg number defining projection (see</span>
+<span class="sd">                   http://spatialreference.org/ref/ for moreinfo)</span>
+<span class="sd">                   Overrides utm_zone if both are provided</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    --------------</span>
+<span class="sd">        **proj_point**: tuple(easting, northing, zone)</span>
+<span class="sd">                        projected point in UTM in Datum</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">lat</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">lon</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="c1"># make sure the lat and lon are in decimal degrees</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">iterable</span><span class="p">(</span><span class="n">lon</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">iterable</span><span class="p">(</span><span class="n">lat</span><span class="p">):</span>
+        <span class="n">lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">assert_lat_value</span><span class="p">(</span><span class="n">lat_value</span><span class="p">)</span> <span class="k">for</span> <span class="n">lat_value</span> <span class="ow">in</span> <span class="n">lat</span><span class="p">])</span>
+        <span class="n">lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">assert_lon_value</span><span class="p">(</span><span class="n">lon_value</span><span class="p">)</span> <span class="k">for</span> <span class="n">lon_value</span> <span class="ow">in</span> <span class="n">lon</span><span class="p">])</span>
+        <span class="k">assert</span> <span class="n">lat</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">lon</span><span class="o">.</span><span class="n">size</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">assert_lat_value</span><span class="p">(</span><span class="n">lat</span><span class="p">)])</span>
+        <span class="n">lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">assert_lon_value</span><span class="p">(</span><span class="n">lon</span><span class="p">)])</span>
+
+    <span class="k">if</span> <span class="n">HAS_GDAL</span><span class="p">:</span>
+        <span class="c1"># set lat lon coordinate system</span>
+        <span class="n">ll_cs</span> <span class="o">=</span> <span class="n">osr</span><span class="o">.</span><span class="n">SpatialReference</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">datum</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">ogrerr</span> <span class="o">=</span> <span class="n">ll_cs</span><span class="o">.</span><span class="n">ImportFromEPSG</span><span class="p">(</span><span class="n">datum</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ogrerr</span> <span class="o">!=</span> <span class="n">OGRERR_NONE</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">GIS_ERROR</span><span class="p">(</span><span class="s2">&quot;GDAL/osgeo ogr error code: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ogrerr</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">datum</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">ogrerr</span> <span class="o">=</span> <span class="n">ll_cs</span><span class="o">.</span><span class="n">SetWellKnownGeogCS</span><span class="p">(</span><span class="n">datum</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ogrerr</span> <span class="o">!=</span> <span class="n">OGRERR_NONE</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">GIS_ERROR</span><span class="p">(</span><span class="s2">&quot;GDAL/osgeo ogr error code: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ogrerr</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GIS_ERROR</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;datum </span><span class="si">{0}</span><span class="s2"> not understood, needs to be EPSG as int</span>
+<span class="s2">                               or a well known datum as a string&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">datum</span><span class="p">))</span>
+
+        <span class="c1"># set utm coordinate system</span>
+        <span class="n">utm_cs</span> <span class="o">=</span> <span class="n">osr</span><span class="o">.</span><span class="n">SpatialReference</span><span class="p">()</span>
+    <span class="c1"># end if</span>
+
+    <span class="c1"># project point on to EPSG coordinate system if given</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">epsg</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">HAS_GDAL</span><span class="p">:</span>
+            <span class="n">ogrerr</span> <span class="o">=</span> <span class="n">utm_cs</span><span class="o">.</span><span class="n">ImportFromEPSG</span><span class="p">(</span><span class="n">epsg</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ogrerr</span> <span class="o">!=</span> <span class="n">OGRERR_NONE</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">GIS_ERROR</span><span class="p">(</span><span class="s2">&quot;GDAL/osgeo ogr error code: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ogrerr</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pp</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Proj</span><span class="p">(</span><span class="s1">&#39;+init=EPSG:</span><span class="si">%d</span><span class="s1">&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">epsg</span><span class="p">))</span>
+        <span class="c1"># end if</span>
+    <span class="c1"># otherwise project onto given datum</span>
+    <span class="k">elif</span> <span class="n">epsg</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">HAS_GDAL</span><span class="p">:</span>
+            <span class="n">ogrerr</span> <span class="o">=</span> <span class="n">utm_cs</span><span class="o">.</span><span class="n">CopyGeogCSFrom</span><span class="p">(</span><span class="n">ll_cs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ogrerr</span> <span class="o">!=</span> <span class="n">OGRERR_NONE</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">GIS_ERROR</span><span class="p">(</span><span class="s2">&quot;GDAL/osgeo ogr error code: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ogrerr</span><span class="p">))</span>
+        <span class="c1"># end if</span>
+        <span class="k">if</span> <span class="n">utm_zone</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="n">utm_zone</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;none&#39;</span><span class="p">:</span>
+            <span class="c1"># get the UTM zone in the datum coordinate system, otherwise</span>
+            <span class="n">zone_number</span><span class="p">,</span> <span class="n">is_northern</span><span class="p">,</span> <span class="n">utm_zone</span> <span class="o">=</span> <span class="n">get_utm_zone</span><span class="p">(</span><span class="n">lat</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+                                                              <span class="n">lon</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># get zone number and is_northern from utm_zone string</span>
+            <span class="n">zone_number</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">utm_zone</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">is_northern</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">utm_zone</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">&gt;</span> <span class="s1">&#39;n&#39;</span> <span class="k">else</span> <span class="kc">False</span>
+
+        <span class="k">if</span><span class="p">(</span><span class="n">HAS_GDAL</span><span class="p">):</span>
+            <span class="n">utm_cs</span><span class="o">.</span><span class="n">SetUTM</span><span class="p">(</span><span class="n">zone_number</span><span class="p">,</span> <span class="n">is_northern</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">projstring</span> <span class="o">=</span> <span class="s1">&#39;+proj=utm +zone=</span><span class="si">%d</span><span class="s1"> +</span><span class="si">%s</span><span class="s1"> +datum=</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> \
+                         <span class="p">(</span><span class="n">zone_number</span><span class="p">,</span> <span class="s1">&#39;north&#39;</span> <span class="k">if</span> <span class="n">is_northern</span> <span class="k">else</span> <span class="s1">&#39;south&#39;</span><span class="p">,</span> <span class="n">datum</span><span class="p">)</span>
+            <span class="n">pp</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Proj</span><span class="p">(</span><span class="n">projstring</span><span class="p">)</span>
+        <span class="c1"># end if</span>
+    <span class="c1"># end if</span>
+
+    <span class="c1"># return different results depending on if lat/lon are iterable</span>
+    <span class="n">projected_point</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;easting&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">),</span>
+                                                <span class="p">(</span><span class="s1">&#39;northing&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">),</span>
+                                                <span class="p">(</span><span class="s1">&#39;elev&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">),</span>
+                                                <span class="p">(</span><span class="s1">&#39;utm_zone&#39;</span><span class="p">,</span> <span class="s1">&#39;U4&#39;</span><span class="p">)])</span>
+
+    <span class="k">if</span><span class="p">(</span><span class="n">HAS_GDAL</span><span class="p">):</span>
+        <span class="n">ll2utm</span> <span class="o">=</span> <span class="n">osr</span><span class="o">.</span><span class="n">CoordinateTransformation</span><span class="p">(</span><span class="n">ll_cs</span><span class="p">,</span> <span class="n">utm_cs</span><span class="p">)</span><span class="o">.</span><span class="n">TransformPoint</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ll2utm</span> <span class="o">=</span> <span class="n">pp</span>
+    <span class="c1"># end if</span>
+
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">lat</span><span class="o">.</span><span class="n">size</span><span class="p">):</span>
+        <span class="n">point</span> <span class="o">=</span> <span class="n">ll2utm</span><span class="p">(</span><span class="n">lon</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">lat</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span>
+        <span class="n">projected_point</span><span class="p">[</span><span class="s1">&#39;easting&#39;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">projected_point</span><span class="p">[</span><span class="s1">&#39;northing&#39;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">HAS_GDAL</span><span class="p">):</span> <span class="n">projected_point</span><span class="p">[</span><span class="s1">&#39;elev&#39;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">projected_point</span><span class="p">[</span><span class="s1">&#39;utm_zone&#39;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">utm_zone</span> <span class="k">if</span> <span class="n">utm_zone</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">get_utm_zone</span><span class="p">(</span><span class="n">lat</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">ii</span><span class="p">])[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="c1"># end for</span>
+
+    <span class="c1"># if just projecting one point, then return as a tuple so as not to break</span>
+    <span class="c1"># anything.  In the future we should adapt to just return a record array</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">projected_point</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">projected_point</span><span class="p">[</span><span class="s1">&#39;easting&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">projected_point</span><span class="p">[</span><span class="s1">&#39;northing&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">projected_point</span><span class="p">[</span><span class="s1">&#39;utm_zone&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">rec</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">projected_point</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="project_point_utm2ll"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.project_point_utm2ll">[docs]</a><span class="k">def</span> <span class="nf">project_point_utm2ll</span><span class="p">(</span><span class="n">easting</span><span class="p">,</span> <span class="n">northing</span><span class="p">,</span> <span class="n">utm_zone</span><span class="p">,</span> <span class="n">datum</span><span class="o">=</span><span class="s1">&#39;WGS84&#39;</span><span class="p">,</span> <span class="n">epsg</span><span class="o">=</span><span class="mi">3149</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Project a point that is in Lat, Lon (will be converted to decimal degrees)</span>
+<span class="sd">    into UTM coordinates.</span>
+<span class="sd">    </span>
+<span class="sd">    Arguments:</span>
+<span class="sd">    ---------------</span>
+<span class="sd">        **easting** : float</span>
+<span class="sd">                    easting coordinate in meters</span>
+<span class="sd">                    </span>
+<span class="sd">        **northing** : float</span>
+<span class="sd">                    northing coordinate in meters</span>
+<span class="sd">        </span>
+<span class="sd">        **utm_zone** : string (##N or ##S)</span>
+<span class="sd">                      utm zone in the form of number and North or South</span>
+<span class="sd">                      hemisphere, 10S or 03N</span>
+<span class="sd">        </span>
+<span class="sd">        **datum** : string</span>
+<span class="sd">                    well known datum ex. WGS84, NAD27, etc.</span>
+<span class="sd">                    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">    --------------</span>
+<span class="sd">        **proj_point**: tuple(lat, lon)</span>
+<span class="sd">                        projected point in lat and lon in Datum, as decimal</span>
+<span class="sd">                        degrees.</span>
+<span class="sd">                    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">easting</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">easting</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">GIS_ERROR</span><span class="p">(</span><span class="s2">&quot;easting is not a float&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">northing</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">northing</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">GIS_ERROR</span><span class="p">(</span><span class="s2">&quot;northing is not a float&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">HAS_GDAL</span><span class="p">:</span>
+        <span class="c1"># set utm coordinate system</span>
+        <span class="n">utm_cs</span> <span class="o">=</span> <span class="n">osr</span><span class="o">.</span><span class="n">SpatialReference</span><span class="p">()</span>
+        <span class="n">utm_cs</span><span class="o">.</span><span class="n">SetWellKnownGeogCS</span><span class="p">(</span><span class="n">datum</span><span class="p">)</span>
+    <span class="c1"># end if</span>
+
+    <span class="k">if</span> <span class="n">epsg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">HAS_GDAL</span><span class="p">:</span>
+            <span class="n">ogrerr</span> <span class="o">=</span> <span class="n">utm_cs</span><span class="o">.</span><span class="n">ImportFromEPSG</span><span class="p">(</span><span class="n">epsg</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ogrerr</span> <span class="o">!=</span> <span class="n">OGRERR_NONE</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;GDAL/osgeo ogr error code: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ogrerr</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pp</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Proj</span><span class="p">(</span><span class="s1">&#39;+init=EPSG:</span><span class="si">%d</span><span class="s1">&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">epsg</span><span class="p">))</span>
+        <span class="c1"># end if</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">utm_zone</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">utm_zone</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">bytes_</span><span class="p">):</span>
+        <span class="c1"># the isinstance(utm_zone, str) could be False in python3 due to numpy datatype change.</span>
+        <span class="c1"># So FZ added  isinstance(utm_zone, np.bytes_) and convert the utm_zone into string</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">utm_zone</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">bytes_</span><span class="p">):</span>
+            <span class="n">utm_zone</span> <span class="o">=</span> <span class="n">utm_zone</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;UTF-8&#39;</span><span class="p">)</span> <span class="c1"># b&#39;54J&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">zone_number</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">utm_zone</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>  <span class="c1">#b&#39;54J&#39;</span>
+            <span class="n">zone_letter</span> <span class="o">=</span> <span class="n">utm_zone</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Zone number </span><span class="si">{0}</span><span class="s1"> is not a number&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utm_zone</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">is_northern</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">zone_letter</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="s1">&#39;n&#39;</span> <span class="k">else</span> <span class="kc">False</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">utm_zone</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="c1"># std UTM code returned by gdal</span>
+        <span class="n">is_northern</span> <span class="o">=</span> <span class="kc">False</span> <span class="k">if</span> <span class="n">utm_zone</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">True</span>
+        <span class="n">zone_number</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">utm_zone</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;epsg and utm_zone&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">epsg</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">utm_zone</span><span class="p">))</span>
+
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;utm_zone type (</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">) not supported&quot;</span><span class="o">%</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">utm_zone</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">utm_zone</span><span class="p">)))</span>
+    
+    <span class="k">if</span> <span class="n">epsg</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">HAS_GDAL</span><span class="p">:</span>
+            <span class="n">utm_cs</span><span class="o">.</span><span class="n">SetUTM</span><span class="p">(</span><span class="n">zone_number</span><span class="p">,</span> <span class="n">is_northern</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">projstring</span> <span class="o">=</span> <span class="s1">&#39;+proj=utm +zone=</span><span class="si">%d</span><span class="s1"> +</span><span class="si">%s</span><span class="s1"> +datum=</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> \
+                         <span class="p">(</span><span class="n">zone_number</span><span class="p">,</span> <span class="s1">&#39;north&#39;</span> <span class="k">if</span> <span class="n">is_northern</span> <span class="k">else</span> <span class="s1">&#39;south&#39;</span><span class="p">,</span> <span class="n">datum</span><span class="p">)</span>
+            <span class="n">pp</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Proj</span><span class="p">(</span><span class="n">projstring</span><span class="p">)</span>
+        <span class="c1"># end if</span>
+    <span class="c1"># end if</span>
+
+    <span class="k">if</span> <span class="n">HAS_GDAL</span><span class="p">:</span>
+        <span class="n">ll_cs</span> <span class="o">=</span> <span class="n">utm_cs</span><span class="o">.</span><span class="n">CloneGeogCS</span><span class="p">()</span>
+        <span class="n">utm2ll</span> <span class="o">=</span> <span class="n">osr</span><span class="o">.</span><span class="n">CoordinateTransformation</span><span class="p">(</span><span class="n">utm_cs</span><span class="p">,</span> <span class="n">ll_cs</span><span class="p">)</span><span class="o">.</span><span class="n">TransformPoint</span>
+        <span class="n">ll_point</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">utm2ll</span><span class="p">(</span><span class="n">easting</span><span class="p">,</span> <span class="n">northing</span><span class="p">,</span> <span class="mf">0.</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ll_point</span> <span class="o">=</span> <span class="n">pp</span><span class="p">(</span><span class="n">easting</span><span class="p">,</span> <span class="n">northing</span><span class="p">,</span> <span class="n">inverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="c1"># end if</span>
+
+    <span class="c1"># be sure to round out the numbers to remove computing with floats</span>
+    <span class="k">return</span> <span class="nb">round</span><span class="p">(</span><span class="n">ll_point</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">6</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">ll_point</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">6</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="project_points_ll2utm"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.project_points_ll2utm">[docs]</a><span class="k">def</span> <span class="nf">project_points_ll2utm</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">datum</span><span class="o">=</span><span class="s1">&#39;WGS84&#39;</span><span class="p">,</span> <span class="n">utm_zone</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">epsg</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Project a list of points that is in Lat, Lon (will be converted to decimal </span>
+<span class="sd">    degrees) into UTM coordinates.</span>
+<span class="sd">    </span>
+<span class="sd">    Arguments:</span>
+<span class="sd">    ---------------</span>
+<span class="sd">        **lat** : float or string (DD:MM:SS.ms)</span>
+<span class="sd">                  latitude of point</span>
+<span class="sd">                  </span>
+<span class="sd">        **lon** : float or string (DD:MM:SS.ms)</span>
+<span class="sd">                  longitude of point</span>
+<span class="sd">        </span>
+<span class="sd">        **datum** : string</span>
+<span class="sd">                    well known datum ex. WGS84, NAD27, NAD83, etc.</span>
+
+<span class="sd">        **utm_zone** : string</span>
+<span class="sd">                       zone number and &#39;S&#39; or &#39;N&#39; e.g. &#39;55S&#39;. Defaults to the</span>
+<span class="sd">                       centre point of the provided points</span>
+<span class="sd">                       </span>
+<span class="sd">        **epsg** : int</span>
+<span class="sd">                   epsg number defining projection (see </span>
+<span class="sd">                   http://spatialreference.org/ref/ for moreinfo)</span>
+<span class="sd">                   Overrides utm_zone if both are provided</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    --------------</span>
+<span class="sd">        **proj_point**: tuple(easting, northing, zone)</span>
+<span class="sd">                        projected point in UTM in Datum</span>
+<span class="sd">                    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span>
+    <span class="n">lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lon</span><span class="p">)</span>
+
+    <span class="c1"># check length of arrays</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">lon</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;latitude and longitude arrays are of different lengths&quot;</span><span class="p">)</span>
+
+    <span class="c1"># flatten, if necessary</span>
+    <span class="n">flattened</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">llshape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">llshape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">flattened</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">lat</span> <span class="o">=</span> <span class="n">lat</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">lon</span> <span class="o">=</span> <span class="n">lon</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    # check lat/lon values</span>
+<span class="sd">    # this is incredibly slow; disabling for the time being</span>
+<span class="sd">    for ii in range(len(lat)):</span>
+<span class="sd">        lat[ii] = assert_lat_value(lat[ii])</span>
+<span class="sd">        lon[ii] = assert_lon_value(lon[ii])</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="k">if</span> <span class="n">lat</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">lon</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="n">HAS_GDAL</span><span class="p">:</span>
+        <span class="c1"># set utm coordinate system</span>
+        <span class="n">utm_cs</span> <span class="o">=</span> <span class="n">osr</span><span class="o">.</span><span class="n">SpatialReference</span><span class="p">()</span>
+        <span class="n">utm_cs</span><span class="o">.</span><span class="n">SetWellKnownGeogCS</span><span class="p">(</span><span class="n">datum</span><span class="p">)</span>
+
+        <span class="c1"># set lat, lon coordinate system</span>
+        <span class="n">ll_cs</span> <span class="o">=</span> <span class="n">utm_cs</span><span class="o">.</span><span class="n">CloneGeogCS</span><span class="p">()</span>
+        <span class="n">ll_cs</span><span class="o">.</span><span class="n">ExportToPrettyWkt</span><span class="p">()</span>
+    <span class="c1"># end if</span>
+
+    <span class="c1"># get zone number, north and zone name</span>
+    <span class="k">if</span> <span class="n">epsg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">HAS_GDAL</span><span class="p">:</span>
+            <span class="c1"># set projection info</span>
+            <span class="n">ogrerr</span> <span class="o">=</span> <span class="n">utm_cs</span><span class="o">.</span><span class="n">ImportFromEPSG</span><span class="p">(</span><span class="n">epsg</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ogrerr</span> <span class="o">!=</span> <span class="n">OGRERR_NONE</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;GDAL/osgeo ogr error code: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ogrerr</span><span class="p">))</span>
+            <span class="c1"># get utm zone (for information) if applicable</span>
+            <span class="n">utm_zone</span> <span class="o">=</span> <span class="n">utm_cs</span><span class="o">.</span><span class="n">GetUTMZone</span><span class="p">()</span>
+
+            <span class="c1"># Whilst some projections e.g. Geoscience Australia Lambert (epsg3112) do</span>
+            <span class="c1"># not yield UTM zones, they provide eastings and northings for the whole</span>
+            <span class="c1"># Australian region. We therefore set UTM zones, only when a valid UTM zone</span>
+            <span class="c1"># is available</span>
+            <span class="k">if</span><span class="p">(</span><span class="n">utm_zone</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">):</span>
+                <span class="c1"># set projection info</span>
+                <span class="n">utm_cs</span><span class="o">.</span><span class="n">SetUTM</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">utm_zone</span><span class="p">),</span> <span class="n">utm_zone</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pp</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Proj</span><span class="p">(</span><span class="s1">&#39;+init=EPSG:</span><span class="si">%d</span><span class="s1">&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">epsg</span><span class="p">))</span>
+        <span class="c1"># end if</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">utm_zone</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># get zone number and is_northern from utm_zone string</span>
+            <span class="n">zone_number</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">utm_zone</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">is_northern</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">utm_zone</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">&gt;</span> <span class="s1">&#39;n&#39;</span> <span class="k">else</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># get centre point and get zone from that</span>
+            <span class="n">latc</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">lat</span><span class="p">))</span> <span class="o">/</span> <span class="mf">2.</span>
+            <span class="n">lonc</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">lon</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">lon</span><span class="p">))</span> <span class="o">/</span> <span class="mf">2.</span>
+            <span class="n">zone_number</span><span class="p">,</span> <span class="n">is_northern</span><span class="p">,</span> <span class="n">utm_zone</span> <span class="o">=</span> <span class="n">get_utm_zone</span><span class="p">(</span><span class="n">latc</span><span class="p">,</span> <span class="n">lonc</span><span class="p">)</span>
+        <span class="c1"># set projection info</span>
+
+        <span class="k">if</span><span class="p">(</span><span class="n">HAS_GDAL</span><span class="p">):</span>
+            <span class="n">utm_cs</span><span class="o">.</span><span class="n">SetUTM</span><span class="p">(</span><span class="n">zone_number</span><span class="p">,</span> <span class="n">is_northern</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">projstring</span> <span class="o">=</span> <span class="s1">&#39;+proj=utm +zone=</span><span class="si">%d</span><span class="s1"> +</span><span class="si">%s</span><span class="s1"> +datum=</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> \
+                         <span class="p">(</span><span class="n">zone_number</span><span class="p">,</span> <span class="s1">&#39;north&#39;</span> <span class="k">if</span> <span class="n">is_northern</span> <span class="k">else</span> <span class="s1">&#39;south&#39;</span><span class="p">,</span> <span class="n">datum</span><span class="p">)</span>
+            <span class="n">pp</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Proj</span><span class="p">(</span><span class="n">projstring</span><span class="p">)</span>
+        <span class="c1"># end if</span>
+    <span class="c1"># end if</span>
+    
+    <span class="k">if</span> <span class="n">HAS_GDAL</span><span class="p">:</span>
+        <span class="n">ll2utm</span> <span class="o">=</span> <span class="n">osr</span><span class="o">.</span><span class="n">CoordinateTransformation</span><span class="p">(</span><span class="n">ll_cs</span><span class="p">,</span> <span class="n">utm_cs</span><span class="p">)</span><span class="o">.</span><span class="n">TransformPoints</span>
+        <span class="n">easting</span><span class="p">,</span> <span class="n">northing</span><span class="p">,</span> <span class="n">elev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ll2utm</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">])</span><span class="o">.</span><span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ll2utm</span> <span class="o">=</span> <span class="n">pp</span>
+        <span class="n">easting</span><span class="p">,</span> <span class="n">northing</span> <span class="o">=</span> <span class="n">ll2utm</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">)</span>
+    <span class="c1"># end if</span>
+
+    <span class="n">projected_point</span> <span class="o">=</span> <span class="p">(</span><span class="n">easting</span><span class="p">,</span> <span class="n">northing</span><span class="p">,</span> <span class="n">utm_zone</span><span class="p">)</span>
+
+    <span class="c1"># reshape back into original shape</span>
+    <span class="k">if</span> <span class="n">flattened</span><span class="p">:</span>
+        <span class="n">lat</span> <span class="o">=</span> <span class="n">lat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">llshape</span><span class="p">)</span>
+        <span class="n">lon</span> <span class="o">=</span> <span class="n">lon</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">llshape</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">projected_point</span></div>
+<span class="c1"># end func</span>
+
+<span class="c1"># =================================</span>
+<span class="c1"># functions from latlon_utm_conversion.py</span>
+
+
+<span class="n">_deg2rad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">180.0</span>
+<span class="n">_rad2deg</span> <span class="o">=</span> <span class="mf">180.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">_equatorial_radius</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">_eccentricity_squared</span> <span class="o">=</span> <span class="mi">3</span>
+
+<span class="n">_ellipsoid</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="c1">#  id, Ellipsoid name, Equatorial Radius, square of eccentricity</span>
+    <span class="c1"># first once is a placeholder only, To allow array indices to match id</span>
+    <span class="c1"># numbers</span>
+    <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Placeholder&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Airy&quot;</span><span class="p">,</span> <span class="mi">6377563</span><span class="p">,</span> <span class="mf">0.00667054</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;Australian National&quot;</span><span class="p">,</span> <span class="mi">6378160</span><span class="p">,</span> <span class="mf">0.006694542</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;Bessel 1841&quot;</span><span class="p">,</span> <span class="mi">6377397</span><span class="p">,</span> <span class="mf">0.006674372</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="s2">&quot;Bessel 1841 (Nambia] &quot;</span><span class="p">,</span> <span class="mi">6377484</span><span class="p">,</span> <span class="mf">0.006674372</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="s2">&quot;Clarke 1866&quot;</span><span class="p">,</span> <span class="mi">6378206</span><span class="p">,</span> <span class="mf">0.006768658</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="s2">&quot;Clarke 1880&quot;</span><span class="p">,</span> <span class="mi">6378249</span><span class="p">,</span> <span class="mf">0.006803511</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="s2">&quot;Everest&quot;</span><span class="p">,</span> <span class="mi">6377276</span><span class="p">,</span> <span class="mf">0.006637847</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="s2">&quot;Fischer 1960 (Mercury] &quot;</span><span class="p">,</span> <span class="mi">6378166</span><span class="p">,</span> <span class="mf">0.006693422</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="s2">&quot;Fischer 1968&quot;</span><span class="p">,</span> <span class="mi">6378150</span><span class="p">,</span> <span class="mf">0.006693422</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="s2">&quot;GRS 1967&quot;</span><span class="p">,</span> <span class="mi">6378160</span><span class="p">,</span> <span class="mf">0.006694605</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">11</span><span class="p">,</span> <span class="s2">&quot;GRS 1980&quot;</span><span class="p">,</span> <span class="mi">6378137</span><span class="p">,</span> <span class="mf">0.00669438</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">12</span><span class="p">,</span> <span class="s2">&quot;Helmert 1906&quot;</span><span class="p">,</span> <span class="mi">6378200</span><span class="p">,</span> <span class="mf">0.006693422</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">13</span><span class="p">,</span> <span class="s2">&quot;Hough&quot;</span><span class="p">,</span> <span class="mi">6378270</span><span class="p">,</span> <span class="mf">0.00672267</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">14</span><span class="p">,</span> <span class="s2">&quot;International&quot;</span><span class="p">,</span> <span class="mi">6378388</span><span class="p">,</span> <span class="mf">0.00672267</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">15</span><span class="p">,</span> <span class="s2">&quot;Krassovsky&quot;</span><span class="p">,</span> <span class="mi">6378245</span><span class="p">,</span> <span class="mf">0.006693422</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="s2">&quot;Modified Airy&quot;</span><span class="p">,</span> <span class="mi">6377340</span><span class="p">,</span> <span class="mf">0.00667054</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">17</span><span class="p">,</span> <span class="s2">&quot;Modified Everest&quot;</span><span class="p">,</span> <span class="mi">6377304</span><span class="p">,</span> <span class="mf">0.006637847</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">18</span><span class="p">,</span> <span class="s2">&quot;Modified Fischer 1960&quot;</span><span class="p">,</span> <span class="mi">6378155</span><span class="p">,</span> <span class="mf">0.006693422</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">19</span><span class="p">,</span> <span class="s2">&quot;South American 1969&quot;</span><span class="p">,</span> <span class="mi">6378160</span><span class="p">,</span> <span class="mf">0.006694542</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;WGS 60&quot;</span><span class="p">,</span> <span class="mi">6378165</span><span class="p">,</span> <span class="mf">0.006693422</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">21</span><span class="p">,</span> <span class="s2">&quot;WGS 66&quot;</span><span class="p">,</span> <span class="mi">6378145</span><span class="p">,</span> <span class="mf">0.006694542</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">22</span><span class="p">,</span> <span class="s2">&quot;WGS-72&quot;</span><span class="p">,</span> <span class="mi">6378135</span><span class="p">,</span> <span class="mf">0.006694318</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">23</span><span class="p">,</span> <span class="s2">&quot;WGS-84&quot;</span><span class="p">,</span> <span class="mi">6378137</span><span class="p">,</span> <span class="mf">0.00669438</span><span class="p">]</span>
+<span class="p">]</span>
+
+
+<span class="c1"># Reference ellipsoids derived from Peter H. Dana&#39;s website-</span>
+<span class="c1"># http://www.utexas.edu/depts/grg/gcraft/notes/datum/elist.html</span>
+<span class="c1"># Department of Geography, University of Texas at Austin</span>
+<span class="c1"># Internet: pdana@mail.utexas.edu</span>
+<span class="c1"># 3/22/95</span>
+
+<span class="c1"># Source</span>
+<span class="c1"># Defense Mapping Agency. 1987b. DMA Technical Report: Supplement to Department of Defense World Geodetic System</span>
+<span class="c1"># 1984 Technical Report. Part I and II. Washington, DC: Defense Mapping Agency</span>
+
+<span class="c1"># @deprecated(&quot;This function may be removed in later release. mtpy.utils.gis_tools.project_point_ll2utm() should be &quot;</span>
+<span class="c1">#             &quot;used instead.&quot;)</span>
+<div class="viewcode-block" id="ll_to_utm"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.ll_to_utm">[docs]</a><span class="k">def</span> <span class="nf">ll_to_utm</span><span class="p">(</span><span class="n">reference_ellipsoid</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    converts lat/long to UTM coords.  Equations from USGS Bulletin 1532</span>
+<span class="sd">    East Longitudes are positive, West longitudes are negative.</span>
+<span class="sd">    North latitudes are positive, South latitudes are negative</span>
+<span class="sd">    Lat and Long are in decimal degrees</span>
+<span class="sd">    Written by Chuck Gantz- chuck.gantz@globalstar.com</span>
+
+<span class="sd">    Outputs:</span>
+<span class="sd">        UTMzone, easting, northing&quot;&quot;&quot;</span>
+
+    <span class="n">a</span> <span class="o">=</span> <span class="n">_ellipsoid</span><span class="p">[</span><span class="n">reference_ellipsoid</span><span class="p">][</span><span class="n">_equatorial_radius</span><span class="p">]</span>
+    <span class="n">ecc_squared</span> <span class="o">=</span> <span class="n">_ellipsoid</span><span class="p">[</span><span class="n">reference_ellipsoid</span><span class="p">][</span><span class="n">_eccentricity_squared</span><span class="p">]</span>
+    <span class="n">k0</span> <span class="o">=</span> <span class="mf">0.9996</span>
+
+    <span class="c1"># Make sure the longitude is between -180.00 .. 179.9</span>
+    <span class="n">long_temp</span> <span class="o">=</span> <span class="p">(</span><span class="n">lon</span> <span class="o">+</span> <span class="mi">180</span><span class="p">)</span> <span class="o">-</span> <span class="nb">int</span><span class="p">((</span><span class="n">lon</span> <span class="o">+</span> <span class="mi">180</span><span class="p">)</span> <span class="o">/</span> <span class="mi">360</span><span class="p">)</span> <span class="o">*</span> <span class="mi">360</span> <span class="o">-</span> <span class="mi">180</span>  <span class="c1"># -180.00 .. 179.9</span>
+
+    <span class="n">lat_rad</span> <span class="o">=</span> <span class="n">lat</span> <span class="o">*</span> <span class="n">_deg2rad</span>
+    <span class="n">long_rad</span> <span class="o">=</span> <span class="n">long_temp</span> <span class="o">*</span> <span class="n">_deg2rad</span>
+
+    <span class="n">zone_number</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">long_temp</span> <span class="o">+</span> <span class="mi">180</span><span class="p">)</span> <span class="o">/</span> <span class="mi">6</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="k">if</span> <span class="mf">56.0</span> <span class="o">&lt;=</span> <span class="n">lat</span> <span class="o">&lt;</span> <span class="mf">64.0</span> <span class="ow">and</span> <span class="mf">3.0</span> <span class="o">&lt;=</span> <span class="n">long_temp</span> <span class="o">&lt;</span> <span class="mf">12.0</span><span class="p">:</span>
+        <span class="n">zone_number</span> <span class="o">=</span> <span class="mi">32</span>
+
+    <span class="c1"># Special zones for Svalbard</span>
+    <span class="k">if</span> <span class="mf">72.0</span> <span class="o">&lt;=</span> <span class="n">lat</span> <span class="o">&lt;</span> <span class="mf">84.0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="mf">0.0</span> <span class="o">&lt;=</span> <span class="n">long_temp</span> <span class="o">&lt;</span> <span class="mf">9.0</span><span class="p">:</span>
+            <span class="n">zone_number</span> <span class="o">=</span> <span class="mi">31</span>
+        <span class="k">elif</span> <span class="mf">9.0</span> <span class="o">&lt;=</span> <span class="n">long_temp</span> <span class="o">&lt;</span> <span class="mf">21.0</span><span class="p">:</span>
+            <span class="n">zone_number</span> <span class="o">=</span> <span class="mi">33</span>
+        <span class="k">elif</span> <span class="mf">21.0</span> <span class="o">&lt;=</span> <span class="n">long_temp</span> <span class="o">&lt;</span> <span class="mf">33.0</span><span class="p">:</span>
+            <span class="n">zone_number</span> <span class="o">=</span> <span class="mi">35</span>
+        <span class="k">elif</span> <span class="mf">33.0</span> <span class="o">&lt;=</span> <span class="n">long_temp</span> <span class="o">&lt;</span> <span class="mf">42.0</span><span class="p">:</span>
+            <span class="n">zone_number</span> <span class="o">=</span> <span class="mi">37</span>
+
+    <span class="n">long_origin</span> <span class="o">=</span> <span class="p">(</span><span class="n">zone_number</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">6</span> <span class="o">-</span> <span class="mi">180</span> <span class="o">+</span> <span class="mi">3</span>  <span class="c1"># +3 puts origin in middle of zone</span>
+    <span class="n">long_origin_rad</span> <span class="o">=</span> <span class="n">long_origin</span> <span class="o">*</span> <span class="n">_deg2rad</span>
+
+    <span class="c1"># compute the UTM Zone from the latitude and longitude</span>
+    <span class="n">utm_zone</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%d%c</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">zone_number</span><span class="p">,</span> <span class="n">_utm_letter_designator</span><span class="p">(</span><span class="n">lat</span><span class="p">))</span>
+
+    <span class="n">ecc_prime_squared</span> <span class="o">=</span> <span class="n">ecc_squared</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">ecc_squared</span><span class="p">)</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="n">a</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">ecc_squared</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">lat_rad</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">T</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">lat_rad</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">ecc_prime_squared</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">lat_rad</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">lat_rad</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">long_rad</span> <span class="o">-</span> <span class="n">long_origin_rad</span><span class="p">)</span>
+
+    <span class="n">M</span> <span class="o">=</span> <span class="n">a</span> <span class="o">*</span> <span class="p">(</span>
+        <span class="p">(</span><span class="mi">1</span>
+         <span class="o">-</span> <span class="n">ecc_squared</span> <span class="o">/</span> <span class="mi">4</span>
+         <span class="o">-</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">ecc_squared</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">64</span>
+         <span class="o">-</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">ecc_squared</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">256</span><span class="p">)</span> <span class="o">*</span> <span class="n">lat_rad</span>
+        <span class="o">-</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">ecc_squared</span> <span class="o">/</span> <span class="mi">8</span>
+           <span class="o">+</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">ecc_squared</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">32</span>
+           <span class="o">+</span> <span class="mi">45</span> <span class="o">*</span> <span class="n">ecc_squared</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">lat_rad</span><span class="p">)</span>
+        <span class="o">+</span> <span class="p">(</span><span class="mi">15</span> <span class="o">*</span> <span class="n">ecc_squared</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">256</span>
+           <span class="o">+</span> <span class="mi">45</span> <span class="o">*</span> <span class="n">ecc_squared</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">lat_rad</span><span class="p">)</span>
+        <span class="o">-</span> <span class="p">(</span><span class="mi">35</span> <span class="o">*</span> <span class="n">ecc_squared</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">3072</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">6</span> <span class="o">*</span> <span class="n">lat_rad</span><span class="p">))</span>
+
+    <span class="n">utm_easting</span> <span class="o">=</span> <span class="p">(</span><span class="n">k0</span> <span class="o">*</span> <span class="n">N</span> <span class="o">*</span> <span class="p">(</span><span class="n">A</span>
+                             <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">T</span> <span class="o">+</span> <span class="n">C</span><span class="p">)</span> <span class="o">*</span> <span class="n">A</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">6</span>
+                             <span class="o">+</span> <span class="p">(</span><span class="mi">5</span> <span class="o">-</span> <span class="mi">18</span> <span class="o">*</span> <span class="n">T</span>
+                                <span class="o">+</span> <span class="n">T</span> <span class="o">**</span> <span class="mi">2</span>
+                                <span class="o">+</span> <span class="mi">72</span> <span class="o">*</span> <span class="n">C</span>
+                                <span class="o">-</span> <span class="mi">58</span> <span class="o">*</span> <span class="n">ecc_prime_squared</span><span class="p">)</span> <span class="o">*</span> <span class="n">A</span> <span class="o">**</span> <span class="mi">5</span> <span class="o">/</span> <span class="mi">120</span><span class="p">)</span>
+                   <span class="o">+</span> <span class="mf">500000.0</span><span class="p">)</span>
+
+    <span class="n">utm_northing</span> <span class="o">=</span> <span class="p">(</span><span class="n">k0</span> <span class="o">*</span> <span class="p">(</span><span class="n">M</span>
+                          <span class="o">+</span> <span class="n">N</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">lat_rad</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">A</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">2</span>
+                                                   <span class="o">+</span> <span class="p">(</span><span class="mi">5</span>
+                                                      <span class="o">-</span> <span class="n">T</span>
+                                                      <span class="o">+</span> <span class="mi">9</span> <span class="o">*</span> <span class="n">C</span>
+                                                      <span class="o">+</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">C</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">A</span> <span class="o">**</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">24</span>
+                                                   <span class="o">+</span> <span class="p">(</span><span class="mi">61</span>
+                                                      <span class="o">-</span> <span class="mi">58</span> <span class="o">*</span> <span class="n">T</span>
+                                                      <span class="o">+</span> <span class="n">T</span> <span class="o">**</span> <span class="mi">2</span>
+                                                      <span class="o">+</span> <span class="mi">600</span> <span class="o">*</span> <span class="n">C</span>
+                                                      <span class="o">-</span> <span class="mi">330</span> <span class="o">*</span> <span class="n">ecc_prime_squared</span><span class="p">)</span> <span class="o">*</span> <span class="n">A</span> <span class="o">**</span> <span class="mi">6</span> <span class="o">/</span> <span class="mi">720</span><span class="p">)))</span>
+
+    <span class="k">if</span> <span class="n">lat</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">utm_northing</span> <span class="o">=</span> <span class="n">utm_northing</span> <span class="o">+</span> <span class="mf">10000000.0</span>  <span class="c1"># 10000000 meter offset for southern hemisphere</span>
+    <span class="k">return</span> <span class="n">utm_zone</span><span class="p">,</span> <span class="n">utm_easting</span><span class="p">,</span> <span class="n">utm_northing</span></div>
+
+
+<span class="k">def</span> <span class="nf">_utm_letter_designator</span><span class="p">(</span><span class="n">lat</span><span class="p">):</span>
+    <span class="c1"># This routine determines the correct UTM letter designator for the given latitude</span>
+    <span class="c1"># returns &#39;Z&#39; if latitude is outside the UTM limits of 84N to 80S</span>
+    <span class="c1"># Written by Chuck Gantz- chuck.gantz@globalstar.com</span>
+
+    <span class="k">if</span> <span class="mi">84</span> <span class="o">&gt;=</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="mi">72</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;X&#39;</span>
+    <span class="k">elif</span> <span class="mi">72</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="mi">64</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;W&#39;</span>
+    <span class="k">elif</span> <span class="mi">64</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="mi">56</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;V&#39;</span>
+    <span class="k">elif</span> <span class="mi">56</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="mi">48</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;U&#39;</span>
+    <span class="k">elif</span> <span class="mi">48</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="mi">40</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;T&#39;</span>
+    <span class="k">elif</span> <span class="mi">40</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="mi">32</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;S&#39;</span>
+    <span class="k">elif</span> <span class="mi">32</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="mi">24</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;R&#39;</span>
+    <span class="k">elif</span> <span class="mi">24</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="mi">16</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;Q&#39;</span>
+    <span class="k">elif</span> <span class="mi">16</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="mi">8</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;P&#39;</span>
+    <span class="k">elif</span> <span class="mi">8</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;N&#39;</span>
+    <span class="k">elif</span> <span class="mi">0</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">8</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;M&#39;</span>
+    <span class="k">elif</span> <span class="o">-</span><span class="mi">8</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">16</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;L&#39;</span>
+    <span class="k">elif</span> <span class="o">-</span><span class="mi">16</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">24</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;K&#39;</span>
+    <span class="k">elif</span> <span class="o">-</span><span class="mi">24</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">32</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;J&#39;</span>
+    <span class="k">elif</span> <span class="o">-</span><span class="mi">32</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">40</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;H&#39;</span>
+    <span class="k">elif</span> <span class="o">-</span><span class="mi">40</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">48</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;G&#39;</span>
+    <span class="k">elif</span> <span class="o">-</span><span class="mi">48</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">56</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;F&#39;</span>
+    <span class="k">elif</span> <span class="o">-</span><span class="mi">56</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">64</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;E&#39;</span>
+    <span class="k">elif</span> <span class="o">-</span><span class="mi">64</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">72</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;D&#39;</span>
+    <span class="k">elif</span> <span class="o">-</span><span class="mi">72</span> <span class="o">&gt;</span> <span class="n">lat</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">80</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;C&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;Z&#39;</span>  <span class="c1"># if the Latitude is outside the UTM limits</span>
+
+
+<span class="c1"># @deprecated(&quot;This function may be removed in later release. mtpy.utils.gis_tools.project_point_utm2ll() should be &quot;</span>
+<span class="c1">#             &quot;used instead.&quot;)</span>
+<div class="viewcode-block" id="utm_to_ll"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.utm_to_ll">[docs]</a><span class="k">def</span> <span class="nf">utm_to_ll</span><span class="p">(</span><span class="n">reference_ellipsoid</span><span class="p">,</span> <span class="n">northing</span><span class="p">,</span> <span class="n">easting</span><span class="p">,</span> <span class="n">zone</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    converts UTM coords to lat/long.  Equations from USGS Bulletin 1532</span>
+<span class="sd">    East Longitudes are positive, West longitudes are negative.</span>
+<span class="sd">    North latitudes are positive, South latitudes are negative</span>
+<span class="sd">    Lat and Long are in decimal degrees.</span>
+<span class="sd">    Written by Chuck Gantz- chuck.gantz@globalstar.com</span>
+<span class="sd">    Converted to Python by Russ Nelson &lt;nelson@crynwr.com&gt;</span>
+
+<span class="sd">    Outputs:</span>
+<span class="sd">        Lat,Lon</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">k0</span> <span class="o">=</span> <span class="mf">0.9996</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">_ellipsoid</span><span class="p">[</span><span class="n">reference_ellipsoid</span><span class="p">][</span><span class="n">_equatorial_radius</span><span class="p">]</span>
+    <span class="n">ecc_squared</span> <span class="o">=</span> <span class="n">_ellipsoid</span><span class="p">[</span><span class="n">reference_ellipsoid</span><span class="p">][</span><span class="n">_eccentricity_squared</span><span class="p">]</span>
+    <span class="n">e1</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">ecc_squared</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">ecc_squared</span><span class="p">))</span>
+    <span class="c1"># NorthernHemisphere; //1 for northern hemispher, 0 for southern</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">easting</span> <span class="o">-</span> <span class="mf">500000.0</span>  <span class="c1"># remove 500,000 meter offset for longitude</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">northing</span>
+
+    <span class="n">zone_letter</span> <span class="o">=</span> <span class="n">zone</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">zone_number</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">zone</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">zone_letter</span> <span class="o">&gt;=</span> <span class="s1">&#39;N&#39;</span><span class="p">:</span>
+        <span class="n">NorthernHemisphere</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># point is in northern hemisphere</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">NorthernHemisphere</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># point is in southern hemisphere</span>
+        <span class="n">y</span> <span class="o">-=</span> <span class="mf">10000000.0</span>  <span class="c1"># remove 10,000,000 meter offset used for southern hemisphere</span>
+
+    <span class="c1"># +3 puts origin in middle of zone</span>
+    <span class="n">long_origin</span> <span class="o">=</span> <span class="p">(</span><span class="n">zone_number</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">6</span> <span class="o">-</span> <span class="mi">180</span> <span class="o">+</span> <span class="mi">3</span>
+
+    <span class="n">ecc_prime_squared</span> <span class="o">=</span> <span class="n">ecc_squared</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">ecc_squared</span><span class="p">)</span>
+
+    <span class="n">M</span> <span class="o">=</span> <span class="n">y</span> <span class="o">/</span> <span class="n">k0</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">M</span> <span class="o">/</span> <span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">ecc_squared</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">-</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">ecc_squared</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span>
+                   <span class="mi">64</span> <span class="o">-</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">ecc_squared</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">256</span><span class="p">))</span>
+
+    <span class="n">phi1_rad</span> <span class="o">=</span> <span class="p">(</span><span class="n">mu</span> <span class="o">+</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">e1</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">27</span> <span class="o">*</span> <span class="n">e1</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">32</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">mu</span><span class="p">)</span>
+                <span class="o">+</span> <span class="p">(</span><span class="mi">21</span> <span class="o">*</span> <span class="n">e1</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">16</span> <span class="o">-</span> <span class="mi">55</span> <span class="o">*</span> <span class="n">e1</span> <span class="o">**</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">32</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">mu</span><span class="p">)</span>
+                <span class="o">+</span> <span class="p">(</span><span class="mi">151</span> <span class="o">*</span> <span class="n">e1</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">96</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">6</span> <span class="o">*</span> <span class="n">mu</span><span class="p">))</span>
+    <span class="n">phi1</span> <span class="o">=</span> <span class="n">phi1_rad</span> <span class="o">*</span> <span class="n">_rad2deg</span>
+
+    <span class="n">n1</span> <span class="o">=</span> <span class="n">a</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">ecc_squared</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi1_rad</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">t1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">phi1_rad</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">c1</span> <span class="o">=</span> <span class="n">ecc_prime_squared</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi1_rad</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">r1</span> <span class="o">=</span> <span class="n">a</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">ecc_squared</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">ecc_squared</span> <span class="o">*</span>
+                                          <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi1_rad</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">x</span> <span class="o">/</span> <span class="p">(</span><span class="n">n1</span> <span class="o">*</span> <span class="n">k0</span><span class="p">)</span>
+
+    <span class="n">lat</span> <span class="o">=</span> <span class="n">phi1_rad</span> <span class="o">-</span> <span class="p">(</span><span class="n">n1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">phi1_rad</span><span class="p">)</span> <span class="o">/</span> <span class="n">r1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+        <span class="n">d</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">-</span> <span class="p">(</span><span class="mi">5</span> <span class="o">+</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">t1</span> <span class="o">+</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">c1</span> <span class="o">-</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">c1</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">9</span> <span class="o">*</span> <span class="n">ecc_prime_squared</span><span class="p">)</span> <span class="o">*</span> <span class="n">d</span> <span class="o">**</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">24</span>
+        <span class="o">+</span> <span class="p">(</span>
+            <span class="mi">61</span> <span class="o">+</span> <span class="mi">90</span> <span class="o">*</span> <span class="n">t1</span> <span class="o">+</span> <span class="mi">298</span> <span class="o">*</span> <span class="n">c1</span> <span class="o">+</span> <span class="mi">45</span> <span class="o">*</span> <span class="n">t1</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">252</span> <span class="o">*</span> <span class="n">ecc_prime_squared</span> <span class="o">-</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">c1</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">d</span> <span class="o">**</span> <span class="mi">6</span> <span class="o">/</span> <span class="mi">720</span><span class="p">)</span>
+    <span class="n">lat</span> <span class="o">=</span> <span class="n">lat</span> <span class="o">*</span> <span class="n">_rad2deg</span>
+
+    <span class="n">lon</span> <span class="o">=</span> <span class="p">(</span><span class="n">d</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">t1</span> <span class="o">+</span> <span class="n">c1</span><span class="p">)</span> <span class="o">*</span> <span class="n">d</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">6</span> <span class="o">+</span> <span class="p">(</span>
+        <span class="mi">5</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">c1</span> <span class="o">+</span> <span class="mi">28</span> <span class="o">*</span> <span class="n">t1</span> <span class="o">-</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">c1</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="n">ecc_prime_squared</span> <span class="o">+</span> <span class="mi">24</span> <span class="o">*</span> <span class="n">t1</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+           <span class="o">*</span> <span class="n">d</span> <span class="o">**</span> <span class="mi">5</span> <span class="o">/</span> <span class="mi">120</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi1_rad</span><span class="p">)</span>
+    <span class="n">lon</span> <span class="o">=</span> <span class="n">long_origin</span> <span class="o">+</span> <span class="n">lon</span> <span class="o">*</span> <span class="n">_rad2deg</span>
+    <span class="k">return</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span></div>
+
+<span class="c1"># http://spatialreference.org/ref/epsg/28350/proj4/</span>
+<span class="n">epsg_dict</span> <span class="o">=</span> <span class="p">{</span><span class="mi">28350</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=50 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">50</span><span class="p">],</span>
+             <span class="mi">28351</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=51 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">51</span><span class="p">],</span>
+             <span class="mi">28352</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=52 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">52</span><span class="p">],</span>
+             <span class="mi">28353</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=53 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">53</span><span class="p">],</span>
+             <span class="mi">28354</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=54 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">54</span><span class="p">],</span>
+             <span class="mi">28355</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=55 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">55</span><span class="p">],</span>
+             <span class="mi">28356</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=56 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">56</span><span class="p">],</span>
+             <span class="mi">3112</span><span class="p">:</span> <span class="p">[</span>
+                 <span class="s1">&#39;+proj=lcc +lat_1=-18 +lat_2=-36 +lat_0=0 +lon_0=134 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs&#39;</span><span class="p">,</span>
+                 <span class="mi">0</span><span class="p">],</span>
+             <span class="mi">4326</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+             <span class="mi">32609</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=9 +ellps=WGS84 +datum=WGS84 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span>
+             <span class="mi">32610</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=10 +ellps=WGS84 +datum=WGS84 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+             <span class="mi">32611</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=11 +ellps=WGS84 +datum=WGS84 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">11</span><span class="p">],</span>
+             <span class="mi">32612</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=12 +ellps=WGS84 +datum=WGS84 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">12</span><span class="p">],</span>
+             <span class="mi">32613</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=13 +ellps=WGS84 +datum=WGS84 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">13</span><span class="p">],</span>
+             <span class="mi">32614</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=14 +ellps=WGS84 +datum=WGS84 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">14</span><span class="p">],</span>
+             <span class="mi">32615</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=15 +ellps=WGS84 +datum=WGS84 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">15</span><span class="p">],</span>
+             <span class="mi">32616</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=16 +ellps=WGS84 +datum=WGS84 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">16</span><span class="p">],</span>
+             <span class="mi">32617</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=17 +ellps=WGS84 +datum=WGS84 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">17</span><span class="p">],</span>
+             <span class="mi">32618</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=18 +ellps=WGS84 +datum=WGS84 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">18</span><span class="p">],</span>
+             <span class="mi">32619</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs&#39;</span><span class="p">,</span> <span class="mi">19</span><span class="p">]</span>
+             <span class="p">}</span>
+
+<div class="viewcode-block" id="epsg_project"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.epsg_project">[docs]</a><span class="k">def</span> <span class="nf">epsg_project</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">epsg_from</span><span class="p">,</span> <span class="n">epsg_to</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    project some xy points using the pyproj modules</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">pyproj</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;please install pyproj&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">epsg_from</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">p1</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Proj</span><span class="p">(</span><span class="n">EPSG_DICT</span><span class="p">[</span><span class="n">epsg_from</span><span class="p">])</span>
+            <span class="n">p2</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Proj</span><span class="p">(</span><span class="n">EPSG_DICT</span><span class="p">[</span><span class="n">epsg_to</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Surface or data epsg either not in dictionary or None&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+    <span class="k">return</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="utm_wgs84_conv"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.utm_wgs84_conv">[docs]</a><span class="k">def</span> <span class="nf">utm_wgs84_conv</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Bidirectional UTM-WGS84 converter https://github.com/Turbo87/utm/blob/master/utm/conversion.py</span>
+<span class="sd">    :param lat:</span>
+<span class="sd">    :param lon:</span>
+<span class="sd">    :return: tuple(e, n, zone, lett)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="kn">import</span> <span class="nn">utm</span>  <span class="c1"># pip install utm</span>
+    <span class="n">tup</span> <span class="o">=</span> <span class="n">utm</span><span class="o">.</span><span class="n">from_latlon</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span>
+
+    <span class="p">(</span><span class="n">new_lat</span><span class="p">,</span> <span class="n">new_lon</span><span class="p">)</span> <span class="o">=</span> <span class="n">utm</span><span class="o">.</span><span class="n">to_latlon</span><span class="p">(</span><span class="n">tup</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tup</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">tup</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">tup</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+    <span class="c1"># print (new_lat,new_lon)  # should be same as the input param</span>
+
+    <span class="c1"># checking correctess</span>
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">lat</span> <span class="o">-</span> <span class="n">new_lat</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">e</span> <span class="o">-</span> <span class="mi">10</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: lat and new_lat should be equal!&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">lon</span> <span class="o">-</span> <span class="n">new_lon</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">e</span> <span class="o">-</span> <span class="mi">10</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: lon and new_lon should be equal!&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">tup</span></div>
+
+
+<span class="c1">#@gdal_data_check</span>
+<span class="c1">#@deprecated(&quot;This function may be removed in later release. mtpy.utils.gis_tools.project_point_utm2ll() should be &quot;</span>
+<span class="c1">#            &quot;used instead.&quot;)</span>
+<span class="k">def</span> <span class="nf">transform_utm_to_ll</span><span class="p">(</span><span class="n">easting</span><span class="p">,</span> <span class="n">northing</span><span class="p">,</span> <span class="n">zone</span><span class="p">,</span>
+                        <span class="n">reference_ellipsoid</span><span class="o">=</span><span class="s1">&#39;WGS84&#39;</span><span class="p">):</span>
+    <span class="n">utm_coordinate_system</span> <span class="o">=</span> <span class="n">osr</span><span class="o">.</span><span class="n">SpatialReference</span><span class="p">()</span>
+    <span class="c1"># Set geographic coordinate system to handle lat/lon</span>
+    <span class="n">utm_coordinate_system</span><span class="o">.</span><span class="n">SetWellKnownGeogCS</span><span class="p">(</span><span class="n">reference_ellipsoid</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">zone_number</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">zone</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">zone_letter</span> <span class="o">=</span> <span class="n">zone</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Zone number </span><span class="si">{0}</span><span class="s1"> is not a number&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">zone</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">is_northern</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">zone_letter</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="s1">&#39;n&#39;</span> <span class="k">else</span> <span class="kc">False</span>
+
+    <span class="n">utm_coordinate_system</span><span class="o">.</span><span class="n">SetUTM</span><span class="p">(</span><span class="n">zone_number</span><span class="p">,</span> <span class="n">is_northern</span><span class="p">)</span>
+
+    <span class="c1"># Clone ONLY the geographic coordinate system</span>
+    <span class="n">ll_coordinate_system</span> <span class="o">=</span> <span class="n">utm_coordinate_system</span><span class="o">.</span><span class="n">CloneGeogCS</span><span class="p">()</span>
+
+    <span class="c1"># create transform component</span>
+    <span class="n">utm_to_ll_geo_transform</span> <span class="o">=</span> <span class="n">osr</span><span class="o">.</span><span class="n">CoordinateTransformation</span><span class="p">(</span><span class="n">utm_coordinate_system</span><span class="p">,</span>
+                                                           <span class="n">ll_coordinate_system</span><span class="p">)</span>
+    <span class="c1"># returns lon, lat, altitude</span>
+    <span class="k">return</span> <span class="n">utm_to_ll_geo_transform</span><span class="o">.</span><span class="n">TransformPoint</span><span class="p">(</span><span class="n">easting</span><span class="p">,</span> <span class="n">northing</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+
+<span class="c1">#@gdal_data_check</span>
+<div class="viewcode-block" id="transform_ll_to_utm"><a class="viewcode-back" href="../../../utils.html#csamtpy.utils.gis_tools.transform_ll_to_utm">[docs]</a><span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;This function may be removed in later release. mtpy.utils.gis_tools.project_point_ll2utm() should be &quot;</span>
+            <span class="s2">&quot;used instead.&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">transform_ll_to_utm</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">reference_ellipsoid</span><span class="o">=</span><span class="s1">&#39;WGS84&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    transform a (lon,lat) to  a UTM coordinate.</span>
+<span class="sd">    The UTM zone number will be determined by longitude. South-North will be determined by Lat.</span>
+<span class="sd">    :param lon: degree</span>
+<span class="sd">    :param lat: degree</span>
+<span class="sd">    :param reference_ellipsoid:</span>
+<span class="sd">    :return: utm_coordinate_system, utm_point</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">get_utm_zone</span><span class="p">(</span><span class="n">longitude</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="p">(</span><span class="n">longitude</span> <span class="o">+</span> <span class="mf">180.0</span><span class="p">)</span> <span class="o">/</span> <span class="mf">6.0</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">is_northern</span><span class="p">(</span><span class="n">latitude</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Determines if given latitude is a northern for UTM</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># if (latitude &lt; 0.0):</span>
+        <span class="c1">#     return 0</span>
+        <span class="c1"># else:</span>
+        <span class="c1">#     return 1</span>
+        <span class="k">return</span> <span class="n">latitude</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+
+    <span class="n">utm_coordinate_system</span> <span class="o">=</span> <span class="n">osr</span><span class="o">.</span><span class="n">SpatialReference</span><span class="p">()</span>
+    <span class="c1"># Set geographic coordinate system to handle lat/lon</span>
+    <span class="n">utm_coordinate_system</span><span class="o">.</span><span class="n">SetWellKnownGeogCS</span><span class="p">(</span><span class="n">reference_ellipsoid</span><span class="p">)</span>
+    <span class="n">utm_coordinate_system</span><span class="o">.</span><span class="n">SetUTM</span><span class="p">(</span><span class="n">get_utm_zone</span><span class="p">(</span><span class="n">lon</span><span class="p">),</span> <span class="n">is_northern</span><span class="p">(</span><span class="n">lat</span><span class="p">))</span>
+
+    <span class="c1"># Clone ONLY the geographic coordinate system</span>
+    <span class="n">ll_coordinate_system</span> <span class="o">=</span> <span class="n">utm_coordinate_system</span><span class="o">.</span><span class="n">CloneGeogCS</span><span class="p">()</span>
+    <span class="c1"># create transform component</span>
+    <span class="n">ll_to_utm_geo_transform</span> <span class="o">=</span> <span class="n">osr</span><span class="o">.</span><span class="n">CoordinateTransformation</span><span class="p">(</span><span class="n">ll_coordinate_system</span><span class="p">,</span>
+                                                           <span class="n">utm_coordinate_system</span><span class="p">)</span>
+
+    <span class="n">utm_point</span> <span class="o">=</span> <span class="n">ll_to_utm_geo_transform</span><span class="o">.</span><span class="n">TransformPoint</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># returns easting, northing, altitude</span>
+    <span class="k">return</span> <span class="n">utm_coordinate_system</span><span class="p">,</span> <span class="n">utm_point</span></div>
+
+
+
+<span class="c1">#################################################################</span>
+<span class="c1"># Example usages of this script/module</span>
+<span class="c1"># python gis_tools.py</span>
+<span class="c1">#=================================================================</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="n">mylat</span><span class="o">=-</span><span class="mf">35.0</span>
+    <span class="n">mylon</span><span class="o">=</span><span class="mf">149.5</span>
+    <span class="n">utm</span> <span class="o">=</span> <span class="n">project_point_ll2utm</span><span class="p">(</span><span class="n">mylat</span><span class="p">,</span> <span class="n">mylon</span><span class="p">)</span>
+    <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;project_point_ll2utm(mylat, mylon) =:  &quot;</span><span class="p">,</span> <span class="n">utm</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">HAS_GDAL</span><span class="p">:</span>
+        <span class="n">utm2</span> <span class="o">=</span> <span class="n">transform_ll_to_utm</span><span class="p">(</span><span class="n">mylon</span><span class="p">,</span> <span class="n">mylat</span><span class="p">)</span>
+        <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;The transform_ll_to_utm(mylon, mylat) results lat, long, elev =: &quot;</span><span class="p">,</span> <span class="n">utm2</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">spref_obj</span><span class="o">=</span><span class="n">utm2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The spatial ref string =:&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">spref_obj</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The spatial ref WKT format =:&quot;</span><span class="p">,</span> <span class="n">spref_obj</span><span class="o">.</span><span class="n">ExportToWkt</span><span class="p">())</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;*********  Details of the spatial reference object ***************&quot;</span><span class="p">)</span>
+        <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;spref.GetAttrValue(&#39;projcs&#39;)&quot;</span><span class="p">,</span> <span class="n">spref_obj</span><span class="o">.</span><span class="n">GetAttrValue</span><span class="p">(</span><span class="s1">&#39;projcs&#39;</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span> <span class="s2">&quot;spref.GetUTMZone()&quot;</span><span class="p">,</span> <span class="n">spref_obj</span><span class="o">.</span><span class="n">GetUTMZone</span><span class="p">())</span>
+    <span class="c1"># end if</span>
+
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyCSAMT v1.0.01 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2021, Kouadio K. Laurent.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.4.0.
+    </div>
+  </body>
+</html>

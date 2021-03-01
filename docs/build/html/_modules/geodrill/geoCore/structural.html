@@ -1,0 +1,878 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>geodrill.geoCore.structural &#8212; pyCSAMT v1.0.01 documentation</title>
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyCSAMT v1.0.01 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for geodrill.geoCore.structural</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">===============================================================================</span>
+<span class="sd">    Copyright © 2021  Kouadio K.Laurent</span>
+<span class="sd">    </span>
+<span class="sd">    This file is part of pyCSAMT.</span>
+<span class="sd">    </span>
+<span class="sd">    pyCSAMT is free software: you can redistribute it and/or modify</span>
+<span class="sd">    it under the terms of the GNU Lesser General Public License as published by</span>
+<span class="sd">    the Free Software Foundation, either version 3 of the License, or</span>
+<span class="sd">    (at your option) any later version.</span>
+<span class="sd">    </span>
+<span class="sd">    pyCSAMT is distributed in the hope that it will be useful,</span>
+<span class="sd">    but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="sd">    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="sd">    GNU Lesser General Public License for more details.</span>
+<span class="sd">    </span>
+<span class="sd">    You should have received a copy of the GNU Lesser General Public License</span>
+<span class="sd">    along with pyCSAMT.  If not, see &lt;https://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">===============================================================================  </span>
+<span class="sd">    . class for  geological structural analysis </span>
+<span class="sd">    . some conventional structure can populate the data</span>
+<span class="sd">    </span>
+<span class="sd">Created on Sat Nov 28 21:19:13 2020</span>
+
+<span class="sd">@author: @Daniel03</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span> 
+<span class="kn">from</span> <span class="nn">csamtpy.ff.processing.callffunc</span> <span class="kn">import</span> <span class="n">set_stratum_on_dict</span> <span class="k">as</span> <span class="n">strato</span>
+<span class="kn">from</span> <span class="nn">csamtpy.utils</span>  <span class="kn">import</span> <span class="n">exceptions</span> <span class="k">as</span> <span class="n">CSex</span>
+<span class="kn">from</span> <span class="nn">csamtpy.utils._csamtpylog</span> <span class="kn">import</span> <span class="n">csamtpylog</span>
+<span class="n">_logger</span><span class="o">=</span><span class="n">csamtpylog</span><span class="o">.</span><span class="n">get_csamtpy_logger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="c1">#---- End import modules --------</span>
+
+<div class="viewcode-block" id="geo_pattern"><a class="viewcode-back" href="../../../geocore.html#geodrill.geoCore.structural.geo_pattern">[docs]</a><span class="k">class</span> <span class="nc">geo_pattern</span><span class="p">:</span> 
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Singleton class to deal with geopattern  with other modules. It is and exhaustive pattern</span>
+<span class="sd">    dict, can be add and change. This pattern  will be depreacted later , to create for pyCSAMT,</span>
+<span class="sd">    its owwn geological pattern in coformity with the conventional geological swatches .</span>
+<span class="sd">     deal with USGS(US Geological Survey ) swatches- references and FGDC (Digital cartographic </span>
+<span class="sd">    Standard for Geological  Map Symbolisation):</span>
+<span class="sd">    :::FGDCgeostdTM11A2_A-37-01cs2.eps ::: </span>
+<span class="sd">        </span>
+<span class="sd">        make _pattern:{&#39;/&#39;, &#39;\&#39;, &#39;|&#39;, &#39;-&#39;, &#39;+&#39;, &#39;x&#39;, &#39;o&#39;, &#39;O&#39;, &#39;.&#39;, &#39;*&#39;}</span>
+<span class="sd">                /   - diagonal hatching</span>
+<span class="sd">                \   - back diagonal</span>
+<span class="sd">                |   - vertical</span>
+<span class="sd">                -   - horizontal</span>
+<span class="sd">                +   - crossed</span>
+<span class="sd">                x   - crossed diagonal</span>
+<span class="sd">                o   - small circle</span>
+<span class="sd">                O   - large circle</span>
+<span class="sd">                .   - dots</span>
+<span class="sd">                *   - stars</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pattern</span><span class="o">=</span><span class="p">{</span>
+                        <span class="s2">&quot;basement rocks&quot;</span> <span class="p">:</span>      <span class="p">[</span><span class="s1">&#39;.+++++.&#39;</span><span class="p">,</span> <span class="p">(</span><span class="o">.</span><span class="mi">25</span><span class="p">,</span> <span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="o">.</span><span class="mi">5</span><span class="p">)],</span>
+                        <span class="s2">&quot;igneous rocks&quot;</span><span class="p">:</span>        <span class="p">[</span><span class="s1">&#39;.o.o.&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)],</span> 
+                        <span class="s2">&quot;duricrust&quot;</span>   <span class="p">:</span>         <span class="p">[</span><span class="s1">&#39;+.+&#39;</span><span class="p">,(</span><span class="mf">1.</span><span class="p">,</span> <span class="o">.</span><span class="mi">2</span><span class="p">,</span> <span class="o">.</span><span class="mi">36</span><span class="p">)],</span>
+                        <span class="s2">&quot;gravel&quot;</span> <span class="p">:</span>              <span class="p">[</span><span class="s1">&#39;oO&#39;</span><span class="p">,(</span><span class="o">.</span><span class="mi">75</span><span class="p">,</span><span class="o">.</span><span class="mi">86</span><span class="p">,</span><span class="o">.</span><span class="mi">12</span><span class="p">)],</span>
+                        <span class="s2">&quot;sand&quot;</span><span class="p">:</span>                 <span class="p">[</span><span class="s1">&#39;....&#39;</span><span class="p">,(</span><span class="o">.</span><span class="mi">23</span><span class="p">,</span> <span class="o">.</span><span class="mi">36</span><span class="p">,</span> <span class="o">.</span><span class="mi">45</span><span class="p">)],</span>
+                        <span class="s2">&quot;conglomerate&quot;</span>    <span class="p">:</span>     <span class="p">[</span><span class="s1">&#39;.O.&#39;</span><span class="p">,</span> <span class="p">(</span><span class="o">.</span><span class="mi">55</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">.</span><span class="mi">36</span><span class="p">)],</span>
+                        <span class="s2">&quot;dolomite&quot;</span> <span class="p">:</span>            <span class="p">[</span><span class="s1">&#39;.-.&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="o">.</span><span class="mi">75</span><span class="p">,</span> <span class="o">.</span><span class="mi">23</span><span class="p">)],</span>
+                        <span class="s2">&quot;limestone&quot;</span> <span class="p">:</span>           <span class="p">[</span><span class="s1">&#39;//.&#39;</span><span class="p">,(</span><span class="o">.</span><span class="mi">52</span><span class="p">,</span> <span class="o">.</span><span class="mi">23</span><span class="p">,</span> <span class="o">.</span><span class="mi">125</span><span class="p">)],</span>
+                       <span class="s2">&quot;permafrost&quot;</span>  <span class="p">:</span>          <span class="p">[</span><span class="s1">&#39;o.&#39;</span><span class="p">,</span> <span class="p">(</span><span class="o">.</span><span class="mi">2</span><span class="p">,</span> <span class="o">.</span><span class="mi">26</span><span class="p">,</span> <span class="o">.</span><span class="mi">75</span><span class="p">)],</span>
+                        <span class="s2">&quot;metamorphic rocks&quot;</span> <span class="p">:</span>   <span class="p">[</span><span class="s1">&#39;*o.&#39;</span><span class="p">,</span> <span class="p">(</span><span class="o">.</span><span class="mi">2</span><span class="p">,</span> <span class="o">.</span><span class="mi">2</span><span class="p">,</span> <span class="o">.</span><span class="mi">3</span><span class="p">)],</span>
+                        <span class="s2">&quot;tills&quot;</span>  <span class="p">:</span>              <span class="p">[</span><span class="s1">&#39;-.&#39;</span><span class="p">,</span> <span class="p">(</span><span class="o">.</span><span class="mi">7</span><span class="p">,</span> <span class="o">.</span><span class="mi">6</span><span class="p">,</span> <span class="o">.</span><span class="mi">9</span><span class="p">)],</span>
+                        <span class="s2">&quot;standstone &quot;</span><span class="p">:</span>          <span class="p">[</span><span class="s1">&#39;..&#39;</span><span class="p">,</span> <span class="p">(</span><span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="o">.</span><span class="mi">6</span><span class="p">,</span> <span class="o">.</span><span class="mi">9</span><span class="p">)],</span>
+                        <span class="s2">&quot;lignite coal&quot;</span><span class="p">:</span>         <span class="p">[</span><span class="s1">&#39;+/.&#39;</span><span class="p">,(</span><span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="o">.</span><span class="mi">4</span><span class="p">)],</span>
+                        <span class="s2">&quot;coal&quot;</span><span class="p">:</span>                 <span class="p">[</span><span class="s1">&#39;*.&#39;</span><span class="p">,</span> <span class="p">(</span><span class="o">.</span><span class="mi">8</span><span class="p">,</span> <span class="o">.</span><span class="mi">9</span><span class="p">,</span> <span class="mf">0.</span><span class="p">)],</span>
+                        <span class="s2">&quot;shale&quot;</span>   <span class="p">:</span>             <span class="p">[</span><span class="s1">&#39;=&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">)],</span>
+                        <span class="s2">&quot;clay&quot;</span>   <span class="p">:</span>              <span class="p">[</span><span class="s1">&#39;=.&#39;</span><span class="p">,(</span><span class="o">.</span><span class="mi">9</span><span class="p">,</span> <span class="o">.</span><span class="mi">8</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">)],</span>
+                        <span class="s2">&quot;saprolite&quot;</span> <span class="p">:</span>           <span class="p">[</span><span class="s1">&#39;*/&#39;</span><span class="p">,(</span><span class="o">.</span><span class="mi">3</span><span class="p">,</span> <span class="mf">1.2</span><span class="p">,</span> <span class="o">.</span><span class="mi">4</span><span class="p">)],</span>
+                        <span class="s2">&quot;sedimentary rocks&quot;</span><span class="p">:</span>    <span class="p">[</span><span class="s1">&#39;...&#39;</span><span class="p">,(</span><span class="o">.</span><span class="mi">25</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="o">.</span><span class="mi">25</span><span class="p">)],</span>
+                        <span class="s2">&quot;fresh water&quot;</span>  <span class="p">:</span>        <span class="p">[</span><span class="s1">&#39;.-.&#39;</span><span class="p">,(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span><span class="o">.</span><span class="mi">2</span><span class="p">)],</span>
+                        <span class="s2">&quot;salt water&quot;</span>   <span class="p">:</span>        <span class="p">[</span><span class="s1">&#39;o.-&#39;</span><span class="p">,(</span><span class="o">.</span><span class="mi">2</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="o">.</span><span class="mi">2</span><span class="p">)],</span>
+                        <span class="s2">&quot;massive sulphide&quot;</span> <span class="p">:</span>     <span class="p">[</span><span class="s1">&#39;.+O&#39;</span><span class="p">,(</span><span class="mf">1.</span><span class="p">,</span><span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="o">.</span><span class="mi">5</span> <span class="p">)],</span>
+                        <span class="s2">&quot;sea water&quot;</span>     <span class="p">:</span>       <span class="p">[</span><span class="s1">&#39;.--&#39;</span><span class="p">,(</span><span class="o">.</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">)],</span>
+                        <span class="s2">&quot;ore minerals&quot;</span>  <span class="p">:</span>       <span class="p">[</span><span class="s1">&#39;--|&#39;</span><span class="p">,(</span><span class="o">.</span><span class="mi">8</span><span class="p">,</span> <span class="o">.</span><span class="mi">2</span><span class="p">,</span> <span class="o">.</span><span class="mi">2</span><span class="p">)],</span>
+                        <span class="s2">&quot;graphite&quot;</span>    <span class="p">:</span>         <span class="p">[</span><span class="s1">&#39;.++.&#39;</span><span class="p">,(</span><span class="o">.</span><span class="mi">2</span><span class="p">,</span> <span class="o">.</span><span class="mi">7</span><span class="p">,</span> <span class="o">.</span><span class="mi">7</span><span class="p">)],</span>
+                        <span class="p">}</span></div>
+            
+<div class="viewcode-block" id="Structure"><a class="viewcode-back" href="../../../geocore.html#geodrill.geoCore.structural.Structure">[docs]</a><span class="k">class</span> <span class="nc">Structure</span> <span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class for typical geological strutural conventions </span>
+<span class="sd">    for AGSO_STCODES . . </span>
+<span class="sd">         . all geological structural informations are geostructral object.</span>
+<span class="sd">                  </span>
+<span class="sd">    Holds the following information:</span>
+
+<span class="sd">        </span>
+<span class="sd">    ================= ============== ==========================================</span>
+<span class="sd">    Attributes              Type                     Explanation</span>
+<span class="sd">    ================= ============== ==========================================</span>
+<span class="sd">    boudin_axis            geos_obj         boudin    </span>
+<span class="sd">    fold_axial_plane       geos_obj         axial plam of structural fold.</span>
+<span class="sd">    banding_gneissosity    geos_obj         gneissossity of boudin plan  </span>
+<span class="sd">    s_fabric               geos_obj         fabric plan</span>
+<span class="sd">    fault_plane            geos_obj         fault plan </span>
+<span class="sd">    fracture_joint_set     geos_obj         fracture joint </span>
+<span class="sd">    undifferentiated_plane geos_obj         unnamed geological structure </span>
+<span class="sd">    sharp_contact          geos_obj         sharp contact : various discrepancy </span>
+<span class="sd">                                            contact : {stratigraphy disprecancy  </span>
+<span class="sd">                                             fracture /fault discrepancies}</span>
+<span class="sd">    ================= =========== =============================================</span>
+
+<span class="sd">    More attributes can be added by inputing a key word dictionary</span>
+
+<span class="sd">    e.g :: </span>
+<span class="sd">        &gt;&gt;&gt; structural=Structure()</span>
+<span class="sd">        &gt;&gt;&gt; boudin=boudin_axis()</span>
+<span class="sd">        &gt;&gt;&gt; # print(boudin.code) </span>
+<span class="sd">        &gt;&gt;&gt; print(structural.boudin_axis.name)</span>
+<span class="sd">        &gt;&gt;&gt; # print(structural.boudin_axis.color)</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>  
+    <span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Set Structural main geological informations. &#39;</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">boudin_axis</span> <span class="o">=</span><span class="n">boudin_axis</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fold_axial_plane</span><span class="o">=</span><span class="n">fold_axial_plane</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">banding_gneissosity</span><span class="o">=</span><span class="n">banding_gneissosity</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s_fabric</span><span class="o">=</span><span class="n">s_fabric</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fault_plane</span><span class="o">=</span><span class="n">fault_plane</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fracture_joint_set</span><span class="o">=</span><span class="n">fracture_joint_set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">undifferentiated_plane</span><span class="o">=</span><span class="n">undifferentiated_plane</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sharp_contact</span><span class="o">=</span><span class="n">sharp_contact</span><span class="p">()</span>
+        
+        
+        <span class="k">for</span> <span class="n">keys</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keys</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">keys</span><span class="p">])</span></div>
+
+<span class="c1">#====================================================</span>
+<span class="c1">#   geological structural objects </span>
+<span class="c1">#=====================================================</span>
+<div class="viewcode-block" id="boudin_axis"><a class="viewcode-back" href="../../../geocore.html#geodrill.geoCore.structural.boudin_axis">[docs]</a><span class="k">class</span> <span class="nc">boudin_axis</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Special class for boudins_axis</span>
+<span class="sd">    </span>
+<span class="sd">    Holds the following information:</span>
+
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    Attributes              Type          Explanation</span>
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    code                str             conventional code    </span>
+<span class="sd">    label               str             named label</span>
+<span class="sd">    size                str             drawing size  </span>
+<span class="sd">    pattern             str             drawing pattern </span>
+<span class="sd">    density             str             elmts density </span>
+<span class="sd">    thickness           str             drawing thickness </span>
+<span class="sd">    color               str             color set</span>
+<span class="sd">    ================= =========== ============================================</span>
+
+<span class="sd">    More attributes can be added by inputing a key word dictionary</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span><span class="kc">None</span>
+        
+        <span class="k">for</span> <span class="n">keys</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">keys</span><span class="p">])</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_boudin_axis</span><span class="p">()</span>   
+        
+    <span class="k">def</span> <span class="nf">_set_boudin_axis</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        methode to populates attributes</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">baxis</span><span class="o">=</span><span class="n">strato</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">keys</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">baxis</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">keys</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;code&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;label&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;pattern&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;size&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;density&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">thickess</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;thickness&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="fold_axial_plane"><a class="viewcode-back" href="../../../geocore.html#geodrill.geoCore.structural.fold_axial_plane">[docs]</a><span class="k">class</span> <span class="nc">fold_axial_plane</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Special class for fold_axial_plane</span>
+<span class="sd">    </span>
+<span class="sd">    Holds the following information:</span>
+
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    Attributes              Type          Explanation</span>
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    code                str             conventional code    </span>
+<span class="sd">    label               str             named label</span>
+<span class="sd">    size                str             drawing size  </span>
+<span class="sd">    pattern             str             drawing pattern </span>
+<span class="sd">    density             str             elmts density </span>
+<span class="sd">    thickness           str             drawing thickness </span>
+<span class="sd">    color               str             color set</span>
+<span class="sd">    ================= =========== ============================================</span>
+
+<span class="sd">    More attributes can be added by inputing a key word dictionary</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span><span class="kc">None</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_fold_axial_plane</span><span class="p">()</span>
+        
+        <span class="k">for</span> <span class="n">keys</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">keys</span><span class="p">])</span>
+            
+    <span class="k">def</span> <span class="nf">_set_fold_axial_plane</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        methode to populates attributes</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">baxis</span><span class="o">=</span><span class="n">strato</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">keys</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">baxis</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">keys</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;code&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;label&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;pattern&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;size&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;density&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">thickess</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;thickness&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="banding_gneissosity"><a class="viewcode-back" href="../../../geocore.html#geodrill.geoCore.structural.banding_gneissosity">[docs]</a><span class="k">class</span> <span class="nc">banding_gneissosity</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Special class for banding_gneissosity</span>
+<span class="sd">    </span>
+<span class="sd">    Holds the following information:</span>
+
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    Attributes              Type          Explanation</span>
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    code                str             conventional code    </span>
+<span class="sd">    label               str             named label</span>
+<span class="sd">    size                str             drawing size  </span>
+<span class="sd">    pattern             str             drawing pattern </span>
+<span class="sd">    density             str             elmts density </span>
+<span class="sd">    thickness           str             drawing thickness </span>
+<span class="sd">    color               str             color set</span>
+<span class="sd">    ================= =========== ============================================</span>
+
+<span class="sd">    More attributes can be added by inputing a key word dictionary</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span><span class="kc">None</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_banding_gneissosity</span><span class="p">()</span>
+        
+        <span class="k">for</span> <span class="n">keys</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">keys</span><span class="p">])</span>
+            
+    <span class="k">def</span> <span class="nf">_set_banding_gneissosity</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        methode to populates attributes</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">baxis</span><span class="o">=</span><span class="n">strato</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># print(baxis)</span>
+        <span class="k">for</span> <span class="n">keys</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">baxis</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">keys</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;code&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;label&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;pattern&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;size&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;density&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">thickess</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;thickness&#39;</span><span class="p">)</span>             </div>
+
+<div class="viewcode-block" id="s_fabric"><a class="viewcode-back" href="../../../geocore.html#geodrill.geoCore.structural.s_fabric">[docs]</a><span class="k">class</span> <span class="nc">s_fabric</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Special class for s_fabric</span>
+<span class="sd">    </span>
+<span class="sd">        Holds the following information:</span>
+
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    Attributes              Type          Explanation</span>
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    code                str             conventional code    </span>
+<span class="sd">    label               str             named label</span>
+<span class="sd">    size                str             drawing size  </span>
+<span class="sd">    pattern             str             drawing pattern </span>
+<span class="sd">    density             str             elmts density </span>
+<span class="sd">    thickness           str             drawing thickness </span>
+<span class="sd">    color               str             color set</span>
+<span class="sd">    ================= =========== ============================================</span>
+
+<span class="sd">    More attributes can be added by inputing a key word dictionary</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span><span class="kc">None</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_s_fabric</span><span class="p">()</span>
+        
+        <span class="k">for</span> <span class="n">keys</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">keys</span><span class="p">])</span>
+            
+    <span class="k">def</span> <span class="nf">_set_s_fabric</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        methode to populates attributes</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">baxis</span><span class="o">=</span><span class="n">strato</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># print(baxis)</span>
+        <span class="k">for</span> <span class="n">keys</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">baxis</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">keys</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;code&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;label&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;pattern&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;size&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;density&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">thickess</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;thickness&#39;</span><span class="p">)</span>  </div>
+
+<div class="viewcode-block" id="fault_plane"><a class="viewcode-back" href="../../../geocore.html#geodrill.geoCore.structural.fault_plane">[docs]</a><span class="k">class</span> <span class="nc">fault_plane</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Special class for fault_plane</span>
+<span class="sd">    </span>
+<span class="sd">    Holds the following information:</span>
+
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    Attributes              Type          Explanation</span>
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    code                str             conventional code    </span>
+<span class="sd">    label               str             named label</span>
+<span class="sd">    size                str             drawing size  </span>
+<span class="sd">    pattern             str             drawing pattern </span>
+<span class="sd">    density             str             elmts density </span>
+<span class="sd">    thickness           str             drawing thickness </span>
+<span class="sd">    color               str             color set</span>
+<span class="sd">    ================= =========== ============================================</span>
+
+<span class="sd">    More attributes can be added by inputing a key word dictionary</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span><span class="kc">None</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_fault_plane</span><span class="p">()</span>
+        
+        <span class="k">for</span> <span class="n">keys</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">keys</span><span class="p">])</span>
+            
+    <span class="k">def</span> <span class="nf">_set_fault_plane</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        methode to populates attributes</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">baxis</span><span class="o">=</span><span class="n">strato</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># print(baxis)</span>
+        <span class="k">for</span> <span class="n">keys</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">baxis</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">keys</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;code&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;label&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;pattern&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;size&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;density&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">thickess</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;thickness&#39;</span><span class="p">)</span></div>
+                
+<div class="viewcode-block" id="fracture_joint_set"><a class="viewcode-back" href="../../../geocore.html#geodrill.geoCore.structural.fracture_joint_set">[docs]</a><span class="k">class</span> <span class="nc">fracture_joint_set</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Special class for fracture_joint_set</span>
+<span class="sd">    </span>
+<span class="sd">    Holds the following information:</span>
+
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    Attributes              Type          Explanation</span>
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    code                str             conventional code    </span>
+<span class="sd">    label               str             named label</span>
+<span class="sd">    size                str             drawing size  </span>
+<span class="sd">    pattern             str             drawing pattern </span>
+<span class="sd">    density             str             elmts density </span>
+<span class="sd">    thickness           str             drawing thickness </span>
+<span class="sd">    color               str             color set</span>
+<span class="sd">    ================= =========== ============================================</span>
+
+<span class="sd">    More attributes can be added by inputing a key word dictionary</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span><span class="kc">None</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_fracture_joint_set</span><span class="p">()</span>
+        
+        <span class="k">for</span> <span class="n">keys</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">keys</span><span class="p">])</span>
+            
+    <span class="k">def</span> <span class="nf">_set_fracture_joint_set</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        methode to populates attributes</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">baxis</span><span class="o">=</span><span class="n">strato</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># print(baxis)</span>
+        <span class="k">for</span> <span class="n">keys</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">baxis</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">keys</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;code&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;label&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;pattern&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;size&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;density&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">thickess</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;thickness&#39;</span><span class="p">)</span></div>
+                
+<div class="viewcode-block" id="undifferentiated_plane"><a class="viewcode-back" href="../../../geocore.html#geodrill.geoCore.structural.undifferentiated_plane">[docs]</a><span class="k">class</span> <span class="nc">undifferentiated_plane</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Special class for undifferentiated_plane</span>
+<span class="sd">    </span>
+<span class="sd">    Holds the following information:</span>
+
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    Attributes              Type          Explanation</span>
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    code                str             conventional code    </span>
+<span class="sd">    label               str             named label</span>
+<span class="sd">    size                str             drawing size  </span>
+<span class="sd">    pattern             str             drawing pattern </span>
+<span class="sd">    density             str             elmts density </span>
+<span class="sd">    thickness           str             drawing thickness </span>
+<span class="sd">    color               str             color set</span>
+<span class="sd">    ================= =========== ============================================</span>
+
+<span class="sd">    More attributes can be added by inputing a key word dictionary</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span><span class="kc">None</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_undifferentiated_plane</span><span class="p">()</span>
+        
+        <span class="k">for</span> <span class="n">keys</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">keys</span><span class="p">])</span>
+            
+    <span class="k">def</span> <span class="nf">_set_undifferentiated_plane</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        methode to populates attributes</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">baxis</span><span class="o">=</span><span class="n">strato</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># print(baxis)</span>
+        <span class="k">for</span> <span class="n">keys</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">baxis</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">keys</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;code&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;label&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;pattern&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;size&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;density&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">thickess</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;thickness&#39;</span><span class="p">)</span>             </div>
+                
+<div class="viewcode-block" id="sharp_contact"><a class="viewcode-back" href="../../../geocore.html#geodrill.geoCore.structural.sharp_contact">[docs]</a><span class="k">class</span> <span class="nc">sharp_contact</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Special class for sharp_contact</span>
+<span class="sd">    </span>
+<span class="sd">    Holds the following information:</span>
+
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    Attributes              Type          Explanation</span>
+<span class="sd">    ================= ============== =========================================</span>
+<span class="sd">    code                str             conventional code    </span>
+<span class="sd">    label               str             named label</span>
+<span class="sd">    size                str             drawing size  </span>
+<span class="sd">    pattern             str             drawing pattern </span>
+<span class="sd">    density             str             elmts density </span>
+<span class="sd">    thickness           str             drawing thickness </span>
+<span class="sd">    color               str             color set</span>
+<span class="sd">    ================= =========== ============================================</span>
+
+<span class="sd">    More attributes can be added by inputing a key word dictionary</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span><span class="kc">None</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_sharp_contact</span><span class="p">()</span>
+        
+        <span class="k">for</span> <span class="n">keys</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">keys</span><span class="p">])</span>
+            
+    <span class="k">def</span> <span class="nf">_set_sharp_contact</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        methode to populates attributes</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">baxis</span><span class="o">=</span><span class="n">strato</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># print(baxis)</span>
+        <span class="k">for</span> <span class="n">keys</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">baxis</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">keys</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;code&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;label&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;pattern&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;size&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;density&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">thickess</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="s1">&#39;thickness&#39;</span><span class="p">)</span>             </div>
+                
+<div class="viewcode-block" id="Geo_formation"><a class="viewcode-back" href="../../../geocore.html#geodrill.geoCore.structural.Geo_formation">[docs]</a><span class="k">class</span> <span class="nc">Geo_formation</span> <span class="p">(</span><span class="nb">object</span><span class="p">):</span> 
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This class is an axilliary class to supplement geodatabase , if the GeodataBase doesnt reply </span>
+<span class="sd">    to SQL request  , then use this c,lass to secah information about structures . </span>
+<span class="sd">    If SQL is done as well , program won&#39;t call this class as rescure . </span>
+<span class="sd">    Contain more than  150 geological strutures ...</span>
+<span class="sd">    </span>
+<span class="sd">    To see the names of strutures  : </span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; from geodrill.geoCore.strutural import Geo_formation as gf </span>
+<span class="sd">        &gt;&gt;&gt; geo_structure = gf()</span>
+<span class="sd">        ... geo_structure.names</span>
+<span class="sd">        </span>
+<span class="sd">    ================= ============== ==========================================</span>
+<span class="sd">    Attributes              Type                     Explanation</span>
+<span class="sd">    (** ={name of struture}.)</span>
+<span class="sd">    ================= ============== ==========================================</span>
+<span class="sd">    names               array_like      names of all geological strutures </span>
+<span class="sd">    codes               array_like      names of all geological codes </span>
+<span class="sd">    **code              str             code of specific geological structure </span>
+<span class="sd">    **label             str             label of specific structure</span>
+<span class="sd">    **name              str             label of specific structure</span>
+<span class="sd">    **pattern           str             pattern of specific structure  </span>
+<span class="sd">    **pat_size          str             pattern size  of specific structure</span>
+<span class="sd">    **pat_density       str             pattern density l of specific structure</span>
+<span class="sd">    **pat_thickness     str             pttern thickess of specific structure</span>
+<span class="sd">    **color             str             color of specific structure</span>
+<span class="sd">                                            </span>
+<span class="sd">    ================= =========== =============================================</span>
+
+<span class="sd">    eg :: to extract color  of the structure amphibollite: </span>
+<span class="sd">        1--&gt; with the name = amphibolite </span>
+<span class="sd">           ... geo_structure.amphibolite[&#39;color&#39;] </span>
+<span class="sd">        2 --&gt; with the structure code : </span>
+<span class="sd">            ... geo_structure.amphibolite[&#39;code&#39;] </span>
+<span class="sd">            ... geoformation_obj.AMP[&#39;color&#39;]</span>
+<span class="sd">        </span>
+<span class="sd">        output : &#39;R128G128&#39;</span>
+<span class="sd"> </span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span> 
+    <span class="n">codef</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;code&#39;</span><span class="p">,</span><span class="s1">&#39;label&#39;</span><span class="p">,</span><span class="s1">&#39;__description&#39;</span><span class="p">,</span><span class="s1">&#39;pattern&#39;</span><span class="p">,</span> <span class="s1">&#39;pat_size&#39;</span><span class="p">,</span>	<span class="s1">&#39;pat_density&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;pat_thickness&#39;</span><span class="p">,</span><span class="s1">&#39;color&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agso_file</span> <span class="o">=</span><span class="kc">None</span> <span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logging</span> <span class="o">=</span> <span class="n">csamtpylog</span><span class="o">.</span><span class="n">get_csamtpy_logger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_agso_fn</span> <span class="o">=</span><span class="n">agso_file</span>
+        
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+            
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">agso_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="p">:</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_geo_formation</span><span class="p">()</span>
+
+    <span class="nd">@property</span> 
+    <span class="k">def</span> <span class="nf">agso_fn</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_agso_fn</span> <span class="ow">is</span> <span class="kc">None</span> <span class="p">:</span> 
+             <span class="bp">self</span><span class="o">.</span><span class="n">_agso_fn</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span> <span class="s1">&#39;geodrill&#39;</span><span class="p">,</span> <span class="s1">&#39;_geocodes&#39;</span><span class="p">,</span>
+                                         <span class="s1">&#39;agso&#39;</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39;.csv&#39;</span> <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_agso_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="p">:</span> 
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_agso_fn</span><span class="p">)</span> <span class="p">:</span> 
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_agso_fn</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span> <span class="o">=</span><span class="s1">&#39;utf8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">_fags0</span><span class="p">:</span> 
+                    <span class="n">agso_lines</span> <span class="o">=</span> <span class="n">_fags0</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+                    <span class="n">_secags0</span> <span class="o">=</span> <span class="n">agso_lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+                    <span class="n">_secags0</span> <span class="o">=</span><span class="p">[</span><span class="n">_code</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">_code</span> <span class="ow">in</span> <span class="n">_secags0</span><span class="p">]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_AGS0_DATA</span> <span class="o">=</span><span class="n">agso_lines</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+                    
+                    <span class="k">if</span> <span class="n">_secags0</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">codef</span> <span class="p">:</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39; !Problem to decode geostructures structures!&#39;</span><span class="p">)</span>
+                        <span class="k">raise</span> <span class="n">CSex</span><span class="o">.</span><span class="n">pyCSAMTError_structural</span><span class="p">(</span><span class="s1">&#39;Geostructures files provided is wrong !&#39;</span><span class="p">)</span>
+            <span class="k">else</span> <span class="p">:</span> 
+                
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;No Geostructure file detected .{_structures unfound}. It seems the file moved from its host folder.&#39;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">CSex</span><span class="o">.</span><span class="n">pyCSAMTError_structural</span><span class="p">(</span><span class="s1">&#39;pyCSAMT inner geocodes property is not in host folder </span><span class="si">{_geocodes_}</span><span class="s1">.&#39;</span>\
+                                                   <span class="s1">&#39; Please provide a right structures codes.&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_AGS0_DATA</span> 
+    
+    <span class="k">def</span> <span class="nf">_set_geo_formation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agso_fn</span> <span class="o">=</span><span class="kc">None</span><span class="p">):</span> 
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read and set  attributes and decode agso geostructures .</span>
+<span class="sd">        params : agso_fn : str : full path geological structural  file.</span>
+<span class="sd">        </span>
+<span class="sd">        eg :: </span>
+<span class="sd">             </span>
+<span class="sd">            &gt;&gt;&gt; geoformation_obj =Geo_formation()</span>
+<span class="sd">            &gt;&gt;&gt; DATA = geoformation_obj._AGS0_DATA</span>
+<span class="sd">            ... print( geoformation_obj.argillite[&#39;name&#39;])</span>
+<span class="sd">            ... print( geoformation_obj.argillite[&#39;color&#39;])</span>
+<span class="sd">            .. print( geoformation_obj.wood[&#39;color&#39;])</span>
+<span class="sd">            ... print( geoformation_obj.amphibolite[&#39;code&#39;])</span>
+<span class="sd">            .. print( geoformation_obj.names)</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Read &amp;  and decodes geostructures files . &#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">agso_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="p">:</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">agso_fn</span><span class="o">=</span> <span class="n">agso_fn</span> 
+            
+        <span class="c1">#split the code files </span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_AGS0_DATA</span> <span class="o">=</span> <span class="p">[</span> <span class="n">geos</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">geos</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_AGS0_DATA</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_AGS0_DATA</span><span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_AGS0_DATA</span><span class="p">)</span>
+
+        <span class="c1"># sanitize the geonames . </span>
+        <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="s1">&#39;names&#39;</span><span class="p">,</span>
+                         <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span> <span class="p">[</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_AGS0_DATA</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]]</span> <span class="p">))</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="s1">&#39;codes&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_AGS0_DATA</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+        
+        <span class="c1"># set for all values in geofomations codes </span>
+        <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">codeff</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">codef</span> <span class="p">[</span><span class="mi">1</span><span class="p">:],</span><span class="mi">1</span><span class="p">)</span> <span class="p">:</span>  <span class="c1"># count starting from one .</span>
+            <span class="k">if</span> <span class="n">codeff</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;pat&#39;</span><span class="p">)</span> <span class="o">&gt;=</span><span class="mi">0</span> <span class="p">:</span> 
+                <span class="k">for</span> <span class="n">jj</span><span class="p">,</span> <span class="n">pp</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_AGS0_DATA</span><span class="p">[:,</span> <span class="n">ii</span><span class="p">]):</span> 
+                    <span class="k">if</span> <span class="n">pp</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="ow">or</span> <span class="n">pp</span> <span class="o">==</span><span class="s1">&#39; &#39;</span> <span class="p">:</span>       <span class="c1"># repalec all None value by 0. later will filled it </span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_AGS0_DATA</span><span class="p">[:,</span> <span class="n">ii</span><span class="p">][</span><span class="n">jj</span><span class="p">]</span><span class="o">=</span><span class="mf">0.</span>
+                        
+                <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">codeff</span><span class="p">,</span> 
+                                 <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">pp</span><span class="p">)</span> <span class="k">for</span> <span class="n">pp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_AGS0_DATA</span><span class="p">[:,</span> <span class="n">ii</span><span class="p">]]))</span>
+            <span class="k">else</span> <span class="p">:</span> 
+               <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">codeff</span><span class="p">,</span>
+                         <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span> <span class="p">[</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_AGS0_DATA</span><span class="p">[:,</span> <span class="n">ii</span><span class="p">]]</span> <span class="p">))</span> 
+        
+        <span class="n">DECODE</span> <span class="o">=</span><span class="p">{}</span>
+        <span class="c1"># change RGBA color palette into Matplotlib color </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mpl_colorsp</span><span class="o">=</span> <span class="p">[</span> <span class="n">get_color_palette</span><span class="p">(</span><span class="n">rgb</span><span class="p">)</span> <span class="k">for</span> <span class="n">rgb</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_AGS0_DATA</span><span class="p">[:,</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+
+        <span class="k">for</span> <span class="n">jj</span><span class="p">,</span>  <span class="n">decode</span>  <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_AGS0_DATA</span><span class="p">):</span>
+           <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">codec</span>  <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">codef</span><span class="p">)</span> <span class="p">:</span> 
+               <span class="k">if</span> <span class="n">codec</span> <span class="o">==</span><span class="s1">&#39;__description&#39;</span> <span class="p">:</span> <span class="n">codec</span> <span class="o">=</span> <span class="s1">&#39;name&#39;</span>
+               <span class="k">if</span> <span class="n">codec</span> <span class="o">==</span><span class="s1">&#39;color&#39;</span><span class="p">:</span> 
+                   <span class="n">DECODE</span><span class="p">[</span><span class="n">codec</span><span class="p">]</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mpl_colorsp</span><span class="p">[</span><span class="n">jj</span><span class="p">]</span>
+               <span class="k">else</span> <span class="p">:</span> <span class="n">DECODE</span> <span class="p">[</span><span class="n">codec</span><span class="p">]</span><span class="o">=</span> <span class="n">decode</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span>
+               <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">decode</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">),</span>
+                                <span class="n">DECODE</span><span class="p">)</span>
+               <span class="bp">self</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">decode</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">),</span>
+                                <span class="n">DECODE</span><span class="p">)</span>
+               
+           <span class="n">DECODE</span> <span class="o">=</span><span class="p">{}</span>  </div>
+        
+        
+<div class="viewcode-block" id="get_color_palette"><a class="viewcode-back" href="../../../geocore.html#geodrill.geoCore.structural.get_color_palette">[docs]</a><span class="k">def</span> <span class="nf">get_color_palette</span> <span class="p">(</span><span class="n">RGB_color_palette</span><span class="p">):</span> 
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert RGB color into matplotlib color palette. In the RGB color system two bits</span>
+<span class="sd">    of data are used for each color, red, green, and blue. That means that each color runs</span>
+<span class="sd">    on a scale from 0 to 255. Black would be 00,00,00, while white would be 255,255,255.</span>
+<span class="sd">    Matplotlib has lots of pre-defined colormaps for us . They are all normalized to 255,</span>
+<span class="sd">    so they run from 0 to 1. So you need only normalize data, then we can manually </span>
+<span class="sd">    select colors from a color map  </span>
+<span class="sd">    params : RGB_color_palette : str value of RGB value </span>
+<span class="sd">    return  rgba : tuple (R, G, B)</span>
+<span class="sd">    eg : </span>
+<span class="sd">        &gt;&gt;&gt; from geodrill.geoCore.structural import get_color_palette </span>
+<span class="sd">        &gt;&gt;&gt; get_color_palette (RGB_color_palette =&#39;R128B128&#39;)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>   
+    <span class="k">def</span> <span class="nf">ascertain_cp</span> <span class="p">(</span><span class="n">cp</span><span class="p">):</span> 
+        <span class="k">if</span> <span class="n">cp</span> <span class="o">&gt;</span><span class="mf">255.</span> <span class="p">:</span> 
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39; !RGB value is range 0 to 255 pixels , not beyond !. Your input values is = </span><span class="si">{0}</span><span class="s1">.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cp</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="n">CSex</span><span class="o">.</span><span class="n">pyCSAMTError_parameter_number</span><span class="p">(</span><span class="s1">&#39;Error color RGBA value ! &#39;</span>\
+                                                     <span class="s1">&#39;RGB value  provided is = </span><span class="si">{0}</span><span class="s1">. It is larger than 255 pixels.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cp</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">cp</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">RGB_color_palette</span><span class="p">,(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span> 
+        <span class="k">try</span> <span class="p">:</span> 
+            <span class="nb">float</span><span class="p">(</span><span class="n">RGB_color_palette</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">:</span> 
+              <span class="n">RGB_color_palette</span><span class="o">=</span> <span class="n">RGB_color_palette</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+             
+        <span class="k">else</span> <span class="p">:</span> <span class="k">return</span> <span class="n">ascertain_cp</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">RGB_color_palette</span><span class="p">))</span><span class="o">/</span><span class="mf">255.</span>
+    
+    <span class="n">rgba</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,))</span>
+    
+    <span class="k">if</span> <span class="s1">&#39;r&#39;</span> <span class="ow">in</span> <span class="n">RGB_color_palette</span> <span class="p">:</span> 
+        <span class="n">knae</span> <span class="o">=</span> <span class="n">RGB_color_palette</span> <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+        <span class="k">try</span> <span class="p">:</span>
+            <span class="n">_knae</span> <span class="o">=</span> <span class="n">ascertain_cp</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">knae</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">except</span> <span class="p">:</span> 
+            <span class="n">rgba</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mf">1.</span>
+        <span class="k">else</span> <span class="p">:</span> <span class="n">rgba</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">_knae</span> <span class="o">/</span><span class="mf">255.</span>
+        
+    <span class="k">if</span> <span class="s1">&#39;g&#39;</span> <span class="ow">in</span> <span class="n">RGB_color_palette</span> <span class="p">:</span> 
+        <span class="n">knae</span> <span class="o">=</span> <span class="n">RGB_color_palette</span> <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+        <span class="k">try</span> <span class="p">:</span> 
+            <span class="n">_knae</span> <span class="o">=</span><span class="n">ascertain_cp</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">knae</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">except</span> <span class="p">:</span> 
+            <span class="n">rgba</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span><span class="mf">1.</span>
+            
+        <span class="k">else</span> <span class="p">:</span><span class="n">rgba</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span> <span class="n">_knae</span> <span class="o">/</span><span class="mf">255.</span>
+    <span class="k">if</span> <span class="s1">&#39;b&#39;</span> <span class="ow">in</span> <span class="n">RGB_color_palette</span> <span class="p">:</span> 
+        <span class="n">knae</span> <span class="o">=</span> <span class="n">knae</span> <span class="o">=</span> <span class="n">RGB_color_palette</span> <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+        <span class="k">try</span> <span class="p">:</span> 
+            <span class="n">_knae</span> <span class="o">=</span><span class="n">ascertain_cp</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">knae</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">except</span> <span class="p">:</span>
+            <span class="n">rgba</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">=</span><span class="mf">1.</span>
+        <span class="k">else</span> <span class="p">:</span><span class="n">rgba</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">=</span> <span class="n">_knae</span> <span class="o">/</span><span class="mf">255.</span>
+        
+
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">rgba</span><span class="p">)</span></div>
+    
+
+    
+                
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    
+    <span class="c1"># structural=Structure()</span>
+    <span class="c1"># boudin=boudin_axis()</span>
+    <span class="c1"># # print(boudin.code) </span>
+    <span class="c1"># print(structural.boudin_axis.name)</span>
+    <span class="c1"># print(structural.boudin_axis.color)</span>
+    
+    <span class="n">geoformation_obj</span> <span class="o">=</span><span class="n">Geo_formation</span><span class="p">()</span>
+    <span class="n">DATA</span> <span class="o">=</span> <span class="n">geoformation_obj</span><span class="o">.</span><span class="n">_AGS0_DATA</span>
+    <span class="n">rgb</span><span class="o">=</span>  <span class="n">geoformation_obj</span><span class="o">.</span><span class="n">amphibolite</span><span class="p">[</span><span class="s1">&#39;color&#39;</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">rgb</span><span class="p">)</span>
+
+
+    
+                
+    
+    
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyCSAMT v1.0.01 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2021, Kouadio K. Laurent.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.4.0.
+    </div>
+  </body>
+</html>

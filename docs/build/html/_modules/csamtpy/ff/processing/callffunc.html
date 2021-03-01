@@ -1,0 +1,513 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>csamtpy.ff.processing.callffunc &#8212; pyCSAMT v1.0.01 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pyCSAMT v1.0.01 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for csamtpy.ff.processing.callffunc</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">===============================================================================</span>
+<span class="sd">    Copyright © 2021  Kouadio K.Laurent</span>
+<span class="sd">    </span>
+<span class="sd">    This file is part of pyCSAMT.</span>
+<span class="sd">    </span>
+<span class="sd">    pyCSAMT is free software: you can redistribute it and/or modify</span>
+<span class="sd">    it under the terms of the GNU Lesser General Public License as published by</span>
+<span class="sd">    the Free Software Foundation, either version 3 of the License, or</span>
+<span class="sd">    (at your option) any later version.</span>
+<span class="sd">    </span>
+<span class="sd">    pyCSAMT is distributed in the hope that it will be useful,</span>
+<span class="sd">    but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="sd">    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="sd">    GNU Lesser General Public License for more details.</span>
+<span class="sd">    </span>
+<span class="sd">    You should have received a copy of the GNU Lesser General Public License</span>
+<span class="sd">    along with pyCSAMT.  If not, see &lt;https://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">===============================================================================</span>
+
+<span class="sd">    .Typical call files functions  </span>
+<span class="sd">    .call files from Avg, AGSO, else... </span>
+<span class="sd">    </span>
+<span class="sd">Created on Thu Nov 26 20:55:39 2020</span>
+
+<span class="sd">@author: @Daniel03</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span><span class="o">,</span><span class="nn">warnings</span> 
+<span class="c1"># import warnings</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">csamtpy.utils</span> <span class="kn">import</span> <span class="n">exceptions</span> <span class="k">as</span> <span class="n">CSex</span>
+<span class="kn">from</span> <span class="nn">csamtpy.utils._csamtpylog</span> <span class="kn">import</span> <span class="n">csamtpylog</span>
+<span class="kn">from</span> <span class="nn">csamtpy.utils</span> <span class="kn">import</span> <span class="n">func_utils</span> <span class="k">as</span> <span class="n">func</span>
+<span class="n">_logger</span><span class="o">=</span><span class="n">csamtpylog</span><span class="o">.</span><span class="n">get_csamtpy_logger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+
+<span class="c1">#*** file from _geocodes folder :AGSO &amp; AGSO.STCODES ******</span>
+
+
+<span class="k">def</span> <span class="nf">_code_strata</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">[</span><span class="s1">&#39;code&#39;</span><span class="p">,</span> <span class="s1">&#39;label&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;pattern&#39;</span><span class="p">,</span>
+                  <span class="s1">&#39;size&#39;</span><span class="p">,</span> <span class="s1">&#39;density&#39;</span><span class="p">,</span> <span class="s1">&#39;thickness&#39;</span><span class="p">,</span> <span class="s1">&#39;color&#39;</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="agso_data"><a class="viewcode-back" href="../../../../processing.html#csamtpy.ff.processing.callffunc.agso_data">[docs]</a><span class="k">def</span> <span class="nf">agso_data</span> <span class="p">():</span> 
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Geological data codes processing</span>
+<span class="sd">    :: will later deprecated :: </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">agsofiles</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;AGSO.csv&#39;</span><span class="p">,</span> <span class="s1">&#39;AGSO_STCODES.csv&#39;</span><span class="p">]</span>
+    
+    <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">agsofiles</span> <span class="p">:</span> 
+        <span class="n">path_to_agsofile</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;pyCSAMT&quot;</span><span class="p">],</span> <span class="s1">&#39;geodrill&#39;</span><span class="p">,</span>
+                                                 <span class="s2">&quot;_geocodes&quot;</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path_to_agsofile</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">fgeo</span><span class="o">=</span><span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">ss</span><span class="p">,</span> <span class="n">stratum</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fgeo</span><span class="p">):</span>
+            <span class="n">stratum</span><span class="o">=</span><span class="n">stratum</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+            <span class="n">fgeo</span><span class="p">[</span><span class="n">ss</span><span class="p">]</span><span class="o">=</span><span class="n">stratum</span>
+        <span class="k">if</span> <span class="n">file</span> <span class="o">==</span><span class="s1">&#39;AGSO.csv&#39;</span><span class="p">:</span>
+            <span class="n">fagso</span><span class="o">=</span><span class="n">fgeo</span>
+        <span class="k">elif</span> <span class="n">file</span> <span class="o">==</span><span class="s1">&#39;AGSO_STCODES.csv&#39;</span><span class="p">:</span>
+            <span class="n">fagso_stcodes</span><span class="o">=</span><span class="n">fgeo</span>
+            <span class="n">fagso_stcodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="n">fagso</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Geocodes files &lt; AGS0 &amp; AGS0_STCODES&gt; Not found !&quot;</span><span class="p">)</span>
+            <span class="n">CSex</span><span class="o">.</span><span class="n">pyCSAMTError_file_handling</span><span class="p">(</span><span class="s1">&#39;Geocodes files :&lt; AGS0 &amp; AGS0_STCODES&gt; not found.&#39;</span>\
+                                            <span class="s1">&#39;check the right path to _geocodes folder. &#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fagso</span><span class="p">,</span> <span class="n">fagso_stcodes</span></div>
+
+
+<div class="viewcode-block" id="set_stratum_on_dict"><a class="viewcode-back" href="../../../../processing.html#csamtpy.ff.processing.callffunc.set_stratum_on_dict">[docs]</a><span class="k">def</span> <span class="nf">set_stratum_on_dict</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Process to put geocodes_strata and geocodes_structures into dictionnaries  </span>
+<span class="sd">    better way to go on metaclasses merely. Thus each keys of dictionary will be </span>
+<span class="sd">    its own object. </span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    strata_dict : dict</span>
+<span class="sd">        Disctionnary of geostrata .</span>
+<span class="sd">    structures_dict : dict</span>
+<span class="sd">        Dictionnary of geostructures.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">code_strata</span><span class="o">=</span><span class="n">_code_strata</span><span class="p">()</span>
+    <span class="n">drop_bar</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39; / &#39;</span><span class="p">,</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="p">,</span><span class="s1">&#39;-&#39;</span><span class="p">]</span>
+    <span class="n">attr_dict</span><span class="o">=</span><span class="p">{}</span>
+    <span class="n">strata_dict</span><span class="p">,</span> <span class="n">structures_dict</span><span class="o">=</span><span class="p">{},{}</span>
+    <span class="k">for</span> <span class="n">iiagso</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+        <span class="n">fstrata</span><span class="o">=</span><span class="n">agso_data</span><span class="p">()[</span><span class="n">iiagso</span><span class="p">][</span><span class="mi">1</span><span class="p">:]</span>
+        
+        <span class="k">for</span> <span class="n">ss</span> <span class="p">,</span> <span class="n">elem</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fstrata</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">jj</span><span class="p">,</span> <span class="n">attribute</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">code_strata</span><span class="p">):</span>
+                <span class="n">attr_dict</span><span class="p">[</span><span class="s2">&quot;</span><span class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">attribute</span><span class="p">)]</span><span class="o">=</span><span class="n">elem</span><span class="p">[</span><span class="n">jj</span><span class="p">]</span>
+                <span class="n">stratum_description</span><span class="o">=</span><span class="n">elem</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">db</span> <span class="ow">in</span> <span class="n">drop_bar</span> <span class="p">:</span>
+                <span class="k">if</span> <span class="n">db</span> <span class="ow">in</span> <span class="n">stratum_description</span> <span class="p">:</span> 
+                    <span class="n">stratum_description</span><span class="o">=</span><span class="n">stratum_description</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">db</span><span class="p">,</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+            <span class="n">stratum_description</span><span class="o">=</span><span class="n">stratum_description</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">stratum_description</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">stratum_description</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">):</span>
+                <span class="n">stratum_description</span><span class="o">=</span><span class="n">stratum_description</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">iiagso</span> <span class="o">==</span><span class="mi">1</span> <span class="p">:</span>
+                <span class="n">structures_dict</span><span class="p">[</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">stratum_description</span><span class="p">)]</span><span class="o">=</span><span class="n">attr_dict</span>
+            <span class="k">else</span> <span class="p">:</span>
+                <span class="n">strata_dict</span><span class="p">[</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">stratum_description</span><span class="p">)]</span><span class="o">=</span><span class="n">attr_dict</span>
+            <span class="n">attr_dict</span><span class="o">=</span><span class="p">{}</span>
+
+    <span class="k">return</span> <span class="n">strata_dict</span><span class="p">,</span> <span class="n">structures_dict</span></div>
+
+<span class="c1">#***  end call file from _geocodes folder :AGSO &amp; AGSO.STCODES ******</span>
+
+<span class="c1">#***start Avg files extract **** </span>
+    
+<span class="k">def</span> <span class="nf">_validate_avg_file</span><span class="p">(</span><span class="n">avg_dataLines</span><span class="p">):</span>
+    
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to validate and readZonge Avg FILE :Plainty file _F1 and the Astatic file </span>
+<span class="sd">    _F2. Both files can be read and separatedd by the program. if Avg file doesnt match </span>
+<span class="sd">    any of them , the programm will generate errors . </span>
+<span class="sd">    </span>
+<span class="sd">    params : </span>
+<span class="sd">    -------</span>
+<span class="sd">        ** avag_dataLines: list </span>
+<span class="sd">                    list of avgData for all lines. </span>
+<span class="sd">    </span>
+<span class="sd">    returns :</span>
+<span class="sd">        _F1 &amp; _F2: int , </span>
+<span class="sd">            type of AVG Zonge file .</span>
+<span class="sd">  </span>
+<span class="sd">                </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+        
+    <span class="n">remark</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1"> AMTAVG&#39;</span><span class="p">,</span><span class="s1">&#39;$ ASPACE&#39;</span><span class="p">,</span> <span class="s1">&#39;$ XMTR &#39;</span><span class="p">]</span> 
+    <span class="n">count</span><span class="o">=</span><span class="mi">0</span>
+    
+    <span class="kn">import</span> <span class="nn">inspect</span> 
+    
+    <span class="n">func_name</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getframeinfo</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">currentframe</span><span class="p">())[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">_logger</span><span class="o">.</span><span class="n">info</span> <span class="p">(</span><span class="s1">&#39;Check the Avg_Datalinesfile </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span><span class="n">func_name</span> <span class="p">)</span>
+      
+    <span class="k">if</span> <span class="n">avg_dataLines</span> <span class="ow">is</span> <span class="ow">not</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">]:</span>
+        <span class="n">filehead</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">ss</span> <span class="k">for</span> <span class="n">ss</span> <span class="ow">in</span> <span class="n">avg_dataLines</span><span class="p">[:</span><span class="mi">3</span><span class="p">]])</span>
+        <span class="c1">#------------------checker section ------------------------</span>
+        <span class="c1">#---&gt;  check if astatic file is on the head_section </span>
+        <span class="k">if</span> <span class="n">filehead</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;astatic&#39;</span><span class="o">.</span><span class="n">upper</span><span class="p">())</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span> 
+            <span class="n">_FT</span><span class="o">=</span><span class="mi">2</span>
+        <span class="k">elif</span> <span class="s1">&#39;astatic&#39;</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">filehead</span><span class="p">:</span> 
+            <span class="k">for</span> <span class="n">ss</span> <span class="ow">in</span> <span class="n">remark</span> <span class="p">:</span>
+                <span class="k">if</span> <span class="n">filehead</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">ss</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">:</span><span class="n">count</span> <span class="o">+=</span><span class="mi">1</span>
+            <span class="c1">#---&gt; that mean all the remak elemt are on the head_section </span>
+            <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;=</span><span class="mi">2</span> <span class="p">:</span>
+                <span class="n">_FT</span><span class="o">=</span><span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Wrong Avg file.  Must respect the typical zonge file.&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">CSex</span><span class="o">.</span><span class="n">pyCSAMTError_avg_file</span><span class="p">(</span><span class="s1">&#39;Type of AVg file provide is Wrong. No match&#39;</span>\
+                                             <span class="s1">&#39;the typical Zonge engeneering file.&#39;</span><span class="p">)</span>       
+    <span class="k">else</span> <span class="p">:</span> 
+        <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;No Zonge Engeneering files exists. No data found on that curent AVG file.&#39;</span>\
+                      <span class="s1">&#39;Check the better path to Avgfiles right file.&#39;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">CSex</span><span class="o">.</span><span class="n">pyCSAMTError_avg_file</span><span class="p">(</span><span class="s1">&#39;Check the The type of Avg file.&#39;</span><span class="p">)</span>
+            <span class="c1">#-------------------end checker -----------------------------</span>
+    <span class="k">return</span>  <span class="n">_FT</span>
+        
+
+
+
+<div class="viewcode-block" id="straighten_cac2CSfile"><a class="viewcode-back" href="../../../../processing.html#csamtpy.ff.processing.callffunc.straighten_cac2CSfile">[docs]</a><span class="k">def</span> <span class="nf">straighten_cac2CSfile</span> <span class="p">(</span><span class="n">data_array</span><span class="p">,</span> <span class="n">component_column_section</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">         Sometimes head_sections of file _F2(CAC2CSAMT) provided is little </span>
+<span class="sd">         different colunms section name  according to different version . </span>
+<span class="sd">         it &#39;s better to filter  and to check before returning the </span>
+<span class="sd">         correct informations we need.</span>
+<span class="sd">    </span>
+<span class="sd">    params : </span>
+<span class="sd">    -------</span>
+<span class="sd">        data_array : ndarray </span>
+<span class="sd">            data from AVG astatic file </span>
+<span class="sd">        </span>
+<span class="sd">         component_column_section : list </span>
+<span class="sd">             astactic file column comps provided . </span>
+<span class="sd">    returns : </span>
+<span class="sd">        array_we_need : ndarray</span>
+<span class="sd">            same infos present in the plainty /1 Avg file </span>
+<span class="sd">        array_other_comp :  pd.Core.DataFrame </span>
+<span class="sd">             infos include through Astatic softwares . very usefull therefore </span>
+<span class="sd">             we keep it .</span>
+<span class="sd">        </span>
+<span class="sd">             </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_comp_not_in_F1</span><span class="p">,</span> <span class="n">_comp_we_need</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Z.mwgt&#39;</span><span class="p">,</span><span class="s1">&#39;Z.pwgt&#39;</span><span class="p">,</span><span class="s1">&#39;Z.mag&#39;</span><span class="p">,</span>
+                                     <span class="s1">&#39;SRes&#39;</span><span class="p">,</span><span class="s1">&#39;E.wght&#39;</span><span class="p">,</span>
+                                     <span class="s1">&#39;H.wght&#39;</span><span class="p">,</span><span class="s1">&#39;Z.</span><span class="si">%e</span><span class="s1">rr&#39;</span><span class="p">,</span>
+                                     <span class="s1">&#39;Z.perr&#39;</span><span class="p">,</span><span class="s1">&#39;Gdp.Blk&#39;</span><span class="p">,</span>
+                                     <span class="s1">&#39;Gdp.Chn&#39;</span><span class="p">,</span> <span class="s1">&#39;Gdp.Time&#39;</span><span class="p">],[</span><span class="s1">&#39;skp&#39;</span><span class="p">,</span><span class="s1">&#39;Freq&#39;</span><span class="p">,</span>
+                                                            <span class="s1">&#39;Tx.Amp&#39;</span><span class="p">,</span> <span class="s1">&#39;E.mag&#39;</span><span class="p">,</span>
+                                                            <span class="s1">&#39;B.mag&#39;</span><span class="p">,</span><span class="s1">&#39;B.phz&#39;</span><span class="p">,</span>
+                                                            <span class="s1">&#39;Z.phz&#39;</span><span class="p">,</span><span class="s1">&#39;ARes.mag&#39;</span><span class="p">,</span>
+                                                            <span class="s1">&#39;E.</span><span class="si">%e</span><span class="s1">rr&#39;</span><span class="p">,</span><span class="s1">&#39;E.perr&#39;</span><span class="p">,</span><span class="s1">&#39;B.</span><span class="si">%e</span><span class="s1">rr&#39;</span><span class="p">,</span>
+                                                            <span class="s1">&#39;B.perr&#39;</span><span class="p">,</span><span class="s1">&#39;Z.perr&#39;</span><span class="p">,</span>
+                                                            <span class="s1">&#39;ARes.</span><span class="si">%e</span><span class="s1">rr&#39;</span><span class="p">,</span><span class="s1">&#39;E.phz&#39;</span><span class="p">]</span>           
+                                            
+    
+    <span class="k">if</span> <span class="n">component_column_section</span> <span class="ow">is</span> <span class="kc">None</span> <span class="p">:</span> 
+        <span class="k">raise</span> <span class="n">CSex</span><span class="o">.</span><span class="n">pyCSAMTError_inputarguments</span><span class="p">(</span><span class="s1">&#39;head-section must be on list of string items.&#39;</span><span class="p">)</span>
+        
+    <span class="n">tem_del</span><span class="p">,</span> <span class="n">other_del</span><span class="o">=</span><span class="p">[],[]</span>
+    <span class="c1">#strip comps _column to check....</span>
+    <span class="n">component_column_section</span><span class="o">=</span><span class="n">func</span><span class="o">.</span><span class="n">_strip_item</span><span class="p">(</span><span class="n">item_to_clean</span><span class="o">=</span><span class="n">component_column_section</span><span class="p">)</span>
+    
+    <span class="c1">#---&gt; put on dataFrame the component wee_need </span>
+    <span class="n">df</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data_array</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span> <span class="n">component_column_section</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">ss</span> <span class="ow">in</span> <span class="n">component_column_section</span> <span class="p">:</span> 
+        <span class="k">if</span> <span class="n">ss</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_comp_we_need</span><span class="p">:</span> 
+            <span class="n">tem_del</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ss</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ss</span> <span class="ow">in</span> <span class="n">_comp_we_need</span> <span class="p">:</span>
+            <span class="n">other_del</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ss</span><span class="p">)</span>
+    <span class="n">df_we_need</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">tem_del</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">df_we_need</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">array_we_need</span><span class="o">=</span> <span class="n">df_we_need</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="c1">#---&gt;&gt; _keep on other dataframe the component we dont need.</span>
+    <span class="c1"># other_comp_list =func._cross_eraser(data=component_column_section, to_del=tem_del,</span>
+    <span class="c1">#                                     deep_cleaner=False)</span>
+    <span class="n">df_other_comp</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">other_del</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">df_other_comp</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+
+    
+    <span class="c1">#--&gt; add skpi value if not in component section : </span>
+    <span class="k">if</span> <span class="s1">&#39;skp&#39;</span>  <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">ii</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="n">component_column_section</span><span class="p">]:</span> <span class="c1"># to spare a manner &#39;Skp&#39; is written.</span>
+        <span class="n">skp_value</span> <span class="o">=</span><span class="mi">2</span>   <span class="c1">#  give a certitude value that data were good quality : </span>
+        <span class="n">skp_array</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">array_we_need</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mi">1</span><span class="p">),</span><span class="n">skp_value</span><span class="p">)</span>
+        <span class="n">array_we_need</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">skp_array</span><span class="p">,</span><span class="n">array_we_need</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    
+    <span class="k">return</span> <span class="n">array_we_need</span> <span class="p">,</span> <span class="n">df_other_comp</span></div>
+
+
+<div class="viewcode-block" id="truncated_data"><a class="viewcode-back" href="../../../../processing.html#csamtpy.ff.processing.callffunc.truncated_data">[docs]</a><span class="k">def</span> <span class="nf">truncated_data</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">number_of_reccurence</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to truncate all data according to number of frequency.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : list, or nd.array </span>
+<span class="sd">        data must be truncate.</span>
+<span class="sd">    number_of_freq : int</span>
+<span class="sd">        number of frequency imaged.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    loc_list : list</span>
+<span class="sd">        data truncated on list.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span> <span class="p">:</span> 
+        <span class="n">data</span> <span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> 
+    <span class="n">value_lengh</span><span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c1"># index_loc = [np.int(ss) for ss in np.linspace(0, value_lengh, number_of_station)]</span>
+    <span class="n">index_loc</span> <span class="o">=</span> <span class="p">[</span><span class="n">ss</span> <span class="k">for</span> <span class="n">ss</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">value_lengh</span><span class="p">,</span> <span class="n">number_of_reccurence</span><span class="p">)]</span>
+
+    <span class="n">loc_list</span><span class="o">=</span><span class="p">[]</span>
+    <span class="k">for</span> <span class="n">ss</span><span class="p">,</span> <span class="n">value</span>  <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">index_loc</span><span class="p">)</span> <span class="p">:</span> 
+        <span class="k">if</span> <span class="n">ss</span> <span class="o">==</span><span class="nb">len</span><span class="p">(</span><span class="n">index_loc</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span> <span class="p">:</span> 
+            <span class="n">loc_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">value</span><span class="p">:])</span>
+            <span class="k">break</span>
+        <span class="n">loc_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">value</span><span class="p">:</span><span class="n">index_loc</span><span class="p">[</span><span class="n">ss</span><span class="o">+</span><span class="mi">1</span><span class="p">]])</span>
+            
+    <span class="k">return</span> <span class="n">loc_list</span> </div>
+    
+
+<span class="k">def</span> <span class="nf">_numbering_station</span><span class="p">(</span><span class="n">number_of_station</span><span class="p">,</span> <span class="n">number_of_freq</span><span class="p">):</span> 
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    small function to numbering stations : </span>
+<span class="sd">    params : </span>
+<span class="sd">        number_of_station :int , </span>
+<span class="sd">            number of station found on the site. </span>
+<span class="sd">        number_of freq : int , </span>
+<span class="sd">            number of frequency found for survey at each station.</span>
+<span class="sd">    return : </span>
+<span class="sd">        numbsta : station numbered </span>
+<span class="sd">        poly_sta : multplie station for each frequency for each stations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+   
+    <span class="n">numbsta</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;S</span><span class="si">{:02}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ii</span><span class="p">)</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span> <span class="p">(</span><span class="n">number_of_station</span><span class="p">)]</span>
+    <span class="n">poly_sta</span><span class="o">=</span><span class="n">numbsta</span><span class="o">*</span><span class="n">number_of_freq</span> 
+    <span class="n">poly_sta</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+    
+    <span class="k">return</span> <span class="n">numbsta</span> <span class="p">,</span> <span class="n">poly_sta</span>
+
+
+<div class="viewcode-block" id="zstar_array_to_nan"><a class="viewcode-back" href="../../../../processing.html#csamtpy.ff.processing.callffunc.zstar_array_to_nan">[docs]</a><span class="k">def</span> <span class="nf">zstar_array_to_nan</span> <span class="p">(</span><span class="n">zstar_array</span><span class="p">,</span> <span class="n">nan_value</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">keep_str</span> <span class="o">=</span><span class="kc">False</span><span class="p">):</span> 
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    zstar_array : ndarray</span>
+<span class="sd">        array contain unfloat converter value. the unconverter value can be a &#39;*&#39;</span>
+<span class="sd">    nan_value : float or np.nan type</span>
+<span class="sd">        the nan_value could be any value either int, float or str.  i The default is np.nan.</span>
+<span class="sd">    keep_str : bool, optional</span>
+<span class="sd">        keep the str item on your array. f keep_str is set to </span>
+<span class="sd">        false and the type nan_value is str , the program will force &#39;keep_str_&#39;  to True </span>
+<span class="sd">        to allow converter . The default is False.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    TYPE ; ndarray </span>
+<span class="sd">        zstrar_array converted .</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">for</span> <span class="n">kk</span> <span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">zstar_array</span><span class="p">):</span> 
+        <span class="k">try</span> <span class="p">:</span> <span class="n">zstar_array</span><span class="p">[</span><span class="n">kk</span><span class="p">]</span> <span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">:</span><span class="n">zstar_array</span><span class="p">[</span><span class="n">kk</span><span class="p">]</span><span class="o">=</span><span class="n">nan_value</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">nan_value</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span> <span class="p">:</span> <span class="n">keep_str</span><span class="o">=</span><span class="kc">True</span>
+    <span class="k">if</span> <span class="n">keep_str</span> <span class="p">:</span> <span class="k">return</span> <span class="n">zstar_array</span> 
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">kk</span><span class="p">)</span> <span class="k">for</span> <span class="n">kk</span> <span class="ow">in</span> <span class="n">zstar_array</span><span class="p">])</span></div>
+
+   
+<div class="viewcode-block" id="get_array_from_reffreq"><a class="viewcode-back" href="../../../../processing.html#csamtpy.ff.processing.callffunc.get_array_from_reffreq">[docs]</a><span class="k">def</span> <span class="nf">get_array_from_reffreq</span> <span class="p">(</span> <span class="n">array_loc</span><span class="p">,</span> <span class="n">freq_array</span><span class="p">,</span><span class="n">reffreq_value</span><span class="p">,</span> <span class="n">stnNames</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Get array value at special frequency</span>
+<span class="sd">    params : </span>
+<span class="sd">        array_loc : dict , dictionnary of stations :array_value :eg: S00:(ndarray,1) rho_values</span>
+<span class="sd">        freq_array : (ndarray,1) : frequency array for CSAMT survey </span>
+<span class="sd">        reffreq_value : int or float : the value of frequency user want to get the value </span>
+<span class="sd">        stnNames : list , list of stations names . </span>
+<span class="sd">    </span>
+<span class="sd">    return : </span>
+<span class="sd">        (ndarray,1) : an array of all station with reffreq_value . </span>
+<span class="sd">        eg : reffreq_value =1024. it return all value of the array at 1024Hz frequency . </span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">stnNames</span> <span class="ow">is</span> <span class="kc">None</span> <span class="p">:</span> <span class="k">raise</span> <span class="n">CSex</span><span class="o">.</span><span class="n">pyCSAMTError_station</span><span class="p">(</span><span class="s1">&#39;You may at least specify &#39;</span>\
+                        <span class="s1">&#39;the array or list of stations-Names or station id.&#39;</span><span class="p">)</span>
+    
+    <span class="n">arrayObj</span><span class="p">,</span><span class="n">freqObj</span><span class="p">,</span><span class="n">rfObj</span><span class="p">,</span><span class="n">stnObj</span> <span class="o">=</span><span class="n">array_loc</span> <span class="p">,</span><span class="n">freq_array</span><span class="p">,</span><span class="n">reffreq_value</span><span class="p">,</span><span class="n">stnNames</span>
+
+    <span class="k">def</span> <span class="nf">get_reffreq_index</span><span class="p">(</span><span class="n">freq_array</span><span class="p">,</span> <span class="n">reffreq_value</span><span class="p">):</span> 
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        get the index of reference index. From this index ,All array will filter data at this reffreq</span>
+<span class="sd">        value . </span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+    
+        <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">freq</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">freq_array</span><span class="p">):</span> 
+            <span class="k">if</span> <span class="n">freq</span> <span class="o">==</span> <span class="n">reffreq_value</span><span class="p">:</span>
+                <span class="n">index_rf</span> <span class="o">=</span> <span class="n">ii</span>
+                <span class="k">break</span>
+        <span class="k">return</span> <span class="n">index_rf</span>
+    
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">values</span><span class="p">[</span><span class="n">get_reffreq_index</span><span class="p">(</span><span class="n">freq_array</span><span class="o">=</span><span class="n">freqObj</span><span class="p">,</span> <span class="n">reffreq_value</span><span class="o">=</span><span class="n">rfObj</span><span class="p">)]</span> \
+                <span class="k">for</span> <span class="n">stn</span> <span class="ow">in</span> <span class="n">stnObj</span> <span class="k">for</span> <span class="n">keys</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">arrayObj</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">stn</span><span class="o">==</span><span class="n">keys</span><span class="p">])</span></div>
+        
+<div class="viewcode-block" id="relocate_on_dict_arrays"><a class="viewcode-back" href="../../../../processing.html#csamtpy.ff.processing.callffunc.relocate_on_dict_arrays">[docs]</a><span class="k">def</span> <span class="nf">relocate_on_dict_arrays</span><span class="p">(</span><span class="n">data_array</span><span class="p">,</span> <span class="n">number_of_frequency</span><span class="p">,</span> <span class="n">station_names</span> <span class="o">=</span><span class="kc">None</span><span class="p">):</span> 
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Put data arrays on dictionnary where keys is each station and value the array of that station.</span>
+<span class="sd">    if station_names is None , program will create name of station. if station_names is given ,</span>
+<span class="sd">    function will sorted stations names . please make sure to provide correctly station according </span>
+<span class="sd">    the disposal you want . </span>
+<span class="sd">    params : </span>
+<span class="sd">        number_of_frequency : array_like (ndarray,1) : array of frequency during survey </span>
+<span class="sd">        station_names: list of array_like : list of station . </span>
+<span class="sd">        </span>
+<span class="sd">    return : dict , key :stations , value : infos at data stations . </span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+        
+    <span class="k">if</span> <span class="n">station_names</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="p">:</span> 
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">station_names</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span> <span class="p">:</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">station_names</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="n">data_array</span><span class="o">.</span><span class="n">size</span> <span class="o">/</span> <span class="n">number_of_frequency</span><span class="p">),</span>\
+                <span class="n">CSex</span><span class="o">.</span><span class="n">pyCSAMTError_station</span><span class="p">(</span><span class="s1">&#39;Number of Station provided must be &lt;</span><span class="si">{0}</span><span class="s1">&gt; not &lt;</span><span class="si">{1}</span><span class="s1">&gt;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">(</span><span class="n">data_array</span><span class="o">.</span><span class="n">size</span> <span class="o">/</span> <span class="n">number_of_frequency</span><span class="p">)),</span> 
+                                            <span class="nb">len</span><span class="p">(</span><span class="n">station_names</span><span class="p">))</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="k">assert</span> <span class="n">station_names</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">data_array</span><span class="o">.</span><span class="n">size</span> <span class="o">/</span> <span class="n">number_of_frequency</span><span class="p">,</span> \
+            <span class="n">CSex</span><span class="o">.</span><span class="n">pyCSAMTError_station</span><span class="p">(</span><span class="s1">&#39;Number of Station provided must be &lt;</span><span class="si">{0}</span><span class="s1">&gt; not &lt;</span><span class="si">{1}</span><span class="s1">&gt;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">(</span><span class="n">data_array</span><span class="o">.</span><span class="n">size</span> <span class="o">/</span> <span class="n">number_of_frequency</span><span class="p">)),</span> 
+                                            <span class="n">station_names</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+            <span class="n">station_names</span> <span class="o">=</span><span class="n">station_names</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            
+        <span class="n">NUM_STN</span><span class="o">=</span><span class="nb">sorted</span><span class="p">(</span><span class="n">station_names</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">station_names</span> <span class="ow">is</span> <span class="kc">None</span>  <span class="p">:</span>
+        <span class="n">station_length</span> <span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">(</span><span class="n">data_array</span><span class="o">.</span><span class="n">size</span> <span class="o">/</span> <span class="n">number_of_frequency</span> <span class="p">)</span>
+        
+        <span class="n">NUM_STN</span><span class="o">=</span><span class="nb">sorted</span><span class="p">((</span><span class="n">_numbering_station</span><span class="p">(</span><span class="n">number_of_station</span><span class="o">=</span><span class="n">station_length</span> <span class="p">,</span>
+                                    <span class="n">number_of_freq</span><span class="o">=</span><span class="n">number_of_frequency</span><span class="p">))[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="n">LIST_BROK</span> <span class="o">=</span> <span class="n">truncated_data</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data_array</span><span class="p">,</span> <span class="n">number_of_reccurence</span><span class="o">=</span><span class="n">number_of_frequency</span><span class="p">)</span>   
+    
+    <span class="k">return</span> <span class="p">{</span> <span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span> <span class="p">(</span><span class="n">NUM_STN</span><span class="p">,</span> <span class="n">LIST_BROK</span><span class="p">)}</span></div>
+
+<div class="viewcode-block" id="dipole_center_position"><a class="viewcode-back" href="../../../../processing.html#csamtpy.ff.processing.callffunc.dipole_center_position">[docs]</a><span class="k">def</span> <span class="nf">dipole_center_position</span> <span class="p">(</span><span class="n">dipole_position</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generaly positions are taken at each electrode of dipole to that to easy correct data  for ploting and for</span>
+<span class="sd">    noise correction , we adjust coordinate by taking the center position that means , </span>
+<span class="sd">    the number of points will be substract to one.</span>
+<span class="sd">    params : dipole_postion : array_like (ndarray,1): postion array at each electrodes. </span>
+<span class="sd">    </span>
+<span class="sd">    return : array_centered_value . </span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">dipole_position</span> <span class="ow">is</span> <span class="kc">None</span> <span class="p">:</span> <span class="k">raise</span> <span class="n">CSex</span><span class="o">.</span><span class="n">pyCSAMTError_inputarguments</span><span class="p">(</span><span class="s1">&#39;NoneType can not be compute.&#39;</span>\
+                                                                        <span class="s1">&#39; Please provide the right values.&#39;</span><span class="p">)</span>
+    <span class="k">try</span> <span class="p">:</span> <span class="n">dipole_position</span><span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">pp</span><span class="p">)</span> <span class="k">for</span> <span class="n">pp</span> <span class="ow">in</span> <span class="n">dipole_position</span><span class="p">])</span>
+    <span class="k">except</span> <span class="p">:</span> <span class="k">raise</span> <span class="n">CSex</span><span class="o">.</span><span class="n">pyCSAMTError_float</span><span class="p">(</span><span class="s1">&#39;Cannot convert position values. &#39;</span>\
+                                           <span class="s1">&#39;Position must be a number not str.Please check your data!.&#39;</span><span class="p">)</span>
+    <span class="c1"># temp_pospp =[(dipole_position[pp]+dipole_position[pp-1])/2 for \</span>
+    <span class="c1">#              pp, pos in enumerate( dipole_position) if ( pp&gt;0 and pp &lt;= dipole_position.size) ] </span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">dipole_position</span><span class="p">[</span><span class="n">pp</span><span class="p">]</span><span class="o">+</span><span class="n">dipole_position</span><span class="p">[</span><span class="n">pp</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">/</span><span class="mi">2</span> <span class="k">for</span> \
+                 <span class="n">pp</span><span class="p">,</span> <span class="n">pos</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span> <span class="n">dipole_position</span><span class="p">)</span> <span class="k">if</span> <span class="p">(</span> <span class="n">pp</span><span class="o">&gt;</span><span class="mi">0</span> <span class="ow">and</span> <span class="n">pp</span> <span class="o">&lt;=</span> <span class="n">dipole_position</span><span class="o">.</span><span class="n">size</span><span class="p">)</span> <span class="p">])</span></div>
+        
+
+
+<span class="c1"># if __name__==&#39;__main__&#39;:</span>
+    
+<span class="c1">#     # print(numfreq, num_sta)</span>
+<span class="c1">#     ch =[&#39;2&#39;, &#39;7&#39;, &#39;9&#39;, &#39;a&#39;, &#39;g&#39;, &#39;e&#39;, &#39;*&#39;, &#39;9&#39;,&#39;2&#39;, &#39;7&#39;, &#39;9&#39;, &#39;*&#39;, &#39;g&#39;, &#39;e&#39;, &#39;geth&#39;, &#39;9&#39;]</span>
+<span class="c1">#     array =np.array(ch)</span>
+<span class="c1">#     test=zstar_array_to_nan(zstar_array=array, keep_str=False)</span>
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pyCSAMT v1.0.01 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2021, Kouadio K. Laurent.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.4.0.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,33 @@
+
+=======================
+Package GeoCore
+=======================
+
+**Module Geodrill**
+====================
+.. automodule:: geodrill.geoCore.geodrill
+	:members:
+
+	
+**Module Strutural**
+====================
+.. automodule:: geodrill.geoCore.structural
+    :members:
+
+**Module Strata**
+====================
+.. automodule:: geodrill.geoCore.strata
+	:members:
+	
+
+
+
+
+
+
+
+
+
+
+
+

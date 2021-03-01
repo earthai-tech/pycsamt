@@ -1299,7 +1299,7 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
         DH_East_North=input()
         DH_East_North=dump_comma(input_car=DH_East_North,
                                  max_value=2, carType='value')
-        print("Enter the Hole Bottom value and dip (Bottom, dip):" , end='')
+        print("Enter the Hole Bottom value and dip (Bottom, dip):", end='')
         dh_botdip=input()
         dh_botdip=dump_comma(input_car=dh_botdip,
                                  max_value=2, carType='value')
@@ -1307,8 +1307,9 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
         if float(dh_botdip[1])==0.:
             dh_botdip[1]=(90.)
         elif float(dh_botdip[0])==0.:
-            raise Exception("The curent bottom has a value 0.0 . "\
-                            "Must put the bottom of the well as deep as possible !")
+            raise Exception(
+            "The curent bottom has a value 0.0 . Must put the bottom of the well as deep as possible !"
+                            )
             
         hole_list.append(DH_Hole)
 
@@ -1333,7 +1334,7 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
                 
                 break
             # comp=comp+1
-            print("Enter the layers-thickness levels in (meters):",end='')
+            print("Enter the layers-thickness levels in (meters):", end='')
             dh_from_in=input()
             
             if dh_from_in=="" or dh_from_in=="end":

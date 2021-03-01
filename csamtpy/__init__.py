@@ -4,9 +4,9 @@
 # from .pyConvert import *
 # from .sql import *
 # from .utils import *
-from .utils._csamtpylog import csamtpylog
+#from .utils._csamtpylog import csamtpylog
 
-csamtpylog.load_configure()
+#csamtpylog.load_configure()
 
 
-__all__=["*","*",'*','*','*','*']
+#__all__=["*","*",'*','*','*','*']

@@ -845,7 +845,7 @@ def get_conductive_and_resistive_zone (data, site_names, purpose ='groundwater',
                           ' taken with cautiousness because in groundwater ', 
                           ' exploration, many other parameters are considering',
                           ' before a possible drilling decison. We hope in  ', 
-                          'the next realase, introduce an intelligent drill ', 
+                          'the next release, introduce an intelligent drill ', 
                           'estimator `StarGain` to give better precision of ',
                           ' absolute point  with tolerance value by considering', 
                           '  multiple other parameters. '])

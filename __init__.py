@@ -1,5 +1,6 @@
 
-# 
+# version 
+__version__ ='1.0.01'
 # import logging and load pyCSAMT default logging config
 
 import logging 

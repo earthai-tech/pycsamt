@@ -245,18 +245,18 @@ def compute_components_Z_Phz(magn_E_field , magn_H_field, phz_E_field,
     
     Parameters
     ----------
-    magn_E_field : np.ndarray 
-        E_.field magnitude (ndarray,1) : microV/KM*A
-    magn_H_field : np.ndarray 
-        H_.field magnitude (ndarray,1): mGammas/A or picoTesla/A
-    phz_E_field : np.ndarray 
-        E_field phase (ndarray, 1): mrad 
-    phz_H_field : np.ndarray 
-        H_field phase (ndarray,1) : mrad.
-    freq_value : np.ndarray 
-        Frequency at which data was measured(ndarray,1): Hz
-    **kwargs : str 
-        units conversion.
+        magn_E_field : np.ndarray 
+            E_.field magnitude (ndarray,1) : microV/KM*A
+        magn_H_field : np.ndarray 
+            H_.field magnitude (ndarray,1): mGammas/A or picoTesla/A
+        phz_E_field : np.ndarray 
+            E_field phase (ndarray, 1): mrad 
+        phz_H_field : np.ndarray 
+            H_field phase (ndarray,1) : mrad.
+        freq_value : np.ndarray 
+            Frequency at which data was measured(ndarray,1): Hz
+        **kwargs : str 
+            units conversion.
         
     Raises
     ------
@@ -265,39 +265,38 @@ def compute_components_Z_Phz(magn_E_field , magn_H_field, phz_E_field,
 
     Returns
     -------
-    rho : ndarray 
-        Cagnard resistivity calculation. ohm.m 
-        
-    phz : ndarray 
-        Impedance phase value.
-    Zij : ndarray  
-        Impedance Tensor value.
-    Zreal : ndarray 
-        Value of Real part of impedance Tensor.
-    Zimag : TYPE
-        Value of Imaginary part of impedance Tensor.
-    Zreal_imag : ndarray , complex 
-        Complex value of impedance Tensor.
+        rho : ndarray 
+            Cagnard resistivity calculation. ohm.m 
+            
+        phz : ndarray 
+            Impedance phase value.
+        Zij : ndarray  
+            Impedance Tensor value.
+        Zreal : ndarray 
+            Value of Real part of impedance Tensor.
+        Zimag : TYPE
+            Value of Imaginary part of impedance Tensor.
+        Zreal_imag : ndarray , complex 
+            Complex value of impedance Tensor.
         
         eg :: 
-                path =  os.path.join(os.environ["pyCSAMT"], 
-                          'csamtpy','data', 'K1.AVG')
-                
-                >>>> from csamtpy.core import avg 
-                
-                >>>> emag_ob = avg.Emag(path)
-                >>>> hmag_obj = avg.Hmag(path)
-                >>>> ephz_obj = avg.Ephz(path)
-                >>>> hphz_obj = avg.Hphz(path)
-                >>>> freq_obj =avg.Frequency(path)
-                >>>> station_name ='S00'
-                >>>> rho, phz, Z, real, imag, comp = \
-                    compute_components_Z_Phz(magn_E_field=emag_ob.loc[station_name], 
-                                            magn_H_field =hmag_obj.loc[station_name], 
-                                            phz_E_field =ephz_obj.loc[station_name], 
-                                            phz_H_field=hphz_obj.loc[station_name], 
-                                            freq_value=freq_obj.loc[station_name])
-                ... print(rho)
+            
+            >>> from csamtpy.core import avg 
+            >>> path =  os.path.join(os.environ["pyCSAMT"], 
+                          data', 'avg', 'K1.AVG')
+            >>> emag_ob = avg.Emag(path)
+            >>> hmag_obj = avg.Hmag(path)
+            >>> ephz_obj = avg.Ephz(path)
+            >>> hphz_obj = avg.Hphz(path)
+            >>> freq_obj =avg.Frequency(path)
+            >>> station_name ='S00'
+            >>> rho, phz, Z, real, imag, comp =compute_components_Z_Phz( 
+                magn_E_field=emag_ob.loc[station_name], 
+                                        magn_H_field =hmag_obj.loc[station_name], 
+                                        phz_E_field =ephz_obj.loc[station_name], 
+                                        phz_H_field=hphz_obj.loc[station_name], 
+                                        freq_value=freq_obj.loc[station_name])
+            ... rho
     """
     
     units_E_field =kwargs.pop('unit_E_field', 'microV/km*A')

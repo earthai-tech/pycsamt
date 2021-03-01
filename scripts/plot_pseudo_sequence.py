@@ -40,7 +40,7 @@ DOI = '1km'                 #  can be float like 1000 = 1km
 
 
 # provided station id or number 
-station_to_plot = 1      # can be the station id like "S22" or 23 means the site number 23
+station_to_plot = 10      # can be the station id like "S22" or 23 means the site number 23
 
 # Main parameters : value must be less or eagl of DOI. if step =DOi WILL return your Occam model files.
 STEP_DESCENT = 200.         # float value. Step to cut out data and to  force resistivites calcualted 

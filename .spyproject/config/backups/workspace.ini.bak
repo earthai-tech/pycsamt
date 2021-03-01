@@ -6,5 +6,5 @@ save_non_project_files = False
 
 [main]
 version = 0.2.0
-recent_files = ['viewer\\plot.py', 'csamtpy\\utils\\avg_utils.py', 'csamtpy\\utils\\plot_utils.py', 'geodrill\\geoCore\\geodrill.py', 'geodrill\\geoDB\\dict_app.py', 'scripts\\occam2d_buildinputfiles.py', 'scripts\\plot_curves.py', 'scripts\\plot_occam_2d_res_model.py']
+recent_files = ['viewer\\plot.py', 'csamtpy\\utils\\avg_utils.py', 'geodrill\\geoCore\\geodrill.py', 'scripts\\occam2d_buildinputfiles.py', 'scripts\\plot_curves.py', 'scripts\\plot_occam_2d_res_model.py', 'scripts\\plot_pseudo_sequence.py', 'scripts\\plot_RMS.py', 'scripts\\straighten_profile.py', 'scripts\\plot_survey_lines.py', 'scripts\\plot_pseudo_cross_resitivity_and_phase.py']
 

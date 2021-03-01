@@ -1,0 +1,11 @@
+sphinx>=2.4.0
+matplotlib>=3.2.1
+numpy
+scipy
+qtpy
+netcdf4
+numpydoc>=0.7.0
+pytest
+flake8
+pyyaml
+pyproj==1.9.6

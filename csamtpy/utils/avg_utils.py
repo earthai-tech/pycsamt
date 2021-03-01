@@ -56,7 +56,7 @@ Function utils :
 #==============================================================================
 import os 
 
-import csamtpy.utils.gis_tools as gis 
+from csamtpy.utils import gis_tools as gis 
 import numpy as np 
 import pandas as pd 
 
@@ -673,7 +673,7 @@ class ReadFile:
         print("filenames :")
         
         for ii in filenames :
-            print("{:<30}".format(ii),end='') 
+            print("{:<30}".format(ii) ,end='') 
         print("-"*80)
         select_file=input("Enter the data filename:")
         print('{:-^80}\n'.format("End of searching file."))
@@ -692,19 +692,6 @@ def interpol_Scipy (x_value, y_value,x_new, kind="linear",
     
     return y_new
                 
-#Test : 
-if __name__=='__main__':
-    dir_=r"C:\Users\kouao\OneDrive\Python\CodesExercices\ex_avgfiles\modules"
-    # chdir(dir_)
-    # p=ll2DMS(26.04987)
-    # print(p)
-    # s,east,north=ll_to_utm2(26.051521962922,110.486260190638)
-    # print(s,east,north)
-    # np.random.seed(0)
-    # ser=np.array([ii*152 for ii in np.random.randn(100)])
-    # df= pd.DataFrame(data=ser, columns=["TEST"])
-    # print(df.shape)
-    # print(ss)
-    # print(ss%-180)
+
 
  

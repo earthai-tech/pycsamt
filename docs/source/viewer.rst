@@ -3,7 +3,7 @@
 Package Visualization
 ==================================
 
-**Module Plot**
+**Module Plot1D2D**
 =============================
 .. automodule:: viewer.plot
 	:members:

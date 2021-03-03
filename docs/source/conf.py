@@ -46,12 +46,15 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.coverage',
     'sphinx.ext.imgmath',
-    #'numpydoc',
+    'numpydoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     'sphinx.ext.githubpages',
 ]
 
+#Configuring Napoleon
+#napoleon_google_docstring = False
+napoleon_numpy_docstring = True
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -86,6 +89,7 @@ pygments_style = 'sphinx'
 # a list of builtin themes.
 #
 html_theme = 'classic'
+#html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

@@ -23,16 +23,17 @@ Package Utils
 
 **Module Gis-tools**
 =====================
-.. automodule:: csamtpy.utils.gis_tools
+.. automodule::csamtpy.utils.gis_tools
     :members:
 
 **Module Infos**
 =====================
 .. automodule:: csamtpy.etc.infos
     :members:
+    :private-members:
 
 
 **Module Plot-utils**
 =====================
-.. automodule::  csamtpy.utils.plot_utils
+.. automodule:: csamtpy.utils.plot_utils
     :members:

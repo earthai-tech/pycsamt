@@ -19,16 +19,16 @@
     along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
 
 ===============================================================================
-    
-    From `viewer` subpackage. `plot` module is the visualization module of
-    pyCSAMT software. All analyses , processings , corrections  are vusualized  
-    thoughoutthis module. We decided this option so to avoid importing several time 
-    matplotlib and its properties into differents subpackages . Import Matplotlib 
-    packages into a special module allow a good visibility of scripts  and let 
-    the editor to easy customize the plots without knowning deeply the module 
-    itself.
 
-    Plot module special plot 1d, 2d and 3D. 
+.. Module::Visualization 
+    :synopsis:From `viewer` subpackage. `plot` module is the visualization module of
+        pyCSAMT software. All analyses , processings , corrections  are vusualized  
+        thoughoutthis module. We decided this option so to avoid importing several time 
+        matplotlib and its properties into differents subpackages . Import Matplotlib 
+        packages into a special module allow a good visibility of scripts  and let 
+        the editor to easy customize the plots without knowning deeply the module 
+        itself. Special plot 1d, 2d and 3D.
+        ... 
     
 Created on Mon Dec 28 14:28:06 2020
 
@@ -42,8 +42,8 @@ import  matplotlib.pyplot  as plt
 
 import matplotlib.cm as cm 
 import matplotlib.colorbar as mplcb
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.ticker import MultipleLocator, NullLocator
+# from mpl_toolkits.axes_grid1 import make_axes_locatable
+# from matplotlib.ticker import MultipleLocator, NullLocator
 import matplotlib.gridspec as gspec
 
 from csamtpy.ff.core.cs import CSAMT
@@ -85,9 +85,9 @@ class Plot1d :
     """
     plot 1d class : Deal with all 1D plots. 
 
-    =================== ===================================================
+    =================== =======================================================
     Key Words           Description        
-    =================== ===================================================
+    =================== =======================================================
     fig_dpi             dots-per-inch resolution of the figure
                         *default* is 300
     fig_num             number of the figure instance
@@ -101,9 +101,11 @@ class Plot1d :
     marker              marker of stations 
                         *default* is r"$\blacktriangledown$"
     ms                  size of marker in points. *default* is 5
-
-    =================== ===================================================
-    ======================= ============================================
+    =================== =======================================================
+    
+    =========================== ===============================================
+    Methods                     Description
+    =========================== ===============================================
     plot_topo_sep_azim :        plot_topography , station separation and 
                                 azimuth  profile can plot individually or 
                                 grouped by.
@@ -115,8 +117,8 @@ class Plot1d :
     plot_curves                 plot data curves : specific for 
                                 Zonge Engineering AVG file. 
     plot_RhoPhase errors        plot errors bar of resistivities in ohm.m and 
-                                        phase in degree. 
-    ======================== =============================================
+                                phase in degree. 
+    =========================== ===============================================
     """
     
     def __init__(self,**kwargs):
@@ -155,7 +157,8 @@ class Plot1d :
         # self.station_pk =None 
         
     
-    def plot_topo_sep_azim(self,fn = None , profile_fn=None  , savefig =None ,  **kwargs):
+    def plot_topo_sep_azim(self,fn = None , profile_fn=None  , 
+                           savefig =None ,  **kwargs):
         """
         Method to plot topographic , stations separation and azimuth profiles .
         User can add station_names and and set _it to let the program to plot on the corresponding 
@@ -170,26 +173,26 @@ class Plot1d :
         index 2.To plot individually , User doesnt need to put properties on list. Programm will
         recognize and set the poperties provided according the figure He wants. 
         
+        Parameters
+        ------------
      
-                :fn : str,   full path to [EDI|J|AVG] file.
-                            
-                :profile_fn : str, path to file  may Zonge Engineering *.stn  file  
-                            
-                :plot : str ,    
-                            type of plot : default is '*' mean of three profile.
-                :Station_Names: list ,  
-                            list of station names , User could provide. Default is None ;
-                            compute automatically 
-
-                :set_station_names : bool , 
-                             display the station name on figure axis . Default is False.
-                :elevation : (ndarray,1)
-                            Array_like of elevation 
-                :station_pk : array_like, 
-                            array_like station dipole center value. 
-     
-                :savefig : str , path  to save figure. 
-                
+        * fn : str
+            full path to [EDI|J|AVG] file.    
+        * profile_fn : str 
+            path to file  may Zonge Engineering *.stn  file  
+         * plot : str     
+             type of plot ,  default is '*' mean of three profile.
+         * Station_Names: list   
+                 list of station names , User could provide. Default is None ;
+                 compute automatically 
+         * set_station_names : bool  
+                 display the station name on figure axis . Default is False.
+         * elevation : (ndarray,1)
+                 Array_like of elevation 
+         * station_pk : array_like, 
+                 array_like station dipole center value. 
+         * savefig : str 
+                 path  to save figure. 
                 
         =================== ===================================================
         Key Words           Description        
@@ -197,28 +200,27 @@ class Plot1d :
         lw                  line width . *default* is 1.5
         ls                  [ '-' | '.' | ':' ] line style of lines
                             *default* is "['-', ':', '-.']" for 3 profiles.
-        marker              marker of stations 
-                            *default* is 'o'
+        marker              marker of stations  *default* is 'o'
         ms                  size of marker in points. *default* is 6
         color               color of line .*Default* is 'k'
         alpha               Marker transparence .*Defaut* is .2 
         markerfacecolor     facecolor or markers .*Default*  is 'k'
-        markeredgecolor     eadgecolor of markers . default is "['w','r', 'gray']"
+        markeredgecolor     eadgecolor of markers . default is "['w','r''gray']"
         xtick_label_rotation xtick rotation angle . default* is 45.
         ytick_label_rotation ytick rotatoion angle .default * is 45 
         xtick_labelsize      xtick label size .defalut* is 12.
         ytick_labelsize      ytick label size .defalut* is 12.
-        
         =================== ===================================================
         
-        e:g::       >>> import os
-                    >>> file_stn='K6.stn'
-                    >>> path =  os.path.join(os.environ["pyCSAMT"], 
-                                              'csamtpy','data', file_stn)
-                    ...  plot_1d_obj= Plot1d()
-                    .... plot_1d_obj.plot_topo_sep_azim(profile_fn= path , plot='*', 
-                                                        set_station_names=True,
-                                                       dipole_length_curve=False)
+        :Example: ::
+            >>> import os
+            >>> file_stn='K6.stn'
+            >>> path =  os.path.join(os.environ["pyCSAMT"], 
+                                      'csamtpy','data', file_stn)
+            ...  plot_1d_obj= Plot1d()
+            .... plot_1d_obj.plot_topo_sep_azim(profile_fn= path , plot='*', 
+                                                set_station_names=True,
+                                               dipole_length_curve=False)
         """
         self._logging.info('Plotting Topography-Station_separations and Azimuth.')
         
@@ -292,7 +294,6 @@ class Plot1d :
         def plot_topography(axes=None, set_xlabel=True ): 
             """
             plot topography 
-            
             """
             topo_profile = axes.plot(station_pk, elevation_array, 
                                      lw=lw[0], marker=marker_style[0],markersize=self.ms,
@@ -319,9 +320,8 @@ class Plot1d :
        
         def plot_stn_separation(axes =None, set_xlabel=True): 
             """
-            :plot station _separations  x_station / h: separtion(m)
-             : dipole_length_curve: show the line of overage value on de site beteen all stations . 
-            
+            plot station _separations  x_station / h- separtion(m)
+             dipole_length_curve show the line of overage value on de site beteen all stations  
             """
 
             stn_sep_profile = axes.plot(station_pk, stn_separation_array,
@@ -355,7 +355,8 @@ class Plot1d :
         def plot_azimuth(axes =None, set_xlabel=True): 
             """
             plot_azimuth  
-                : set_xlabel : show the labels of on x 
+            :param set_xlabel : show the labels of on x
+            :type set_xlabel : bool
             
             """
             # plot the azimuth
@@ -497,34 +498,40 @@ class Plot1d :
     def plot_static_correction(self, data_fn, profile_fn =None , 
                                frequency_id  =1 , ADD_FILTER ='tma' ,  **kwargs): 
         """
-        plot coorected apparent resistivities at different stations by reducing the problem of static shift . 
-            :data_fn : str , full path to file , can be [AVG|EDI|J] files
-            :profile_fn : str ,  pathLike  full path to Zonge Engeneering *.station file .
+        plot coorected apparent resistivities at different stations by reducing 
+        the problem of static shift . 
             
-        Note : If user provide raw Zonge AVG file , may also add profile file (*.stn)  
+        :param data_fn :full path to file , can be [AVG|EDI|J] files
+        :type data_fn: str 
         
-        ================ =============== ========================================
-        params             Default                   Description 
-        ================ =============== ========================================
-        frequency_id      str or int        plot the filtered frequency.
-                                            eg  frequency_id = 1023 means  
-                                            plot  uncorrected rho and static rho 
-                                            at that frequency . set on list to plot
-                                            multiple frequency [8,1101 ].
-        ADD_FILTER          str             name of filter to apply . 
-                                            TMA  Trimming moving average
-                                            AMA  Adaptative moving average 
-                                            FLMA  Fixed Length moving average
-
-        ==========================================================================
+        :param profile_fn :  pathLike  full path to Zonge Engeneering *.station file .
+        :type profile_fn: str 
         
-        eg :: 
+        .. note::  If user provide raw Zonge AVG file , 
+                    may also add profile file (*.stn)  
+        
+        ================ ============ =========================================
+        params           Default      Description 
+        ================ ============ =========================================
+        frequency_id      str or int    plot the filtered frequency,
+                                        eg  frequency_id = 1023 means  
+                                        plot  uncorrected rho and static rho 
+                                        at that frequency . set on list to plot
+                                        multiple frequency [8,1101 ].
+        ADD_FILTER          str         name of filter to apply . 
+                                        TMA  Trimming moving average
+                                        AMA  Adaptative moving average 
+                                        FLMA  Fixed Length moving average
+        ================ ============ =========================================
+        
+        :Example: :: 
             >>> from from viewer.plot import Plot1d 
             >>> path =  os.path.join(os.environ["pyCSAMT"], 
                           'csamtpy','data', file_1)
             >>> plot_1d_obj =Plot1d()
             ... plot_1d_obj.plot_static_correction(data_fn =path , 
-                                               profile_fn= os.path.join(os.path.dirname(path), 'K1.stn'), 
+                                               profile_fn= os.path.join(
+                                                os.path.dirname(path), 'K1.stn'), 
                                                frequency_id =1023)
         """
         
@@ -642,26 +649,31 @@ class Plot1d :
                              **kwargs ):
         """
         Method to plot apparent resistivity |phase vs frequency .
-        : fn : str , full path to [AVG|EDI|J] file : 
-        :profile_fn : str ,  full path to station profile . 
-                
-            ... NB :: if user use drectly *AVG data , must provide station profile '*.stn'
+        :param fn :  full path to [AVG|EDI|J] file  
+        :type fn: str 
+        
+        :param profile_fn :  full path to station profile . 
+        :type profile_fn : str  
+        
+        ... note :: if user use drectly *AVG data 
+                 must provide station profile '*.stn'
             
-        =============== ================ =======================================
-        params             Default                   Description 
-        =============== ================= ========================================
-        station_id      str or int          plot the name of station 
-                                            if string is povided make be sure that 
-                                            the station name is on the station list 
-                                            eg : station_id = 1 means  plot  S00
-                                            station =[1,13] means plot >S00,S12
-                                            station [S05, 7, 8]-- [ S05, S06, S07]
-        rename_stations      list            bring the station name . Be sure the 
-                                            len of station name you provided match 
-                                            the data station name . 
-        show_error          bool            if True , see errobar plot. Default is 
-                                            False.
-        ==========================================================================
+        =============== =================== ===================================
+        Others params   Default             Description 
+        =============== =================== ===================================
+        station_id      str or int          plot the name of station if string 
+                                            is povided make be sure that 
+                                            the station name is on the station  
+                                            list eg : station_id = 1 means 
+                                            plot  S00 station =[1,13] means 
+                                            plot >S00,S12station [S05, 7, 8]
+                                            -- [ S05, S06, S07]
+        rename_stations list                bring the station name . Be sure
+                                            the length of station name you 
+                                            provided match the data station name  
+        show_error      bool                if True , see errobar plot.  
+                                            *Default* is False.
+        =============== =================== ===================================
         """
         marker = kwargs.pop('marker', 'D')
         ms = kwargs.pop('ms', 7)
@@ -799,40 +811,49 @@ class Plot1d :
             
             plt.draw()
         
-    def penetrated1D(self, fn =None , profile_fn =None , selected_frequency =None,  **kwargs):
+    def penetrated1D(self, fn =None , profile_fn =None , 
+                     selected_frequency =None,  **kwargs):
         """
-        Pentration1D depth : Show skin depth at selected frequencies .for multiples frequencies , 
-        put argument "selected_frequency" on list. If frequency provided is not on the frequency
-        range , it will be interpolated. 
-     
-            :fn : full path to [AVG|EDI|J] file 
-            :profile_fn : full path to *stn station file . If user used  EDI or J files . Dont need to 
-                        add profile_file 
-            :selected_frequency : list ,  list of freauency want to see the penetration depth. 
-                                must be on a list  . egg  [8, 511,1024 ]
-                         
-        ... Note :: browse to see others plot config. 
-        ================= =============== ========================================
-        params             Default                   Description 
-        ================= =============== ========================================
-        rename_station      list            bring the station name . Be sure the 
-                                            len of station name you provided match 
+        Pentration1D depth : Show skin depth at selected frequencies .
+        for multiples frequencies , put argument `selected_frequency` on list.
+        If frequency provided is not on the frequency range , it will be interpolated.
+   
+        :param fn : full path to [AVG|EDI|J] file 
+        :type fn:str 
+        
+        :param profile_fn : full path to *stn station file . If user used  EDI or
+                    J files , Dont need to add profile_file 
+        :type profile_fn:str 
+            
+        :param selected_frequency : list ,  list of freauency want to see the  
+                               penetration depth. must be on a list  . 
+                               i.e [8, 511,1024 ]
+        :type selected_frequency : list 
+        
+        .. Note :: browse to see others plot config.
+        ================== ================ ==================================
+        Params             Default          Description 
+        ================== ================ ==================================
+        rename_station      list            Bring the station name . 
+                                            Be sure the length of station name 
+                                            you provided match  the size of 
                                             the data station name .
         rotate_station      int             rotation station name  . 
-                                            * Default is 90 degree. 
+                                            *Default* is 90 degree. 
         fs                  float           can change the size of marker. 
-                                            *Default is .7 : eg ms =9*fs
+                                            *Default* is .7 : eg ms =9*fs
         lw                  float           change the linewdth 
         plot_grid           bool            add grid on your plot . 
                                             Default is False 
-        ==========================================================================
-        eg :: 
+        ================== ================ ==================================
+        :Example: :: 
             >>> from viewer.plot import Plot1d 
             >>> path =  os.path.join(os.environ["pyCSAMT"], 
                           'csamtpy','data', file_1)
             >>> plot_1d_obj =Plot1d()
             ... plot1d_depth = plot_1d_obj.penetrated1D(fn =path ,
-                                profile_fn= os.path.join(os.path.dirname(path), 'K1.stn'), 
+                                profile_fn= os.path.join(
+                                    os.path.dirname(path), 'K1.stn'), 
                                 selected_frequency =511)
         """
         self._logging.info('PlotPenetration1D datapath <%s>'% fn)
@@ -970,28 +991,35 @@ class Plot1d :
                          fontsize= self.font_size*4,
                          bbox =dict(boxstyle='round',facecolor ='whitesmoke'),
                          fontstyle ='italic') 
-        if savefig is not None : plt.savefig(savefig, dpi=self.fig_dpi, orientation =orient )
+        if savefig is not None :
+            plt.savefig(savefig, dpi=self.fig_dpi, orientation =orient )
 
-    def plot_curves (self, fn =None , savefig =None ,selected_stations =1,  ** kws): 
+    def plot_curves (self, fn =None , savefig =None ,
+                     selected_stations =1,  ** kws): 
         """
-        Plot Zonge Engineering AVG file with different components E and H at differents
-        frequencies.  
+        Plot Zonge Engineering AVG file with different components 
+        E and H at differents frequencies.  
         
-        : fn : full path to Zonge Engineering file 
-        :profile_fn : str ,  full path to profile file . 
-        :savefig : str ,  path to figure plot 
+        :param fn : full path to Zonge Engineering file 
+        :type fn : str 
+        
+        :param profile_fn :   full path to profile file .
+        :type profile_fn: str 
+        
+        :param savefig :  path to figure plot
+        :type savefig: str 
+        
+        ================== ============ ======================================
+        params             Default      Description 
+        ================== ============ ======================================
+        fs                  float       can change the size of marker. 
+                                        *Default is .7 : eg ms =9*fs
+        lw                  float       change the linewdth 
+        error_bar           bool        set to false to let invisible. 
+                                        Default is True 
+        ================== ============ ======================================
                 
-        ================ ============== ========================================
-        params             Default                   Description 
-        ================ =============== =========================================
-        fs                  float           can change the size of marker. 
-                                            *Default is .7 : eg ms =9*fs
-        lw                  float           change the linewdth 
-        error_bar           bool            set to false to let invisible. 
-                                            Default is True 
-        ==========================================================================
-                
-        ... eg ::   
+        :Example ::   
                 >>> from viewer.plot import Plot1d 
                 >>>path =  os.path.join(os.environ["pyCSAMT"], 
                           'csamtpy','data', file_1)
@@ -1218,28 +1246,33 @@ class Plot1d :
     def  plotRMS(self, fn=None ,target =1. ,savefig =None,  **kwargs): 
         """
         Plot RMS . If occamlogfile is not available , set rms value , 
-        iteration value at each rms and|or roughness. 
-     
-            :fn : str ,  full path to occam2D logfile 
-            :savefig : str ,  full directory to save fig 
-            :target : float ,  target supposed RMS to reach . Default is 1. 
+        iteration value at each rms and|or roughness.
         
-        ... Additionals Notes :: 
+        Parameters
+        -----------
+           * fn : str 
+               full path to occam2D logfile 
+           * savefig : str 
+               full directory to save fig 
+           * target : float 
+               target supposed RMS to reach . Default is 1. 
+        
+        .. note:: 
             If occam2d logfile is availbale , dont need other parameters , except 
             the path "fn" and as possible the "target". 
-        ============= =============== ==========================================
-        params          type                Description
-        ============= ================ ===========================================
-        rms            array_like          RootMeanSquare array . 
-        iteration       int                 number of interation reached .
-                                            iteration starts from "0". so we will
-                                            add the number provided plus 1.
-        roughness       array_like          deGootHeldlin roughness parameters. 
-                                            number of params =Num(RMS)-1 . so we 
-                                            excluded the starting R.M.S
-        target          float               RMS target weexpected to reach .
-                                             Default is   1.0
-        ============================================================================
+        ============== ================ =======================================
+        Params         Type             Description
+        ============== ================ =======================================
+        rms            array_like       RootMeanSquare array . 
+        iteration       int             number of interation reached .
+                                        iteration starts from "0". so we will
+                                        add the number provided plus 1.
+        roughness       array_like      deGootHeldlin roughness parameters. 
+                                        number of params =Num(RMS)-1 . so we 
+                                        excluded the starting R.M.S
+        target          float           RMS target weexpected to reach .
+                                        Default is   1.0
+        ============== ================ =======================================
         """
        
         orientation =kwargs.pop('fig_orientation', None)  
@@ -1254,19 +1287,22 @@ class Plot1d :
             
         for key in list(kwargs.keys()):
             if key in ['rms', 'iteration', 'roughness']:
-                if kwargs['rms'] is not None : csamt_rms_obj = kwargs['rms']
-                if kwargs['iteration'] is not None : csamt_iteration_obj= kwargs['rms']
-                if kwargs['roughness'] is not None : csamt_roughness_obj =kwargs['roughness']
+                if kwargs['rms'] is not None :
+                    csamt_rms_obj = kwargs['rms']
+                if kwargs['iteration'] is not None :
+                    csamt_iteration_obj= kwargs['rms']
+                if kwargs['roughness'] is not None :
+                    csamt_roughness_obj =kwargs['roughness']
            
         for comp in [csamt_rms_obj, csamt_iteration_obj ]:
             if comp is None : 
                 warnings.warn (
-                    'R.M.S and Iteration value are required for plotting.'\
+                    'R.M.S and Iteration value are required for plotting.'
                         ' Can not plot "None" value.')
                 self._logging.warn(
                     'Error plotting R.M.S VS Iteration. Can not plot "None" value.')
-                raise CSex.pyCSAMTError_plot('Error Plot R.M.S . '\
-                                             'Compulsory need R.M.S value and '\
+                raise CSex.pyCSAMTError_plot('Error Plot R.M.S . '
+                                             'Compulsory need R.M.S value and '
                                                  'Iteration value. Please check your value. ')
                 
         # append None to roughness value for last iteration if not exists
@@ -1375,15 +1411,20 @@ class Plot1d :
         """
         Method to plot original station profile and coordinate reajustment profiles. 
         Deal with Zonge AVG file .
-        params : 
-            :fn : str,  full path to profile station file (Zonge Engineering station
-                                                    profile file ). format = *.stn
-            :straighten_type : str , type of straingther profile : it may be 
-                                            'classic, equisistant or distord'
-                                see Profile().straighten_profileline.__doc__
-            :reajust_coordinates : list ,  list of float x, y values . 
-                                        see profile.reajust_coordinates_values.__doc__ 
-        eg ::
+        
+        Parameters
+        -----------
+        * fn : str   
+            full path to profile station file  of Zonge Engineering station
+            profile file . format egal to *.stn
+        * straighten_type : str 
+            type of straingther profile   
+            it may be `classic`, `equisistant` or `distord`
+            *Default* is 'classic'
+        * reajust_coordinates : list 
+            list of float x, y values  
+                                        
+        :Example: ::
                 >>> path =  os.path.join(os.environ["pyCSAMT"], 
                           'csamtpy','data', 'avg', 'K1.stn')
                 >>> plot_1d_obj= Plot1d()
@@ -1487,18 +1528,24 @@ class Plot1d :
                            profile_lines =None,  **kwargs): 
         """
         Plot multisations of site sof survey area 
-   
-            :path : str , full path to station profile path . In the case where 
-                        Zonge avg file is provided , use `stn` profile files. Group 
-                        all `stn` file on a folder will call automatically
-            :profile_lines  : list ,  name of profile lines . if profile lines is NOne 
-                                will tale all `stn` profiles in the path directory 
-            :X : list ,  list of arrays array of X coordinates values  for each
-                            survey line. Can be easting or Northing 
-                                    
-            :Y:  list ,  list of arrays  of Y coordinates values : can be easting 
-                                    or northing
-                    ! X and Y MUST be the same length        
+        
+        Parameters
+        -----------
+            * path : str 
+                full path to station profile path . In the case where 
+                Zonge avg file is provided , use `stn` profile files. Group 
+                all `stn` file on a folder will call automatically
+            * profile_lines  : list 
+                name of profile lines . if profile lines is NOne 
+                will tale all `stn` profiles in the path directory 
+            * X : list 
+                list of arrays array of X coordinates values  for each
+                 survey line. Can be easting or Northing              
+            * Y:  list 
+                list of arrays  of Y coordinates values : can be easting 
+                     or northing
+                     
+        .. note ::  `X` and `Y` MUST be the same length        
         """
         
         savefig =kwargs.pop('savefig', None )
@@ -1624,6 +1671,7 @@ class Plot1d :
         self.fig_aspect ='auto'
                 #--- using window rose to plot diagramm ------- 
         """
+        .. note:: 
         ======================================================================
         For the future plan : ADDED rose diagram from strikes angles   
         computation from all `edi` , `avg` or `j` files . Rose Diagram plot 
@@ -1730,6 +1778,7 @@ class Plot1d :
         
                 
         """
+        .. note:: 
         ========================================================================
         We abondonned idea to add Rose diagram from Windrose . We try to use  
         polar projection . Idea is to plot simultaneousthe profile angles as 
@@ -1765,8 +1814,6 @@ class Plot1d :
             #                                              for nn in
                                                             np.arange(0,
             #                                                         360,
-            #                                                          10)]), 
-                    
             #                                   )
             # ax.bar(wd, ws,
             #                 normed=True, 
@@ -1874,7 +1921,7 @@ class Plot2d (object):
     """
     class to plot 2D map  : Deal with all 2D plots
     ======================= ===============================================
-    keywords                description
+    keywords                Description
     ======================= ===============================================
     cb_pad                  padding between axes edge and color bar 
     cb_shrink               percentage to shrink the color bar
@@ -2011,31 +2058,35 @@ class Plot2d (object):
                       savefig =None, doi= '2km',  **kwargs): 
         """
         plot penetration 2D 
- 
-            :fn : str :,  full path to [EDI|AVG|J] files. 
-            :doi : float ,  depth assumed to be imaged , default is 2000m 
-                            For  CSAMT , 2km is enought to have more info about near surface.
-                            ** Default** unit is "m". 2--> 2km 
-                            
-            :profile_fn : str , full path to profile *stn file 
-            :savefig : str ,  outdir 
+        Parameters
+        -----------
+        * fn : str 
+            full path to [EDI|AVG|J] files. 
+        * doi : float 
+            depth assumed to be imaged , default is 2000m For  CSAMT ,
+            2km is enought to have more info about near surface.
+             * Default* unit is "m".
+        * profile_fn : str 
+            full path to profile *stn file 
+        * savefig : str 
+            outdir 
             
-        ============== ================== ======================================
-        params             type                  Description 
-        ============= ================== ========================================
-        plot_style         str              [pycolormesh|imshow] 
-                                            Default is *pcolormesh
-                                            *Default is .7 : eg ms =9*fs
-        cm                  str             mpl.colormap .Default is "Purples".
-        rename_station     list             can set new_stationname. 
-        =============== ============== ===========================================
-        eg:: 
+        ============== ==================== ===================================
+        Params         Type                 Description 
+        ============== ==================== ===================================
+        plot_style      str                 *pcolormesh* or *imshow* 
+                                            Default is **pcolormesh**
+        ms              int                 markersize: *Default is .7 ,ie.9*fs
+        cm              str                 mpl.colormap .Default is "Purples".
+        rename_station  list                can set new_stationname. 
+        ============== ==================== ===================================
+        :Example : :: 
                     >>> path =  os.path.join(os.environ["pyCSAMT"], 
                           'csamtpy','data', K1.AVG)
                     >>> plot2d_obj = plot2d()
-                    ... plot2d_obj.penetration2D(fn = path, 
-                                            profile_fn=os.path.join(os.path.dirname(path), 
-                                                                    'K1.stn') ,
+                    >>> plot2d_obj.penetration2D(fn = path, 
+                                            profile_fn=os.path.join(
+                                                os.path.dirname(path),'K1.stn'), 
                                              plot_style='imshow',  doi='10000m')
         """
         
@@ -2063,12 +2114,19 @@ class Plot2d (object):
 
         def depth2D (dep_loc,  freq_obj, doi ): 
             """
-            Build matrix freq* nstation from 1D skin depth and return use station 
-            : dep_loc : dict , obj to get create matrix . from all station 
-                    :freq_obj:  ndarray, 1 ,  freqyency array 
-                    :doi : int ,  limit of investigation depth . 
-                return cutoff matrix fonction to depth investigation . 
-                
+            Build matrix freq at n-station from 1D skin depth and return use station 
+            
+            :param dep_loc: obj to get create matrix  from all station 
+            :type dep_loc: dict 
+            
+            :param freq_obj:  frequency array 
+            :type freq_obj:  array_like 
+            
+            :param doi : int ,  limit of investigation depth .
+            :type doi : int  
+            
+            :returns: cutoff matrix fonction to depth investigation. 
+            :rtype:ndarray
             """
             dep2D_GRID_obj  =  func.concat_array_from_list(
                 list_of_array= [values for keys ,
@@ -2214,19 +2272,26 @@ class Plot2d (object):
                             savefig =None , plot_style=None, **kws ):
         """
         plot Pseudocrossection of resistivity and phase 
-        params 
-        : fn :str ,  full path to [AVG\EDI\J] file . 
-        :profile_fn :str ,  full path to profile station file  in the case fn 
-                                    is *AVG. 
-        :savefig : str , path to save figure 
+        :param fn : full path to ['AVG', 'EDI', 'J'] file .
+        :type fn :str 
+        
+        :param profile_fn :  full path to profile station file  in the case fn 
+                            is *AVG. 
+        :type profile_fn :str
+        
+        :param savefig : path to save figure 
+        :type savefig : str 
                 
         """
         def controle_delineate_curve(res_deline =None , phase_deline =None ): 
             """
             fonction to controle delineate value given  and return value ceilling . 
-            params 
-            : res_deline|phase_deline : float|int|list  ,  resistiviry or phase value to
-                                                delineate. 
+
+            :param res_deline: resistivity value  to delineate.
+            :type res_deline: float, int, list  
+            
+            :param phase_deline :  phase value to  delineate.
+            :type phase_deline : float, int, list  
             """
             fmt=['resistivity, phase']
  
@@ -2467,31 +2532,34 @@ class Plot2d (object):
         """
         Plotoccam Model  form Occam Model class 
                    
-                        :model_fn : str , full path to Occam 2Dmodel file 
-        ======================== =========== ==================================
-        params                      type           Description 
-        ======================== ============ ==================================
-        
-            iter_fn                  str         full path to occam iteration file 
-            mesh_fn                  str         full path to mesh_fn file 
-            data_fn                  str         full path to occam_data file 
-            doi                      str         depth of investigation might 
-                                                    be float or str like "1km" =1000
-            depth_scale             str          scale of imaging depth can be 
-                                                   "km" or "m". Default is"m"
-        ========================================================================
-            
-        eg : 
+        :param model_fn : full path to Occam 2Dmodel file 
+        :type model_fn : str  
+        =============== ========== =======================================
+        Params          Type       Description 
+        =============== ========== =======================================
+        iter_fn         str         full path to occam iteration file 
+        mesh_fn         str         full path to mesh_fn file 
+        data_fn         str         full path to occam_data file 
+        doi             str         depth of investigation might 
+                                    be float or str like "1km" =1000
+        depth_scale     str         scale of imaging depth can be 
+                                    "km" or "m". *Default* is"m"
+        =============== ========== =======================================
+        :Example: :: 
             >>> data='OccamDataFile.dat'
             >>> mesh = 'Occam2DMesh'
             >>> model = 'Occam2DModel'
             >>> iter_='ITER17.iter'
-            ... path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D', mesh)
-            ... plot2d_obj = plot2d()
-            ... plot2d_obj.plot_occam2dModel(mesh_fn=path, 
-                                        iter_fn = os.path.join(os.path.dirname(path), iter_), 
-                                        model_fn =os.path.join(os.path.dirname(path), model) , 
-                                        data_fn =os.path.join(os.path.dirname(path), data ), doi='1km')
+            >>> path =os.path.join(os.environ ['pyCSAMT'], 
+                                   'data', 'occam2D', mesh)
+            >>> plot2d_obj = plot2d()
+            >>> plot2d_obj.plot_occam2dModel(mesh_fn=path, 
+                                        iter_fn = os.path.join(
+                                            os.path.dirname(path), iter_), 
+                                        model_fn =os.path.join(
+                                            os.path.dirname(path), model) , 
+                                        data_fn =os.path.join(
+                                            os.path.dirname(path), data ), doi='1km')
         """
         self._logging.info('Plot occamModel 2D')
         depth_scale =kwargs.pop('depth_scale', 'm')
@@ -2826,24 +2894,20 @@ class Plot2d (object):
     def plot_Response(self, data_fn =None ,
                       response_fn =None , mode =None,   **kws ): 
         """
-        Function to plot forward value , and residual value fROM 
-        Occam 2D
+        Function to plot forward value , and residual value from Occam 2D 
         
-        ===================== ============= =================================
-        params                      type                        Description 
-        ====================== ============= =================================
-        
-            response_fn              str             full path to occam 
-                                                            iteration file 
-            data_fn                  str             full path to occam_data 
-                                                                file 
-            doi                      str             depth of investigation
-                                                        might be float or str 
-                                                            like "1km" =1000
-            show_station_id         str              show station names 
-        =======================================================================
+        list of params are below 
+        ================== ================ ===================================
+        Params             Type             Description 
+        ================== ================ ===================================
+        response_fn         str             full path to occam iteration file           
+        data_fn             str             full path to occam_data file              
+        doi                 str             depth of investigation might be
+                                            float or str like "1km" =1000
+        show_station_id     str             show station names 
+        ================== ================ ===================================
             
-        eg :: 
+        :Example: :: 
             >>> pathresp =os.path.join(os.environ ['pyCSAMT'],
                                        'csamtpy', 'data', 'occam2D','RESP17.resp')
             >>> path_data =os.path.join(os.environ ['pyCSAMT'],
@@ -3239,64 +3303,57 @@ class Plot2d (object):
          the value of resistivity produced by our model so to force the pogramm
         to make a correlation between data from true layers and the model values.
         
-        params 
-           : station_id :  str !int  ,  Number or the site id of the survey area 
-                                    numer starts from 1 to the end .
-            ... Note :: User caneither use Occam 2D inversions files to plot or 
-                    BoYang (x, y, file)+ station location file (*bln) to plot 
+         
+        :param station_id :  Number or the site id of the survey area 
+                                 numer starts from 1 to the end .
+        :type station_id :  str, int
+            
+        .. Note :: User caneither use Occam 2D inversions files to plot or 
+                BoYang (x, y, file)+ station location file (*bln) to plot 
                 if the two types of files are provided , program with give 
                 priority to Occam 2D inversion files.
+
+        ======================= =========== ===================================
+        Params                   Type       Description 
+        ======================= =========== ===================================
+        model_fn                str         full path to Occam model file .
+        iter_fn                 str         full path to occam iteration file 
+        data_fn                 str         full path to occam_data file 
+        doi                     str         depth of investigation might be 
+                                            float or str like "1km" =1000
+        depth_scale             str         scale of imaging depth can be 
+                                            "km" or "m". Default is"m"
+        step_descent            float       step to enforce the model 
+                                            resistivities to keep truth layers
+                                            values as reference data . if step 
+                                            descentis egal to doi max, data 
+                                            looks like model at 99.99%.Step  
+                                            decent is function of depth and rho.
+        lc_AD_curves            tuple       customize line color of average
+                                            curve and details sequneces 
+                                            logs  eg : ((0.5, 0.8, 0.),'blue') 
+        default_unknow_lcolor    str        In the case  the name of layer   
+                                            is notin our data base ,
+                                            customize the layer color .
+                                            default is "(1.0, 1.0, 1.0)".
+        default_unknow_lpattern  str        In the case  the name of layer  
+                                            is not in our data base ,
+                                            customize the layer pattern 
+                                            default is "+.+.+."
+        ======================= =========== ===================================
+        
+        .. note:: constrained_electrical _properties_of_rocks param 
+             keeps the Truth layers resistivities  as reference resistivities.
+             If value is false will check in our    data base to find the 
+             resistivities that match better the given resistivities of 
+              the layers. *Default* is True.                                   
             
-        =================== ============== =========================================
-        params                      type                        Description 
-        =================== ================ =======================================
-        model_fn                 str          full path to Occam model file .
-        iter_fn                  str          full path to occam iteration file 
-        data_fn                  str          full path to occam_data file 
-        doi                      str          depth of investigation might be 
-                                                float or str like "1km" =1000
-        depth_scale             str           scale of imaging depth can be 
-                                                "km" or "m". Default is"m"
-        step_descent            float         step to enforce the model 
-                                                resistivities to keep the 
-                                                truth layers values as reference. 
-                                                if step descent is egal
-                                                to doi (max investigation depth), 
-                                                data looks like the model 
-                                                at 99.99%. Mean the capacity to
-                                                differenciate  the resistivity that
-                                                match nderground layers. Step decent
-                                                if function of depth and rho.
-        constrained_electrical
-            _properties_of_rocks  bool        keep the Truth layers 
-                                                resistivities with their 
-                                                 as reference resistivities.
-                                                 if false will check in our  
-                                                 data base to find the 
-                                                 resistivities that match better 
-                                                 gthe given resistivities of 
-                                                 the layers. Default is True.
-        lc_AD_curves            tuple           customize line color of average
-                                                curve and details sequneces 
-                                                logs  eg : ((0.5, 0.8, 0.), 
-                                                'blue')
+        Customize your plot using matplotlib properties. 
         
-        default_unknow_lcolor    str            In the case  the name of layer   
-                                                    is notin our data base ,
-                                                    customize the layer color .
-                                                    default is "(1.0, 1.0, 1.0)".
-        default_unknow_lpattern  str               : In the case  the name of layer  
-                                                            is not in our data base ,
-                                                        customize the layer pattern 
-                                                        default is "+.+.+."
-            
-        ======================== ============ ========================================
-        
-        ...notes :: 
-            Customize your plot using matplotlib properties. 
-        
-        eg : >>> from viewer.plot impor Plot2d 
-            >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D')
+        :Example: :: 
+            >>> from viewer.plot impor Plot2d 
+            >>> path =os.path.join(os.environ ['pyCSAMT'],
+                                   'csamtpy', 'data', 'occam2D')
             >>> plot2d_obj = Plot2d(station_label_rotation=None, 
                                 show_grid=True, 
                                 font_size =8, 
@@ -3304,7 +3361,7 @@ class Plot2d (object):
                                 fig_size=[5,8], 
                                 markerfacecolor='k', 
                                 markeredgecolor='k')
-            ... plot2d_obj.plot_Pseudolog( station_id=[43], 
+            >>> plot2d_obj.plot_Pseudolog( station_id=[43], 
                                             input_resistivities=[300, 500,
                                                                  1000, 2000,
                                                                  4000, 6000],
@@ -3392,7 +3449,7 @@ class Plot2d (object):
                                 'pseudostratigraphy log. Please provided a station'
                                     ' location file. You can use Iter2Dat model ::', 
                                 'from csamtpy.modeling.occam2d import Iter2Dat:: '
-                                    'or Profile module :: from csamtpy.ff.core.cs import Profile:: to', 
+                                    'or Profile module ` from csamtpy.ff.core.cs import Profile` to', 
                                 'build a station location file.'])
                          warnings.warn(mess)
                          self._logging.error (mess)

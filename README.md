@@ -1,5 +1,7 @@
-# pyCSAMT
-Python  for Controlled Source Audio-frequency Magnetotelluric (CSAMT)
+# pyCSAMT (Python  for Controlled Source Audio-frequency Magnetotelluric )
+[![Documentation Status](https://readthedocs.org/projects/pycsamt/badge/?version=latest)](https://pycsamt.readthedocs.io/en/latest/?badge=latest)
+     
+
 
 ## Overview 
 
@@ -23,6 +25,8 @@ developers and users of that software.
  * [Note](#Note)
  
  For the first release, The python toolbox gives a basic tools and  works only in far field. Furhermore , it uses  [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) open source sofware as modeling software , nevertheless several  outputs are provided for other modeling softwares.  
+## Documentation 
+* API Documentation  :  
 
 ## Licence 
 pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/pyCSAMT/blob/master/LICENSE.md)

@@ -19,12 +19,11 @@
     along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
 
 ===============================================================================  
-
-    . Specially dedicate to Manage SQL 
+.. Module:: Interface 
+    :synopsis: Specially dedicate to Manage SQL 
 Created on Tue Oct 13 15:28:57 2020
 
-@author: Daniel03
-
+@author: @Daniel03
 """
 import os, shutil 
 
@@ -49,41 +48,41 @@ class ManageDB(object) :
     simple way to make a transit between two objects : 
         One object dict_app to populate DataBase
     
-    parameters : 
+    Arguments
     ------------
-            * db_name : str  :name of dataBase 
-                
-            * db_host : st, :path to database 
+           * db_name : str  
+               name of dataBase 
+           * db_host : st 
+                path to database 
 
-    =========================================================================== 
-    Attributes                  type                    explanation 
-    ===========================================================================
-    *connex :               object                   DataBase connection 
-    *curs :                 object                   Database cursor
-    ===========================================================================
+    ====================== ============== ==================================== 
+    Attributes              Type            Explanation 
+    ====================== ============== ====================================
+    connex                  object            DataBase connection 
+    curs                    object            Database cursor
+    ====================== ============== ====================================
  
-    Method to manage DB.
-    ===========================================================================
-    methods                     explanation 
-    ===========================================================================
-    * dicT_sqlDB :            send infos as  dictionnary to dataBase 
-    * execute req :           execute a sql_request
-    * drop_TableDB :          drop all Tables in sql memory DB or single Table 
-    * closeDB :               close after requests the connection and the cursor
-    *commit :                 transfer the data to DataBase. if not the data will
-                                 still in the cursor and  not in the dataBase 
-    *print_last_Query :       print the last operating system 
-    * export_req :            export the request on datasheet like excelsheet . 
-    =============================================================================
+    Method to manage DB
+    =========================== ===============================================
+     methods                     Explanation 
+    =========================== ===============================================
+    dicT_sqlDB                  send infos as  dictionnary to dataBase 
+    execute req                 execute a sql_request
+    drop_TableDB                drop all Tables in sql memory DB or single Table 
+    closeDB                     close after requests the connection and the cursor
+    commit                      transfer the data to DataBase. if not the data 
+                                will still in the cursor and  not in the dataBase 
+    print_last_Query            print the last operating system 
+    export_req                  export the request on datasheet like excelsheet . 
+    =========================== ===============================================
         
         
-    e.g ::
+    :Example:  ::
         >>> from sqlrequests import SqlQ
         >>> path= os.getcwd()
         >>> nameofDB='memory.sq3'
         >>> manDB=ManageDB(db_name=nameofDB, 
                            db_host=path)
-        
         ... print(SqlQ.sql_req[-1])
         ... manDB.executeReq(SqlQ.sql_req[2])
         ... ss=manDB.print_last_Query()
@@ -92,8 +91,6 @@ class ManageDB(object) :
                              export_type='.csv')
         ... manDB.dicT_sqlDB(dictTables=Glob.dicoT, 
                            visualize_request=False)
-    
-
         """
     def __init__(self, db_name =None, db_host=None): 
         self._logging=csamtpylog.get_csamtpy_logger(self.__class__.__name__)
@@ -107,11 +104,13 @@ class ManageDB(object) :
             
     def connect_DB(self, db_host=None , db_name=None): 
         """
-        Create sqqlite Database : 
-            params : 
-            db_host : str :  DataBase location path
-            db_name : str : DataBase name 
+        Create sqqlite Database 
         
+        :param db_host:   DataBase location path
+        :type db_host: str
+        
+        :param db_name : str , DataBase name 
+        :type db_name : str 
         """
         if db_host is not None : self.db_host = db_host 
         if db_name is not None : self.db_name = db_name 
@@ -145,28 +144,28 @@ class ManageDB(object) :
     def dicT_sqlDB(self, dicTables, **kwargs): 
         """
         Method to create Table for sqlDataBase . 
-            Enter Data to DataBase from dictionnary. 
-            Interface objet : Database _Dictionnary : 
-            to see how dicTable is arranged , may consult dict_app module 
+        Enter Data to DataBase from dictionnary. 
+        Interface objet : Database _Dictionnary  
+        to see how dicTable is arranged , may consult dict_app module 
                 
         Parameters
         ----------
-        dictTables : dict
+        * dictTables : dict
            Rely on dict_app.py module. it populates the  datababse 
            from dictionnay app 
+           
         Returns
-        -------
-        None.
+        ---------
+          str 
             execute queries from dict_app 
-        
-        Example :
-        ********
+            
+        :Example ::
             >>>  mDB=GestionDB (dbname='memory.sq3, 
                                db_host =os.getcwd()')
-            ...mDB.dicT_sqlDB(dicTables=Glob.dicoT,
+            >>> mDB.dicT_sqlDB(dicTables=Glob.dicoT,
                               visualize_request=False)
-            ...ss=mB.print_last_query()
-            ...print(ss)
+            >>> ss=mB.print_last_query()
+            >>> print(ss)
         """
         visual_req=kwargs.pop('visualize_request', False)
         
@@ -212,11 +211,11 @@ class ManageDB(object) :
         """
         Execute request  of dataBase  with detection of error. 
         
-        parameters : 
-        ------------
-        * query : str , 
+        Parameters  
+        -----------
+        * query : str  
             sql_query 
-        * param : str, 
+        * param : str 
             Default is None . 
         
         raise : 
@@ -225,13 +224,14 @@ class ManageDB(object) :
             
         return : 
         -------
-            1 : int , 
-                the request has been successuful run . 
-        e.g. :: 
-                ... for keys in Glob.dicoT.keys(): 
-                    reqst='select * from %s'%keys
-                ... ss=manageDB.executeReq(query=reqst)
-                ... print(ss)
+          int  
+              1, the request has been successuful run .
+              
+        :Example: ::
+                >>>  for keys in Glob.dicoT.keys(): 
+                        reqst='select * from %s'%keys
+                >>>  ss=manageDB.executeReq(query=reqst)
+                >>>  print(ss)
         """
         
         try :
@@ -266,17 +266,10 @@ class ManageDB(object) :
         * drop_all : Bool, optional
             Must select if you need to drop all table. 
             The default is False.
-            
-        *kwargs : TYPE
-            populate laters.
 
         Raises
         ------
             Exception : Errors occurs ! .
-
-        Returns
-        -------
-            . New_sqlDatBase safe .
 
         """
         
@@ -300,9 +293,6 @@ class ManageDB(object) :
     def closeDB(self):
         """
         simple method to close Database. 
-        Returns
-        -------
-        None.
         """
         
         if self.connexDB : 
@@ -321,7 +311,7 @@ class ManageDB(object) :
         """
         return the result of the previous query.
         
-        parameters :
+        Parameters :
         ------------
             * query_table_nam : str
                 name of table to fetch colounm data .
@@ -352,16 +342,12 @@ class ManageDB(object) :
         Exception
             Print wrong sqlrequests.
 
-        Returns
-        -------
-        None.
-        
-        e.g.:: 
+        :Example: :: 
             >>> from sqlrequests import SqlQ
-            ... manageDB.executeReq(SqlQ.sql_req[2])
-            ... ss=manageDB.print_last_Query()
-            ... print(ss)
-            ... manageDB.export_req(SqlQ.sql_req[-1],
+            >>> manageDB.executeReq(SqlQ.sql_req[2])
+            >>> ss=manageDB.print_last_Query()
+            >>> print(ss)
+            >>> manageDB.export_req(SqlQ.sql_req[-1],
                                 export_type='.csv',
                                 )
         """

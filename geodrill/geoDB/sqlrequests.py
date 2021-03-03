@@ -28,7 +28,7 @@ Created on Tue Oct 13 17:36:35 2020
 
 class SqlQ(object):
     """
-    Build sql _requests : Not use for others
+    Build sql _requests - Not use for others
     you may populate request for your purpose. the request in not general , 
     the user must change the request according its will . 
     

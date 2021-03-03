@@ -19,9 +19,9 @@
     along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
 
 ===============================================================================  
-
-    .Metaclasses of geostrata . Takes conventional strata geocodes 
-    look in _geocodes folder . 
+.. Module ::Strata 
+    :synopsis:Metaclasses of geostrata . Takes conventional strata geocodes 
+    look in _geocodes folder . will be deprecated soon
     
 Created on Wed Nov 25 16:45:33 2020
 

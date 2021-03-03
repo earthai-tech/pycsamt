@@ -19,8 +19,9 @@
     along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
 
 ===============================================================================  
-    . class for  geological structural analysis 
-    . some conventional structure can populate the data
+.. Module:: Structural 
+    :synopsis:class for  geological structural analysis 
+               contains some conventional structure can populate the data
     
 Created on Sat Nov 28 21:19:13 2020
 
@@ -45,8 +46,7 @@ class geo_pattern:
     its owwn geological pattern in coformity with the conventional geological swatches .
      deal with USGS(US Geological Survey ) swatches- references and FGDC (Digital cartographic 
     Standard for Geological  Map Symbolisation):
-    :::FGDCgeostdTM11A2_A-37-01cs2.eps ::: 
-        
+    .. FGDCgeostdTM11A2_A-37-01cs2.eps :: 
         make _pattern:{'/', '\', '|', '-', '+', 'x', 'o', 'O', '.', '*'}
                 /   - diagonal hatching
                 \   - back diagonal
@@ -58,7 +58,6 @@ class geo_pattern:
                 O   - large circle
                 .   - dots
                 *   - stars
-    
     """
     pattern={
                         "basement rocks" :      ['.+++++.', (.25, .5, .5)],
@@ -90,15 +89,13 @@ class geo_pattern:
 class Structure :
     """
     Class for typical geological strutural conventions 
-    for AGSO_STCODES . . 
-         . all geological structural informations are geostructral object.
+    for AGSO_STCODES .  All geological structural informations are
+    geostructral object.
                   
     Holds the following information:
-
-        
-    ================= ============== ==========================================
+    ===================== ========== ==========================================
     Attributes              Type                     Explanation
-    ================= ============== ==========================================
+    ===================== ========== ==========================================
     boudin_axis            geos_obj         boudin    
     fold_axial_plane       geos_obj         axial plam of structural fold.
     banding_gneissosity    geos_obj         gneissossity of boudin plan  
@@ -106,22 +103,19 @@ class Structure :
     fault_plane            geos_obj         fault plan 
     fracture_joint_set     geos_obj         fracture joint 
     undifferentiated_plane geos_obj         unnamed geological structure 
-    sharp_contact          geos_obj         sharp contact : various discrepancy 
-                                            contact : {stratigraphy disprecancy  
-                                             fracture /fault discrepancies}
-    ================= =========== =============================================
+    sharp_contact          geos_obj         sharp contact `various discrepancy` 
+                                            contact `stratigraphy discrepancy`  
+                                             fracture or fault discrepancies
+    ===================== ========== ==========================================
 
     More attributes can be added by inputing a key word dictionary
 
-    e.g :: 
+    :Example: :: 
         >>> structural=Structure()
         >>> boudin=boudin_axis()
-        >>> # print(boudin.code) 
+        >>>  print(boudin.code) 
         >>> print(structural.boudin_axis.name)
-        >>> # print(structural.boudin_axis.color)
-    
-    
-    
+        >>> print(structural.boudin_axis.color)
     """  
     _logger.info('Set Structural main geological informations. ')
     
@@ -149,7 +143,6 @@ class boudin_axis(object):
     Special class for boudins_axis
     
     Holds the following information:
-
     ================= ============== =========================================
     Attributes              Type          Explanation
     ================= ============== =========================================
@@ -160,10 +153,9 @@ class boudin_axis(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= =========== ============================================
+    ================= =============== ========================================
 
     More attributes can be added by inputing a key word dictionary
-    
     """
     def __init__(self, **kwargs):
         
@@ -214,10 +206,9 @@ class fold_axial_plane(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= =========== ============================================
+    ================= ============== =========================================
 
     More attributes can be added by inputing a key word dictionary
-    
     """
     def __init__(self, **kwargs):
         
@@ -268,7 +259,7 @@ class banding_gneissosity(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= =========== ============================================
+    ================= =============== ========================================
 
     More attributes can be added by inputing a key word dictionary
     """
@@ -322,10 +313,9 @@ class s_fabric(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= =========== ============================================
+    ================= ============== =========================================
 
     More attributes can be added by inputing a key word dictionary
-    
     """
     def __init__(self, **kwargs):
         
@@ -344,10 +334,7 @@ class s_fabric(object):
             self.__setattr__(keys, kwargs[keys])
             
     def _set_s_fabric(self):
-        """
-        methode to populates attributes
-
-        """
+        """methode to populates attributes"""
         baxis=strato()[1]
         # print(baxis)
         for keys, values in baxis.items():
@@ -377,7 +364,7 @@ class fault_plane(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= =========== ============================================
+    ================= =============== ========================================
 
     More attributes can be added by inputing a key word dictionary
     """
@@ -422,7 +409,7 @@ class fracture_joint_set(object):
     Holds the following information:
 
     ================= ============== =========================================
-    Attributes              Type          Explanation
+    Attributes         Type           Explanation
     ================= ============== =========================================
     code                str             conventional code    
     label               str             named label
@@ -431,10 +418,9 @@ class fracture_joint_set(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= =========== ============================================
+    ================= ============== =========================================
 
     More attributes can be added by inputing a key word dictionary
-    
     """
     def __init__(self, **kwargs):
         
@@ -453,9 +439,7 @@ class fracture_joint_set(object):
             self.__setattr__(keys, kwargs[keys])
             
     def _set_fracture_joint_set(self):
-        """
-        methode to populates attributes
-
+        """methode to populates attributes
         """
         baxis=strato()[1]
         # print(baxis)
@@ -486,7 +470,7 @@ class undifferentiated_plane(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= =========== ============================================
+    ================= ============== =========================================
 
     More attributes can be added by inputing a key word dictionary
     """
@@ -540,8 +524,7 @@ class sharp_contact(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= =========== ============================================
-
+    ================= ============== =========================================
     More attributes can be added by inputing a key word dictionary
     """
     def __init__(self, **kwargs):
@@ -563,7 +546,6 @@ class sharp_contact(object):
     def _set_sharp_contact(self):
         """
         methode to populates attributes
-
         """
         baxis=strato()[1]
         # print(baxis)
@@ -580,21 +562,21 @@ class sharp_contact(object):
                 
 class Geo_formation (object): 
     """
-    This class is an axilliary class to supplement geodatabase , if the GeodataBase doesnt reply 
-    to SQL request  , then use this c,lass to secah information about structures . 
-    If SQL is done as well , program won't call this class as rescure . 
-    Contain more than  150 geological strutures ...
-    
-    To see the names of strutures  : 
+    This class is an axilliary class to supplement geodatabase , 
+    if the GeodataBase doesnt reply  to SQL request  , then use this class
+    to secah information about structures .  If SQL is done as well ,
+    program won't call this class as rescure . 
+    Containers of more than  150 geological strutures.
         
+    .. note :: To see the names of strutures , write the script below 
         >>> from geodrill.geoCore.strutural import Geo_formation as gf 
         >>> geo_structure = gf()
-        ... geo_structure.names
-        
-    ================= ============== ==========================================
+        >>> geo_structure.names
+    
+    .. note :: replace in attributes param ** by `name of struture`
+    =================== ============ ==========================================
     Attributes              Type                     Explanation
-    (** ={name of struture}.)
-    ================= ============== ==========================================
+    =================== ============ ==========================================
     names               array_like      names of all geological strutures 
     codes               array_like      names of all geological codes 
     **code              str             code of specific geological structure 
@@ -605,19 +587,15 @@ class Geo_formation (object):
     **pat_density       str             pattern density l of specific structure
     **pat_thickness     str             pttern thickess of specific structure
     **color             str             color of specific structure
-                                            
-    ================= =========== =============================================
+    =================== ============ ==========================================
 
-    eg :: to extract color  of the structure amphibollite: 
-        1--> with the name = amphibolite 
-           ... geo_structure.amphibolite['color'] 
-        2 --> with the structure code : 
-            ... geo_structure.amphibolite['code'] 
-            ... geoformation_obj.AMP['color']
-        
-        output : 'R128G128'
- 
-    
+    :Example: :: 
+          to extract color  of the structure amphibolite 
+          >>>  geo_structure.amphibolite['color'] 
+          to get the code of structure 
+          >>> geo_structure.amphibolite['code'] 
+          >>> geoformation_obj.AMP['color']
+          ... 'R128G128'
     """ 
     codef =['code','label','__description','pattern', 'pat_size',	'pat_density',
             'pat_thickness','color']
@@ -659,18 +637,18 @@ class Geo_formation (object):
     def _set_geo_formation(self, agso_fn =None): 
         """
         Read and set  attributes and decode agso geostructures .
-        params : agso_fn : str : full path geological structural  file.
         
-        eg :: 
-             
+        :param agso_fn :  full path geological structural  file.
+        :type agso_fn : str 
+        
+        :Example: :: 
             >>> geoformation_obj =Geo_formation()
             >>> DATA = geoformation_obj._AGS0_DATA
-            ... print( geoformation_obj.argillite['name'])
-            ... print( geoformation_obj.argillite['color'])
-            .. print( geoformation_obj.wood['color'])
-            ... print( geoformation_obj.amphibolite['code'])
-            .. print( geoformation_obj.names)
-        
+            >>> print( geoformation_obj.argillite['name'])
+            >>> print( geoformation_obj.argillite['color'])
+            >>> print( geoformation_obj.wood['color'])
+            >>> print( geoformation_obj.amphibolite['code'])
+            >>> print( geoformation_obj.names)
         """
         self._logging.info('Read &  and decodes geostructures files . ')
         if agso_fn is not None : 
@@ -726,18 +704,24 @@ def get_color_palette (RGB_color_palette):
     Matplotlib has lots of pre-defined colormaps for us . They are all normalized to 255,
     so they run from 0 to 1. So you need only normalize data, then we can manually 
     select colors from a color map  
-    params : RGB_color_palette : str value of RGB value 
-    return  rgba : tuple (R, G, B)
-    eg : 
+
+    :param RGB_color_palette: str value of RGB value 
+    :type RGB_color_palette: str 
+        
+    :returns : rgba, tuple of (R, G, B)
+    :rtype: tuple
+     
+    :Example: :: 
         >>> from geodrill.geoCore.structural import get_color_palette 
         >>> get_color_palette (RGB_color_palette ='R128B128')
-
     """   
     def ascertain_cp (cp): 
         if cp >255. : 
-            warnings.warn(' !RGB value is range 0 to 255 pixels , not beyond !. Your input values is = {0}.'.format(cp))
-            raise CSex.pyCSAMTError_parameter_number('Error color RGBA value ! '\
-                                                     'RGB value  provided is = {0}. It is larger than 255 pixels.'.format(cp))
+            warnings.warn(' !RGB value is range 0 to 255 pixels , '
+                          'not beyond !. Your input values is = {0}.'.format(cp))
+            raise CSex.pyCSAMTError_parameter_number('Error color RGBA value ! '
+                                                     'RGB value  provided is = {0}.'
+                                                     ' It is larger than 255 pixels.'.format(cp))
         return cp
     if isinstance(RGB_color_palette,(float, int, str)): 
         try : 

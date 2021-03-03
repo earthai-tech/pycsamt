@@ -1,10 +1,10 @@
-sphinx>=1.8.0
-matplotlib>=3.2.1
+sphinx>=2.4.0
+matplotlib>=3.3.0
 numpy
 scipy
 qtpy
 netcdf4
-numpydoc>=0.7.0
+numpydoc>=1.1.0
 pytest
 flake8
 pyyaml

@@ -4,7 +4,7 @@ numpy
 scipy
 qtpy
 netcdf4
-numpydoc>=1.1.0
+#numpydoc>=1.1.0
 pytest
 flake8
 pyyaml

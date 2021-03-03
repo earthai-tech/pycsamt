@@ -128,10 +128,10 @@ class suit :
 
 class _sensitive:
     """
-    NOTE : sensitive class . Please must keep carefully the indice like it was.
-    Ways to avoid reduncdancy in pyCSAMT software. Very usefull : 
-        1- to check file . it is was the right file provided or not 
-        2. to write file : to Zonge Avg_format or J-Format or EDI -format and else.
+    .. note ::  sensitive class . Please must keep carefully the indice like it was.
+        Ways to avoid reduncdancy in pyCSAMT software. Very usefull : 
+        1. to check file . it is was the right file provided or not 
+        2. to write file . to Zonge Avg_format or J-Format or EDI -format and else.
         3. to compute value . Indice are used for computation , set and get specific value.
     
     """
@@ -210,41 +210,48 @@ class _sensitive:
     @classmethod
     def which_file(cls, filename=None, deep= True): 
         """
-        Which file is class method . List of files are the typical files able to read by pyCSAMT softwares.
+        Which file is class method . List of files are the typical files able
+        to read by pyCSAMT softwares.
         Sensitive class method. 
-        PARAMS
-        -------
+        
+        Parameters
+        ----------
             *** filename *** :str 
                             corresponding file to read , pathLike 
             *** deep *** : bool , 
-                control reading : False for just control the extension file , not opening file . 
-                                    True : control in deeper file and find which file were inputted. 
+                control reading : False for just control the extension file ,
+                not opening file . 
+                True : control in deeper file and find which file were inputted. 
 
         List of files read by pyCSAMT are : 
-        ++++++++++++++  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        ++++++++++++++  +++++++++++++++++++++++++++++++++++++++++++++++++++++++
         CodeFile                        DESCRIPTION 
-        ++++++++++++++  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        ++++++++++++++  +++++++++++++++++++++++++++++++++++++++++++++++++++++++
         
-            - avg          Zonge Engineering file Plainty file of ASTATIC file. 
-            - j            A.G .Jonhson J=Format file. 
-            - edi          SEG (Society of Exploration Geophysics) Electrical Data Interchange file (SEG-EDI) .
-            - stn          Zonge Engineering station file. 
-            - occamdat     deGroot-Hedlin, C., and S. Constable, Occam file. 
-            - mesh         Constable, S. C., R. L. Parker, and C. G. Constable  mesh file .
-            - model        Occam Model file . 
-            - startup      Occam startup file  
-            - iter         Occam iteration file get after Inversion . 
-            - resp         Occam response file , Get after inversion 
-            - logfile      Occam Logfile, Get after inverson (Inversion file )
+            - avg           Zonge Engineering file Plainty file of ASTATIC file. 
+            - j              A.G .Jonhson J=Format file. 
+            - edi           SEG (Society of Exploration Geophysics) Electrical
+                            Data Interchange file (SEG-EDI) .
+            - stn           Zonge Engineering station file. 
+            - occamdat      deGroot-Hedlin, C., and S. Constable, Occam file. 
+            - mesh          Constable, S. C., R. L. Parker, and C. G. Constable 
+                            mesh file .
+            - model         Occam Model file . 
+            - startup       Occam startup file  
+            - iter          Occam iteration file get after Inversion . 
+            - resp          Occam response file , Get after inversion 
+            - logfile       Occam Logfile, Get after inverson (Inversion file )
         
-       ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++     
+       ++++++++++++++++ +++++++++++++++++++++++++++++++++++++++++++++++++++++++   
         
-        RETURN :  FileType :str
+        Returns  
         -------
-            *** ['avg' , j, edi, resp, mesh, occamdat, stn, model, iter, logfile, startup]
+            str 
+                FileType :str
+                *** ['avg' , j, edi, resp, mesh, occamdat,
+                     stn, model, iter, logfile, startup]
             
-            
-        E:G: 
+        .. Test :: 
             >>> files = ['K1_exp.bln','LCS01.avg' ,'LCS01_2_to_1.avg', 'K1.stn','csi000.dat','csa250.edi','LogFile.logfile',
                              'Occam2DMesh','Occam2DModel', 'OccamDataFile.dat', 'S00_ss.edi', 'Startup','RESP13.resp', 
                              'ITER02.iter']
@@ -254,7 +261,6 @@ class _sensitive:
             ...                 try : 
             ...                    print(_sensitive.which_file(path,deep=True))
                                 except :pass 
-        
         """
         
         _code = {'edi':cls._edi , 'j': cls._j, 'startup':cls._occam_startup, 

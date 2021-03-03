@@ -33,25 +33,23 @@ class Agso (object):
         * _agso_on_dict_: func
             return a special dictionnay of element of AGSO file 
         
-        e.g. :: 
-            >>>     import os 
-                    path=r'F:\OneDrive\Python\CodesExercices\ex_avgfiles\modules\_geocodes'
-                    os.chdir(path)
-                    
-                    #TEST with AGSO.csv file
-                    geo=Agso._agso_on_dict_(set_agsoDataFrame=False, return_orientation="SERIES")
-                    
-                    # print(agf)
-                    # agf_struc=Agso._agso_(configuration_agso_filename=os.path.basename(os.path.join(path,"AGSO_STCODES.csv")))
-                    
-                    #test with "AGSO_STCODES
-                    # geo=Agso._agso_on_dict_(set_agsoDataFrame=True, return_orientation="series", 
-                    #                         agso_codefile=os.path.basename(os.path.join(path,"AGSO_STCODES.csv")))
-                    
-                    #EXTRACT ELEMENT WITH THEIR CORRESPONDANCE 
-                    dico_test={key:value for key , value in zip (geo["CODE"],geo['__DESCRIPTION'])}
-                    dico_lst=sorted(dico_test.items())
-                    # print(dico_lst)
+    :Example: :: 
+        >>>  import os 
+        >>>  path=os.path.join(os.environ ['pyCSAMT;], 'geodrill',
+                                           _geocodes'
+        - Test with AGSO.csv file
+        >>> geo=Agso._agso_on_dict_(set_agsoDataFrame=False, return_orientation="SERIES")  
+        ... print(agf)
+        >>> agf_struc=Agso._agso_(configuration_agso_filename=os.path.basename(os.path.join(path,"AGSO_STCODES.csv")))
+                
+       - Test test with "AGSO_STCODES
+       >>>  geo=Agso._agso_on_dict_(set_agsoDataFrame=True, return_orientation="series", 
+                                   agso_codefile=os.path.basename(os.path.join(path,"AGSO_STCODES.csv")))
+
+       - extract element with their correspondance 
+      >>>  dico_test={key:value for key , value in zip (geo["CODE"],geo['__DESCRIPTION'])}
+                dico_lst=sorted(dico_test.items())
+      ...  print(dico_lst)
         
     """
     @staticmethod
@@ -86,13 +84,11 @@ class Agso (object):
         ----------
         *set_agsoDataFrame* : Boolean  
                 if False it will take the agso default filename 'AGSO.csv'
-                .
-            
+
         * single_series_extraction* : Boolean  (deprecatedWarning)
                 way to creat a dictionnary 
                 Each column match its values  no including index 
-                keys are columns 
-                if False it will return a dictionnary with index 
+                keys are columns if False it will return a dictionnary with index 
                 
         * return_orientation * : str 
                 specify the way to extract the dictionary 
@@ -104,9 +100,8 @@ class Agso (object):
 
         Returns
         -------
-        dictionary of agso elements
-        
-        
+            dict, dictionary of agso elements
+      
         """
         
         set_agsoDataFrame=kwargs.pop("set_agsoDataFrame", False)

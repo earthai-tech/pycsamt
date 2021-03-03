@@ -20,6 +20,9 @@
 
 ===============================================================================
 
+.. Module:: Plot_Utils 
+    :synopsis: helpers functions for visualization 
+    
 Created on Tue Dec 29 19:18:44 2020
 
 @author: @Daniel03
@@ -37,12 +40,15 @@ from csamtpy.utils.decorator import deprecated, redirect_cls_or_func
 def share_props_for_each_plot(number_of_plot = 3 ,  **kwargs):
     """
     Function to set properties for each plot. Easy to customize line and markers.
-    Function can add other properties which are not in kwargs.keys(). It will set according the number of subplotsplots 
-    we assume subplot are define on one colo
-    params : number_of_plot :int : number of subsplot you want show. 
+    Function can add other properties which are not in kwargs.keys(). 
+    It will set according the number of subplotsplots 
+    we assume subplot are define on one columns 
     
-    return :dict : dictionarry of labels and properties. 
+    :param number_of_plot : number of subsplot you want show.
+    :type number_of_plot :int 
     
+    :returns: dictionarry of labels and properties. 
+    :rtype:dict 
     """
     
     def set_multiple(labelprops, default=None): 
@@ -121,12 +127,19 @@ def share_props_for_each_plot(number_of_plot = 3 ,  **kwargs):
 def find_path (path =None, ptol =0.7):
     """
     check path and return filepath , edipath or jpath .
-    path : str : can be a file path or directory 
-    ptol : float : float =<1 : tolerance that given by the program to judge if the number of typical file [EDI|J] 
-                                to declare as path found is either "edipath" or "jpath" 
-                                if none ,return None 
-    return specific path 
-
+    
+    :param path : full  path  to `edi`, `avag` or `j` file or directory 
+    :type path :str 
+    
+    :param ptol :  tolerance that given by the program to judge if the number 
+                    of typical file [EDI|J] 
+                    to declare as path found is either "edipath" or "jpath" 
+                    if none ,return None . less or equal to 1.
+                    
+    :type ptol : float 
+    
+    :returns: specific path 
+    :rtype:str 
     """
     if path is None : raise CSex.pyCSAMTError_plot_tip('Can not find path to read.please provided a datapath . ')
     if path is not None : 
@@ -146,14 +159,20 @@ def find_path (path =None, ptol =0.7):
 def get_stationid (stations ,  station_id) :  
     """
     Tip to get station id from user by input either integer of station name .
-    params : stations: list :  list of stations known
-            station_id : list, str, or int : staion expect to plot.
-            
-    retun constructed list for plotting
-    eg ::     teslist = ['S{0:02}'.format(ii) for ii in range(23)]
-            ss = get_stationid (stations=teslist ,  station_id=('S04',13))
-            print(ss)
     
+    :param stations:  list of stations known
+    :type stations: list
+    
+    :param station_id : staion expect to plot.
+    :type station_id : list, str, or int 
+            
+    :returns: constructed list for plotting
+    :rtype:array_like 
+    
+    :Example ::   
+        >>> teslist = ['S{0:02}'.format(ii) for ii in range(23)]
+        >>> ss = get_stationid (stations=teslist ,  station_id=('S04',13))
+        >>> print(ss)
     """                
     
     sid=[]
@@ -176,9 +195,15 @@ def get_stationid (stations ,  station_id) :
 def get_frequency_id (freq_array , frequency_id ): 
     """
     function to get id of frequency . Frequency to plot
-    freq_array : nd.array,1 : array of frequency
-    frequency_id : list or float : frequency to plot .
     
+    :param freq_array :  array of frequency
+    :type freq_array :  nd.array,1 
+    
+    :param frequency_id :  frequency to plot .
+    :type frequency_id : list or float  
+    
+    :returns: new close frequency id
+    :rtype:float|list
     """
     freqID =[] 
     if isinstance(freq_array, list) : freq_array=np.array(freq_array)
@@ -200,12 +225,19 @@ def get_frequency_id (freq_array , frequency_id ):
 def slice_matrix (base_matrix , freq_array, doi=2000):
     """
     Function get a matrix and give new matrice slice from limit value  
-    params: 
-        base_matrix : ndarray(yaxis lenghth, station_length)
-        freq_array : ndarray,1 : frequency array range 
-        doi : float : expect to be the depth of investigation from 
-                        which data muts be selected. 
+
+    :param base_matrix : arrays (yaxis lenghth, station_length)
+    :type base_matrix : ndarray
     
+    :param freq_array :  frequency array range 
+    :type freq_array : ndarray,1 
+    
+    :param doi : expect to be the depth of investigation from 
+                    which data muts be selected in `m` or `km` 
+    :type doi :float 
+    
+    :returns :matrix sliced according to doi
+    :rtype:ndarray 
     """
     fm=0
     if isinstance (doi, str):
@@ -231,20 +263,28 @@ def slice_matrix (base_matrix , freq_array, doi=2000):
 def delineate_curve ( dict_loc , value , atol=0.2, replace_value = np.nan): 
     """
     function to delineate value of rho and phase .
-    params : dict_loc : dict : dictionnary composed of keys = stations id and values 
-            value : float |list : value to delineate curve . for single value. 
-            atol : float : Tolerance parameter <=1 . Most the param is closest to 0 , 
-                            most the selected data become severe.
-                            default is 0.2
-            replace_value : float or else : could be None or np.nan , Default is np.nan
-            
+    
+    :param dict_loc :  dictionnary composed of keys = stations id and values
+    :type  dict_loc : dict 
+    
+    :param value : value to delineate curve . for single value. 
+    :type  value : float |list 
+    
+    :param atol : tolerance parameter <=1 . Most the param is closest to 0 , 
+                 most the selected data become severe.default is 0.2
+    :type atol : float   
+                     
+    :param replace_value : could be None or np.nan , Default is np.nan
+    :type replace_value : float or else
                     
-    return : dict of delineate data 
+    :returns : dict of delineate data
+    :rtype:dict
 
-          eg :        >>> ts = np.array([0.1, 0.7, 2, 3, 8, 1000, 58,55, 85, 18])
-                      >>> to =np.array([51, 78, 0.25, 188, 256, 7])
-                      >>> tt ={'S00': ts, 'S01':to, 'S02': np.array([0, 5, 125, 789])}
-                    ... print(delineate_curve(dict_loc = tt, value=[50,70], atol = 0.1))
+    :Example: ::
+          >>> ts = np.array([0.1, 0.7, 2, 3, 8, 1000, 58,55, 85, 18])
+          >>> to =np.array([51, 78, 0.25, 188, 256, 7])
+          >>> tt ={'S00': ts, 'S01':to, 'S02': np.array([0, 5, 125, 789])}
+          >>> print(delineate_curve(dict_loc = tt, value=[50,70], atol = 0.1))
     """
 
     if isinstance(value, (str, int, float)): 
@@ -300,11 +340,19 @@ def delineate_curve ( dict_loc , value , atol=0.2, replace_value = np.nan):
 def delineate_sparseMatrix (dict_loc, delineate_dict, replace_value =np.nan ):
     """
     Build from delineate dict a matrix according to frequency length . value doesnt 
-    exis in the delineate dict will be repalce by replacevalue . Default is nan.
-    param : delineate_dict :dict : delineation value 
-            dict_loc : dict : dictionnary composed of keys = stations id and values
-            replace_value : float: value to replece other value  like build a sparse matrix 
+    exist in the delineate dict will be repalce by replacevalue . Default is `nan`.
     
+    :param delineate_dict :delineation value 
+    :type delineate_dict :dict
+    
+    :param dict_loc : dictionnary composed of keys = stations id and values
+    :type dict_loc : dict 
+    
+    :param replace_value : value to replece other value  like build a sparse matrix 
+    :type replace_value : float 
+    
+    :returns:dit of sparse matrix 
+    :rtype:dict 
     """
     dictMatrix ={}
     dict_loc =sorted(dict_loc.items())
@@ -321,10 +369,16 @@ def delineate_sparseMatrix (dict_loc, delineate_dict, replace_value =np.nan ):
 
 def resetting_ticks ( get_xyticks,  number_of_ticks=None ): 
     """
-    resetting xyticks  modulo , 100 
-    params : get_xyticks : list : xyticks list  , use to ax.get_x|yticks()
-            number_of_ticks : int: maybe the number of ticks on x or y axis 
-            return a new_list or ndarray 
+    resetting xyticks  modulo , 100
+    
+    :param get_xyticks :  xyticks list  , use to ax.get_x|yticks()
+    :type  get_xyticks : list 
+    
+    :param number_of_ticks :  maybe the number of ticks on x or y axis 
+    :type number_of_ticks : int
+    
+    :returns: a new_list or ndarray 
+    :rtype:list or array_like 
     """
     if not isinstance(get_xyticks, (list, np.ndarray) ): 
         warnings.warn ('Arguments get_xyticks must be a list not <{0}>.'.format(type(get_xyticks)))
@@ -360,13 +414,22 @@ def resetting_ticks ( get_xyticks,  number_of_ticks=None ):
 def resetting_colorbar_bound(cbmax , cbmin, number_of_ticks = 5, logscale=False): 
     """
     Function to reset colorbar ticks more easy to read 
-    param : cbmax : float : value maximum of colorbar 
-            cbmin : float : minimum data value : 
-            number_of_ticks : int : number of ticks should be 
+    
+    :param cbmax :value maximum of colorbar 
+    :type cbmax : float 
+    
+    :param cbmin : minimum data value 
+    :type cbmin : float  minimum data value
+    
+    :param number_of_ticks :  number of ticks should be 
                             located on the color bar . Default is 5.
-            logarith scale : bool : set to True if your data are lograith data . 
-            
-    return array of color bar ticks value.
+    type number_of_ticks : int 
+    
+    :param logscale : set to True if your data are lograith data . 
+    :type logscale : bool 
+    
+    :returns: array of color bar ticks value.
+    :rtype:array_like 
     """
     def round_modulo10(value): 
         """
@@ -402,27 +465,36 @@ def slice_csamt_matrix ( block_matrix , station_offsets, depth_offsets, offset_M
     Using Wannamaker FE elements mesh to define rho matrix blocks , need after inversion to slice the model 
     resistivity according the offset and depth we need . This function is easy tool to slice matrix and to keep
     the part we need . station offset , depth and model resistivity 
-    params :
-    --------
-        block_matrix : ndarray(station_offsets.shape[0], : matrix of station depth Resistivity model
-                               depth_offsets.shape[0])
-        depth_offset : array_like  :            depth of investigation after generating by mesh file :>z_nodes . 
-        station_offsets : array_like :          station _offsets : offset generate by mesh_file :>x_nodes . 
-        offset_MinMax : typle  :                the interval of data to keep . eg : 
-                                                    if station location start by 0 : off[0] = min and off[-1]=max 
-                                                    (min, max):--> index 0 :minimum value of station location 
-                                                                -->index 1 : maximum value of station location
-                                                                default is (0,1000)
-        doi : str |float :                      investigation depth : migth be [m|km]. 
-                                                    If value is provided is float number , it might take value 
-                                                    as a default unit 'meter'. i.e : 1000="1000m"
-    return : tuple 
-            new sliced station offset , new sliced depth offset  ,  new_matrix block , 
-        
+    
+    Parameters
+    -----------
+    * block_matrix : ndarray(station_offsets.shape[0], 
+                matrix of station depth Resistivity model
+                depth_offsets.shape[0])
+    * depth_offset : array_like  
+           depth of investigation after generating by mesh file :>z_nodes . 
+    * station_offsets : array_like 
+          station _offsets : offset generate by mesh_file :>x_nodes . 
+    * offset_MinMax : tuple  
+          the interval of data to keep . eg if station location start by 0 : 
+         off[0] = min and off[-1]=max (min, max):--> index 0 :minimum value of station location 
+                    -->index 1 : maximum value of station location
+                    default is (0,1000)
+                    
+    * doi : str |float 
+        investigation depth ,  migth be [m|km]. 
+            If value is provided is float number , it might take value 
+            as a default unit 'meter'. i.e : 1000="1000m"
+                
+    Returns
+    ---------
+    tuple 
+      new sliced station offset , new sliced depth offset  , new_matrix block , 
     """
     def depth_of_investigation(doi): 
         """
-        return doi in meter whether you provide value in kilometer 
+        :returns: doi in meter whether you provide value in kilometer 
+        :rtype:float 
     
         """
         fm=0
@@ -565,10 +637,16 @@ def slice_csamt_matrix ( block_matrix , station_offsets, depth_offsets, offset_M
             
 def controle_delineate_curve(res_deline =None , phase_deline =None ): 
     """
-    fonction to controle delineate value given  and return value ceilling . 
-    params : res_deline|phase_deline : float|int|list  : resistiviry or phase value to
-                                        delineate. unit of Res ={ohm.m}
-                                                    unit of phase ={degree}
+    fonction to controle delineate value given  and return value ceilling .
+    
+    :param  res_deline:  resistivity  value todelineate. unit of Res in `ohm.m`
+    :type  res_deline : float|int|list  
+    
+    :param  phase_deline :   phase value to  delineate , unit of phase in degree
+    :type phase_deline : float|int|list  
+    
+    :returns: delineate resistivity or phase values 
+    :rtype:array_like 
     """
     fmt=['resistivity, phase']
  
@@ -594,12 +672,14 @@ def controle_delineate_curve(res_deline =None , phase_deline =None ):
 
 def depth_of_investigation(doi): 
     """
-    return depth of investigation 
-    param : str|float : depth of investigation 
-                if value float is provided , it will considered as 
-                default units in meter 
-    return doi :float: 
-                    value in meter 
+     Depth of investigation converter 
+
+    :param doi : depth of investigation  if value float is provided , it will considered as 
+                default units in meter
+    :type doi: str|float 
+    
+    :returns doi :value in meter
+    :rtype:float           
     """
     fm=0
     if isinstance (doi, str):
@@ -625,16 +705,18 @@ def build_new_station_id (station_id , new_station_name ):
     Fonction to build new station id including station name provided , if the length provided 
         doesnt match the length of station id 
         
-        return : station id : list : new sites names 
-                mess : str : message for debugging  
-                            Default is None 
-    eg :: 
-            ts =[   28.,  200.,  400.,  600.,  800., 1000., 1200., 1400., 1600., 1800., 1807.]
-            sto = ['S{0}'.format(i) for i in range(7)]
-            print(sto)
-            stn, fu =build_new_station_id(station_id = sto, new_station_name =ts)
-            print(stn, fu)
-
+    :param station id : new sites names 
+    :type station id : list 
+    
+    :param mess :  message for debugging, Default is None 
+    :type  mess : str  
+             
+    :Example: :: 
+        >>> ts =[   28.,  200.,  400.,  600.,  800., 1000., 1200., 1400., 1600., 1800., 1807.]
+        >>> sto = ['S{0}'.format(i) for i in range(7)]
+        >>> print(sto)
+        >>> stn, fu =build_new_station_id(station_id = sto, new_station_name =ts)
+        >>> print(stn, fu)
     """
     mess=None
     get_len_new_station_id =len(new_station_name)
@@ -670,16 +752,32 @@ def get_conductive_and_resistive_zone (data, site_names, purpose ='groundwater',
     but give an overview of decison . It is not sufficient to declare that the zone is 
     favorable for any drill , but just work with probability 
 
+    :param data : resistivity datata of survey area 
+    :type data : ndarray 
+    
+    :param site_name: list of sites names 
+    :type site_name: list 
+    
+    :param purpose : type of exploration , default is `groundwater` 
+    :type purpose:str 
+    
+    :returns: report of exploration area 
+    :rtype: str 
     """
     def fmt_text (data_text, fmt='~', leftspace = 3, return_to_line =77) : 
         """
         Allow to format report with data text , fm and leftspace 
-        params  : 
-            data_text : str : a long text  
-            fm : str : type of underline text 
-            leftspae : int : How many space do you want before starting wrinting report .
-            return_to_line : int : number of character to return to line 
+        :param  data_text : a long text 
+        :type  data_text : str  
+            
+        :param fmt :  type of underline text 
+        :type fmt : str
+
+        :param leftspae : How many space do you want before starting wrinting report .
+        :type leftspae : int 
         
+        :param return_to_line : number of character to return to line
+        :type return_to_line : int 
         """
     
         return_to_line= int(return_to_line)
@@ -858,12 +956,18 @@ def get_conductive_and_resistive_zone (data, site_names, purpose ='groundwater',
 def fmt_text (data_text, fmt='~', leftspace = 3, return_to_line =77) : 
     """
     Allow to format report with data text , fm and leftspace 
-    params  : 
-        data_text : str : a long text  
-        fm : str : type of underline text 
-        leftspae : int : How many space do you want before starting wrinting report .
-        return_to_line : int : number of character to return to line 
+
+    :param  data_text : a long text 
+    :type  data_text : str  
+        
+    :param fmt :  type of underline text 
+    :type fmt : str
+
+    :param leftspae : How many space do you want before starting wrinting report .
+    :type leftspae : int 
     
+    :param return_to_line : number of character to return to line
+    :type return_to_line : int 
     """
 
     return_to_line= int(return_to_line)
@@ -893,14 +997,23 @@ def fmt_text (data_text, fmt='~', leftspace = 3, return_to_line =77) :
 def find_closest_station( offset_indice ,  model_offsets , site_offsets )  : 
     """ 
     Get the indice of the closest offset 
-    offset_indice : int : if the indix of the offset at the selected resistivity point. 
-    model_offset : array_like  : is a large band of x_nodes resistivities  gnerated by mesh files 
     
-    sites_offsets : array_like : is the data set offset from Occam Data file 
-    return : tuple
-            indexoff :int : index of data offset 
-            get_offs : float : value of the offset at that index 
+    Parameters
+    -----------
+    * offset_indice : int 
+         if the indix of the offset at the selected resistivity point. 
+    * model_offset : array_like  
+        is a large band of x_nodes resistivities  gnerated by mesh files 
     
+    * sites_offsets : array_like 
+        is the data set offset from Occam Data file 
+        
+    Returns 
+    --------
+    int
+        indexoff,  index of data offset 
+     float
+         get_offs,  value of the offset at that index 
     """
     offs_value= model_offsets[int(offset_indice)] #  keep the offset value form model 
 
@@ -924,21 +1037,22 @@ def find_closest_station( offset_indice ,  model_offsets , site_offsets )  :
 def find_local_maxima_minima (array): 
     """
     function to find minimum local and maximum local  on array 
-    param : 
-        data : array_like : value of array to find minima , maxima 
     
-    return : tuple
-            - array of index of minima  and maxima local index 
-            - array of minima maxima  value 
-    eg : 
-           >>> from csamtpy.utils import func_utils as func
-            >>> ts =np.array([2, 3, 4, 7, 9, 0.25, 18, 28, 86, 10, 5])
-            >>> te=np.array([0.2, .3, 18, 1.6, 0.2, 0.6, 0.7, 0.8, 0.9, 1., 23.])
-            >>> th =func.concat_array_from_list([ts, te], concat_axis=1)
-            .. tth =th.T
-            ... print(tth)
-            ... print(find_local_maxima_minima(tth[0]))
+    :param data : value of array to find minima , maxima 
+    :type data : array_like 
     
+    :returns : tuple of index of minima  and maxima local index and 
+            array of minima maxima  value
+    :rtype:array_like
+    
+    :Example: :: 
+        >>> from csamtpy.utils import func_utils as func
+        >>> ts =np.array([2, 3, 4, 7, 9, 0.25, 18, 28, 86, 10, 5])
+        >>> te=np.array([0.2, .3, 18, 1.6, 0.2, 0.6, 0.7, 0.8, 0.9, 1., 23.])
+        >>> th =func.concat_array_from_list([ts, te], concat_axis=1)
+        .. tth =th.T
+        ... print(tth)
+        ... print(find_local_maxima_minima(tth[0]))
     """  
     localmm, indexlmm=[[] for ii in range(2)]
     
@@ -983,17 +1097,18 @@ def average_rho_with_locals_minmax(array):
     """
     How to compute mean value between local maxima and local minima 
     and keep locals minima and maxima value on the final data 
-    param: array_like : data to compute the local minima and local maxima 
     
-    return : 
-        and array mean with data local value averaged 
-        
-    example : 
-            mean1= average_rho_with_locals_minmax(tth[0])
-            mean2= average_rho_with_locals_minmax(tth[1])
-            print(mean1)
-            print(mean2)
+    :param array : data to compute the local minima and local maxima 
+    :param array: array_like 
     
+    :returns : array mean with data local value averaged 
+    :rtype:array_like
+    
+    :Example: :: 
+        >>> mean1= average_rho_with_locals_minmax(tth[0])
+        >>> mean2= average_rho_with_locals_minmax(tth[1])
+        >>> print(mean1)
+        >>> print(mean2)
     """
     tem=[]
     indexmm, _= find_local_maxima_minima(array) # find the local and maxium local index
@@ -1033,29 +1148,35 @@ def average_rho_in_deeper (dep_array, rho_array, step_descent ) :
     in approximately. The most conductive zone is detected as the zone with 
     lower resistivities values . But fixing values as averaged rho , can build a 
     specific strata that could match this zone .
-    params : 
-        dep_array : array_like : the imaged depth (doi)
-        resistivity array_like : resistivity ate the station 
-        step_descent : float : value to step descent 
     
-    return array_like : rho average for each station 
-                        # dep_averaged for each station
+    Parameters
+    ------------
+    * dep_array : array_like 
+        the imaged depth (doi)
+    * resistivity array_like
+        resistivity ate the station 
+    * step_descent : float 
+        value to step descent 
     
-    eg ::
-            >>> pseudo_depth=np.array([  0. ,  6. , 13. , 20.  ,29. , 39.,  49. ,
-                                   59. , 69. , 89., 109. ,129., 149. ,179.,
-                              209. ,249. ,289., 339., 399., 459. ,529. ,609., 
-                              699., 799., 899., 999.])
-            #pseudo_depth = np.arange(0, 1220, 20)
-            >>> rho = np.random.randn(len(pseudo_depth))
-            >>> rho_aver, dep_aver= average_rho_in_deep(dep_array=pseudo_depth,
-                                                    rho_array=rho, 
-                                                    step_descent=20.)
-            >>> rho_2,dep_2 =   average_rho_in_deeper (dep_array= pseudo_depth,
-                                                     rho_array=rho,
-                                                     step_descent=1000) 
-    
-            ... print(pseudo_depth)
+    Returns
+    ---------
+    array_like 
+         rho average for each station  # dep_averaged for each station
+
+    :Example: ::
+        >>> pseudo_depth=np.array([  0. ,  6. , 13. , 20.  ,29. , 39.,  49. ,
+                               59. , 69. , 89., 109. ,129., 149. ,179.,
+                          209. ,249. ,289., 339., 399., 459. ,529. ,609., 
+                          699., 799., 899., 999.])
+        >>> pseudo_depth = np.arange(0, 1220, 20)
+        >>> rho = np.random.randn(len(pseudo_depth))
+        >>> rho_aver, dep_aver= average_rho_in_deep(dep_array=pseudo_depth,
+                                                rho_array=rho, 
+                                                step_descent=20.)
+        >>> rho_2,dep_2 =   average_rho_in_deeper (dep_array= pseudo_depth,
+                                                 rho_array=rho,
+                                                 step_descent=1000) 
+        >>>  print(pseudo_depth)
     """
     v,r , dm, rm=[[] for i in range(4)]
     value = step_descent
@@ -1097,15 +1218,20 @@ def average_rho_in_deep (dep_array, rho_array, step_descent)   :
     in approximated. The most conductive zone is detected as the zone with 
     lower resistivities values . But fixing values as averaged rho , can build a 
     specific strata that could match the zone .
-    params : 
-        dep_array : array_like : the imaged depth (doi)
-        resistivity array_like : resistivity ate the station 
-        step_descent : float : value to step descent 
-    
-    return array_like : rho average for each station 
-                        # dep_averaged for each station
-    
-    eg ::
+    Parameters
+    -----------
+        * dep_array : array_like
+            the imaged depth (doi)
+        * resistivity : array_like 
+            resistivity ate the station 
+        * step_descent : float 
+            value to step descent 
+    Returns 
+    --------
+    array_like 
+         rho average for each station # dep_averaged for each station
+  
+    :Example: ::
             >>> pseudo_depth = np.arange(0, 1201.,100)
             >>> print(pseudo_depth)
             ... dep_aver= dep(dep_array=pseudo_depth, value=100)
@@ -1167,10 +1293,13 @@ def get_station_id_input_resistivities(station_rho_value, number_of_layer=None):
     choose the max resistivities and the minim resistivities to build automatic 
     resistivities whom COULD match the deth is less sure .
     Geeting a input resitivities to aplom the site , give a merly and better interpretation. 
-    params : 
-        station_rho_value : array  : value of resistivities under the site thin the maximum depth 
-       number_of_layer : int : number of layer totop to bottom.
- 
+
+    :param station_rho_value : value of resistivities under the 
+                                site thin the maximum depth 
+    :type station_rho_value : array_like
+    
+    :param number_of_layer : number of layer to top to bottom.
+    :type number_of_layer : int 
     """
     if number_of_layer is None : number_of_layer =7.
     if isinstance(number_of_layer, (list, tuple, np.ndarray)): 
@@ -1200,16 +1329,23 @@ def get_station_id_input_resistivities(station_rho_value, number_of_layer=None):
 def build_resistivity_barplot(depth_values , res_values): 
     """
     Allow to build bar plot resistivity function of  investigation depth . 
-    params : depth_values : aray_like : model investigation depth 
-            res_values : array_like : model_resistivities at each depth values 
+    Parameters
+    ----------
+    * depth_values : aray_like 
+        model investigation depth 
+    * res_values : array_like 
+        model_resistivities at each depth values 
             
-    return : 
-       d : array_like : resistivity barplot depth .
-       r: array_like : specific structure resistivities 
-       sumd : float: chekcker number that cover in fact the total depth. 
-                       this numbe must absolutely match the total depth .
-      
- 
+    Returns 
+    ---------
+    array_like 
+            d ,  resistivity barplot depth .
+     array_like 
+          r,  specific structure resistivities 
+    float
+        csumd,hekcker number that cover in fact the total depth. 
+        this numbe must absolutely match the total depth .
+
     """
     mess = "".join(["Depth and resistivity arrays have no the same Length .",
                     " Length Depth is ={0} and length depth is = {1}".format(len(depth_values), len(res_values))
@@ -1254,24 +1390,33 @@ def build_resistivity_barplot(depth_values , res_values):
 
 def annotate_tip(layer_thickness , layer_names): 
     """
-    A tip to group text with the same resistivities one layer when the layer are successively the same 
-    eg :: 
+    A tip to group text with the same resistivities one layer when the layer 
+    are successively the same .
+    
+    :param layer_thickness: thickness of layer
+    :type layer_thickness :array_like |list 
+    
+    :param layer_names : names of layers , geological structures names 
+    :type layer_names: list or array_like 
+    
+    :returns:v ,  layer  thickness in depth 
+    :rtype: array_like 
+    
+    :returns: ni ,  list : name of layer 
+    :rtype: array_like 
+  
+    :Example: :: 
             >>> rocks = ['Massive sulfide', 'Igneous rocks', 'Igneous rocks', 'Igneous rocks',
-             'Igneous rocks', 'Igneous rocks', 'Igneous rocks', 'Igneous rocks', 
-             'Massive sulfide', 'Igneous rocks', 'Igneous rocks', 'Igneous rocks'] 
-            >>> resprops = [0.0, 49.0,69.0,89.0,109.0,129.0,149.0,179.0,249.0,699.0,799.0,899.0]
-            
-            ... thickness, lnames = annotate_tip(layer_thickness=resprops, layer_names=rocks)
-            ... print(thickness)
-            ... print(lnames)
-            output : 
-                v= [24.5, 149.0, 474.0, 799.0]
-                ni= ['Massive sulfide', 'Igneous rocks', 'Massive sulfide', 'Igneous rocks']
-                
-    params : 
-        v : layer  thickness in depth 
-        ni : list : name of layer 
-        
+                 'Igneous rocks', 'Igneous rocks', 'Igneous rocks', 'Igneous rocks', 
+                 'Massive sulfide', 'Igneous rocks', 'Igneous rocks', 'Igneous rocks'] 
+            >>> resprops = [0.0, 49.0,69.0,89.0,109.0,129.0,
+                            149.0,179.0,249.0,699.0,799.0,899.0]
+            >>> thickness, lnames = annotate_tip(layer_thickness=resprops, layer_names=rocks)
+            >>>print(thickness)
+            >>> print(lnames)
+            >>> v, ni
+            ...  [24.5, 149.0, 474.0, 799.0]
+            ...  ['Massive sulfide', 'Igneous rocks', 'Massive sulfide', 'Igneous rocks']
     """
     if len(layer_thickness)==1 : 
         return layer_thickness, layer_names

@@ -20,18 +20,20 @@
 
 ===============================================================================
 
-.. module:: .
-   :synopsis: Deal with EDI files.  The EDI class can read and write an .edi file
-             file, the 'standard format' of magnetotellurics.  Each section
-             of the .edi file is given its own class, so the elements of each
+... module:: EDI
+   :synopsis: EDI module can read and write an .edi file
+             file, the 'standard format' of magnetotellurics. 
+             Each sectionof the .edi file is given its
+              own class, so the elements of each
              section are attributes for easy access.
-             Edi file will write following the SEG document instructions ofr EMAP
-             (Electromagnetic Array Profiling)
+             Edi file will write following the SEG document
+             instructions ofr EMAP (Electromagnetic
+              Array Profiling)
              ...
+             
 Created on Mon Jan 11 11:37:51 2021
 
 @author: KouaoLaurent alias @Daniel03
-
 """
 import os , re, warnings
 import datetime, shutil, time
@@ -51,45 +53,66 @@ _logger = csamtpylog.get_csamtpy_logger(__name__)
 
 class Edi_collection : 
     """
-    Super class to deal with Edifiles . Collect edifiles and set important properties 
-    form Controled Source audiofrequency magnetotelluRic ,two(2) components XY and YX will
-    be set and calculated .
+    Super class to deal with Edifiles .Collect edifiles and set important properties 
+    form Controled Source audiofrequency magnetotelluRic  ,two(2) components XY 
+   and YX will be set and calculated .
     
-    arguments : list_of_edifiles : list : list of edifiles
-                edipath : str : path to edifiles : 
-                                if no listis provided , provided 
-                survey_name : location name where the date where collected . if surveyname is None  
+    Arguments 
+    ---------
+        list_of_edifiles : list 
+                list of edifiles
+        edipath : str 
+                path to edifiles. If no listis provided ,
+                provided 
+        survey_name : location name where the date
+                where collected . if surveyname is None  
                 can chech on edifiles. 
                 
-    ================================================================================================
-    Attributes               type                      Description 
-    ==================== ================= =========================================================
-    edifiles                list            List of edifiles , defalut is None 
-    survey_name             str             location where edidata where collected 
+    =================== ================== ====================================
+    Attributes               Type             Description 
+    ==================== ================= ====================================
+    edifiles                list            List of edifiles ,default is None 
+    survey_name             str             location where edidata where 
+                                            collected
     Edi                     class           Ediclass for ediproperties 
-    Location                class           Location class for location properties 
-    longitude               ndarray, 1      array of longitude collected from edifiles
-    latitude                ndarray,1       array of latitude collected from edifiles 
-    freq_array              nadarry,1       array of frequencies collected from edifiles 
-    elevation               ndarray ,1     array of elevation collected from edifiles. 
-    station_names          list            list of EDI dataId ; Use station id to work.
-    res_xy|res_yx           dict           dict :{stn: res_xy|res_yx} 
-                                            ndarray value of resivities  from 2 comps xy|yx 
-    phs_xy|phs_yx           dict           dict :{stn: res_phs|phs_yx} 
-                                            ndarray value of phase from 2  comps xy|yx 
-    z_xy|res_yx             dict           dict :{stn: z_xy|z_yx}  (in degree)
-                                            ndarray value of impedance from 2 comps xy|yx 
-    XX_err_xy| XX_err_yx    dict           dict  of error values :{stn: XX_err_xy|XX_err_yx} 
-                                            ndarray value of impedance from 2 comps xy|yx 
-                                            XX : res|phs|z  
-                                            stn : name of site eg : stn :S00, S01 , .., Snn
-    ================================================================================================
-                >>> from csamtpy.ff.core.edi import Edi_collection 
-                >>> edilist = [os.path.join(path, edi)for edi in os.listdir (path) if edi.endswith('.edi')]
-                ... edi_objs = Edi_collection(list_of_edifiles = edilist)
-                ... print(edi_objs.res_xy['S01'])
-                ... print(edi_objs.phs_err_xy['S00'])
-                ... print(edi_objs.z_err_xy['S00'])
+    Location                class           Location class for location
+                                            properties 
+    longitude               ndarray, 1      array of longitude collected
+                                            from edifiles
+    latitude                ndarray,1       array of latitude collected
+                                            from edifiles 
+    freq_array              nadarry,1       array of frequencies collected
+                                            from edifiles 
+    elevation               ndarray ,1      array of elevation collected 
+                                            from edifiles. 
+    station_names          list             list of EDI dataId , Use station
+                                            id to work.
+    res_xy|res_yx           dict            dict :{stn: res_xy|res_yx} 
+                                            ndarray value of resivities
+                                            from 2 comps xy|yx 
+    phs_xy|phs_yx           dict            dict :{stn: res_phs|phs_yx} 
+                                            ndarray value of phase from 
+                                            2  comps xy|yx 
+    z_xy|res_yx             dict            dict :{stn: z_xy|z_yx} 
+                                            (in degree)
+                                            ndarray value of impedance
+                                            from 2 comps xy|yx 
+    XX_err_xy| XX_err_yx    dict            dict  of error values 
+                                            {stn: XX_err_xy|XX_err_yx} 
+                                            ndarray value of impedance 
+                                            from 2 comps xy|yx 
+                                            XX : res|phs|z  stn : name of 
+                                            site eg stn :S00, S01 , .., Snn
+    ======================= ============= =====================================
+     ... Example :: 
+         
+        >>> from csamtpy.ff.core.edi import Edi_collection 
+        >>> edilist = [os.path.join(path, edi)for edi in os.listdir 
+                       (path) if edi.endswith('.edi')]
+        ... edi_objs = Edi_collection(list_of_edifiles = edilist)
+        ... print(edi_objs.res_xy['S01'])
+        ... print(edi_objs.phs_err_xy['S00'])
+        ... print(edi_objs.z_err_xy['S00'])
     """
     
     def __init__(self, list_of_edifiles =None, edipath =None ,  survey_name =None  ): 
@@ -102,7 +125,8 @@ class Edi_collection :
         
         if self.edifiles is None and edipath is not None : 
             self._logging.info ('Getting edifiles from edipath <%s>'% edipath )
-            self.edifiles = [os.path.join(edipath , ediobj) for ediobj in os.listdir(edipath) if ediobj.endswith('.edi') ]
+            self.edifiles = [os.path.join(edipath , ediobj) for ediobj
+                             in os.listdir(edipath) if ediobj.endswith('.edi') ]
         
         if len(self.edifiles ) < 1 : 
             warnings.warn('No edifiles found in the path provided <%s>.'\
@@ -111,19 +135,21 @@ class Edi_collection :
         else : self._logging.info ('Number of edifiles found are <%s>'%len(self.edifiles))
         
         if self.edifiles is None and edipath is None : 
-            warnings.warn ('May provided a least alist of edifiles or edipath where edifiles are located.'\
+            warnings.warn ('May provided a least alist of edifiles or edipath where edifiles are located.'
                            ' None value cannot be computed.Please get check your path or your edilist. ')
-            self._logging.warning('May provided a least alist of edifiles or edipath where edifiles are located.'\
+            self._logging.warning('May provided a least alist of edifiles or edipath where edifiles are located.'
                            ' None value cannot be computed.Please get check your path or your edilist. ')
-            raise CSex.pyCSAMTError_EDI('Empty list and wrong edipath can not be read. Please provided either the list of edifiles '\
+            raise CSex.pyCSAMTError_EDI('Empty list and wrong edipath can not be read. Please provided either the list of edifiles '
                                         'or the right edipath. None value can not be computed.')
                 
         #---> construction of georeference attributes : 
-        for _key in ['_latitude', '_longitude', '_azimuth', '_elevation', 'station_names']: 
+        for _key in ['_latitude', '_longitude', '_azimuth', 
+                     '_elevation', 'station_names']: 
             self.__setattr__(_key, None )
 
         # construction of impedances , resistivities and phasetensor attributes and set all to None value.
-        for tensor  in ['_z', '_z_err', '_z_det','_res', '_res_err', '_res_det','_phs', '_phs_det', '_phs_det_err'
+        for tensor  in ['_z', '_z_err', '_z_det','_res', '_res_err',
+                        '_res_det','_phs', '_phs_det', '_phs_det_err'
                          ] :  self.__setattr__( tensor, None) 
                                  
         if self.edifiles is not None : 
@@ -162,24 +188,34 @@ class Edi_collection :
             else :self._station_names =edi_stations
             
       
-    def _collect_edifiles(self, edifiles_list =None, ediobjs =None ):
+    def _collect_edifiles(self, edifiles_list =None,
+                          ediobjs =None ):
         """
-        collect edifiles and set appropriates attributes for eadh stations . 
-        params: edifiles_list : list : list of edifiles. 
-                ediobjs : obj class : can provided from  class built.
-        eg : 
-                    >>> path =r'F:\__main__csamt__\paper2_data_old\data_edifiles - numStations\K1_edi\new_EDI'
-                    >>> edilist = [os.path.join(path, edi)for edi in os.listdir (path) if edi.endswith('.edi')]
-                
-                    ... edi_objs = Edi_collection._collect_edifiles(list_of_edifiles = edilist)
-                    ... print(edi_objs.phs_xy['S01'])
-                    ... print(edi_objs.freq_array)
+        collect edifiles and set appropriates attributes
+        for eadh stations. 
         
+        :param edifiles_list: list of edifiles
+        :param edifiles_list: list 
+        
+        :param ediobjs :  can provided from  class built.
+        :param ediobjs: obj 
+        
+        :Example: 
+            >>> path =r'F:\__main__csamt__\paper2_data_old\
+                data_edifiles - numStations\K1_edi\new_EDI'
+            >>> edilist = [os.path.join(path, edi)for
+                           edi in os.listdir (path) 
+                           if edi.endswith('.edi')]
+            ... edi_objs = Edi_collection._collect_edifiles(
+                list_of_edifiles = edilist)
+            ... print(edi_objs.phs_xy['S01'])
+            ... print(edi_objs.freq_array)
         """
         self._logging.info ('Collectiong edilfiles from <%s>'% self.__class__.__name__)
         
         if edifiles_list is not None : self.edifiles = edifiles_list
-        if self.edifiles is None and ediobjs is None  : raise CSex.pyCSAMTError_EDI('No edifiles found to read.Please check your right path ')
+        if self.edifiles is None and ediobjs is None  : 
+            raise CSex.pyCSAMTError_EDI('No edifiles found to read.Please check your right path ')
         
         self._logging.debug('Building EDI object from edi files.') 
         if self.edifiles is not None : 
@@ -190,12 +226,14 @@ class Edi_collection :
         elif ediobjs is not None : 
             self.edi_obj_list= list(ediobjs)
             
-        assert len(self.edi_obj_list) > 0 , CSex.pyCSAMTError_EDI("Can't read none value. Porvided at least one edifiles!")
+        assert len(self.edi_obj_list) > 0 , CSex.pyCSAMTError_EDI(
+            "Can't read none value. Porvided at least one edifiles!")
             
         self._logging.info ('Running list of <%s> edifiles'% len(self.edifiles))
         print('Number of edifiles or stations read successfully = <%s>'% len(self.edifiles))
 
-        sta , lat,lon, elev , freq , zz, zz_err, rho, rho_err, phs , phs_err =[[] for ii in range (11)]
+        sta , lat,lon, elev , freq , zz, zz_err, rho, rho_err, phs , phs_err =[
+            [] for ii in range (11)]
              
         #--> set gereference attributes 
         
@@ -203,22 +241,29 @@ class Edi_collection :
             sta.append(edi_obj.Head.dataid ) 
             if edi_obj.Head.long is None : 
                 edi_obj.Head.long= edi_obj.DefineMeasurement.reflong 
-                self._logging.info ('Longitude of Headid <{0}> has been set from Edi.DefineMeasurenement'.format(edi_obj.Head.dataid))
+                self._logging.info ('Longitude of Headid <{0}> has'
+                                    ' been set from Edi.DefineMeasurenement'.\
+                                        format(edi_obj.Head.dataid))
                 
             lon.append(edi_obj.Head.long)
             
             if edi_obj.Head.lat is None : 
                 edi_obj.Head.lat= edi_obj.DefineMeasurement.reflat 
-                self._logging.info ('Latitude of Headid <{0}> has been set from Edi.DefineMeasurenement'.format(edi_obj.Head.dataid))
+                self._logging.info ('Latitude of Headid <{0}> has been '
+                                    'set from Edi.DefineMeasurenement'.\
+                                        format(edi_obj.Head.dataid))
             lat.append(edi_obj.Head.lat)
             if edi_obj.Head.elev is None : 
                 edi_obj.Head.elev = edi_obj.DefineMeasurement.refelev 
-                self._logging.info('Elevation of Headid <{0}> has been set from Edi.DefineMeasurenement'.format(edi_obj.Head.dataid))
+                self._logging.info('Elevation of Headid <{0}> has been '
+                                   'set from Edi.DefineMeasurenement'.\
+                                       format(edi_obj.Head.dataid))
             elev.append(edi_obj.Head.elev)
             freq.append(edi_obj.Z.freq) 
             
         # ---> get impednaces , phase tensor and resistivities values form ediobject
-        self._logging.debug('Setting impedances tensor , phases tensor and  resisvitivities values from ediobjs.')
+        self._logging.debug('Setting impedances tensor , phases tensor and '
+                            ' resisvitivities values from ediobjs.')
         
         zz= [edi_obj.Z.z for edi_obj in self.edi_obj_list]
         zz_err= [edi_obj.Z.z_err for edi_obj in self.edi_obj_list]
@@ -237,7 +282,8 @@ class Edi_collection :
 
         #---> set ino dictionnary the impdance and phase Tensor 
         
-        self._logging.debug('Setting impedances, resistivities and phase tensors into dictionnaries.')
+        self._logging.debug('Setting impedances, resistivities and'
+                            ' phase tensors into dictionnaries.')
         
         self._z = {key:value for key , value in zip (self.id, zz)}
         self._z_err ={key:value for key , value in zip (self.id, zz_err)}
@@ -302,84 +348,73 @@ class Edi_collection :
 
 class Edi : 
     """
-    Ediclass  is for especialy dedicated to .edi files, mainly reading and writing 
+    Ediclass  is for especialy dedicated to .edi files, mainly reading and writing
     which are meant to follow the archaic EDI format put forward by SEG
-      Can read impedance, Tipper and not spectra.To read spectra format
-     please consult MTpy documentation . Best tool for MT developpement : 
-    https://mtpy2.readthedocs.io/en/develop/ or https://github.com/MTgeophysics/mtpy
-
+    Can read impedance, Tipper but not spectra. To read spectra format
+    please consult MTpy documentation https://mtpy2.readthedocs.io/en/develop/ 
     The Edi class contains a class for each major section of the .edi file.
-
-    Frequency and components are ordered from highest to lowest frequency.
-    arguments : 
-        
-        edi_filename :  str : full path to .edi file to be read in.
-                      *default* is None. If an .edi file is not None , that's 
-                      mean Edi is input', it isautomatically read in and 
-                      attributes of Edi are populated 
-
-
-   
-    ===========================================================================
-    Attributes            Description                                default
-    ===================== ========================================== ==========
-    edifile               Full path to edifile                          None
     
-    MTEMAP                MT section or EMAP DataSection class, 
-                          contains basicinformation on the data 
-                          collected . Can read MT and EMAP section
-
-    DefineMeasurement     DefineMeasurement class, contains
-                          information on how the data was collected.
-                          
-    Head                  Head class, contains metadata on
-                          where, when, and who collected the data
-    Info                  Information class, contains information
-                          on how the data was processed and how the
-                          transfer functions where estimated.
-                          
+    ..note:: Frequency and components are ordered from highest to lowest frequency.
+    
+    
+    Arguments 
+    ---------
+        edi_filename :  str 
+            full path to .edi file to be read 
+            *default* is None. 
+                   
+    ... Attributes descriptions :: 
+    ==================== ======================================================
+    Attributes            Description                               
+    ===================== =====================================================
+    edifile               Full path to edifile                          
+    MTEMAP                MT section or EMAP DataSection class, contains
+                          basic information  on the data  collected . 
+                          Can read MT and EMAP section
+    DefineMeasurement     DefineMeasurement class, contains information on how
+                          the data was collected.
+    Head                  Head class, contains metadata  on where, when, and 
+                          who collected the data Information class.
+    Info                  contains information on how the data was processed 
+                          and how thetransfer functions where estimated.
     Z                     Z class, contains the impedance data
-                          
-    block_size            number of data in one line.                7
-    data_header_com       header string for each of the data         '>!****{0}****!'
-                           section
-    bloc_num_format       string format of data.                     ' 16.6e'
+    block_size            number of data in one line.  Default is 7
+    data_header_com       header string for each of   the data section.         
+                          Default is '>!****{0}****!'
+    bloc_num_format       string format of data, Default is' 16.6e'           
     _t_comps              components for tipper blocks
     _z_comps              components for impedance blocks
     _res_comps            resistivities components 
     _phs_comps            phase components 
+    ==================== ======================================================
     
-    ============================================================================
     
-    
-    ===================== =====================================================
-    Methods               Description
-    ===================== =====================================================
-    read_edi              Reads in an edi file and populates the associated
-                          classes and attributes.
-    write_edifile         Writes an .edi file following the EDI format given
-                          the apporpriate attributes are filled.  Writes out
-                          in impedance and Tipper format.
-
-    _fill_data_array      Fill the impedance blocks, Tipper blocks if exists, 
-                         if the.edi file is in EMAP section, read_data compute data
-                          to impedance , rho and phase .
-    _write_components_blocks_mt      Write MT or EMAP components blocks for data
-                                      blocks of the .edi file.
-
+    ======================= ===================================================
+    Methods                 Description
+    ======================= ===================================================
+    read_edi                Reads in an edi file and  populates the associated
+                            classes and attributes.
+    write_edifile           Writes an .edi file following the EDI format given
+                            the apporpriate attributes are filled.  Writes out
+                            in impedance and Tipper format.
+    _fill_data_array        Fill the impedance blocks,Tipper blocks if exists, 
+                            if the.edi file is in EMAP section, read_data compute 
+                            data to impedance , rho and phase .
+    _write_components\
+        _blocks_mt          Write MT or EMAP components blocks for data blocks
+                             of the .edi file.
     ===================== =====================================================
    
-     eg : 
+     :Example: :: 
            >>> import csamtpy.ff.core.edi as csedi
-           
-           >>> path =  os.path.join(os.environ["pyCSAMT"], 'csamtpy','data', file_edi_3)
-           
-           >>> edihead= csedi.Head.get_header_list_from_edi(edi_fn=path)
-           >>> info_obj =csedi.Info.get_info_list_from_edi(edi_fn=path)
-           
+           >>> path =  os.path.join(os.environ["pyCSAMT"], 
+                                    'data','edi', csa000.edi)
+           >>> edihead= csedi.Head.get_header_list_from_edi(
+                           edi_fn=path)
+           >>> info_obj =csedi.Info.get_info_list_from_edi(
+                               edi_fn=path)
            >>> edi_obj =csedi.Edi(edi_filename=path )
-           >>> edi_obj.write_edifile(new_edifilename=None, savepath =pathi)
-    
+           >>> edi_obj.write_edifile(new_edifilename=None)
     """
     
     def __init__(self, edi_filename=None, **kwargs):
@@ -441,15 +476,19 @@ class Edi :
     def read_edi (self, edifile =None): 
         """
         read edifile and populate attribute to each data section of edi. 
-        params : edifile : str : full path to edifile 
-            
+        params :
+            :edifile : str , full path to edifile 
         """
         self._logging.info ("Reading <{0}> edifile.".format(edifile))
         
         if edifile is not None :self.edifile = edifile 
-        if self.edifile is None : raise CSex.pyCSAMTError_EDI('NoneType can not read. Please provide at least an edifile.')
+        if self.edifile is None : 
+            raise CSex.pyCSAMTError_EDI('NoneType can not read. '
+                                        'Please provide at least an edifile.')
         if self.edifile is not None :
-            if  os.path.isfile(self.edifile) is False: raise CSex.pyCSAMTError_EDI('Can not find edifile to read. Please check your path.')
+            if  os.path.isfile(self.edifile) is False:
+                raise CSex.pyCSAMTError_EDI('Can not find edifile to read.'
+                                            ' Please check your path.')
         
         if SB.which_file(filename =self.edifile ) =='edi': #---> read each section and populate attribute 
             self.Head = Head.get_header_list_from_edi(edi_fn=self.edifile )
@@ -464,23 +503,31 @@ class Edi :
    
     def _get_specific_comp (self, edifile=None, data_sect_line =None): 
         """
-        method to get a specific components present on the data set . put all components into 
-        dictionnary  and data : 
-            eg : {'zxxr' :<list of data zxxr>, 
-                    'zxyr':<list of data zxyr>, ...., 'zyyi':<list data of zyyi>}
-        param : edifile : str : full path to edifile 
-                data_sect_line :int : number of line where data section start . Normally we dont need 
-                                it will be find automatically . For consistency , we will use this parameter again
-                                and ask  whether it is not None. User dont need to add anaything provided that He know on 
-                                edifile where its data start. 
-                                'default is None': fill automatycally 
-        return :comp_dict : dict : dictionnary of all component values get on edifiles.
+        Method to get a specific components present on the data set .
+        put all components into dictionnary  and data 
+         like : {'zxxr' :<list of data zxxr>, 
+                    'zxyr':<list of data zxyr>, ....,zyyi':<list data of zyyi>}
+        Parameters
+        -----------
+        edifile : str  
+            full path to edifile 
+        data_sect_line :int  
+                number of line where data section start.
+                default is None': fill automatycally 
+        Returns 
+        --------
+            dict 
+                dictionnary of all component values get on edifiles.
+            
+        .. note :: data_sect_line  is optional.
         """
         
-        self._logging.info('Read <get_specific_comp> in edi_data section :edifile :{0}.'.format( edifile))
+        self._logging.info('Read <get_specific_comp> in edi_data'
+                           ' section :edifile :{0}.'.format( edifile))
         
         if edifile is not None : self.edifile = edifile 
-        else :raise CSex.pyCSAMTError_EDI('Can not find edifile to read. NoneType can not be read. Check, your rigth path.')
+        else :raise CSex.pyCSAMTError_EDI('Can not find edifile to read.'
+                                          ' NoneType can not be read. Check, your rigth path.')
         if self.edifile is not None :
             if os.path.isfile(self.edifile) is False : raise CSex.pyCSAMTError_EDI('No edifile file .Please check your edipath.')
         if SB.which_file(filename =self.edifile , deep=False) =='edi': # we assume that the file will check above , just to get to microsec running
@@ -518,13 +565,15 @@ class Edi :
         
     def _fill_data_array (self, data_dict =None  ): 
         """
-        Method to fill Impedance Data bloc and Tipper blocks and Resistivities and data blocks if provided 
-        User dont need to provided data on dictionnay provided that your are sure that data providing respect 
+        Method to fill Impedance Data bloc and Tipper blocks and Resistivities
+        and data blocks if provided User dont need to provided data on dictionnay
+         provided that your are sure that data providing respect 
         SEG instructions. if not fill automatically by reading edifile .
         
-        param : data_dict : dict : dictionnary of data  < get from reading edifiles > 
-                                    default is None : fill automatically 
-                                    
+        :param data_dict: dictionnary of data  < get from reading edifiles > 
+            default is None : fill automatically   
+        :type data_dict: dict 
+                     
         """
         flag_freqOrder = 0          #frequency arranged to highest to lowest . if 1 mean is lower to highest 
         
@@ -534,7 +583,8 @@ class Edi :
         # get frequency array and initialise z_array and Z_error 
         freq_array = np.array(self.comp_dict['freq'], dtype =np.float)
         z_array , z_error_array =  np.zeros((freq_array.size , 2 , 2),dtype =np.complex),\
-                                                np.zeros ((freq_array.size , 2 , 2), dtype =np.float)
+                                                np.zeros ((freq_array.size , 2 , 2), 
+                                                          dtype =np.float)
         
                                
         if freq_array [-1]  > freq_array [0]   : 
@@ -545,16 +595,20 @@ class Edi :
         for key in self.comp_dict.keys(): 
 
             if key == 'zxxr' :
-                z_array[: , 0 , 0] = np.array(self.comp_dict[key]) + 1j * np.array(self.comp_dict[key[:-1]+'i'] )  
+                z_array[: , 0 , 0] = np.array(self.comp_dict[key]) + 1j * np.array(
+                    self.comp_dict[key[:-1]+'i'] )  
                 z_error_array [: , 0 , 0]= np.sqrt(np.array(self.comp_dict[key[:-1]+'.var']))
             if key == 'zxyr' :
-                z_array[: , 0 , 1] = np.array(self.comp_dict[key]) + 1j * np.array(self.comp_dict[key[:-1]+'i'])  
+                z_array[: , 0 , 1] = np.array(self.comp_dict[key]) + 1j * np.array(
+                    self.comp_dict[key[:-1]+'i'])  
                 z_error_array [: , 0 , 1]= np.sqrt(np.array(self.comp_dict[key[:-1]+'.var']))
             if key == 'zyxr' :
-                z_array[: , 1 , 0] = np.array(self.comp_dict[key] ) + 1j * np.array(self.comp_dict[key[:-1]+'i'])  
+                z_array[: , 1 , 0] = np.array(self.comp_dict[key] ) + 1j * np.array(
+                    self.comp_dict[key[:-1]+'i'])  
                 z_error_array [: , 1 , 0]= np.sqrt(np.array(self.comp_dict[key[:-1]+'.var']))
             if key == 'zyyr' :
-                z_array[: , 1, 1] = np.array(self.comp_dict[key]) + 1j * np.array(self.comp_dict[key[:-1]+'i'])  
+                z_array[: , 1, 1] = np.array(self.comp_dict[key]) + 1j * np.array(
+                    self.comp_dict[key[:-1]+'i'])  
                 z_error_array [: , 1 , 1]= np.sqrt(np.array(self.comp_dict[key[:-1]+'.var']))
 
                                   
@@ -607,19 +661,26 @@ class Edi :
         """
         Method to write edifiles from data setting oin attribute of Edi or from existing file. 
         can write also EMAP data are filled attribute of EDI.
-        param : edifile : str : new edifile name  . If None , will write edi using station_name 
-                                plus type of survey (MT of EMAP) plus year of writing as < S00_emap.2021.edi> or 
-                                                    <S00_mt.2021.edi>
-                datatype : str : type of file : "mt" or "emap" if None , program will detect which file is provided . 
-                                                if set , program will be force to rewrite edi into given format
-                savepath :str : path to save edifile.if None : save to your current work directory
-                
-                add_filter_ array: ndarray(nfreq, 2, 2) , EDI edifile is EMAP section data , if add filter is provied.
-                                                        programm add filtered arrays.
-                          
-        return : new_edifile :str : full path to edifle 
-    
-    
+
+        :param edifile :new edifile name .If None , will write edi using station_name 
+                            plus type of survey (MT of EMAP) plus year of writing as
+                            < S00_emap.2021.edi> or  <S00_mt.2021.edi>
+        :type edifile: str                   
+                                               
+        :param datatype: type of file , "mt" or "emap" if None , program will 
+                        detect which file is provided . if datatype is set , program will be 
+                         force to rewrite edi into given format.
+        :type datatype: str
+        
+        :param savepath : path to save edifile. if None  save to your current work directory
+        :type savepath: str
+        
+        :param add_filter_array: ndarray(nfreq, 2, 2) , EDI edifile is EMAP section data ,
+                                if add filter is provided , will recompute rho.  
+        :type add_filter_ array: str
+        
+        :returns : new_edifile , full path to edifile 
+        :rtype :str 
         """
         z_rho_phs_labels =[
                             [['zxxr', 'zxxi', 'zxx.var'],
@@ -645,7 +706,8 @@ class Edi :
         if edi_fn is not None : self.edifile =edi_fn 
         
         if new_edifilename is None : 
-            if self.edifile is not None : new_edifilename = '{0}{1}'.format('new_', os.path.basename(self.edifile)) 
+            if self.edifile is not None : new_edifilename = '{0}{1}'.format(
+                    'new_', os.path.basename(self.edifile)) 
             else : 
                 f = 1
                 new_edifilename = '{0}_{1}.{2}.edi'
@@ -859,7 +921,8 @@ class Edi :
        
         
         print('-'*77)
-        print('---> Edifile <{0}> has be successfully written to your savepath.\n---> savepath : <{1}>'.\
+        print('---> Edifile <{0}> has be successfully written to'
+              ' your savepath.\n---> savepath : <{1}>'.\
               format(os.path.basename(new_edifilename), savepath ))
         # print('-'*77)  
         
@@ -870,15 +933,23 @@ class Edi :
         
     def _write_components_blocks (self, edi_datacomp , comp_key, datatype=None ): 
         """
-        methods to write blocks  with data components keys . 
-        edi_datacomp  :( ndarray, n) : array of data components . 
-                        :::(nfreq, 2, 2)
-        comp_key : component to write in edifile .
-        datatype  : str : mt or eamap : default is "mt"
+        Method to write blocks  with data components keys . 
         
-        return : data_list : list of line to write in edifile
+        :param edi_datacomp  :array of data components,
+        :type edi_datacomp: ndarray (nfreq, 2, 2)
+ 
+        :param comp_key : component to write in edifile .
+        :type comp_key: str 
+        
+        :datatype  : mt or eamap : default is "mt"
+        :type datatype:str 
+        
+        :returns: data_list, list of line to write in edifile
+        :rtype:list 
+        
     
-        Note : we assume that comp_key provided is found on the edifile 
+        .. Note ::we assume that comp_key provided is found on the edifile 
+            
         
         """
         self._logging.info ('Ready to write edi data component blocks info list !')
@@ -970,12 +1041,13 @@ class Head (object):
     The edi head block contains a series of options which (1) identity the data  
     set, (2) describe whn , where and by whoom was acquired , and (3) describe   
     when , how  and by whom it was written.
-    
-    arguments : 
-        edi_fn :str : Full path to edi path 
+    Arguments 
+    ----------
+        edi_fn :str 
+            Full path to edi path 
         
-    eg: 
-         >HEAD
+    .. Example: :: 
+            >HEAD
              DATAID="kap012"
              ACQBY="Phoenix"
              FILEBY="EMTF FCU"
@@ -989,21 +1061,21 @@ class Head (object):
              MAXSECT=999
              EMPTY=1.0e+32
                 
-    ============================================================================
-    Attribute       Description                 resctriction           Default 
-    ============================================================================
+    ============== ========================== ================= ================
+    Attribute       Description                 Restriction         Default 
+    ============== =========================== ================ ================
     dataid          Identifier for data set         str             Required 
     acqby           Name of contractor or other 
-                            party                   str             Required 
+                    party                           str             Required 
     fileby          Name of contractor of other 
-                            party                   str             Required 
+                    party                           str             Required 
     acqdate         Date of (start of) data
-                        acquisition                 date            Required 
+                    acquisition                     date            Required 
     enddate         Date of end of data acq         date            ""
     filedate        Date EDI was written            Date            Required 
     country         Name of country of acq.         str             ""
     state           state(s) of province(s) of 
-                        acquisition                 str             ""
+                    acquisition                     str             ""
     county          Name of country of acq.         str             ""
     prospect        Name of associated prospect     str             ""
     loc             Description of location         str             ""
@@ -1012,22 +1084,19 @@ class Head (object):
     elev            avg.(approx)elevation of acq.   str             ""
     units           Units for elevation             "m"|"ft"        "m"
     stdvers         Version of EDI format for 
-                        this file                   str             Required 
-    progvers       Version ID for prog. written    str             Required 
+                    this file                       str             Required 
+    progvers        Version ID for prog. written    str             Required 
     progdate        Last revision of prog writing
-                        file                        str             Required 
+                    file                             str             Required 
     coordsys        coordinate system [geographic|
-                                       geomagnetic] str             Geography North
+                    geomagnetic]                     str             Geography North
     declination     geomagnetic declination         float           "10."     
     maxsect         Maximum data section in EDI 
                             file                    int>=1          "16"
     bindata         if not "", tag for binary data
                             file                    str of ""       ""
     empty           Value which represents "nodata" float           "1.0E32"
-    
-    ============================================================================
-    
-    
+    ============= ================================= ============= ==============
     """
     head_keys =['dataid', 'acqby',
                 'fileby','acqdate',
@@ -1118,7 +1187,8 @@ class Head (object):
     def get_header_list_from_edi (cls, edi_fn=None):
         """
         class method to return edi_head_list . 
-        param : edi_fn :str : full path to edifile 
+            :paramedi_fn :full path to edifile
+            :type edi_fn:str 
         """
         _logger.info ('Geting <%s> Head info'% edi_fn)
         
@@ -1148,9 +1218,10 @@ class Head (object):
     def read_head (self, edi_header_list =None):
         """
         read_header_list and set attributes values
-        param : edi_header_list : list of edifile header infos .
-         eg:: 
-             
+        
+        :param edi_header_list : list of edifile header infos 
+        :type edi_header_list:list 
+         :Example: :: 
                     >>>> file_edi= 'S00_ss.edi'
                     >>>> path =  os.path.join(os.environ["pyCSAMT"], 
                                           'csamtpy','data', file_edi)
@@ -1188,16 +1259,20 @@ class Head (object):
     def write_head_info (self , head_list_infos =None): 
         """
         Write list info . Can read edi and rewrite list or  to provide 
-            input as ['key_01=value_01', 'key_02=value_02', ...,'key_nn=value_nn' ]
-            Note : If value is absent i.e None ,  don't write the key . 
-            
-        param: head_list_infos : list : list of head info 
-        return write_info : list : list ready to write to let EDI file more visible .
-        e:g:
+        input as ['key_01=value_01', 'key_02=value_02', ...,'key_nn=value_nn' ]
+        .. Note :: If value is absent i.e None ,  don't write the key . 
+
+        :param head_list_infos : list , list of head info 
+        :type head_list_infos : list 
+        
+        :returns:write_info list , list ready to write to let
+                            EDI file more visible .
+        :rtype: list 
+        
+        :Example::
             >>> path =  os.path.join(os.environ["pyCSAMT"], 'csamtpy','data', S00_ss.edi)
             ... edihead= Head.get_header_list_from_edi(edi_fn=path)
             ... print(edihead.write_head_info(head_list_infos = edihead.edi_header))
-            
         """
         self.logging.info ('Writing Edifile info .')
 
@@ -1243,8 +1318,8 @@ class Head (object):
  
 class Info :
     """
-     class EDI info class : collect information of the survey : 
-    for instance : 
+     Class EDI info class : collect information of the survey : 
+    :Example of file : 
              >INFO
                  MAXINFO=999
                   PROJECT=SAMTEX
@@ -1269,8 +1344,6 @@ class Info :
     Notes               Note class      info additions 
     
     ================= =========== =============================================
-    
-    
     """
     infokeys =['maxinfo', 'project', 'survey', 'creationdate', 
                'processedby','processingsoftware', 'processingtag',
@@ -1299,9 +1372,12 @@ class Info :
     def get_info_list_from_edi (cls, edi_fn =None):
         """
         class to get edinfo from edifiles :
-            retunn edi_info_list 
-        params : edi_fn : full path to edifile
+          
+        :param edi_fn :str,  full path to edifile
+        :type edi_fn :str
         
+        :returns: edi_info_list 
+        :rtype:list 
         """
         _logger.info ('subclass :Reading <%s> Ediinfo and return  class.'% cls.__name__)
         
@@ -1327,11 +1403,10 @@ class Info :
     def read_info (self, edi_info_list =None ):
         """
         readinformation and populate attaribute info 
-        can setother attributes once read and not present on the file. 
+        can setother attributes once read and not present on the file.
         
-        params : edi_info_list :list 
-        
-        
+        :param edi_info_list :list of infos files 
+        :type edi_info_list:list 
         """
         listinfo=[]
         
@@ -1380,16 +1455,18 @@ class Info :
             input as ['key_01=value_01', 'key_02=value_02', ...,'key_nn=value_nn' ]
             Note : If value is absent i.e None ,  don't write the key . Info write method add some
             field notes informations from other softwares if exists.  
+ 
+        :param edi_info_list : list of infos contain in info sections 
+        :type edi_info_list :list 
+        
+        :returns: list of info 
             
-        params : edi_info_list : list 
-        return list 
-                e:g :     
-                    >>> file_edi_2='SAMTEX.edi_2.edi'
-                    >>> file_edi= 'S00_ss.edi'
-                    >>> path =  os.path.join(os.environ["pyCSAMT"],  'csamtpy','data', file_edi_2)
-                    ... info_obj =Info.get_info_list_from_edi(edi_fn=path)
-                    ... print(info_obj.write_edi_info())
-    
+        :Ex ::     
+            >>> file_edi_2='SAMTEX.edi_2.edi'
+            >>> file_edi= 'S00_ss.edi'
+            >>> path =  os.path.join(os.environ["pyCSAMT"],  'csamtpy','data', file_edi_2)
+            ... info_obj =Info.get_info_list_from_edi(edi_fn=path)
+            ... print(info_obj.write_edi_info())
         """
         self.logging.info ('writing ediinfo from <%s> class.' % self.__class__.__name__)
         
@@ -1466,7 +1543,7 @@ class DefineMeasurement:
     Begins Measurement definition data section . Defines Location of sensors 
     and parameters pertainning to runs for each measurments . 
     
-    for instance :
+    :Example :
          >=DEFINEMEAS
              MAXCHAN=7
              MAXRUN=999
@@ -1484,30 +1561,30 @@ class DefineMeasurement:
             >EMEAS ID=1004.001 CHTYPE=EX X=    -50.0 Y=      0.0 Z=   0.0 X2=     50.0 Y2=      0.0 AZM=   0.0
             >EMEAS ID=1005.001 CHTYPE=EY X=      0.0 Y=    -50.0 Z=   0.0 X2=      0.0 Y2=     50.0 AZM=  90.0
     
-        :param : defineMeas_list : list : 
-            to get the list for define measurement ,
-            it's better to call the classmethod <get_define_measurement_info> to 
-            full path to .edi file to read in.
-            
+    :param defineMeas_list : list for define measurement infos  ,
+    :type defineMeas_list : list 
+        
+    .. note ::  to get the list for define measurement
+        it's better to call the classmethod <get_define_measurement_info> to 
+        full path to .edi file to read in.
 
-        ================= ==================================== ======== ===========
-        Attributes        Description                          Default  Restriction 
-        ================= ==================================== ======== ===========
-        defineMeas_list   list of definemeasurment             None     no
-        maxchan           Maximum number of channels measured  None     yes
-        maxmeas           Maximum number of measurements       9999     yes
-        maxrun            Maximum number of measurement runs   999      yes
-        meas_####         Hmeasurement or EmEasurment object   None     yes
-                          defining the measurement made  
-        refelev           Reference elevation (m)              None     yes
-        reflat            Reference latitude                   None     yes
-        refloc            Reference location                   None     yes
-        reflon            Reference longituted                 None     yes
-        reftype           Reference coordinate system          'cart'   yes
-        units             Units of length                      m        yes
+    ================= ==================================== ======== ===========
+    Attributes        Description                          Default  Restriction 
+    ================= ==================================== ======== ===========
+    defineMeas_list   list of definemeasurment             None     no
+    maxchan           Maximum number of channels measured  None     yes
+    maxmeas           Maximum number of measurements       9999     yes
+    maxrun            Maximum number of measurement runs   999      yes
+    meas_####         Hmeasurement or EmEasurment object   None     yes
+                      defining the measurement made  
+    refelev           Reference elevation (m)              None     yes
+    reflat            Reference latitude                   None     yes
+    refloc            Reference location                   None     yes
+    reflon            Reference longituted                 None     yes
+    reftype           Reference coordinate system          'cart'   yes
+    units             Units of length                      m        yes
  
-        ================= ==================================== ======== ===========
-    
+    ================= ==================================== ======== ===========
     """
     
     definemeasurementkeys = ['maxchan', 'maxrun', 'maxmeas',
@@ -1563,25 +1640,31 @@ class DefineMeasurement:
     @classmethod 
     def get_DefineMeasurement_info (cls, edi_fn=None):
         """
-        class method to get definemeasurment list  
-        params : edi_fn : full path to edifiles. 
-        return class 
-    
+        class method to get definemeasurement list  
+        
+        :param edi_fn : full path to edifiles.
+        :type edi_fn :str 
+        
+        :returns: new class with infos list 
+        :rtype:list 
         """
         _logger.info('Reading < %s> file from <%s>' % (os.path.basename(edi_fn), cls.__name__))
         
         _flagmeas =0
         dfmeasurementlist = [] 
-        if edi_fn is None : raise CSex.pyCSAMTError_EDI('Can not read edifile .None value is found.')
+        if edi_fn is None : raise CSex.pyCSAMTError_EDI(
+                'Can not read edifile .None value is found.')
         if SB.which_file(filename = edi_fn) =='edi': 
             with open(edi_fn , 'r', encoding= 'utf8') as fdefm : 
                 edilines =fdefm.readlines ()
             for dd , dmvalue in enumerate(edilines) : 
-                if '>=definemeas'.upper() in dmvalue or dmvalue.find('>=DEFINEMEAS')>=0 or re.match(r'>=DEFINEMEAS',dmvalue) is not None: 
+                if '>=definemeas'.upper() in dmvalue or dmvalue.find(
+                        '>=DEFINEMEAS')>=0 or re.match(r'>=DEFINEMEAS',dmvalue) is not None: 
                     _flagmeas= dd
                 
                 if _flagmeas > 0 : 
-                    if dmvalue.find('>=mtsect'.upper())>=0  or dmvalue.find('>=emapsect'.upper())>=0 :
+                    if dmvalue.find('>=mtsect'.upper())>=0  or dmvalue.find(
+                            '>=emapsect'.upper())>=0 :
                         if '>=MTSECT' in dmvalue or '>=EMAPSECT' in dmvalue:
  
                             dfmeasurementlist= edilines[_flagmeas+ 1:dd]
@@ -1592,21 +1675,26 @@ class DefineMeasurement:
     
     def read_define_measurement (self, define_measurement_list  =None ):
         """
-        readmeasurement inedilist and populate attributes . 
-        param : define_measurement_list : list : lif of measurement data 
-            can be : [key_01=value_01 , ..., key_xx = value_xx]
-            Emeas and Hmeas will be set on dictionnary and call the class to populate attribute
-            default is None 
-            eg :
-                    >>> file_edi= 'S00_ss.edi'
-                    >>> path =  os.path.join(os.environ["pyCSAMT"], 'csamtpy','data', file_edi_2)
-                                          
-                    >>> definemeas =DefineMeasurement.get_measurement_info(edi_fn=path)
-                    ... print(definemeas.define_measurement)
-                    .. print(definemeas.meas_ex)
-            to get measurement_hx or measurement_ex : 
-                for instance get attribute <id> of Emeasurement :
-                    ... print(definemeas.meas_ex.id) --> output =1004.
+        readmeasurement inedilist and populate attributes .
+        
+        :param define_measurement_list :  list of measurement data 
+                            can be  [key_01=value_01 , ..., key_xx = value_xx]
+                            Emeas and Hmeas will be set on dictionnary
+                            and call the class to populate attribute
+                            default is None 
+        :type define_measurement_list:list 
+        
+        :Example  ::
+            >>> file_edi= 'S00_ss.edi'
+            >>> path =  os.path.join(os.environ["pyCSAMT"], 
+                                     'csamtpy','data', file_edi_2)
+            >>> definemeas =DefineMeasurement.get_measurement_info(edi_fn=path)
+            ... print(definemeas.define_measurement)
+            .. print(definemeas.meas_ex)
+            
+        ...note :: to get measurement_hx or measurement_ex : 
+                    for instance get attribute <id> of Emeasurement :
+            ... print(definemeas.meas_ex.id) -- output =1004.
         """
         self.logging.info ('Reading DefineMeasurement info <%s>' % self.__class__.__name__)
         xmeas_list =[]
@@ -1692,31 +1780,36 @@ class DefineMeasurement:
     def write_define_measurement(self, define_measurement_list = None): 
         """
         write definemeasurement method ,intend to write and rewrite measurements infos into list. 
-        informations must be on list as possible if not may set attribute manually :
-            [key01=value02 , ..., keynn=valuenn + dictXX ]
-            dictXX ={meas_e}, {meas_hx}, {meas_ey}{meas_hx}, {meas_hy} {meas_hz}
+        informations must be on list as possible if not may set attribute manually
+            i.e  [key01=value02 , ..., keynn=valuenn + dictXX ]dictXX ={meas_e}, {meas_hx},
+            {meas_ey}{meas_hx}, {meas_hy} {meas_hz}
+
+        :param define_measurement_list: list of define measuremenent 
+        :type define_measurement_list: list 
+        
+        :returns: new list of define_measurement
+        :rtype:list 
+        
+        ...notes ::
+            if no edifiles is provided , can write definemeasurement  by creating 
+            dict of Eand H measurment. 
             
-        param: define_measurement_list :list 
-        return : 
-        define_measurement :list 
-        
-        eg ::    if no edifiles is provided , can write definemeasurement  by creating dict of Eand H measurment. For instance :
-                    ex_dict ={'id':1002, 'chtype':'Ex', 'x':0, 'y':0, 'z':0, 'x2':-50,'y2':0, 'z2':0, 
-                                       'acqchan':0,'filter':'hanning', 'sensor':'ex', 'gain':None}
-                    ey_dict ={'id':1003.1, 'chtype':'Ey', 'x':0, 'y':50, 'z':0, 'x2':0,'y2':0, 'z2':0, 
-                                   'acqchan':0}
-                    hy_dict ={'id':1003, 'chtype':'Hy', 'x':0, 'y':50, 'z':90, 'azm':0.0,'dip':35,
-                                       'acqchan':'hy','filter':'Hanning', 'sensor':None, 'gain':0, 'measdate':''}
-                    
-                    >>> definemeas =DefineMeasurement()
-                    >>> ex =Emeasurement(**ex_dict)
-                    >>> ey =Emeasurement(**ey_dict)
-                    >>> hy=Hmeasurement(**hy_dict)
-                    ... definemeas.__setattr__('meas_ex', ex)
-                    ... definemeas.__setattr__('meas_ey', ey)
-                    ... definemeas.__setattr__('meas_hy', hy)
-                    ... print(definemeas.write_define_measurement())
-        
+        :For instance: ::
+
+        >>> ex_dict ={'id':1002, 'chtype':'Ex', 'x':0, 'y':0, 'z':0, 'x2':-50,'y2':0, 'z2':0, 
+                           'acqchan':0,'filter':'hanning', 'sensor':'ex', 'gain':None}
+        >>> ey_dict ={'id':1003.1, 'chtype':'Ey', 'x':0, 'y':50, 'z':0, 'x2':0,'y2':0, 'z2':0, 
+                       'acqchan':0}
+        >>> hy_dict ={'id':1003, 'chtype':'Hy', 'x':0, 'y':50, 'z':90, 'azm':0.0,'dip':35,
+                           'acqchan':'hy','filter':'Hanning', 'sensor':None, 'gain':0, 'measdate':''}
+        >>> definemeas =DefineMeasurement()
+        >>> ex =Emeasurement(**ex_dict)
+        >>> ey =Emeasurement(**ey_dict)
+        >>> hy=Hmeasurement(**hy_dict)
+        ... definemeas.__setattr__('meas_ex', ex)
+        ... definemeas.__setattr__('meas_ey', ey)
+        ... definemeas.__setattr__('meas_hy', hy)
+        ... print(definemeas.write_define_measurement())
         """
         write_dfmeasurements, dictlist=['>=DEFINEMEAS\n'],[]
         
@@ -1817,17 +1910,15 @@ class Hmeasurement(object):
         gain                   gain used for run ("")
         measdate               date of run ("")
         ====================== ====================================================
-    
         :Fill Metadata: ::
-    
             >>> import csamtpy.ff.core.edi as csedi
-            >>> hmeas_dict = {'id': '1000.3', 'chtype':'hx', 'x':0, 'y':0, 'azm':0, 'sensor':'None'}
+            >>> hmeas_dict = {'id': '1000.3', 'chtype':'hx', 'x':0, 
+                              'y':0, 'azm':0, 'sensor':'None'}
             >>> hmeas = csedi.Hmeasurement(**hmeas_dict )
             ... print(hmeas.chtype)
             ... print(hmeas.azm)
             ... print(hmeas.measdate)
             ... print(hmeas.sensor)
- 
      """
     hmeasurementkey = ['id', 'chtype', 'x', 'y', 'z', 'azm','dip',
                        'acqchan','filter', 'sensor', 'gain', 'measdate']
@@ -1846,36 +1937,35 @@ class Hmeasurement(object):
                 
 class Emeasurement(object): 
     """
-        Define the electrode location , and run parameters for
-        an electric field measurement.EMeasurement contains metadata for an 
-        electric field measurement
+    Define the electrode location , and run parameters for
+    an electric field measurement.EMeasurement contains metadata for an 
+    electric field measurement.
     
-        ====================== ====================================================
-        Attributes             Description (Restriction)
-        ====================== ====================================================
-        id                     Measurement ID , channel number  ('required ')
-        chtype                 Type of Hmeasurement[ Ex | Ey ](required)
-        x                      x (m) north offset from first electrode (reauired)
-        y                      y (m) offest from ref for first electrode(reauired)
-        z                      z offset from the ref for first electrode(reauired) 
-        x2                      x offset from the 2nd electrode ('required')
-        y2                      y offset from the 2nd electrode (required)
-        z2                      z offset from the 2nd electrode ("")
-        acqchan                name of the channel acquired usually same as chtype
-        filter                 description of sensor to run ("")
-        gain                   gain used for run ("")
-        measdate               date of run ("")
-        ====================== ====================================================
-    
-        :Fill Metadata: ::
-    
-            >>> import csamtpy.ff.core.edi as csedi
-            >>> emeas_dict = {'id': '1000.4', 'chtype':'ex', 'x':0, 'y':0, 'azm':0, 'acqchan':'ex', }
-            >>> emeas = csedi.Hmeasurement(**emeas_dict)
-            ... print(emeas.chtype)
-            ... print(emeas.azm)
-            ... print(emeas.measdate)
- 
+    ====================== ====================================================
+    Attributes             Description (Restriction)
+    ====================== ====================================================
+    id                     Measurement ID , channel number  ('required ')
+    chtype                 Type of Hmeasurement[ Ex | Ey ](required)
+    x                      x (m) north offset from first electrode (reauired)
+    y                      y (m) offest from ref for first electrode(reauired)
+    z                      z offset from the ref for first electrode(reauired) 
+    x2                      x offset from the 2nd electrode ('required')
+    y2                      y offset from the 2nd electrode (required)
+    z2                      z offset from the 2nd electrode ("")
+    acqchan                name of the channel acquired usually same as chtype
+    filter                 description of sensor to run ("")
+    gain                   gain used for run ("")
+    measdate               date of run ("")
+    ====================== ====================================================
+
+    :Fill Metadata: ::
+        >>> import csamtpy.ff.core.edi as csedi
+        >>> emeas_dict = {'id': '1000.4', 'chtype':'ex', 'x':0,
+                          'y':0, 'azm':0, 'acqchan':'ex', }
+        >>> emeas = csedi.Hmeasurement(**emeas_dict)
+        ... print(emeas.chtype)
+        ... print(emeas.azm)
+        ... print(emeas.measdate)
      """
     emeasurementkey = ['id', 'chtype', 'x', 'y', 'z', 'x2','y2', 'z2', 
                        'acqchan','filter', 'sensor', 'gain', 'measdate']
@@ -1911,7 +2001,7 @@ class MTEMAP (object):
     """
     Begins an MT and EMAP data section .Defines the default measurment for MT sounding and 
     Defines the measurments which makeup an EMAP lines. 
-    for instance :
+    :for instance :
       >=MTSECT                          >=EMAPSECT
              SECTID=""                      SECTID=S00
                 NFREQ=**                    NCHAN=4
@@ -1922,18 +2012,19 @@ class MTEMAP (object):
                 EY= 1005.001                HY= .0
                                             HZ= NONE
                                             CHKSUM =None
-        argument : 
-            mt_or_emap_section_list : list : mt and emap section 
-            can read ediflies by calling class method <'get_mtemap_section_list'>
+
+    :param mt_or_emap_section_list :  mt and emap section 
+                can read ediflies by calling class method <'get_mtemap_section_list'>
+    :type mt_or_emap_section_list :list 
             
      Holds the following information:
-    ================= =========== =============================================
+    ================= ======================== =============== ================
     Attributes        Description               Default          restriction 
-    ================= =========== =============================================
-    sectid            Name of this section          None        str or""
-    nfreq             Number of frequencies      required       int >=1
-    maxblks             maximum number of blocks 
-                        of this section             None         int>=1
+    ================= ======================== ================ ===============
+    sectid          Name of this section           None         str or""
+    nfreq           Number of frequencies          required       int >=1
+    maxblks         maximum number of blocks 
+                    of this section                None         int>=1
     ndipole         Number of dipoles in 
                         the EMAP line              required  
     type            Descrip. of spatial filter
@@ -1946,17 +2037,16 @@ class MTEMAP (object):
     rx              Meas ID for Rx measurement     None         Def Meas Id or "
     ry              Meas ID for Ry measurement     None         Def Meas Id or "
     chksum          checksum total for datavalues  None         Num of ""
-    ================= =========== =============================================
-    **Note : MTEMAP can recognize functionto value provided with type of data acquired eithe MT or EMAP.
-    
+    ================= =========================== ============ ================
+    ...Note ::
+        MTEMAP can recognize functionto value provided with type of data acquired eithe MT or EMAP.
     More attributes can be added by inputing a key word dictionary
-
-    >>>MTEMAP(**{'ex':'0011.001', 'hx':'0013.001','sectid':'Niable','nfreq':47, 
+    :Ex: :: 
+    >>> MTEMAP(**{'ex':'0011.001', 'hx':'0013.001','sectid':'Niable','nfreq':47, 
                  'ey':'0012.001', 'hy':0014.001 , 'hz': 0015.001 })
     >>> MTEMAP (**{'sectid':'yobkro','nfreq':18 , 'maxblks':100, 'hx':"1003.1", 
               'ex':'1005.4','hz':'1006.3', 'ey':1002.3 , 'hy':'1000.2','chksum':47,
               'ndipole':47, 'type':'hann'})
-   
     """
     mtemapsectkey =['sectid', 'nfreq', 'maxblks', 'hx', 'hy', 'hz', 'ex','ey','rx',
                 'ry', 'ndipole', 'type', 'chksum']
@@ -1979,8 +2069,12 @@ class MTEMAP (object):
     def get_mtemap_section_list (cls, edi_fn =None ): 
         """
         MT or EMAP section_classmethod to get special MT info or EMAP info in edifile
-        param :edi_fn :str : full path to edifile 
-        return :newclass
+
+        :param edi_fn : full path to edifile
+        :type edi_fn:str 
+            
+        :returns : newclass contained a list of mtemap infos 
+        :rtype:list 
         """
         _logger.info ("Read MT Section on edifile <%s>: %s" % (os.path.basename(edi_fn),cls.__name__))
         if edi_fn is None :CSex.pyCSAMTError_EDI('NoneType can not be read. Please provide your right edipath.')
@@ -2014,15 +2108,17 @@ class MTEMAP (object):
 
     def read_mtemap_section (self, mt_or_emap_section_list =None): 
         """
-        Read mtsection and set attribute . values can be set as key :[key01=value01, ..., keynn=valuenn]
-        param : mt_or_emap_section_list: list : mt or emap  section list 
-        
-        e:g: 
+        Read mtsection and set attribute . values can be set as key 
+            [key01=value01, ..., keynn=valuenn] 
+            
+        :param mt_or_emap_section_list: `mt` or `emap`  section list 
+        :type mt_or_emap_section_list:
+            
+        :Example: 
             >>> import csamtpy.ff.core.edi as csedi 
             ... mtsection_obj= csedi.MTEMAP.get_mtemap_section_list(edi_fn =path)
             ... info = mtsection_obj.read_mtemap_section()
             ... print(mtsection_obj.sectid) 
-    
         """
 
         mtemapsectionlist, fmt =[],"{:>12}"
@@ -2067,13 +2163,17 @@ class MTEMAP (object):
         """
         Method to write MT or EMAP section into list : provide list as ['key01= value01', ..., keyxx=valuexx ]
         Method can recognize whether edifile provided is MT or EMAP , Then can read file according to. 
-        param :mt_or_emap_section_list :list :list of mt or eamp sectiionvalidate by egal ('=')
-        eg ::    
-                >>> mtemapinfo ={'sectid':'yobkro','nfreq':18 , 'maxblks':100, 'hx':"1003.1",
-                         'ex':'1005.4','hz':'1006.3', 'ey':1002.3 , 'hy':'1000.2'}#'chksum':18, 'ndipole':47, 'type':'hann'
-                >>> mtemapsection_obj = MTEMAP(**mtinfo)
-                ... writeinfomtemapsect = mtemapsection_obj.write_mtemap_section()
-                ... print(writeinfomtemapsect)
+
+        :param mt_or_emap_section_list :list of mt or eamp sectiionvalidate by egal ('=')
+        :type mt_or_emap_section_list :list 
+            
+        :Example: ::    
+            >>> mtemapinfo ={'sectid':'yobkro','nfreq':18 , 'maxblks':100, 'hx':"1003.1",
+                     'ex':'1005.4','hz':'1006.3', 'ey':1002.3 , 
+                     'hy':'1000.2'}#'chksum':18, 'ndipole':47, 'type':'hann'
+            >>> mtemapsection_obj = MTEMAP(**mtinfo)
+            ... writeinfomtemapsect = mtemapsection_obj.write_mtemap_section()
+            ... print(writeinfomtemapsect)
         """ 
         self._logging.info ('Writing MT or EMAP section')
         fmt='{:>7}'
@@ -2125,27 +2225,26 @@ class MTEMAP (object):
 
 class References(object):
     """
-    Rfeerences information for a citation.
+    References information for a citation.
 
     Holds the following information:
-    ================= =========== =============================================
+    ================= =========== ===============================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================= =========== ===============================
     author            string      Author names
     title             string      Title of article, or publication
     journal           string      Name of journal
     doi               string      DOI number 
     year              int         year published
-    ================= =========== =============================================
+    ================= =========== ================================
 
     More attributes can be added by inputing a key word dictionary
-    e:g :
+    :Example: ::
         >>> refobj = References(**{'volume':18, 'pages':'234--214', 
                                    'title':'pyCSAMT :python toolbox for CSAMT' ,
                           'journal':'Computers and Geosciences', 
                           'year':'2021', 'author':'DMaryE'})
         ... print(refobj.journal)
-        
     """
     def __init__(self, **kwargs):
         
@@ -2173,7 +2272,6 @@ class Copyright(object):
     ================= =========== =============================================
 
     More attributes can be added by inputing a key word dictionary
-
     >>> Copyright(**{'owner':'University of CSAMT', 'contact':'Cagniard'})
     """
 
@@ -2214,7 +2312,6 @@ class Source(object):
     ====================== =========== ========================================
 
     More attributes can be added by inputing a key word dictionary
-
     >>>Source(**{'archive':'IRIS', 'reprocessed_by':'grad_student'})
     """
 
@@ -2236,7 +2333,6 @@ class Person(object):
     Information for a person
 
     Holds the following information:
-
     ================= =========== =============================================
     Attributes         Type        Explanation
     ================= =========== =============================================
@@ -2247,7 +2343,6 @@ class Person(object):
     ================= =========== =============================================
 
     More attributes can be added by inputing a key word dictionary
-
     >>> person =Person(**{'name':'ABA', 'email':'aba@cagniard.res.org',
                           'phone':'00225-0769980706', 
                   'organization':'CagniadRES'})
@@ -2282,7 +2377,6 @@ class Processing(object):
     ================= =========== =============================================
 
     More attributes can be added by inputing a key word dictionary
-
     """
     
     
@@ -2303,17 +2397,16 @@ class Software(object):
     
     Holds the following information:
 
-    ================= =========== =============================================
+    ================= =========== ========================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================= =========== ========================
     name                string      name of software 
     version             string      version of sotware 
     Author              string      Author of software
     release             string      latest version release
-    ================= =========== =============================================
+    ================= =========== ========================
 
     More attributes can be added by inputing a key word dictionary
-
     >>> Software(**{'release':'0.11.23'})
     
     """
@@ -2329,16 +2422,20 @@ def minimum_parser_to_write_edi (edilines, parser =None ):
     """
     This fonction validate edifile for writing , string with egal. We assume that 
     dictionnary in list will be for definemeasurment E and H fieds. 
-    param : edilines : list : list of item to parse 
-            parser  : str : the egal is use  to parser edifile . it can be change 
-            default is egal (=)
-    eg:         
-                >>> file_edi= 'S00_ss.edi'
-                >>> path =  os.path.join(os.environ["pyCSAMT"], 'csamtpy','data', file_edi_2)
-                >>> definemeas =DefineMeasurement.get_measurement_info(edi_fn=path)
-                ... minimparser = minimum_parser_to_write_edi(edilines =definemeas.define_measurement)
-                ... print(minimparser)
+
+    :param edilines: list of items to parse
+    :type edilines: list 
     
+    :param parser: str , the egal is use  to parser edifile .
+                    it can be change default is egal (=) 
+    :type parser: str 
+                
+    :Example: ::         
+        >>> file_edi= 'S00_ss.edi'
+        >>> path =  os.path.join(os.environ["pyCSAMT"], 'csamtpy','data', file_edi_2)
+        >>> definemeas =DefineMeasurement.get_measurement_info(edi_fn=path)
+        ... minimparser = minimum_parser_to_write_edi(edilines =definemeas.define_measurement)
+        ... print(minimparser)
     """
     if parser is None :parser ='='
     elif parser is not None :
@@ -2358,22 +2455,30 @@ def minimum_parser_to_write_edi (edilines, parser =None ):
 
 def gather_measurement_key_value_with_str_parser (old_measurement_list, parser =None): 
     """
-    fonction to rebuild xmeasurement list , to solder list with egal. In the case no value is found at 
+    fonction to rebuild xmeasurement list , to solder list with egal.
+    In the case no value is found at 
     the last item, we will add None . 
-    param : old_measurement_list :list : measurement list to solder : 
-        parser : str : can be egal or all you want . Default is None mean parser '='. 
+ 
+    :param old_measurement_list :measurement list to solder
+    :type old_measurement_list :list 
+                
+    :param parser :  can be egal or all you want, 
+                    Default is None mean parser '='. 
+    :type parser : str 
+
+    :returns:  list solded with egal like <key=value> 
+    :rtype :list 
     
-    return new_list :list : listsolded with egal like : <key=value> 
-    eg : 
-           >>> measm = [ ['>HMEAS', 'ID=1001.001', 'CHTYPE=HX', 'X=', '0.0', 'Y=', '0.0', 'Z=', '0.0', 'AZM=', '0.0', 'TS='],
-                            ['>HMEAS', 'ID=1002.001', 'CHTYPE=HY', 'X=', '0.0', 'Y=', '0.0', 'Z=', '0.0', 'AZM=', '90.0'],
-                            ['>HMEAS', 'ID=1003.001', 'CHTYPE=HZ', 'X=', '0.0', 'Y=', '0.0', 'Z=', '0.0', 'AZM=', '0.0', 'TS=', '']] 
-           >>> for item in measm: 
-               print(gather_measurement_key_value_with_str_parser(old_measurement_list=item) )
-                   .... ['ID=1001.001', 'CHTYPE=HX', 'X=0.0', 'Y=0.0', 'Z=0.0', 'AZM=0.0', 'TS=None']
-                   ... ['ID=1002.001', 'CHTYPE=HY', 'X=0.0', 'Y=0.0', 'Z=0.0', 'AZM=90.0']
-                   ... ['ID=1003.001', 'CHTYPE=HZ', 'X=0.0', 'Y=0.0', 'Z=0.0', 'AZM=0.0', 'TS=None']
-                       
+    :Example: :: 
+        >>> measm = [ ['>HMEAS', 'ID=1001.001', 'CHTYPE=HX', 'X=', '0.0', 'Y=', '0.0', 'Z=', '0.0', 'AZM=', '0.0', 'TS='],
+                         ['>HMEAS', 'ID=1002.001', 'CHTYPE=HY', 'X=', '0.0', 'Y=', '0.0', 'Z=', '0.0', 'AZM=', '90.0'],
+                         ['>HMEAS', 'ID=1003.001', 'CHTYPE=HZ', 'X=', '0.0', 'Y=', '0.0', 'Z=', '0.0', 'AZM=', '0.0', 'TS=', '']] 
+        >>> for item in measm: 
+            ...print(gather_measurement_key_value_with_str_parser(old_measurement_list=item) )
+            output::
+         ... ['ID=1001.001', 'CHTYPE=HX', 'X=0.0', 'Y=0.0', 'Z=0.0', 'AZM=0.0', 'TS=None']
+         ... ['ID=1002.001', 'CHTYPE=HY', 'X=0.0', 'Y=0.0', 'Z=0.0', 'AZM=90.0']
+         ... ['ID=1003.001', 'CHTYPE=HZ', 'X=0.0', 'Y=0.0', 'Z=0.0', 'AZM=0.0', 'TS=None']
     """
     # print(old_measurement_list)
     

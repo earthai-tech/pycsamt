@@ -20,8 +20,9 @@
 
 ===============================================================================
 
-    .Typical call files functions  
-    .call files from Avg, AGSO, else... 
+.. Module:: Dispatcher 
+    :synopsis :Typical call files functions  
+                call computations functions , AGSO and dispatch for purposes  
     
 Created on Thu Nov 26 20:55:39 2020
 
@@ -50,7 +51,8 @@ def _code_strata():
 def agso_data (): 
     """
     Geological data codes processing
-    :: will later deprecated :: 
+    ** will later deprecated 
+    
     """
     
     agsofiles =['AGSO.csv', 'AGSO_STCODES.csv']
@@ -84,7 +86,7 @@ def set_stratum_on_dict():
     Returns
     -------
     strata_dict : dict
-        Disctionnary of geostrata .
+        Disctionnary of geostrata 
     structures_dict : dict
         Dictionnary of geostructures.
 
@@ -125,14 +127,14 @@ def _validate_avg_file(avg_dataLines):
     _F2. Both files can be read and separatedd by the program. if Avg file doesnt match 
     any of them , the programm will generate errors . 
     
-    params : 
-    -------
+    Parameters 
+    -----------
         ** avag_dataLines: list 
                     list of avgData for all lines. 
-    
-    returns :
-        _F1 & _F2: int , 
-            type of AVG Zonge file .
+    Returns 
+    --------
+        int , 
+            type of AVG Zonge file , _F1 & _F2: 
   
                 
     """
@@ -178,19 +180,21 @@ def straighten_cac2CSfile (data_array, component_column_section = None):
          it 's better to filter  and to check before returning the 
          correct informations we need.
     
-    params : 
-    -------
-        data_array : ndarray 
-            data from AVG astatic file 
-        
-         component_column_section : list 
-             astactic file column comps provided . 
-    returns : 
-        array_we_need : ndarray
-            same infos present in the plainty /1 Avg file 
-        array_other_comp :  pd.Core.DataFrame 
-             infos include through Astatic softwares . very usefull therefore 
-             we keep it .
+    Parameters  
+    ------------
+    data_array : ndarray 
+        data from AVG astatic file 
+    
+     component_column_section : list 
+         astactic file column comps provided 
+         
+    Returns
+    --------
+    ndarray
+        array_we_need , same infos present in the plainty /1 Avg file 
+     pd.Core.DataFrame 
+         array_other_comp , infos include through Astatic softwares 
+         very usefull therefore we keep it .
         
              
     """
@@ -254,8 +258,8 @@ def truncated_data (data, number_of_reccurence, **kwargs):
 
     Returns
     -------
-    loc_list : list
-        data truncated on list.
+    list
+        loc_list , data truncated on list.
 
     """
     if type(data) is list : 
@@ -276,15 +280,20 @@ def truncated_data (data, number_of_reccurence, **kwargs):
 
 def _numbering_station(number_of_station, number_of_freq): 
     """
-    small function to numbering stations : 
-    params : 
-        number_of_station :int , 
-            number of station found on the site. 
-        number_of freq : int , 
-            number of frequency found for survey at each station.
-    return : 
-        numbsta : station numbered 
-        poly_sta : multplie station for each frequency for each stations.
+    small function to numbering stations .
+    
+    Prameters 
+    ---------
+    number_of_station :int  
+        number of station found on the site. 
+    number_of freq : int  
+        number of frequency found for survey at each station.
+    Returns
+    --------
+    str 
+        numbsta ,  station numbered 
+    list 
+        poly_sta ,  multplie station for each frequency for each stations.
     """
    
     numbsta =['S{:02}'.format(ii) for ii in range (number_of_station)]
@@ -309,7 +318,7 @@ def zstar_array_to_nan (zstar_array, nan_value=np.nan, keep_str =False):
 
     Returns
     -------
-    TYPE ; ndarray 
+     ndarray 
         zstrar_array converted .
 
     """
@@ -325,15 +334,22 @@ def zstar_array_to_nan (zstar_array, nan_value=np.nan, keep_str =False):
 def get_array_from_reffreq ( array_loc, freq_array,reffreq_value, stnNames=None):
     """ 
     Get array value at special frequency
-    params : 
-        array_loc : dict , dictionnary of stations :array_value :eg: S00:(ndarray,1) rho_values
-        freq_array : (ndarray,1) : frequency array for CSAMT survey 
-        reffreq_value : int or float : the value of frequency user want to get the value 
-        stnNames : list , list of stations names . 
+    Parameters
+    ------------
+    array_loc : dict , 
+        dictionnary of stations , array_value e.g: S00:(ndarray,1) rho_values
+    freq_array : (ndarray,1) 
+        frequency array for CSAMT survey 
+    reffreq_value : int or float 
+        the value of frequency user want to get the value 
+    stnNames : list 
+        list of stations names . 
     
-    return : 
-        (ndarray,1) : an array of all station with reffreq_value . 
-        eg : reffreq_value =1024. it return all value of the array at 1024Hz frequency . 
+    Returns 
+    ---------
+    array_like
+        an array of all station with reffreq_value . 
+        e.g  reffreq_value =1024. it return all value of the array at 1024Hz frequency . 
     
     """
     if stnNames is None : raise CSex.pyCSAMTError_station('You may at least specify '\
@@ -363,11 +379,15 @@ def relocate_on_dict_arrays(data_array, number_of_frequency, station_names =None
     if station_names is None , program will create name of station. if station_names is given ,
     function will sorted stations names . please make sure to provide correctly station according 
     the disposal you want . 
-    params : 
-        number_of_frequency : array_like (ndarray,1) : array of frequency during survey 
-        station_names: list of array_like : list of station . 
+    
+    :param number_of_frequency : array of frequency during survey 
+    :type number_of_frequency : array_like
+    
+    :param station_names:  list of station 
+    :type station_names: list of array_like 
         
-    return : dict , key :stations , value : infos at data stations . 
+    :returns : infos at data stations 
+    :rtype: dict 
     
     """
         
@@ -398,9 +418,12 @@ def dipole_center_position (dipole_position=None):
     Generaly positions are taken at each electrode of dipole to that to easy correct data  for ploting and for
     noise correction , we adjust coordinate by taking the center position that means , 
     the number of points will be substract to one.
-    params : dipole_postion : array_like (ndarray,1): postion array at each electrodes. 
     
-    return : array_centered_value . 
+    :param dipole_position :postion array at each electrodes. 
+    :type dipole_position : array_like 
+    
+    :returns : centered position value  array 
+    :rtype : array_like 
     
     """
     if dipole_position is None : raise CSex.pyCSAMTError_inputarguments('NoneType can not be compute.'\

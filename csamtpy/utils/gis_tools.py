@@ -1,44 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================    
-
-    Copyright © 2014, 2017  Lars Kriegers, Jared R. Peacock
- 
-    MTpy is free software: you can redistribute it and/or modify
-    it under the terms of the GNU  General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    MTpy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU  General Public License for more details.
-    
-    You should have received a copy of the GNU  General Public License
-    along with MTpy.  If not, see <https://www.gnu.org/licenses/>.
-
-=============================================================================== 
+   
 Created on Fri Apr 14 14:47:48 2017
+...:: Module author :: jrpeacock 
 
-@author: jrpeacock
+@ author : jrpeacock 
+
 """
 
 # ==============================================================================

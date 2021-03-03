@@ -23,13 +23,11 @@
 Created on Tue Aug  4 16:03:30 2020
     module will be deprecated soon !
 
-@author: @Daniel03
-
 -------
 Classes :
     
     ReadFile : Extract informations of files with index 
-    ++++++++
+
     
         methods :
         ---------
@@ -39,19 +37,18 @@ Classes :
 
 Function utils : 
     
-    * ll2DMS: 
+    : ll2DMS: 
         fonction convert degree decimal to DD:MM:SS
-    * roundVar : 
+    : roundVar : 
         round value with exactitude 
-    * convert_phase_from_pdSeries(df, columns=None)
+    *: convert_phase_from_pdSeries(df, columns=None)
         return dataframe 
-    * ll_to_utm2 : 
+    : ll_to_utm2 : 
         return utm_zone, utm_easting, utm_northing
-    *convert_rotate_phase : 
+    :convert_rotate_phase : 
         return exactitude float (phase value ) according to geometry principal phase value
-    *convert_phase_from_pdSeries : 
+    : convert_phase_from_pdSeries : 
         return  a specified pd.Series :df[columns]
-   
 """
 #==============================================================================
 import os 
@@ -69,7 +66,7 @@ def ll2DMS(position_val):
     """Conversion function : Convert degree decimals (long and lat) 
     value on string DD:MM:SS.
     
-     Argument : 
+     params : 
     ------------
     **longitude or latitude value in degree decimals  ***
     
@@ -174,12 +171,12 @@ def convert_rotate_phase(value,rot_phase=180):
     
     Examples :
     ---------
-        import numpy as np
-        np.random.seed(0)
-        ss=np.array([convert_rotate_phase(float(ii)) for\
+        >>> import numpy as np
+         >>>np.random.seed(0)
+        >>> ss=np.array([convert_rotate_phase(float(ii)) for\
                  ii in np.linspace(1,525,50) if float(ii)<=382] )
-        print(ss,"\n")
-        print(np.linspace(1,525,50))
+        ... print(ss,"\n")
+        ... print(np.linspace(1,525,50))
     """
     rot_phase=int(rot_phase)
 
@@ -299,9 +296,8 @@ class ReadFile:
             
          
     Test: 
-        if __name__=="__main__":
-        >>>os.chdir(os.getcwd())
-        >>>ff=ReadFile(FilePath =None, 
+        >>> os.chdir(os.getcwd())
+        >>> ff=ReadFile(FilePath =None, 
                        file_to_read="K1_exp.bln",
                        head_range=None,
                        ex_index=(8,-1),
@@ -312,8 +308,7 @@ class ReadFile:
         >>>  d1,d2=np.array(d1),np.array(d2)
         >>>  ary=np.concatenate((d1.reshape((1,d1.shape[0])),\
                                 d2.reshape((1,d2.shape[0]))),axis=0)
-        >>>  print(ary)
-        
+        >>>  print(ary) 
     """
     
     
@@ -428,18 +423,15 @@ class ReadFile:
         
         Examples:
         --------
-           import os 
-           import numpy as np
-           path=os.getcwd()
+           >>> import os 
+           >>> import numpy as np
+           >>> path=os.getcwd()
            dir =os.path.basename(path)
-           >>> /K1_exp.bln
            >>> dic_ex=read_file(dir,(0,-9,3,-2,6),
                             headline=True,sep=" ")
-           
           >>> sta=dic_ex['index_00']
           >>> azim=np.array([float(ss) for ss in dic_ex['index_08']])
           >>> print(azim)
-        
         """
         
         # if self.file ==None :
@@ -586,7 +578,6 @@ class ReadFile:
             ss=ff.assert_index_value(ch2)
             ts= [ff.assert_index_value(ii) for ii in su ]
             print(ch,"\n",ss,'\n',ts)
-
         """
         # f=-1
         temp=[]
@@ -641,11 +632,11 @@ class ReadFile:
                 users must choose the data file he want to extract. 
         Ex :
         ---
-            ff=ReadFine()
+            >>> ff=ReadFine()
             Path=ff.path
             >>> None 
-            ds=ff.search_file(Pathfile=Path)
-            >>> ----------------------------------------------------------
+            >>> ds=ff.search_file(Pathfile=Path)
+            ... ----------------------------------------------------------
                              list of current files                              
                 Current directory : F:\OneDrive\Python\
                     CodesExercices\ex_avgfiles\modules

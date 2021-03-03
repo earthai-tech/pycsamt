@@ -21,44 +21,22 @@
 
 ===============================================================================    
 
-    Copyright © 2014, 2019  Lars Krieger, Jared R. Peacock
-    
-    MTpy is free software: you can redistribute it and/or modify
-    it under the terms of the GNU  General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    MTpy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU  General Public License for more details.
-    
-    You should have received a copy of the GNU  General Public License
-    along with MTpy.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================   
-    
-
-    Module belongs to  MTpy. as CSAMT and MT as the very closest geophysical methods
-    we slighty edited this module for CSAMT purposes. However we keep the Exception of 
-    MTpy for authorships purpose.
-    For more about this module  documentation consult : 
-    https://mtpy2.readthedocs.io/en/develop/ or https://github.com/MTgeophysics/mtpy
-    
-    you may cite these two papers if you use this module : 
-        
-    Kirkby, A.L., Zhang, F., Peacock, J., Hassan, R., Duan, J., 2019. 
-    The MTPy software package for magnetotelluric data analysis and visualisation.
-    Journal of Open Source Software, 4(37), 1358. https://doi.org/10.21105/joss.01358
-    
-    Krieger, L., and Peacock, J., 2014. MTpy: A Python toolbox for magnetotellurics.
-     Computers and Geosciences, 72, p167-175. https://doi.org/10.1016/j.cageo.2014.07.013
-            
 .. module:: Z
    :synopsis: Deal with MT responses Z and Tipper
+        Module belongs to  MTpy .see  https://mtpy2.readthedocs.io/en/develop/ 
+        CSAMT and MT are  very close geophysical methods
+        We slighty edited this module for CSAMT purpose. 
+        However we keep the Exception of MTpy for authorships.
+        If you use this module , please you may cite authors:
+        Kirkby, A.L., Zhang, F., Peacock, J., Hassan, R., Duan, J., 2019. 
+        The MTPy software package for magnetotelluric data analysis and visualisation.
+        Journal of Open Source Software, 4(37), 1358. https://doi.org/10.21105/joss.01358
+        ...
 
 .. moduleauthor:: Jared Peacock <jpeacock@usgs.gov>
 .. moduleauthor:: Lars Krieger
+
+.. edited ::  @Daniel03
 """
 
 import cmath
@@ -81,6 +59,9 @@ _logger = csamtpylog.get_csamtpy_logger(__name__)
 class ResPhase(object):
     """
     resistivity and phase container
+    .. module:: Z
+    .. moduleauthor:: Jared Peacock <jpeacock@usgs.gov>
+    .. moduleauthor:: Lars Krieger
     """
 
     def __init__(self, z_array=None, z_err_array=None, freq=None, **kwargs):
@@ -161,11 +142,6 @@ class ResPhase(object):
             for idx_f in range(self.freq.size):
                 for ii in range(2):
                     for jj in range(2):
-#                        r_err, phi_err = MTcc.z_error2r_phi_error(
-#                            np.real(self._z[idx_f, ii, jj]),
-#                            self._z_err[idx_f, ii, jj],
-#                            np.imag(self._z[idx_f, ii, jj]),
-#                            self._z_err[idx_f, ii, jj])
 
                         r_err, phi_err = MTcc.z_error2r_phi_error(
                                 self._z[idx_f, ii, jj].real,
@@ -173,9 +149,7 @@ class ResPhase(object):
                                 self._z_err[idx_f, ii, jj])
                         self._resistivity_err[idx_f, ii, jj] = \
                             self._resistivity[idx_f, ii, jj] * r_err
-#                        self._resistivity_err[idx_f, ii, jj] = \
-#                            0.4 * np.abs(self._z[idx_f, ii, jj]) / \
-#                            self.freq[idx_f] * r_err
+
                         self._phase_err[idx_f, ii, jj] = phi_err
 
     def set_res_phase(self, res_array, phase_array, freq, res_err_array=None,
@@ -183,7 +157,6 @@ class ResPhase(object):
         """
         Set values for resistivity (res - in Ohm m) and phase
         (phase - in degrees), including error propagation.
-
 
         :param res_array: resistivity array in Ohm-m
         :type res_array: np.ndarray(num_freq, 2, 2)
@@ -199,8 +172,6 @@ class ResPhase(object):
 
         :param phase_err_array: phase error array in degrees
         :type phase_err_array: np.ndarray(num_freq, 2, 2)
-
-
         """
 
         self._logger.info ('Resetting z and z_err')
@@ -411,8 +382,6 @@ class Z(ResPhase):
         >>> z_object = mtz.Z(z_array=z_test, freq=[1])
         >>> z_object.rotate(45)
         >>> z_object.resistivity
-
-
     """
 
     def __init__(self, z_array=None, z_err_array=None, freq=None):

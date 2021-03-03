@@ -20,6 +20,13 @@
 
 ===============================================================================    
  
+.. Module :: Shifting 
+        :synopsis: Deal with all data files. It corrects apparent resistivity
+        by shitibg value to rj static factor . Apply correction and filters
+        Some filters applied to correct apparent resistivities are 
+        TMA , AMA and FLMA. 
+        ...
+        
 Created on Sat Dec 12 13:55:47 2020
 
 @author: @Daniel03
@@ -43,14 +50,15 @@ class shifting(object):
     """ 
     processing class : shifting processing workflow 
      coorection  class deal with  AVG Zonge station file "*.stn" or SEG-EDI file. :
-        argument : 
-            * data_fn : str 
-                path to Zonge *AVG file of SEG-EDI file 
-            * res_array : array_like (ndarray,1) 
+      Arguments
+      ----------
+            data_fn : str 
+                path to Zonge *AVG file or SEG-EDI files or jfiles 
+            res_array : array_like (ndarray,1) 
                 apparent resistivities uncorrected data 
-            * freq_array : array_like (ndarray,1)
+             freq_array : array_like (ndarray,1)
                 frequency array during survey 
-            * phase_array : array_like(ndarray,1)
+             phase_array : array_like(ndarray,1)
                 phase array during survey 
             
     More arrtibute will populate : 
@@ -58,39 +66,34 @@ class shifting(object):
     ================= =========== =============================================
     Attributes         Type        Explanation
     ================= =========== =============================================
-    _rj                 array_like static shist factor  
-
-    rho_static         array_like   keep the assuming corrected data from AMTAVG
-                                    Zonge software. Benefit to make a comparison 
-                                    from what calculated with pyCSAMT software .
-    
-    _reference_freq    float        reference value to start corrected data . If 
-                                    provided , function will use for data correction 
-                                    if not program will search the reference fre
-                                    frequency automatically and set it for computation. 
-                                    Note : Reference frequency must not ncessary be 
-                                    on freauency array . If value is not in frequency 
-                                    array, program will interpolate value. 
-    
+    _rj                 array_like  static shift factor  
+    rho_static         array_like   corrected data from files
+    _reference_freq    float        reference value to start corrected data . 
+                                    If provided , function will use for data  
+                                    correction.if notprovided, program will 
+                                    search the reference frequency automatically
+                                    and set it for computation. 
     ================= =========== =============================================
-    
+    .. note::Note : Reference frequency doesnt need to  be on frequency range
+                    If value is not in frequency array, program will 
+                        interpolate value
+                        
+    ========================= =================================================
     Methods                    Description
     ========================= =================================================
     TMA                         Trimming Moving Average computation. 
     FLMA                        Fixed Length Dipole Moving average computation. 
     AMA                         Adaptative Moving average . see Biblio. 
-
     ======================= ===================================================
-
     More attributes can be added by inputing a key word dictionary
     
-    e:g:: 
+   :Example: :: 
                     >>> path =  os.path.join(os.environ["pyCSAMT"], 
                                           'csamtpy','data', LCS01.AVG)
-    
-                    ... static_cor =shifting().TMA (data_fn=path,  reference_freq=1024.,number_of_TMA_points =5 )
-                    .... print(static_cor)
-                        
+                    ... static_cor =shifting().TMA (data_fn=path,
+                                                    reference_freq=1024.,
+                                                    number_of_TMA_points =5 )
+                    .... print(static_cor)   
     """
     
     def __init__(self, data_fn=None , freq_array=None, res_array=None, phase_array =None , 
@@ -171,37 +174,45 @@ class shifting(object):
         the program vill find automaticall other parameters . If not may provide all the parameters excepth the 
         data file . 
         
-        params :
-            data_fn , str : path to avg file or edi file .
-            freq_array : array_like (ndarray,1) : frequency array of at normalization frequency (reference value)
-                                                of all stations. station j to n .( units =  Hz )
-            res_array :     dict of array_like (ndarra,1) : dict of array of app.resistivity at reffreq. from station j to n.
-            phase_array : dict of array_lie(ndarray,1)  : dict of array of phase at reffreq. from station j to n. (unit=rad)
+        Parameters
+        -----------
+        data_fn : str 
+            path to avg file or edi file .
+        freq_array : array_like (ndarray,1) 
+            frequency array of at normalization frequency (reference value)
+            of all stations. station j to n .( units =  Hz )
+        res_array :     dict of array_like (ndarra,1) 
+                dict of array of app.resistivity at reffreq. from station j to n.
+        phase_array : dict of array_lie(ndarray,1), dict of array of phase at reffreq.
+             from station j to n. (unit=rad)value of frequency with clean data . (unit=Hz)
+        stnVSrho_loc : dict 
+            set of dictionnary of all app.resistivity data from station j to n . (optional)
+        num_of_TMA_point  :int 
+            window to apply filter .
             
-            reference_freq : float or int       : value of frequency with clean data . (unit=Hz)
+        Returns
+        -------
+        dict 
+           rho_corrected , value corrected with TMA filter  from station j to n. 
+        
+        :Examples : ::
             
-            stnVSrho_loc : dict : set of dictionnary of all app.resistivity data from station j to n . (optional)
-            
-            num_of_TMA_point  :int : window to apply filter .
-            
-        return : 
-            rho_corrected : dict 
-                        value corrected with TMA filter  from station j to n. 
-            
-             e.g:  (1) : corrected data from [AVG]
-                         >>> path =  os.path.join(os.environ["pyCSAMT"], 
-                                  'csamtpy','data', LCS01.AVG)
-                         ... static_cor =shifting().TMA (data_fn=path, 
-                                                     reference_freq=1024.,number_of_TMA_points =5 )
-                         
-                 (2) : corrected from edifiles [EDI]: 
-                         >>> from csamtpy.pyCS.core.cs import CSAMT
-    
-                        ... edipath = r'C:/Users\Administrator\Desktop\test\edirewrite'
-                        ... csamt_obj =CSAMT(edipath =edipath)
-                        ... static_cor =shifting().TMA( reference_freq =256. , freq_array = csamt_obj.freq , res_array = csamt_obj.resistivity , 
-                                                    phase_array =csamt_obj.phase , number_of_TMA_points=5)
-                        ... print(static_cor)
+        (1) : corrected data from [AVG]
+             >>> path =  os.path.join(os.environ["pyCSAMT"], 
+                      'csamtpy','data', LCS01.AVG)
+             ... static_cor =shifting().TMA (data_fn=path, 
+                                         reference_freq=1024.,number_of_TMA_points =5 )
+                  
+        (2) : corrected from edifiles [EDI] 
+                >>> from csamtpy.pyCS.core.cs import CSAMT
+               ... edipath = r'C:/Users\Administrator\Desktop\test\edirewrite'
+               ... csamt_obj =CSAMT(edipath =edipath)
+               ... static_cor =shifting().TMA( reference_freq =256. ,
+                                              freq_array = csamt_obj.freq ,
+                                              res_array = csamt_obj.resistivity , 
+                                           phase_array =csamt_obj.phase ,
+                                           number_of_TMA_points=5)
+               ... print(static_cor)
 
         """
         flag= 0
@@ -302,10 +313,12 @@ class shifting(object):
 def interp_to_reference_freq(freq_array, rho_array,  reference_freq, plot=False): 
     """
     interpolate frequencies to the reference frequencies.
-    Params: freq_array :  ndarray : frequency array 
-        reference_freq : float 
-        Returns
-        -------
+    
+    :param freq_array :  frequency array
+    :type freq_array: array_like
+    
+    :param reference_freq : frequency at clean data 
+    :type reference_freq: float 
     """
     #find number of frequency
     freqObj , _reffreq =freq_array , reference_freq 
@@ -328,6 +341,16 @@ def interp_to_reference_freq(freq_array, rho_array,  reference_freq, plot=False)
         """
         seek the array for interpolation with reference frequency.
         return size of array to interpolate and the array .
+        
+        :param freq_array:  frequency array
+        :type freq_array: array_like
+        
+        :param reference_freq: frequency at clean data 
+        :type reference_freq: float 
+        
+        :param kind_interp: kind of interpolation 
+                            Default is `linear`
+        :type kind_interp: str 
         """
         for ss , value in enumerate(freq_array): 
             if reference_freq == freq_array[-1]:

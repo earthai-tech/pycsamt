@@ -20,19 +20,16 @@
 
 ===============================================================================
 
-.. module:: .
+.. module:: J
    :synopsis: Deal with J files.  The J class can read and write an A.G.Jones file
              file, the 'standard format' of magnetotellurics.  Each section
              of the .edi file is given its own class, so the elements of each
              section are attributes for easy access.
-            
              ...
-
 
 Created on Thu Dec  3 22:31:16 2020
 
-@author:KouaoLaurent alias @Daniel03
-
+@author: @Daniel03
 """
 import os , re, warnings
 import datetime, shutil
@@ -50,50 +47,52 @@ _logger = csamtpylog.get_csamtpy_logger(__name__)
 
 class J_collection : 
     """
-    J collection Class . Collect jfiles 
-    
-    argument : 
-            list_of_jfiles : list : list of Jfiles collection 
-            
-             survey_name=None : str : path to A.G. Jones Jfiles . 
-            
+    J collection Class . Collect jfiles
+    Arguments 
+    ---------
+        list_of_jfiles : list 
+                list of Jfiles collection 
+        survey_name=None : str 
+                path to A.G. Jones Jfiles 
+                
     Holds the following information:
-
     ================= =========== =============================================
     Attributes         Type        Explanation
     ================= =========== =============================================
-    azimuth             (ndaray,1)  array_of all stations azimuth (deg) 
-    latitude            (ndarray,1) stations latitudes in degre decimal 
-    longitude           (ndarray,1)  stations longitudes in degree decimal 
-    elevation           (ndarray,1)  stations elevations in meter.
-                  
-    period              list        list of array of collection periods. collect 
-                                    all periods  from all stations . 
-                                 
-    app_rho             list    list  of arrays of apparent resistivities (ohm.m)
-    phase               list    list of array of phases in degree from allstations.
-    rhomax              list    list of  (rho + 1 standard error) arrays
-    rhomin              list    list of (rho - 1 standard error) arrays
-    phamax              list    list of (pha + 1 standard error )arrays
-    phamin              list    list of (pha - 1 standard error) arrays 
+    azimuth           ndarray,1     array_of all stations azimuth (deg) 
+    latitude          ndarray,1     stations latitudes in degre decimal 
+    longitude         ndarray,1     stations longitudes in degree decimal 
+    elevation         ndarray,1     stations elevations in meter.
+    period            list          list of array of collection periods.
+                                     collect  all periods  from all stations . 
+    app_rho           list          list of arrays of apparent resistivities
+                                    (ohm.m)
+    phase             list          list of array of phases in degree from 
+                                    allstations.
+    rhomax            list          list of  (rho + 1 standard error) arrays
+    rhomin            list          list of (rho - 1 standard error) arrays
+    phamax            list          list of (pha + 1 standard error )arrays
+    phamin            list          list of (pha - 1 standard error) arrays 
+    wrho              list          list of (weight for apparent_resistivity) 
+                                    arrays  
+    wpha              list          list of (weight for phase ) arrays 
+    real              list          list of real part of the transfer
+                                    function arrays 
+    imag              list          list of imaginary part of the transfer
+                                    function
+    error             list          list of standard error  from alla stations 
+    weight            list          list of  weight (Note: some weights are 
+                                    in error!)
+    ================== ========== =============================================
     
-    wrho                list    list of (weight for apparent_resistivity) arrays  
-    wpha                list    list of (weight for phase ) arrays 
-    
-    real                list    list of real part of the transfer function arrays 
-    imag                list    list of imaginary part of the transfer function
-    error               list    list of standard error  from alla stations 
-    weight              list    list of  weight (Note: some weights are in error!)
-    
-    ===========================================================================
+    ===================== =====================================================
     Method                          Description 
     ===================== =====================================================
     collect_jfiles          read collections jfiles and populates attributes 
     plot_Topo_Stn_Azim      method to plot Topograpy , station seperation and 
                             Azimuth . 
     rewrite_jfiles          rewrite jfiles. 
-    ===========================================================================
-    
+    ===================== =====================================================
     """
     
     def __init__(self, list_of_jfiles =None , survey_name=None,  **kwargs): 
@@ -183,11 +182,10 @@ class J_collection :
         
     def collect_jfiles (self, list_of_jfiles=None, jpath = None):
         """
-        Collect the Jfile from jlist. Read and populate attributes .
+        Collect the Jfile from jlist from jpath.Read and populate attributes .
         
-        params : list_of_jfiles : str 
-                list of jfiles 
-        
+        :param list_of_jfiles :list of jfiles
+        :type list_of_jfiles:list 
         """
         if list_of_jfiles is None and jpath is not None : 
             self.jfiles_list = [os.path.join(jpath, jfile) for jfile in os.listdir (jpath) if os.path.isfile(jfile) ==True]
@@ -269,19 +267,33 @@ class J_collection :
     def plot_Topo_Stn_Azim (self, list_of_jfiles =None, plot ='*', show_stations =False , compute_azimuth =True , 
                 savefig =None): 
         """
-        plot Topography , Stn _Azim from J  . method to just see J data how it works. 
-        params : list_of_jfiles : list : list of jfiles 
-                plot : str or int :  '*' means all the 03 plots or use ['topo', 'stn', 'azim']
-                                    to plot individually. defalut is '*'
-                show_stations : bool  : see the stations names as xlabel . 
-                compute_azimuth : bool : if not you want to plot azimuth , set azimuth to False 
-                                        ** Default** is True 
-                savefig : str : PathLike : path to save your figure 
+        plot Topography , Stn _Azim from Jfiles
+
+        :param list_of_jfiles : list of jfiles 
+        :type list_of_jfiles : list 
         
+        :param plot : type of plot '*' means all the 03 plots or 
+                      use `topo`, `stn`, `azim` to plot 
+                     individually. defalut is '*'
+        :type plot : str or int 
+        
+        :param show_stations : see the stations names as xlabel .
+        :type show_stations : bool  
+        
+        :param compute_azimuth : if add azimuth, set azimuth to False 
+                                ** Default** is True 
+        :type  compute_azimuth : bool  
+        
+        :param savefig : PathLike - path to save your figure
+        :type savefig : str 
+        
+        ...Note :: 
+            Work but not stable ...
         """
         
         if list_of_jfiles is not None : self.jfiles_list= list_of_jfiles 
-        if self.jfiles_list is None : raise CSex.pyCSAMTError_J('Can not compute NoneType.Check your path')
+        if self.jfiles_list is None : raise CSex.pyCSAMTError_J(
+                'Can not compute NoneType.Check your path')
         elif self.jfiles_list is not None :
             self.collect_jfiles(list_of_jfiles =self.jfiles_list )
             
@@ -333,18 +345,25 @@ class J_collection :
         Method to rewrite A.G. johnson file (J-Format file). 
         see documentation  here : http://mtnet.info/docs/jformat.txt
         
-        params : 
-            list_of_files : list : is a collection of Jfiles 
-            survey_name :   str : name of exploration area 
-            j_extension : str : output format . Default is '.dat' 
-            savepath : str  :   output directory .If None , file will be store in current work directory
-            
+        :param list_of_files :  collection of Jfiles 
+        :type list_of_files : list 
         
+        :param survey_name :  name of exploration area 
+        :type survey_name:   str  
+        
+        :param j_extension  output format . Default is '.dat'
+        :type j_extension : str  
+        
+        :param savepath : output directory .If None ,
+                        file will be store in current work directory
+        :type savepath : str   
         """
         
         if list_of_jfiles is not None : self.jfiles_list =list_of_jfiles 
         if survey_name is not None : self.survey_name =survey_name 
-        if self.jfiles_list is  None : raise CSex.pyCSAMTError_J('No files found to read . Please check your path <%s>'% os.getcwd())  
+        if self.jfiles_list is  None : 
+            raise CSex.pyCSAMTError_J('No files found to read . '
+                                      'Please check your path <%s>'% os.getcwd())  
         elif self.jfiles_list is not None : 
             self.collect_jfiles(list_of_jfiles =self.jfiles_list )
          
@@ -363,26 +382,63 @@ class J_collection :
             
             #---> write comments line if original file provided it.
             try : 
-                if self.J.jinfo.site_infos is not None : write_jlines.append(''.join([self.J_comment_mark,'{0}:'.format('Site info'), self.J.jinfo.site_infos,'\n'] ))                                                                  
-                if self.J.jinfo.ex_length is not None : write_jlines.append(''.join([self.J_comment_mark,'{0}:'.format('Ex length'), self.J.jinfo.ex_length,'\n'] )) 
-                if self.J.jinfo.ey_length is not None : write_jlines.append(''.join([self.J_comment_mark,'{0}:'.format('Ey length'), self.J.jinfo.ey_length,'\n'] ))
-                if self.J.jinfo.ex_azimuth is not None : write_jlines.append(''.join([self.J_comment_mark,'{0}:'.format('Ex azimuth'), self.J.jinfo.ex_azimuth,'\n'] ))                                                                                                                                                   
-                if self.J.jinfo.ey_azimuth is not None : write_jlines.append(''.join([self.J_comment_mark,'{0}:'.format('Ey azimuth'), self.J.jinfo.ey_azimuth,'\n'] ) )                                                                    
-                if self.J.jinfo.hx_azimuth is not None : write_jlines.append(''.join([self.J_comment_mark,'{0}:'.format('Hx azimuth'), self.J.jinfo.hx_azimuth,'\n'] ))                                                                                                                                   
-                if self.J.jinfo.coherence_min is not None : write_jlines.append(''.join([self.J_comment_mark,'{0}:'.format('Coherence minimum'), self.J.jinfo.coherence_min,'\n']))                                                                                                                                
-                if self.J.jinfo.coherence_max is not None : write_jlines.append(''.join([self.J_comment_mark,'{0}:'.format('Coherence maximum'), self.J.jinfo.coherence_max,'\n'] ))                                                                                                                                  
-                if self.J.jinfo.max_type is not None : write_jlines.append(''.join([self.J_comment_mark,'{0}:'.format('Maxtype'), self.J.jinfo.max_type,'\n'] ) )                                                            
-                if self.J.jinfo.ntpype is not None : write_jlines.append(''.join([self.J_comment_mark,'{0}:'.format('Ntype'), self.J.jinfo.ntpype,'\n'] ) )                                                             
-                if self.J.jinfo.weight is not None : write_jlines.append(''.join([self.J_comment_mark,'{0}:'.format('Ntype'), self.J.jinfo.weight,'\n'] ) )  
+                if self.J.jinfo.site_infos is not None : write_jlines.append(
+                        ''.join([self.J_comment_mark,'{0}:'.format('Site info'),
+                                 self.J.jinfo.site_infos,'\n'] ))                                                                  
+                if self.J.jinfo.ex_length is not None :
+                    write_jlines.append(''.join([self.J_comment_mark,
+                                                 '{0}:'.format('Ex length'),
+                                                 self.J.jinfo.ex_length,'\n'] )) 
+                if self.J.jinfo.ey_length is not None : 
+                    write_jlines.append(''.join([self.J_comment_mark,
+                                                 '{0}:'.format('Ey length'), 
+                                                 self.J.jinfo.ey_length,'\n'] ))
+                if self.J.jinfo.ex_azimuth is not None : 
+                    write_jlines.append(''.join([self.J_comment_mark,
+                                                 '{0}:'.format('Ex azimuth'), 
+                                                 self.J.jinfo.ex_azimuth,'\n'] ))                                                                                                                                                   
+                if self.J.jinfo.ey_azimuth is not None :
+                    write_jlines.append(''.join([self.J_comment_mark,
+                                                 '{0}:'.format('Ey azimuth'),
+                                                 self.J.jinfo.ey_azimuth,'\n'] ) )                                                                    
+                if self.J.jinfo.hx_azimuth is not None : 
+                    write_jlines.append(''.join([self.J_comment_mark,
+                                                 '{0}:'.format('Hx azimuth'),
+                                                 self.J.jinfo.hx_azimuth,'\n'] ))                                                                                                                                   
+                if self.J.jinfo.coherence_min is not None :
+                    write_jlines.append(''.join([self.J_comment_mark,
+                                                 '{0}:'.format('Coherence minimum'),
+                                                 self.J.jinfo.coherence_min,'\n']))                                                                                                                                
+                if self.J.jinfo.coherence_max is not None :
+                    write_jlines.append(''.join([self.J_comment_mark,
+                                                 '{0}:'.format('Coherence maximum'),
+                                                 self.J.jinfo.coherence_max,'\n'] ))                                                                                                                                  
+                if self.J.jinfo.max_type is not None : 
+                    write_jlines.append(''.join([self.J_comment_mark,
+                                                 '{0}:'.format('Maxtype'), 
+                                                 self.J.jinfo.max_type,'\n'] ) )                                                            
+                if self.J.jinfo.ntpype is not None :
+                    write_jlines.append(''.join([self.J_comment_mark,
+                                                 '{0}:'.format('Ntype'), 
+                                                 self.J.jinfo.ntpype,'\n'] ) )                                                             
+                if self.J.jinfo.weight is not None :
+                    write_jlines.append(''.join([self.J_comment_mark,
+                                                 '{0}:'.format('Ntype'),
+                                                 self.J.jinfo.weight,'\n'] ) )  
             except : pass 
             
             #--- > write jlabels 
-            write_jlines.append(''.join(['{0:<13}'.format(self.J._jlabels[0]),'=', "{0:>13.1f}".format(self.azimuth[ii]), '\n'] ))
-            write_jlines.append(''.join(['{0:<13}'.format(self.J._jlabels[1]),'=', "{0:>13.5f}".format(self.latitude[ii]), '\n'] ))
-            write_jlines.append(''.join(['{0:<13}'.format(self.J._jlabels[2]),'=', "{0:>13.5f}".format(self.longitude[ii]), '\n'] ))
-            write_jlines.append(''.join(['{0:<13}'.format(self.J._jlabels[3]),'=', "{0:>13.1f}".format(self.elevation[ii]), '\n'] ))
+            write_jlines.append(''.join(['{0:<13}'.format(
+                self.J._jlabels[0]),'=', "{0:>13.1f}".format(self.azimuth[ii]), '\n'] ))
+            write_jlines.append(''.join(['{0:<13}'.format(
+                self.J._jlabels[1]),'=', "{0:>13.5f}".format(self.latitude[ii]), '\n'] ))
+            write_jlines.append(''.join(['{0:<13}'.format(
+                self.J._jlabels[2]),'=', "{0:>13.5f}".format(self.longitude[ii]), '\n'] ))
+            write_jlines.append(''.join(['{0:<13}'.format(
+                self.J._jlabels[3]),'=', "{0:>13.1f}".format(self.elevation[ii]), '\n'] ))
             #---> write jnames , components  and nperiods 
-            write_jlines.append(''.join(['{0}'.format(self.stnames[ii]), '{0:>7.1f}'.format(self.azimuth[ii]),'\n']))
+            write_jlines.append(''.join(['{0}'.format(
+                self.stnames[ii]), '{0:>7.1f}'.format(self.azimuth[ii]),'\n']))
             write_jlines.append('{0}'.format(self.J.jmode)+'\n')
             write_jlines.append(' {0}'.format(self.J.jperiod.size)+'\n')
             # now  write value :
@@ -429,11 +485,12 @@ class J:
     """
     Class deal with A.G. Jones j-file. see : http://mtnet.info/docs/jformat.txt
     
-    argument : 
-            j_fn : str : path to A.G. Jones Jfile . 
+    Arguments 
+    ----------
+            j_fn : str 
+                path to A.G. Jones Jfile . 
             
     Holds the following information:
-
     ================= =========== =============================================
     Attributes         Type        Explanation
     ================= =========== =============================================
@@ -446,23 +503,21 @@ class J:
     jnperiod            int         number of period . User can provide.If none 
                                     it will be computed automatically                   
     jperiod             (ndarray,1) array of periods (s-1) or(1/second)1
-    
     japp_rho            (ndarray,1) array of apparent resistivities (ohm.m)
     jphase              (ndarray,1) array of phase in degree 
     jrhomax             (ndarray,1)  rho + 1 standard error
     jrhomin             (ndarray,1)  rho - 1 standard error
     jphamax             (ndarray,1)  pha + 1 standard error 
     jphamin             (ndarray,1)  pha - 1 standard error
-    
     jwrho               (ndarray,1)  weight for apparent_resistivity 
     jwpha               (ndarray,1)  weight for phase 
-    
     jreal               (ndarray,1)  real part of the transfer function
     jimag               (ndarray,1)  imaginary part of the transfer function
     jerror              (ndarray ,1) standard error 
     jweight             (ndarray,1)   weight (Note: some weights are in error!)
+    =================== ============ =========================================
     
-    ===========================================================================
+    ===================== =====================================================
     Method                          Description 
     ===================== =====================================================
     jname                   staticmethod to generate A.G.Jones station codename
@@ -472,12 +527,13 @@ class J:
     read_j                  read the jfiles. 
     ===========================================================================
     
-            None : -999  : missing data marker
+    ... None ::`-999` -- missing data marker
+            
     More attributes can be added by inputing a key word dictionary
-          >>>  j=J()
+          >>> from csamtpy.ff.core import J 
+          >>> j=J()
           >>> jmode = j.jMode(polarization_type='RXY')
           ...  print(jmode)
-
     """
 
     jdalpha , jdbeta ={'R':'apparent resistivities and phases', 
@@ -691,10 +747,16 @@ class J:
         """
         Staticmethod for generate alphanumeric STATION NAME (case insensitive) 
         survey XXX, station 001. 
-        params : number_of_sites : int : number of stations . 
-                survey_name :str : place location name . 
-        return : list : list of alphanumeric station names . 
         
+        :param  number_of_sites : number of stations . 
+        :type number_of_sites : int 
+        
+        :param survey_name : place location name . 
+        :type survey_name :str 
+        
+        :returns :list of alphanumeric station names 
+        :rtype:list
+              
         """
         alpha, cunm ='abcdefghijklmnopqrstuvwxyz', []
         if not isinstance(number_of_sites, int): 
@@ -716,11 +778,10 @@ class J:
         """
         Jmode is conformited a different set of H-Polarization ans E-Polarization. 
         for more detail please consult the documentation on :http://mtnet.info/docs/jformat.txt
-        Convention:
+        .. Convention::
                 The convention used is for RXY to represent
                 the E-polarization (TE) mode, and for RYX
                 to represent the B-polarization mode.
-        
         """
         comb =[ ('{0}{1}'.format(jakeys, jbkeys), '{0}/{1}'.format(javalues, jbvalues))\
                for jakeys, javalues  in self.jdalpha.items() for jbkeys, jbvalues in self.jdbeta.items()]
@@ -729,28 +790,31 @@ class J:
                      ([pol for pol, info in comb],[info for pol, info in comb] )}
 
         if polarization_type not in list(jmodeDICT.keys()) :
-            warnings.warn('Polarization Type  provided <{0}> for JMode is unacceptable.\
-                          Please consults the Dictionnary of jPolarisation mode above.')           
-            [print('{0:<5}:{1:<55}'.format(keys,values)) for keys, values in zip(list(jmodeDICT.keys()),
-                                                                                      list(jmodeDICT.values()))]
+            warnings.warn('Polarization Type  provided <{0}> for JMode is unacceptable.'
+                          'Please consults the Dictionnary of jPolarisation mode above.')           
+            [print('{0:<5}:{1:<55}'.format(keys,values)) for keys,
+             values in zip(list(jmodeDICT.keys()), list(jmodeDICT.values()))]
+                         
             print(notion.j)
             
-            raise CSex.pyCSAMTError_J('Value provided is not in polarization mode .Please consult the dict above.') 
+            raise CSex.pyCSAMTError_J('Value provided is not in polarization mode '
+                                      '.Please consult the dict above.') 
         
         return polarization_type
     
     def read_j (self, j_fn=None  ): 
         """
         Method to read Jformat file. 
-        params : j_fn :str , path to jfile 
-            
+        :param j_fn : path to jfile 
+        :type j_fn :str
         """ 
  
         self._logging.info('Reading A.G.Jones J-format.%s'%self.jfn)
         
         jdata=[]
         if j_fn is not None : self.jfn =j_fn 
-        if self.jfn is None : raise CSex.pyCSAMTError_J('Error file. Please Provide the right path!')
+        if self.jfn is None : 
+            raise CSex.pyCSAMTError_J('Error file. Please Provide the right path!')
   
         if self.jfn is not None : 
 
@@ -771,28 +835,43 @@ class J:
                     
                     j_comminfo, jcommval,*ignore =jitems.strip().split(':')
                     
-                    if 'Site info'.lower() in j_comminfo.lower():self.J.jinfo.site_infos = jcommval
-                    elif 'Ex length'.lower() in j_comminfo.lower():self.J.jinfo.ex_length = jcommval 
-                    elif 'Ey length'.lower() in j_comminfo.lower():self.J.jinfo.ey_length = jcommval
-                    elif 'Ex azimuth'.lower() in j_comminfo.lower():self.J.jinfo.ex_azimuth = jcommval 
-                    elif 'Ey azimuth'.lower() in j_comminfo.lower():self.J.jinfo.ey_azimuth = jcommval
+                    if 'Site info'.lower() in j_comminfo.lower():
+                        self.J.jinfo.site_infos = jcommval
+                    elif 'Ex length'.lower() in j_comminfo.lower():
+                        self.J.jinfo.ex_length = jcommval 
+                    elif 'Ey length'.lower() in j_comminfo.lower():
+                        self.J.jinfo.ey_length = jcommval
+                    elif 'Ex azimuth'.lower() in j_comminfo.lower():
+                        self.J.jinfo.ex_azimuth = jcommval 
+                    elif 'Ey azimuth'.lower() in j_comminfo.lower():
+                        self.J.jinfo.ey_azimuth = jcommval
                     
-                    elif 'Hx azimuth'.lower() in j_comminfo.lower():self.J.jinfo.hx_azimuth = jcommval
-                    elif 'Coherence minimum'.lower() in j_comminfo.lower():self.J.jinfo.coherence_min = jcommval
-                    elif 'Coherence maximum'.lower() in j_comminfo.lower():self.J.jinfo.coherence_max = jcommval
+                    elif 'Hx azimuth'.lower() in j_comminfo.lower():
+                        self.J.jinfo.hx_azimuth = jcommval
+                    elif 'Coherence minimum'.lower() in j_comminfo.lower():
+                        self.J.jinfo.coherence_min = jcommval
+                    elif 'Coherence maximum'.lower() in j_comminfo.lower():
+                        self.J.jinfo.coherence_max = jcommval
                     
-                    elif 'Maxtype'.lower() in j_comminfo.lower():self.J.jinfo.max_type = jcommval
-                    elif 'Ntype'.lower() in j_comminfo.lower():self.J.jinfo.ntype = jcommval
-                    elif 'Weight'.lower() in j_comminfo.lower():self.J.jinfo.weight = jcommval
+                    elif 'Maxtype'.lower() in j_comminfo.lower():
+                        self.J.jinfo.max_type = jcommval
+                    elif 'Ntype'.lower() in j_comminfo.lower():
+                        self.J.jinfo.ntype = jcommval
+                    elif 'Weight'.lower() in j_comminfo.lower():
+                        self.J.jinfo.weight = jcommval
                     
                     self.read_commentblock = True 
                 #set longitude value 
                 elif  re.match(r'^>', jitems) is not None :
                     jparam, jparamvalue =jitems.strip().split('=')
-                    if 'azimuth'  in jparam.lower() :self.jazim =jparamvalue 
-                    elif 'longitude' in jparam.lower():self.jlon=jparamvalue
-                    elif 'latitude' in jparam.lower():self.jlat =jparamvalue
-                    elif 'elevation' in jparam.lower():self.jelev =jparamvalue
+                    if 'azimuth'  in jparam.lower() :
+                        self.jazim =jparamvalue 
+                    elif 'longitude' in jparam.lower():
+                        self.jlon=jparamvalue
+                    elif 'latitude' in jparam.lower():
+                        self.jlat =jparamvalue
+                    elif 'elevation' in jparam.lower():
+                        self.jelev =jparamvalue
                 
                 else :
                     #---> Get the station name , jmode and number of periods 
@@ -821,20 +900,27 @@ class J:
                         self.jphamax, self.jphamin , self.jwrho , self.jwpha = jDATA
                         
                 else :
-                    warnings.warn ('J-FORMAT expects to get "9" records values like <{0}>'.format(*list(notion.j_recordR.keys())))
-                    raise CSex.pyCSAMTError_J('For data type=R?? Only  9 Range values are not acceptable. You provided <{0}>'.format(JDAT.shape[1]))
+                    warnings.warn ('J-FORMAT expects to get "9" records'
+                                   ' values like <{0}>'.format(*list(notion.j_recordR.keys())))
+                    raise CSex.pyCSAMTError_J(
+                        'For data type=R?? Only  9 Range values are not '
+                        'acceptable. You provided <{0}>'.format(JDAT.shape[1]))
             elif (re.match(r'^Z', self.jmode) is True) or (re.match(r'^T', self.jmode)  is True):
                 if JDAT.shape[1] == 5 : 
                     jDATA = [np.reshape(ii,( ii.shape[0],)) for ii in np.hsplit(JDAT,5) ]
                     self.jperiod , self.jreal , self.jimag , self.jerror, self.jweight = jDATA
                 else :
-                    warnings.warn('JFORMAT for GSC responses expects to get "5" records values like<{0}>'.format(*list(notion.j_recordZ.keys())))
-                    raise CSex.pyCSAMTError_J('For data type=R?? Only  9 Range values are not acceptable. You provided <{0}>'.format(JDAT.shape[1]))
+                    warnings.warn('JFORMAT for GSC responses expects'
+                                  ' to get "5" records values like<{0}>'.\
+                                      format(*list(notion.j_recordZ.keys())))
+                    raise CSex.pyCSAMTError_J(
+                        'For data type=R?? Only  9 Range values'
+                        ' are not acceptable. You provided <{0}>'.format(JDAT.shape[1]))
         
      
 class J_infos (object):
     """
-    J_infos class : set the information of J_file
+     J_infos class - set the information of J_file
     
     """
 

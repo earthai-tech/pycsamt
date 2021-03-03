@@ -18,29 +18,25 @@
     You should have received a copy of the GNU Lesser General Public License
     along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
 
-===============================================================================  
-    
-    . Occam 2D : 
-        The Occam 2D MT inversion code (v3.0) presented here is an implementation
-        of the general Occam procedure of Constable, et al. (1987) extended to 
-        2D by deGroot-Hedlin and Constable (1990). The 2D MT forward 
-        calculations are carried out with codeprovided by Wannamaker, et al (1987) 
-        using reciprocity to calculate the Jacobian (de Lugao and Wannamaker, 1996).
-        
-        for more details and download the occam 2D software : please follow this link : 
+=============================================================================== 
+ 
+.. Module :: Occam 2D  
+    :synopsis::   The Occam 2D MT inversion code (v3.0) presented here is an
+        implementation of the general Occam procedure of  Constable, et al. (1987)
+        extended to  2D by deGroot-Hedlin and Constable (1990).
+        The 2D MT forward  calculations are carried out with codeprovided by Wannamaker,
+        et al (1987)  using reciprocity to calculate the
+        Jacobian (de Lugao and Wannamaker, 1996).
+        for more details and download the occam 2D software ,  please follow this link : 
             - http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html 
             - https://marineemlab.ucsd.edu/~kkey/Software.php
+            ...
             
-    NB : Actually this module is not able to write Occam2D meshes file or build 
-    OccamInputfiles. However , a MT excellent tool  of Alison Louise Kirkby1,Fei 
-    Zhang1, Jared Peacock2, Rakib Hassan1, and Jingming Duan is already available. 
-    User can install MTpy and use it to build OCCAM2Dinputfiles.
-        - DOI : 10.21105/joss.01358 
-        - https://mtpy2.readthedocs.io/en/develop/core.html
+.. note:: Actually this module is not able to write Occam2D meshes file or build 
+    OccamInputfiles. you can import  MTpy and use it to build OCCAM2Dinputfiles.
         
 @author: KouaoLaurent alias @Daniel03
 Created on Fri Jan 22 20:31:14 2021
-
 """
 
 
@@ -63,20 +59,22 @@ except : pass
 class occamLog (object) : 
     """
     Class to deal with occcam 2d logfile . File output after inverted data 
-    arguments : 
-        fn : str : full path to occam logfile 
-    ===========================================================================
-    Attributes              Description 
-    ===========================================================================
+    Arguments
+    ---------
+        fn : str 
+            full path to occam logfile 
+    =================== =============== =====================================
+    Attributes            type              Description 
+    =================== =============== =======================================
     rms                 float           RootMeansquared computation Error 
     iteration           float           number of iteration 
     fminocc             float           minimum tolerance 
     stepsize            float           cutoff evaluation function 
     roughness           float           deGrootHeldin roughness parameters.
-    ===========================================================================
-    
+    ================== =============== ========================================
     """
-    occam_params =['rms', 'iteration', 'fminocc', 'stepsize', 'roughness', 'and_is']
+    occam_params =['rms', 'iteration', 'fminocc', 'stepsize',
+                   'roughness', 'and_is']
     
     def __init__(self, fn =None, **kwargs):
         self._logging=csamtpylog.get_csamtpy_logger(self.__class__.__name__)
@@ -110,17 +108,17 @@ class occamLog (object) :
     def read_occam2d_logfile(self, fn =None ) : 
         """
         Read occam file and populate attributes 
-        params : 
-            fn : str : full path to occam2d log file 
-            
         
-        >>> from csamtpy.ff.modeling import occam2d 
-        >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data',
-                               'occam2D', 'logFile.logfile')
-        >>> occamlog_obj =occam2d.Log(fn = path)
-        ... print(occamlog_obj.rms.shape)
-        ... print(occamlog_obj.roughness.shape)
-    
+        :param fn :  full path to occam2d log file 
+        :type fn : str
+
+        :Example: ::
+            >>> from csamtpy.ff.modeling import occam2d 
+            >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data',
+                                   'occam2D', 'logFile.logfile')
+            >>> occamlog_obj =occam2d.Log(fn = path)
+            ... print(occamlog_obj.rms.shape)
+            ... print(occamlog_obj.roughness.shape)
         """
         
         if fn is not None : self.fn = fn 
@@ -156,25 +154,26 @@ class occamLog (object) :
 class Data(object): 
     """
     Read and write Occam data 
-    arguments : 
-        fn : str : full path to occam Data file 
+    Arguments
+    ---------
+        fn : str 
+            full path to occam Data file 
         
-    ===========================================================================
+    =================== ================= =====================================
     Attributes 
     (**=occam_data)      type                        Description 
-    ===========================================================================
+    =================== ================= =====================================
     **format              str               occam sofware version name 
     **title               str               title given the building files 
     **sites               array_like        array of stations names 
     **offsets             array_like        array of site locations along
-                                                the 2D line in meters  
-    **frequencies         array_like      array of frequencies in decreasing order 
-    **data_nblocks           int            number of data blocks for building 
-                                                    models 
+                                            the 2D line in meters  
+    **frequencies         array_like        array of frequencies in decreasing 
+    **data_nblocks           int            order number of data blocks for  
+                                            building models 
     **data                   (ndarray,4)    array of {site, freq, type, datum,
                                                       error} . datacollected                  
-    ===========================================================================
-    
+    ==================== ================= ====================================
     """
     occam_data_type= {'te_log10':1, 
                  'te_phase':2, 
@@ -265,18 +264,22 @@ class Data(object):
     def read_occam2d_datafile (self, data_fn =None ): 
         """
         read_occam_data file. and populates attributes 
-        params : fn : full path to occam data file . 
-        eg :: 
-                >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D', 'OccamDataFile.dat')
-                >>> occamdata_obj =Data(fn = path)
-                ... print(occamdata_obj.occam_data_format)
-                ... print(occamdata_obj.occam_data_blocks)
-                ... print(occamdata_obj.occam_data_title)
-                ... print(occamdata_obj.occam_data_sites)
-                ... print(occamdata_obj.occam_data_frequencies)
-                ... print(occamdata_obj.occam_data_offsets)
-                ... occamDATA = occamdata_obj.occam_data
 
+        :param fn : full path to occam data file .
+        :type fn : str
+            
+        :Example:: 
+            >>> path =os.path.join(os.environ ['pyCSAMT'], 
+                                   'csamtpy', 'data', 'occam2D', 
+                                   'OccamDataFile.dat')
+            >>> occamdata_obj =Data(fn = path)
+            ... print(occamdata_obj.occam_data_format)
+            ... print(occamdata_obj.occam_data_blocks)
+            ... print(occamdata_obj.occam_data_title)
+            ... print(occamdata_obj.occam_data_sites)
+            ... print(occamdata_obj.occam_data_frequencies)
+            ... print(occamdata_obj.occam_data_offsets)
+            ... occamDATA = occamdata_obj.occam_data
         """
         if data_fn is not None : 
             self.fn =data_fn
@@ -346,8 +349,7 @@ class Data(object):
         
     def write_occam2d_data(self):
         """
-        Future plan 
-        
+        **Future plan**
         """
         pass 
     
@@ -358,19 +360,19 @@ class DataBlock (object):
     ====================== ====================================================
         Attributes             Description (Restriction)
     ====================== ====================================================
-    site                   number of the site from the site list that this data 
-                                belongs to.
-    freq                   number of the frequency from the frequency list.
-    type                   type of data
-    datum                  data value
-    error                  size of the error for this measurement : 
-                            - For log10 resistivity this value can look a little 
+    site                    number of the site from the site list that this data 
+                            belongs to.
+    freq                    number of the frequency from the frequency list.
+    type                    type of data
+    datum                   data value
+    error                   size of the error for this measurement  
+                            For log10 resistivity this value can look a little 
                                 strange. It is derived from the calculation
                              d(log_10(x))/dx = 1/[x ln(10)]. So for 10% error, 
                              dx = 0.10x thus d(log_10(x)) = 0.10x / x ln(10) 
                                             = .1/ln(10) = 0.0434
     ====================== ====================================================
-    eg : 
+    .. eg :: 
         >>> form csamtpy.ff.modeling import DataBlock 
         >>> np.random.seed(1983)
         >>> dblocks_dict = {'site' : ['S{0:02}'.format(ii)  for ii in range (10)], 
@@ -417,10 +419,12 @@ class DataBlock (object):
                 
     def _set_dbk_properly (self) : 
         """
-        : set property data : 'Ckeck dataBlocks and share corresponding data params separately.'\
-                            ' For instance: ste (1=site number 1=S00), freq(1: freq numb1),
+        method to set property data 
+        Ckeck dataBlocks and share corresponding data params separately.
+         :For instance: site (1=site number 1=S00), freq(1: freq numb1),
                                 dataType(5: logTM, 6:phaseTM) 
-        eg : dict_mode ={ '6': }
+        eg :
+            dict_mode ={ '6': }
         """
    
         #create data mode dict and put all value inside 
@@ -444,10 +448,11 @@ class DataBlock (object):
     def decode_each_site_data (data_blocks, data_type_index)  : 
         """
         Decode each site data and get differents values array 
-        params : 
-            datablocks : ndarray ; datafrom differents blocks
-            data_type_index : int : specify the data type index 
-
+        :param datablocks : ndarray , datafrom differents blocks
+        :type datablocks : ndarray 
+        
+        :param data_type_index : specify the data type index 
+        :type data_type_index : int 
         """
         block_type = data_blocks[ :,  data_type_index]
         get_occam_mode  = np.array([int(ff) for ff in np.unique(block_type)])
@@ -482,41 +487,39 @@ class DataBlock (object):
 class Model (object): 
     """
     Occam Model . Actually read model file
-    arguments : 
-        model_fn : str : full path to occam model file 
+    Arguments
+    ----------
+        model_fn : str 
+            full path to occam model file 
         
-    ===========================================================================
-    Attributes        type                        Description 
+    ================= ================= ======================================
+    Attributes         type                        Description 
     (**model_)
-    ===========================================================================
+    ================= ================= =======================================
     **format              str               occam sofware version name 
     **description         str               describe the model 
     **name                str               name of the models 
     **meshfile            str               The name of the mesh file.
     **mesh_type           str               the type of the mesh ,default is PW2D
     **static_file         str               name of static file if given . 
-                                               Default  is 'none'.
+                                            Default  is 'none'.
     **prejudice_file      str               name of the prejudice file if given.
-                                                default is 'none'.
-                                                    models 
-    **binding_offset      float               pram value for a model block can be 
+                                            default is 'none'.models 
+    **binding_offset      float             param value for a model block can be 
                                             aggregation into  many mesh blocks
-                                            
-    **num_layers          float            number of layers of model blocks          
-    ===========================================================================
-    eg ::       
+    **num_layers          float             number of layers of model blocks          
+    =================== ================= =====================================
+    :eg : ::       
                 >>> from csamtpy.modeling.occam2d import Model
                 >>> data='OccamDataFile.dat'
                 >>> mesh = 'Occam2DMesh'
                 >>> model = 'Occam2DModel'
                 >>> iter_='ITER17.iter'
-                
                 >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D', mesh)
                                    #,'OccamDataFile.dat')
                 >>> occam_model_obj =Model(mesh_fn=path, 
                                     iter_fn = os.path.join(os.path.dirname(path), iter_), 
                                     model_fn =os.path.join(os.path.dirname(path), model) )
-                
                 ... print(occam_model_obj.model_binding_offset)
                 ... print(occam_model_obj.model_resistivity)
                 ... print(occam_model_obj.model_values)
@@ -552,15 +555,24 @@ class Model (object):
             
     def read_occam2d_modelfile(self, model_fn=None, mesh_fn=None , iter_fn=None):
         """
-        read modelfiles . 
-        params : model_fn : full path to OCCAM2D model file 
-        eg:: 
-            >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D', 'Occam2DModel')
+        read   and ascertain modelfile
+        
+        :param model_fn: full path to OCCAM2D model file 
+        :type model_fn: str 
+        
+        :param mesh_fn: full path to MESH model file 
+        :type mesh_fn:str 
+        
+        :param iter_fn: full path to ITER model file 
+        :type iter_fn:str 
+        
+        :eg: :: 
+            >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 
+                                   'data', 'occam2D', 'Occam2DModel')
             >>> occammodel_obj =Model(model_fn = path)
             ... print(occammodel_obj.model_name)
             ... print(occammodel_obj.model_mesh_file)
             ... print(occammodel_obj.model_num_layers)
-    
         """
         if model_fn is not None : self.model_fn= model_fn 
         if iter_fn is not None : self.iter_fn = iter_fn 
@@ -709,45 +721,47 @@ class Startup(object):
     Occam startup file...for more detail about occam 2D , please consult : 
         http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html
     Occam startup . Actually read startup file
-    arguments : 
-        startup_fn : str : full path to occam startup file 
+    Arguments 
+    ----------
+        startup_fn : str 
+            full path to occam startup file 
 
-    ========================================================================================
+    =================== ========= =============================================
     Attributes 
-    (**=startup_)      type                        Description 
-    ========================================================================================
-    **format              str               occam sofware version name 
-    **description         str               describe the startup file
-    **model_file          str               name of the model file . 
-    **data_file           str               The name of the data file.
-    **iteration_to_run    float             number of iteration to run 
-    **target_misfit       float             misfit target. default is 1.0 
-    **roughness_type      int               type of roughness params:
-    **diagonal_penalties  int               penalties horizontally & vertically
-                                            [0|1].default is 0
-    **stepsize_cut_count int                The parameter limits the number of times
-                                            Occam cuts the step size in a
-                                            search for a better fitting model.
-    **model_limits        tuple             (min, max):params imposes limits
-                                            on the values that the model parameters 
-                                            may take.min & max are also log10 resistivity
-    **model_value_steps  flaot              stepsize : discretizes model parameter
-                                            space into steps “stepsize” large.the model space
-                                            is in log10 resistivity, so these steps are
-                                            in the exponent (e.g. for stepsize=0.1, values
-                                            allowed will be 100.1, 100.2, 100.3, 100.4, etc…
-    **debug_level       int                 may be [0, 1, 2] : 
-                                            0 minimizes the amount of “chatter” that Occam2D
-                                            displays while running.
-                                            1 (the default), displays progress on a 
-                                            frequency-by-frequency basis.
-                                            2 displays more diagnostic info and changes
-                                            the way Occam2D searches model space!
-    **iteration         int                 Occam2D iteration number represented on the file.
-    **param_count       int                 assumes that the model parameter
-         
-    ============================================================================================
-
+    (**=startup_)        Type                        Description 
+    =================== ========== ============================================
+    **format              str       occam sofware version name 
+    **description         str       describe the startup file
+    **model_file          str       name of the model file . 
+    **data_file           str       The name of the data file.
+    **iteration_to_run    float     number of iteration to run 
+    **target_misfit       float     misfit target. default is 1.0 
+    **roughness_type      int       type of roughness params:
+    **diagonal_penalties  int       penalties horizontally & vertically
+                                    [0|1].default is 0
+    **stepsize_cut_count int        The parameter limits the number of times
+                                    Occam cuts the step size in a
+                                    search for a better fitting model.
+    **model_limits        tuple     (min, max):params imposes limits
+                                    on the values that the model parameters 
+                                    may take.min & max are also log10 resistivity
+    **model_value_steps  flaot      stepsize : discretizes model parameter
+                                    space into steps “stepsize” large.the model
+                                    space is in log10 resistivity, so these
+                                    steps arein the exponent (e.g. for 
+                                    stepsize=0.1, values allowed will be 100.1, 
+                                    100.2,100.3, 100.4, etc…
+    **debug_level       int         may be [0, 1, 2] : 
+                                    0 minimizes the amount of “chatter” that 
+                                    Occam2D displays while running.
+                                    1 (the default), displays progress on a 
+                                    frequency-by-frequency basis.
+                                    2 displays more diagnostic info and changes
+                                    the way Occam2D searches model space!
+    **iteration         int         Occam2D iteration number represented 
+                                    on the file.
+    **param_count       int         assumes that the model parameter
+    ================== =========== ============================================
     """
 
     def __init__(self, startup_fn =None, **kwargs): 
@@ -783,13 +797,15 @@ class Startup(object):
             
     def read_occam2d_startupfile(self, startup_fn=None):
         """
-        read occam2d_startupfile 
-        startup_fn : full path to startup_file 
-        eg ::     
+        read occam2d_startupfile
+        
+        :param startup_fn : full path to startup_file 
+        :type startup_fn: str 
+        
+        .. eg: ::     
             >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D', 'Startup')
             >>> startup_obj=Startup(startup_fn = path)
             ... print(startup_obj.occam_startup_data_file)
-        
         """
         if startup_fn is not None : self.startup_fn = startup_fn
         self._logging.info ('Read Occam2D STARTUP file :<%s>' % self.startup_fn)
@@ -815,23 +831,26 @@ class Startup(object):
 class Iter (Startup): 
     """
     Occam iteration file 
-    arguments : 
-        iter_fn : str : full path to occam iteration file 
+    Arguments
+    ----------
+        iter_fn : str 
+            full path to occam iteration file 
     
     inherets from startup obj , in fact two object a similar the same 
     
-    Most attributes are describe in Startup.__doc__
-    Iter is a copy of the startup file with the model parameters set to the values from the end
-        of iteration “??” (?? means = number of iteration output file.)
-    ========================================================================================
+    ..note:: Most attributes are describe in Startup.__doc__
+        Iter is a copy of the startup file with the model parameters 
+        set to the values from the endof  iteration “??” (?? means =
+         number of iteration output file.)
+    =================== =========== ==========================================
     Attributes 
-    (**=occam_iter_)      type                        Description 
-    ========================================================================================
-    **iteration         int                 Occam2D iteration number represented on the file.
-    **param_count       int                 assumes that the model parameter
-    **iteraion_data     array               iteration data output after inversion
-    ============================================================================================
-    
+    (**=occam_iter_)      Type                        Description 
+    =================== =========== ==========================================
+    **iteration         int         Occam2D iteration number represented on
+                                    the file.
+    **param_count       int         assumes that the model parameter
+    **iteraion_data     array       iteration data output after inversion
+    =================== =========== ==========================================
     """
     def __init__(self, iter_fn =None, **kwargs): 
         Startup.__init__(self, **kwargs)
@@ -853,11 +872,15 @@ class Iter (Startup):
         """
         read_occam iteration file  and populate attributes 
         
-            >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D', 'ITER17.iter')
+        :param iter_fn: full path to iteration file 
+        :type iter_fn: str 
+        
+        : eg: ::
+            >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 
+                                   'data', 'occam2D', 'ITER17.iter')
             >>> iter_obj=Iter(iter_fn= path)
             ... print(iter_obj.occam_iter_param_count)
             ... iterDATA= iter_obj.occam_iter_data
-        
         """
 
         if iter_fn is not None : self.iter_fn = iter_fn
@@ -892,48 +915,60 @@ class Iter (Startup):
 class Response (Data): 
     """
     Occam response file . Response is paired with the iteration file above.
-    One is output at the end of each successful iteration.Inherets from Occam 2D data file 
-    argument : 
-        response_fn : str : full path to Occam 2D  response_file 
-        data_fn : str : full path to Occam 2D data file 
-    ========================================================================================
-    Attributes              type                        Description 
-    (**=resp_)
-    ***=resp_+{occam_dtype})
-    ========================================================================================
-    occam_mode              str                 occam  mode of survey area 
-    occam_dtye              str                 Type of data provided 
-    **receiver_number       int                 number of sites names 
-    **frequencies           array_like          frequency array 
-    **datatype              array_like          datatype from OccamData file (TE, TM etc..) 
-    ** data_value           array_like          occam2d data value in OccamDatafile .
-    ** forward_data         array_like          data value produced by the forward code using
-                                                    the model from ITER??.iter  
-    ***residual              array_like         normalized difference: 
-                                                (input data – forward data) / error.
-                                                The “error” value is from the input data file.
-    ***forward              ndarray             array of forward mode resistivities 
-    ***forward_phase        ndarray             array of computed phase forward mode 
-    ***strike_angle         ndarray             array of strike angle , it rotation is applied 
-
-    ===========================================================================================
-    Note : easy way to get all attributes for other purposes : 
-        eg :: {occam_mode} means the data type provided  see Data.occam_mode and Data.data_type for more 
-        infos :  if {occam_dtype}= tm_log10 them 
-            --> resp_obj.resp_{occam_dtype}_residual  ====> resp_obj.resp_tm_log10_residual 
+    One is output at the end of each successful iteration.
+    Inherets from Occam 2D data file .
+    
+    Arguments
+    ---------
+        response_fn : str 
+            full path to Occam 2D  response_file 
+        data_fn : str 
+            full path to Occam 2D data file 
             
-    ex  :   >>> from csamtpy.modeling.occam2d import Response
+    ===================== ============== =====================================
+    Attributes              Type                        Description 
+    (**=resp_)
+    ***=r
+    esp_+{occam_dtype})
+    ==================== =============== =====================================
+    occam_mode              str             occam  mode of survey area 
+    occam_dtye              str             Type of data provided 
+    **receiver_number       int             number of sites names 
+    **frequencies           array_like      frequency array 
+    **datatype              array_like      datatype from OccamData file (TE, 
+                                            TM etc..) 
+    ** data_value           array_like      occam2d data value in OccamDatafile .
+    ** forward_data         array_like      data value produced by the forward 
+                                            code using
+                                            the model from ITER??.iter  
+    ***residual              array_like     normalized difference i.e
+                                            (input data – forward data) / error.
+                                            The “error” value is from the input
+                                            data file.
+    ***forward              ndarray         array of forward mode resistivities 
+    ***forward_phase        ndarray         array of computed phase forward mode 
+    ***strike_angle         ndarray         array of strike angle , it rotation 
+                                            is applied 
+    ==================== ================ =====================================
+    .. Note :: easy way to get all attributes for other purposes  
+            eg. {occam_mode} means the data type provided  
+            see Data.occam_mode and Data.data_type for more 
+            infos :  if {occam_dtype}= tm_log10 them 
+             resp_obj.resp_{occam_dtype}_residual = resp_obj.resp_tm_log10_residual 
+            
+    :example : :: 
+            >>> from csamtpy.modeling.occam2d import Response
             >>> resp_obj =Response (data_fn =os.path.join(os.environ[pyCSAMT], 
-                                                          'csamtpy', data, occam2D, 'OccamDataFile.dat'), 
+                                                          'csamtpy', data, occam2D,
+                                                          'OccamDataFile.dat'), 
                                     response_fn =os.path.join(os.environ[pyCSAMT], 
-                                                          'csamtpy', data, occam2D, 'RESP17.resp')
+                                                          'csamtpy', data, occam2D,
+                                                          'RESP17.resp')
             >>> occam_mode =resp_obj.resp_occam_mode 
             >>> occam_data_type =resp_obj.occam_dtype 
             >>> occam_mode_forward =resp_obj.resp_{occam_dtype}_forward
             >>> occam_mode_residual =resp_obj.resp_{occam_dtype}_residual 
             >> occam_mode_phase_error = resp_obj.resp_{occam_dtype}_residual_phase_error
-            >>> ...
-        
     """
     response_params =['sites', 'frequencies', 'data_type',
                       'strike_angle', 'data', 'forward', 'residual']
@@ -956,13 +991,15 @@ class Response (Data):
     def read_occam2d_responsefile(self, response_fn=None): 
         """
         read_OCCAM2D response file 
-        params :response_fn :str: full path to response file 
+        :param response_fn : full path to response file 
+        :type response_fn :str
         
-        eg ::   
+        .. eg :::   
                 >>> from csamtpy.modeling.occam2d import Response 
-            
-                >>> pathresp =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D',RESP17.resp )
-                >>> path_data =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D',OccamDataFile.dat )
+                >>> pathresp =os.path.join(os.environ ['pyCSAMT'], 'csamtpy',
+                                           'data', 'occam2D',RESP17.resp )
+                >>> path_data =os.path.join(os.environ ['pyCSAMT'], 'csamtpy',
+                                            'data', 'occam2D',OccamDataFile.dat )
                 >>> resp_obj = Response(response_fn=pathresp, data_fn = path_data )
                 ... respDATA= resp_obj.resp_data_value 
                 ... resp_obj.occam_mode 
@@ -977,7 +1014,6 @@ class Response (Data):
                 ... tm_phase_error = resp_obj.resp_tm_phase_err
                 ... tm_phase_err = occam_resp_obj.resp_tm_log10_forward_phase
                 ... tm_residual_phase_err = occam_resp_obj.resp_tm_log10_residual_phase_err
-        
         """
         if response_fn is not None : self.resp_fn =response_fn 
         self._logging.info ('Read Occam 2D response file <%s>' % self.resp_fn)
@@ -992,7 +1028,8 @@ class Response (Data):
         
         # container of original data 
         for ii, keyattr in enumerate(['receiver_number', 'frequencies', 'data_type',
-                                      'strike_angle_value', 'data_value','forward_value', 'residual_value']) : 
+                                      'strike_angle_value', 'data_value',
+                                      'forward_value', 'residual_value']) : 
             self.__setattr__(''.join(['resp_',keyattr]),self.resp_data[:, ii])
         
         #--->  populate specific  attributes 
@@ -1001,12 +1038,19 @@ class Response (Data):
             """
             function to truncate data and put on dictionnay for all stations  and 
             their coresponding values 
-                data : array : arrray of data ndarray(depth , station_location)
-                station_data : array_like : from response data 
-                station_names :list : list of sites names 
             
-            return dico :dict : dict of station value 
-        
+            :param data : array : data ndarray(depth , station_location)
+            :type data:ndarray 
+            
+            :param station_data : from response data 
+            :type station_data : array_like  
+            
+            :param station_names : list of sites names 
+            :param station_names :list
+            
+  
+            :returns dico : dictionnary of station value 
+            :rtype dico :dict 
             """ 
             dico, sta={},0
    
@@ -1181,18 +1225,18 @@ class Response (Data):
 class Mesh(object): 
     """
     Read Occam read mesh file 
-    arguments : 
-        mesh_fn : str : full path to occam_2D mesh file 
-        
-    ========================================================================================
-    Attributes              type                        Description 
-    (**=mesh_)
-    ========================================================================================
-    **x_nodes               ndarray,                    horizontal “nodes” (i.e. blocks + 1)
-    **z_nodes               ndarray,                    vertical “nodes” (i.e. layers + 1)
-    **mesh_values           ndarray(xnodes,z_nodes)     array of mesh files parameters 
-                                                        specifications 
-    ============================================================================================
+    Arguments
+    -----------
+        mesh_fn : str 
+            full path to occam_2D mesh file 
+    ==================== =========== ==========================================
+    Attributes(**=mesh_)  Type         Description 
+    ==================== ============ =========================================
+    **x_nodes              array_like       horizontal “nodes” (i.e. blocks + 1)
+    **z_nodes              array_like       vertical “nodes” (i.e. layers + 1)
+    **mesh_values          ndarray          array of mesh files parameters 
+                                            xnodes,z_nodes
+    ==================== ============= ========================================
     
     """
     def  __init__(self, mesh_fn=None , **kwargs)  : 
@@ -1208,9 +1252,8 @@ class Mesh(object):
     def read_occam2d_mesh(self, mesh_fn =None): 
         """
         Read mesh and get mesh values data and populates attributes 
-        params : mesh_fn : str : full path to mesh file 
-        
-        
+        :param mesh_fn : str ,  full path to mesh file 
+        :type mesh_fn : str 
         """
         if mesh_fn is not None : 
             self.mesh_fn= mesh_fn 
@@ -1328,53 +1371,56 @@ class Iter2Dat (object):
     """
     ITER2DAT A format converter which convert *.iter file and related mesh
     files to so called 'x,y,z' *.data file for post-processing.
-    
-    arguments : 
-        path_to_occamfiles : str : path to occamfiles : put on one directory 
-        
-    The class was inpired from the Bo Yang matlab script . reading 
-    functions come from 'plotOccam2DMT.m' routine (http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html )
-    of SIO, UCSD.
-         Bo Yang matlab-script is on external packages of pyCSAMT. If your are familiar with matlab and you want
-         to use this sripts , please contact authors :
-        ------------------
-        Bo Yang, 2011.
+    The class was inpired from the Bo Yang matlab script . reading functions come
+    from 'plotOccam2DMT.m' routine 
+    :ref: `Occam routine <http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html >`
+    of SIO, UCSD.Bo Yang matlab-script is on `add.info` sub-packages of pyCSAMT.
+    If your are familiar with matlab and you want to rewrite  the script
+    please contact author at: 
+     Bo Yang, 2011.
+     ------------------
         China Univ. of Geosciences, Wuhan, China.
         yangbo.cug@163.com.
         Copyright 2011-2016 Bo Yang.
         $Revision: 1.0 $ $Date: 2012/04/05 21:50:20 $
         Revision log:
         2012/04/04 : Version 1.0 released.
-        
-    ========================================================================================
-    Attributes              type                        Description
-    ========================================================================================
-    ** Data                 obj                 Occam Data object 
-    **Iter                  obj                 occam Iteration object
-    **Response              obj                 OccamResponse object 
-    model_fn                str                 full path to occam model file 
-    iter_fn                 str                 full path to iteration file 
-    mesh_fn                 str                 full path to occam mesh file 
-    data_fn                 str                 full path to occam data file 
-
-    doi                     str of float       depth of investigation. default is 1km
-                                                if your povide  value on float,
-    model_x_nodes           array_like          rescalled station offsets according to doi.
-    model_z_nodes           array_like          rescalled depth offsets accordng to doi
-    model_res               ndarray             rescalled model resistivity according to doi
-                                                shape =(len(model_z_nodes, model_x_nodes))
-    station_names           list                list of sites names 
-    station_location        array_like          station offsets  
-    elevation               array               elevation value  , to rewrite a file 
-                                                if elevation is given , will take elevation              
-
-    =========================================================================================
     
+    Arguments
+    ----------
+        path_to_occamfiles : str 
+            path to occamfiles : put on one directory 
+        
+    =================== ================ =====================================
+    Attributes              type                        Description
+    =================== ================ ======================================
+    ** Data             obj             Occam Data object 
+    **Iter              obj             occam Iteration object
+    **Response          obj             OccamResponse object 
+    model_fn            str             full path to occam model file 
+    iter_fn             str             full path to iteration file 
+    mesh_fn             str             full path to occam mesh file 
+    data_fn             str             full path to occam data file 
+    doi                 str of float    depth of investigation. default is 1km
+                                        if your povide  value on float,
+    model_x_nodes       array_like      rescalled station offsets according 
+                                        to doi.
+    model_z_nodes       array_like      rescalled depth offsets accordng to doi
+    model_res           ndarray         rescalled model resistivity according
+                                        to doi.shape len(model_z_nodes,
+                                        model_x_nodes)
+    station_names       list            list of sites names 
+    station_location    array_like      station offsets  
+    elevation           array_like      elevation value  , to rewrite a file 
+                                        if elevation is given ,
+                                        will take elevation              
+    =================== =================== ===================================
     """
     iter2d_params =['model_x_nodes', 'model_z_nodes', 'model_res', 'station_names', 
                     'station_location', 'elevation']
     
-    def __init__(self, iter2dat_fn =None , model_fn =None , data_fn=None ,  iter_fn=None,  mesh_fn=None,
+    def __init__(self, iter2dat_fn =None , model_fn =None , data_fn=None , 
+                 iter_fn=None,  mesh_fn=None,
                    **kwargs): 
                  
         self._logging =csamtpylog.get_csamtpy_logger(self.__class__.__name__)
@@ -1399,30 +1445,36 @@ class Iter2Dat (object):
     def read_occamfiles(self , path_to_occamfiles=None,  **kws): 
         """
         getffiles and readfiles to populates speciales attributes 
-        params : 
-                >>> path_to_occamfiles : str : full path to occamfiles [ITER|DATA|RESP] files. 
-                >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D')
-                .. iter2_obj=Iter2Dat(path_to_occamfiles= path)
-                ... sites= iter2_obj.OccamData.occam_data_sites
-                ... freq =iter2_obj.OccamData.occam_data_frequencies
+
+        :param path_to_occamfiles : full path to occamfiles [ITER|DATA|RESP] files. 
+        :type path_to_occamfiles : str
                 
-                ... iter_roughn =iter2_obj.OccamIter.occam_iter_roughness_value
-                ... iter_misfit=iter2_obj.OccamIter.occam_iter_misfit_reached
-                
-                ... forward_data = iter2_obj.OccamResponse.forward_data
-                ... residual_data = iter2_obj.OccamResponse.residual
-        
+        :Example : :: 
+            >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D')
+            .. iter2_obj=Iter2Dat(path_to_occamfiles= path)
+            ... sites= iter2_obj.OccamData.occam_data_sites
+            ... freq =iter2_obj.OccamData.occam_data_frequencies
+            ... iter_roughn =iter2_obj.OccamIter.occam_iter_roughness_value
+            ... iter_misfit=iter2_obj.OccamIter.occam_iter_misfit_reached
+            ... forward_data = iter2_obj.OccamResponse.forward_data
+            ... residual_data = iter2_obj.OccamResponse.residual
         """
         def truncate_response (data , station_data, station_names ):  
             """
             function to truncate data and put on dictionnay for all stations  and 
             their coresponding values 
-                data : array : arrray of data ndarray(depth , station_location)
-                station_data : array_like : from response data 
-                station_names :list : list of sites names 
+  
+            :param data :   arrray of data ndarray(depth , station_location)
+            :type data: array_like 
             
-            return dico :dict : dict of station value 
-        
+            :param station_data : from response data 
+            :type station_data :array_like , dtype '<U12'
+                
+            :param station_names :list , list of sites names
+            :type station_names :list 
+                
+            :returns: dico,  dictionnary  of station value 
+            :rtype: dict 
             """ 
             dico, sta={},0
    
@@ -1447,28 +1499,35 @@ class Iter2Dat (object):
         write  'x,y,z' *.data file for post-processing
         can read and rewrite iter2dat file 
         
-        x : offset , y=depth , z=log10 resistivities
+        :param x : offset
+        :type x: array_like 
         
-        =================================================================================
+        :param y: depth 
+        :type y: array_like 
+        
+        :param z : log10 resistivities
+        :type z:array_like 
+        
+        ============== ============= ==========================================
         params          type            Description 
-        =================================================================================
-        model_fn        :str            : full path to occam model file 
-        iter_fn         :str            : full path to iteration file 
-        mesh_fn         :str            :  full path to occam mesh file 
-        data_fn         :str            : fll path to occam data file 
-        filename        :str            : output of iter2dat file 
-        doi             :str of float   : depth of investigation. default is 1km
-                                            if your povide  value on float,  
-                                            default unit is "meter" eg : 2000 = 2000m 
-        negative_depth  :bool ,         : if True , will provide file with 
-                                            negative depth value 
-        scale           :str            : scaled the offset value and elevation . 
-                                            might be [m|km]
-        elevation       :ndarray|list   : can be provided if usefull 
-        ==================================================================================
+        ============== ============= ==========================================
+        model_fn        str             full path to occam model file 
+        iter_fn         str             full path to iteration file 
+        mesh_fn         str             full path to occam mesh file 
+        data_fn         str             fll path to occam data file 
+        filename        str             output of iter2dat file 
+        doi             str of float    depth of investigation. default is 1km
+                                        if your povide  value on float,  
+                                        default unit is "meter" eg : 2000=2000m 
+        negative_depth  bool            if True , will provide file with 
+                                        negative depth value 
+        scale           str             scaled the offset value and elevation . 
+                                        might be [m|km]
+        elevation       ndarray|list    can be provided if usefull 
+        ============== =============== ========================================
         
-        eg ::  ( 1 ) -->  write with Occam 2D files :  
-            
+        :Examples :::  
+            (1) write with Occam 2D files  
                 >>> from csamtpy.modeling.occam2d import Iter2Dat as i2d
                 >>> data='OccamDataFile.dat'
                 >>> mesh = 'Occam2DMesh'
@@ -1476,11 +1535,10 @@ class Iter2Dat (object):
                 >>> iter_='ITER17.iter'
                 >>> idat = K1.iter.20142.dat
                 >>> bln = K1.iter.20142.bln
-                
-                >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D')
+                >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 
+                                       'data', 'occam2D')
                                    #,'OccamDataFile.dat')
                 >>> pathi2d =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', '_iter2dat_')
-                
                 ... occam_iter2dat_obj =i2d(mesh_fn=os.path.join(path, mesh), 
                                     iter_fn = os.path.join(path, iter_), 
                                     model_fn =os.path.join(path, model), 
@@ -1630,25 +1688,33 @@ class Iter2Dat (object):
                       data_fn=None , occam_model_obj=None, **kws): 
         """
         Read YangBo iter2data file or provided  Occam 2D specific files .
-        params : 
-            iter2dat_fn : str : full path to iter2dat file 
-            bln_file : str : full path to bln file 
-            scale : str : scale of output data . Most of time , Bo yang iter2Dat file is converted 
-                            in kilometer . If not turn the scale to {'m'}
-        e G:: 
+
+        :param iter2dat_fn : full path to iter2dat file 
+        :type iter2dat_fn : str  
+        
+        :param bln_file : full path to bln file 
+        :type  bln_file : str  
+        
+        :param scale : str ,  scale of output data . Most of time ,
+                    Bo yang iter2Dat file is converted in kilometer . If not turn 
+                        the scale to `m`.
+        :type param scale : str 
+            
+        :Example: :: 
                 >>> i2d='iter17.2412.dat'
                 >>> i2d_2='K1.iter.dat'
                 >>> bln='iter17.2412.bln'
                 >>> bln_2 = 'K1.bln'
-                >>> pathiter = os.path.join(os.path.dirname(os.environ ['pyCSAMT']), '_iter2dat_', i2d_2)
-                >>> pathbln = os.path.join(os.path.dirname(os.environ ['pyCSAMT']), '_iter2dat_', bln_2)
-  
-                >>> occam_iter2dat_obj =Iter2Dat(iter2dat_fn=pathiter, bln_fn =pathbln ) 
+                >>> pathiter = os.path.join(os.path.dirname(os.environ ['pyCSAMT']),
+                                            '_iter2dat_', i2d_2)
+                >>> pathbln = os.path.join(os.path.dirname(os.environ ['pyCSAMT']),
+                                           '_iter2dat_', bln_2)
+                >>> occam_iter2dat_obj =Iter2Dat(iter2dat_fn=pathiter, 
+                                                 bln_fn =pathbln ) 
                 ... i2d_data = occam_iter2dat_obj.read_iter2datfile()
-                ... i2d_sta, i2d_depth = occam_iter2dat_obj.model_x_nodes, occam_iter2dat_obj.model_z_nodes
+                ... i2d_sta, i2d_depth = occam_iter2dat_obj.model_x_nodes,
+                occam_iter2dat_obj.model_z_nodes
                 ... i2d_model_res = occam_iter2dat_obj.model_res
-                
-            
         """
         f=0 # flag to read data from file or attributes populating 
         

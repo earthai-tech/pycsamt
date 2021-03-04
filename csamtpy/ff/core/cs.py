@@ -19,8 +19,10 @@
     along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
 
 ===========================================================================
+
+.. _module-cs :: `csamtpy.ff.core.cs` 
     
-   .. synopsis :: Super class or CSAMT Far Field implementation 
+   :synopsis: Super class or CSAMT Far Field implementation 
                Deal with AVG file and EDI files 
     
 Created on Wed Dec  2 11:29:32 2020
@@ -56,9 +58,11 @@ try :
     scipy_version = [int(vers) for vers in sp.__version__.split('.')] #[1,4,1]
     if scipy_version [0] == 1 : 
         if scipy_version [1] < 4 :
-            warnings.warn('Note: need scipy version 1.4.0 or more . It may probably  get a trouble when import "stats" attribute'
+            warnings.warn('Note: need scipy version 1.4.0 or more . It may probably  get a '
+                          'trouble when import "stats" attribute'
                           'under such version.It may probably move from ', ImportWarning)
-            _logger.warning('Note: need scipy version 0.14.0 or higher or for stats.linearegress. Under such version'
+            _logger.warning('Note: need scipy version 0.14.0 or higher or for'
+                            ' stats.linearegress. Under such version'
                             'it might not work.')
     # from sp import stats 
     stats_import =True 
@@ -85,22 +89,23 @@ class CSAMT(object):
      
     Arguments 
     ---------
-        data_fn : str  
-            full path to EDI, J or AVG file or  
-            files directory 
-        edipath : str  
-            path to edifiles directory.,
-            where edifiles are located OR
-        jpath : str 
-             full path to AG.Jones file ,
-             directory where jfiles are located 
-        profile_fn : str 
-            full path to Zonge station profile file  "*.stn"
+        **data_fn** : str  
+                full path to EDI, J or AVG file or  
+                files directory 
+        **edipath** : str  
+                path to edifiles directory.,
+                where edifiles are located 
+        **jpath** : str 
+                 full path to AG.Jones file ,
+                 directory where jfiles are located 
+        **profile_fn** : str 
+                full path to Zonge station profile file  "*.stn"
         
-    Note : To call multiple files ,user need only to specify the path . 
-    ================== ==================== ===================================
+    .. note:: to call multiple files , better to specify only  the path. 
+    
+    =================  ===================  ===================================
     Attributes              Type                Description  
-    ================== ==================== ===================================
+    =================  ===================  ===================================
     lat                 float/ndarray,1     sation latitude 
     lon                 float/ndarray,1     station longitude 
     elev                float/ndarray       station elevantion 
@@ -125,27 +130,27 @@ class CSAMT(object):
     zyx_err             dict                imped. Tensor error  at each
                                             station from yx
     freq                ndarray,1           frequency array from survey   
-    ================= ==================== ====================================
-    
-    Followings methods : 
-    =========================== ===============================================
+    =================  ===================  ===================================
+
+    ===========================  ==============================================
     Methods                         Description 
-    =========================== ===============================================
+    ===========================  ==============================================
     _read_csamt_objs                read in CSAMT file [EDI|AVG|J]
     _read_edi_obj                   read_edi_obj and set attributes 
     _read_avg_obj                   read Zonge Eng. Avg file and set attributes
     _read_j_obj                     read A.G. Jones file and set attributes.
-    =========================== ===============================================
+    ===========================  ==============================================
      
-    :Examples: ::
+    :Example:
+        
         >>> from csamtpy.ff.core.cs import CSAMT
         >>> profile_stn='K1.stn'
         >>> for ii in ['csi000.dat', 'testemap3.edi', 'K1.AVG']:
         >>> path =  os.path.join(os.environ["pyCSAMT"], 
-                          'csamtpy','data', ii)
+        ...                  'csamtpy','data', ii)
         >>> csamt_obj = CSAMT(fn = path, 
-                              profile_fn= os.path.join(
-                                  os.path.dirname(path), file_stn))
+        ...                      profile_fn= os.path.join(
+        ...                          os.path.dirname(path), file_stn))
         ... print(csamt_obj.resistivity['S00'])
         ... print(csamt_obj.phase['S00'])
         ... print(csamt_obj.phase_err['S00'])
@@ -247,17 +252,16 @@ class CSAMT(object):
 
     def _read_csamt_objs (self, fn=None ): 
         """
-        read cs object and set attributes . 
-        actualy can read J.Avg and Edifile
-        
+        read cs object and set attributes , actualy can read J, Avg and Edifile 
+
         Parameters 
         ----------
-         fn : str  
-            full path to csamtfile either edi , avg or jfile
-         edipath : str  
-             full path to edifiles : edi directory
-        jpath : str 
-                full path to AG.Jones files : j directory
+        * fn : str  
+               full path to csamtfile either edi , avg or jfile
+        * edipath : str  
+                full path to edifiles ,  edi directory
+        * jpath : str 
+                full path to AG.Jones files , j directory
         """
         self._logging.info("Reading <%s> file from <%s> " % (self._fn ,
                                                              self._read_csamt_objs.__name__))
@@ -294,37 +298,35 @@ class CSAMT(object):
     def _read_edi_obj (self, edi_fn =None ):
         """
         read edifiles and populates important attributes 
-        
-        Parameters 
-        ---------
-        :param edi_fn:full path to edifile, 
-            can be  edi directory , where edifiles are located . 
+   
+        :param edi_fn: full path to edifile, 
+                        can be  edi directory , 
+                        where edifiles are located . 
         :type edi_fn: str 
             
-        .. Note :: To call multiple edifiles ,  
-                set only the path where edifiles are located 
-                dont need to call edifile one by one 
         
-        .. Example::
-             
-             (1)  read only one edifile   
-                >>> from csamtpy.ff.core.cs import CSAMT 
-                >>> path = os.path.join(os.environ['pyCSAMT'], 
-                                        'data', 'edi')
-                >>> csamt_obj = CSAMT(
-                    data_fn = os.path.join(path,'csi000.dat')
-                    )
-                ... print(csamt_obj.resistivity['S00'])
-                ... print(csamt_obj.lat)
-                ... print(csamt_obj.freq)
+        1. Read single edifile
+        
+        :Example:
+  
+            >>> from csamtpy.ff.core.cs import CSAMT 
+            >>> path = os.path.join(os.environ['pyCSAMT'], 
+            ...                        'data', 'edi')
+            >>> csamt_obj = CSAMT(
+                data_fn = os.path.join(path,'csi000.dat')
+                )
+            ... print(csamt_obj.resistivity['S00'])
+            ... print(csamt_obj.lat)
+            ... print(csamt_obj.freq)
                 
-             (2) read multiple edifiles  
-                 set only the path where edifiles are located.
-             
-                >>> from csamtpy.ff.core.cs import CSAMT 
-                >>> csamt_obj = CSAMT( data_fn = edipath )
-                ... print(csamt_obj.resistivity['S05'])
-                ... print(csamt_obj.resistivity_err['S00'])
+        2. Read read multiple edifiles  
+         
+        :Example:
+      
+            >>> from csamtpy.ff.core.cs import CSAMT 
+            >>> csamt_obj = CSAMT( data_fn = edipath )
+            ... print(csamt_obj.resistivity['S05'])
+            ... print(csamt_obj.resistivity_err['S00'])
         """
         
         self._logging.info("Reading <%s> edifile from edi_obj "% edi_fn)
@@ -374,33 +376,34 @@ class CSAMT(object):
         
     def _read_j_obj(self, j_fn =None, jpath =None): 
         """
-        read AG. JONES files and populate attributes 
-        :param j_fn:  full path to AG Jones format 
-            or full path to all jfiles .
-        :type j_fn: str
+        Read A. G. Jones files and populate attributes. 
         
-        .. Note :: To call multiple jfiles ,  set only the path where jfiles are located 
-        dont need to call jfile one by one .
-
-         :Example: ::
-             (1)  read single jfile : 
-                >>> from csamtpy.ff.core.cs import CSAMT 
-                >>> path = os.path.join(os.environ['pyCSAMT'], 
-                                   'data', 'j')
-                >>> csamt_obj = CSAMT(
-                    fn = os.path.join(data_fn,
-                                      'csi000.dat'))
-                ... print(csamt_obj.resistivity['S00'])
-                ... print(csamt_obj.lat)
-                ... print(csamt_obj.freq)
+        :param j_fn:  full path to AG Jones format 
+                    or full path to all jfiles .
+        :type j_fn: str
+  
+        1.  read single jfile 
+        
+        :Example: 
+ 
+            >>> from csamtpy.ff.core.cs import CSAMT 
+            >>> path = os.path.join(os.environ['pyCSAMT'], 
+                               'data', 'j')
+            >>> csamt_obj = CSAMT(
+                fn = os.path.join(data_fn,
+                                  'csi000.dat'))
+            ... print(csamt_obj.resistivity['S00'])
+            ... print(csamt_obj.lat)
+            ... print(csamt_obj.freq)
              
-             (2) read multiple files 
-                 set only the path where jfiles are located.
+        2. Read multiple files 
+
+        :Example:
                      
-                >>> from csamtpy.ff.core.cs import CSAMT 
-                >>> csamt_obj = CSAMT( data_fn = path )
-                ... print(csamt_obj.resistivity['S05'])
-                ... print(csamt_obj.lat)
+            >>> from csamtpy.ff.core.cs import CSAMT 
+            >>> csamt_obj = CSAMT( data_fn = path )
+            ... print(csamt_obj.resistivity['S05'])
+            ... print(csamt_obj.lat)
         """
         self._logging.info("Reading <%s> edifile from edi_obj "% j_fn)
         
@@ -481,12 +484,12 @@ class CSAMT(object):
       
     def _read_avg_obj (self, avgfile, **kwargs) : 
         """
-        read Zonge Engineering AVg file and and set attributes
+        Read Zonge Engineering AVg file and and set attributes.
         
-        :param avgfile : full path to avg file
+        :param avgfile: full path to avg file
         :type avgfile: str 
                 
-        :Example: :: 
+        :Example:  
             
             >>> path =  os.path.join(os.environ["pyCSAMT"], 
                               'csamtpy','data', file_stn)
@@ -663,21 +666,21 @@ class CSAMT(object):
     @staticmethod    
     def find_path (path =None, ptol =0.7):
         """
-        check path and return filepath , edipath or jpath .
+        Check path and return filepath , edipath or jpath .
         
-        :param path :  full path to file  or directory 
-        :type path :str or pathlike 
+        :param path:  full path to file  or directory 
+        :type path: str or pathlike 
         
-        :param ptol : float, less or equal to 1    
-                     tolerance that given by the program 
-
+        :param ptol: tolerance given by the program ,
+                    less or egal to 1 
+                     
+        :type ptol: float
         :returns: specific path
-        :rtype :str 
+        :rtype: str 
         
-        .. note :: tolerence param inspects  the number of
-                     EDI or J file located on the path.
-                    determine the typical path of files
-                    either edipath or jpath.
+        .. note :: tolerence param inspects  the number of EDI or J file
+                    located on the path and determine the typical
+                     path of files either edipath or jpath.
         """
         
         if path is None : return 
@@ -704,40 +707,40 @@ class CSAMT(object):
     
 class Profile (object): 
     """
-    Profile line of AVG data, Profile class
-      deal with  AVG Zonge station file 
-     "*.stn" or SEG-EDI file. 
-
-    :param profile_fn :  path to Zonge *STN file of 
+    Profile class deal with  AVG Zonge station file and statation locations 
+    coordinates could be find in *.stn* file or SEG-EDI file. 
+     
+     
+    :param profile_fn:  Path to Zonge *STN file of 
                         SEG-EDI locations or Zonge station file
     :type profile_fn: str 
                 
-    .. Note :: When call SEG-EDI file , especiallyl EDI-collecton
-                profile attribute are auto populated and 
-                coordinates are rescalled. 
+    .. Note :: When  EDI file is called , EDI-collecton
+                 auto populated  profile attributes and 
+                 coordinates are automatically rescalled. 
        
-    Attributes infos : 
-    ================= ============ ============================================
-    Attributes         Type        Explanation
-    ================= ============ ============================================
-    Location            class       Location class for Easting  Northing 
+    ================  ============  ===========================================
+    Attributes         Type         Explanation
+    ================  ============  ===========================================
+    Location           class        Location class for Easting  Northing 
                                     azimuth details. 
-    profile_angle       float       If user doesnt Know   the angle profile . 
+    profile_angle      float        If user doesnt Know   the angle profile . 
                                     He can use the method "get_profile_angle"  
                                     to get the value of profile angle. 
     stn_interval       (ndarray,1)  Array of station separation. 
-    dipole_length       float       Dipole length value 
+    dipole_length      float        Dipole length value 
                                     computed automatically.          
     lat/lon            (ndarray,1)  latitude/longitude of  stations points . 
     east/north         (ndarray,1)  Easting and northing of stations points.  
     azimuth            (ndarray,1)  Azimuth array stations .    
     ele                (ndarray,1)  Elevation array at each station points.
-    stn_position       (ndarray,1)  Station position occupied   at each stations.
-    ================= =========== =============================================
+    stn_position       (ndarray,1)  Station position occupied  
+                                    at each stations.
+    ================  ============  ===========================================
     
-    ========================= =================================================
-    Methods                    Description
-    ========================= =================================================
+    ==========================  ===============================================
+    Methods                     Description
+    ==========================  ===============================================
     read_stnprofile             Read the profile file .
     get_profile_angle           Compute the profile  line and strike angle .
     reajust_coordinates_values  Reajustment of coordinates values.  
@@ -747,25 +750,27 @@ class Profile (object):
     stn_separation              Compute the stations  separations .      
     compute_dipole\
         length_from_coords      compute dipolelength
-    =======================-== ================================================
+    ==========================  ===============================================
 
     More attributes can be added by inputing a key word dictionary
     
-    :Example: ::       
+    :Example: 
+        
+        >>> from csamtpy.ff.core.cs import Profile 
         >>> file_stn = 'K1.stn'
         >>> path =  os.path.join(os.environ["pyCSAMT"], 
-                              'csamtpy','data', file_stn)
+        ...                      'csamtpy','data', file_stn)
         >>> profile =Profile (profile_fn=path)
         >>> profile.straighten_profileline(
             X=profile.east, Y=profile.north,straight_type='n')
         >>> profile.rewrite_station_profile(
-                    easting=profile.east, 
-                    northing=profile.north, 
-                    elevation =profile.elev, 
-                    add_azimuth=True)
-        ... separation = profile.stn_separation(
-            easting = profile.east, 
-            northing =profile.north)
+        ...            easting=profile.east, 
+        ...            northing=profile.north, 
+        ...            elevation =profile.elev, 
+        ...            add_azimuth=True)
+        >>> separation = profile.stn_separation(
+        ...    easting = profile.east, 
+        ...    northing =profile.north)
     """
     def __init__(self , profile_fn=None ,  **kwargs):
         
@@ -847,26 +852,26 @@ class Profile (object):
         
         Parameters  
         -----------
-        profile_fn :str 
-            path to station profile file 
-        split_type :str or NoneType 
-            How data is separed . Default  is "".
-        easting : array_like , 1 
-            easting coordinate (m), 
-        northing : array_like ,1 
-            northing coordinate value (m)
-        
-        lat : array_like 
-            latitude coordinate in degree 
-        lon : array_like  
-            longitude coordinate in degree
-        azim : array_like ,
-            azimuth in degree 
-            If not provided can computed automatically 
-        utm_zone :str      
-            survey utm zone 
-            if not porvided and lat and lon is set ,
-            can compute automatically 
+            * profile_fn :str 
+                        path to station profile file 
+            * split_type :str 
+                        How data is separed . 
+                        Default  is "".
+            * easting : array_like  
+                        easting coordinate (m), 
+            * northing : array_like  
+                        northing coordinate value (m)
+            * lat : array_like 
+                    latitude coordinate in degree 
+            * lon : array_like  
+                    longitude coordinate in degree
+            * azim : array_like ,
+                    azimuth in degree 
+                    If not provided can computed automatically 
+            * utm_zone :str      
+                    survey utm zone 
+                    if not porvided and lat and lon is set ,
+                    can compute automatically 
         """
         lat = kwargs.pop('latitude', None)
         lon = kwargs.pop('longitude', None)
@@ -1028,13 +1033,13 @@ class Profile (object):
         """
         Method to compute profile angle . 
         
-        :param easting :  easting corrdinate of the station point 
+        :param easting:  easting corrdinate of the station point 
         :type easting: array_like 
         
         :param northing: northing coordinate of station point.
         :type northing:array-like 
         
-        :returns: profile _angle in degrees. 
+        :returns: profile angle in degrees. 
         :rtype: float
         """
         self._logging.info ('Computing _ profile angle of geoelectric strike.')
@@ -1120,36 +1125,38 @@ class Profile (object):
         
         Parameters 
         ----------
-        x : float 
-            value for ajusting X coordinates _EASTING 
-        y : float 
-            value for ajustig Y coordinates ._NORTHING
-        stn_file : str 
-            station profile file . it may be a STN file . 
-        rewrite : bool 
-            rewrite a new station file after reajust coordinates. 
-        :savepath : str 
-            outdir pathLike to save your new profile file. 
+            * x: float 
+                value for ajusting X coordinates _EASTING 
+            * y: float 
+                value for ajustig Y coordinates ._NORTHING
+            * stn_file: str 
+                    station profile file . it may be a STN file . 
+            * rewrite: bool 
+                    rewrite a new station file after reajust coordinates. 
+            * savepath : str 
+                    outdir pathLike to save your new profile file. 
         
         Returns 
         ---------
-        array_like  
-            stations_pk , station profile pka value(m) .
-            Electrode fixed point value.
-        array_like 
-            easting coordinate value (m)
-         array_like 
-             northing coordinate value (m)
-        elevation : array_like 
-            evelation point  at each station (m)
+            * array_like  
+                stations_pk , station profile pka value(m) .
+                Electrode fixed point value.
+            * array_like 
+                easting coordinate value (m)
+            * array_like 
+                 northing coordinate value (m)
+            * elevation : array_like 
+                evelation point  at each station (m)
                     
-        Example :  
-             >>> stn_file =K1.stn
-             >>> path =  os.path.join(os.environ["pyCSAMT"],
-                                      'csamtpy','data',
-                                      stn_file)
-             ... profile =Profile.reajust_coordinates_values(
-                         x=-300238.702 ,y=-2369.252  )                                                                        
+        :Example :  
+            
+            >>> from csamtpy.ff.core.cs import Profile 
+            >>> stn_file =K1.stn
+            >>> path =  os.path.join(os.environ["pyCSAMT"],
+            ...                         'csamtpy','data',
+            ...                         stn_file)
+            >>> profile =Profile.reajust_coordinates_values(
+            ...           x=-300238.702 ,y=-2369.252  )                                                                        
         """
         
         elev =kwargs.pop('elevation', None)
@@ -1303,17 +1310,17 @@ class Profile (object):
        it will show the right place station must be.
         
         .. note::  for easier approch we use X
-                 as easting and Y as northing. It may be change . 
+                 as easting and Y as northing. 
 
-        :param X:  easting coordinates array. 
+        :param X: easting coordinates array. 
         :type X: array_like (ndarry, array,1)
             
         :param Y: northing coordinates array 
-        :type Y:array_like (ndarray,1)
+        :type Y: array_like (ndarray,1)
         
         :param straight_type: type of straighten ,it could 
                             be "equistant or egal, natural
-                            or distord". default is "classic"
+                            or distord". *default* is "classic"
         :type straight_type: str 
 
         :param reajust:  coordinates for reajustment (
@@ -1419,10 +1426,9 @@ class Profile (object):
                                  add_azimuth =False,
                                  **kwargs): 
         """
-        Mthod to rewrite station_profile or output ney profile 
-        by straightening profile throught
-        reajusting location values. User can use this method to 
-        create .zone profile if coordinates are known.
+        Mthod to rewrite station_profile or output new profile 
+        by straightening profile throught reajusting location coordinates values.
+         User can use this method to create zonge *stn* file if coordinates are known.
          
         :param easting:  easting coordinates (m)
         :type easting: array_like 
@@ -1431,14 +1437,14 @@ class Profile (object):
         :type northing: array_like 
         
         :param elevation: elevation values (m)
-        :type elevation:array_like 
+        :type elevation: array_like 
         
         :param username: name  of user 
         :type username: str 
         
-        :param add_azimuth :compute azimuth  
+        :param add_azimuth: compute azimuth  
                             positive down(clockwise)
-        :type add_azimuth : bool   
+        :type add_azimuth: bool   
         """
         
     
@@ -1562,23 +1568,22 @@ class Profile (object):
         
         Parameters 
         ----------
-        easting : array_like (ndarray, 1)
-            easting coordinates  
-        northing : array_like (ndarray,1) 
-            northing coordinates 
-        interpolate : bool 
-            if interpolate is True  will extend
-            to N+1 number to much excatly the number
-             of electrode. if false , 
-            it match the number of dipole N.
-            Defalut is False.
+        * easting : array_like (ndarray, 1)
+                    easting coordinates  
+        * northing : array_like (ndarray,1) 
+                    northing coordinates 
+        * interpolate : bool 
+                    if interpolate is True  will extend to N+1 number to much
+                    excatly the number  of electrode. If false ,
+                    it match the number of dipole N.
+                    *Default* is False.
                 
         Returns  
         --------
-        array_like 
+        * array_like 
              separation value array  
-        float 
-            separation mean average separation value  
+        * float 
+            separation mean  or average separation value  
         """
         if (easting.dtype !='float') or (northing.dtype !='float'): 
             try :
@@ -1613,13 +1618,13 @@ class Profile (object):
     def compute_dipolelength_from_coords(easting=None, northing=None,
                                          **kwargs): 
         """
-        Fonction to compute dipole length
-        from coordinates easting and northing
+        Fonction to compute dipole length from coordinates easting 
+        and northing values.
         
-        :param easting :array of easting coordinate in meters
+        :param easting: array of easting coordinate in meters
         :type easting: array_like 
                 
-        :param northing : array of northing coordinate in meters
+        :param northing: array of northing coordinate in meters
         :type northing:  array_like 
         
         :param lat:  latitude coordinate  in degree 
@@ -1628,20 +1633,19 @@ class Profile (object):
         :param lon: longitude coordinate  in degree 
         :type lon: array_like (ndarray,1) 
         
-        :param reference_ellipsoid : id, Ellipsoid name,
+        :param reference_ellipsoid: id, Ellipsoid name,
                                 Equatorial Radius, square of 
                                 eccentricity ,default is 23 
-        :type reference_ellipsoid:int 
+        :type reference_ellipsoid: int 
         
         :returns: length of dipole during survey approximated . 
-        :rtype : float 
+        :rtype: float 
          
         :returns:  position of dipole from reference station  
-        :rtype : array_like(ndarray,1)
+        :rtype: array_like(ndarray,1)
         
-        .. note:: the first electrode is located at 0 
-                 and second electrode to dipole length  
-                 i.e [0, 50 , ..., nn*50] where nn number
+        .. note:: the first electrode is located at 0 and second electrode to 
+                 dipole length i.e [0, 50 , ..., nn*50] where nn number 
                  of point -1. Data are relocated in center position
                  of dipole.
         """
@@ -1700,28 +1704,27 @@ class Location (object):
     Details of sation location . Classe used to convert 
     cordinnates and check values for lat/lon , east/north 
 
-    ================== ===================== ==================================
+    ==================  ====================  =================================
     Attributes              Type                Description  
-    ================= ====================== ==================================
+    ==================  ====================  =================================
     latitude            float/ndarray,1         sation latitude 
     longitude           float/ndarray,1         station longitude 
     elevation           float/ndarray           station elevantion in m or ft 
     easting             float/ndarray.1         station easting coordinate (m)
     northing            float/ndarray,1         station northing coordinate (m)
     azimuth             float/ndarray,1         station azimuth  in meter 
-    stn_pos              ndarray,1              sation dipoleposition
+    stn_pos             ndarray,1               sation dipoleposition
     utm_zone            str                     UTM location zone 
-    ================ ======================= ==================================
+    ==================  ====================  =================================
     
-    Followings methods: 
-    ============================ ==============================================
+    ============================  =============================================
     Methods                         Description 
-    ============================ ==============================================
+    ============================  =============================================
     convert_location_2_utm          convert position location lon/lat in 
                                     utm easting northing 
     convert_location_2_latlon       convert location postion  from east/north 
                                     to latitude/longitude 
-    ============================ ==============================================
+    ============================  =============================================
     """
 
 
@@ -1855,14 +1858,13 @@ class Location (object):
     def convert_location_2_utm (self, latitude =None  , 
                                 longitude=None ): 
         """
-        project coordinate to utm if coordinate are degrees. 
-        given the reference ellipsoid, constrained to
-         WGS84.
-        
+        Project coordinates to utm if coordinates are in degrees at  
+        given reference ellipsoid constrained to WGS84.
+         
         :param latitude:  latitude number 
-        :type latitude:float 
+        :type latitude: float 
         
-        :param longitude :longitude number 
+        :param longitude: longitude number 
         :type longitude: float 
         """
         
@@ -1894,8 +1896,8 @@ class Location (object):
         
     def convert_location_2_latlon(self, utm_zone =None ): 
         """
-        project coodinate on longitude latitude once  
-        data are utm . give referene ellispoid 
+        Project coodinate on longitude latitude once  
+        data are utm at  given reference ellispoid 
         constrained to WGS-84.
         """
         if utm_zone is not None : self._utm_zone =utm_zone 
@@ -1916,16 +1918,16 @@ class Location (object):
         Method to quicly convert array of latitude and 
         northing into easting northing
         
-        :param arr_lat :array of latitude value 
+        :param arr_lat: array of latitude value 
         :type arr_lat: array_like 
         
-        :array_lon :array of longitude value. 
+        :param array_lon: array of longitude value. 
         :type array_lon: array_like 
         
-        :returns:easting array
-        :rtype :  array_like 
+        :returns: easting array
+        :rtype : array_like 
         
-        :returns nothing : northing array
+        :returns: northing array
         :rtype:  array_like 
         """
         array_easting , array_northing =[[] for ii in range(2)]
@@ -1948,10 +1950,13 @@ class Site(object):
         
     Arguments 
     ---------
-        data_fn :str 
-         path to site file , the same file as profile or X,Y coordinates values 
+        **data_fn** :str 
+                 path to site file , the same file as profile 
+                 or X,Y coordinates values 
 
-    :Example: ::
+    :Example: 
+        
+        >>>  from csamtpy.ff.core.cs import Site 
         >>>  site=Site(data_fn=path)
         >>>  print(site.east['S07'])
         >>>  print(site.north['S09'])
@@ -2002,7 +2007,8 @@ class Site(object):
         if self.stn_name is None : 
             self.stn_name = latitude.size
             warnings.warn('You are not provided stations_names : We will defined stations names'
-                          ' automatically starting by S-XX [{0},..,{1}]so to zip data with latitude. If you dont want this station nomenclature '\
+                          ' automatically starting by S-XX [{0},..,{1}]so '
+                          'to zip data with latitude. If you dont want this station nomenclature '
                           'please provide station names.'.format(
                               self.stn_name[0], self.stn_name[-1]))
             
@@ -2089,18 +2095,16 @@ class Site(object):
     def set_site_info(self, data_fn = None, easting =None ,
                       northing =None , utm_zone='49N' ):
         """
-        Set-info from site file .Itmay use the profile fine
-        from Zonge STN file. Once call it 
-        here , it may call profile in turn to populate
-        attribute for easy access. 
-        
+        Set-info from site file, can read zonge *stn* profile fine or set easting 
+        and northing coordinates.
+ 
         :param data_fn:  path to site data file . 
                        may Use Stn  or other file of
                        coordinates infos
         :type data_fn: str 
                 
-        :param utm_zone :Utm zone WGS84 
-        :type utm_wone: str            
+        :param utm_zone: Utm zone WGS84 
+        :type utm_zone: str            
         """
         self.utm_zone = utm_zone 
         if data_fn is not None : self.sitedata = data_fn 
@@ -2146,16 +2150,14 @@ class Site(object):
 
 def _validate_stnprofile(profile_lines, spliting=None): 
     """ 
-    validate station profile . check whether the label
-    of stn file are present.number verification value
-     is set to 2 at minimum matching at least the easting and 
-    the northing coordinates . 
+    Validate station profile, cross ccheck the *stn* file. 
+    The Number verification value is set to 2. 
     
     Parameters
     ----------
-        profile_lines : list 
+        * profile_lines: list 
             reading lines 
-        spliting : str 
+        * spliting: str 
             type t0 split the stn line . 
     Returns
     -------

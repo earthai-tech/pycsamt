@@ -20,8 +20,8 @@
 
 ===============================================================================
 
-.. Module::ZCalculator
-    :synopsis ::  helper functions special calculator 
+.. _module-ZCalculator::
+    :synopsis:  helper functions special calculator 
 
 Created on Thu Dec  3 16:44:29 2020
 
@@ -67,17 +67,17 @@ def mag_avg (mag_array , A_spacing, Txcur):
     RAW, E-, or H-field magnitude values)for each frequency
         units : mV/Km*
         
-    :param mag_array :  magnnitude value for each data block
-    :type mag_array : np.array (ndarray, 1),
+    :param mag_array:  magnnitude value for each data block
+    :type mag_array: np.array (ndarray, 1),
 
-    :param a_spacing : dipole length 
-    :type a_spacing : float 
+    :param a_spacing: dipole length 
+    :type a_spacing: float 
     
     :param txcur:  curv coil, transmitter length 
     :type txcurv: float
 
     :returns: averaged data of magnitude data Block
-    :rtype mag_avg : np.ndarray 
+    :rtype mag_avg: np.ndarray 
     
     """
 
@@ -156,8 +156,8 @@ def param_phz (pphz_array, to_degree =False):
 
 def comp_rho (mag_E_field, mag_H_field, freq_array, A_spacing, Txcurr ):
     """
-    function to compute component average 
-    unition in ohm.m 
+    Function to compute component average 
+    unit in in ohm.m 
 
     :param mag_E_field: magnitude of E-filed , averaged 
     :type mag_E_field: np.ndarray(ndarray,1)
@@ -168,14 +168,14 @@ def comp_rho (mag_E_field, mag_H_field, freq_array, A_spacing, Txcurr ):
     :param freq_array:  frequency of station field
     :type freq_array: np.ndarray(ndarray,1)
     
-    : param  A_spacing:step_between station
-    : type A_spacing: np.float
+    :param  A_spacing: step_between station
+    :type A_spacing: np.float
     
-    : param Txcurr:  distance of coil in meter 
-    : type Txcurr: np.float,
+    :param Txcurr:  distance of coil in meter 
+    :type Txcurr: np.float,
 
     :returns: comp_rho , component averaged rho.
-    :rtype :np.ndarray 
+    :rtype: np.ndarray 
         
     """
     args =[mag_E_field, mag_H_field, freq_array, A_spacing, Txcurr]
@@ -200,15 +200,16 @@ def comp_rho (mag_E_field, mag_H_field, freq_array, A_spacing, Txcurr ):
 def comp_phz (comphz_array, units ='deg'):
     
     """
-    PHZc are from each data block, units : rad 
+    PHZc are from each data block, units in rad 
 
     :param comphz_array: average parameters phase for data blocs.
     :type comphz_array: float 
     
     :returns: component phase averaged.
-    :rtype:component phase averaged.
+    :rtype: component phase averaged.
     
-    :Example: ::
+    :Example:
+        
         >>> path =  os.path.join(os.environ["pyCSAMT"], 
                       'csamtpy','data', 'K1.AVG')
         >>> from csamtpy.core import avg  
@@ -245,55 +246,57 @@ def compute_components_Z_Phz(magn_E_field , magn_H_field, phz_E_field,
     
     Parameters
     ----------
-        magn_E_field : np.ndarray 
+        * magn_E_field : np.ndarray 
             E_.field magnitude (ndarray,1) in  microV/KM*A
-        magn_H_field : np.ndarray 
-            H_.field magnitude (ndarray,1)in  mGammas/A or picoTesla/A
-        phz_E_field : np.ndarray 
+        * magn_H_field : np.ndarray 
+             H_.field magnitude (ndarray,1)in  mGammas/A or picoTesla/A
+        * phz_E_field : np.ndarray 
             E_field phase (ndarray, 1) in  mrad 
-        phz_H_field : np.ndarray 
-            H_field phase (ndarray,1) in  mrad.
-       freq_value : np.ndarray 
-            Frequency at which data was measured(ndarray,1)in  Hz
-       kwargs : str 
-            units conversion.
+        * phz_H_field : np.ndarray 
+             H_field phase (ndarray,1) in  mrad.
+        * freq_value : np.ndarray 
+             Frequency at which data was measured(ndarray,1)in  Hz
+        * kwargs : str 
+             units conversion.
         
     Raises
     ------
-    CSex :pyCSAMT exception , 
-        Exceptions if units entered by the user doesnt match or are messy.
+        CSex :pyCSAMT exception , 
+            Exceptions if units entered by the user doesnt match or are messy.
 
     Returns
     -------
-         ndarray 
-            rho  Cagnard resistivity calculation. ohm.m 
-         ndarray 
-            phz ,Impedance phase value.
-         ndarray  
-            Zij, Impedance Tensor value.
-        ndarray 
-            :Zreal ,Value of Real part of impedance Tensor.
-         float
-             Zimag Value of Imaginary part of impedance Tensor.
-         ndarray , complex 
-            Zreal_imag , Complex value of impedance Tensor.
-    :Example : ::
-    >>> from csamtpy.core import avg 
-    >>> path =  os.path.join(os.environ["pyCSAMT"], 
-                  data', 'avg', 'K1.AVG')
-    >>> emag_ob = avg.Emag(path)
-    >>> hmag_obj = avg.Hmag(path)
-    >>> ephz_obj = avg.Ephz(path)
-    >>> hphz_obj = avg.Hphz(path)
-    >>> freq_obj =avg.Frequency(path)
-    >>> station_name ='S00'
-    >>> rho, phz, Z, real, imag, comp =compute_components_Z_Phz( 
-        magn_E_field=emag_ob.loc[station_name], 
-                                magn_H_field =hmag_obj.loc[station_name], 
-                                phz_E_field =ephz_obj.loc[station_name], 
-                                phz_H_field=hphz_obj.loc[station_name], 
-                                freq_value=freq_obj.loc[station_name])
-    ... rho
+        rho: ndarray 
+            Cagnard resistivity calculation. ohm.m 
+        phz: ndarray 
+             Impedance phase value.
+        Zij: ndarray  
+             Impedance Tensor value.
+        Zreal: ndarray 
+            Value of Real part of impedance Tensor.
+        Zimag: float
+             Value of Imaginary part of impedance Tensor.
+        Zreal_imag: ndarray , complex 
+            Complex value of impedance Tensor.
+         
+    :Example: 
+        
+        >>> from csamtpy.core import avg 
+        >>> path =  os.path.join(os.environ["pyCSAMT"], 
+        ...              data', 'avg', 'K1.AVG')
+        >>> emag_ob = avg.Emag(path)
+        >>> hmag_obj = avg.Hmag(path)
+        >>> ephz_obj = avg.Ephz(path)
+        >>> hphz_obj = avg.Hphz(path)
+        >>> freq_obj =avg.Frequency(path)
+        >>> station_name ='S00'
+        >>> rho, phz, Z, real, imag, comp =compute_components_Z_Phz( 
+        ...    magn_E_field=emag_ob.loc[station_name], 
+        ...                            magn_H_field =hmag_obj.loc[station_name], 
+        ...                            phz_E_field =ephz_obj.loc[station_name], 
+        ...                            phz_H_field=hphz_obj.loc[station_name], 
+        ...                            freq_value=freq_obj.loc[station_name])
+        ... rho
     """
     
     units_E_field =kwargs.pop('unit_E_field', 'microV/km*A')
@@ -374,14 +377,14 @@ def z_error2r_phi_error(z_real, z_imag, error):
     :param z_real: real component of z (real number or array)
     :type z_real: float 
     
-    :param z_imag :  imaginary component of z (real number or array)
-    :type z_imag :complex
+    :param z_imag:  imaginary component of z (real number or array)
+    :type z_imag: complex
     
-    :param error : absolute error in z (real number or array)
-    :type error : float
+    :param error: absolute error in z (real number or array)
+    :type error: float
     
     :returns: containers of relative error in resistivity, absolute error in phase
-    :rtupe:tuple
+    :rtupe: tuple
     
     """
         
@@ -409,28 +412,28 @@ def z_error2r_phi_error(z_real, z_imag, error):
 
 def rhophi2z ( phase, freq , resistivity=None,  z_array= None):
     """
-    function to compute z , real part and imag part . 
+    Function to compute z , real part and imag part . 
 
-    :param phase : phase angles array in radians
-    :type phase : ndarray 
+    :param phase: phase angles array in radians
+    :type phase: ndarray 
      
-    :param freq : frequencies array in Hz
-    :type freq : array_like
+    :param freq: frequencies array in Hz
+    :type freq: array_like
     
-    :param resistivity :  rho array in ohm.m
-    :type resistivity : array_like
+    :param resistivity:  rho array in ohm.m
+    :type resistivity: array_like
     
-    :param z_array : impedance z array in V/m 
-    :type z_array : array_like 
+    :param z_array: impedance z array in V/m 
+    :type z_array: array_like 
 
-    :returns : z_abs , absolute value of zz
-    :rtype:float 
+    :returns: z_abs , absolute value of zz
+    :rtype: float 
     
     :returns: z_real, real part of complex number
     :rtype: float 
     
     :returns: z_imag, imaginary part of zz
-    :rtype : complex 
+    :rtype: complex 
     
     :returns: ndarray 
     :rtype: zz, array of z_abs, z_imag, z_real 
@@ -466,13 +469,13 @@ def rhophi2z ( phase, freq , resistivity=None,  z_array= None):
 
 def get_reffreq_index(freq_array, reffreq_value): 
     """ 
-    get the index of reference index. From this index ,All array will filter data at this reffreq
+    Get the index of reference index. From this index ,All array will filter data at this reffreq
     value . 
-    :param freq_array :array of frequency values
-    :type freq_array : array_like 
+    :param freq_array: array of frequency values
+    :type freq_array: array_like 
     
-    :param reffreq_value :  value of frequency at clean data 
-    :type reffreq_value : float, int 
+    :param reffreq_value:  value of frequency at clean data 
+    :type reffreq_value: float, int 
     """
     freq_array=np.array([float(ss) for ss in freq_array])
     if float(reffreq_value) not in freq_array : 
@@ -501,19 +504,19 @@ def  _interpolate_array_fromreffreq(stationNames , freq_array , reffreq_array,
     """ 
     Interpolate value from  reference frequency : 
  
-    :param stationNames :  list of stations of survey .
-    :type stationNames : list
+    :param stationNames:  list of stations of survey .
+    :type stationNames: list
      
-    :param freq_array :  array of frequencies 
-    :type freq_array : (ndarray,1)
+    :param freq_array:  array of frequencies 
+    :type freq_array: (ndarray,1)
      
-    :param reffreq_array : reference frequence for clean Data .
-    :type reffreq_array : float 
+    :param reffreq_array: reference frequence for clean Data .
+    :type reffreq_array: float 
      
-    :param array_dict_loc : location of each value according each station names  
-                             keys are stationsNmes and value : value of array at that station : 
-                                 eg : S00 : valueof RhO
-    : type array_dict_loc : dict 
+    :param array_dict_loc: location of each value according each station names  
+                            keys are stationsNmes and value of array
+                            at that station , eg -S00 , valueof RhO  
+    :type array_dict_loc: dict 
     """
     
     def _interpolate_array(array_to, kind='linear', fill_value='extrapolate' ):
@@ -523,8 +526,8 @@ def  _interpolate_array_fromreffreq(stationNames , freq_array , reffreq_array,
         :param array_to: (ndarray,1), array to interpolate
         :type array_to: array_like
         
-        :param fill_value :kind of extrapolation
-        :type fill_value : str 
+        :param fill_value: kind of extrapolation
+        :type fill_value: str 
         """ 
 
         Y_intp_value =[]
@@ -554,20 +557,20 @@ def find_reference_frequency(freq_array =None, reffreq_value =None , sharp =Fals
     """
     Method to find and interpolate reference value if it is not present on the frequency range. 
 
-    :param freq_array : array_like frequency range 
-    :type freq_array : array_like
+    :param freq_array: array_like frequency range 
+    :type freq_array: array_like
     
-    :param reffreq_value : reference frequency value
-    :type reffreq_value : float or int 
+    :param reffreq_value: reference frequency value
+    :type reffreq_value: float or int 
     
-    :param sharp :  if set to True , it forces the program to find mainly 
+    :param sharp:  if set to True , it forces the program to find mainly 
                     a value closest inside the  frequency range.
-    :type sharp : bool  
+    :type sharp: bool  
 
-    :param etching :bool , if set to True , it will print in your stdout.
-    :type etching :bool 
+    :param etching: bool , if set to True , it will print in your stdout.
+    :type etching: bool 
     
-    :returns :reference frequency 
+    :returns: reference frequency 
     :rtype: float 
             
     """
@@ -593,11 +596,11 @@ def find_reference_frequency(freq_array =None, reffreq_value =None , sharp =Fals
         """ 
         Method to force reference value interpolated to find a value in frequency range close to . 
 
-        :param value_to_steep :  reference frequency value to be forced .
-        :type value_to_steep : float 
+        :param value_to_steep:  reference frequency value to be forced .
+        :type value_to_steep: float 
         
-        :return : closet value of interpolated frequency 
-        :rtype:float
+        :returns: closet value of interpolated frequency 
+        :rtype: float
         """ 
         #find the value close to reference array.
         
@@ -640,14 +643,14 @@ def compute_TMA (data_array=None, number_of_TMApoints=None ):
     """
     function to compute a trimmed-moving-average filter to estimate average apparent resistivities.
 
-    :param data_array : array_like(ndarray,1) , content of value to be trimmed 
-    :type data_array : array_like(ndarray,1) 
+    :param data_array:  content of value to be trimmed 
+    :type data_array: array_like(ndarray,1) 
     
-    :param number_of_TMA points :  number of filter points .
-    :type number_of_TMA points : int, 
+    :param number_of_TMA points:  number of filter points .
+    :type number_of_TMA points: int 
     
-    :returns :   value corrected with TMA  
-    :rtype:array_like (ndarray, 1)
+    :returns:  value corrected with TMA  
+    :rtype: array_like (ndarray, 1)
           
     """
     
@@ -689,23 +692,24 @@ def get_data_from_reference_frequency(array_loc, freq_array, reffreq_value):
     to get it. If none value is found , an Error will 
     occurs. 
 
-    :param array_loc : assume to be a dictionnary of stations_data_values. 
-    :type  array_loc : dict
+    :param array_loc: assume to be a dictionnary of stations_data_values. 
+    :type  array_loc: dict
     
-    :param freq_array :  frequency array 
-    :type  freq_array : array_like
+    :param freq_array:  frequency array 
+    :type  freq_array: array_like
     
-    :param reffreq_value : float or int , reffrence value  If the reference value
+    :param reffreq_value: float or int , reffrence value  If the reference value
                             is not in frequency array ,  function will force to interpolate
                             value amd find the correlative array.
-    :type reffreq_value : float or int 
+    :type reffreq_value: float or int 
             
     :returns:  an array of reference value at specific index .
     :rtype: array_like 
             
-    :Example: :: 
+    :Example: 
+        
         >>> get_data_from_reference_frequency(array_loc=rho,freq_array=freq_array,
-                                              reffreq_value=1023.)
+        ...                                      reffreq_value=1023.)
         ... Input reference frequency has been interpolated to < 1024.0 > Hz 
     """
     
@@ -740,20 +744,20 @@ def perforce_reference_freq(dataset, frequency_array=None ):
     Function to get automatically the reference frequency. If user doesnt provide the value , 
     function will find automatically value . 
  
-    :param data : array of avg DATA,  ndim>1 
-    :type data : array_like ,
+    :param data: array of avg DATA,  ndim>1 
+    :type data: array_like 
     
-    :param frequency_array : array of frequency
-    :type frequency_array : array_like   
+    :param frequency_array: array of frequency
+    :type frequency_array: array_like   
     
     :returns: reffreq_value float , reference frequency value 
-    :rtype : float
+    :rtype: float
     
-    :returns:uncover_index,  index of reference value on frequency array 
-    :rtype:int 
+    :returns: uncover_index,  index of reference value on frequency array 
+    :rtype: int 
      
-    :returns : nan_ratio , the ratio or the prevalence of nan in the data_set 
-    :rtype:float 
+    :returns: nan_ratio , the ratio or the prevalence of nan in the data_set 
+    :rtype: float 
     """
     import copy
     new_data_array =copy.deepcopy(dataset)
@@ -774,19 +778,20 @@ def perforce_reference_freq(dataset, frequency_array=None ):
 
 def hanning (dipole_length=50., number_of_points=7, large_band=False):
     """ 
-    function to compute hanning window .
-    .. see biblo ::
-        Torres-Verdin and Bostick, 1992, Principles of spatial surface electric field filtering in
-        magnetotellurics: electromagnetic array profiling (EMAP), Geophysics, v57, p603-622.
-        
-    :param dipole_length : the length of dipole , xk is centered between dipole 
-    :type dipole_length : float
+    Function to compute hanning window .
     
-    :param number_of_points : number of filter points 
-    :type number_of_points : int  
+    .. seealso::Torres-Verdin and Bostick, 1992, Principles of spatial surface electric
+             field filtering in magnetotellurics: electromagnetic array profiling (EMAP),
+             Geophysics, v57, p603-622.
+        
+    :param dipole_length: the length of dipole , xk is centered between dipole 
+    :type dipole_length: float
+    
+    :param number_of_points: number of filter points 
+    :type number_of_points: int  
     
     :returns: windowed hanning 
-    :rtype:array_like 
+    :rtype: array_like 
     
     """
     
@@ -819,21 +824,24 @@ def weight_beta (dipole_length =50. , number_of_points = 7, window_width=None):
     """
     WeightBeta function is  weight Hanning window . if window width is not provide  , function 
     will compute the width of window. 
-    .. see biblio :: 
-    Torres-Verdin and Bostick, 1992, Principles of spatial surface electric field filtering in
-        magnetotellurics: electromagnetic array profiling (EMAP), Geophysics, v57, p603-622.
-            SUM(Betaj (j=1..M)=1 .  
+    
+    .. seealso:: 
+            Torres-Verdin and Bostick, 1992, Principles of spatial surface electric field filtering in
+            magnetotellurics: electromagnetic array profiling (EMAP), Geophysics, v57, p603-622.
+            ...
             
-    :param dipole_length : length of dipole in meter (m) 
-    :type dipole_length : float
+    .. note::SUM(Betaj (j=1..M)=1 .
+              
+    :param dipole_length: length of dipole in meter (m) 
+    :type dipole_length: float
     
-    :param number_of_points : int , number of station points to filter
-    :type  number_of_points : int 
+    :param number_of_points: number of station points to filter
+    :type  number_of_points: int 
     
-    :param window_width : the width of window filter 
-    :type window_width : float 
+    :param window_width: the width of window filter 
+    :type window_width: float 
       
-    :returns : beta_array at each station 
+    :returns: beta_array at each station 
     :rtype: array_like 
     """
     _logger.info( 'Computing weight Hanning window ')
@@ -866,7 +874,7 @@ def weight_beta (dipole_length =50. , number_of_points = 7, window_width=None):
 
 def compute_FLMA ( z_array =None  , weighted_window=None , dipole_length = None , number_of_points =None ):
     """
-    ... note :: 
+    .. note:: 
         We will add this filter later !
     ***future plan ***
     """
@@ -909,11 +917,11 @@ def hanning_xk (dipole_length =50. , number_of_points =7):
         integrate value on all the window_bandwidth discrete and continue.
         if value is greater than Hald of the width  value == 0 . 
        
-    :param dipole_length : length of dipole 
-    :type dipole_length : float 
+    :param dipole_length: length of dipole 
+    :type dipole_length: float 
     
-    :param number_of_points :  value of points or survey stations . 
-    :type number_of_points : int 
+    :param number_of_points:  value of points or survey stations . 
+    :type number_of_points: int 
     
     :returns: han_xk , continue value on half bandwidth x0-- xk (center point) 
     :rtype: array_like 
@@ -951,21 +959,21 @@ def hanning_x (x_point_value, dipole_length =50.,  number_of_points=7,
     on the total bandwith. If half is False the value of greater than center point will be
     computed and not be 0 as the normal definition of Hanning window filter. 
     
-    :param x_point_value :  value  to intergrate.
-    :type x_point_value : float 
+    :param x_point_value:  value  to intergrate.
+    :type x_point_value: float 
     
-    :param dipole_length : length of dipole on survey
-    :type dipole_length : float 
+    :param dipole_length: length of dipole on survey
+    :type dipole_length: float 
     
-    :param number_of_point : survey point or number point to apply.
-    :type number_of_point : int 
+    :param number_of_point: survey point or number point to apply.
+    :type number_of_point: int 
     
     :param bandwidth_values: see all value on the bandwith , value greater than x_center
                             point will be computed .
     :type bandwidth_values:bool 
                             
-    :param on-half :  value on the bandwith; value greater that x_center point = 0.
-    :type on-half : bool 
+    :param on_half:  value on the bandwith; value greater that x_center point = 0.
+    :type on_half: bool 
 
     :returns: hannx  integrated X_point_value or  array of window bandwidth .
     :rtype: array_like 
@@ -980,11 +988,11 @@ def hanning_x (x_point_value, dipole_length =50.,  number_of_points=7,
         is set to True < it will show the data on band <= half windowith i.e. thin 
         center point xk.
         
-        :param apply_on_half  : half band of hanning filter.
-        :type apply_on_half  : bool  
+        :param apply_on_half: half band of hanning filter.
+        :type apply_on_half: bool  
 
         :returns: windowed hanning band
-        :rtype:: array_like(ndarray,1) 
+        :rtype: array_like(ndarray,1) 
         """
         hv=[]
         
@@ -1024,16 +1032,15 @@ def wbetaX (Xpos, dipole_length=50., number_of_points=7) :
     Torres-verdfn, C., and F. X. Bostick, 1992, Principles of spatial surface electric field 
     filtering in magnetotellurics - Electromagnetic array profiling ( EMAP )- Geophysics, 57(4), 25–34. 
         
-    :param Xpos : reference position on the field 
-    :type Xpos : str : 
-    :param dipole_length : length of dipole measurement
-    :type dipole_length : float 
+    :param Xpos: reference position on the field 
+    :type Xpos: str 
     
-    :param number_of_points :  point to stand filters , window width 
-    :type number_of_points : int 
+    :param dipole_length: length of dipole measurement
+    :type dipole_length: float 
     
-    ... note ::
-            will add soon !
+    :param number_of_points:  point to stand filters , window width 
+    :type number_of_points: int 
+    
     """
     
     window_width = dipole_length * number_of_points 
@@ -1061,29 +1068,29 @@ def compute_sigmas_e_h_and_sigma_rho(pc_emag , pc_hmag, pc_app_rho, app_rho, ema
 
     Parameters
     -----------
-    pc_emag : float  
-        Statistical variation of magnitude values from averaged data blocks.
-        Standard Deviation/Average Emag (%)
-     pc_hmag :float 
-         Statistical variation of magnitude values from averaged data blocks.
-         Standard Deviation / Average Hmag (%)
-     pc_app_rho: float 
-         Statistical variation of magnitude values from averaged data blocks.
-         Standard Deviation / Average Rho (%)
-         
-     app_rho :float 
-         resistivity calculated from averaged component (ohm.m)
-     Emag : float
-         average E - field magnitude(microVolt/Km *amp )
-     Hmag : float 
-         average H - field magnitude(pTesta/amp) or (milliGammas/Amp)
+        * pc_emag : float  
+                Statistical variation of magnitude values from averaged data blocks.
+                Standard Deviation/Average Emag (%)
+        * pc_hmag :float 
+                Statistical variation of magnitude values from averaged data blocks.
+                Standard Deviation / Average Hmag (%)
+        * pc_app_rho: float 
+                Statistical variation of magnitude values from averaged data blocks.
+                Standard Deviation / Average Rho (%)
+                 
+        * app_rho :float 
+                resistivity calculated from averaged component (ohm.m)
+        * Emag : float
+                average E - field magnitude(microVolt/Km *amp )
+        * Hmag : float 
+                average H - field magnitude(pTesta/amp) or (milliGammas/Amp)
         
     Returns
     --------
-         float 
-             sigma_rho ,srhoC (Standard Deviation for Component RHO)
-        float 
-            c_var_Rho :C-varrhoC(  Coefficient of Variation for Component RHO)
+        sigma_rho : float 
+             srhoC (Standard Deviation for Component RHO)
+        c_var_Rho : float 
+            C-varrhoC(  Coefficient of Variation for Component RHO)
     """
     # Standard Deviation for E-field (se) in (%) 1micoV/m*amp= 1mV/Km*amp
     emag /=1e3 # convert microvolt to millivolt 

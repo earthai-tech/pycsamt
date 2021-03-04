@@ -132,8 +132,10 @@ class redirect_cls_or_func(object) :
         Description:
             used to redirected functions or classes. Deprecated functions or class 
             can call others use functions or classes.
+            
         Usage:
-            todo: use new function or class to replace old function method or class 
+            .. todo:: use new function or class to replace old function method or class
+                with multiple parameters.
 
         Author: @Daniel03
         Date: 18/10/2020

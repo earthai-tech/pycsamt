@@ -20,7 +20,8 @@
 
 ===============================================================================
 
-.. Module AVG ::  
+.. _module-avg:: `csamtpy.ff.core.avg`  
+
     :synopsis: Module to deal with AVG file. each section of Avg file is a class 
     Avg file from Zonge Engeneering company is two types . module will read 
     the main file type as Type 1 . the othe type of AVG will rewrite on t
@@ -57,18 +58,18 @@ _logger=csamtpylog.get_csamtpy_logger(__name__)
 
 class Avg (object):
     """
-    A super class of all content of AVG Zonge file :
+    A super class of all content of AVG Zonge file 
+    
         Deal with Zonge Engeering Avg file .
         
     Arguments 
     ----------
-    data_fn : str 
-        path to AVG file 
+    **data_fn**: str 
+                path to AVG file 
         
-    Container of all AVG components
-    ================= =========== =============================================
+    ================  ===========  =======================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================  ===========  =======================================
     Header             class        container of Header informations 
     Data_section       class        container of all Data informations   
     Skip_flag          str          value to jugde the quality of data 
@@ -76,13 +77,15 @@ class Avg (object):
                                     value is provide , the program will
                                     judge quality of provided data 
                                     and set to him a score .
-    ================= =========== =============================================
+    ================  ===========  =======================================
 
     More attributes can be added by inputing a key word dictionary
-    ... e.g::
-                    >>> Avg_object =Data(data_array=avg_data )
-                    >>> stn=DATA.Station.name 
-                    >>> freq=DATA.Frequency.value
+    
+    :Example:
+        
+        >>> Avg_object =Data(data_array=avg_data )
+        >>> stn=DATA.Station.name 
+        >>> freq=DATA.Frequency.value
     """
     encodage ='utf8'
     def __init__(self, data_fn=None , **kwargs):
@@ -126,13 +129,14 @@ class Avg (object):
                                       
     def _read_avg_file (self, data_fn=None ): 
         """
-        method to read avg file and set each objects .
+        Method to read avg file and set each objects .
+        
         The main source protocole to transfert data into corresponding classes. 
         
-        Parameters :
+        Parameters
         ------------
-        data_fn :str  
-            path to AVG filename.      
+        * data_fn: str  
+                path to AVG filename.      
         """
         
         if data_fn is not None : 
@@ -281,12 +285,14 @@ class Avg (object):
             
     def avg_write_2_to_1 (self, data_fn=None , savepath =None ):
         """ 
-        Method to rewrite avg Astatic file (F2)
-        to main file F1 .
-        :param data_fn : ASTATIC FILE 
-        :type data_fn : str 
+        Method to rewrite avg Astatic file (F2) to main file F1 .
+        
+        :param data_fn: ASTATIC FILE 
+        :type data_fn: str 
+        
         :param savepath: path to save your rewritten file . 
         :type savepath: str 
+        
         """
         if data_fn is not None : self.data_fn =data_fn 
         if self.data_fn is None : 
@@ -334,11 +340,16 @@ class Avg (object):
                                  '{:^7}','{:^7}','{:^7}',
                                  '{:^7}','{:^7}'] , value_to_format=self._f1_labels):
             """ 
-            Drawn formatage chain : params: 
-                format_len : list of formatage indicator , flexible ;
-                user can change the disposal of avg_labels.
-                value-to-format : the list of item we want to format .
+            Drawn formatage chain . 
             
+            :param format_len: list of formatage indicator , flexible .
+            :type format_len: list 
+            
+            :param value-to-format: the list of item we want to format.
+            :type value_to_format: list 
+                
+            ..note:: user can change the disposal of avg_labels.
+    
             """
             for ss, item in enumerate(format_len):value_to_format[ss]=item.format(value_to_format[ss])
             
@@ -356,7 +367,7 @@ class Avg (object):
         
         def nan_to_zstar(nan_array, swaper='*' ): # not usefull , we replace nan at the bottom .
             """
-            swapp np.nan number on the data .
+            Swapp np.nan number on the data .
             """
             nan_array= np.nan_to_num(nan_array, nan=-999)
             return np.where(nan_array==-999, swaper, nan_array)
@@ -423,25 +434,27 @@ class Avg (object):
     def avg_to_jfile (self, avg_data_fn=None , station_fn =None, j_extension='dat', 
                       utm_zone='49N',**kws):
         """
-        Method to write avg file to Jfile.Convert both files.Astatic or plainty avg file to 
-        A.G. Jones format.
+        Method to write avg file to Jfile, convert both files , Astatic or plainty
+         avg file to A.G. Jones format.
+        
         Parameters 
         -----------
-        avg_data_fn:    str 
-            pathLike - path to your avg file 
-        station_fn :    str
-            pathLike, path to your profile/station file .
-        j_extension :   str
-            extension type you want to export file .Defalut is ".dat"
-        utm_zone :      str
-            add it if possible if station_profile are not referenced yet.
-            later , it would be removed ,it will computed automatically 
-        savepath       str
-            pathLike , path to save your outpufile 
-        write_info :    bool
-            write the informations of your input file , export informations into Jfile, 
-            Default is False.
-        survey_name :   bool, 
+        * avg_data_fn:str 
+                    pathLike , path to your avg file 
+        * station_fn:  str
+                    pathLike, path to your profile/station file .
+        * j_extension: str
+                    Extension type you want to export file .
+                    *Default* is ".dat"
+        * utm_zone: str
+                    add  if station_profile are not referenced yet.
+                    later , it would be removed .
+        * savepath: str
+                pathLike , path to save your outpufile 
+        * write_info: bool
+                    write the informations of your input file ,  
+                    export informations into Jfile,*Default* is False.
+        * survey_name:   bool, 
                     survey_area  
         """
         savepath =kws.pop('savepath', None)
@@ -628,30 +641,31 @@ class Avg (object):
         
         Parameters 
         ----------
-            data_fn     : str 
-                full path to avgfile 
-            savepath    : str 
-                outdir to store edifiles if None ,
-                is your current work directory                
-            profile_fn  :str 
-                full path  to station _profile file
-            apply_filter: str 
-                add the name of filter to process the
-                    avg file exported in edifiles. 
-                    can be ; [TMA | AMA| FLMA]
-                    TMA - Trimming Moving Average
-                    AMA - Adaptative Moving avarage , 
-                    FLMA - Fixed dipoleLength moving 
-                    average (number of point=7)
-                    Dipolelength willbe computed automatically 
+            * data_fn : str 
+                        full path to avgfile 
+            * savepath : str 
+                        outdir to store edifiles if None ,
+                        is your current work directory                
+            * profile_fn: str 
+                        full path  to station _profile file
+            * apply_filter: str 
+                        add the name of filter to process the
+                        avg file exported in edifiles. 
+                        can be ; [TMA | AMA| FLMA]
+                        TMA - Trimming Moving Average
+                        AMA - Adaptative Moving avarage , 
+                        FLMA - Fixed dipoleLength moving 
+                        average (number of point=7)
+                        Dipolelength willbe computed automatically 
                                                 
-            ... e:g:    
-                >> from csamtpy.pyCS.core import avg 
-                >>> avg_obj= avg.Avg()
-                ... avg_obj.avg_to_edifile(data_fn= os.path.join(path_to_avgfile, avgfile) , 
-                           profile_fn = os.path.join(path_to_avgfile, station_profile_file), 
-                           savepath =save_edipath, 
-                           apply_filter=None ) 
+        :Example:   
+            
+            >>> from csamtpy.pyCS.core import avg 
+            >>> avg_obj= avg.Avg()
+            >>> avg_obj.avg_to_edifile(data_fn= os.path.join(path_to_avgfile, avgfile) , 
+            ...           profile_fn = os.path.join(path_to_avgfile, station_profile_file), 
+            ...           savepath =save_edipath, 
+            ...           apply_filter=None ) 
         """
         
         if data_fn is not None : self.data_fn = data_fn 
@@ -926,27 +940,29 @@ class Avg (object):
 class Header (object):
     
     """
-    Read the info Header of AVG file and rewrite Avgfile (main type): Type 1
+    Read the info Header of AVG file and rewrite Avgfile (main type, Type1) .
+    
     Arguments  
     ---------
-        data_fn : str  
-            path to avgfile
+        **data_fn** : str  
+                path to avgfile
         
-    Holds the following information:
-    ================= =========== =============================================
-    Attributes         Type        Explanation
-    ================= =========== =============================================
-    HardwareInfos       class        zonge Hardware  
-    SurveyAnnotation    class        zonge project  informations 
-    SurveyConfiguration class        zonge project/locations settings 
-    Tx                  class        special Transmitter  properties 
-    Rx                  class        special receiver properties
-    ================= =========== =============================================
+    ======================  =========  =====================================
+    Attributes              Type        Explanation
+    ======================  =========  =====================================
+    HardwareInfos           class        zonge Hardware  
+    SurveyAnnotation        class        zonge project  informations 
+    SurveyConfiguration     class        zonge project/locations settings 
+    Tx                      class        special Transmitter  properties 
+    Rx                      class        special receiver properties
+    ======================  =========  =====================================
 
     More attributes can be added by inputing a key word dictionary
-    eg :: 
+    
+    :Example:
+        
             >>> path=os.path.join(os.environ["pyCSAMT"], 
-                      "csamtpy", "data", "LC101.avg")
+            ...          "csamtpy", "data", "LC101.avg")
             >>> avg_obj= Avg(data_fn=path) 
             >>> surv_area= avg_obj.Header.SurveyAnnotation.project_area 
             >>>> print(survey.area)
@@ -977,20 +993,22 @@ class Header (object):
         
         Parameters 
         ----------
-            data_fn : str 
-                path to Avgfile
-            savepath : str 
-                    path to your destination file . if None , 
-                    path is your current work directory .
+            * data_fn : str 
+                        path to Avgfile
+            * savepath : str 
+                        path to your destination file . if None , 
+                        path is your current work directory .
             
-            eg :: 3 ways to get your filelog.
-                >>> Header().write_header_log(data_fn=path,
-                               )
-                >>> he=Header()
-                ... he.write_header_log(data_fn=path,
-                                   savepath=r'C:/Users\Administrator\Desktop')
-                ... avg_obj.Header.write_header_log(data_fn=path,
-                               savepath=r'C:/Users/Administrator/Desktop') 
+        :Example:
+            
+            >>> from csamtpy.ff.core.avg import Header
+            >>> Header().write_header_log(data_fn=path,
+            ...               )
+            >>> he=Header()
+            ... he.write_header_log(data_fn=path,
+            ...                   savepath=r'C:/Users\Administrator\Desktop')
+            ... avg_obj.Header.write_header_log(data_fn=path,
+            ...               savepath=r'C:/Users/Administrator/Desktop') 
         """
          
         if data_fn is not None : self.data_fn =data_fn 
@@ -1052,29 +1070,32 @@ class SurveyAnnotation (object) :
          
     Arguments  
     -----------
-        survey_annotations_data: list or str  
-            path to your annotation file or  Filled automatically
+        **survey_annotations_data**: list , str  
+                                    path to your annotation file or  
+                                    Filled automatically
         
-    Holds the following information:
-    ================= =========== =============================================
-    Attributes         Type        Explanation
-    ================= =========== =============================================
-    project_name        str         project name 
-    project_area        str         project area 
-    custumer_name       str         company name 
-    contractor_name     str         contractor name 
-    projet_label        str         label or number 
-    acqdate             str         data acquisition date 
-    sconfig_dict        dict        survey annotation
-                                    dictionnary       
-    ================= =========== =============================================
+    ======================  =========  =====================================
+    Attributes              Type        Explanation
+    ======================  =========  =====================================
+    project_name            str         project name 
+    project_area            str         project area 
+    custumer_name           str         company name 
+    contractor_name         str         contractor name 
+    projet_label            str         label or number 
+    acqdate                 str         data acquisition date 
+    sconfig_dict            dict        survey annotation
+                                        dictionnary       
+    ======================  =========  =====================================
     
     More attributes can be added by inputing a key word dictionary
-     eg:: 
-             >>> avg_obj= Avg(data_fn=path) 
-             >>> surv_area= avg_obj.Header.SurveyAnnotation.project_area 
-             ... survey_area
-             ... avg_obj.Header.SurveyAnnotation.sconfig_dict['Job.By']
+    
+    :Example:
+         
+        >>> from csamtpy.ff.core.avg import Avg 
+        >>> avg_obj= Avg(data_fn=path) 
+        >>> surv_area= avg_obj.Header.SurveyAnnotation.project_area 
+        ... survey_area
+        ... avg_obj.Header.SurveyAnnotation.sconfig_dict['Job.By']
     """
     def __init__(self, survey_annotations_data =None  ,  **kwargs):
 
@@ -1100,11 +1121,12 @@ class SurveyAnnotation (object) :
                 
     def set_survey_annotations_infos (self, survey_annotations_data =None): 
         """
-        Method to set _survey annotations informations . 
+        Method to set _survey annotations informations .
+        
         Parameters 
         ----------
-        survey_annotation : list 
-            container of survey annotations infos. 
+        * survey_annotation : list 
+                            container of survey annotations infos. 
         """
         _logger.info('Reading and setting zonge survey Annotations infos !')
         
@@ -1154,13 +1176,12 @@ class SurveyConfiguration(object) :
          
     Arguments  
     ---------
-        survey_config_data  : list 
-            configuration list
+        **survey_config_data** : list 
+                                configuration list
         
-    Holds the following information:
-    ================= =========== =============================================
+    =================  ==========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    =================  ==========  ============================================
     surveyType          str         survey type (CSAMT, TEM, CR, TDIP)        
     surveyArray         str         array type(for CSAMT:Scalar, Vector, Tensor)
     lineName            str         line label 
@@ -1179,10 +1200,13 @@ class SurveyConfiguration(object) :
     unitHfield          str         field units (pT,pT/A
     unitPhase           str         units (mrad,deg)
     sconfig_dict        dict        surveyconfiguration dict elmts
-    ================= =========== =============================================
+    =================  ==========  ============================================
         
     More attributes can be added by inputing a key word dictionary
-    .. eg:: 
+    
+    :Example:
+        
+        >>> from csamtpy.ff.core import Avg
         >>> avg_obj= Avg(data_fn=path) 
         >>> surv_nameLine= avg_obj.Header.SurveyConfiguration.lineName 
         ... surv_nameLine
@@ -1237,8 +1261,8 @@ class SurveyConfiguration(object) :
         
         Parameters 
         ----------
-        survey_config_data : list or pathLike str 
-            container of survey configurations  infos. 
+        * survey_config_data : list or pathLike str 
+                            container of survey configurations  infos. 
         """
         _logger.info('Reading and setting survey configurations informations!')
 
@@ -1305,18 +1329,16 @@ class SurveyConfiguration(object) :
 class TransmitterProperties(object):
     
     """
-    class for transmitter  properties.
+    Class for transmitter  properties.
      
     Arguments  
     -----------
-    data_fn : str  
-        path to avgfile
+    **data_fn** : str  
+            path to avgfile
         
-    Holds the following information:
-    
-    ================= =========== =============================================
+    =================  ==========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    =================  ==========  ============================================
     txType              str         source type (for NSAMT /CSAMT:Natural, 
                                      Bipole,Loop)
     txGdpStn            str         transmitter ID from GDP Tx field 
@@ -1337,17 +1359,20 @@ class TransmitterProperties(object):
                                     (positive float, length units)
     sconfig_dict        dict        params config dictionnary  
                                     
-    ================= =========== =============================================
+    =================  ==========  ============================================
     
-     More attributes can be added by inputing a key word dictionary
+    More attributes can be added by inputing a key word dictionary
      
-     .. Example::  
-             >>> path= os.path.join(os.environ['pyCSAMT'], 
-                                      'csamtpy', data, 'LCS01.AVG')
-             >>> avg_obj= Avg(data_fn=path) 
-             ... avg_obj.Header.Tx.txGdpStn
-             ... avg_obj.Header.Tx.txStn
-             ... avg_obj.Header.Tx.sconfig_dict['Tx.Type']
+    :Example:
+        
+        >>> from csamtpy.ff.core import Avg
+        >>> path= os.path.join(os.environ['pyCSAMT'], 
+        ...                         'csamtpy', data, 'LCS01.AVG')
+        >>> avg_obj= Avg(data_fn=path) 
+        >>> avg_obj.Header.Tx.txGdpStn
+        >>> avg_obj.Header.Tx.txStn
+        >>> avg_obj.Header.Tx.sconfig_dict['Tx.Type']
+        
      """
     def __init__(self, **kwargs):
 
@@ -1369,8 +1394,9 @@ class TransmitterProperties(object):
     def set_transmitter_properties(self, Tx_data =None):
         """
         Method to set_Tx_properties.
-        :param tx_data : list of Tx-infos from AVG filename 
-        :type tx_data :list 
+        
+        :param tx_data: list of Tx-infos from AVG filename 
+        :type tx_data:list 
         """
         
         if Tx_data is None : 
@@ -1405,14 +1431,13 @@ class ReceiverProperties(object):
       
     Arguments 
     ---------- 
-    Rx_data : list or str 
-        Filled automatically or path to your
-        receiver properties file.
-         
-     Holds the following information:
-    ================= =========== =============================================
+    **Rx_data** : list or str 
+                Filled automatically or path to your
+                receiver properties file.
+
+    =================  ==========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    =================  ==========  ============================================
     rxGdpStn            str         receiver GDP station number (alias = Station) 
     rxStn               str         receiver client station number
     rxHPR               int         EM component heading, pitch, roll 
@@ -1429,17 +1454,19 @@ class ReceiverProperties(object):
     rxComps             str         EM component/impedance label(ExHx, ExHy, 
                                     EyHx, EyHy, Zxx, Zxy, Zyx, Zyy,  Zvec, Zdet)   
     sconfig_dict        dict        parameters dict config            
-    ================= =========== =============================================
+    =================  ==========  ============================================
          
-     More attributes can be added by inputing a key word dictionary
+    More attributes can be added by inputing a key word dictionary
      
-     .. Example::  
-             >>> path= os.path.join(os.environ['pyCSAMT'], 
-                                      'csamtpy', data, 'LCS01.AVG')
-             >>> avg_obj= Avg(data_fn=path) 
-             ... avg_obj.Header.Rx.txGdpStn
-             ... avg_obj.Header.Rx.txStn
-             ... avg_obj.Header.Rx.sconfig_dict['Tx.Length']
+    :Example:
+         
+        >>> from csamtpy.ff.core import Avg
+        >>> path= os.path.join(os.environ['pyCSAMT'], 
+                                 'csamtpy', data, 'LCS01.AVG')
+        >>> avg_obj= Avg(data_fn=path) 
+        ... avg_obj.Header.Rx.txGdpStn
+        ... avg_obj.Header.Rx.txStn
+        ... avg_obj.Header.Rx.sconfig_dict['Tx.Length']
      """
     def __init__(self, Rx_data=None ,  **kwargs):
 
@@ -1471,8 +1498,8 @@ class ReceiverProperties(object):
 
         Parameters
         ----------
-        Rx_data : list, optional
-            container infos of receivers. The default is None.
+        * Rx_data : list, optional
+                    container infos of receivers. The default is None.
         """
         if Rx_data is not None : 
             self.rx_data = Rx_data
@@ -1520,22 +1547,27 @@ class ReceiverProperties(object):
 
 class Skip_flag (object) : 
     """
-        skip flag values : 
-        0. drop data , 1. skip data , 2. good quality of data
-        
-        Arguments 
-        --------
-            skip_flag : str or int , 
-                skip_flag value set automatically .
-                some astatic file doesnt mention the number of 
-                skip_flag .Default is '2'.
-     
-        .. Example::  
-              >>> path= os.path.join(os.environ['pyCSAMT'], 
-                                      'csamtpy', data, 'LCS01.AVG')
-             >>> avg_obj= Avg(data_fn=path) 
-             ... avg_obj.Skip_flag.skip_flag
-             ... avg_obj.Skip_flag.get_skip_flag
+    skip flag values 
+    
+        - 0. drop data 
+        - 1. skip data 
+        - 2. good quality of data
+    
+    Arguments 
+    ----------
+        **skip_flag** : str or int , 
+                    skip_flag value set automatically .
+                    some astatic file doesnt mention the number of 
+                    skip_flag .Default is '2'.
+ 
+    :Example:
+            
+         >>> from csamtpy.ff.core import Avg
+         >>> path= os.path.join(os.environ['pyCSAMT'], 
+         ...                         'csamtpy', data, 'LCS01.AVG')
+         >>> avg_obj= Avg(data_fn=path) 
+         >>> avg_obj.Skip_flag.skip_flag
+         >>> avg_obj.Skip_flag.get_skip_flag
     """
     
     def __init__(self, skip_flag=None , **kwargs):
@@ -1557,7 +1589,8 @@ class Skip_flag (object) :
         
     def setandget_skip_flag (self, skip_flag=None):
         """ 
-        simple method to set and get skip_flag. 
+        simple method to set and get skip_flag.
+        
         Parameters
         ----------
              skip_flag:  str 
@@ -1565,7 +1598,7 @@ class Skip_flag (object) :
         
         if skip_flag is not None : 
             if skip_flag not in list(self.skip_flag_dict.keys()):
-                raise CSex.pyCSAMTError_config_file('Wrong Input ! skip flag must be'\
+                raise CSex.pyCSAMTError_config_file('Wrong Input ! skip flag must be'
                                                     ' among : {0}'.format(list(self.skip_flag_dict.keys())))
             self.skip_flag = str(skip_flag)
 
@@ -1580,14 +1613,13 @@ class ZongeHardware(object):
     
     Arguments
     ---------
-    zonge_hardw_infos : list or str , 
-        filled automatically or path to your hardware setting file.
+        **zonge_hardw_infos** : list or str , 
+                            filled automatically or path to your 
+                            hardware setting file.
             
-    Holds the following information:
-            
-    ================= =========== =============================================
+    =================  ==========  =========================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    =================  ==========  =========================================
     version             str         version of AMTAVG software
     dated               str         date of building Avg file 
     processed           str         date of data preprocessing
@@ -1597,15 +1629,18 @@ class ZongeHardware(object):
     numfilterfreq       int         number of point that TMA used to filter 
     freq_filter         float       value of TMA filter frequency
     end_astatic_file    str         end file description.
-    ================= ============ ============================================
+    =================  ==========  =========================================
         
     More can be added by inputing a key word dictionary
-     .. Example::  
-         >>> path= os.path.join(os.environ['pyCSAMT'], 
-                                  'csamtpy', data, 'LCS01.AVG')
-         >>> avg_obj= Avg(data_fn=path) 
-         ... avg_obj.Header.HardwareInfos.freq_filter)
-         ... avg_obj.Header.HardwareInfos.sconfig_dict['AMTAVG'])
+    
+    :Example:
+         
+        >>> from csamtpy.ff.core import Avg
+        >>> path= os.path.join(os.environ['pyCSAMT'], 
+        ...                     'csamtpy', data, 'LCS01.AVG')
+        >>> avg_obj= Avg(data_fn=path) 
+        >>> avg_obj.Header.HardwareInfos.freq_filter)
+        >>> avg_obj.Header.HardwareInfos.sconfig_dict['AMTAVG'])
     """
 
     def __init__(self,zonge_hardw_infos=None ,  **kwargs):
@@ -1632,12 +1667,12 @@ class ZongeHardware(object):
         
     def set_harware_infos (self, zonge_hardw_infos =None ):
         """
-        method to set Harwares infos
+        Method to set Harwares infos.
         
         Parameters 
         ----------
-        zonge_hardw_infos : list 
-            Hardware informations collected  
+        * zonge_hardw_infos : list 
+                            Hardware informations collected  
         """
         _logger.info ('Reading and setting Harwware informations !')
         
@@ -1684,63 +1719,61 @@ class ZongeHardware(object):
 
 class Data (object): 
     """
-    AVG Data informations : Container of all data infos .
+    AVG Data informations ,  Container of all data infos .
      
     Arguments
     ---------
-     data_array  : np.ndarray  
-        Data collected form the site . It contains all the informations during 
-        survey. It could read a  user own data build 
-        by classifying data according the main AVG file 
-                        
-     ... notes :: when data come straightforwardly from AVG file ,
-             data was set respecting the unitprovided . see the table to have 
-             differents units provided. User must takes account for data processing
-         .A little bit  conversion is needed. User can use a special function
-         on procesing module 'zcalculator.compute_components_Z_Phz' to have any 
-         idea to convert according its will. 
-        
-    Holds the following information:
-    ================= ============= ===========================================
-    Attributes         Type          Explanation
-    ================= ============= ===========================================
-    Station            (ndarray, 1) station length infos . unit : m 
-    Frequency          (ndarray, 1) frequency using during survey , unit : Hz  
-    Amps               (ndarray, 1) current induction values using during 
-                                       survey , unit : Amp  
-    Emag               (ndarray, 1) Electric field magnitude (Unit.nV/m,nV/Am) 
-    Ephz               (ndarray, 1) Electric field phase  (unit. mrad)
-    Hmag               (ndarray, 1) Magnetic field magnitude (Unit.pT,pT/A)
-                                   
-    Hphz               (ndarray, 1) Magnetic field phase (unit. mrad)
-    Resistivity        (ndarray, 1) Cagnard apparent Resistivity
-                                    magnitude (unit.ohm.m)
-    Phase              (ndarray, 1) Impedance phase (unit. mrad)
-    Z                  (ndarray, 1) Impedance magnitude  (unit. km/s)
-    pcEmag             (ndarray, 1) relative |E| error (%)
-    pcHmag             (ndarray, 1) relative |H| error (%)
-    sEphz              (ndarray, 1) phase(E) error (unit.mrad)
-    sHphz              (ndarray, 1) phase(H) error (unit.mrad)
-    sPhz               (ndarray, 1) phase(Z) error (unit.mrad)
-    pcRho              (ndarray, 1) relative apparent resistivity
-                                    (rho) error (%)
-    added_astatic_data (ndarray, 1) static_corrected-apparent
-                                    resistivity (unit.ohm.m)
-    set_to_degree       bool        phase angle value :if set to True , value
-                                    of phase will be on degree. make 
-                                    sure to converte the data on radian angle
-                                    before not in mrad.
-    ================= ============  ===========================================
+     **data_array**  : np.ndarray  
+                    Data collected form the site, It contains all the informations 
+                    during survey. It could read a  user own data build 
+                    by classifying data according the main AVG file 
 
-    .. note :: normalized_station_value parameter normalize station value . 
-                if set to true station will started name from 0 to n 
+    ==================  ==============  =======================================
+    Attributes          Type            Explanation
+    ==================  ==============  =======================================
+    Station             (ndarray, 1)    station length infos . unit : m 
+    Frequency           (ndarray, 1)    frequency using during survey ,unit : Hz  
+    Amps                (ndarray, 1)    current induction values using during 
+                                        survey , unit : Amp  
+    Emag                (ndarray, 1)    Electric field magnitude(Unit.nV/m,nV/Am) 
+    Ephz                (ndarray, 1)    Electric field phase  (unit. mrad)
+    Hmag                (ndarray, 1)    Magnetic field magnitude (Unit.pT,pT/A)
+    Hphz                (ndarray, 1)    Magnetic field phase (unit. mrad)
+    Resistivity         (ndarray, 1)    Cagnard apparent Resistivity
+                                        magnitude (unit.ohm.m)
+    Phase               (ndarray, 1)    Impedance phase (unit. mrad)
+    Z                   (ndarray, 1)    Impedance magnitude  (unit. km/s)
+    pcEmag              (ndarray, 1)    relative |E| error (%)
+    pcHmag              (ndarray, 1)    relative |H| error (%)
+    sEphz               (ndarray, 1)    phase(E) error (unit.mrad)
+    sHphz               (ndarray, 1)    phase(H) error (unit.mrad)
+    sPhz                (ndarray, 1)    phase(Z) error (unit.mrad)
+    pcRho               (ndarray, 1)    relative apparent resistivity
+                                        (rho) error (%)
+    added_astatic_data  (ndarray, 1)    static_corrected-apparent
+                                        resistivity (unit.ohm.m)
+    set_to_degree           bool        phase angle value :if set to True , 
+                                        valueof phase will be on degree. make 
+                                        sure to converte the data on radian 
+                                        anglebefore not in mrad.
+    ==================  ==============  =======================================
+    
+     .. notes :: when data come straightforwardly from AVG file ,
+             data was set respecting the unit provided  User must takes account 
+             for data processing .A little bit  conversion is needed.
+             User can use a special function. Normalized_station_value parameter 
+             normalize station value . if set to true station will started name
+             from 0 to n
                 ...
+                
     More attributes can be added by inputing a key word dictionary
 
-    .. e.g::
-            >>> DATA=Data(data_array=avg_data )
-            >>> stn=DATA.Station.name 
-            >>> freq=DATA.Frequency.value
+    :Example:
+        
+        >>> from csamtpy.ff.core import Avg
+        >>> DATA=Data(data_array=avg_data )
+        >>> stn=DATA.Station.name 
+        >>> freq=DATA.Frequency.value
     """
     
     def __init__(self, data_array=None , **kwargs):
@@ -1789,16 +1822,16 @@ class Data (object):
         
         Parameters
         ----------
-        data_array : np.ndarray 
-            data recovered from avg file. 
-            It must be on numpy array. The default is None.
-        data_type : int, optional
-            show the type of Avg file, 
-            must be 1 for plainty file 2 for Astatic file. 
-             Default is None.
-        add_astatic_data : pd.coreDataFrame , optional
-            added infos from astatic file. 
-            Default is None.
+        * data_array : np.ndarray 
+                    data recovered from avg file. 
+                    It must be on numpy array. The default is None.
+        * data_type : int, optional
+                    show the type of Avg file, 
+                    must be 1 for plainty file 2 for Astatic file. 
+                     *Default* is None.
+        * add_astatic_data : pd.coreDataFrame , optional
+                            added infos from astatic file. 
+                            *Default* is None.
         """
         if data_array is not None : 
             self._data_array =data_array
@@ -1833,16 +1866,18 @@ class Data (object):
             """
             Parameters
             ----------
-            zstar_array : ndarray 
-                    array contain unfloat converter value. the unconverter value can be a '*'
-            nan_value : float or np.nan type  
-                    nan_value could be any value either int, float or str.  
-                    If The default is np.nan.
-            keep_str : bool, optional  
+            * zstar_array : ndarray 
+                        array contain unfloat converter value.
+                        the unconverter value can be a '*'
+            * nan_value : float or np.nan type  
+                        nan_value could be any value either int, float or str.  
+                        If The default is np.nan.
+            * keep_str : bool, optional  
                         keep the str item on your array.
             Returns 
             -------
-            array_like : zstrar_array converted 
+            array_like 
+                zstrar_array converted 
             """
             
             for kk , value in enumerate(zstar_array): 
@@ -1943,13 +1978,18 @@ class Data (object):
 
 class  Station(object):
     """
-    Stations informations  
-   
-    Holds the following information:
-
-    ================= =========== =============================================
-    Attributes         Type        Explanation
-    ================= =========== =============================================
+    Stations informations 
+    
+    Parameters
+    -----------
+     * norm_station_value: bool 
+                         True or False , if True , station will numbered
+                         starting by 0 . 
+                         *Default* is True 
+ 
+    ================  ===========  ============================================
+    Attributes        Type          Explanation
+    ================  ===========  ============================================
     value             nd.array      data of station  columns components 
     max               float         maximum distance of survey lines 
     min               float         minimum distance strated recorded data  
@@ -1961,15 +2001,15 @@ class  Station(object):
     loc               dict          main attribute location of station: eg
                                     loc ['S01'] show the distance of station at
                                     that point. 
-    norm_station_value bool         True|False : if True , station will numbered
-                                    starting by 0 . Default is True 
-    ================= =========== =============================================
+    ================  ===========  ============================================
 
     More attributes can be added by inputing a key word dictionary
 
-    .. Example: ::
+    :Example: 
+        
+        >>> from csamtpy.ff.core.avg import Station
         >>> path=os.path.join(os.environ["pyCSAMT"], 
-                              "csamtpy", "data", "K1.AVG")
+        ...                      "csamtpy", "data", "K1.AVG")
         >>> station=Station(path)
         >>> print(station.loc['S07'])
     """
@@ -2003,14 +2043,15 @@ class  Station(object):
 
         Parameters
         ----------
-        station_data_array : np.ndarray (ndarray,1), optional
-            station value recorded in the field at each point. The default is None.
-        rename_station : np.ndarray(ndarray,1), optional
-            list of station name provided. 
-            Default is None.
-        normalized_station_value : bool, optional
-            start the value of station by 0.
-            Default is False.
+        * station_data_array : np.ndarray (ndarray,1), optional
+                            station value recorded in the field at each point.
+                            The *default* is None.
+        * rename_station : np.ndarray(ndarray,1), optional
+                            list of station name provided. 
+                            *Default* is None.
+        * normalized_station_value : bool, optional
+                            start the value of station by 0.
+                            *Default* is False.
         """
         
         if station_data_array  is not None : 
@@ -2090,42 +2131,44 @@ class Frequency (object):
         
     Arguments  
     ---------
-    freq_array  : arrya_like 
-        frequence data array 
-    normalize_freq_betw  : list  
-        must be on list of integer value 
-        If float value provided 
-        should be convert on list, same as tuple 
-        
-    Holds the following information:
-    ================= =========== =============================================
-    Attributes         Type        Explanation
-    ================= =========== =============================================
-    value             nd.array      frequency data columns
-                                    components 
-    max               float         Hight frequency 
-    min               float         lower frequency  
-    loc               dict          main attribute : location 
-                                    of station loc ['S01'] show the frequency 
-                                    of station at that point. 
-    normalize_freq_betw   list      must be a list of integer  be sure that
-                                    the numberprovided will be power 
-                                    to 10. eg .(start, end,  nfreq)   
-                                    start - first number will be power by 10 
-                                    0=1:10exp(0) end- last value to be 
-                                    interpolated : 4 --> 10(exp)4
-                                    nfreq- number of frequency  : eg : 17 
-                                    Default is None 
-    ================= =========== =============================================
+    **freq_array**  : arrya_like 
+                    frequence data array 
+                    
+    **normalize_freq_betw** : list  
+                            must be on list of integer value 
+                            If float value provided 
+                            should be convert on list, same as tuple 
+ 
+    ======================  ==========  =======================================
+    Attributes              Type        Explanation
+    ======================  ==========  =======================================
+    value                   nd.array    frequency data columns
+                                        components 
+    max                     float       Hight frequency 
+    min                     float       lower frequency  
+    loc                     dict        main attribute : location 
+                                        of station loc ['S01'] show the frequency 
+                                        of station at that point. 
+    normalize_freq_betw     list        must be a list of integer  be sure that
+                                        the numberprovided will be power 
+                                        to 10. eg .(start, end,  nfreq)   
+                                        start - first number will be power by 10 
+                                        0=1:10exp(0) end- last value to be 
+                                        interpolated : 4 --> 10(exp)4
+                                        nfreq- number of frequency  : eg : 17 
+                                        *Default* is None 
+    ======================  ==========  =======================================
 
     More attributes can be added by inputing a key word dictionary
 
-    .. e.g::
-                >>> path=os.path.join(os.environ["pyCSAMT"], 
-                      "data", "avg", "K1.AVG")
-                >>> freq_obj=Avg(path)
-                >>> freq_obj =avg_obj.Data_section.Frequency.loc['S07']
-                ... print(freq_obj)
+    :Example:
+        
+        >>> from csamtpy.ff.core.avg import Avg
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+              "data", "avg", "K1.AVG")
+        >>> freq_obj=Avg(path)
+        >>> freq_obj =avg_obj.Data_section.Frequency.loc['S07']
+        ... print(freq_obj)
     """
     
     def __init__(self, freq_array =None, 
@@ -2153,10 +2196,11 @@ class Frequency (object):
 
         Parameters
         ----------
-        freq_array : np.ndarray(ndarray, 1)
-            frequency data provided . The default is None.
-        normalize_freq_betw : list 
-            list of frequency range to normalize, optional. The default is None.
+        * freq_array : np.ndarray(ndarray, 1)
+                    frequency data provided . The default is None.
+        * normalize_freq_betw : list 
+                    list of frequency range to normalize, optional. 
+                    The *default* is None.
         """
         
         
@@ -2205,7 +2249,9 @@ class Frequency (object):
     def normalize_frequency (self , normalize_freq_betw=None ):
         """
         method to interpolate frequencies.
-        *** waist_method ** replaced on cs module.
+        
+        .. deprecated:: waist_method will replaced on cs module.
+ 
         Raises
         ------
         CSex
@@ -2244,33 +2290,38 @@ class Comp (object):
     """
     Components measured
     
-     Holds the following information:
+    Holds the following information:
          
-    Arguments :
+    Arguments 
     ----------
-     comp_name : str
-        path to avg filename 
-     new_component :str  
-        component type which data will acquired . make sure 
-        once change it , the method to calculate impedande Z and 
-        rotating angle will also change  
-        ExHy : Zxy (Ex/Hy), EyHz : Zyx (Ey/Hx)
-        EyHy : Zyy (Ey/Hy), ExHx : Zxx (Ex/Hx)
+     **comp_name** : str
+                    path to avg filename 
+     **new_component** :str  
+                    component type which data will acquired . make sure 
+                    once change it , the method to calculate impedande Z and 
+                    rotating angle will also change to
+                    
+                    - ExHy Zxy (Ex/Hy)
+                    - EyHz Zyx (Ey/Hx)
+                    - EyHy Zyy (Ey/Hy)
+                    - ExHx Zxx (Ex/Hx)
 
-    ================= =========== =============================================
+    =================  ==========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
-    name              str           name of components will filled automatically
+    =================  ==========  ============================================
+    name               str          name of components will filled automatically
     length             float        lenght of the survey lines 
-    ================= =========== =============================================
+    =================  ==========  ============================================
 
-    More attributes can be added by 
-    inputing a key word dictionary
-    .. e.g::
-                >>> path=os.path.join(os.environ["pyCSAMT"], 
-                                  "csamtpy", "data", "K1.AVG")
-                >>> component=Comp(path, component_name='EyHx')
-                >>> print(component.name)
+    More attributes can be added by inputing a key word dictionary
+    
+    :Example:
+        
+        >>> from csamtpy.ff.core.avg import Comp
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+                          "csamtpy", "data", "K1.AVG")
+        >>> component=Comp(path, component_name='EyHx')
+        >>> print(component.name)
     """
     component_type =['ExHy', "EyHx", 'EyHy', 'ExHx']
     
@@ -2300,18 +2351,17 @@ class Amps (object):
     
     Arguments :
     ----------
-        amps_array : np.ndarray (ndarray, 1)
-            evolution of current data on the site 
-        number_of_stations : int  
-                number of survey_stations . 
-        number_of_frequencies: int 
-                 number of frequencies during
-                 the survey for each station location
+        **amps_array** : np.ndarray (ndarray, 1)
+                        evolution of current data on the site 
+        **number_of_stations** : int  
+                            number of survey_stations . 
+        **number_of_frequencies**: int 
+                             number of frequencies during
+                             the survey for each station location
             
-    Holds the following information:
-    ================= =========== =============================================
+    ================  ===========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================  ===========  ============================================
     value             nd.array      data of Amp  column  on avgfile   
     max               float         maximum current enforce  a that point
     min               float         minimun current unit :amp (A)  
@@ -2319,15 +2369,18 @@ class Amps (object):
                                     the current enforce a that point .eg loc 
                                     ['S07'] show the current Amps-data
                                     at that point
-    ================= =========== =============================================
+    ================  ===========  ============================================
 
     More attributes can be added by inputing a key word dictionary
-     eg :: 
-                >>> path=os.path.join(os.environ["pyCSAMT"], 
-                      "csamtpy", "data", "K1.AVG")
-                >>> avg_obj=Avg(path)
-                >>> amps_obj =avg_obj.Data_section.Amps.loc['S00']
-                ... print(amp_obj)
+    
+    :Example:
+         
+        >>> from csamtpy.ff.core.avg import Avg
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+        ...      "csamtpy", "data", "K1.AVG")
+        >>> avg_obj=Avg(path)
+        >>> amps_obj =avg_obj.Data_section.Amps.loc['S00']
+        >>> print(amp_obj)
     """
 
     def __init__(self, amps_array= None, number_of_frequencies=None , number_of_stations=None , **kwargs):
@@ -2356,12 +2409,15 @@ class Amps (object):
         
         Parameters
         ----------
-        amps_array : ndarray, optional
-            amps _current observed sites. The default is None.
-        number_of_frequencies : int , optional
-            number of frequencies for survey. The default is None.
-        number_of_stations : int , optional
-            number_of stations. The default is None.
+        * amps_array : ndarray, optional
+                        amps _current observed sites. 
+                        The *default* is None.
+        * number_of_frequencies : int , optional
+                        number of frequencies for survey.
+                        The *default* is None.
+        * number_of_stations : int , optional
+                        number_of stations. 
+                        The *default* is None.
         """
         if amps_array is not None : 
             self._amps_array =amps_array 
@@ -2400,28 +2456,30 @@ class Emag (object):
     
     Arguments 
     ----------
-    e_mag_array: ndarray
-        E_field magnitude Class  
+    **e_mag_array**: ndarray
+                    E_field magnitude Class  
                   
-    Holds the following information:
-    ================= =========== =============================================
+    ================  ===========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================  ===========  ============================================
     value             nd.array      data of Emag  column on avgfile   
     max               float         maximum E-Field magnitude unit :mV/km*Amp 
     loc               dict          location of E-Field  magnitude value at 
                                     the station lambda.e:g : loc['S00'] show 
                                     the current  E-mag data of station 
                                     at that point.
-    ================= =========== =============================================
+    ================  ===========  ============================================
 
     More attributes can be added by inputing a key word dictionary
-     .. eg :: 
-                >>> path=os.path.join(os.environ["pyCSAMT"], 
-                      "csamtpy", "data", "K1.AVG")
-                >>> avg_obj=Avg(path)
-                >>> emag_obj =avg_obj.Data_section.Emag.loc['S02']
-                ... print(emag_obj)
+    
+    :Example: 
+        
+        >>> from csamtpy.ff.core.avg import Avg
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+        ...      "csamtpy", "data", "K1.AVG")
+        >>> avg_obj=Avg(path)
+        >>> emag_obj =avg_obj.Data_section.Emag.loc['S02']
+        ... print(emag_obj)
     """
     def __init__(self, e_mag_array=None, number_of_frequencies=None , number_of_stations=None , **kwargs):
         
@@ -2449,14 +2507,14 @@ class Emag (object):
             
         Parameters
         ----------
-        e_mag_array : ndarray, optional
-            B-Field magnitude observed at each station.
-            The default is None.
-        number_of_frequencies : int , optional
-            number of frequencies for survey. 
-            The default is None.
-        number_of_stations : int , optional
-            number_of stations. The default is None.
+        * e_mag_array : ndarray, optional
+                        B-Field magnitude observed at each station.
+                        The *default* is None.
+        * number_of_frequencies : int , optional
+                            number of frequencies for survey. 
+                            The default is None.
+        * number_of_stations : int , optional
+                            number_of stations. The default is None.
         """
         if e_mag_array is not None : 
             self.e_mag_array =e_mag_array 
@@ -2495,29 +2553,31 @@ class Ephz (object):
     
     Arguments 
     ----------
-    e_phz_array : ndarray
-       E_phase data field
-    to_deg  : bool 
-       put the Ephz value on degree . 
+    **e_phz_array** : ndarray
+               E_phase data field
+    **to_deg**  : bool 
+               put the Ephz value on degree . 
                   
-    Holds the following information:
-    ================= =========== =============================================
+    ================  ===========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================  ===========  ============================================
     value             nd.array      data of Emag  column  unit - mrad 
     max               float         maximum E-Field magnitude  unit -mV/km*Amp 
     loc               dict          location of E-phase   value at the
                                     station lambda . e.g - loc['S46] show the 
                                     current  E-phase data  at the station S46
-    ================= =========== =============================================
+    ================  ===========  ============================================
 
     More attributes can be added by inputing a key word dictionary
-    .. eg :: 
-                >>> path=os.path.join(os.environ["pyCSAMT"], 
-                      "csamtpy", "data", "K1.AVG")
-                >>> avg_obj=Avg(path)
-                >>> ephz_obj =avg_obj.Data_section.Ephz.loc['46']
-                ... print(ephz_obj)
+    
+    :Example:
+        
+        >>> from csamtpy.ff.core.avg import Avg 
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+        ...      "csamtpy", "data", "K1.AVG")
+        >>> avg_obj=Avg(path)
+        >>> ephz_obj =avg_obj.Data_section.Ephz.loc['46']
+        >>> print(ephz_obj)
     """
     def __init__(self, e_phz_array=None, number_of_frequencies=None , 
                  number_of_stations=None , **kwargs):
@@ -2547,17 +2607,17 @@ class Ephz (object):
             
         Parameters
         ----------
-        e_phz_array : ndarray, en rad 
-                E-Field phase observed .
-                The default is None.
-        number_of_frequencies : int , optional
-                number of frequencies for survey.
-                The default is None.
-        number_of_stations : int , optional
-                number_of stations. 
-                The default is None.
-        to_degree : bool,
-                compute angle todegree . 
+        * e_phz_array : ndarray, en rad 
+                        E-Field phase observed .
+                        The *default* is None.
+        * number_of_frequencies : int , optional
+                            number of frequencies for survey.
+                            The *default* is None.
+        * number_of_stations : int , optional
+                            number_of stations. 
+                            The *default* is None.
+        * to_degree : bool,
+                    compute angle to degree . 
         """
         to_degree =kwargs.pop("to_degree", False)
         if to_degree :
@@ -2604,29 +2664,30 @@ class Hmag (object):
     
     Arguments 
     ----------
-             h_mag_array : ndarray
-                H/B_field magnitude Class . 
+    **h_mag_array** : ndarray
+                   H/B_field magnitude Class . 
                   
-    Holds the following information:
-    ================= =========== =============================================
+    ================  ===========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================  ===========  ============================================
     value             nd.array      data of Hmag  column  on avgfile  maximum
     max               float         H-mag magnitude unit -  mV/km*Amp 
     loc               dict          location of H-mag magnitude value at  the 
                                     station lambda . e:g : loc['S05']
                                     show the current  H-mag data
                                     of station at S05.
-    ================= =========== =============================================
+    ================  ===========  ============================================
 
     More attributes can be added by inputing a key word dictionary
     
-     .. eg :: 
-                >>> path=os.path.join(os.environ["pyCSAMT"], 
-                      "csamtpy", "data", "K1.AVG")
-                >>> avg_obj=Avg(path)
-                >>> hmag_obj =avg_obj.Data_section.Hmag.loc['S05']
-                ... print(hmag_obj)
+    :Example: 
+         
+        >>> from csamtpy.ff.core import Avg 
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+        ...      "csamtpy", "data", "K1.AVG")
+        >>> avg_obj=Avg(path)
+        >>> hmag_obj =avg_obj.Data_section.Hmag.loc['S05']
+        ... print(hmag_obj)
     """
     
     def __init__(self, h_mag_array=None, number_of_frequencies=None , number_of_stations=None , **kwargs):
@@ -2655,14 +2716,14 @@ class Hmag (object):
            
         Parameters
         ----------
-        h_mag_array : ndarray, optional
-            B Field measured data on the sites.
-            The default is None.
-        number_of_frequencies : int , optional
-            number of frequencies for survey. 
-            The default is None.
-        number_of_stations : int , optional
-            number_of stations. The default is None.
+        * h_mag_array : ndarray, optional
+                        B Field measured data on the sites.
+                        The default is None.
+        * number_of_frequencies : int , optional
+                                number of frequencies for survey. 
+                                The default is None.
+        * number_of_stations : int , optional
+                            number_of stations. The default is None.
         """
         
         if h_mag_array is not None : 
@@ -2702,30 +2763,31 @@ class Hphz (object):
     
     Arguments 
     ---------
-    h_phz_array : ndarray
-        E_phase data field
-     to_degree  : bool 
-        put the Hphz value on degree . 
+    **h_phz_array** : ndarray
+                    E_phase data field
+     **to_degree**  : bool 
+                put the Hphz value on degree . 
                   
-    Holds the following information:
-    ================= =========== =============================================
+    ================  ===========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================  ===========  ============================================
     value             nd.array      data of Emag  column  unit : mrad   
     max               float         maximum E-Field magnitude unit :mV/km*Amp 
     loc               dict          location of E-phase  value at the station
                                     lambda , e.g loc['S43] show the
                                     current  E-phase data at the stationS43
-    ================= =========== =============================================
+    ================  ===========  ============================================
 
     More attributes can be added by inputing a key word dictionary
     
-     eg :: 
-                >>> path=os.path.join(os.environ["pyCSAMT"], 
-                      "csamtpy", "data", "K1.AVG")
-                >>> avg_obj=Avg(path)
-                >>> hphz_obj =avg_obj.Data_section.Ephz.loc['43']
-                ... print(hphz_obj)
+    :Example: 
+        
+        >>> from csamtpy.ff.core.avg import Data_section 
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+              "csamtpy", "data", "K1.AVG")
+        >>> avg_obj=Avg(path)
+        >>> hphz_obj =avg_obj.Data_section.Ephz.loc['43']
+        ... print(hphz_obj)
     """
     def __init__(self, h_phz_array=None, number_of_frequencies=None , 
                  number_of_stations=None , **kwargs):
@@ -2756,14 +2818,15 @@ class Hphz (object):
         
         Parameters
         ----------
-        e_phz_array : ndarray, en rad 
-                E-Field phase observed . The default is None.
-        number_of_frequencies : int , optional
-                number of frequencies for survey. The default is None.
-        number_of_stations : int , optional
-                number_of stations. The default is None.
-        to_degree : bool,
-                compute angle todegree . 
+        * e_phz_array : ndarray, en rad 
+                        E-Field phase observed . The default is None.
+        * number_of_frequencies : int , optional
+                        number of frequencies for survey. The default is None.
+        * number_of_stations : int , optional
+                        number_of stations.
+                        The default is None.
+        * to_degree : bool,
+                        compute angle todegree . 
         """
         to_degree =kwargs.pop("to_degree", False)
         if to_degree :
@@ -2809,40 +2872,40 @@ class Hphz (object):
         
 class Resistivity (object):
     """
-    based on Cagniard Resistivity (Ohm-Meters) 
-    calculation 
-     :see biblio :
-         Cagniard, L., 1953, Basic theory of the magnetotelluric method of 
-         geophysical prospecting: Geophysics, 18, 605–635,
-         ** doi: 10.1190/1.1437915. 
+    based on Cagniard Resistivity (Ohm-Meters) calculation 
+    
+     .. see also::Cagniard, L., 1953, Basic theory of the magnetotelluric
+          method of  geophysical prospecting: Geophysics, 18, 605–635,
+          *doi*: 10.1190/1.1437915. 
     
     Arguments 
     ----------
-    res_array  : str
-      data array of apparents resistivy calculation.
+    **res_array**  : str
+                  data array of apparents resistivy calculation.
                   
-    Holds the following information:
-    ================= =========== =============================================
+    ================  ===========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================  ===========  ============================================
     value             nd.array      data of resistivity column - ohm.m 
     max               float         higher value of Resistivity 
     min               float         minimum value of resitivity on the area
     mean              float         everage value of the rho 
     loc               dict          location of rho  value at the station lambda 
-                                    e:g - loc['S13] show the current  rho data 
+                                    e.g - loc['S13] show the current  rho data 
                                     at the station S13
-    Sres            ndarray         Astatic value corrected .
-    ================= =========== =============================================
+    Sres              ndarray       Astatic value corrected
+    ================  ===========  ============================================
 
     More attributes can be added by inputing a key word dictionary
     
-     .. Example : :: 
-                >>> path=os.path.join(os.environ["pyCSAMT"], 
-                                  "csamtpy", "data", "K1.AVG")
-                >>> avg_obj=Avg(path)
-                >>> rho_obj =avg_obj.Data_section.Resistivity.loc['S00']
-                ... print(rho.loc['S00'])
+    :Example:  
+         
+        >>> from csammtpy.ff.core.avg import Avg 
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+        ...                  "csamtpy", "data", "K1.AVG")
+        >>> avg_obj=Avg(path)
+        >>> rho_obj =avg_obj.Data_section.Resistivity.loc['S00']
+        >>> print(rho.loc['S00'])
     """
     
     def __init__(self, res_array =None , number_of_frequencies=None , 
@@ -2876,14 +2939,17 @@ class Resistivity (object):
         
         Parameters
         ----------
-        res_array : array_like 
-                Resistivity calculated  on the field. The default is None.
-        number_of_frequencies : int , optional
-                number of frequencies for survey. The default is None.
-        number_of_stations : int , optional
-                number_of stations. The default is None.
-        Sres : ndarray, 
-                Zonge Astatic rho calculated.
+        * res_array : array_like 
+                     Resistivity calculated  on the field. 
+                     The *default* is None.
+        * number_of_frequencies : int , optional
+                        number of frequencies for survey. 
+                        The *default* is None.
+        * number_of_stations : int , optional
+                        number_of stations. 
+                        The *default* is None.
+        * Sres : ndarray, 
+                    Zonge Astatic rho calculated.
         """
         
         if res_array  is not None : 
@@ -2933,36 +2999,39 @@ class Resistivity (object):
        
 class Phase (object): 
     """
-    Impedance phase  on milliRadians
-    can be calculate using Ephz object and Hphz object :
-        ** Phase = E-phase - H-phase
+    Impedance phase  on milliRadians can be calculate using Ephz
+     object and Hphz object 
+     
+         * **Phase** = E-phase - H-phase
         
-    Arguments :
+    Arguments 
     ----------
-        phase_array  : ndarray
-         to_degree : bool 
-                put the Phase value on degree . 
+        **phase_array**  : ndarray
+                        array of phase values got on the field
+         **to_degree** : bool 
+                        put the Phase value on degree . 
                   
-    Holds the following information:
-    ================= =========== =============================================
+    ================  ===========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================  ===========  ============================================
     value             nd.array      data of phase  column  
     max               float         maximum phase value (mrad)
     min               float         minimum  Phase  (mrad)
     loc               dict          location of H-phase  value  at the 
                                     station lambda . e:g : loc['S00'] show the 
                                     current phase data at the station S00
-    ================= =========== =============================================
+    ================  ===========  ============================================
 
     More attributes can be added by inputing a key word dictionary
 
-     .. eg :: 
-                >>> path=os.path.join(os.environ["pyCSAMT"], 
-                                  "csamtpy", "data", "K1.AVG")
-                >>> avg_obj=Avg(path)
-                >>>phs_obj =avg_obj.Data_section.Phase.loc['S00']
-                ... print(phs.loc['S00'])
+    :Example:
+         
+        >>> from csamtpy.ff.core.avg import Avg 
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+        ...                  "csamtpy", "data", "K1.AVG")
+        >>> avg_obj=Avg(path)
+        >>> phs_obj =avg_obj.Data_section.Phase.loc['S00']
+        ... print(phs.loc['S00'])
     """
     
     
@@ -2994,14 +3063,16 @@ class Phase (object):
         Zonge keep the phase values on mrad.
         
         Parameters
-        ----------
-        phase_array : ndarray, optional
-            phase data aray on the field. The default is None.
-        number_of_frequencies : TYPE, optional
-            number of fequency used .
-            The default is None.
-        number_of_stations : int, optional
-            number of the stations on the site. The default is None.
+        ------------
+        * phase_array : ndarray, optional
+                        phase data aray on the field.
+                        The *default* is None.
+        * number_of_frequencies : TYPE, optional
+                        number of fequency used .
+                        The *default* is None.
+        * number_of_stations : int, optional
+                        number of the stations on the site.
+                        The *default* is None.
         """
     
  
@@ -3048,21 +3119,20 @@ class Phase (object):
 class Z_Tensor(object):
     """
     Impedance Tensor Z Calculation :  
-       class can recompute the apparent resistity rho base on impedance Tensor Z. 
-       see biblio : 
-        Zonge, K.L. and Hughes, L.J., 1991, Controlled source audio-frequency 
-        magnetotellurics,in Electromagnetic Methods in Applied Geophysics, ed.
-        Nabighian, M.N., Vol. 2,Society of Exploration Geophysicists, pp. 713-809.
+       class can recompute the apparent resistity rho base on impedance Tensor Z.
+       
+    .. seealso:: Zonge, K.L. and Hughes, L.J., 1991, Controlled source audio-frequency 
+                magnetotellurics,in Electromagnetic Methods in Applied Geophysics, ed.
+                Nabighian, M.N., Vol. 2,Society of Exploration Geophysicists, pp. 713-809.
             
     Arguments 
     ----------
-        data_fn : str
-            path to avg filename. 
+        **data_fn** : str
+                path to avg filename. 
                   
-    Holds the following information:
-    ================= =========== ============= ===============================
-    Attributes         Type          units          Explanation
-    ================= =========== ============= ===============================
+    ================  ===========  ===========  ===============================
+    Attributes         Type          units      Explanation
+    ================  ===========  ===========  ===============================
     Z                 np.ndarray    V/m         Impedance tensor 
     real              dict          V/m         real part of Z 
     imag              dict                      imaginary part of Z  
@@ -3072,21 +3142,24 @@ class Z_Tensor(object):
                                                 the station lambda .
                                                 e:g loc['S00] show the
                                                 current Z data at station S00
-    ================= =========== =============================================
+    ================  ===========  ===========  ===============================
+    
     .. note:: all dict-attributes  can be loc with the station name .
         
     More attributes can be added by inputing a key word dictionary
     
-     .. eg :: 
-                >>> path=os.path.join(os.environ["pyCSAMT"], 
-                                  "csamtpy", "data", "K1.AVG")
-                >>> z_obj=Z_Tensor(path)
-                >>> z_z=Zxy.Z
-                ... print(z_obj.real["S00"])
-                ... print(z_obj.imag["S00"])
-                ... print(z_obj.complex["S00"])
-                ... print(z_obj.loc["S00"])
-                ... print(z_obj.rho["S00"])
+    :Example:
+         
+        >>> from csamtpy.ff.core.avg impor Z_tensor
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+        ...                  "csamtpy", "data", "K1.AVG")
+        >>> z_obj=Z_Tensor(path)
+        >>> z_z=Zxy.Z
+        >>> print(z_obj.real["S00"])
+        >>> print(z_obj.imag["S00"])
+        >>> print(z_obj.complex["S00"])
+        >>> print(z_obj.loc["S00"])
+        >>> print(z_obj.rho["S00"])
     """
     def __init__(self, z_array =None , phase_array =None, freq=None, z_error=None, 
                  **kwargs): 
@@ -3169,16 +3242,17 @@ class Z_Tensor(object):
         
         Parameters
         ----------
-        z_array : ndarray , dtype =='complex'
-            Impedance tensor complex_number 
-            The default is None.
-        freq : ndarray, 
-            frequency value. The default is None.
+        * z_array : complex
+                Impedance tensor complex_number 
+                The *default* is None.
+        * freq : ndarray, 
+                frequency value.
+                The *default* is None.
 
         Returns
         -------
             ndarray(ndarray,1)  
-                resistivity value computed :ohm.m
+                resistivity value computed in ohm.m
             ndarray (ndarray, 1), 
                 phase angle value  in degree.
         """
@@ -3220,17 +3294,18 @@ class Z_Tensor(object):
         
         Parameters
         ----------
-            res_array : ndarray , 
-                    resistivity value in ohm.m 
-            phase_array : ndarray , 
+            * res_array : ndarray , 
+                        resistivity value in ohm.m 
+            * phase_array : ndarray , 
                         phase angle value in mradians 
-            z_error : ndarray , 
-                    impedance Tensor error 
-            freq : ndarray , 
+            * z_error : ndarray , 
+                        impedance Tensor error 
+            * freq : ndarray , 
                         frequency numbers in Hz 
-          return  : 
-             ndarrays 
-                resistivities error and phase errors values  .
+        Returns 
+        --------
+           ndarrays 
+              resistivities error and phase errors values  .
         """
         
         
@@ -3272,17 +3347,20 @@ class Z_Tensor(object):
        
         Parameters
         -----------
-        z_array : pd.DataFrame ,
-                added values from astatic files. 
-        number_of_frequency :  int  , 
-                number of frequency used during surveys.
-        number_of_stations :int , 
+        * z_array : pd.DataFrame ,
+                    added values from astatic files. 
+        * number_of_frequency :  int  , 
+                    number of frequency used during surveys.
+        * number_of_stations :int , 
                     differents survey frequencies.
-        Frequency : units , Hz  
+        * Frequency : array_like
+                    frequency array units in Hz  
             
-        ... Notes :: 
-            :appropriate converter : 1Hz -- 6.28140704, deg- rad : theta(deg) *np.pi/180 
-             mu: vaccum permitivity : scipy.constants.epsilon_0
+        .. Notes :: 
+             appropriate converter  should be 
+             - 1Hz -->  6.28140704, 
+             - deg-rad --> theta(deg) *np.pi/180 
+             - mu  vaccum permitivity with  scipy.constants.epsilon_0
         """
         
         self._logging.info('Transfering Astatic Z data .')
@@ -3331,18 +3409,18 @@ class pcEmag (object):
     """
     Statistical variation of magnitude values from 
     averaged data blocks.
+    
     Standard Deviation/Average Emag (percent)
         
     Arguments 
     ----------
-    pcEmag : ndarray
-        data array of statistical variataion
-        of Emag value on the field.
-                  
-    Holds the following information:
-    ================= =========== =============================================
+    **pcEmag** : ndarray
+                data array of statistical variataion
+                of Emag value on the field.
+            
+    ================  ===========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================  ===========  ============================================
     value             nd.array      data of pcEmag  column   on avgfile
     max               float         maximum % value of pc Emag
     min               float         minimum % value of pcEmag 
@@ -3350,15 +3428,18 @@ class pcEmag (object):
                                     value at the station lambda e:g .loc['S05']
                                     show the current  H-mag data 
                                     of station at S05.
-    ================= =========== =============================================
+    ================  ===========  ============================================
 
     More attributes can be added by inputing a key word dictionary
-    :eg : :: 
-                >>> path=os.path.join(os.environ["pyCSAMT"], 
-                      "csamtpy", "data", "K1.AVG")
-                >>> avg_obj=Avg(path)
-                >>> pcemag_obj =avg_obj.Data_section.pcEmag.loc['S05']
-                ... print(pcemag_obj)
+    
+    :Example:
+        
+        >>> from csamtpy.ff.core.avg import Avg 
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+        ...      "csamtpy", "data", "K1.AVG")
+        >>> avg_obj=Avg(path)
+        >>> pcemag_obj =avg_obj.Data_section.pcEmag.loc['S05']
+        >>> print(pcemag_obj)
     """
     def __init__(self, pc_e_mag_array=None, 
                  number_of_frequencies=None , number_of_stations=None , **kwargs):
@@ -3387,14 +3468,14 @@ class pcEmag (object):
         
         Parameters
         ----------
-        pc_e_mag_array : ndarray, optional
-            E-Field std variation  observed at each station.
-            The default is None.
-        number_of_frequencies : int , optional
-            number of frequencies for survey. 
-            The default is None.
-        number_of_stations : int , optional
-            number_of stations. The default is None.
+        * pc_e_mag_array : ndarray, optional
+                            E-Field std variation  observed at each station.
+                            The default is None.
+        * number_of_frequencies : int , optional
+                                number of frequencies for survey. 
+                                The default is None.
+        * number_of_stations : int , optional
+                            number_of stations. The default is None.
         """
         if pc_e_mag_array is not None : 
             self._pcEmag =pc_e_mag_array 
@@ -3435,13 +3516,13 @@ class sEphz(object) :
         
     Arguments 
     ----------
-        sEphz  : ndarray,
-           data array of statistical variation of Ephase value on the field.
+        **sEphz**  : ndarray,
+                   data array of statistical variation of 
+                   Ephase value on the field.
                   
-    Holds the following information:
-    ================= =========== =============================================
+    ================  ===========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================  ===========  ============================================
     value             nd.array      data of sHphz  column  on avgfile   
     max               float         maximum % value of sHphz
     min               float         minimum  value of sHphz
@@ -3449,10 +3530,13 @@ class sEphz(object) :
                                     value at the station lambda
                                     e.g : loc['S44'] show the 
                                     current  sHphz data of station at S44
-    ================= =========== =============================================
+    ================  ===========  ============================================
+    
     More attributes can be added by inputing a key word dictionary
     
-     eg :: 
+    :Example:
+         
+        >>> from csamtpy.ff.core.avg import Avg 
         >>> path=os.path.join(os.environ["pyCSAMT"], 
               "csamtpy", "data", "K1.AVG")
         >>> avg_obj=Avg(path)
@@ -3487,16 +3571,16 @@ class sEphz(object) :
  
         Parameters
         ----------
-        shphz_array : ndarray, 
-                en rad E-Field phase observed 
-                The default is None.
-        number_of_frequencies : int , optional
-                number of frequencies for survey.
-                The default is None.
-        number_of_stations : int , optional
-                number_of stations. The default is None.
-        to_degree : bool,
-                compute angle todegree . 
+        * shphz_array : ndarray, 
+                        en rad E-Field phase observed 
+                        The default is None.
+        * number_of_frequencies : int , optional
+                                number of frequencies for survey.
+                                The default is None.
+        * number_of_stations : int , optional
+                            number_of stations. The default is None.
+        * to_degree : bool,
+                    compute angle todegree . 
         """
         to_degree =kwargs.pop("to_degree", False)
         if to_degree :
@@ -3551,11 +3635,11 @@ class pcHmag (object):
         
      Arguments :
      ----------
-        pcHmag  : ndarray
-           data array of statistical variataion of Hmag value on the field.
+        **pcHmag**  : ndarray
+                   data array of statistical variataion 
+                   of Hmag value on the field.
                   
-    Holds the following information:
-    ================= =========== =============================================
+    ================  ===========  ============================================
     Attributes         Type        Explanation
     ================= =========== =============================================
     value             nd.array      data of pcHmag  column  on avgfile
@@ -3565,16 +3649,21 @@ class pcHmag (object):
                                     value at the station lambda
                                     e:g . loc['S05'] show the current  H-mag 
                                     data  of station at S05.
-    ================= =========== =============================================
+    ================  ===========  ============================================
 
     More attributes can be added by inputing a key word dictionary
-     .. eg :: 
+    
+    :Example:
+         
+        >>> from csamtpy.ff.core.avg import Avg 
         >>> path=os.path.join(os.environ["pyCSAMT"], 
-              "csamtpy", "data", "K1.AVG")
+        ...      "csamtpy", "data", "K1.AVG")
         >>> avg_obj=Avg(path)
         >>> pchmag_obj =avg_obj.Data_section.pcHmag.loc['S05']
-        ... print(pchmag_obj)
+        >>> print(pchmag_obj)
+        
     """
+    
     def __init__(self, pc_h_mag_array=None, 
                  number_of_frequencies=None , number_of_stations=None , **kwargs):
         
@@ -3602,12 +3691,14 @@ class pcHmag (object):
         
         Parameters
         ----------
-            pc_h_mag_array : ndarray, optional
-                E-Field std variation  observed at each station. The default is None.
-            number_of_frequencies : int , optional
-                number of frequencies for survey. The default is None.
-            number_of_stations : int , optional
-                number_of stations. The default is None.
+            * pc_h_mag_array : ndarray, optional
+                            E-Field std variation  observed at each station. 
+                            The default is None.
+            * number_of_frequencies : int , optional
+                                    number of frequencies for survey. 
+                                    The default is None.
+            * number_of_stations : int , optional
+                                number_of stations. The default is None.
         """
         if pc_h_mag_array is not None : 
             self._pcHmag =pc_h_mag_array 
@@ -3647,14 +3738,13 @@ class sHphz(object) :
         
     Arguments
     ----------
-        shphz  : ndarray
-            data array of statistical variation of Emag 
-            value on the field.
+        **shphz**  : ndarray
+                data array of statistical variation of Emag 
+                value on the field.
                   
-    Holds the following information:
-    ================= =========== =============================================
+    ================  ===========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================  ===========  ============================================
     value             nd.array      data of sHphz  column on avgfile   
     max               float         maximum % value of sHphz
     min               float         minimum  value of sHphz
@@ -3662,16 +3752,19 @@ class sHphz(object) :
                                     value at the station lambda. 
                                     e:g : loc['S43'] show the
                                     current  sHphz data of station at S43.
-    ================= =========== =============================================
+    ================  ===========  ============================================
 
-        More attributes can be added by inputing a key word dictionary
+    More attributes can be added by inputing a key word dictionary
     
-     eg :: 
-                >>> path=os.path.join(os.environ["pyCSAMT"], 
-                      "csamtpy", "data", "K1.AVG")
-                >>> avg_obj=Avg(path)
-                >>> shphz_obj =avg_obj.Data_section.sHphz.loc['S43']
-                ... print(shphz_obj)
+    :Example: 
+         
+        >>> from csamtpy.ff.core.avg impor Avg 
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+        ...      "csamtpy", "data", "K1.AVG")
+        >>> avg_obj=Avg(path)
+        >>> shphz_obj =avg_obj.Data_section.sHphz.loc['S43']
+        >>> print(shphz_obj)
+        
     """
     def __init__(self, shphz_array=None, number_of_frequencies=None , 
                  number_of_stations=None , **kwargs):
@@ -3702,16 +3795,17 @@ class sHphz(object) :
         
         Parameters
         ----------
-            shphz_array : ndarray, en rad 
-                    E-Field phase observed . 
-                    The default is None.
-            number_of_frequencies : int , optional
-                    number of frequencies for survey.
-                    The default is None.
-            number_of_stations : int , optional
-                    number_of stations. The default is None.
-            to_degree : bool,
-                    compute angle todegree . 
+        * shphz_array : ndarray, en rad 
+                        E-Field phase observed . 
+                        The default is None.
+        * number_of_frequencies : int , optional
+                        number of frequencies for survey.
+                        The default is None.
+        * number_of_stations : int , optional
+                     number_of stations. The default is None.
+        * to_degree : bool,
+                     compute angle todegree .
+                     
         """
         to_degree =kwargs.pop("to_degree", False)
         if to_degree :
@@ -3770,12 +3864,13 @@ class pcRho (object):
         
     Arguments 
     ----------
-            pcRes : ndarray
+        **pcRes** : ndarray
                statistical variation averaged rho.
-    Holds the following information:
-    ================= =========== =============================================
+
+
+    ================  ===========  ============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================  ===========  ============================================
     value             ndarray       data of pcRho column  on avgfile 
     max               float         maximum % value of pcRho
     min               float         minimu % value of pcRho 
@@ -3783,15 +3878,19 @@ class pcRho (object):
                                     value at  the station lambda .
                                     e:g : loc['S07'] show  the current  H-mag 
                                     data of station at S07.
-    ================= =========== =============================================
+    ================  ===========  ============================================
+    
      More attributes can be added by inputing a key word dictionary
     
-     eg :: 
-                >>> path=os.path.join(os.environ["pyCSAMT"], 
-                                  "csamtpy", "data", "K1.AVG")
-                >>> avg_obj=Avg(path)
-                >>> pcrho_obj =avg_obj.Data_section.pcRho.loc['S00']
-                ... print(pcrho.loc['S00'])
+    :Example: 
+         
+        >>> from csamtpy.ff.core.avg import Avg
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+                          "csamtpy", "data", "K1.AVG")
+        >>> avg_obj=Avg(path)
+        >>> pcrho_obj =avg_obj.Data_section.pcRho.loc['S00']
+        ... print(pcrho.loc['S00'])
+        
     """
     
     def __init__(self, pcRes_array =None ,
@@ -3824,15 +3923,15 @@ class pcRho (object):
         
         Parameters
         ----------
-            pcRes_array: ndarray, en ohm.m
-                    Resistivity calculated  on the field.
-                    The default is None.
-            number_of_frequencies : int , optional
-                    number of frequencies for survey. 
-                    The default is None.
-            number_of_stations : int , optional
-                    number_of stations. 
-                    The default is None.
+            * pcRes_array: ndarray, en ohm.m
+                            Resistivity calculated  on the field.
+                            The default is None.
+            * number_of_frequencies : int , optional
+                            number of frequencies for survey. 
+                            The default is None.
+            * number_of_stations : int , optional
+                            number_of stations. 
+                            The default is None.
         """
         
         if pcRes_array  is not None : 
@@ -3873,15 +3972,16 @@ class sPhz(object) :
         
     Arguments 
     ----------
-        sphz array : array_like 
-            coefficient of  phase variation arrqy 
-        path to avg:str
-            full path to filename 
+        **sphz array** : array_like 
+                coefficient of  phase variation arrqy 
+        **path to avg**:str
+                full path to filename 
                   
-    Holds the following information:
-    ================= =========== =============================================
+    Holds the following informations:
+        
+    ================  ==========  =============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================  ==========  =============================================
     value             nd.array      data of sPhz  column on avgfile   
     max               float         maximum % value of sHphz
     min               float         minimu  value of sHphz
@@ -3889,15 +3989,18 @@ class sPhz(object) :
                                     the station lambda .
                                     e:g - loc['S07'] show the current  sPhz data 
                                     of station at S07.
-    ================= =========== =============================================
+    ================  ==========  =============================================
+    
     More attributes can be added by inputing a key word dictionary
     
-     eg :: 
-                >>> path=os.path.join(os.environ["pyCSAMT"], 
-                      "csamtpy", "data", "K1.AVG")
-                >>> avg_obj=Avg(path)
-                >>> shphz_obj =avg_obj.Data_section.sHphz.loc['43']
-                ... print(shphz_obj)
+    :Example:
+
+        >>> from csamtpy.ff.core.avg impor Avg
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+        ...     "csamtpy", "data", "K1.AVG")
+        >>> avg_obj=Avg(path)
+        >>> shphz_obj =avg_obj.Data_section.sHphz.loc['43']
+        ... print(shphz_obj)
     """
     def __init__(self, sPhase_array=None, number_of_frequencies=None , 
                  number_of_stations=None , **kwargs):
@@ -3924,21 +4027,20 @@ class sPhz(object) :
         """
         Method to read and arange data according each station /Statistical variation 
         of zPhase -Field angles. 
-            values .
-        
+
         Parameters
-        ----------
-            shphz_array : ndarray, en rad 
-                    E-Field phase observed . 
-                    The default is None.
-            number_of_frequencies : int , optional
-                    number of frequencies for survey.
-                    The default is None.
-            number_of_stations : int , optional
-                    number_of stations. 
-                    The default is None.
-            to_degree : bool,
-                    compute angle todegree . 
+        ------------
+            * shphz_array : ndarray, en rad 
+                        E-Field phase observed . 
+                        The default is None.
+            * number_of_frequencies : int , optional
+                        number of frequencies for survey.
+                        The default is None.
+            * number_of_stations : int , optional
+                        number_of stations. 
+                        The default is None.
+            * to_degree : bool,
+                        compute angle todegree . 
         """
         to_degree =kwargs.pop("to_degree", False)
         if to_degree :self.to_degree = to_degree

@@ -19,14 +19,14 @@
     along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
 
 ===============================================================================  
-.. Module : Func_utils 
-    :synopsis::.helpers functions 
+.. _module-Func-utils::  
+    :synopsis: helpers functions 
      ...
      
 Created on Sun Sep 13 09:24:00 2020
 @author:  @Daniel03
 
-    : functions: ::
+    :utils: 
         * averageData 
         * concat_array_from_list 
         * sort_array_data 
@@ -99,33 +99,35 @@ def averageData(np_array, filter_order=0,
     """
     Parameters  
     -----------
-        *np_array  : numpy array 
-            must be an array data 
-        *filter_order  : int 
-            must be the index of the column you want to sort 
+        * np_array  : numpy array 
+                must be an array data 
+        * filter_order  : int 
+                must be the index of the column you want to sort 
             
         * axis average  : int  
-            axis you want to see data averaged, also , it is the concatenate axis  
-            default is axis=0 
+                axis you want to see data averaged, also , it is the concatenate axis  
+                default is axis=0 
         
         * astype*: str , 
-            is the ndarray dtype array .
-            change to have an outup arry dtype , you want .
+                is the ndarray dtype array .
+                change to have an outup arry dtype , you want .
     
     Returns  
     --------
         numpy array 
             Data averaged array
     
-    :Example : ::
+    :Example : 
+        
+        >>> import numpy as np 
         >>> list8=[[4,2,0.1],[8,2,0.7],[10,1,0.18],[4,3,0.1],
-                       [7,2,1.2],[10,3,0.5],[10,1,0.5],[8.2,0,1.9],
-                       [10,7,0.5],[10,1,0.5],
-                       [2,0,1.4],[5,4,0.5],[10,2,0.7],[7,2,1.078],
-                       [10,2,3.5],[10,8,1.9]]
+        ...               [7,2,1.2],[10,3,0.5],[10,1,0.5],[8.2,0,1.9],
+        ...               [10,7,0.5],[10,1,0.5],
+        ...               [2,0,1.4],[5,4,0.5],[10,2,0.7],[7,2,1.078],
+        ...               [10,2,3.5],[10,8,1.9]]
         >>> np_test=np.array(list8)
         >>> ss=averageData(np_array=np_test,filter_order=1,
-                       axis_average=0, astype="int")
+        ...               axis_average=0, astype="int")
         >>> ss
     """
     idx,sep_counts=0,0
@@ -164,20 +166,22 @@ def averageData(np_array, filter_order=0,
 
 def concat_array_from_list(list_of_array, concat_axis=0):
     """
-    small function to concatenate a list with array contents 
+    Small function to concatenate a list with array contents 
     
     Parameters 
     -----------
     * list_of_array : list 
-        contains a list for array data. the concatenation is possible 
-        if an index array have the same size 
+            contains a list for array data. the concatenation is possible 
+            if an index array have the same size 
         
     Returns 
     -------
         array_like 
             numpy concatenated data 
         
-    :Example: ::
+    :Example: 
+        
+        >>> import numpy as np 
         >>>  np.random.seed(0)
         >>> ass=np.random.randn(10)
         >>> ass2=np.linspace(0,15,12)
@@ -185,7 +189,7 @@ def concat_array_from_list(list_of_array, concat_axis=0):
         >>>  ass2=ass2.reshape((ass2.shape[0],1))
         >>> or_list=[ass,ass2]
         >>> ss_check_error=concat_array_from_list(list_of_array=or_list,
-                                                  concat_axis=0)
+        ...                                          concat_axis=0)
         >>>  secont test :
         >>>  ass=np.linspace(0,15,14)
         >>> ass2=np.random.randn(14)
@@ -194,8 +198,8 @@ def concat_array_from_list(list_of_array, concat_axis=0):
         >>> or_list=[ass,ass2]
         >>>  ss=concat_array_from_list(list_of_array=or_list, concat_axis=0)
         >>> ss=concat_array_from_list(list_of_array=or_list, concat_axis=1)
-        .. ss
-        .. ss.shape 
+        >>> ss
+        >>> ss.shape 
     """
     #first attemp when the len of list is ==1 :
     
@@ -253,18 +257,20 @@ def sort_array_data(data,  sort_order =0,
             
     * sort_order : int, optional 
             index  of colum to sort data. The default is 0.
+            
     * concatenate : Boolean , optional
             concatenate all array in the object.
             Must be the same dimentional if concatenate is set to True. 
-            The default is False.
+            The *default* is False.
+            
     * concat_axis_order : int, optional
             must the axis of concatenation  . The default is axis=0.
 
     Returns
     -------
     numpy.ndarray
-       data : Either the simple sort data or 
-        array sorted and concatenated .
+       data , Either the simple sort data or 
+       array sorted and concatenated .
     """
     
     if type(data)==list :
@@ -297,45 +303,49 @@ def transfer_array_(data, index_key,start_value_depth, end_value_depth,
     Parameters
     ----------
     * data : dict
-        Dictionnary of numpy ndarray .
+            Dictionnary of numpy ndarray .
         
     * index_key : float 
-        key of the dictionnary . must be a number of the first column of offset .
+            key of the dictionnary . 
+            Must be a number of the first column of offset .
         
     * start_value_depth : float 
-        If the depth is not reach must add depth of the closest point.
-        give the start value which match to the maxi depth of the data :
-            The default is -214.
+            If the depth is not reach must add depth of the closest point.
+            give the start value which match to the maxi depth of the data :
+            The *default* is -214.
             
     * end_value_depth : float
-        Maximum depth of the survey. The default is -904.
+            Maximum depth of the survey. The default is -904.
         
     * column_order_selection : int,
-        the index of depth column. The default is 0.
+            the index of depth column. The default is 0.
+            
     * axis : int , optional
-        numpy.ndarray axis . The default is 0.
+            numpy.ndarray axis . The default is 0.
 
     Returns
     -------
     numpy.ndarray
         return the array data we want to top to .
     
-    :Example: ::
-            >>> sos=abs(np.random.randn(4,3)*4)
-            >>> sos2=abs(np.random.randn(4,3)*10.8)
-            >>>  print(sos2)
-            >>> sis1=sort_array_data(data=sos,sort_order =1,
-                                concatenate=False, concat_axis_order=0)
-            >>> sis2=sort_array_data(data=sos2,sort_order =1,
-                                concatenate=False, concat_axis_order=0)
-            >>> dico={"18.4":sis1,
-                  "21.4":sis2}
-            >>> test=transfer_array_(data=dico, index_key=11.4, 
-                                  start_value_depth=-14, end_value_depth=23,
-                                  column_order_selection=1)
-            ... print("sis1\n:",sis1)
-            ... print("sis2\n:",sis2)
-            .. print("Finaltest\n", test)
+    :Example: 
+        
+        >>> import numpy as np 
+        >>> sos=abs(np.random.randn(4,3)*4)
+        >>> sos2=abs(np.random.randn(4,3)*10.8)
+        >>>  print(sos2)
+        >>> sis1=sort_array_data(data=sos,sort_order =1,
+        ...                    concatenate=False, concat_axis_order=0)
+        >>> sis2=sort_array_data(data=sos2,sort_order =1,
+        ...                    concatenate=False, concat_axis_order=0)
+        >>> dico={"18.4":sis1,
+        ...      "21.4":sis2}
+        >>> test=transfer_array_(data=dico, index_key=11.4, 
+        ...                      start_value_depth=-14, end_value_depth=23,
+        ...                      column_order_selection=1)
+        >>> print("sis1\n:",sis1)
+        >>> print("sis2\n:",sis2)
+        >>> print("Finaltest\n", test)
     """
 
     start_value_depth=abs(start_value_depth)
@@ -411,16 +421,21 @@ def interpol_scipy (x_value, y_value,x_new,
     ------------
     * x_value : np.ndarray 
                 value on array data : original absciss 
+                
     * y_value : np.ndarray 
                 value on array data : original coordinates (slope)
+                
     * x_new  : np.ndarray 
                 new value of absciss you want to interpolate data 
+                
     * kind  : str 
             projection kind : 
                 maybe : "linear", "cubic"
+                
     * fill : str 
         kind of extraolation, if None , *spi will use constraint interpolation 
         can be "extrapolate" to fill_value.
+        
     * plot : Boolean 
         Set to True to see a wiewer graph
 
@@ -429,7 +444,9 @@ def interpol_scipy (x_value, y_value,x_new,
     np.ndarray 
         y_new ,new function interplolate values .
         
-    :Example: ::
+    :Example: 
+        
+        >>> import numpy as np 
         >>>  fill="extrapolate"
         >>>  x=np.linspace(0,15,10)
         >>>  y=np.random.randn(10)
@@ -455,22 +472,25 @@ def _set_depth_to_coeff(data, depth_column_index,coeff=1, depth_axis=0):
     ----------
     * data : np.ndarray
         must be on array channel .
+        
     * depth_column_index : int
         index of depth_column.
+        
     * depth_axis : int, optional
         Precise kind of orientation of depth data(axis =0 or axis=1) 
-        The default is 0.
+        The *default* is 0.
+        
     * coeff : float,
         the value you want to multiplie depth. 
         set depth to negative multiply by one. 
-        The default is -1.
+        The *default* is -1.
 
     Returns
     -------
     data : np.ndarray
         new data after set depth according to it value.
         
-    :Example: ::
+    :Example: 
 
         >>>  import numpy as np 
         >>>  np.random.seed(4)
@@ -500,7 +520,7 @@ def broke_array_to_(arrayData, keyIndex=0, broken_type="dict"):
     * arrayData :np.array
         data array .
         
-    * keyIndex : int, 
+    * keyIndex : int 
         index of column to create dict key 
 
     Returns
@@ -553,10 +573,10 @@ def _OlDFUNCNOUSEsearch_fill_data(dicoReal, arrayTemp ,
     Parameters
     ----------
     * data : dict
-        Dictionnary of numpy ndarray .
+            Dictionnary of numpy ndarray .
         
     * dataReal : dict
-         dictionnary . must be a dictionnary of real of offset .
+             dictionnary . must be a dictionnary of real of offset .
         
     * arrayTemp : np.ndarray 
              must be a numpy array of reserve data , the one , we want to 
@@ -566,7 +586,8 @@ def _OlDFUNCNOUSEsearch_fill_data(dicoReal, arrayTemp ,
             Maximum depth of the survey. 
         
     * index_of_depth : int,
-            the index of depth column. The default is 0.
+            the index of depth column. The *default* is 0.
+            
     * axis : int , optional
         numpy.ndarray axis . The default is 0.
     
@@ -575,27 +596,28 @@ def _OlDFUNCNOUSEsearch_fill_data(dicoReal, arrayTemp ,
     array_like 
         the array data we want to top to .
     
-    :Example : ::
-
-            >>>  np.random.seed(0)
-            >>>  sos=abs(np.random.randn(4,3)*4)
-            >>>  sos2=abs(np.random.randn(4,3)*10.8)
-            >>>  sos3=abs(np.randon.rand(8,3)*12.4)
-            >>>  # print(sos2)
-            >>>  sis1=sort_array_data(data=sos,sort_order =1,
-                                concatenate=False, concat_axis_order=0)
-            >>>  sis2=sort_array_data(data=sos2,sort_order =1,
-                                concatenate=False, concat_axis_order=0)
-            >>>  sis3=sort_array_data(data=sos3,sort_order =1,
-                                concatenate=False, concat_axis_order=0)
-           >>>  dico={"18.4":sis1,
-                  "21.4":sis2}
-            >>>  test=_search_fill_data(dicoReal=dico, index_key=11.4, 
-                                  start_value=10, max_value=23,
-                                  index_of_depth=1)
-            >>> print("sis1\n:",sis1)
-            >>>  print("sis2\n:",sis2)
-            >>>  print("Finaltest\n", test)
+    :Example: 
+        
+         >>> import numpy as np 
+         >>>  np.random.seed(0)
+         >>>  sos=abs(np.random.randn(4,3)*4)
+         >>>  sos2=abs(np.random.randn(4,3)*10.8)
+         >>>  sos3=abs(np.randon.rand(8,3)*12.4)
+         >>>  # print(sos2)
+         >>>  sis1=sort_array_data(data=sos,sort_order =1,
+         ...                    concatenate=False, concat_axis_order=0)
+         >>>  sis2=sort_array_data(data=sos2,sort_order =1,
+         ...                    concatenate=False, concat_axis_order=0)
+         >>>  sis3=sort_array_data(data=sos3,sort_order =1,
+         ...                    concatenate=False, concat_axis_order=0)
+         >>>  dico={"18.4":sis1,
+         ...      "21.4":sis2}
+         >>>  test=_search_fill_data(dicoReal=dico, index_key=11.4, 
+         ...                      start_value=10, max_value=23,
+         ...                      index_of_depth=1)
+         >>> print("sis1\n:",sis1)
+         >>> print("sis2\n:",sis2)
+         >>> print("Finaltest\n", test)
     """
     
     # arange a dictionany : 
@@ -759,7 +781,7 @@ def _OlDFUNCNOUSEsearch_fill_data(dicoReal, arrayTemp ,
 def _search_ToFill_Data (dicoReal, arrayTemp , 
                       max_value, index_of_depth,axis=0): 
     """
-    Parameters :
+    Parameters 
     ------------
         * data : dict
                 Dictionnary of numpy ndarray .
@@ -784,40 +806,41 @@ def _search_ToFill_Data (dicoReal, arrayTemp ,
         dict
          dictionnary of offsets filled the array data we want to top to
         
-        :Example: ::
-            >>>  import numpy as np 
-            >>>  np.random.seed(0)
-            >>>  sos=abs(np.random.randn(4,3)*4)
-            >>>  sos2=abs(np.random.randn(4,3)*10.8)
-            >>>  sos3=abs(np.random.randn(5,3)*10.8)
-            >>>  temp3=abs(np.random.rand(4,3)*12.4)
-            >>>  temp2=abs(np.random.rand(4,3)*15.4)
-            >>>  temp1=abs(np.random.rand(4,3)*9.4)
-            >>>  temp4=abs(np.random.rand(5,3)*9.9)
-            >>>  dico,temp={},[]
-            >>>  ff=[sos,sos2,sos3,temp1,temp2,temp3,temp4]
-            >>>  fin=[sort_array_data(data=ii,sort_order =1,
-                            concatenate=False, concat_axis_order=0) for ii in  ff ]
-            >>>  key=[11.9,61.4,102.7]
-            >>>  vat=[214,405,904]
-            >>>  for ii in range(3):
-                    fin[ii][:,0]=key[ii]
-                    fin[ii][-1][1]=vat[ii]
-            >>>  tempi=[(19.4,[11,18,50,120]),(28.4,[12,17,403,904]),
-                   (78.3,[11,8,202,804]),(124.4,[203,403,604,714,904])]
-            >>>  for ss, val in enumerate(tempi) :
-                    fin[ss+3][:,0]=val[0]
-                    fin[ss+3][:,1]=np.array(val[1])       
-            >>>  for ss, van in enumerate (fin):
-                    if ss<=3 :
-                        dico[van[0][0]]=van
-                    if ss>3 :
-                        temp.append(van)
-            >>>  arrayTemp=concat_array_from_list(list_of_array=temp,
-                                             concat_axis=0)
-            >>>  sis02=_search_ToFill_Data(dicoReal=dico, arrayTemp=arrayTemp , 
-                          max_value=904, index_of_depth=1,axis=0)
-            >>>  print(sis02)
+    :Example: 
+    
+        >>>  import numpy as np 
+        >>>  np.random.seed(0)
+        >>>  sos=abs(np.random.randn(4,3)*4)
+        >>>  sos2=abs(np.random.randn(4,3)*10.8)
+        >>>  sos3=abs(np.random.randn(5,3)*10.8)
+        >>>  temp3=abs(np.random.rand(4,3)*12.4)
+        >>>  temp2=abs(np.random.rand(4,3)*15.4)
+        >>>  temp1=abs(np.random.rand(4,3)*9.4)
+        >>>  temp4=abs(np.random.rand(5,3)*9.9)
+        >>>  dico,temp={},[]
+        >>>  ff=[sos,sos2,sos3,temp1,temp2,temp3,temp4]
+        >>>  fin=[sort_array_data(data=ii,sort_order =1,
+        ...                concatenate=False, concat_axis_order=0) for ii in  ff ]
+        >>>  key=[11.9,61.4,102.7]
+        >>>  vat=[214,405,904]
+        >>>  for ii in range(3):
+        ...        fin[ii][:,0]=key[ii]
+        ...        fin[ii][-1][1]=vat[ii]
+        >>>  tempi=[(19.4,[11,18,50,120]),(28.4,[12,17,403,904]),
+        ...       (78.3,[11,8,202,804]),(124.4,[203,403,604,714,904])]
+        >>>  for ss, val in enumerate(tempi) :
+        ...        fin[ss+3][:,0]=val[0]
+        ...        fin[ss+3][:,1]=np.array(val[1])       
+        >>>  for ss, van in enumerate (fin):
+        ...        if ss<=3 :
+        ...            dico[van[0][0]]=van
+        ...        if ss>3 :
+        ...            temp.append(van)
+        >>>  arrayTemp=concat_array_from_list(list_of_array=temp,
+        ...                                 concat_axis=0)
+        >>>  sis02=_search_ToFill_Data(dicoReal=dico, arrayTemp=arrayTemp , 
+        ...              max_value=904, index_of_depth=1,axis=0)
+        >>>  print(sis02)
     """ 
     #Notes :
     # arange a dictionany : 
@@ -896,19 +919,21 @@ def straighten_out_list (main_list , list_to_straigh):
     Parameters
     ----------
     * main_list : list
-        list of which the data must absolutely appear into the straighen list.
-        in our case , it is the staion list : a list of offset 
+            list of which the data must absolutely appear into the straighen list.
+            in our case , it is the station list : a list of offset 
+            
     * list_to_straigh : list
-        list contain the data (offset calculated , the depth and the resistivity (log10)), 
+            list contain the data (offset calculated , the depth and the resistivity (log10)), 
 
     Returns
     -------
-    * list_to_straigh : list
+    * list
         the straighen list.
         some offset have been replaced by the offsets which are not in the 
         main_list whithout change the lengh of the straighen list. 
 
-    :Example : :: 
+    :Example: 
+        
         >>>  import numpy as np 
         >>>  np.random.seed(14)
         >>>  ss=np.random.randn(10)*12
@@ -918,7 +943,7 @@ def straighten_out_list (main_list , list_to_straigh):
         >>>  red=np.random.randn(7)*12
         >>>  red=red.tolist()
         >>>  test=[19, 15.012, 5.5821, 0.7234,3.1, 
-              0.7919, 3.445, 4.7398, 5.1, 10.8, 15.51,21]
+        ...      0.7919, 3.445, 4.7398, 5.1, 10.8, 15.51,21]
         >>>  main=[20., 0.7234, 5, 3.445, 15.51,10.7, 3,5.1]
         >>>  test.sort()
         >>>  main.sort()
@@ -926,7 +951,7 @@ def straighten_out_list (main_list , list_to_straigh):
         >>>  print(test)
         >>>  print(main)
         >>>  sos=straighten_out_list (main_list=main , 
-                                 list_to_straigh=test)
+        ...                         list_to_straigh=test)
         >>>  print("sos:\n",sos)   
     """
     
@@ -1018,22 +1043,23 @@ def take_firstValue_offDepth(data_array,
     """
     Parameters
     ----------
-    data_array : np.array 
-        array of the data .
-    filter_order : int , optional
-        the column you want to filter. The default is 1.
+    * data_array : np.array 
+            array of the data .
+    * filter_order : int , optional
+            the column you want to filter. The default is 1.
 
     Returns
     -------
     array_like
         return array of the data filtered.
    
-    :Example: ::
+    :Example: 
+        
         >>>  import numpy as np 
         >>>  list8=[[4,2,0.1],[8,2,0.7],[10,1,0.18],[4,3,0.1],
-                [7,2,1.2],[10,3,0.5],[10,1,0.5],[8.2,0,1.9],
-                [10,7,0.5],[10,1,0.5],[2,0,1.4],[5,4,0.5],
-                [10,2,0.7],[7,2,1.078],[10,2,3.5],[10,8,1.9]]
+        ...        [7,2,1.2],[10,3,0.5],[10,1,0.5],[8.2,0,1.9],
+        ...        [10,7,0.5],[10,1,0.5],[2,0,1.4],[5,4,0.5],
+        ...        [10,2,0.7],[7,2,1.078],[10,2,3.5],[10,8,1.9]]
         >>>  test=np.array(list8)
         >>>   print(np_test)
         >>>  ss=take_firstValue_offDepth(data_array =np_test, filter_order=1)
@@ -1073,25 +1099,26 @@ def dump_comma(input_car, max_value=2, carType='mixed'):
     * max_value : int, optional
         The default is 2.
         
-    * carType =str 
-        Type of character , you want to entry : 
-            it may be as arguments parameters :
-            for value :  ['value','val',"numeric",
-                        "num", "num","float","int"]
-            for pure character : ["car","character","ch","char","str",,
-                                  "mix", "mixed","merge","mer",
-                                  "both","num&val","val&num&"]
-              it seems not possible to convert to float or integer.
-              the defaut is mixed 
+    * carType: str 
+            Type of character , you want to entry
                  
     Returns
     -------
     Tuple of input character
         must be return tuple of float value, or string value
+      
+    .. note:: carType  may be as arguments parameters like ['value','val',"numeric",
+              "num", "num","float","int"] or  for pure character like 
+                ["car","character","ch","char","str", "mix", "mixed","merge","mer",
+                "both","num&val","val&num&"]
+                if not , can  not possible to convert to float or integer.
+                the *defaut* is mixed 
+                
+    :Example: 
         
-    :Example: ::
+        >>> import numpy as np
         >>>  ss=dump_comma(input_car=",car,box", max_value=3, 
-              carType="str")
+        ...      carType="str")
         >>>  print(ss)
         ... ('0', 'car', 'box')
     """
@@ -1148,38 +1175,39 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
     """
     Parameters
     ----------
-    * add_azimuth : Bool, optional
-        compute azimuth if add_azimut is set to True. The default is False.
-        
-   *  utm_zone : Str, optional
-        WGS84 utm_projection. set your zone if add_azimuth is turn to True. 
-        The default is "49N".
-        
-    * report_path : str, optional
-        path to save your _well_report. The default is None.
-        its match the current work directory 
-        
-    * add_geochemistry_sample: bool
-        add_sample_data.Set to True if you want to add_mannually Geochimistry data.
-        default is False.
+        * add_azimuth : Bool, optional
+                compute azimuth if add_azimut is set to True. The default is False.
+             
+        *  utm_zone : Str, optional
+                 WGS84 utm_projection. set your zone if add_azimuth is turn to True. 
+                 The default is "49N".
+             
+        * report_path : str, optional
+                path to save your _well_report. The default is None.
+                its match the current work directory 
+            
+        * add_geochemistry_sample: bool
+                add_sample_data.Set to True if you want to add_mannually Geochimistry data.
+                default is False.
 
     Raises
     ------
-    Exception
-        manage the dimentionaly of ndarrays .
-    OSError
-        when report_path is not found in your O.S.
+        Exception
+            manage the dimentionaly of ndarrays .
+        OSError
+            when report_path is not found in your O.S.
 
     Returns
     -------
-     str
-        name of location of well .
-    np.ndarray
-         WellData , data of build Wells .
-     np.ndarray
-        GeolData , data of build geology.
+        str
+            name of location of well .
+        np.ndarray
+             WellData , data of build Wells .
+        np.ndarray
+           GeolData , data of build geology.
 
-    :Example: ::
+    :Example: 
+        
         >>>  import numpy as np 
         >>>  import os, shutil
         >>>  import warnings,
@@ -1187,25 +1215,24 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
         >>>  well=build_wellData (add_azimuth=True, utm_zone="49N")
         >>>  print("nameof locations\n:",well[0])
         >>>  print("CollarData\n:",well[1])
-        >>>  print("GeolData\n:",well[2])
-        ... outputs:
-        ...        nameof locations
-        ...        : Shimen
-        ...        CollarData
-        ...       : [['S01' '477205.6935' '2830978.218' '987.25' '-90' '0.0' 'Shi01'
-        ...          'Wdanxl0']
-        ...         ['S18' '477915.4355' '2830555.927' '974.4' '-90' '2.111' 'Shi18'
-        ...          'Wdanxl0']]
-        ...        GeolData
-        ...        [['S01' '0.0' '240.2' 'granite']
-        ...        ['S01' '240.2' '256.4' ' basalte']
-        ...        ['S01' '256.4' '580.0' ' granite']
-        ...         ['S01' '580.0' '987.25' 'rock']
-        ...         ['S18' '0.0' '110.3' 'sand']
-        ...         ['S18' '110.3' '520.2' 'agrilite']
-        ...         ['S18' '520.2' '631.3' ' granite']
-        ...         ['S18' '631.3' '974.4' ' rock']]
-        ...    outputfile :Shimen_wellReports_
+        >>>  print("GeolData\n:", well[2])
+        ...  nameof locations
+        ...  Shimen
+        ...  CollarData
+        ...  [['S01' '477205.6935' '2830978.218' '987.25' '-90' '0.0' 'Shi01'
+        ...   'Wdanxl0']
+        ...   ['S18' '477915.4355' '2830555.927' '974.4' '-90' '2.111' 'Shi18'
+        ...   'Wdanxl0']]
+        ...  GeolData
+        ...  [['S01' '0.0' '240.2' 'granite']
+        ...   ['S01' '240.2' '256.4' ' basalte']
+        ...   ['S01' '256.4' '580.0' ' granite']
+        ...   ['S01' '580.0' '987.25' 'rock']
+        ...   ['S18' '0.0' '110.3' 'sand']
+        ...   ['S18' '110.3' '520.2' 'agrilite']
+        ...    ['S18' '520.2' '631.3' ' granite']
+        ...   ['S18' '631.3' '974.4' ' rock']]
+        ...   Shimen_wellReports_
     """
     reg_lines=[]
     wellSites,ftgeo,hole_list,Geolist=[],[],[],[]
@@ -1427,34 +1454,36 @@ def compute_azimuth(easting, northing, utm_zone="49N", extrapolate=False):
     Parameters
     ----------
     * easting : np.ndarray
-        Easting value of coordinates _UTM_WGS84 
+            Easting value of coordinates _UTM_WGS84 
          
     * northing : np.ndarray
-        Northing value of coordinates._UTM_WGS84
+            Northing value of coordinates._UTM_WGS84
         
     * utm_zone : str, optional
-        the utm_zone . if None try to get is through 
-        gis.get_utm_zone(latitude, longitude). 
-        latitude and longitude must be on degree decimals. The default is "49N".
+            the utm_zone . if None try to get is through 
+            gis.get_utm_zone(latitude, longitude). 
+            latitude and longitude must be on degree decimals. The default is "49N".
     * extrapolate : bool , 
-        for other purpose , user can extrapolate azimuth value , in order to get the sizesize as 
-        the easting and northing size. The the value will repositionate at each point data were collected. 
-            Default is False as originally azimuth computation . 
+            for other purpose , user can extrapolate azimuth value , in order to get the sizesize as 
+            the easting and northing size. The the value will repositionate at each point data were collected. 
+                Default is False as originally azimuth computation . 
 
     Returns
     -------
     np.ndarray
         azimuth.
         
-    :Example: ::
-            >>> import gis_tools as gis 
-            >>>   easting=[477205.6935,477261.7258,477336.4355,477373.7903,477448.5,
-            >>>    477532.5484,477588.5806,477616.5968]
-            >>>   northing=[2830978.218, 2830944.879,2830900.427, 2830878.202,2830833.75,
-                              2830783.742,2830750.403,2830733.734]
-            >>>  test=compute_azimuth(easting=np.array(easting), 
-                                  northing=np.array(northing), utm_zone="49N")
-            >>>  print(test)
+    :Example: 
+        
+        >>> import numpy as np
+        >>> import gis_tools as gis
+        >>>  easting=[477205.6935,477261.7258,477336.4355,477373.7903,477448.5,
+        ...  477532.5484,477588.5806,477616.5968]
+        >>>   northing=[2830978.218, 2830944.879,2830900.427, 2830878.202,2830833.75,
+        ...                  2830783.742,2830750.403,2830733.734]
+        >>>  test=compute_azimuth(easting=np.array(easting), 
+        ...                      northing=np.array(northing), utm_zone="49N")
+        >>>  print(test)
     """
     #---**** method to compute azimuth****----
     
@@ -1508,18 +1537,19 @@ def build_geochemistry_sample():
      np.ndarray
         Sample ,Geochemistry sample Data.
 
-    :Example: ::
+    :Example:
+        
         >>> geoch=build_geochemistry_sample()
         >>> print(geoch)
-        ... output sampleData
+        ... sampleData
         ... [['S0X4' '0' '254.0' 'PUP']
-             ['S0X4' '254' '521.0' 'mg']
-             ['S0X4' '521' '625.0' 'tut']
-             ['S0X4' '625' '984.0' 'suj']
-             ['S0X2' '0' '19.0' 'pup']
-             ['S0X2' '19' '425.0' 'hut']
-             ['S0X2' '425' '510.0' 'mgt']
-             ['S0X2' '510' '923.2' 'pyt']]
+        ...     ['S0X4' '254' '521.0' 'mg']
+        ...     ['S0X4' '521' '625.0' 'tut']
+        ...     ['S0X4' '625' '984.0' 'suj']
+        ...     ['S0X2' '0' '19.0' 'pup']
+        ...     ['S0X2' '19' '425.0' 'hut']
+        ...     ['S0X2' '425' '510.0' 'mgt']
+        ...     ['S0X2' '510' '923.2' 'pyt']]
     """
 
     tempsamp,SampleList=[],[]
@@ -1585,32 +1615,38 @@ def parse_wellData(filename=None, include_azimuth=False,
 
     Parameters
     ----------
-    * filename : str, optional
-        DESCRIPTION. The default is None.
-    * include_azimuth: bool , 
-        Way to compute azimuth automatically 
-        
-    * utm_zone : str, 
-        set coordinate _utm_WGS84. Defaut is 49N
+        * filename : str, optional
+                full path to parser file, The default is None.
+                
+        * include_azimuth: bool , 
+            Way to compute azimuth automatically 
+            
+        * utm_zone : str, 
+            set coordinate _utm_WGS84. Defaut is 49N
 
     Raises
     ------
-    FileNotFoundError
-        if typical file deoesnt match the *csv file.
+        FileNotFoundError
+            if typical file deoesnt match the *csv file.
 
     Returns
     -------
-     str
-        Name of location .
-    np.ndarray
-         WellData , Specificy the collar Data .
-     np.ndarray
-        GeoData , specify the geology data .
-    SampleData : TYPE
-        geochemistry sample Data.
+       location:  str
+            Name of location .
+            
+       WellData : np.ndarray
+              Specificy the collar Data .
+              
+        GeoData : np.ndarray
+             specify the geology data .
+             
+        SampleData : TYPE
+            geochemistry sample Data.
 
 
-    :Example: :: 
+    :Example: 
+        
+        >>> import numpy as np
         >>> dir_=r"F:\OneDrive\Python\CodesExercices\ex_avgfiles\modules"
         >>> parse_=parse_wellData(filename='Drill&GeologydataT.csv')
         >>> print("NameOflocation:\n",parse_[0])
@@ -1760,34 +1796,38 @@ def _nonelist_checker(data, _checker=False ,
     * data : list
         container of list. Data must contain others list.
         the element to delete should be on list.
+        
    *  _checker : bool, optional
-        DESCRIPTION. The default is False.
+         The default is False.
+        
     * list_to_delete : TYPE, optional
-        DESCRIPTION. The default is ['\n'].
+           The default is ['\n'].
 
     Returns
     -------
-     int
-        _occ , number of occurence.
-     int
-        num_turn , number of turns to elimate the value.
-     list
-        data , data safeted exempt of the value we want to delete.
+        _occ : int
+            number of occurence.
+        num_turn : int
+            number of turns to elimate the value.
+        data : list
+           data safeted exempt of the value we want to delete.
         
-    :Example: ::
-             >>> listtest =[['DH_Hole', 'Thick01', 'Thick02', 'Thick03',
-                'Thick04', 'sample02', 'sample03'], 
-                ['sample04'], [], ['\n'], 
-               ['S01', '98.62776918', '204.7500461', '420.0266651'], ['prt'],
-               ['pup', 'pzs'],[], ['papate04', '\n'], 
-               ['S02', '174.4293956'], [], ['400.12', '974.8945704'],
-               ['pup', 'prt', 'pup', 'pzs', '', '\n'],
-               ['saple07'], [], '',  ['sample04'], ['\n'],
-               [''], [313.9043882], [''], [''], ['2'], [''], ['2'], [''], [''], ['\n'], 
-               [''], ['968.82'], [], [],[], [''],[ 0.36], [''], ['\n']]
-             >>> ss=_nonelist_checker(data=listtest, _checker=True,
-                                     list_to_delete=[''])
-              >>> print(ss)
+    :Example: 
+        
+        >>> import numpy as np 
+        >>> listtest =[['DH_Hole', 'Thick01', 'Thick02', 'Thick03',
+        ...   'Thick04', 'sample02', 'sample03'], 
+        ...   ['sample04'], [], ['\n'], 
+        ...  ['S01', '98.62776918', '204.7500461', '420.0266651'], ['prt'],
+        ...  ['pup', 'pzs'],[], ['papate04', '\n'], 
+        ...  ['S02', '174.4293956'], [], ['400.12', '974.8945704'],
+        ...  ['pup', 'prt', 'pup', 'pzs', '', '\n'],
+        ...  ['saple07'], [], '',  ['sample04'], ['\n'],
+        ...  [''], [313.9043882], [''], [''], ['2'], [''], ['2'], [''], [''], ['\n'], 
+        ...  [''], ['968.82'], [], [],[], [''],[ 0.36], [''], ['\n']]
+        >>> ss=_nonelist_checker(data=listtest, _checker=True,
+        ...                        list_to_delete=[''])
+        >>> print(ss)
     """
     
     _occ,num_turn=0,0
@@ -1828,27 +1868,29 @@ def _order_well (data,**kwargs):
     Parameters
     ----------
     * data : list,
-        data contains list of well thickness and rock description .
+            data contains list of well thickness and rock description .
 
     * bottom_value  : np.ndarray float
-        value of bottom . it may the basement extrapolation.
-        default is 1.023 km
+            value of bottom . it may the basement extrapolation.
+            default is 1.023 km
 
     Returns
     -------
      np.ndarray
         data, data aranged to [DH_Hole, DH_From, DH_To, Rock.] arrays
         
-    :Example: ::
-         >>> listtest =[['DH_Hole', 'Thick01', 'Thick02', 'Thick03',
-                    'Thick04','Rock01', 'Rock02', 'Rock03', 'Rock04'],
-         >>> ['S01', '0.0', '98.62776918', '204.7500461','420.0266651',
-              'GRT', 'ATRK', 'GRT', 'ROCK'],
-         >>> ['S02', '174.4293956', '313.9043882', '400.12', '974.8945704',
-              'GRT', 'ATRK', 'GRT', 'ROCK']]
-         >>> print(listtest[1:])
-         >>> ss=_order_well(listtest[1:])
-         >>> print(ss)
+    :Example:
+        
+        >>> import numpy as np
+        >>> listtest =[['DH_Hole', 'Thick01', 'Thick02', 'Thick03',
+        ...           'Thick04','Rock01', 'Rock02', 'Rock03', 'Rock04'],
+        >>> ['S01', '0.0', '98.62776918', '204.7500461','420.0266651',
+        ...     'GRT', 'ATRK', 'GRT', 'ROCK'],
+        >>> ['S02', '174.4293956', '313.9043882', '400.12', '974.8945704',
+        ...     'GRT', 'ATRK', 'GRT', 'ROCK']]
+        >>> print(listtest[1:])
+        >>> ss=_order_well(listtest[1:])
+        >>> print(ss)
     """
     
     this_function_name=inspect.getframeinfo(inspect.currentframe())[2]
@@ -1908,28 +1950,30 @@ def intell_index (datalist,assembly_dials =False):
 
     Parameters
     ----------
-    * datalist : list
-        list of element : may contain value and rocks or sample .
-    * assembly_dials : list, optional
-        separate on two list : values and rocks or samples. The default is False.
+        * datalist : list
+                list of element : may contain value and rocks or sample .
+        * assembly_dials : list, optional
+                separate on two list : values and rocks or samples. The default is False.
 
     Returns
     -------
-     int
-        index , index of breaking up.
-     list , 
-         first_dial , first sclice of value part 
-     list , 
-         secund_dial , second slice of rocks or sample part.
-     list 
-         assembly , list of first_dial and second_dial
+        index: int
+             index of breaking up.
+        first_dial: list , 
+           first sclice of value part 
+        secund_dial: list , 
+          second slice of rocks or sample part.
+        assembly : list 
+             list of first_dial and second_dial
     
-    :Example: ::     
-         >>> listtest =[['DH_Hole', 'Thick01', 'Thick02', 'Thick03',
-                    'Thick04','Rock01', 'Rock02', 'Rock03', 'Rock04'],
-                    ['S01', '0.0', '98.62776918', '204.7500461','420.0266651','520', 'GRT', 
-                     'ATRK', 'GRT', 'ROCK','GRANODIORITE'],
-                    ['S02', '174.4293956', '313.9043882','974.8945704', 'GRT', 'ATRK', 'GRT']]
+    :Example: 
+        
+        >>> import numpy as np
+        >>> listtest =[['DH_Hole', 'Thick01', 'Thick02', 'Thick03',
+        ...           'Thick04','Rock01', 'Rock02', 'Rock03', 'Rock04'],
+        ...           ['S01', '0.0', '98.62776918', '204.7500461','420.0266651','520', 'GRT', 
+        ...            'ATRK', 'GRT', 'ROCK','GRANODIORITE'],
+        ...           ['S02', '174.4293956', '313.9043882','974.8945704', 'GRT', 'ATRK', 'GRT']]
         >>> listtest2=[listtest[1][1:],listtest[2][1:]]
         >>> for ii in listtest2 :
         >>> op=intell_index(datalist=ii)
@@ -1976,22 +2020,24 @@ def _nonevalue_checker (list_of_value, value_to_delete=None):
     Parameters
     ----------
     * list_of_value : list
-        DESCRIPTION.
+            list to check.
     * value_to_delete : TYPE, optional
-        DESCRIPTION. The default is ''.
+            specific value to delete. The default is ''.
 
     Returns
     -------
      list
         list_of_value , safe list without the deleted value .
     
-    :Example: :: 
-             >>> test=['DH_Hole (ID)', 'DH_East', 'DH_North',
-                       'DH_Dip', 'Elevation ', 'DH_Azimuth', 
-                         'DH_Top', 'DH_Bottom', 'DH_PlanDepth', 'DH_Decr', 
-                         'Mask', '', '', '', '']
-             >>> test0= _nonevalue_checker (list_of_value=test)
-             >>> print(test0)
+    :Example: 
+        
+        >>> import numpy as np 
+        >>> test=['DH_Hole (ID)', 'DH_East', 'DH_North',
+        ...          'DH_Dip', 'Elevation ', 'DH_Azimuth', 
+        ...            'DH_Top', 'DH_Bottom', 'DH_PlanDepth', 'DH_Decr', 
+        ...            'Mask', '', '', '', '']
+        >>> test0= _nonevalue_checker (list_of_value=test)
+        >>> print(test0)
     """
     if value_to_delete is None :
         value_to_delete  =''
@@ -2016,21 +2062,24 @@ def _strip_item(item_to_clean, item=None, multi_space=12):
 
     Parameters
     ----------
-    * item_to_clean : list or np.ndarray of string 
-         List to strip item.
-    * cleaner : str , optional
-        item to clean , it may change according the use. The default is ''.
-    * multi_space : int, optional
-        degree of repetition may find around the item. The default is 12.
+        * item_to_clean : list or np.ndarray of string 
+                 List to strip item.
+        * cleaner : str , optional
+                item to clean , it may change according the use. The default is ''.
+        * multi_space : int, optional
+                degree of repetition may find around the item. The default is 12.
 
     Returns
     -------
-    list or ndarray
-        item_to_clean , cleaned item 
-    :Example: ::
+        list or ndarray
+            item_to_clean , cleaned item 
+            
+    :Example: 
+        
+     >>> import numpy as np
      >>> new_data=_strip_item (item_to_clean=np.array(['      ss_data','    pati   ']))
      >>>  print(np.array(['      ss_data','    pati   ']))
-    ... print(new_data)
+     ... print(new_data)
 
     """
     if item==None :item = ' '
@@ -2066,27 +2115,28 @@ def _cross_eraser (data , to_del, deep_cleaner =False):
     Parameters
     ----------
     * data : list
-        Main data user want to filter.
+            Main data user want to filter.
     * to_del : list
-        list of item you want to delete present on the main data.
+            list of item you want to delete present on the main data.
     * deep_cleaner : bool, optional
-        Way to deeply check. Sometimes the values are uncleaned and 
-        capitalizeed . this way must not find their safety correspondace 
-        then the algorth must clean item and to match all at the same time before eraisng.
-        The default is False.
+            Way to deeply check. Sometimes the values are uncleaned and 
+            capitalizeed . this way must not find their safety correspondace 
+            then the algorth must clean item and to match all at the same time before eraisng.
+            The *default* is False.
 
     Returns
     -------
      list
         data , list erased.
 
-    :Example: :: 
-           >>> data =['Z.mwgt','Z.pwgt','Freq',' Tx.Amp','E.mag','   E.phz',
-                      '   B.mag','   B.phz','   Z.mag', '   Zphz  ']
-            >>> data2=['   B.phz','   Z.mag',]
-                remain_data =cross_eraser(data=data, to_del=data2, 
-                                         deep_cleaner=True)
-            >>> print(remain_data)
+    :Example: 
+        
+        >>> data =['Z.mwgt','Z.pwgt','Freq',' Tx.Amp','E.mag','   E.phz',
+        ...          '   B.mag','   B.phz','   Z.mag', '   Zphz  ']
+        >>> data2=['   B.phz','   Z.mag',]
+        ...     remain_data =cross_eraser(data=data, to_del=data2, 
+        ...                              deep_cleaner=True)
+        >>> print(remain_data)
     """
     
     data , to_del=_strip_item(item_to_clean=data), _strip_item(item_to_clean=to_del)
@@ -2108,23 +2158,25 @@ def _remove_str_word (char, word_to_remove, deep_remove=False):
     
     Parameters
     ----------
-    * char : str
-        may the the str phrases or sentences . main items.
-    * word_to_remove : str
-        specific word to remove.
-    * deep_remove : bool, optional
-        use the lower case to remove the word even the word is uppercased 
-        of capitalized. The default is False.
+        * char : str
+                may the the str phrases or sentences . main items.
+        * word_to_remove : str
+                specific word to remove.
+        * deep_remove : bool, optional
+                use the lower case to remove the word even the word is uppercased 
+                of capitalized. The default is False.
 
     Returns
     -------
-    str 
-        char , new_char without the removed word .
+        str 
+            char , new_char without the removed word .
         
-    :Example: :: 
-            >>> ch ='AMTAVG 7.76: "K1.fld", Dated 99-01-01,AMTAVG, Processed 11 Jul 17 AMTAVG'
-            >>> ss=_remove_str_word(char=ch, word_to_remove='AMTAVG', deep_remove=False)
-            >>> print(ss)
+    :Example: 
+        
+        >>> from csamtpy.utils  import func_utils as func
+        >>> ch ='AMTAVG 7.76: "K1.fld", Dated 99-01-01,AMTAVG, Processed 11 Jul 17 AMTAVG'
+        >>> ss=func._remove_str_word(char=ch, word_to_remove='AMTAVG', deep_remove=False)
+        >>> print(ss)
     """
     if type(char) is not str : char =str(char)
     if type(word_to_remove) is not str : word_to_remove=str(word_to_remove)
@@ -2146,21 +2198,24 @@ def _remove_str_word (char, word_to_remove, deep_remove=False):
 
 def stn_check_split_type(data_lines): 
     """
-    Read data_line and check for data line the presence of split_type < ',' or ' ', or any other marks.>
+    Read data_line and check for data line the presence of 
+    split_type < ',' or ' ', or any other marks.>
     Threshold is assume to be third of total data length.
     
-    :params data_lines : list of data to parse . 
-    :type data_lines:list 
+    :params data_lines: list of data to parse . 
+    :type data_lines: list 
  
     :returns: The split _type
     :rtype: str
     
-    :Example: :: 
+    :Example: 
+        
+        >>> from csamtpy.utils  import func_utils as func
         >>> path =  os.path.join(os.environ["pyCSAMT"], 
                           'csamtpy','data', K6.stn)
         >>> with open (path, 'r', encoding='utf8') as f : 
         ...                     data= f.readlines()
-        >>>  print(stn_check_split_type(data_lines=data))
+        >>>  print(func.stn_check_split_type(data_lines=data))
             
     """
 
@@ -2187,12 +2242,13 @@ def minimum_parser_to_write_edi (edilines, parser = '='):
     """
     This fonction validates edifile for writing , string with egal.we assume that 
     dictionnary in list will be for definemeasurment E and H fied. 
-    :param edilines : list of item to parse 
-    :type edilines:list 
     
-    :param parser : the egal is use  to parser edifile .
-                        can be changed, default is `=`
-    :type parser :str 
+    :param edilines: list of item to parse 
+    :type edilines: list 
+    
+    :param parser: the egal is use  to parser edifile .
+                    can be changed, default is `=`
+    :type parser: str 
   
     """
     if isinstance(edilines,list):
@@ -2211,11 +2267,11 @@ def round_dipole_length(value):
     small function to graduate dipole length 5 to 5. Goes to be reality and 
     simple computation .
     
-    :param value:value of dipole length 
+    :param value: value of dipole length 
     :type value: float 
     
     :returns: value of dipole length rounded 5 to 5 
-    :rtype:float
+    :rtype: float
     """ 
     mm = value % 5 
     if mm < 3 :return np.around(value - mm)

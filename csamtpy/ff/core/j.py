@@ -20,7 +20,8 @@
 
 ===============================================================================
 
-.. module:: J
+.. _module-j:: `csamtpy.ff.core.j
+
    :synopsis: Deal with J files.  The J class can read and write an A.G.Jones file
              file, the 'standard format' of magnetotellurics.  Each section
              of the .edi file is given its own class, so the elements of each
@@ -48,17 +49,19 @@ _logger = csamtpylog.get_csamtpy_logger(__name__)
 class J_collection : 
     """
     J collection Class . Collect jfiles
+    
     Arguments 
     ---------
-        list_of_jfiles : list 
+        **list_of_jfiles** : list 
                 list of Jfiles collection 
-        survey_name=None : str 
+        **survey_name** : str 
                 path to A.G. Jones Jfiles 
                 
     Holds the following information:
-    ================= =========== =============================================
+        
+    ================  ==========  =============================================
     Attributes         Type        Explanation
-    ================= =========== =============================================
+    ================  ==========  =============================================
     azimuth           ndarray,1     array_of all stations azimuth (deg) 
     latitude          ndarray,1     stations latitudes in degre decimal 
     longitude         ndarray,1     stations longitudes in degree decimal 
@@ -83,16 +86,17 @@ class J_collection :
     error             list          list of standard error  from alla stations 
     weight            list          list of  weight (Note: some weights are 
                                     in error!)
-    ================== ========== =============================================
+    ================  ==========  =============================================
     
-    ===================== =====================================================
+    ====================  =====================================================
     Method                          Description 
-    ===================== =====================================================
+    ====================  =====================================================
     collect_jfiles          read collections jfiles and populates attributes 
     plot_Topo_Stn_Azim      method to plot Topograpy , station seperation and 
                             Azimuth . 
     rewrite_jfiles          rewrite jfiles. 
-    ===================== =====================================================
+    ====================  =====================================================
+    
     """
     
     def __init__(self, list_of_jfiles =None , survey_name=None,  **kwargs): 
@@ -184,8 +188,8 @@ class J_collection :
         """
         Collect the Jfile from jlist from jpath.Read and populate attributes .
         
-        :param list_of_jfiles :list of jfiles
-        :type list_of_jfiles:list 
+        :param list_of_jfiles: list of jfiles
+        :type list_of_jfiles: list 
         """
         if list_of_jfiles is None and jpath is not None : 
             self.jfiles_list = [os.path.join(jpath, jfile) for jfile in os.listdir (jpath) if os.path.isfile(jfile) ==True]
@@ -264,30 +268,31 @@ class J_collection :
                                                    'Weight':self.J.jinfo.weight,
                                                    }
         
-    def plot_Topo_Stn_Azim (self, list_of_jfiles =None, plot ='*', show_stations =False , compute_azimuth =True , 
+    def plot_Topo_Stn_Azim (self, list_of_jfiles =None, plot ='*',
+                            show_stations =False , compute_azimuth =True , 
                 savefig =None): 
         """
         plot Topography , Stn _Azim from Jfiles
 
-        :param list_of_jfiles : list of jfiles 
-        :type list_of_jfiles : list 
+        :param list_of_jfiles: list of jfiles 
+        :type list_of_jfiles: list 
         
-        :param plot : type of plot '*' means all the 03 plots or 
+        :param plot: type of plot '*' means all the 03 plots or 
                       use `topo`, `stn`, `azim` to plot 
-                     individually. defalut is '*'
-        :type plot : str or int 
+                     individually. *default* is '*'
+        :type plot: str or int 
         
-        :param show_stations : see the stations names as xlabel .
-        :type show_stations : bool  
+        :param show_stations: see the stations names as xlabel .
+        :type show_stations: bool  
         
-        :param compute_azimuth : if add azimuth, set azimuth to False 
-                                ** Default** is True 
-        :type  compute_azimuth : bool  
+        :param compute_azimuth: if add azimuth, set azimuth to False 
+                                *Default* is True 
+        :type  compute_azimuth: bool  
         
-        :param savefig : PathLike - path to save your figure
-        :type savefig : str 
+        :param savefig: PathLike - path to save your figure
+        :type savefig: str 
         
-        ...Note :: 
+        ...note :: 
             Work but not stable ...
         """
         
@@ -342,21 +347,23 @@ class J_collection :
     def rewrite_jfiles (self, list_of_jfiles=None , savepath =None, survey_name =None , 
                         j_extension='.dat' ):
         """
-        Method to rewrite A.G. johnson file (J-Format file). 
-        see documentation  here : http://mtnet.info/docs/jformat.txt
+        Method to rewrite A.G. johnson file (J-Format file).
         
-        :param list_of_files :  collection of Jfiles 
-        :type list_of_files : list 
+        .. seealso::  http://mtnet.info/docs/jformat.txt
         
-        :param survey_name :  name of exploration area 
+        :param list_of_files:  collection of Jfiles 
+        :type list_of_files: list 
+        
+        :param survey_name:  name of exploration area 
         :type survey_name:   str  
         
-        :param j_extension  output format . Default is '.dat'
-        :type j_extension : str  
+        :param j_extension:  output format,
+                            *Default* is '.dat'
+        :type j_extension: str  
         
-        :param savepath : output directory .If None ,
+        :param savepath: output directory .If None ,
                         file will be store in current work directory
-        :type savepath : str   
+        :type savepath: str   
         """
         
         if list_of_jfiles is not None : self.jfiles_list =list_of_jfiles 
@@ -487,53 +494,57 @@ class J:
     
     Arguments 
     ----------
-            j_fn : str 
-                path to A.G. Jones Jfile . 
+            **j_fn** : str 
+                    path to A.G. Jones Jfile . 
             
     Holds the following information:
-    ================= =========== =============================================
-    Attributes         Type        Explanation
-    ================= =========== =============================================
-    jazim               float       station azimuth in degree . 
-    jlat                float       station latitude in degre decimal 
-    jlon                float       station longitude in degree decimal 
-    jelev               float       station elevation in meter.
-    jmode               str         polarization mode.Polarization mode will 
+        
+    ==============  ==============  ===========================================
+    Attributes         Type         Explanation
+    ==============  ==============  ===========================================
+    jazim           float           station azimuth in degree . 
+    jlat            float           station latitude in degre decimal 
+    jlon            float           station longitude in degree decimal 
+    jelev           float           station elevation in meter.
+    jmode           str             polarization mode.Polarization mode will 
                                     be use to compute jproperties.
-    jnperiod            int         number of period . User can provide.If none 
+    jnperiod        int             number of period . User can provide.If none 
                                     it will be computed automatically                   
-    jperiod             (ndarray,1) array of periods (s-1) or(1/second)1
-    japp_rho            (ndarray,1) array of apparent resistivities (ohm.m)
-    jphase              (ndarray,1) array of phase in degree 
-    jrhomax             (ndarray,1)  rho + 1 standard error
-    jrhomin             (ndarray,1)  rho - 1 standard error
-    jphamax             (ndarray,1)  pha + 1 standard error 
-    jphamin             (ndarray,1)  pha - 1 standard error
-    jwrho               (ndarray,1)  weight for apparent_resistivity 
-    jwpha               (ndarray,1)  weight for phase 
-    jreal               (ndarray,1)  real part of the transfer function
-    jimag               (ndarray,1)  imaginary part of the transfer function
-    jerror              (ndarray ,1) standard error 
-    jweight             (ndarray,1)   weight (Note: some weights are in error!)
-    =================== ============ =========================================
+    jperiod         (ndarray,1)     array of periods (s-1) or(1/second)1
+    japp_rho        (ndarray,1)     array of apparent resistivities (ohm.m)
+    jphase          (ndarray,1)     array of phase in degree 
+    jrhomax         (ndarray,1)     rho + 1 standard error
+    jrhomin         (ndarray,1)     rho - 1 standard error
+    jphamax         (ndarray,1)     pha + 1 standard error 
+    jphamin         (ndarray,1)     pha - 1 standard error
+    jwrho           (ndarray,1)     weight for apparent_resistivity 
+    jwpha           (ndarray,1)     weight for phase 
+    jreal           (ndarray,1)     real part of the transfer function
+    jimag           (ndarray,1)     imaginary part of the transfer function
+    jerror          (ndarray ,1)    standard error 
+    jweight         (ndarray,1)     weight (Note: some weights are in error!)
+    ==============  ==============  ===========================================
     
-    ===================== =====================================================
+    ====================  =====================================================
     Method                          Description 
-    ===================== =====================================================
+    ====================  =====================================================
     jname                   staticmethod to generate A.G.Jones station codename
     jMode                   method for comformited H-Polarization and E-Polari-
                             zation mode . if mode is provided , il will check 
                             conformities, if not provied, Default is 'RXY'.
     read_j                  read the jfiles. 
-    ===========================================================================
+    ====================  =====================================================
     
-    ... None ::`-999` -- missing data marker
+    .. note ::`-999` means missing data marker
             
     More attributes can be added by inputing a key word dictionary
-          >>> from csamtpy.ff.core import J 
-          >>> j=J()
-          >>> jmode = j.jMode(polarization_type='RXY')
-          ...  print(jmode)
+    
+    :Example:
+        
+        >>> from csamtpy.ff.core import J 
+        >>> j=J()
+        >>> jmode = j.jMode(polarization_type='RXY')
+        >>>  print(jmode)
     """
 
     jdalpha , jdbeta ={'R':'apparent resistivities and phases', 
@@ -745,17 +756,17 @@ class J:
     @staticmethod
     def jname( number_of_sites, survey_name= None,):
         """
-        Staticmethod for generate alphanumeric STATION NAME (case insensitive) 
-        survey XXX, station 001. 
+        Staticmethod for generate alphanumeric `station name` (case sensitive 
+        when reading A.G Jones files) survey XXX, station 001. 
         
-        :param  number_of_sites : number of stations . 
-        :type number_of_sites : int 
+        :param  number_of_sites: number of stations . 
+        :type number_of_sites: int 
         
-        :param survey_name : place location name . 
-        :type survey_name :str 
+        :param survey_name: place location name . 
+        :type survey_name: str 
         
-        :returns :list of alphanumeric station names 
-        :rtype:list
+        :returns: list of alphanumeric station names 
+        :rtype: list
               
         """
         alpha, cunm ='abcdefghijklmnopqrstuvwxyz', []
@@ -777,9 +788,11 @@ class J:
     def jMode(self, polarization_type='RXY'):
         """
         Jmode is conformited a different set of H-Polarization ans E-Polarization. 
-        for more detail please consult the documentation on :http://mtnet.info/docs/jformat.txt
-        .. Convention::
-                The convention used is for RXY to represent
+        for more detail :
+            
+        .. seealso:: http://mtnet.info/docs/jformat.txt
+        
+        :Convention:The convention used is for RXY to represent
                 the E-polarization (TE) mode, and for RYX
                 to represent the B-polarization mode.
         """
@@ -804,9 +817,10 @@ class J:
     
     def read_j (self, j_fn=None  ): 
         """
-        Method to read Jformat file. 
-        :param j_fn : path to jfile 
-        :type j_fn :str
+        Method to read Jformat file.
+        
+        :param j_fn: path to jfile 
+        :type j_fn: str
         """ 
  
         self._logging.info('Reading A.G.Jones J-format.%s'%self.jfn)

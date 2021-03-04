@@ -216,17 +216,25 @@ class _sensitive:
         
         Parameters
         ----------
-            *** filename *** :str 
+            **filename*** :str 
                             corresponding file to read , pathLike 
-            *** deep *** : bool , 
+            **deep** : bool , 
                 control reading : False for just control the extension file ,
                 not opening file . 
-                True : control in deeper file and find which file were inputted. 
+                True : control in deeper file and find which file were inputted.
+                
+        Returns  
+        ---------
+         str 
+            FileType could be ['avg' | j | 'edi' | 'resp' | 'mesh' | 'occamdat' |
+                 'stn' | 'model' | 'iter' | 'logfile' | 'startup']
+            
 
-        List of files read by pyCSAMT are : 
-        ++++++++++++++  +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        List of files read by pyCSAMT: 
+        
+        ===============   =====================================================
         CodeFile                        DESCRIPTION 
-        ++++++++++++++  +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        ===============   =====================================================
         
             - avg           Zonge Engineering file Plainty file of ASTATIC file. 
             - j              A.G .Jonhson J=Format file. 
@@ -242,25 +250,22 @@ class _sensitive:
             - resp          Occam response file , Get after inversion 
             - logfile       Occam Logfile, Get after inverson (Inversion file )
         
-       ++++++++++++++++ +++++++++++++++++++++++++++++++++++++++++++++++++++++++   
+       ===============   ===================================================== 
         
-        Returns  
-        -------
-            str 
-                FileType :str
-                *** ['avg' , j, edi, resp, mesh, occamdat,
-                     stn, model, iter, logfile, startup]
+   
+        :Example:
             
-        .. Test :: 
-            >>> files = ['K1_exp.bln','LCS01.avg' ,'LCS01_2_to_1.avg', 'K1.stn','csi000.dat','csa250.edi','LogFile.logfile',
-                             'Occam2DMesh','Occam2DModel', 'OccamDataFile.dat', 'S00_ss.edi', 'Startup','RESP13.resp', 
-                             'ITER02.iter']
-            >>>            for ii in files : 
-            >>>                 path =  os.path.join(os.environ["pyCSAMT"], 
-                                              'csamtpy','data', ii)
-            ...                 try : 
-            ...                    print(_sensitive.which_file(path,deep=True))
-                                except :pass 
+            >>> files = ['K1_exp.bln','LCS01.avg' ,'LCS01_2_to_1.avg', 'K1.stn',
+            ...            'csi000.dat','csa250.edi','LogFile.logfile',
+            ...                 'Occam2DMesh','Occam2DModel', 'OccamDataFile.dat',
+            ...            'S00_ss.edi', 'Startup','RESP13.resp', 
+            ...                 'ITER02.iter']
+            >>>  for ii in files : 
+            >>>      path =  os.path.join(os.environ["pyCSAMT"], 
+            ...                                  'csamtpy','data', ii)
+            ...       try : 
+            ...         print(_sensitive.which_file(path,deep=True))
+            ...       except :pass 
         """
         
         _code = {'edi':cls._edi , 'j': cls._j, 'startup':cls._occam_startup, 
@@ -385,18 +390,26 @@ class _sensitive:
     @staticmethod 
     def validate_avg(avg_data_lines):
         """
-        Fonction to validate avg file . 
-        params : avg_data_lines : list : list of avgfile 
-        return : tuple 
-                - yesAST or yes : yesAST = Astatic file 
-                                    yes = plainty avg file :main
-                - item :list   : spliting the headAvg components strutured by file. 
-        EG :: 
+        Core function  to validate avg file .
+        
+        :param avg_data_lines: list of avgfile
+        :type avg_data_lines: list 
+        
+        :returns: 'yesAST' or 'yes' where  'yesAST' is  Astatic file 
+                    and  'yes'  is plainty avg file (the main file)  
+        :rtype: str 
+        
+        :returns: item, spliting the headAvg components strutured by file.
+        :rtype: list 
+        
+        :Example:
+            
+            >>> from csamtpy.etc.infos.Infos inmport _sensistive as SB
             >>> path =  os.path.join(os.environ["pyCSAMT"], 
-                                              'csamtpy','data', LCS01_2_to_1.avg)
+            ...                                  'csamtpy','data', LCS01_2_to_1.avg)
             ... with open (path, 'r', encoding ='utf8') as f : 
-                datalines = f.readlines()
-            ... ss =_sensitive.validate_avg(avg_data_lines=datalines)
+            ...   datalines = f.readlines()
+            ... ss =SB._sensitive.validate_avg(avg_data_lines=datalines)
         """
         
         num=[0]
@@ -418,7 +431,8 @@ class _sensitive:
                         item =items.strip().split()
                         return ('yes', item) 
                     
-        if sum(num) ==0 : raise pyCSAMTError_file_handling('Data format provided are not typically issued from Zonge AVG format .')
+        if sum(num) ==0 : raise pyCSAMTError_file_handling(
+                'Data format provided are not typically issued from Zonge AVG format .')
            
  
     

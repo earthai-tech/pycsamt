@@ -18,15 +18,17 @@
     You should have received a copy of the GNU Lesser General Public License
     along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
 
-===============================================================================  
-.. Module :: Geodrill 
-    :synopsis: Deal with geological strata , geological structural info and 
-        geological dataBase. Module to deal with inversion file ,and
-        geologica data and Borehole data  Can read , create an output file
-        directly use by Oasis Montaj of Geosoft corporation and Goldern Software
-        .Can also build borehode data andgenerate a report of survey location 
-        . Deal with geostrata   module to incorporate conventional
-        geological codes , pattern and colors. 
+===============================================================================
+  
+.. _module-Geodrill::`geodrill.geoCore.geodrill`
+    
+        :synopsis: Deal with geological strata , geological structural info and 
+            geological dataBase. Module to deal with inversion file ,and
+            geologica data and Borehole data  Can read , create an output file
+            directly use by Oasis Montaj of Geosoft corporation and Goldern Software
+            Can also build borehode data andgenerate a report of survey location 
+            Deal with geostrata   module to incorporate conventional
+            geological codes , pattern and colors. 
     
 Created on Sat Sep 19 12:37:42 2020
 @author: Daniel03 
@@ -61,9 +63,11 @@ try :
       scipy_version = [int(vers) for vers in sp.__version__.split('.')] 
       if scipy_version [0] == 1 : 
           if scipy_version [1] < 4 :
-              warnings.warn('Note: need scipy version 1.4.0 or more . It may probably  get a trouble when import "stats" attribute'
+              warnings.warn('Note: need scipy version 1.4.0 or more . '
+                            'It may probably  get a trouble when import "stats" attribute'
                             'under such version.It may probably move from ', ImportWarning)
-              _logger.warning('Note: need scipy version 0.14.0 or higher or for stats.linearegress. Under such version'
+              _logger.warning('Note: need scipy version 0.14.0 or higher'
+                              ' or for stats.linearegress. Under such version'
                               'it might not work.')
       # from sp import stats 
       stats_import =True 
@@ -80,7 +84,9 @@ except :
 class Geodrill (object): 
     """
     Class to manage data from Occam2D and Model so to create section of each  
-    sites and it depth.Each station constitues an attribute framed by two closest  
+    sites and it depth.
+    
+    Each station constitues an attribute framed by two closest  
     point of station offsets from model resistivities.
     Deal with  True resistivities get on the survey or with others firms. 
     In fact , input truth resistivities values into our model , produce an accuracy 
@@ -105,31 +111,31 @@ class Geodrill (object):
 
     Arguments
     ----------
-        * model_fn  : str  
-               full path to Occam model  file .                             
-        * iter_fn :  str                
-                full path to occam iteration  file
+        **model_fn** : str  
+                    full path to Occam model  file .                             
+        **iter_fn** :  str                
+                    full path to occam iteration  file
                                                         
-        * data_fn  :  str , 
-               full path to occam_data file 
-        * input_resistivities :   array_like 
-                        Truth values of resistivities 
-        * step_descent  : float   
-            step to enforce the model resistivities to
-              keep the  truth layers values as reference
-              .Step to cut out data and to  force resistivites 
-             calcualted to match the reference data as input 
-             resistivities if not provided the step will be
-             20% of D0I
-        * input_layers :  array_like  
+        **data_fn** :  str  
+                    full path to occam_data file 
+        **input_resistivities** :   array_like 
+                            Truth values of resistivities 
+        **step_descent**: float   
+                        step to enforce the model resistivities to
+                         keep the  truth layers values as reference
+                         Step to cut out data and to  force resistivites 
+                         calcualted to match the reference data as input 
+                         resistivities if not provided the step will be
+                         20% of D0I
+        **input_layers** :  array_like  
                         True input_layers names : geological 
                         informations of encountered layers 
 
-    .. note :: In this section all resistivites are in ohm.meter not in log10.
+    .. note:: In this class, all resistivites are in ohm.meter not in log10.
        
-    ============= ============ ================================================
-    Attributes        Type       Explanation 
-    ============= ============ ================================================
+    =============  ===========  ===============================================
+    Attributes     Type         Explanation 
+    =============  ===========  ===============================================
     doi            str          depth of investigation might
                                 be float or str like "1km" =1000
     depth_scale    str          scale of imaging depth can be 
@@ -140,23 +146,25 @@ class Geodrill (object):
     iter2dat_fn    str          full path to Bo Yang (x, y, z) model_file     
     bln_file       str          full path to station location file  additional 
                                 file issue from Bo Yang (x, y, z file)
-    ============ ============= ================================================
-    :Example: ::
+    =============  ===========  ===============================================
+    
+    :Example: 
+        
         >>> from geodrill.geoCore.geodrill import Geodrill 
         >>> path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 
-                               'data', 'occam2D')
+        ...                       'data', 'occam2D')
         >>> geo_obj = Geodrill( input_resistivities=[300, 500, 
-                                                     1000, 2000, 4000, 6000],
-                               input_layers =['alluvium', 
-                                              'amphibolite','altered rock',
-                                                            'augen gneiss', 'granite'],
-                               mesh_fn=os.path.join(path, 'Occam2DMesh')
-                               iter_fn = os.path.join(path, 'ITER17.iter'), 
-                               model_fn =os.path.join(path, 'Occam2DModel') , 
-                               data_fn =os.path.join(path, 'OccamDataFile.dat'),
-                               doi='1km', 
-                               step_descent=200., 
-                                  )
+        ...                                             1000, 2000, 4000, 6000],
+        ...                       input_layers =['alluvium', 
+        ...                                      'amphibolite','altered rock',
+        ...                                                    'augen gneiss', 'granite'],
+        ...                       mesh_fn=os.path.join(path, 'Occam2DMesh')
+        ...                       iter_fn = os.path.join(path, 'ITER17.iter'), 
+        ...                       model_fn =os.path.join(path, 'Occam2DModel') , 
+        ...                       data_fn =os.path.join(path, 'OccamDataFile.dat'),
+        ...                       doi='1km', 
+        ...                       step_descent=200., 
+        ...                          )
         >>> geo_obj.geo_build_strata_logs()
         >>> geo_obj.geo_name_S01
         >>> geo_obj.geo_name_S00
@@ -231,22 +239,27 @@ class Geodrill (object):
         """
         Readmodel data and collected from each site its value from surface to depth 
         
-        :Example: :: 
+        1. Read with Occam 2D outputs files
+        
+        :Example: 
             
             >>> form csamtpy.geodrill import Geodrill
-            
-            (1) read with Occam 2D output file  
             >>> path_occam2d = os.path.join(os.environ ['pyCSAMT'],
-                                            'csamtpy', 'data', 'occam2D')
+            ...                                'csamtpy', 'data', 'occam2D')
             >>> path_i2d =os.path.join(os.environ ['pyCSAMT'], 
-                                       'csamtpy', 'data', '_iter2dat_2')
+            ...                           'csamtpy', 'data', '_iter2dat_2')
             >>> geo_obj =Geodrill(model_fn  = os.path.join(path_occam2d,'Occam2DModel'), 
-                              mesh_fn = os.path.join(path_occam2d, 'Occam2DMesh'), 
-                              iter_fn = os.path.join(path_occam2d, 'ITER17.iter'), 
-                              data_fn = os.path.join(path_occam2d, 'OccamDataFile.dat'))
-            (2)--> Read with only iter2dat file and bln file 
+            ...                  mesh_fn = os.path.join(path_occam2d, 'Occam2DMesh'), 
+            ...                  iter_fn = os.path.join(path_occam2d, 'ITER17.iter'), 
+            ...                  data_fn = os.path.join(path_occam2d, 'OccamDataFile.dat'))
+            
+        2. Read with only iter2dat file and bln file 
+        
+        :Example:
+            
+            >>> form csamtpy.geodrill import Geodrill
             >>> geo_obj =Geodrill(iter2dat_fn  = os.path.join(path_i2d, 'K1.iter.dat'), 
-                              bln_fn = os.path.join(path_i2d, 'K1.bln'),)
+            ...                  bln_fn = os.path.join(path_i2d, 'K1.bln'),)
             >>> geo_model_off = geo_obj.model_x_nodes
             >>> geo_model_res= geo_obj.model_res
             >>> geoS01 = geo_obj.geo_name_S01
@@ -260,17 +273,17 @@ class Geodrill (object):
             """
             Fonction to frame each site into 3 offsets and put array 
 
-            :param site_names :  name of site , eg S01
-            :type site_names : str  
+            :param site_names:  name of site , eg S01
+            :type site_names: str  
                
-            :param model_res : ndarray(depth, station_offset) resistivity 
-            :type model_res : ndarray(depth, station_offset)
+            :param model_res: ndarray(depth, station_offset) resistivity 
+            :type model_res: ndarray(depth, station_offset)
 
-            :param model_offset:the offset generated by mesh 
+            :param model_offset: the offset generated by mesh 
             :type model_offset: array_like  
                  
-            :site _offset :  offset of that site  : 15.0 m 
-            :site _offset : float 
+            :site _offset:  offset of that site  : 15.0 m 
+            :site _offset: float 
                                  
             """
             # fist check if site offset in in model offset
@@ -463,25 +476,26 @@ class Geodrill (object):
        More resitivities ,more accuracy in the designed of underground model
        geostratigrapyhy model.
 
-       :param input_resistivity_range :an array of resistivity on the site
-       :type input_resistivity_range :array_like 
+       :param input_resistivity_range: an array of resistivity on the site
+       :type input_resistivity_range: array_like 
                       
-       :param input_layers : layers_names , eg .`granite`, `fault`, `river `
-       :param input_layers : list or array 
+       :param input_layers: layers_names , eg .`granite`, `fault`, `river `
+       :param input_layers: list or arrays 
                             
-       :param depth_range : an array _like , an array _of depth of specific layer 
-       :type depth_range : array _like
+       :param depth_range: array _of depth of specific layer 
+       :type depth_range: array _like
                     
-        :Example: ::
+ 
             
-        eg of table  of geoinformation collected on the field somewhere 
-        ==================== ===================== ============================
+        Example of table  of geoinformation collected on the field somewhere 
+        
+        ====================  ====================  ===========================
         Structure	          Rho mean value (Ω.m)	Rho range  (Ω.m)
-        ==================== ===================== ============================
+        ====================  ====================  ===========================
         Granite	                2000	               1000-3000
-        Fault fracture zone 	120	                   60-180
+        Fault fracture zone     120	                   60-180
         River water 	        68	                   66-70
-        ===================== ==================== ============================
+        ====================  ====================  ===========================
         """
   
         if self.iter2dat_fn is None  or self.model_fn is None : 
@@ -495,10 +509,10 @@ class Geodrill (object):
  
             Parameters
             ------------
-            * rowlines :    array_like ,
-                array of resistivities values 
-            * value_range :   array_like 
-                array of resistivities from survey area.
+            * rowlines :  array_like ,
+                            array of resistivities values 
+            * value_range : array_like 
+                        array of resistivities from survey area.
             Returns 
             ---------
             array_like 
@@ -649,8 +663,8 @@ class Geodrill (object):
         :type resistivities_range: array_like,                      
         
         :returns: the list of geological structures
-            form go_electrical _rocks properties 
-        :rtype:list 
+                    form go_electrical _rocks properties 
+        :rtype: list 
         """
         if isinstance(resistivities_range, (float, str, int)): # only single value provided than put on list.
             try : 
@@ -694,8 +708,8 @@ class Geodrill (object):
         calculated averaged rho after will return matrix transpose
          as the same shape as inputted . .Defaut is **False** . 
      
-        :param data_array : ndarray, data of resistivities collected at the site point  
-        :type data_array : ndarray       
+        :param data_array: data of resistivities collected at the site point  
+        :type data_array: ndarray       
         """
         if data_array.dtype not in ['float', 'int']:  # be sure data type is on float value
             try :
@@ -726,25 +740,27 @@ class Geodrill (object):
         Read resistivits data  got on survey area and build geological strata block. 
         If constrained_electrical_properties_of_rocks is False , will build a log 
         by considering the  conventional electrical property of rocks 
-        can be find though this link : 
-        https://www.eoas.ubc.ca/ubcgif/iag/foundations/properties/resistivity.htm
-        list is not exhaustive and depend of the geological formations of 
-        survey area. 
+        can be find through this link :
+            
+        .. seealso:: https://www.eoas.ubc.ca/ubcgif/iag/foundations/properties/resistivity.htm
+                list is not exhaustive and depend of the geological formations of 
+                survey area. 
         
         Parameters
         ------------
         * input_resistivity :array_like
-            an array of resistivity on the site
+                        an array of resistivity on the site
         * step_descent : float 
-            depth value to averaged rho . Must be smaller as possible 
-            if None , it take the 2% times the investigation depth  
+                        depth value to averaged rho . Must be smaller as possible 
+                        if None , it take the 2% times the investigation depth  
         * input_layers : list or array 
-            layers_names , eg `granite`, `fault`, `river` 
+                    layers_names , eg `granite`, `fault`, `river` 
         
-        :Sample of electrical_properties_of_rocks: ::
-        ========================== ==================== =======================
-        rocks                           max Rho           Min Rho (ohm-m)
-        ========================== ==================== =======================
+        A Sample of electrical_properties_of_rocks: 
+            
+        =========================  ===================  =======================
+        Rocks                       Max Rho             Min Rho (ohm-m)
+        =========================  ===================  =======================
         igneous rocks                   10^6                10^3 
         duricrust                       5.10^3              5.10^2
         gravel and sand                 10^4                10^2.90(800)
@@ -765,9 +781,10 @@ class Geodrill (object):
         sea water                       10^-0.09(0.8)       10^-1
         ore minerals                    10^0                10^-4
         Graphite                        10^-2.5             10^-3.5
-        ========================== ==================== =======================
-        .. Note :: list is not Exhaustive, use the data base script to populate 
-            most of goeological electrical properties.
+        =========================  ===================  =======================
+        
+        .. note :: list is not Exhaustive, use the data base script to populate 
+                    most of goeological electrical properties.
         """
 
         def get_conductive_zone (dep_array, rho_array, step_in_deep)   :
@@ -789,26 +806,29 @@ class Geodrill (object):
             Parameters
             ----------
                 * dep_array : array_like 
-                     the imaged depth 
+                             the imaged depth 
                 * step_in_deep : float, 
                                 value to averaged resistivities in deeper
                 *  rho_array :  array_like ,
-                        the resistivities at the sites depth {Top to bottom}
+                                the resistivities at the sites depth {Top to bottom}
             Returns 
             --------
             array_like 
                 rho average for each station dep_averaged for each station
                                  
             
-            .. Note :: Much large is the step , the accuracy become weak , it must be 
-                        as possible 1/20 of investigation depth (doi)
-            :Example: ::
-                    >>> pseudo_depth = np.arange(0, 1201.,100)
-                    >>> print(pseudo_depth)
-                    ... dep_aver= dep(dep_array=pseudo_depth, value=100)
-                    ... print(dep_aver)
-                    ... print(pseudo_depth.shape)
-                    ... print(dep_aver.shape)
+            .. note :: Much larger is the step , the accuracy becomes weak , 
+                        it must be as possible 1/20 of investigation depth (doi)
+                        
+            :Example: 
+                
+                >>> import numpy as np
+                >>> pseudo_depth = np.arange(0, 1201.,100)
+                >>> print(pseudo_depth)
+                ... dep_aver= dep(dep_array=pseudo_depth, value=100)
+                ... print(dep_aver)
+                ... print(pseudo_depth.shape)
+                ... print(dep_aver.shape)
             """
    
             step_in_deep  =punc.depth_of_investigation(step_in_deep)
@@ -1007,24 +1027,26 @@ class Geodrill (object):
         Parameters
         ------------
          * structures resistivities  : array_like, 
-                resistivities of structures 
+                                    resistivities of structures 
+                                    
          * real_layer_names : array_like |list 
-                    names of layer of survey area 
-                if not provided , will use resistivities to find the closet 
-                layer that match the best the resistivities 
+                            names of layer of survey area 
+                            if not provided , will use resistivities to find the closet 
+                            layer that match the best the resistivities
+                            
         * constrained_electrical_properties_of_rocks: bool 
-                set to True mean the realy_layer is provided. if not program 
-                will enforce to False , will use default conventional layers
-                Default is False, assume to povided layer names for  accuracy
+                    set to True mean the realy_layer is provided. if not program 
+                    will enforce to False , will use default conventional layers
+                    Default is False, assume to povided layer names for  accuracy
         
         Returns
         --------
-        array_like 
-             f_name , names of formations find with their corresponding rho 
-        array_like 
-            f_pattern , patter of differents geological formations 
-        array_like   
-             f_color,color of differents geological formations 
+            * f_name: array_like 
+                  names of formations find with their corresponding rho 
+            * f_pattern: array_like 
+                 patter of differents geological formations 
+            * f_color: array_like   
+                 color of differents geological formations 
         """
 
         unknow_layer_color = kwargs.pop('default_layer_color', 'white')
@@ -1162,15 +1184,20 @@ class Geodrill (object):
         """
         Output average files, rehoreplaced files, spseudosequennces
         files and station locations files  will generate 3 outputs for 
-        Golden software plots : 
+        Golden software plots 
+        
         1. One model for rho averaged (*_aver), transitory data betwen 
             the calculated rho and true rho.
+            
         2. second for rho value replaced . Replaced calcualted model 
             structures resistivities 
+            
         to their closest resistivities as resistivities reference from
             input resistivities.
+            
         3. the most important files: the  cut out resistivities value 
             with step descent (._sd) show most dominant stratigraphy sequences .
+            
         4. the station location file (.bln)
     
         Plot the 3 files in Golden software to see transition from model 
@@ -1180,29 +1207,33 @@ class Geodrill (object):
         ------------
             * input_resistivities :   array_like 
                 Truth values of resistivities 
+                
             * filename :str 
                 name of output file 
+                
             * step_descent :  float,
                 Step to cut out data and to  force resistivites calcualted 
                  to match the reference data as input resistivities 
-                 if not provided the step will be 20% of D0I
-            * input_layers  : array_like ,
+                 if not provided the step will be 20% of D0I.
+                 
+            * input_layers  : array_like 
                     True input_layers names ( geological informations of
-                            encountered layers )
+                     encountered layers )
+                    
             * savepath :  str, 
                     full path to the savepath ,
                     if None , will create folder name to savepath 
             
-        =================== ================== ================================
-        other params          type                   explanation 
-        =================== ================== ================================
+        ===================  ================  ================================
+        Other params          Type                   Explanation 
+        ===================  ================  ================================
         elevation              array_like       elevation of survey area 
         to_negative_depth      bool             export deth in negative 
                                                 value or positive 
                                                 default is "negative"
         scale                  str              scale to export data .Must be
                                                 *m* or `km`. *default* is **m**       
-        ==================== ================== ===============================
+        ===================  ================  ================================
         """
         elevation = kwargs.pop('elevation', None)
         write_negative_depth=kwargs.pop('to_negative_depth', True)
@@ -1247,7 +1278,8 @@ class Geodrill (object):
             
             warnings.warn(mess)
             self._logging.error(mess)
-            raise CSex.pyCSAMTError_plot_geoinputargument("Can not write details sequences log files ! Please provided at least one"\
+            raise CSex.pyCSAMTError_plot_geoinputargument("Can not write details sequences log files "
+                                                          "! Please provided at least one"
                                                           " truth layer resistivity.")
         
         matrix_rhoaver ,matrix_rhorr, matrix_rho_stepdescent =[[]for i in range(3)]
@@ -1350,29 +1382,46 @@ class Geodrill (object):
         Parameters
         ------------
             * model_fn :  str  
-                full path to Occam2D model file 
+                    full path to Occam2D model file 
+                
             * mesh_fn :  str   
-                full path to Occam2D mesh file 
+                    full path to Occam2D mesh file 
+                
             * data_fn :   str    
-                full path to Occam2D data file 
+                    full path to Occam2D data file 
+                
             * iter_fn :   str    
-                            full path to Occam2D iteration file 
-                            OR Bo Yang (x, y, z ) files  
+                    full path to Occam2D iteration file 
+                    OR Bo Yang (x, y, z ) files  
+                            
             * iter2dat_fn : str      
                     full path to iter2dat file 
                     (see _occam2d module to see which file is it. or call  
                      occam2d.Iter2Dat.__doc__)
+                    
             * bln : str  
-                full path to satation location file 
-                profile files (Easting , Northing Coordinates) , 
-                                    see csamtpy.ff.Core.cs.Profile.__doc__
+                    full path to satation location file 
+                    profile files (Easting , Northing Coordinates) , 
+                    "see csamtpy.ff.Core.cs.Profile.__doc__"
+                                    
             * profile_fn: str   
                     full path to station profile file . You can   
-                     useProfile module to rewrite _coordinate files 
+                    useProfile module to rewrite _coordinate files 
+                     
+            * write_negative_depth:  bool 
+                            output negative depth. 
+                            *Default* is True
+                            
+            * scalled_east_north:  tuple
+                            scalled the easting and northing. 
+                            Substract or add value to easting
+                            or northing values. first `index1` 
+                            equal easting and  `index2` equal 
+                            Nothing.*Default* is (0,0).
 
-        ================= ================ ====================================
-        Other params        Type                     Explanation 
-        ================= ================ ====================================
+        =================  ==============  ====================================
+        Other params        Type            Explanation 
+        =================  ==============  ====================================
         filename            str             New name of output file .
                                             *Default* is None 
         normalize_depth     bool            Set the depth ega spacing depth .
@@ -1390,16 +1439,9 @@ class Geodrill (object):
                                             file .It will detect  automatically.
                                             *default* is None.
         elevation           array_like      Elevation area . *Default* is None.
-        scalled_east_north  tuple           scalled the easting and northing. 
-                                            Substract or add value to easting
-                                            or northing values. first `index1` 
-                                            equal easting and  `index2` equal 
-                                            Nothing.*Default* is (0,0)
-        output_s_XY           bool          Scalled coordinates  output files. 
+        output_s_XY         bool            Scalled coordinates  output files. 
                                             *Default* is True 
-        write_negative_depth  bool          output negative depth. 
-                                            *Default* is True
-        input_rho             array_like    input resistivities of True
+        input_rho           array_like      input resistivities of True
                                             geological formations (optional)
                                             if input resistivities is provided 
                                             will generated output step descent 
@@ -1422,7 +1464,8 @@ class Geodrill (object):
                                             *Defaut* is ','
         to_log10             bool           if True : will ouput all 
                                             resistivities data to  log10 values         
-        ==================== ============= ====================================
+        =================  ==============  ====================================
+        
         """
         def create_model_matrix (station_names, geo_dict_rho, transpose =True): 
             """
@@ -1432,14 +1475,14 @@ class Geodrill (object):
             Parameters
             ----------
             * station _names: list  
-                    name of stations 
-            * geo_dict_rho : dict 
-                    dictionnary of model_resistivities 
-                     can  be a step _descent dict , 
-                     geo_average_or geo_replace rho 
-            * transpose :  bool 
-                     if transpose is True , depth will be a xoffset 
-                     and and station names as y offsets
+                        name of stations 
+            * geo_dict_rho: dict 
+                        dictionnary of model_resistivities 
+                         can  be a step _descent dict , 
+                         geo_average_or geo_replace rho 
+            * transpose:  bool 
+                         if transpose is True , depth will be a xoffset 
+                         and and station names as y offsets
                                 
             Returns 
             --------
@@ -1742,12 +1785,13 @@ class Geosurface :
  
     Arguments
     -----------
-        * path: string 
-            the path to oasis ouput files , frequently the files generated by
+        **path**: string 
+                path to oasis ouput files , frequently the files generated by
                 `geodrill`modules.
-    ============== =============== ============================================
+            
+    ==============  =============  ============================================
     Key Words       Type                        Description    
-    ============== =============== ============================================
+    ==============  =============  ============================================
     depth _values   array_like      Values of depth for imaging .
                                     can be a list of depth like [38,912]
     fileformat      str             output format . actually geosurface can 
@@ -1755,15 +1799,16 @@ class Geosurface :
                                     *default* is   `csv`. 
     savepath        str             full path to sve directory . If  none 
                                     will create an a new directory 
-    ============== =============== ============================================
+    ==============  =============  ============================================
         
-        :Example :: 
-                >>> from geodrill.geoCore.geodrill import Geosurface 
-                >>> gs_obj = geosurface (path =os.path.join(os.environ['pyCSAMT'], 
-                                                   'geodrill', 'data', 
-                                                   InputOas), 
-                                            depth_values = [28, 100])
-                >>> gs_obj.write_file()
+    :Example :
+        
+        >>> from geodrill.geoCore.geodrill import Geosurface 
+        >>> gs_obj = geosurface (path =os.path.join(os.environ['pyCSAMT'], 
+        ...                                   'geodrill', 'data', 
+        ...                                   InputOas), 
+        ...                            depth_values = [28, 100])
+        >>> gs_obj.write_file()
     """
     geo_surface_format=["csv",  "xlsx", "json","html","sql"] 
     
@@ -1785,9 +1830,10 @@ class Geosurface :
                         
     def _validate_oasis_path(self, path =None ) : 
         """
-        Validate oasis montaj files and get extension files 
-        :param path :  full path to oasis montaj files
-        :type path : str 
+        Validate oasis montaj files and get extension files
+        
+        :param path: full path to oasis montaj files
+        :type path: str 
         
         """  
         if path is not None : self.path =path 
@@ -1831,23 +1877,24 @@ class Geosurface :
         
     def read_oasis_files (self, path =None ):
         """
-        method to get depth spacing , station info  data infos, 
-         Each line becomes it own attributes components
-         of info values are  `Stations`,	`Easting_X_m`,`Northing_Y_m`,
+        Method to get depth spacing , station info  data infos, 
+        Each line becomes it own attributes components
+        of info values are  `Stations`,	`Easting_X_m`,`Northing_Y_m`,
         `v_H_m`,`x_m`	`Norm_h_m`,`sets_m`	`DOI_max_m`.
 
-        :param path : str  full path to the oasis files .  
-        :type path : str  
+        :param path: full path to the oasis files .  
+        :type path: str  
  
-        :Example : ::  
-         >>> from geodrill.geoCore.geodrill  import Geosurface 
-         >>> path =  r'F:/__main__csamt__\oasis data\OASISWORKS\all_data'
-         >>> geo_surface_obj = Geosurface( path =path )
-         >>> geo_surface_obj.read_oasis_files()
-         ... geofilenames = geo_surface_obj.filenames 
+        :Example:
+            
+             >>> from geodrill.geoCore.geodrill  import Geosurface 
+             >>> path =  r'F:/__main__csamt__\oasis data\OASISWORKS\all_data'
+             >>> geo_surface_obj = Geosurface( path =path )
+             >>> geo_surface_obj.read_oasis_files()
+             >>> geofilenames = geo_surface_obj.filenames 
          
-         ... notes::to get the values of line K1_cor_oas "K1_cor_oas.csv
-         ... k1_obj = geo_surface_obj.K1_cor_oas 
+        ... note::To get the values of line K1_cor_oas "K1_cor_oas.csv
+                do ``k1_obj = geo_surface_obj.K1_cor_oas`` 
         """
         print('{0:-^77}'.format('GeoSurface * Data * info'))
         
@@ -1858,15 +1905,15 @@ class Geosurface :
             Parameters
             ----------
                 * df : pandas.Core.DataFrame 
-                    Dataframe pandas 
+                        Dataframe pandas 
             Returns
             --------
-             list 
-                info_names  , header names info 
-             array_like 
-                    depth_values,   spacing depth offsets 
-             float 
-                 depth_spacing  value of spacing depth   
+             info_names: list 
+                      header names info 
+             depth_values: array_like 
+                        spacing depth offsets 
+             depth_spacing: float 
+                      value of spacing depth   
             """
             info_names = [name.lower() for name in df.columns if not
                           (name.find('dep_')>=0  or name.find('res_')>= 0) ]
@@ -1886,12 +1933,12 @@ class Geosurface :
             
             Parameters
             -----------
-                * fnames : list 
-                head of info names except the depth matrix
-                    (dep_) and ressitivity matrix (res_)  
-                * name : str 
-                    name of head user are looking for 
-                * info_matrix : ndarray 
+                * fnames: list 
+                        head of info names except the depth matrix
+                        (dep_) and ressitivity matrix (res_)  
+                * name: str 
+                        name of head user are looking for 
+                * info_matrix: ndarray 
                             ndarray array of oasis montag info .
                             start by ]station] to end normally  [doi max] 
             """
@@ -1973,11 +2020,11 @@ class Geosurface :
         get the depth surfaces for multi-lines and build the numpy 
         corresponding array  at that depth .
 
-        :param depth_values : array of depth 
-        :type  depth_values : float  or array_like  
+        :param depth_values: array of depth 
+        :type  depth_values: float  or array_like  
                            
-        :param path : full path to oasis outputfiles .
-        :type path :str 
+        :param path: full path to oasis outputfiles .
+        :type path: str 
         """
         if path is not None : 
             self.path = path 
@@ -2006,13 +2053,13 @@ class Geosurface :
 
         def get_single_surface_from_one_line(site_name , depth_value)  : 
             """
-            fonction to get single surface from depth value fron one line .
+            Fonction to get single surface from depth value fron one line .
             
-            :param depth value :depth value to image
-            :type depth value : float 
+            :param depth value: depth value to image
+            :type depth value: float 
                           
-            : param site_name : str name of site
-            : type site_name : str
+            :param site_name: str name of site
+            :type site_name: str
             """
             # get attributes array : depth and resistivity
             #get depth index from info_depthvalues dictionnary (key  :
@@ -2066,14 +2113,14 @@ class Geosurface :
         """
         Write output files. Output files are `.xlsx` or `.csv` . 
      
-        :param path :  full path to  `geodrill` ouput files
-        :type path : str 
+        :param path:  full path to  `geodrill` ouput files
+        :type path: str 
         
-        :param depth value :  depth values for imaging  
-        :type depth value : float or array_like
+        :param depth_value:  depth values for imaging  
+        :type depth_value: float or array_like
                    
-        :param fileformat :`xlsx` or `csv` are actually the acceptable formats.
-        :type fileformat : str,      
+        :param fileformat:`xlsx` or `csv` are actually the acceptable formats.
+        :type fileformat: str,      
         """
         savepath = kwargs.pop('savepath', None)
         writeIndex= kwargs.pop('write_index', False)
@@ -2183,13 +2230,15 @@ class geostrike :
      Need to import scipy.stats as one module . Sometimes import scipy 
     differently  with stats may not work . 
     either `import scipy.stats` rather than `import scipy as sp` to use : 
-        `sp.stats.linregress` . 
+        `sp.stats.linregress` .
+        
     """
 
     @staticmethod 
     def compute_profile_angle (easting=None, northing=None): 
         """
-        Essentially dedicated to compute geoprofile angle 
+        Essentially dedicated to compute geoprofile angle. 
+        
         Parameters 
         -----------
         * easting : array_like 
@@ -2249,19 +2298,20 @@ class geostrike :
     def compute_geoelectric_strike (profile_angle = None , easting =None, 
                                     northing=None, **kws):
         """
-        Compute geoelectric strike 
+        Compute geoelectric strike
+        
         Parameters
         -------------
           *  profile_angle : float 
-                if not provided , will comput with 
-                easting and northing coordinates 
+                    If not provided , will comput with 
+                    easting and northing coordinates 
           * easting : array_like 
-                 easting coordiantes values 
+                     Easting coordiantes values 
           * northing : array_like 
-                 northing coordinates values 
+                     Northing coordinates values 
           * geo_strike : float 
-                 strike value , if provided, will 
-                 recomputed geo_electric strike .
+                     strike value , if provided, will 
+                     recomputed geo_electric strike .
         Returns 
         --------
         float
@@ -2325,21 +2375,22 @@ class Drill(object):
         
     Arguments
     -----------
-    * well_filename : string ,
-             The  well filename. 02 options is set : 
-             1rst option is to build well data manually and the program will  
-             generate a report.  2nd option is to send to
-             the program a typical file type to be parsed . the programm parses
-             only the typical well datafile. If None ,  the program will 
-            redirect to build mannually option . 
-     * build_manually_welldata  : bool  
-             option to build manually the well data . set to True , if you want 
-             to build manually a well data . default is False
+        **well_filename** : string ,
+                     The  well filename. 02 options is set : 
+                     1rst option is to build well data manually and the program will  
+                     generate a report.  2nd option is to send to
+                     the program a typical file type to be parsed . the programm parses
+                     only the typical well datafile. If None ,  the program will 
+                    redirect to build mannually option . 
+                    
+        **build_manually_welldata** : bool  
+                     option to build manually the well data . set to True 
+                      if you want to build manually a well data .
+                     *default* is False
 
-    
-    ==================== =========== ==========================================    
-    Key Words/Attributes     Type      Description    
-    ==================== ============ =========================================    
+    ====================  ==========  =========================================    
+    Key Words/Attributes  Type          Description    
+    ====================  ==========  =========================================   
     utm_zone                str         utm WGS84 zone. should be N or S.   
                                         *default* is 49N .
     compute_azimuth         bool        if no azimuth is provided. 
@@ -2351,11 +2402,11 @@ class Drill(object):
                                         buiding . *default* is  None
     mask                    int         the mask of DrillHole(DH) data. 
                                         *Default * is 1.
-    ===================== ============ ========================================
-    Followings methods:: 
-    ================ ==========================================================
+    ====================  ==========  =========================================
+    
+    ==================  =======================================================
     Methods                   Description
-    ================ ==========================================================
+    ==================  =======================================================
     _collar             build _collar data *return*  collar log dataframe 
                         format
      dhGeology          build DH log geology *return* geology log dataframe.        
@@ -2365,19 +2416,20 @@ class Drill(object):
                         & Azimuth dataframes
     writeDHDATA          output log :* return *  the right log to output for
                         Oasis Montaj 
-    ================= =========================================================
+    ==================  =======================================================
         
-    :Example: ::
+    :Example: 
+        
         >>> from geodrill.geoCore.geodrill import Drill 
         >>> parser_file ='nbleDH.csv'
         >>> drill_obj=Drill(well_filename=os.path.join(os.environ['pyCSAMT'],
-                                                   parser_file),
-              build_manually_welldata=False)
+        ...                                           parser_file),
+        ...      build_manually_welldata=False)
         >>>  scollar=drill._collar(DH_Top=None)
         >>> sgeo=drill.dhGeology()
         >>> ssam=drill.dhSample()
         >>> selevaz=drill.dhSurveyElevAz( add_elevation=None, 
-                                     add_azimuth=None)
+        ...                             add_azimuth=None)
         >>> swrite=drill.writeDHData(data2write ="*",
                                  savepath =None)
     """
@@ -2484,8 +2536,8 @@ class Drill(object):
         Parameters 
         ----------
             * DH_Top  : np.ndarray ,
-                it's the Top of data for each Hole Name. ndaray (number of DH , 1) 
-                Default is None.
+                    it's the Top of data for each Hole Name. ndaray (number of DH , 1) 
+                    *Default* is None.
         Returns
         -------
             pd.DataFrme 
@@ -2570,10 +2622,11 @@ class Drill(object):
         Parameters
         ----------
         * dh_geomask : np.ndarray, optional
-            geology mask. send mask value can take exactly
-            the np.ndarray(num_of_geology set ,). The better way to set geology mask
-            is to fill on the wellfilename. if not , programm will take the general mask value. 
-            The default is None.
+                    geology mask. send mask value can take exactly
+                    the np.ndarray(num_of_geology set ,). The better way 
+                    to set geology maskis to fill on the wellfilename.
+                    if not , programm will take the general mask value. 
+                    The *default* is None.
 
         Returns
         -------
@@ -2652,25 +2705,31 @@ class Drill(object):
            
     def dhSample (self,path_to_agso_codefile=None, dh_sampmask=None):
         """
-        Method to build Sample log. This method focuses on the sample obtained during the DH trip.
-        it may georeferenced as the well_filename needed. A main thing is to set the AGSO_STCODES file.
-        AGSO_STCODES is the conventional code of structurals sample. If you have an own AGSO_STCODES ,
-        you may provide the path * kwargs=path_to_ags_codefile * . the program will read and generate
-        logs according to the  DESCRIPTION and STCODES figured. if None, the program will take it STCODES 
-        and set the samplelogs. When you set the Sample code aor sample name , make sur that the name match
-        the same name on STCODES. If not , program will raises an error. 
+        Method to build Sample log. This method focuses on the sample obtained 
+        during the DH trip.it may georeferenced as the well_filename needed. 
+        A main thing is to set the AGSO_STCODES file. AGSO_STCODES is the 
+        conventional code of structurals sample. If you have an own AGSO_STCODES ,
+        you may provide the path * kwargs=path_to_ags_codefile * . 
+        the program will read and generate logs according to the  DESCRIPTION 
+        and STCODES figured. if None, the program will take it STCODES  and set
+        the samplelogs. When you set the Sample code aor sample name , 
+        make sur that the name match the same name on STCODES. If not ,
+        program will raises an error. 
 
         Parameters
         ----------
         * path_to_agso_codefile : str, optional
-            path to conventional AGSO_STRUCTURAL CODES. The default is None.
+                            path to conventional
+                            AGSO_STRUCTURAL CODES.
+                            The *default* is None.
+                            
         * dh_sampmask : np.ndarray, optional
-            Structural mask. The default is None.
+                        Structural mask. The default is None.
 
         Returns
         -------
-        pd.DataFrame 
-            Sample DH log.
+            pd.DataFrame 
+                Sample DH log.
         """
         
         sampKeys=["DH_Hole","DH_From",	"DH_To","Rock",	"Sample",
@@ -2767,20 +2826,25 @@ class Drill(object):
     
     def dhSurveyElevAz(self, add_elevation=None, add_azimuth=None, **kwargs):
         """
-        Method to build Elevation & Azimuth DH logs. if add_elevation and add_azimuth are set . 
-        The programm will ignore the computated azimuth, and it will replace to the new azimuth 
-        provided . all elevation will be ignore and set by the new elevation . *kwargs arguments 
-        {add_elevation , add-azimuth }  must match the same size like the number of Drillholes . 
-        each one must be on ndarray(num_of_holes, 1). 
+        Method to build Elevation & Azimuth DH logs. if add_elevation and . 
+        add_azimuth are set . The programm will ignore the computated azimuth,
+        and it will replace to the new azimuth   provided . all elevation will 
+        be ignore and set by the new elevation . *kwargs arguments 
+        {add_elevation , add-azimuth }  must match the same size like the 
+        number of Drillholes . Each one must be on ndarray(num_of_holes, 1). 
         
         Parameters
         ----------
             * add_elevation : np.nadarray , optional
-                elevation data (num_of_holes, 1) . The default is None.
+                    elevation data (num_of_holes, 1) 
+                    The *default* is None.
+                    
             * add_azimuth : np.ndarray , optional
-                azimuth data (num_of_holes,1). The default is None.
+                    azimuth data (num_of_holes,1). 
+                    The *default* is None.
+                    
             * DH_RL :np.float or np.ndarray(num_of_hole,1),
-                if not provided , it's set to 0. means No topography is added'.
+                    if not provided , it's set to 0. means No topography is added'.
                 
         Returns
         -------
@@ -2888,35 +2952,38 @@ class Drill(object):
         
                     
     def writeDHData (self, data2write =None ,**kwargs):
-        """ Method to write allDH logs. It depends to the users to sort which data 
-        want to export and which format. the program support only two format (.xlsx and .csv)
-        if one is set , it will ouptput the convenience format. Users can give a list of 
-        the name of log he want to export. Program is dynamic and flexible. It tolerates quite 
-        symbols number to extract data logs. 
+        """ 
+        Method to write allDH logs. It depends to the users to sort which data 
+        want to export and which format. the program support only two format 
+        (.xlsx and .csv) if one is set , it will ouptput the convenience format.
+        Users can give a list of  the name of log he want to export.
+        Program is dynamic and flexible. It tolerates quite symbols number to
+         extract data logs. 
         
         Parameters
         ----------
-        * data2write : str or list , optional
-            the search key. The default is None.
-
-        * datafn :str
-            savepath to exported file 
-            *Default is current work directory.
-        * write_index_on_sheet : bool, 
-            choice to write the sheet with pandas.Dataframe index. 
-        * writeType : str , 
-            file type . its may *.csv or *.xlsx .Default is *.xlsx
-        * encoding :str , 
-            default is utf8
-        * add_header : bool, 
-            add head on exported sheet. set False to mask heads. Default is True. 
-        * csv_separateType : str , 
-            Indicated for csv exported files , 
-            the type of comma delimited . defaut is ','.
-        Returns
-        -------
-        str 
-            exported sheet . """
+            * data2write : str or list , optional
+                        the search key. The default is None.
+    
+            * datafn :str
+                    savepath to exported file 
+                    *Default* is current work directory.
+                    
+            * write_index_on_sheet : bool, 
+                    choice to write the sheet with pandas.Dataframe index. 
+                    
+            * writeType : str , 
+                    file type . its may *.csv or *.xlsx .
+                    *Default* is *.xlsx
+                    
+            * add_header : bool, 
+                    add head on exported sheet. set False to mask heads. 
+                    *Default* is True. 
+                    
+            * csv_separateType : str , 
+                    Indicated for csv exported files , 
+                    the type of comma delimited . defaut is ','.
+        """
     
         writepath =kwargs.pop("savepath",None )
         writeIndex=kwargs.pop('write_index_on_sheet',False)
@@ -3038,11 +3105,11 @@ def get_closest_value (values_range, input_value):
     we assume that values are single on array. if the same value is repeated 
     will take the first index and the value at that index 
     
-    :param values_range :  values to get 
-    :type values_range : array_like   
+    :param values_range: values to get 
+    :type values_range: array_like   
                  
-    :param input_value : specific value
-    :type input_value :float,
+    :param input_value: specific value
+    :type input_value: float,
 
     :returns: the closest value and its index
     :rtye: float 
@@ -3103,21 +3170,23 @@ def ascertain_layers_with_its_resistivities(real_layer_names ,
     """
     Assert the length of of real resistivites with their corresponding layers.
     If length of resistivities of larger that the layer's names, then will add
-     layer that match the best the remained resistivities. If the length 
-   of layer is larger than resistivities , to avoid miscomputation , will
-   cut out this more layer and work only the length of resistivities provided.
+    layer that match the best the remained resistivities. If the length 
+    of layer is larger than resistivities , to avoid miscomputation , will
+    cut out this more layer and work only the length of resistivities provided.
     
     Parameters
     ----------
-    * real_layer_names: array_like or list 
-        list of input layer names as real 
-        layers names encountered in area 
-    * real_layer_resistivities :array_like or list 
-        list of resistivities get on survey area 
+    * real_layer_names: array_like , list 
+                list of input layer names as real 
+                layers names encountered in area 
+                
+    * real_layer_resistivities :array_like , list 
+                list of resistivities get on survey area
+                
     Returns 
     --------
-    list 
-        real_layer_names,  new list of input layers 
+        list 
+            real_layer_names,  new list of input layers 
     """
     # for consistency put on string if user provide a digit
     real_layer_names =[str(ly) for ly in real_layer_names]      
@@ -3143,8 +3212,9 @@ def ascertain_layers_with_its_resistivities(real_layer_names ,
 def geo_length_checker(main_param, optional_param, force =False, 
                 param_names =('input_resistivities', 'input_layers'), **kws): 
     """
-    Geo checker is a function to check differents length of different params 
-    .the length of optional params  depend of the length of main params . if
+    Geo checker is a function to check differents length of different params.
+    
+    the length of optional params  depend of the length of main params . if
     the length of optional params is larger than the length of main 
     params, the length of optional params will be reduce to the length of main params .
     if the optional params  length is shorther than the length of
@@ -3155,25 +3225,28 @@ def geo_length_checker(main_param, optional_param, force =False,
   
     Parameters 
     ------------
-    * main_param : array_like , list 
+    * main_param : array_like, list 
              main parameter that must took 
              its length as reference length 
-    * optional params : array_like  , list 
-             optional params , whom length depend 
-             to the length of main params 
+             
+    * optional params : array_like, list 
+             optional params, whom length depend 
+             to the length of main params
+             
     * param_names : tuple or str 
              names of main params and optional params 
              so to generate error if exits.
              
-    * fill_value: str  , float , optional  
+    * fill_value: str, float, optional  
             Default value to fill thearray in the case where 
             the length of optional param is 
-             less than the length of the  main param .If None ,
-             will fill according to array dtype
+            less than the length of the  main param .If None ,
+            will fill according to array dtype
+            
     Returns 
     --------
-    array_like 
-       optional param truncated according to the man params 
+        array_like 
+           optional param truncated according to the man params 
     """
     add_v =kws.pop('fill_value', None)
     

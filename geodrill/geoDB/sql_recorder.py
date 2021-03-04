@@ -19,15 +19,16 @@
     along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
 ===============================================================================  
 
-.. Module :: GeoDataBase 
-    :synopsis:: Special class to manage outputs-input requests from-into 
+.. _module-GeoDataBase::`geodrill.geoDB.sql_recorder`
+ 
+    :synopsis: Special class to manage outputs-input requests from-into 
                 SQL  database .
                 ...
                 
-.. note :: Please! be sure that if you want to edit  this module you are aware
-         of what you  are doing. The module is a core of Geodrill subpackages. 
-         It is sensible module.  However the the way the dataBase is arranged 
-         can be enhanced  and adapted  for better convenient or other suitable purposes.
+.. warnings:: Editing this module presume that you are aware of what you  are doing.
+              The module is a core of Geodrill subpackages. It is sensible module.
+              However the the way the dataBase is arranged can be enhanced  and adapted
+              for better convenient or other suitable purposes.
              
 Created on Wed Oct 14 13:38:13 2020
 
@@ -69,11 +70,10 @@ except Exception as error :
 
 class GeoDataBase (object): 
     """
-     pyCSAMT Geodatabase class . Currently we do not create the specific pattern 
-     for each geostructures 
-     we will later do that. The geoDatabase is built following the table : 
+     Geodatabase class . Currently we do not create the specific pattern 
+     for each geostructures. DataBase is built is built following the   
         codef `code`,   `label`,`__description`,`pattern`, `pat_size`,`pat_density`,
-            `pat_thickness`,`RGBA`, `electrical_props`, `hatch`, `colorMPL`, `FGDC` .
+        `pat_thickness`,`RGBA`, `electrical_props`, `hatch`, `colorMPL`, `FGDC` .
         
     .. note:: FGDC is Digital cartographic Standard for Geological  Map Symbolisation. 
     
@@ -124,6 +124,7 @@ class GeoDataBase (object):
         whether the object `request`   exists effectively  in our
         GeoDatabase . if not , request will be redirect to structural and strata class 
         issue from  module `structural`
+        
         """
         # self.manage_geoDataBase.executeReq(" select __description  from AGS0")
         
@@ -154,8 +155,8 @@ class GeoDataBase (object):
         After checking wether the name of structures exists , 
         let find the geoformation properties   from geodatabase  . 
       
-        :param struture_name :   name of geological rock or layer 
-        :type struture_name : str
+        :param struture_name:   name of geological rock or layer 
+        :type struture_name: str
         """
         if structure_name is not None :self.geo_structure_name = structure_name.lower() 
         
@@ -216,20 +217,24 @@ class GeoDataBase (object):
                 
     def _update_geo_structure (self, geo_formation_name =None, **kws): 
         """
-        update _indormation into geoDataBase . Please remmeber that the
-        geodatabase is build following this table:
-        codef ('code','label','__description','pattern', 'pat_size',
-               'pat_density','pat_thickness','rgb',
-            'electrical_props', 'hatch', 'colorMPL', 'FGDC' )
+        Update _indormation into geoDataBase . 
+        
+        Remember that the geodatabase is build following this table
+        codef 'code','label','__description','pattern', 'pat_size',
+        'pat_density','pat_thickness','rgb','electrical_props',  'hatch',
+        'colorMPL', 'FGDC'. 
         
         :param geo_formation_name:  name of formation be sure the formation
-                 already exists in the geoDataBase if not an error occurs 
-        :type geo_formation_name: str 
+                             already exists in the geoDataBase 
+                             if not an error occurs 
+        :type geo_formation_name: str
         
-        :Example :: 
-            update the electrical property of basement rocks = [1e99, 1e6 ]
+         - Update the electrical property of basement rocks = [1e99, 1e6 ]
+        
+        :Example:
+            
             >>> from geodrill.geoDB.sql_recorder import GeoDataBase 
-            ... GeoDataBase()._update_geo_structure(**{'__description':'basement rocks', 
+            >>> GeoDataBase()._update_geo_structure(**{'__description':'basement rocks', 
                                             'electrical_props':[1e99, 1e6 ]})
         """
         fmt_mess = '---> {0} was successfully set to geoDataBase. Old value = {1} is updated to = {2}'
@@ -352,53 +357,70 @@ class GeoDataBase (object):
     @staticmethod
     def _add_geo_structure( new_geological_rock_name=None , **kws) : 
         """
-        add_geological info into geodatabase 
-        Please remember that the geodatabase is build following this table:
-        The code , 'label' will fill automatically. User doesnt need to fill this part 
-        if code is provided , will not used. 
-        codef ('code','label','__description','pattern', 'pat_size',	'pat_density','pat_thickness','rgb',
-            'electrical_props', 'hatch', 'colorMPL', 'FGDC' )
-        .. note:: `__description` could be replace by `name` 
-       
-        :param new_geological_rock_name : new name of geological formation to add 
-        :type new_geological_rock_name : str  
-        :param informations : dict , must be on keyward keys  when keywords keys 
+        Add new _geological information  into geodatabase .
+        
+        DataBase properties:
+        --------------------
+            - code
+            - label
+            - __description
+            - pattern 
+            - pat_size	
+            - pat_density
+            - pat_thickness
+            - rgb'
+            - electrical_props
+            - hatch
+            - colorMPL
+            - FGDC 
+            
+        .. note:: `__description` could be replaced by `name`.
+                    `code` , `label` and `FGDC` dont need to be fill. 
+                    Values are rejected if given.
+                    
+                
+        :param new_geological_rock_name: new name of geological formation to add 
+        :type new_geological_rock_name: str 
+        
+        :param informations: dict , must be on keyward keys  when keywords keys 
                                 are provided , program will check whether all keys are
                                 effectively the right keys. if not will aborted the process.
-        :type informations : dict
-        :Example: :: 
+        :type informations: dict
+        
+        :Example: 
+            
             >>> from geodrill.geoDB.sql_recorder import GeoDataBase 
             >>> geodatabase_obj= GeoDataBase._add_geo_structure( **{
-                                                 'name': 'massive sulfure', 
-                                                 'pattern': 218., 
-                                                 'pat_size': 250., 
-                                                 'pat_density': 0.75, 
-                                                 'pat_thickness': 2., 
-                                                 'rgb': 'R128B28',
-                                                 'hatch': '+.+.o.+', 
-                                                 'electrical_props':[1e0 , 1e-2],
-                                                 } )
+            ...                                     'name': 'massive sulfure', 
+            ...                                     'pattern': 218., 
+            ...                                     'pat_size': 250., 
+            ...                                     'pat_density': 0.75, 
+            ...                                     'pat_thickness': 2., 
+            ...                                     'rgb': 'R128B28',
+            ...                                     'hatch': '+.+.o.+', 
+            ...                                     'electrical_props':[1e0 , 1e-2],
+            ...                                     } )
         """
         
         def __generate_structure_code (__description , __geocodeList) : 
             """
             Will geological description will create a code and label 
 
-            :param __description :name of geological formation 
-            :type __description : str 
+            :param __description: name of geological formation 
+            :type __description: str 
   
             :returns: geological formation code 
-            :rtype:str 
+            :rtype: str 
             """
             def _rev_func_code (code, CODE): 
                 """
                 generate code and check thin new code  doesnt not exist in 
                 amongs the code of geoDataBase .
 
-                :param code ,  new_generate code 
+                :param code:  new_generate code 
                 :type code: str 
-                :param CODE : codes already exists in dataBase 
-                :type CODE : str  
+                :param CODE: codes already exists in dataBase 
+                :type CODE: str  
                 """
                 # actually the lencode is > than 3 
                 mm=0
@@ -656,9 +678,10 @@ class GeoDataBase (object):
     def rgb(self, litteral_rgb): 
         """
         configure georgb
+        
         .. note:: return the rgb value and the convert rgb palette value: 
-            keep the rgb value g : R125G90B29 and compute the colorMPL
-            let fill automatically the "rgb" and the colorMPL 
+                keep the rgb value eg `R125G90B29` and compute the colorMPL
+                let fill automatically the "rgb" and the colorMPL 
         """
         from geodrill.geoCore.structural import get_color_palette
 
@@ -672,7 +695,8 @@ class GeoDataBase (object):
     @electrical_props.setter 
     def electrical_props(self,range_of_rocks_resvalues):
         """
-        configure electrical property 
+        configure electrical property
+        
         ..note:: Electrical_property of rocks must a tuple of resisvity , max and Min
                 bounds  eg : [2.36e-13, 2.36e-3]
         """
@@ -802,60 +826,56 @@ class GeoDataBase (object):
 class Recorder_sql(object):
     """
     Class to record data from file or pd.core.DataFrame and to tranfer 
-    into SQL database . 
+    into SQL database. 
     
     Arguments 
     -----------
-    * database : str , 
-        name of sql database 
-    * table : str , 
-        name of table in dict_app
-        
-    Attributs 
-    ---------
-        * Glob.dicoT : dict,
-                dicoT is from dict_app module , Global class for sql variable 
-                encapsulated on particular dictionnary. 
-    Methods 
-    ----------
-    * transferdata_to_sqlDB :
-        transfer Data to SQL Database 
+    **database** : str , 
+            name of sql database 
             
+    **table** : str , 
+            name of table in dict_app
+
+    **Glob.dicoT** : dict,
+            dicoT is from dict_app module , Global class for sql variable 
+            encapsulated on particular dictionnary.
+                
+    =========================  ==============================================
+    Methods                    Description 
+    =========================  ==============================================
+    transferdata_to_sqlDB      transfer Data to SQL Database 
+    keepDataInfos              keep informations from datafile '*csv'
+    arrangeData_for_dictapp    to arrange data, acording the dict_app 
+                               arangement
+    =========================  ==============================================
+
+    .. deprecated::deprecated methods 
+                - recordData --> to  keepDataInfos (staticmethod)
+                - set_on_dict_app --> to tarrangeData_for_dictapp(staticmethod)
     
-    * keepDataInfos : __staticmethod__ 
-        method to keep informations from datafile '*csv'
-        or pd.core.DataFrame or np.ndarray 
-    
-    * arrangeData_for_dictapp :  __staticmethod__
-        method to arrange data , acording the dict_app arangement
+    :Example: 
         
-    Warnings   
-    --------
-    
-        deprecated methods 
-    * recordData :  to  keepDataInfos (staticmethod)
-    * set_on_dict_app:  to tarrangeData_for_dictapp(staticmethod)
-    
-    :Example: ::
-            >>> realpath=os.path.dirname(os.path.realpath(__file__)) #where 'the file'sql_recorder is located'
-            >> print(realpath)
-            >>> path_to_files =os.path.normpath(os.path.join(realpath,'sql_utils','sql_DB'))
-            >>> os.chdir(path_to_files)
-            >>>  filename='nofacies_data_2.csv'
-            >>> memory_DB='memory.sq3'
-            >>> path_to_memory=os.path.dirname(os.path.realpath(memory_DB))
-            >>> Rec=Recorder_sql(database=memory_DB,table=None)
-            >>> recordList1=Recorder_sql.recordData(data=filename,new_tablename='TEST2',
-                                                sep=',')
-            >>> sdico_app=Recorder_sql.set_on_dict_app( datalist=recordList0)
-            >>>  sdico_app=Recorder_sql.arrangeData_for_dictapp( datalist=recordList0)
-            >>> trand_sql= Rec.transferdata_to_sqlDB( filename=filename,record_list= None,
-                                                 table_name='exam_zju_2',comments=None,
-                                                 visualize_table_creating_query=True,
-                                                 path_to_sqlDataBase=path_to_files,
-                                                 Drop_DB_Tables='none', fetchall=True, 
-                                                 ready_to_transfer='n',
-                                                 close_connexion =False)
+        >>> from geodrill.geoDB.sql_recorder import Recorder_sql
+        >>> realpath=os.path.dirname(os.path.realpath(__file__)) 
+        >>> #where 'the file'sql_recorder is located'
+        >>> print(realpath)
+        >>> path_to_files =os.path.normpath(os.path.join(realpath,'sql_utils','sql_DB'))
+        >>> os.chdir(path_to_files)
+        >>>  filename='nofacies_data_2.csv'
+        >>> memory_DB='memory.sq3'
+        >>> path_to_memory=os.path.dirname(os.path.realpath(memory_DB))
+        >>> Rec=Recorder_sql(database=memory_DB,table=None)
+        >>> recordList1=Recorder_sql.recordData(data=filename,new_tablename='TEST2',
+        ...                                    sep=',')
+        >>> sdico_app=Recorder_sql.set_on_dict_app( datalist=recordList0)
+        >>>  sdico_app=Recorder_sql.arrangeData_for_dictapp( datalist=recordList0)
+        >>> trand_sql= Rec.transferdata_to_sqlDB( filename=filename,record_list= None,
+        ...                                         table_name='exam_zju_2',comments=None,
+        ...                                         visualize_table_creating_query=True,
+        ...                                         path_to_sqlDataBase=path_to_files,
+        ...                                         Drop_DB_Tables='none', fetchall=True, 
+        ...                                         ready_to_transfer='n',
+        ...                                         close_connexion =False)
     """
     
     def __init__(self, database , table=None,**kwargs):
@@ -876,39 +896,42 @@ class Recorder_sql(object):
         
         Parameters
         ----------
-        * record_list : dict, optional
-            Dictionnay build according the dict_app model. The default is None.
-        * filename : str, optional
-            file must be on ".csv" format. The default is None.
-        *  table_name : str, optional
-            Name of DataBase Table. The default is None.
-
-        *  comments : str  
-                little comment to identify your database table , 
-        *  path_to_sqlDataBase : str  
-                path where the SQL dataBase is located . 
+            * record_list : dict, optional
+                    Dictionnay build according the dict_app model. 
+                    The *default* is None.
+                
+            *  filename : str, optional
+                    file must be on ".csv" format. The default is None.
+            *  table_name : str, optional
+                    Name of DataBase Table. The default is None.
             
-        *  visualize_table_creating_query : bool 
-               if the connexion to server is unlikable , User can 
-               set to True to see whether query entered is right or wrong.
-        *  Drop_DB_Tables : str, 
-               way to drop table in SQL Database . set litteral arguments like 
-              the name of database user want to drop or [ no "*" or all to drop all tables. 
-        *  Ready_to_transfer : str 
-               process to commit Database , the curso tranfered the dataBase to SQL connexion.
-               set litteral 'no' or 'yes' to do.
-           
-         *  close_connexion : bool , 
-               set True when transfer is done . it seems connexion.close()
+            *  comments : str  
+                    little comment to identify your database table. 
+                    
+            *  path_to_sqlDataBase : str  
+                    path where the SQL dataBase is located . 
+                
+            *  visualize_table_creating_query : bool 
+                   If the connexion to server is unlikable  
+                   set to True to see whether query entered is right or wrong.
+                   
+            *  Drop_DB_Tables : str, 
+                   way to drop table in SQL Database . set litteral arguments like 
+                  the name of database user want to drop or [ no "*" or all to drop all tables. 
+                                                             
+            *  Ready_to_transfer : str 
+                   process to commit Database , the curso tranfered the dataBase to SQL connexion.
+                   set litteral 'no' or 'yes' to do.
+              
+            *  close_connexion : bool , 
+                  set True when transfer is done . it seems connexion.close()
 
         Raises
         ------
             Exception occurs when Table Name is not set on dict_app.
 
-        Returns
-        -------
-        None
-             process to set Data PostgreSQL 
+        .. note:: The process of organization is full request of  PostgreSQL 
+        
         """
         
         comments=kwargs.pop('comments', None)
@@ -995,17 +1018,17 @@ class Recorder_sql(object):
         Parameters
         ----------
         * data : str, np.array, list, or pd.core.DataFrame object
-            Data ca, be on the format above or filename of data 
-            if the argument "data" is a filename, we must be convert on ".csv" format.
+                Data ca, be on the format above or filename of data 
+                if the argument "data" is a filename, we must be convert on ".csv" format.
             
         * new_tablename : str, optional
-            Name of database. if name is not given , the 
-            function return only list . The default is None.
+                Name of database. if name is not given , the 
+                function return only list . The default is None.
  
         Raises
         ------
-        Exception
-            IndexError. if lengh of number of columns like heads of data 
+        IndexError.
+             if lengh of number of columns like heads of data 
             does not match the data.shape[0], then errors will occurs.  
 
         Returns
@@ -1103,12 +1126,13 @@ class Recorder_sql(object):
 
         Raises
         ------
-            Povide the dataname compulsory , if not, error occurs.
+         pyCSAMTError_SQL_manager
+            None dataname detected
 
         Returns
         -------
         dict
-            datalist , Data arranged according to  dict_app arrangement.
+            datalist, Data arranged according to  dict_app arrangement.
         """
         
         comments=kwargs.pop('comments', None)
@@ -1175,18 +1199,18 @@ class Recorder_sql(object):
         Parameters
         ----------
         * data : str, np.array, list,  pd.core.DataFrame object
-            Data ca, be on the format above or filename of data 
-            if the argument "data" is a filename, we must be convert on ".csv" format.
+                Data ca, be on the format above or filename of data 
+                if the argument "data" is a filename, we must be convert on ".csv" format.
             
         * new_tablename : str, optional
-            Name of database. if name is not given , the 
-            function return only list . The default is None.
+                Name of database. if name is not given , the 
+                function return only list . The default is None.
 
         Raises
         ------
-        Exception
-            IndexError. if lengh of number of columns like heads of data 
-            does not match the data.shape[0], then errors will occurs.  
+        IndexError
+             if lengh of number of columns like heads of data 
+             does not match the data.shape[0], then errors will occurs.  
 
         Returns
         -------
@@ -1194,10 +1218,11 @@ class Recorder_sql(object):
             list of value in the case of no name is providen for tablename.
             else return dict if name of datatable is providen.
 
-        :Example ::
+        :Example:
+            
             >>> from geodrill.geoDB.sql_recorder import recordData
             >>> filename='nofacies_data.csv'
-            ...recordList0=recordData(data=filename,
+            >>> recordList0=recordData(data=filename,
                                     new_tablename='example')
         """
         nump_columns=kwargs.pop('columns_of array', None)
@@ -1289,7 +1314,8 @@ class Recorder_sql(object):
 
         Raises
         ------
-            Povide the dataname compolsory , if not error occurs.
+        pyCSAMTError_SQL_manager 
+            DataBase no found
 
         Returns
         -------

@@ -19,7 +19,8 @@
     along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
 
 ===============================================================================  
-.. Module:: Interface 
+.. _module-Interface::`geodrill.geoDB.interfaceDB`
+ 
     :synopsis: Specially dedicate to Manage SQL 
 Created on Tue Oct 13 15:28:57 2020
 
@@ -44,28 +45,26 @@ except :
 
 class ManageDB(object) : 
     """
-    build a datable postgre Sql  from dict_app.py 
-    simple way to make a transit between two objects : 
-        One object dict_app to populate DataBase
-    
+    build a datable postgre Sql  from dict_app.py  simple way to make a transit
+    between two objects One object dict_app to populate DataBase
+        
     Arguments
     ------------
-           * db_name : str  
+           **db_name** : str  
                name of dataBase 
-           * db_host : st 
+           **db_host** : st 
                 path to database 
 
-    ====================== ============== ==================================== 
+    ====================  ==============  ==================================== 
     Attributes              Type            Explanation 
-    ====================== ============== ====================================
+    ====================  ==============  ==================================== 
     connex                  object            DataBase connection 
     curs                    object            Database cursor
-    ====================== ============== ====================================
- 
-    Method to manage DB
-    =========================== ===============================================
-     methods                     Explanation 
-    =========================== ===============================================
+    ====================  ==============  ==================================== 
+
+    ==========================  ===============================================
+     Methods                     Explanation 
+    ==========================  ===============================================
     dicT_sqlDB                  send infos as  dictionnary to dataBase 
     execute req                 execute a sql_request
     drop_TableDB                drop all Tables in sql memory DB or single Table 
@@ -74,15 +73,16 @@ class ManageDB(object) :
                                 will still in the cursor and  not in the dataBase 
     print_last_Query            print the last operating system 
     export_req                  export the request on datasheet like excelsheet . 
-    =========================== ===============================================
+    ==========================  ===============================================
         
         
-    :Example:  ::
+    :Example: 
+        
         >>> from sqlrequests import SqlQ
         >>> path= os.getcwd()
         >>> nameofDB='memory.sq3'
         >>> manDB=ManageDB(db_name=nameofDB, 
-                           db_host=path)
+        ...                   db_host=path)
         ... print(SqlQ.sql_req[-1])
         ... manDB.executeReq(SqlQ.sql_req[2])
         ... ss=manDB.print_last_Query()
@@ -109,8 +109,8 @@ class ManageDB(object) :
         :param db_host:   DataBase location path
         :type db_host: str
         
-        :param db_name : str , DataBase name 
-        :type db_name : str 
+        :param db_name: str , DataBase name 
+        :type db_name: str 
         """
         if db_host is not None : self.db_host = db_host 
         if db_name is not None : self.db_name = db_name 
@@ -151,19 +151,20 @@ class ManageDB(object) :
         Parameters
         ----------
         * dictTables : dict
-           Rely on dict_app.py module. it populates the  datababse 
-           from dictionnay app 
-           
+               Rely on dict_app.py module. it populates the  datababse 
+               from dictionnay app 
+               
         Returns
         ---------
           str 
             execute queries from dict_app 
             
-        :Example ::
+        :Example :
+            
             >>>  mDB=GestionDB (dbname='memory.sq3, 
-                               db_host =os.getcwd()')
+            ...                   db_host =os.getcwd()')
             >>> mDB.dicT_sqlDB(dicTables=Glob.dicoT,
-                              visualize_request=False)
+            ...                  visualize_request=False)
             >>> ss=mB.print_last_query()
             >>> print(ss)
         """
@@ -214,9 +215,9 @@ class ManageDB(object) :
         Parameters  
         -----------
         * query : str  
-            sql_query 
+                sql_query 
         * param : str 
-            Default is None . 
+                Default is None . 
         
         raise : 
         -------
@@ -224,12 +225,13 @@ class ManageDB(object) :
             
         return : 
         -------
-          int  
-              1, the request has been successuful run .
+         int  
+             1, the request has been successuful run .
               
-        :Example: ::
+        :Example: 
+            
                 >>>  for keys in Glob.dicoT.keys(): 
-                        reqst='select * from %s'%keys
+                ...        reqst='select * from %s'%keys
                 >>>  ss=manageDB.executeReq(query=reqst)
                 >>>  print(ss)
         """
@@ -256,16 +258,16 @@ class ManageDB(object) :
         Parameters
         ----------
         * dicTables : dict
-            application dictionnary. Normally provide from 
-            dict_app.py module 
+                application dictionnary. Normally provide from 
+                dict_app.py module 
             
         * drop_table_name : str, optional
-            field name of dictionnay (Table Name). 
-            The default is None.
+                field name of dictionnay (Table Name). 
+                The default is None.
             
         * drop_all : Bool, optional
-            Must select if you need to drop all table. 
-            The default is False.
+                Must select if you need to drop all table. 
+                The default is False.
 
         Raises
         ------
@@ -328,13 +330,13 @@ class ManageDB(object) :
 
         Parameters
         ----------
-        query : str, optional
+        * query : str, optional
             Sql requests. You may consult sql_request files. 
             The default is None.
-        export_type : Str, optional
+        * export_type : Str, optional
             file extension. if None , it will export on simple file. 
             The default is '.csv'.
-        **kwargs : str
+        * kwargs : str
             Others parameters.
 
         Raises
@@ -342,7 +344,8 @@ class ManageDB(object) :
         Exception
             Print wrong sqlrequests.
 
-        :Example: :: 
+        :Example:
+            
             >>> from sqlrequests import SqlQ
             >>> manageDB.executeReq(SqlQ.sql_req[2])
             >>> ss=manageDB.print_last_Query()

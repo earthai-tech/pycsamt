@@ -19,7 +19,8 @@
     along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
 
 ===============================================================================  
-.. Module:: Structural 
+.. _module-Structural::`geodrill.geoCore.structural` 
+    
     :synopsis:class for  geological structural analysis 
                contains some conventional structure can populate the data
     
@@ -46,6 +47,7 @@ class geo_pattern:
     its owwn geological pattern in coformity with the conventional geological swatches .
      deal with USGS(US Geological Survey ) swatches- references and FGDC (Digital cartographic 
     Standard for Geological  Map Symbolisation):
+         
     .. FGDCgeostdTM11A2_A-37-01cs2.eps :: 
         make _pattern:{'/', '\', '|', '-', '+', 'x', 'o', 'O', '.', '*'}
                 /   - diagonal hatching
@@ -93,27 +95,30 @@ class Structure :
     geostructral object.
                   
     Holds the following information:
-    ===================== ========== ==========================================
-    Attributes              Type                     Explanation
-    ===================== ========== ==========================================
-    boudin_axis            geos_obj         boudin    
-    fold_axial_plane       geos_obj         axial plam of structural fold.
-    banding_gneissosity    geos_obj         gneissossity of boudin plan  
-    s_fabric               geos_obj         fabric plan
-    fault_plane            geos_obj         fault plan 
-    fracture_joint_set     geos_obj         fracture joint 
-    undifferentiated_plane geos_obj         unnamed geological structure 
-    sharp_contact          geos_obj         sharp contact `various discrepancy` 
-                                            contact `stratigraphy discrepancy`  
-                                             fracture or fault discrepancies
-    ===================== ========== ==========================================
+        
+    ==========================  ===============  ===============================
+    Attributes                  Type             Explanation
+    ==========================  ===============  ===============================
+    boudin_axis                 geos_obj         boudin    
+    fold_axial_plane            geos_obj         axial plam of structural fold.
+    banding_gneissosity         geos_obj         gneissossity of boudin plan  
+    s_fabric                    geos_obj         fabric plan
+    fault_plane                 geos_obj         fault plan 
+    fracture_joint_set          geos_obj         fracture joint 
+    undifferentiated_plane      geos_obj         unnamed geological structure 
+    sharp_contact               geos_obj         sharp contact `various discrepancy` 
+                                                 contact `stratigraphy discrepancy`  
+                                                 fracture or fault discrepancies
+    ==========================  ===============  ================================
 
     More attributes can be added by inputing a key word dictionary
 
-    :Example: :: 
+    :Example: 
+        
+        >>> from geodrill.geoCore.structural import Structure
         >>> structural=Structure()
         >>> boudin=boudin_axis()
-        >>>  print(boudin.code) 
+        >>> print(boudin.code) 
         >>> print(structural.boudin_axis.name)
         >>> print(structural.boudin_axis.color)
     """  
@@ -143,9 +148,10 @@ class boudin_axis(object):
     Special class for boudins_axis
     
     Holds the following information:
-    ================= ============== =========================================
-    Attributes              Type          Explanation
-    ================= ============== =========================================
+    
+    =================  =============  ========================================
+    Attributes         Type             Explanation
+    =================  =============  ========================================
     code                str             conventional code    
     label               str             named label
     size                str             drawing size  
@@ -153,7 +159,7 @@ class boudin_axis(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= =============== ========================================
+    =================  =============  ========================================
 
     More attributes can be added by inputing a key word dictionary
     """
@@ -196,9 +202,9 @@ class fold_axial_plane(object):
     
     Holds the following information:
 
-    ================= ============== =========================================
+    =================  =============  ========================================
     Attributes              Type          Explanation
-    ================= ============== =========================================
+    =================  =============  ========================================
     code                str             conventional code    
     label               str             named label
     size                str             drawing size  
@@ -206,7 +212,7 @@ class fold_axial_plane(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= ============== =========================================
+    =================  =============  ========================================
 
     More attributes can be added by inputing a key word dictionary
     """
@@ -249,9 +255,9 @@ class banding_gneissosity(object):
     
     Holds the following information:
 
-    ================= ============== =========================================
+    =================  =============  ========================================
     Attributes              Type          Explanation
-    ================= ============== =========================================
+    =================  =============  ========================================
     code                str             conventional code    
     label               str             named label
     size                str             drawing size  
@@ -259,7 +265,7 @@ class banding_gneissosity(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= =============== ========================================
+    =================  =============  ========================================
 
     More attributes can be added by inputing a key word dictionary
     """
@@ -301,11 +307,11 @@ class s_fabric(object):
     """
     Special class for s_fabric
     
-        Holds the following information:
+    Holds the following information:
 
-    ================= ============== =========================================
+    =================  =============  ========================================
     Attributes              Type          Explanation
-    ================= ============== =========================================
+    =================  =============  ========================================
     code                str             conventional code    
     label               str             named label
     size                str             drawing size  
@@ -313,7 +319,7 @@ class s_fabric(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= ============== =========================================
+    =================  =============  ========================================
 
     More attributes can be added by inputing a key word dictionary
     """
@@ -354,9 +360,9 @@ class fault_plane(object):
     
     Holds the following information:
 
-    ================= ============== =========================================
-    Attributes              Type          Explanation
-    ================= ============== =========================================
+    =================  =============  ========================================
+    Attributes          Type            Explanation
+    =================  =============  ========================================
     code                str             conventional code    
     label               str             named label
     size                str             drawing size  
@@ -364,7 +370,7 @@ class fault_plane(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= =============== ========================================
+    =================  =============  ========================================
 
     More attributes can be added by inputing a key word dictionary
     """
@@ -408,9 +414,9 @@ class fracture_joint_set(object):
     
     Holds the following information:
 
-    ================= ============== =========================================
+    =================  =============  ========================================
     Attributes         Type           Explanation
-    ================= ============== =========================================
+    =================  =============  ========================================
     code                str             conventional code    
     label               str             named label
     size                str             drawing size  
@@ -418,7 +424,7 @@ class fracture_joint_set(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= ============== =========================================
+    =================  =============  ========================================
 
     More attributes can be added by inputing a key word dictionary
     """
@@ -460,9 +466,9 @@ class undifferentiated_plane(object):
     
     Holds the following information:
 
-    ================= ============== =========================================
-    Attributes              Type          Explanation
-    ================= ============== =========================================
+    =================  =============  ========================================
+    Attributes         Type             Explanation
+    =================  =============  ========================================
     code                str             conventional code    
     label               str             named label
     size                str             drawing size  
@@ -470,7 +476,7 @@ class undifferentiated_plane(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= ============== =========================================
+    =================  =============  ========================================
 
     More attributes can be added by inputing a key word dictionary
     """
@@ -514,9 +520,9 @@ class sharp_contact(object):
     
     Holds the following information:
 
-    ================= ============== =========================================
-    Attributes              Type          Explanation
-    ================= ============== =========================================
+    =================  =============  ========================================
+    Attributes          Type           Explanation
+    =================  =============  ========================================
     code                str             conventional code    
     label               str             named label
     size                str             drawing size  
@@ -524,7 +530,8 @@ class sharp_contact(object):
     density             str             elmts density 
     thickness           str             drawing thickness 
     color               str             color set
-    ================= ============== =========================================
+    ==================  =============  ========================================
+    
     More attributes can be added by inputing a key word dictionary
     """
     def __init__(self, **kwargs):
@@ -568,15 +575,13 @@ class Geo_formation (object):
     program won't call this class as rescure . 
     Containers of more than  150 geological strutures.
         
-    .. note :: To see the names of strutures , write the script below 
-        >>> from geodrill.geoCore.strutural import Geo_formation as gf 
-        >>> geo_structure = gf()
-        >>> geo_structure.names
+   
     
-    .. note :: replace in attributes param ** by `name of struture`
-    =================== ============ ==========================================
-    Attributes              Type                     Explanation
-    =================== ============ ==========================================
+    .. note :: replace in attributes param "**" by  the *name of struture*
+    
+    ==================  ============  =========================================
+    Attributes          Type           Explanation
+    ==================  ============  =========================================
     names               array_like      names of all geological strutures 
     codes               array_like      names of all geological codes 
     **code              str             code of specific geological structure 
@@ -587,15 +592,26 @@ class Geo_formation (object):
     **pat_density       str             pattern density l of specific structure
     **pat_thickness     str             pttern thickess of specific structure
     **color             str             color of specific structure
-    =================== ============ ==========================================
+    ==================  ============  =========================================
 
-    :Example: :: 
-          to extract color  of the structure amphibolite 
-          >>>  geo_structure.amphibolite['color'] 
-          to get the code of structure 
-          >>> geo_structure.amphibolite['code'] 
-          >>> geoformation_obj.AMP['color']
-          ... 'R128G128'
+    1.  To see the names of strutures , write the script below 
+    
+    :Example:
+        
+        >>> from geodrill.geoCore.strutural import Geo_formation as gf 
+        >>> geo_structure = gf()
+        >>> geo_structure.names
+        
+    2.  To extract color  and to get the code of structure  like amphibolite 
+    
+    :Example:
+        
+        >>> from geodrill.geoCore.strutural import Geo_formation as gf 
+        >>> geo_structure = gf() 
+        >>> geo_structure.amphibolite['color'] 
+        >>> geo_structure.amphibolite['code'] 
+        >>> geoformation_obj.AMP['color']
+        ... 'R128G128'
     """ 
     codef =['code','label','__description','pattern', 'pat_size',	'pat_density',
             'pat_thickness','color']
@@ -638,10 +654,11 @@ class Geo_formation (object):
         """
         Read and set  attributes and decode agso geostructures .
         
-        :param agso_fn :  full path geological structural  file.
-        :type agso_fn : str 
+        :param agso_fn:  full path geological structural  file.
+        :type agso_fn: str 
         
-        :Example: :: 
+        :Example: 
+            
             >>> geoformation_obj =Geo_formation()
             >>> DATA = geoformation_obj._AGS0_DATA
             >>> print( geoformation_obj.argillite['name'])
@@ -708,10 +725,11 @@ def get_color_palette (RGB_color_palette):
     :param RGB_color_palette: str value of RGB value 
     :type RGB_color_palette: str 
         
-    :returns : rgba, tuple of (R, G, B)
+    :returns: rgba, tuple of (R, G, B)
     :rtype: tuple
      
-    :Example: :: 
+    :Example: 
+        
         >>> from geodrill.geoCore.structural import get_color_palette 
         >>> get_color_palette (RGB_color_palette ='R128B128')
     """   

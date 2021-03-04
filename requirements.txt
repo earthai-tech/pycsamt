@@ -9,7 +9,7 @@ flake8
 pyyaml
 pyproj==1.9.6
 pandas
-sqlite3
+sqlite
 warnings
 re 
 logging

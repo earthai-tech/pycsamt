@@ -7,3 +7,6 @@ Package Visualization
 =============================
 .. automodule:: viewer.plot
 	:members:
+	:class: viewer.plot.Plot1d
+	:class: viewer.plot.Plot2d
+

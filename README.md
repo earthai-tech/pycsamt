@@ -26,7 +26,7 @@ developers and users of that software.
  
  For the first release, The python toolbox gives a basic tools and  works only in far field. Furhermore , it uses  [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) open source sofware as modeling software , nevertheless several  outputs are provided for other modeling softwares.  
 ## Documentation 
-* API Documentation  : https://readthedocs.org/projects/pycsamt/
+* API Documentation  : https://pycsamt.readthedocs.io/en/latest/
 
 ## Licence 
 pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/pyCSAMT/blob/master/LICENSE.md)

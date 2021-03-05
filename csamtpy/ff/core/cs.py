@@ -20,7 +20,7 @@
 
 ===========================================================================
 
-.. _module-cs :: `csamtpy.ff.core.cs` 
+.. _module-cs:: `csamtpy.ff.core.cs` 
     
    :synopsis: Super class or CSAMT Far Field implementation 
                Deal with AVG file and EDI files 
@@ -256,12 +256,12 @@ class CSAMT(object):
 
         Parameters 
         ----------
-        * fn : str  
-               full path to csamtfile either edi , avg or jfile
-        * edipath : str  
-                full path to edifiles ,  edi directory
-        * jpath : str 
-                full path to AG.Jones files , j directory
+            * fn : str  
+                   full path to csamtfile either edi , avg or jfile
+            * edipath : str  
+                    full path to edifiles ,  edi directory
+            * jpath : str 
+                    full path to AG.Jones files , j directory
         """
         self._logging.info("Reading <%s> file from <%s> " % (self._fn ,
                                                              self._read_csamt_objs.__name__))
@@ -1306,8 +1306,8 @@ class Profile (object):
         that the survey must be. sometimes on the field ,
         crew may get around some obstacle and despite the
         line is not straight , the distance  between station 
-       is distorded. Using 'distord or natural type ' ,
-       it will show the right place station must be.
+        is distorded. Using 'distord or natural type ' ,
+        it will show the right place station must be.
         
         .. note::  for easier approch we use X
                  as easting and Y as northing. 
@@ -1568,22 +1568,22 @@ class Profile (object):
         
         Parameters 
         ----------
-        * easting : array_like (ndarray, 1)
-                    easting coordinates  
-        * northing : array_like (ndarray,1) 
-                    northing coordinates 
-        * interpolate : bool 
-                    if interpolate is True  will extend to N+1 number to much
-                    excatly the number  of electrode. If false ,
-                    it match the number of dipole N.
-                    *Default* is False.
+            * easting : array_like (ndarray, 1)
+                        easting coordinates  
+            * northing : array_like (ndarray,1) 
+                        northing coordinates 
+            * interpolate : bool 
+                        if interpolate is True  will extend to N+1 number to much
+                        excatly the number  of electrode. If false ,
+                        it match the number of dipole N.
+                        *Default* is False.
                 
         Returns  
         --------
-        * array_like 
-             separation value array  
-        * float 
-            separation mean  or average separation value  
+             array_like 
+                 separation value array  
+             float 
+                separation mean  or average separation value  
         """
         if (easting.dtype !='float') or (northing.dtype !='float'): 
             try :

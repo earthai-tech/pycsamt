@@ -49,6 +49,7 @@ def share_props_for_each_plot(number_of_plot = 3 ,  **kwargs):
     
     :returns: dictionarry of labels and properties. 
     :rtype: dict 
+    
     """
     
     def set_multiple(labelprops, default=None): 
@@ -472,31 +473,31 @@ def slice_csamt_matrix ( block_matrix , station_offsets, depth_offsets, offset_M
     
     Parameters
     -----------
-    * block_matrix : ndarray(station_offsets.shape[0], 
-                matrix of station depth Resistivity model
-                depth_offsets.shape[0])
-    
-    * depth_offset : array_like  
-               depth of investigation after generating by mesh file :>z_nodes . 
-               
-    * station_offsets : array_like 
-              station _offsets : offset generate by mesh_file :>x_nodes .
-              
-    * offset_MinMax : tuple  
-          the interval of data to keep . eg if station location start by 0 : 
-              off[0] = min and off[-1]=max (min, max):--> index 0 :
-              minimum value of station location -->index 1 : maximum value of station location
-              *default* is (0,1000)
-                    
-    * doi : str , float 
-            investigation depth ,  migth be [m|km]. 
-            If value is provided is float number , it might take value 
-            as a default unit 'meter'. i.e : 1000="1000m"
+        * block_matrix : ndarray(station_offsets.shape[0], 
+                    matrix of station depth Resistivity model
+                    depth_offsets.shape[0])
+        
+        * depth_offset : array_like  
+                   depth of investigation after generating by mesh file :>z_nodes . 
+                   
+        * station_offsets : array_like 
+                  station _offsets : offset generate by mesh_file :>x_nodes .
+                  
+        * offset_MinMax : tuple  
+              the interval of data to keep . eg if station location start by 0 : 
+                  off[0] = min and off[-1]=max (min, max):--> index 0 :
+                  minimum value of station location -->index 1 : maximum value of station location
+                  *default* is (0,1000)
+                        
+        * doi : str , float 
+                investigation depth ,  migth be [m|km]. 
+                If value is provided is float number , it might take value 
+                as a default unit 'meter'. i.e : 1000="1000m"
                 
     Returns
     ---------
-    tuple 
-      new sliced station offset , new sliced depth offset  , new_matrix block , 
+        tuple 
+          new sliced station offset , new sliced depth offset  , new_matrix block , 
     """
     def depth_of_investigation(doi): 
         """
@@ -1164,19 +1165,19 @@ def average_rho_in_deeper (dep_array, rho_array, step_descent ) :
     
     Parameters
     ------------
-    * dep_array : array_like 
-            the imaged depth (doi)
-        
-    * rho_array: array_like
-            resistivity array  
-        
-    * step_descent : float 
-            value to step descent 
+        * dep_array : array_like 
+                the imaged depth (doi)
+            
+        * rho_array: array_like
+                resistivity array  
+            
+        * step_descent : float 
+                value to step descent 
     
     Returns
     ---------
-    array_like 
-         rho average for each station  # dep_averaged for each station
+        array_like 
+             rho average for each station  # dep_averaged for each station
 
     :Example:
         
@@ -1360,21 +1361,21 @@ def build_resistivity_barplot(depth_values , res_values):
     
     Parameters
     ----------
-    * depth_values : aray_like 
-            model investigation depth 
-            
-    * res_values : array_like 
-            model_resistivities at each depth values 
+        * depth_values : aray_like 
+                model investigation depth 
+                
+        * res_values : array_like 
+                model_resistivities at each depth values 
             
     Returns 
     ---------
-    d : array_like 
-        resistivity barplot depth .
-    r : array_like 
-           specific structure resistivities 
-    sumd : float
-        checker number that cover in fact the total depth. 
-        this numbe must absolutely match the total depth .
+        d : array_like 
+            resistivity barplot depth .
+        r : array_like 
+               specific structure resistivities 
+        sumd : float
+            checker number that cover in fact the total depth. 
+            this numbe must absolutely match the total depth .
 
     """
     mess = "".join(["Depth and resistivity arrays have no the same Length .",

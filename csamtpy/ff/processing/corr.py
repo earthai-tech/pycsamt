@@ -20,7 +20,7 @@
 
 ===============================================================================    
  
-.. _module-Shifting:: 
+.. _module-Shifting::`csamtpy.ff.processing.corr` 
         :synopsis: Deal with all data files. It corrects apparent resistivity
                 by shitibg value to rj static factor . Apply correction and filters
                 Some filters applied to correct apparent resistivities are 
@@ -184,29 +184,29 @@ class shifting(object):
         
         Parameters
         -----------
-        * data_fn : str 
-                path to avg file or edi file .
-            
-        * freq_array : array_like (ndarray,1) 
-                frequency array of at normalization frequency (reference value)
-                of all stations. station j to n .( units =  Hz )
-            
-        * res_array :     dict of array_like (ndarra,1) 
-                dict of array of app.resistivity at reffreq. from station j to n.
+            * data_fn : str 
+                    path to avg file or edi file .
                 
-        * phase_array : dict of array_lie(ndarray,1), dict of array of phase at reffreq.
-                 from station j to n. (unit=rad)value of frequency with clean data . (unit=Hz)
-             
-        * stnVSrho_loc : dict 
-                set of dictionnary of all app.resistivity data from station j to n . (optional)
-            
-        * num_of_TMA_point  :int 
-                window to apply filter .
+            * freq_array : array_like (ndarray,1) 
+                    frequency array of at normalization frequency (reference value)
+                    of all stations. station j to n .( units =  Hz )
+                
+            * res_array :     dict of array_like (ndarra,1) 
+                    dict of array of app.resistivity at reffreq. from station j to n.
+                    
+            * phase_array : dict of array_lie(ndarray,1), dict of array of phase at reffreq.
+                     from station j to n. (unit=rad)value of frequency with clean data . (unit=Hz)
+                 
+            * stnVSrho_loc : dict 
+                    set of dictionnary of all app.resistivity data from station j to n . (optional)
+                
+            * num_of_TMA_point  :int 
+                    window to apply filter .
             
         Returns
         -------
-        dict 
-           rho_corrected , value corrected with TMA filter  from station j to n. 
+            dict 
+               rho_corrected , value corrected with TMA filter  from station j to n. 
         
   
         1.  corrected data from [AVG]

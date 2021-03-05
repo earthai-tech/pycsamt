@@ -20,7 +20,7 @@
 
 =============================================================================== 
  
-.. _module-occam2D :: 
+.. _module-Occam2D :: `csamtpy.modeling.occam2d`
     :synopsis:: The Occam 2D MT inversion code (v3.0) presented here is an
                 implementation of the general Occam procedure of  Constable, et al. (1987)
                 extended to  2D by deGroot-Hedlin and Constable (1990).
@@ -360,7 +360,8 @@ class Data(object):
         
     def write_occam2d_data(self):
         """
-        **Future plan**
+        .. Future plan:: We will call MTpy here for
+                    writing Occam2D data file.
         """
         pass 
     
@@ -468,6 +469,7 @@ class DataBlock (object):
         
         :param data_type_index: specify the data type index 
         :type data_type_index: int 
+        
         """
         block_type = data_blocks[ :,  data_type_index]
         get_occam_mode  = np.array([int(ff) for ff in np.unique(block_type)])
@@ -1264,6 +1266,7 @@ class Response (Data):
 class Mesh(object): 
     """
     Read Occam read mesh file 
+    
     Arguments
     -----------
         **mesh_fn** : str 
@@ -1417,7 +1420,7 @@ class Iter2Dat (object):
     The class was inpired from the Bo Yang matlab script . reading functions come
     from 'plotOccam2DMT.m' routine
     
-    ..seealso:: `Occam routine <http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html >`
+    .. seealso:: `Occam routine <http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html >`
                 of SIO, UCSD.
             
     Bo Yang matlab-script is on `add.info` sub-packages of pyCSAMT.

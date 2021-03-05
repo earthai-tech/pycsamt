@@ -292,7 +292,7 @@ class J_collection :
         :param savefig: PathLike - path to save your figure
         :type savefig: str 
         
-        ...note :: 
+        .. note:: 
             Work but not stable ...
         """
         

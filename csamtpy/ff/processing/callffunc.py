@@ -20,7 +20,7 @@
 
 ===============================================================================
 
-.. _module-Dispatcher::  
+.. _module-Dispatcher::`csamtpy.ff.processing.callffunc`  
     :synopsis: Typical call files functions  
                 call computations functions , AGSO and dispatch for purposes  
     
@@ -252,15 +252,15 @@ def truncated_data (data, number_of_reccurence, **kwargs):
     
     Parameters
     ----------
-    * data : list, or nd.array 
-            data must be truncate.
-    * number_of_freq : int
-            number of frequency imaged.
+        * data : list, or nd.array 
+                data must be truncate.
+        * number_of_freq : int
+                number of frequency imaged.
 
     Returns
     -------
-    list
-        loc_list , data truncated on list.
+        list
+            loc_list , data truncated on list.
 
     """
     if type(data) is list : 
@@ -285,10 +285,10 @@ def _numbering_station(number_of_station, number_of_freq):
     
     Prameters 
     ---------
-    * number_of_station : int  
-        number of station found on the site. 
-    * number_of freq : int  
-        number of frequency found for survey at each station.
+        * number_of_station : int  
+            number of station found on the site. 
+        * number_of freq : int  
+            number of frequency found for survey at each station.
         
     Returns
     --------
@@ -309,23 +309,23 @@ def zstar_array_to_nan (zstar_array, nan_value=np.nan, keep_str =False):
     """
     Parameters
     ----------
-    * zstar_array : ndarray
-            array contain unfloat converter value. the unconverter value can be a '*'
-            
-    * nan_value : float or np.nan type
-            the nan_value could be any value either int, float or str. 
-            The *default* is np.nan.
-            
-    * keep_str : bool, optional
-            keep the str item on your array. f keep_str is set to 
-            false and the type nan_value is str , the program will force 'keep_str_'  to True 
-            to allow converter .
-            The *default* is False.
+        * zstar_array : ndarray
+                array contain unfloat converter value. the unconverter value can be a '*'
+                
+        * nan_value : float or np.nan type
+                the nan_value could be any value either int, float or str. 
+                The *default* is np.nan.
+                
+        * keep_str : bool, optional
+                keep the str item on your array. f keep_str is set to 
+                false and the type nan_value is str , the program will force 'keep_str_'  to True 
+                to allow converter .
+                The *default* is False.
 
     Returns
     -------
-     ndarray 
-        zstrar_array converted .
+         ndarray 
+            zstrar_array converted .
 
     """
     
@@ -342,23 +342,23 @@ def get_array_from_reffreq ( array_loc, freq_array,reffreq_value, stnNames=None)
     Get array value at special frequency
     Parameters
     ------------
-    * array_loc : dict , 
-        dictionnary of stations , array_value e.g: S00:(ndarray,1) rho_values
-        
-    * freq_array : (ndarray,1) 
-        frequency array for CSAMT survey 
-        
-    * reffreq_value : int or float 
-        the value of frequency user want to get the value 
-        
-    * stnNames : list 
-        list of stations names . 
+        * array_loc : dict , 
+            dictionnary of stations , array_value e.g: S00:(ndarray,1) rho_values
+            
+        * freq_array : (ndarray,1) 
+            frequency array for CSAMT survey 
+            
+        * reffreq_value : int or float 
+            the value of frequency user want to get the value 
+            
+        * stnNames : list 
+            list of stations names . 
     
     Returns 
     ---------
-    array_like
-        an array of all station with reffreq_value . 
-        e.g reffreq_value =1024. it return all value of the array at 1024Hz frequency . 
+        array_like
+            an array of all station with reffreq_value . 
+            e.g reffreq_value =1024. it return all value of the array at 1024Hz frequency . 
     
     """
     if stnNames is None : raise CSex.pyCSAMTError_station('You may at least specify '\

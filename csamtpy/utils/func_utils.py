@@ -19,7 +19,7 @@
     along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
 
 ===============================================================================  
-.. _module-Func-utils::  
+.. _module-Func-utils::`csamtpy.utils.func_utils`  
     :synopsis: helpers functions 
      ...
      
@@ -170,9 +170,9 @@ def concat_array_from_list(list_of_array, concat_axis=0):
     
     Parameters 
     -----------
-    * list_of_array : list 
-            contains a list for array data. the concatenation is possible 
-            if an index array have the same size 
+        * list_of_array : list 
+                contains a list for array data. the concatenation is possible 
+                if an index array have the same size 
         
     Returns 
     -------
@@ -251,26 +251,26 @@ def sort_array_data(data,  sort_order =0,
     
     Parameters
     ----------
-    * data : numpy.ndarray 
-            must be in simple array , list of array and 
-            dictionary whom the value is numpy.ndarray 
-            
-    * sort_order : int, optional 
-            index  of colum to sort data. The default is 0.
-            
-    * concatenate : Boolean , optional
-            concatenate all array in the object.
-            Must be the same dimentional if concatenate is set to True. 
-            The *default* is False.
-            
-    * concat_axis_order : int, optional
-            must the axis of concatenation  . The default is axis=0.
+        * data : numpy.ndarray 
+                must be in simple array , list of array and 
+                dictionary whom the value is numpy.ndarray 
+                
+        * sort_order : int, optional 
+                index  of colum to sort data. The default is 0.
+                
+        * concatenate : Boolean , optional
+                concatenate all array in the object.
+                Must be the same dimentional if concatenate is set to True. 
+                The *default* is False.
+                
+        * concat_axis_order : int, optional
+                must the axis of concatenation  . The default is axis=0.
 
     Returns
     -------
-    numpy.ndarray
-       data , Either the simple sort data or 
-       array sorted and concatenated .
+        numpy.ndarray
+           data , Either the simple sort data or 
+           array sorted and concatenated .
     """
     
     if type(data)==list :
@@ -302,31 +302,31 @@ def transfer_array_(data, index_key,start_value_depth, end_value_depth,
     """
     Parameters
     ----------
-    * data : dict
-            Dictionnary of numpy ndarray .
-        
-    * index_key : float 
-            key of the dictionnary . 
-            Must be a number of the first column of offset .
-        
-    * start_value_depth : float 
-            If the depth is not reach must add depth of the closest point.
-            give the start value which match to the maxi depth of the data :
-            The *default* is -214.
+        * data : dict
+                Dictionnary of numpy ndarray .
             
-    * end_value_depth : float
-            Maximum depth of the survey. The default is -904.
-        
-    * column_order_selection : int,
-            the index of depth column. The default is 0.
+        * index_key : float 
+                key of the dictionnary . 
+                Must be a number of the first column of offset .
             
-    * axis : int , optional
-            numpy.ndarray axis . The default is 0.
+        * start_value_depth : float 
+                If the depth is not reach must add depth of the closest point.
+                give the start value which match to the maxi depth of the data :
+                The *default* is -214.
+                
+        * end_value_depth : float
+                Maximum depth of the survey. The default is -904.
+            
+        * column_order_selection : int,
+                the index of depth column. The default is 0.
+                
+        * axis : int , optional
+                numpy.ndarray axis . The default is 0.
 
     Returns
     -------
-    numpy.ndarray
-        return the array data we want to top to .
+        numpy.ndarray
+            return the array data we want to top to .
     
     :Example: 
         
@@ -419,31 +419,31 @@ def interpol_scipy (x_value, y_value,x_new,
     
     Parameters 
     ------------
-    * x_value : np.ndarray 
-                value on array data : original absciss 
-                
-    * y_value : np.ndarray 
-                value on array data : original coordinates (slope)
-                
-    * x_new  : np.ndarray 
-                new value of absciss you want to interpolate data 
-                
-    * kind  : str 
-            projection kind : 
-                maybe : "linear", "cubic"
-                
-    * fill : str 
-        kind of extraolation, if None , *spi will use constraint interpolation 
-        can be "extrapolate" to fill_value.
-        
-    * plot : Boolean 
-        Set to True to see a wiewer graph
+        * x_value : np.ndarray 
+                    value on array data : original absciss 
+                    
+        * y_value : np.ndarray 
+                    value on array data : original coordinates (slope)
+                    
+        * x_new  : np.ndarray 
+                    new value of absciss you want to interpolate data 
+                    
+        * kind  : str 
+                projection kind : 
+                    maybe : "linear", "cubic"
+                    
+        * fill : str 
+            kind of extraolation, if None , *spi will use constraint interpolation 
+            can be "extrapolate" to fill_value.
+            
+        * plot : Boolean 
+            Set to True to see a wiewer graph
 
     Returns 
     --------
-    np.ndarray 
-        y_new ,new function interplolate values .
-        
+        np.ndarray 
+            y_new ,new function interplolate values .
+            
     :Example: 
         
         >>> import numpy as np 
@@ -470,26 +470,26 @@ def _set_depth_to_coeff(data, depth_column_index,coeff=1, depth_axis=0):
     """
     Parameters
     ----------
-    * data : np.ndarray
-        must be on array channel .
-        
-    * depth_column_index : int
-        index of depth_column.
-        
-    * depth_axis : int, optional
-        Precise kind of orientation of depth data(axis =0 or axis=1) 
-        The *default* is 0.
-        
-    * coeff : float,
-        the value you want to multiplie depth. 
-        set depth to negative multiply by one. 
-        The *default* is -1.
+        * data : np.ndarray
+            must be on array channel .
+            
+        * depth_column_index : int
+            index of depth_column.
+            
+        * depth_axis : int, optional
+            Precise kind of orientation of depth data(axis =0 or axis=1) 
+            The *default* is 0.
+            
+        * coeff : float,
+            the value you want to multiplie depth. 
+            set depth to negative multiply by one. 
+            The *default* is -1.
 
     Returns
     -------
-    data : np.ndarray
-        new data after set depth according to it value.
-        
+        data : np.ndarray
+            new data after set depth according to it value.
+            
     :Example: 
 
         >>>  import numpy as np 
@@ -517,16 +517,16 @@ def broke_array_to_(arrayData, keyIndex=0, broken_type="dict"):
 
     Parameters
     ----------
-    * arrayData :np.array
-        data array .
-        
-    * keyIndex : int 
-        index of column to create dict key 
+        * arrayData :np.array
+            data array .
+            
+        * keyIndex : int 
+            index of column to create dict key 
 
     Returns
     -------
-     dict 
-        dico_brok ,dictionnary of array.
+        dict 
+           dico_brok ,dictionnary of array.
     """
     
     # find the max_counts
@@ -572,29 +572,29 @@ def _OlDFUNCNOUSEsearch_fill_data(dicoReal, arrayTemp ,
     
     Parameters
     ----------
-    * data : dict
-            Dictionnary of numpy ndarray .
-        
-    * dataReal : dict
-             dictionnary . must be a dictionnary of real of offset .
-        
-    * arrayTemp : np.ndarray 
-             must be a numpy array of reserve data , the one , we want to 
-             extract the depth data to fill array 
-
-    * max_value : float
-            Maximum depth of the survey. 
-        
-    * index_of_depth : int,
-            the index of depth column. The *default* is 0.
+        * data : dict
+                Dictionnary of numpy ndarray .
             
-    * axis : int , optional
-        numpy.ndarray axis . The default is 0.
+        * dataReal : dict
+                 dictionnary . must be a dictionnary of real of offset .
+            
+        * arrayTemp : np.ndarray 
+                 must be a numpy array of reserve data , the one , we want to 
+                 extract the depth data to fill array 
+    
+        * max_value : float
+                Maximum depth of the survey. 
+            
+        * index_of_depth : int,
+                the index of depth column. The *default* is 0.
+                
+        * axis : int , optional
+            numpy.ndarray axis . The default is 0.
     
     Returns
     -------
-    array_like 
-        the array data we want to top to .
+        array_like 
+            the array data we want to top to .
     
     :Example: 
         
@@ -918,19 +918,19 @@ def straighten_out_list (main_list , list_to_straigh):
     """
     Parameters
     ----------
-    * main_list : list
-            list of which the data must absolutely appear into the straighen list.
-            in our case , it is the station list : a list of offset 
-            
-    * list_to_straigh : list
-            list contain the data (offset calculated , the depth and the resistivity (log10)), 
+        * main_list : list
+                list of which the data must absolutely appear into the straighen list.
+                in our case , it is the station list : a list of offset 
+                
+        * list_to_straigh : list
+                list contain the data (offset calculated , the depth and the resistivity (log10)), 
 
     Returns
     -------
-    * list
-        the straighen list.
-        some offset have been replaced by the offsets which are not in the 
-        main_list whithout change the lengh of the straighen list. 
+        * list
+            the straighen list.
+            some offset have been replaced by the offsets which are not in the 
+            main_list whithout change the lengh of the straighen list. 
 
     :Example: 
         
@@ -1043,15 +1043,15 @@ def take_firstValue_offDepth(data_array,
     """
     Parameters
     ----------
-    * data_array : np.array 
-            array of the data .
-    * filter_order : int , optional
-            the column you want to filter. The default is 1.
+        * data_array : np.array 
+                array of the data .
+        * filter_order : int , optional
+                the column you want to filter. The default is 1.
 
     Returns
     -------
-    array_like
-        return array of the data filtered.
+        array_like
+            return array of the data filtered.
    
     :Example: 
         
@@ -1094,18 +1094,18 @@ def dump_comma(input_car, max_value=2, carType='mixed'):
     """
     Parameters
     ----------
-    * input_car : str,
-        Input character.
-    * max_value : int, optional
-        The default is 2.
-        
-    * carType: str 
+        * input_car : str,
+            Input character.
+        * max_value : int, optional
+            The default is 2.
+            
+        * carType: str 
             Type of character , you want to entry
                  
     Returns
     -------
-    Tuple of input character
-        must be return tuple of float value, or string value
+        Tuple of input character
+            must be return tuple of float value, or string value
       
     .. note:: carType  may be as arguments parameters like ['value','val',"numeric",
               "num", "num","float","int"] or  for pure character like 
@@ -1453,25 +1453,25 @@ def compute_azimuth(easting, northing, utm_zone="49N", extrapolate=False):
     """
     Parameters
     ----------
-    * easting : np.ndarray
-            Easting value of coordinates _UTM_WGS84 
-         
-    * northing : np.ndarray
-            Northing value of coordinates._UTM_WGS84
-        
-    * utm_zone : str, optional
-            the utm_zone . if None try to get is through 
-            gis.get_utm_zone(latitude, longitude). 
-            latitude and longitude must be on degree decimals. The default is "49N".
-    * extrapolate : bool , 
-            for other purpose , user can extrapolate azimuth value , in order to get the sizesize as 
-            the easting and northing size. The the value will repositionate at each point data were collected. 
-                Default is False as originally azimuth computation . 
+        * easting : np.ndarray
+                Easting value of coordinates _UTM_WGS84 
+             
+        * northing : np.ndarray
+                Northing value of coordinates._UTM_WGS84
+            
+        * utm_zone : str, optional
+                the utm_zone . if None try to get is through 
+                gis.get_utm_zone(latitude, longitude). 
+                latitude and longitude must be on degree decimals. The default is "49N".
+        * extrapolate : bool , 
+                for other purpose , user can extrapolate azimuth value , in order to get the sizesize as 
+                the easting and northing size. The the value will repositionate at each point data were collected. 
+                    Default is False as originally azimuth computation . 
 
     Returns
     -------
-    np.ndarray
-        azimuth.
+        np.ndarray
+            azimuth.
         
     :Example: 
         
@@ -1534,8 +1534,8 @@ def build_geochemistry_sample():
 
     Returns
     -------
-     np.ndarray
-        Sample ,Geochemistry sample Data.
+       np.ndarray
+          Sample ,Geochemistry sample Data.
 
     :Example:
         
@@ -1793,15 +1793,15 @@ def _nonelist_checker(data, _checker=False ,
     
     Parameters
     ----------
-    * data : list
-        container of list. Data must contain others list.
-        the element to delete should be on list.
-        
-   *  _checker : bool, optional
-         The default is False.
-        
-    * list_to_delete : TYPE, optional
-           The default is ['\n'].
+        * data : list
+             container of list. Data must contain others list.
+             the element to delete should be on list.
+             
+        *  _checker : bool, optional
+              The default is False.
+             
+        * list_to_delete : TYPE, optional
+                The default is ['\n'].
 
     Returns
     -------
@@ -1867,17 +1867,17 @@ def _order_well (data,**kwargs):
     
     Parameters
     ----------
-    * data : list,
-            data contains list of well thickness and rock description .
-
-    * bottom_value  : np.ndarray float
-            value of bottom . it may the basement extrapolation.
-            default is 1.023 km
+        * data : list,
+                data contains list of well thickness and rock description .
+    
+        * bottom_value  : np.ndarray float
+                value of bottom . it may the basement extrapolation.
+                default is 1.023 km
 
     Returns
     -------
-     np.ndarray
-        data, data aranged to [DH_Hole, DH_From, DH_To, Rock.] arrays
+         np.ndarray
+            data, data aranged to [DH_Hole, DH_From, DH_To, Rock.] arrays
         
     :Example:
         
@@ -2019,15 +2019,15 @@ def _nonevalue_checker (list_of_value, value_to_delete=None):
     
     Parameters
     ----------
-    * list_of_value : list
-            list to check.
-    * value_to_delete : TYPE, optional
+        * list_of_value : list
+                list to check.
+        * value_to_delete : TYPE, optional
             specific value to delete. The default is ''.
 
     Returns
     -------
-     list
-        list_of_value , safe list without the deleted value .
+        list
+            list_of_value , safe list without the deleted value .
     
     :Example: 
         
@@ -2114,20 +2114,20 @@ def _cross_eraser (data , to_del, deep_cleaner =False):
 
     Parameters
     ----------
-    * data : list
-            Main data user want to filter.
-    * to_del : list
-            list of item you want to delete present on the main data.
-    * deep_cleaner : bool, optional
-            Way to deeply check. Sometimes the values are uncleaned and 
+        * data : list
+                Main data user want to filter.
+        * to_del : list
+                list of item you want to delete present on the main data.
+        * deep_cleaner : bool, optional
+                Way to deeply check. Sometimes the values are uncleaned and 
             capitalizeed . this way must not find their safety correspondace 
             then the algorth must clean item and to match all at the same time before eraisng.
             The *default* is False.
 
     Returns
     -------
-     list
-        data , list erased.
+        list
+         data , list erased.
 
     :Example: 
         

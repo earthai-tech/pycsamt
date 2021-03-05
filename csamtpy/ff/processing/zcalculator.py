@@ -20,7 +20,7 @@
 
 ===============================================================================
 
-.. _module-ZCalculator::
+.. _module-ZCalculator::`csamtpy.ff.processing.zcalculator`
     :synopsis:  helper functions special calculator 
 
 Created on Thu Dec  3 16:44:29 2020
@@ -211,12 +211,12 @@ def comp_phz (comphz_array, units ='deg'):
     :Example:
         
         >>> path =  os.path.join(os.environ["pyCSAMT"], 
-                      'csamtpy','data', 'K1.AVG')
+        ...              'csamtpy','data', 'K1.AVG')
         >>> from csamtpy.core import avg  
         >>> phs_obj =avg.Phase(path)
         >>> phs_obj.loc['S00']
         >>> value, ss = comp_phz(comphz_array=phs_obj.loc[
-                    'S00'], to_degree=True)
+        ...            'S00'], to_degree=True)
         ... print(value)
     """
     
@@ -248,14 +248,19 @@ def compute_components_Z_Phz(magn_E_field , magn_H_field, phz_E_field,
     ----------
         * magn_E_field : np.ndarray 
             E_.field magnitude (ndarray,1) in  microV/KM*A
+            
         * magn_H_field : np.ndarray 
              H_.field magnitude (ndarray,1)in  mGammas/A or picoTesla/A
+             
         * phz_E_field : np.ndarray 
             E_field phase (ndarray, 1) in  mrad 
+            
         * phz_H_field : np.ndarray 
              H_field phase (ndarray,1) in  mrad.
+             
         * freq_value : np.ndarray 
              Frequency at which data was measured(ndarray,1)in  Hz
+             
         * kwargs : str 
              units conversion.
         

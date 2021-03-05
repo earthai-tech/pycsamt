@@ -20,7 +20,7 @@
 
 ===============================================================================
 
-... _module-edi:: `csamtpy.ff.core.edi`
+.. _module-edi:: `csamtpy.ff.core.edi`
 
    :synopsis: EDI module can read and write an .edi file as the 'standard format'
              of magnetotellurics. Each sectionof the .edi file is given its
@@ -103,15 +103,15 @@ class Edi_collection :
                                             site eg stn :S00, S01 , .., Snn
     =====================  ===============  ===================================
     
-     :Example : 
-         
-        >>> from csamtpy.ff.core.edi import Edi_collection 
-        >>> edilist = [os.path.join(path, edi)for edi in os.listdir 
-                       (path) if edi.endswith('.edi')]
-        ... edi_objs = Edi_collection(list_of_edifiles = edilist)
-        ... print(edi_objs.res_xy['S01'])
-        ... print(edi_objs.phs_err_xy['S00'])
-        ... print(edi_objs.z_err_xy['S00'])
+    :Example : 
+        
+       >>> from csamtpy.ff.core.edi import Edi_collection 
+       >>> edilist = [os.path.join(path, edi)for edi in os.listdir 
+                      (path) if edi.endswith('.edi')]
+       ... edi_objs = Edi_collection(list_of_edifiles = edilist)
+       ... print(edi_objs.res_xy['S01'])
+       ... print(edi_objs.phs_err_xy['S00'])
+       ... print(edi_objs.z_err_xy['S00'])
     """
     
     def __init__(self, list_of_edifiles =None, edipath =None ,  survey_name =None  ): 
@@ -190,7 +190,7 @@ class Edi_collection :
     def _collect_edifiles(self, edifiles_list =None,
                           ediobjs =None ):
         """
-        collect edifiles and set appropriates attributes for eadh stations. 
+        collect edifiles and set appropriates attributes for each stations. 
 
         :param edifiles_list: list of edifiles
         :param edifiles_list: list 
@@ -210,6 +210,7 @@ class Edi_collection :
                 list_of_edifiles = edilist)
             ... print(edi_objs.phs_xy['S01'])
             ... print(edi_objs.freq_array)
+            
         """
         self._logging.info ('Collectiong edilfiles from <%s>'% self.__class__.__name__)
         
@@ -354,7 +355,7 @@ class Edi :
     please consult MTpy documentation https://mtpy2.readthedocs.io/en/develop/ 
     The Edi class contains a class for each major section of the .edi file.
     
-    ..note:: Frequency and components are ordered from highest to lowest frequency.
+    .. note:: Frequency and components are ordered from highest to lowest frequency.
     
     
     Arguments 
@@ -414,6 +415,7 @@ class Edi :
         ...                    edi_fn=path)
         >>> edi_obj =csedi.Edi(edi_filename=path )
         >>> edi_obj.write_edifile(new_edifilename=None)
+        
     """
     
     def __init__(self, edi_filename=None, **kwargs):
@@ -478,6 +480,7 @@ class Edi :
 
         :param edifile: full path to edifile 
         :type edifile: str 
+        
         """
         self._logging.info ("Reading <{0}> edifile.".format(edifile))
         
@@ -509,17 +512,18 @@ class Edi :
                     'zxyr':<list of data zxyr>, ....,zyyi':<list data of zyyi>}
         Parameters
         -----------
-        * edifile : str  
-                full path to edifile 
-        * data_sect_line: int  
-                number of line where data section start.
-                default is None': fill automatycally 
+            * edifile : str  
+                    full path to edifile 
+            * data_sect_line: int  
+                    number of line where data section start.
+                    default is None': fill automatycally 
         Returns 
         --------
             dict 
                 dictionnary of all component values get on edifiles.
             
         .. note:: data_sect_line parameter  is optional.
+        
         """
         
         self._logging.info('Read <get_specific_comp> in edi_data'
@@ -568,7 +572,7 @@ class Edi :
         Method to fill Impedance Data bloc and Tipper blocks and Resistivities
         and data blocks if provided User dont need to provided data on dictionnay
          provided that your are sure that data providing respect 
-        SEG instructions. if not fill automatically by reading edifile .
+        SEG instructions. If not fill automatically by reading edifile .
         
         :param data_dict: dictionnary of data  < get from reading edifiles > 
                 *default* is None ,  fill automatically   
@@ -681,6 +685,7 @@ class Edi :
         
         :returns: new_edifile , full path to edifile 
         :rtype: str 
+        
         """
         z_rho_phs_labels =[
                             [['zxxr', 'zxxi', 'zxx.var'],
@@ -947,8 +952,7 @@ class Edi :
         :returns: data_list, list of line to write in edifile
         :rtype: list 
         
-    
-        .. Note:: We assume that comp_key provided is found on the edifile
+        .. note:: We assume that comp_key provided is found on the edifile
                 before using this method.
             
         
@@ -1049,18 +1053,18 @@ class Head (object):
             Full path to edi path 
         
     > HEAD
-     DATAID="kap012"
-     ACQBY="Phoenix"
-     FILEBY="EMTF FCU"
-     FILEDATE=01/02/18
-     LAT=-30:52:05.62
-     LONG=21:44:35.00
-     ELEV=1166
-     STDVERS=SEG 1.0
-     PROGVERS="4.0"
-     PROGDATE=06/20/11
-     MAXSECT=999
-     EMPTY=1.0e+32
+     - DATAID="kap012"
+     - ACQBY="Phoenix"
+     - FILEBY="EMTF FCU"
+     - FILEDATE=01/02/18
+     - LAT=-30:52:05.62
+     - LONG=21:44:35.00
+     - ELEV=1166
+     - STDVERS=SEG 1.0
+     - PROGVERS="4.0"
+     - PROGDATE=06/20/11
+     - MAXSECT=999
+     - EMPTY=1.0e+32
                 
     ==============  ===============================  =============  ===========
     Attribute       Description                      Restriction    Default 
@@ -1099,6 +1103,7 @@ class Head (object):
                     file                        
     empty           Value which represents"nodata"      float       "1.0E32"
     ==============  ===============================  =============  ===========
+    
     """
     head_keys =['dataid', 'acqby',
                 'fileby','acqdate',
@@ -1192,6 +1197,7 @@ class Head (object):
         
         :paramedi_fn: full path to edifile
         :type edi_fn: str 
+        
         """
         _logger.info ('Geting <%s> Head info'% edi_fn)
         
@@ -1328,21 +1334,21 @@ class Head (object):
  
 class Info :
     """
-     Class EDI info class , collect information of the survey 
+    Class EDI info class , collect information of the survey. 
 
     > INFO
-     MAXINFO=999
-     PROJECT=SAMTEX
-     SURVEY=Kaapvaal 2003
-     YEAR=2003
-     PROCESSEDBY=SAMTEX team
-     PROCESSINGSOFTWARE=JONES 2.3
-     PROCESSINGTAG=
-     SITENAME=South Africa
-     RUNLIST=
-     REMOTEREF=
-     REMOTESITE=
-     SIGNCONVENTION=exp(+ i\omega t)
+     - MAXINFO=999
+     - PROJECT=SAMTEX
+     - SURVEY=Kaapvaal 2003
+     - YEAR=2003
+     - PROCESSEDBY=SAMTEX team
+     - PROCESSINGSOFTWARE=JONES 2.3
+     - PROCESSINGTAG=
+     - SITENAME=South Africa
+     - RUNLIST=
+     - REMOTEREF=
+     - REMOTESITE=
+     - SIGNCONVENTION=exp(+ i\omega t)
 
     ================  ================  =======================================
     Attributes         Type             Explanation
@@ -1388,6 +1394,7 @@ class Info :
         
         :returns: edi_info_list 
         :rtype: list 
+        
         """
         _logger.info ('subclass :Reading <%s> Ediinfo and return  class.'% cls.__name__)
         
@@ -1417,6 +1424,7 @@ class Info :
         
         :param edi_info_list: list of infos files 
         :type edi_info_list: list 
+        
         """
         listinfo=[]
         
@@ -1462,9 +1470,9 @@ class Info :
     def write_edi_info (self, edi_info_list =None ): 
         """
         Write edi information info . Can read edi and rewrite list or  to provide 
-            input as ['key_01=value_01', 'key_02=value_02', ...,'key_nn=value_nn' ]
-            Note : If value is absent i.e None ,  don't write the key . Info write method add some
-            field notes informations from other softwares if exists.  
+        input as ['key_01=value_01', 'key_02=value_02', ...,'key_nn=value_nn' ]
+        Note : If value is absent i.e None ,  don't write the key . Info write method add some
+        field notes informations from other softwares if exists.  
  
         :param edi_info_list: list of infos contain in info sections 
         :type edi_info_list: list 
@@ -1559,25 +1567,25 @@ class DefineMeasurement:
     
     Arguments
     -----------
-    **param defineMeas_list**:  list 
-                        list for define measurement infos  
+        **param defineMeas_list**:  list 
+                            list for define measurement infos  
   
     >=DEFINEMEAS
-        MAXCHAN=7
-        MAXRUN=999
-        MAXMEAS=9999
-        UNITS=M
-        REFTYPE=CART
-        REFLAT=-30:52:05.62
-        REFLONG=21:44:35.00
-        REFELEV=1166
+        - MAXCHAN=7
+        - MAXRUN=999
+        - MAXMEAS=9999
+        - UNITS=M
+        - REFTYPE=CART
+        - REFLAT=-30:52:05.62
+        - REFLONG=21:44:35.00
+        - REFELEV=1166
          
-        >!****CHANNELS USING ORIGINAL SITE LAYOUT. FOR ROTATIONS SEE ZROT****!
-       >HMEAS ID=1001.001 CHTYPE=HX X=      0.0 Y=      0.0 Z=   0.0 AZM=   0.0
-       >HMEAS ID=1002.001 CHTYPE=HY X=      0.0 Y=      0.0 Z=   0.0 AZM=  90.0
-       >HMEAS ID=1003.001 CHTYPE=HZ X=      0.0 Y=      0.0 Z=   0.0 AZM=   0.0
-       >EMEAS ID=1004.001 CHTYPE=EX X=    -50.0 Y=      0.0 Z=   0.0 X2=     50.0 Y2=      0.0 AZM=   0.0
-       >EMEAS ID=1005.001 CHTYPE=EY X=      0.0 Y=    -50.0 Z=   0.0 X2=      0.0 Y2=     50.0 AZM=  90.0
+     >!****CHANNELS USING ORIGINAL SITE LAYOUT. FOR ROTATIONS SEE ZROT****!
+        - >HMEAS ID=1001.001 CHTYPE=HX X=      0.0 Y=      0.0 Z=   0.0 AZM=   0.0
+        - >HMEAS ID=1002.001 CHTYPE=HY X=      0.0 Y=      0.0 Z=   0.0 AZM=  90.0
+        - >HMEAS ID=1003.001 CHTYPE=HZ X=      0.0 Y=      0.0 Z=   0.0 AZM=   0.0
+        - >EMEAS ID=1004.001 CHTYPE=EX X=    -50.0 Y=      0.0 Z=   0.0 X2=     50.0 Y2=      0.0 AZM=   0.0
+        - >EMEAS ID=1005.001 CHTYPE=EY X=      0.0 Y=    -50.0 Z=   0.0 X2=      0.0 Y2=     50.0 AZM=  90.0
     
    
     ================  ===================================  =======  ===========
@@ -1664,6 +1672,7 @@ class DefineMeasurement:
         
         :returns: new class with infos list 
         :rtype: list 
+        
         """
         _logger.info('Reading < %s> file from <%s>' % (os.path.basename(edi_fn), cls.__name__))
         
@@ -1836,6 +1845,7 @@ class DefineMeasurement:
             ... definemeas.__setattr__('meas_ey', ey)
             ... definemeas.__setattr__('meas_hy', hy)
             >>> print(definemeas.write_define_measurement())
+            
         """
         write_dfmeasurements, dictlist=['>=DEFINEMEAS\n'],[]
         
@@ -1979,9 +1989,9 @@ class Emeasurement(object):
     x                      x (m) north offset from first electrode (reauired)
     y                      y (m) offest from ref for first electrode(reauired)
     z                      z offset from the ref for first electrode(reauired) 
-    x2                      x offset from the 2nd electrode ('required')
-    y2                      y offset from the 2nd electrode (required)
-    z2                      z offset from the 2nd electrode ("")
+    x2                     x offset from the 2nd electrode ('required')
+    y2                     y offset from the 2nd electrode (required)
+    z2                     z offset from the 2nd electrode ("")
     acqchan                name of the channel acquired usually same as chtype
     filter                 description of sensor to run ("")
     gain                   gain used for run ("")
@@ -2017,39 +2027,39 @@ class Emeasurement(object):
 
 class TSeries(object):
     """
-    .. _MTpy::
-        :ref:`MTpy <https://github.com/MTgeophysics/mtpy>` 
-        
-    **Future plan** 
-    .. note:: We will call MTpy directy for Tseries 
-        Begin a times series data section. Defines the set of measurments for which times series 
-        data are presented. refer to MTpy software 
+    .. _MTpy::`MTpy <https://github.com/MTgeophysics/mtpy>`
+
+        .. Future plan:: We will call MTpy directy for Tseries 
+            Begin a times series data section. Defines the set of measurments for which times series 
+            data are presented. refer to MTpy software :ref:`MTpy`
     """
     pass 
 class Spectra(object):
     """
-    **Future plan** 
-    .. note:: We will call MTpy directy for Spectra 
+    .. Future plan:: We will call MTpy directy for Spectra 
         Begin a spectra  data section. Defines the set of measurments for which spectra 
-        data are presented.  refer to :ref:`MTpy`
+        data are presented.  refer to :ref:`MTpy<https://github.com/MTgeophysics/mtpy>`
     """
     pass 
 
 class MTEMAP (object): 
     """
-    Begins an MT and EMAP data section .Defines the default measurment for MT sounding and 
-    Defines the measurments which makeup an EMAP lines. 
+    Begins an MT and EMAP data section .Defines the default measurement for MT 
+    sounding and Defines the measurments which makeup an EMAP lines. 
     
-    >=MTSECT                          >=EMAPSECT
-           SECTID=""                      SECTID=S00
-              NFREQ=**                    NCHAN=4
-              HX= 1001.001                MAXBLKS=999
-              HY= 1002.001                NDIPOLE =47 
-              HZ= 1003.001                NFREQ=17
-              EX= 1004.001                HX= 0.
-              EY= 1005.001                HY= .0
-                                          HZ= NONE
-                                          CHKSUM =None
+    ===========================  ==============================================
+         >=EMAPSECT                        >=EMAPSECT
+    ===========================  ==============================================
+        - SECTID=""                       - SECTID=S00
+        - NFREQ=**                        - NCHAN=4
+        - HX= 1001.001                    - MAXBLKS=999
+        - HY= 1002.001                    - NDIPOLE =47 
+        - HZ= 1003.001                    - NFREQ=17
+        - EX= 1004.001                    - HX= 0.
+        - EY= 1005.001                    - HY= .0
+                                          - HZ= NONE
+                                          - CHKSUM =None
+    ===========================  ==============================================
 
     :param mt_or_emap_section_list:  mt and emap section can read ediflies by
                                  calling class method <'get_mtemap_section_list'>
@@ -2117,6 +2127,7 @@ class MTEMAP (object):
             
         :returns: newclass contained a list of mtemap infos 
         :rtype: list 
+        
         """
         _logger.info ("Read MT Section on edifile <%s>: %s" % (os.path.basename(edi_fn),cls.__name__))
         if edi_fn is None :CSex.pyCSAMTError_EDI('NoneType can not be read. Please provide your right edipath.')
@@ -2512,6 +2523,7 @@ def minimum_parser_to_write_edi (edilines, parser =None ):
         >>> definemeas =DefineMeasurement.get_measurement_info(edi_fn=path)
         >>> minimparser = minimum_parser_to_write_edi(edilines =definemeas.define_measurement)
         >>> print(minimparser)
+        
     """
     if parser is None :parser ='='
     elif parser is not None :
@@ -2532,8 +2544,8 @@ def minimum_parser_to_write_edi (edilines, parser =None ):
 def gather_measurement_key_value_with_str_parser (old_measurement_list, parser =None): 
     """
     fonction to rebuild xmeasurement list , to solder list with egal.
-    In the case no value is found at 
-    the last item, we will add None . 
+    In the case where no value is found at  the last item, we will add "None" . 
+   
  
     :param old_measurement_list: measurement list to solder
     :type old_measurement_list: list 

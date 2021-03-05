@@ -64,8 +64,8 @@ class Avg (object):
         
     Arguments 
     ----------
-    **data_fn**: str 
-                path to AVG file 
+        **data_fn**: str 
+                    path to AVG file 
         
     ================  ===========  =======================================
     Attributes         Type        Explanation
@@ -135,8 +135,8 @@ class Avg (object):
         
         Parameters
         ------------
-        * data_fn: str  
-                path to AVG filename.      
+            * data_fn: str  
+                    path to AVG filename.      
         """
         
         if data_fn is not None : 
@@ -348,7 +348,7 @@ class Avg (object):
             :param value-to-format: the list of item we want to format.
             :type value_to_format: list 
                 
-            ..note:: user can change the disposal of avg_labels.
+            .. note:: user can change the disposal of avg_labels.
     
             """
             for ss, item in enumerate(format_len):value_to_format[ss]=item.format(value_to_format[ss])
@@ -439,23 +439,23 @@ class Avg (object):
         
         Parameters 
         -----------
-        * avg_data_fn:str 
-                    pathLike , path to your avg file 
-        * station_fn:  str
-                    pathLike, path to your profile/station file .
-        * j_extension: str
-                    Extension type you want to export file .
-                    *Default* is ".dat"
-        * utm_zone: str
-                    add  if station_profile are not referenced yet.
-                    later , it would be removed .
-        * savepath: str
-                pathLike , path to save your outpufile 
-        * write_info: bool
-                    write the informations of your input file ,  
-                    export informations into Jfile,*Default* is False.
-        * survey_name:   bool, 
-                    survey_area  
+            * avg_data_fn:str 
+                        pathLike , path to your avg file 
+            * station_fn:  str
+                        pathLike, path to your profile/station file .
+            * j_extension: str
+                        Extension type you want to export file .
+                        *Default* is ".dat"
+            * utm_zone: str
+                        add  if station_profile are not referenced yet.
+                        later , it would be removed .
+            * savepath: str
+                    pathLike , path to save your outpufile 
+            * write_info: bool
+                        write the informations of your input file ,  
+                        export informations into Jfile,*Default* is False.
+            * survey_name:   bool, 
+                        survey_area  
         """
         savepath =kws.pop('savepath', None)
         write_info =kws.pop('writeInfos', False)
@@ -961,11 +961,13 @@ class Header (object):
     
     :Example:
         
-            >>> path=os.path.join(os.environ["pyCSAMT"], 
-            ...          "csamtpy", "data", "LC101.avg")
-            >>> avg_obj= Avg(data_fn=path) 
-            >>> surv_area= avg_obj.Header.SurveyAnnotation.project_area 
-            >>>> print(survey.area)
+        >>> from csamtpy.ff.core.avg import Avg
+        >>> path=os.path.join(os.environ["pyCSAMT"], 
+        ...          "csamtpy", "data", "LC101.avg")
+        >>> avg_obj= Avg(data_fn=path) 
+        >>> surv_area= avg_obj.Header.SurveyAnnotation.project_area 
+        >>>> print(survey.area)
+        
     """
     def __init__(self, header_infos = None , **kwargs):
 
@@ -1001,7 +1003,7 @@ class Header (object):
             
         :Example:
             
-            >>> from csamtpy.ff.core.avg import Header
+            >>> from csamtpy.ff.core.avg.Avg import Header
             >>> Header().write_header_log(data_fn=path,
             ...               )
             >>> he=Header()
@@ -1125,8 +1127,8 @@ class SurveyAnnotation (object) :
         
         Parameters 
         ----------
-        * survey_annotation : list 
-                            container of survey annotations infos. 
+            * survey_annotation : list 
+                                container of survey annotations infos. 
         """
         _logger.info('Reading and setting zonge survey Annotations infos !')
         
@@ -1211,6 +1213,7 @@ class SurveyConfiguration(object) :
         >>> surv_nameLine= avg_obj.Header.SurveyConfiguration.lineName 
         ... surv_nameLine
         ... avg_obj.Header.SurveyConfiguration.sconfig_dict['Stn.Right']
+        
     """
     def __init__(self, survey_config_data =None , **kwargs):
         
@@ -1261,8 +1264,8 @@ class SurveyConfiguration(object) :
         
         Parameters 
         ----------
-        * survey_config_data : list or pathLike str 
-                            container of survey configurations  infos. 
+            * survey_config_data : list or pathLike str 
+                                container of survey configurations  infos. 
         """
         _logger.info('Reading and setting survey configurations informations!')
 
@@ -1333,8 +1336,8 @@ class TransmitterProperties(object):
      
     Arguments  
     -----------
-    **data_fn** : str  
-            path to avgfile
+        **data_fn** : str  
+                path to avgfile
         
     =================  ==========  ============================================
     Attributes         Type        Explanation
@@ -1397,6 +1400,7 @@ class TransmitterProperties(object):
         
         :param tx_data: list of Tx-infos from AVG filename 
         :type tx_data:list 
+        
         """
         
         if Tx_data is None : 
@@ -1431,9 +1435,9 @@ class ReceiverProperties(object):
       
     Arguments 
     ---------- 
-    **Rx_data** : list or str 
-                Filled automatically or path to your
-                receiver properties file.
+        **Rx_data** : list or str 
+                    Filled automatically or path to your
+                    receiver properties file.
 
     =================  ==========  ============================================
     Attributes         Type        Explanation
@@ -1593,7 +1597,7 @@ class Skip_flag (object) :
         
         Parameters
         ----------
-             skip_flag:  str 
+             * skip_flag:  str 
         """
         
         if skip_flag is not None : 
@@ -1671,8 +1675,8 @@ class ZongeHardware(object):
         
         Parameters 
         ----------
-        * zonge_hardw_infos : list 
-                            Hardware informations collected  
+            * zonge_hardw_infos : list 
+                                Hardware informations collected  
         """
         _logger.info ('Reading and setting Harwware informations !')
         
@@ -1723,10 +1727,10 @@ class Data (object):
      
     Arguments
     ---------
-     **data_array**  : np.ndarray  
-                    Data collected form the site, It contains all the informations 
-                    during survey. It could read a  user own data build 
-                    by classifying data according the main AVG file 
+        **data_array**  : np.ndarray  
+                       Data collected form the site, It contains all the informations 
+                       during survey. It could read a  user own data build 
+                       by classifying data according the main AVG file 
 
     ==================  ==============  =======================================
     Attributes          Type            Explanation
@@ -1822,16 +1826,16 @@ class Data (object):
         
         Parameters
         ----------
-        * data_array : np.ndarray 
-                    data recovered from avg file. 
-                    It must be on numpy array. The default is None.
-        * data_type : int, optional
-                    show the type of Avg file, 
-                    must be 1 for plainty file 2 for Astatic file. 
-                     *Default* is None.
-        * add_astatic_data : pd.coreDataFrame , optional
-                            added infos from astatic file. 
-                            *Default* is None.
+            * data_array : np.ndarray 
+                        data recovered from avg file. 
+                        It must be on numpy array. The default is None.
+            * data_type : int, optional
+                        show the type of Avg file, 
+                        must be 1 for plainty file 2 for Astatic file. 
+                         *Default* is None.
+            * add_astatic_data : pd.coreDataFrame , optional
+                                added infos from astatic file. 
+                                *Default* is None.
         """
         if data_array is not None : 
             self._data_array =data_array
@@ -1866,18 +1870,18 @@ class Data (object):
             """
             Parameters
             ----------
-            * zstar_array : ndarray 
-                        array contain unfloat converter value.
-                        the unconverter value can be a '*'
-            * nan_value : float or np.nan type  
-                        nan_value could be any value either int, float or str.  
-                        If The default is np.nan.
-            * keep_str : bool, optional  
-                        keep the str item on your array.
+                * zstar_array : ndarray 
+                            array contain unfloat converter value.
+                            the unconverter value can be a '*'
+                * nan_value : float or np.nan type  
+                            nan_value could be any value either int, float or str.  
+                            If The default is np.nan.
+                * keep_str : bool, optional  
+                            keep the str item on your array.
             Returns 
             -------
-            array_like 
-                zstrar_array converted 
+                array_like 
+                    zstrar_array converted 
             """
             
             for kk , value in enumerate(zstar_array): 
@@ -1982,10 +1986,10 @@ class  Station(object):
     
     Parameters
     -----------
-     * norm_station_value: bool 
-                         True or False , if True , station will numbered
-                         starting by 0 . 
-                         *Default* is True 
+         * norm_station_value: bool 
+                             True or False , if True , station will numbered
+                             starting by 0 . 
+                             *Default* is True 
  
     ================  ===========  ============================================
     Attributes        Type          Explanation
@@ -2043,15 +2047,15 @@ class  Station(object):
 
         Parameters
         ----------
-        * station_data_array : np.ndarray (ndarray,1), optional
-                            station value recorded in the field at each point.
-                            The *default* is None.
-        * rename_station : np.ndarray(ndarray,1), optional
-                            list of station name provided. 
-                            *Default* is None.
-        * normalized_station_value : bool, optional
-                            start the value of station by 0.
-                            *Default* is False.
+            * station_data_array : np.ndarray (ndarray,1), optional
+                                station value recorded in the field at each point.
+                                The *default* is None.
+            * rename_station : np.ndarray(ndarray,1), optional
+                                list of station name provided. 
+                                *Default* is None.
+            * normalized_station_value : bool, optional
+                                start the value of station by 0.
+                                *Default* is False.
         """
         
         if station_data_array  is not None : 
@@ -2131,13 +2135,13 @@ class Frequency (object):
         
     Arguments  
     ---------
-    **freq_array**  : arrya_like 
-                    frequence data array 
-                    
-    **normalize_freq_betw** : list  
-                            must be on list of integer value 
-                            If float value provided 
-                            should be convert on list, same as tuple 
+        **freq_array**  : arrya_like 
+                        frequence data array 
+                        
+        **normalize_freq_betw** : list  
+                                must be on list of integer value 
+                                If float value provided 
+                                should be convert on list, same as tuple 
  
     ======================  ==========  =======================================
     Attributes              Type        Explanation
@@ -2196,11 +2200,11 @@ class Frequency (object):
 
         Parameters
         ----------
-        * freq_array : np.ndarray(ndarray, 1)
-                    frequency data provided . The default is None.
-        * normalize_freq_betw : list 
-                    list of frequency range to normalize, optional. 
-                    The *default* is None.
+            * freq_array : np.ndarray(ndarray, 1)
+                        frequency data provided . The default is None.
+            * normalize_freq_betw : list 
+                        list of frequency range to normalize, optional. 
+                        The *default* is None.
         """
         
         
@@ -2254,13 +2258,13 @@ class Frequency (object):
  
         Raises
         ------
-        CSex
-            raise Error if input arguments for frequency interpolating is wrong.
+            CSex
+                raise Error if input arguments for frequency interpolating is wrong.
 
         Returns
         -------
-        array_like
-            frequency normalized.
+            array_like
+                frequency normalized.
         """
         
         if normalize_freq_betw is not None : 
@@ -2294,17 +2298,17 @@ class Comp (object):
          
     Arguments 
     ----------
-     **comp_name** : str
-                    path to avg filename 
-     **new_component** :str  
-                    component type which data will acquired . make sure 
-                    once change it , the method to calculate impedande Z and 
-                    rotating angle will also change to
-                    
-                    - ExHy Zxy (Ex/Hy)
-                    - EyHz Zyx (Ey/Hx)
-                    - EyHy Zyy (Ey/Hy)
-                    - ExHx Zxx (Ex/Hx)
+        **comp_name** : str
+                       path to avg filename 
+        **new_component** :str  
+                       component type which data will acquired . make sure 
+                       once change it , the method to calculate impedande Z and 
+                       rotating angle will also change to
+                       
+                       - ExHy Zxy (Ex/Hy)
+                       - EyHz Zyx (Ey/Hx)
+                       - EyHy Zyy (Ey/Hy)
+                       - ExHx Zxx (Ex/Hx)
 
     =================  ==========  ============================================
     Attributes         Type        Explanation
@@ -2409,15 +2413,15 @@ class Amps (object):
         
         Parameters
         ----------
-        * amps_array : ndarray, optional
-                        amps _current observed sites. 
-                        The *default* is None.
-        * number_of_frequencies : int , optional
-                        number of frequencies for survey.
-                        The *default* is None.
-        * number_of_stations : int , optional
-                        number_of stations. 
-                        The *default* is None.
+            * amps_array : ndarray, optional
+                            amps _current observed sites. 
+                            The *default* is None.
+            * number_of_frequencies : int , optional
+                            number of frequencies for survey.
+                            The *default* is None.
+            * number_of_stations : int , optional
+                            number_of stations. 
+                            The *default* is None.
         """
         if amps_array is not None : 
             self._amps_array =amps_array 
@@ -2456,8 +2460,8 @@ class Emag (object):
     
     Arguments 
     ----------
-    **e_mag_array**: ndarray
-                    E_field magnitude Class  
+        **e_mag_array**: ndarray
+                        E_field magnitude Class  
                   
     ================  ===========  ============================================
     Attributes         Type        Explanation
@@ -2507,14 +2511,14 @@ class Emag (object):
             
         Parameters
         ----------
-        * e_mag_array : ndarray, optional
-                        B-Field magnitude observed at each station.
-                        The *default* is None.
-        * number_of_frequencies : int , optional
-                            number of frequencies for survey. 
-                            The default is None.
-        * number_of_stations : int , optional
-                            number_of stations. The default is None.
+            * e_mag_array : ndarray, optional
+                            B-Field magnitude observed at each station.
+                            The *default* is None.
+            * number_of_frequencies : int , optional
+                                number of frequencies for survey. 
+                                The default is None.
+            * number_of_stations : int , optional
+                                number_of stations. The default is None.
         """
         if e_mag_array is not None : 
             self.e_mag_array =e_mag_array 
@@ -2553,10 +2557,10 @@ class Ephz (object):
     
     Arguments 
     ----------
-    **e_phz_array** : ndarray
-               E_phase data field
-    **to_deg**  : bool 
-               put the Ephz value on degree . 
+        **e_phz_array** : ndarray
+                   E_phase data field
+        **to_deg**  : bool 
+                   put the Ephz value on degree . 
                   
     ================  ===========  ============================================
     Attributes         Type        Explanation
@@ -2607,17 +2611,17 @@ class Ephz (object):
             
         Parameters
         ----------
-        * e_phz_array : ndarray, en rad 
-                        E-Field phase observed .
-                        The *default* is None.
-        * number_of_frequencies : int , optional
-                            number of frequencies for survey.
+            * e_phz_array : ndarray, en rad 
+                            E-Field phase observed .
                             The *default* is None.
-        * number_of_stations : int , optional
-                            number_of stations. 
-                            The *default* is None.
-        * to_degree : bool,
-                    compute angle to degree . 
+            * number_of_frequencies : int , optional
+                                number of frequencies for survey.
+                                The *default* is None.
+            * number_of_stations : int , optional
+                                number_of stations. 
+                                The *default* is None.
+            * to_degree : bool,
+                        compute angle to degree . 
         """
         to_degree =kwargs.pop("to_degree", False)
         if to_degree :
@@ -2664,8 +2668,8 @@ class Hmag (object):
     
     Arguments 
     ----------
-    **h_mag_array** : ndarray
-                   H/B_field magnitude Class . 
+        **h_mag_array** : ndarray
+                       H/B_field magnitude Class . 
                   
     ================  ===========  ============================================
     Attributes         Type        Explanation
@@ -2716,14 +2720,14 @@ class Hmag (object):
            
         Parameters
         ----------
-        * h_mag_array : ndarray, optional
-                        B Field measured data on the sites.
-                        The default is None.
-        * number_of_frequencies : int , optional
-                                number of frequencies for survey. 
-                                The default is None.
-        * number_of_stations : int , optional
-                            number_of stations. The default is None.
+            * h_mag_array : ndarray, optional
+                            B Field measured data on the sites.
+                            The default is None.
+            * number_of_frequencies : int , optional
+                                    number of frequencies for survey. 
+                                    The default is None.
+            * number_of_stations : int , optional
+                                number_of stations. The default is None.
         """
         
         if h_mag_array is not None : 
@@ -2763,10 +2767,10 @@ class Hphz (object):
     
     Arguments 
     ---------
-    **h_phz_array** : ndarray
-                    E_phase data field
-     **to_degree**  : bool 
-                put the Hphz value on degree . 
+        **h_phz_array** : ndarray
+                        E_phase data field
+         **to_degree**  : bool 
+                    put the Hphz value on degree . 
                   
     ================  ===========  ============================================
     Attributes         Type        Explanation
@@ -2818,15 +2822,15 @@ class Hphz (object):
         
         Parameters
         ----------
-        * e_phz_array : ndarray, en rad 
-                        E-Field phase observed . The default is None.
-        * number_of_frequencies : int , optional
-                        number of frequencies for survey. The default is None.
-        * number_of_stations : int , optional
-                        number_of stations.
-                        The default is None.
-        * to_degree : bool,
-                        compute angle todegree . 
+            * e_phz_array : ndarray, en rad 
+                            E-Field phase observed . The default is None.
+            * number_of_frequencies : int , optional
+                            number of frequencies for survey. The default is None.
+            * number_of_stations : int , optional
+                            number_of stations.
+                            The default is None.
+            * to_degree : bool,
+                            compute angle todegree . 
         """
         to_degree =kwargs.pop("to_degree", False)
         if to_degree :
@@ -2880,8 +2884,8 @@ class Resistivity (object):
     
     Arguments 
     ----------
-    **res_array**  : str
-                  data array of apparents resistivy calculation.
+        **res_array**  : str
+                      data array of apparents resistivy calculation.
                   
     ================  ===========  ============================================
     Attributes         Type        Explanation
@@ -2939,17 +2943,17 @@ class Resistivity (object):
         
         Parameters
         ----------
-        * res_array : array_like 
-                     Resistivity calculated  on the field. 
-                     The *default* is None.
-        * number_of_frequencies : int , optional
-                        number of frequencies for survey. 
-                        The *default* is None.
-        * number_of_stations : int , optional
-                        number_of stations. 
-                        The *default* is None.
-        * Sres : ndarray, 
-                    Zonge Astatic rho calculated.
+            * res_array : array_like 
+                         Resistivity calculated  on the field. 
+                         The *default* is None.
+            * number_of_frequencies : int , optional
+                            number of frequencies for survey. 
+                            The *default* is None.
+            * number_of_stations : int , optional
+                            number_of stations. 
+                            The *default* is None.
+            * Sres : ndarray, 
+                        Zonge Astatic rho calculated.
         """
         
         if res_array  is not None : 
@@ -3064,15 +3068,15 @@ class Phase (object):
         
         Parameters
         ------------
-        * phase_array : ndarray, optional
-                        phase data aray on the field.
-                        The *default* is None.
-        * number_of_frequencies : TYPE, optional
-                        number of fequency used .
-                        The *default* is None.
-        * number_of_stations : int, optional
-                        number of the stations on the site.
-                        The *default* is None.
+            * phase_array : ndarray, optional
+                            phase data aray on the field.
+                            The *default* is None.
+            * number_of_frequencies : TYPE, optional
+                            number of fequency used .
+                            The *default* is None.
+            * number_of_stations : int, optional
+                            number of the stations on the site.
+                            The *default* is None.
         """
     
  
@@ -3242,12 +3246,12 @@ class Z_Tensor(object):
         
         Parameters
         ----------
-        * z_array : complex
-                Impedance tensor complex_number 
-                The *default* is None.
-        * freq : ndarray, 
-                frequency value.
-                The *default* is None.
+            * z_array : complex
+                    Impedance tensor complex_number 
+                    The *default* is None.
+            * freq : ndarray, 
+                    frequency value.
+                    The *default* is None.
 
         Returns
         -------
@@ -3347,14 +3351,14 @@ class Z_Tensor(object):
        
         Parameters
         -----------
-        * z_array : pd.DataFrame ,
-                    added values from astatic files. 
-        * number_of_frequency :  int  , 
-                    number of frequency used during surveys.
-        * number_of_stations :int , 
-                    differents survey frequencies.
-        * Frequency : array_like
-                    frequency array units in Hz  
+            * z_array : pd.DataFrame ,
+                        added values from astatic files. 
+            * number_of_frequency :  int  , 
+                        number of frequency used during surveys.
+            * number_of_stations :int , 
+                        differents survey frequencies.
+            * Frequency : array_like
+                        frequency array units in Hz  
             
         .. Notes :: 
              appropriate converter  should be 
@@ -3414,9 +3418,9 @@ class pcEmag (object):
         
     Arguments 
     ----------
-    **pcEmag** : ndarray
-                data array of statistical variataion
-                of Emag value on the field.
+        **pcEmag** : ndarray
+                    data array of statistical variataion
+                    of Emag value on the field.
             
     ================  ===========  ============================================
     Attributes         Type        Explanation
@@ -3468,14 +3472,14 @@ class pcEmag (object):
         
         Parameters
         ----------
-        * pc_e_mag_array : ndarray, optional
-                            E-Field std variation  observed at each station.
-                            The default is None.
-        * number_of_frequencies : int , optional
-                                number of frequencies for survey. 
+            * pc_e_mag_array : ndarray, optional
+                                E-Field std variation  observed at each station.
                                 The default is None.
-        * number_of_stations : int , optional
-                            number_of stations. The default is None.
+            * number_of_frequencies : int , optional
+                                    number of frequencies for survey. 
+                                    The default is None.
+            * number_of_stations : int , optional
+                                number_of stations. The default is None.
         """
         if pc_e_mag_array is not None : 
             self._pcEmag =pc_e_mag_array 
@@ -3571,16 +3575,16 @@ class sEphz(object) :
  
         Parameters
         ----------
-        * shphz_array : ndarray, 
-                        en rad E-Field phase observed 
-                        The default is None.
-        * number_of_frequencies : int , optional
-                                number of frequencies for survey.
-                                The default is None.
-        * number_of_stations : int , optional
-                            number_of stations. The default is None.
-        * to_degree : bool,
-                    compute angle todegree . 
+            * shphz_array : ndarray, 
+                            en rad E-Field phase observed 
+                            The default is None.
+            * number_of_frequencies : int , optional
+                                    number of frequencies for survey.
+                                    The default is None.
+            * number_of_stations : int , optional
+                                number_of stations. The default is None.
+            * to_degree : bool,
+                        compute angle todegree . 
         """
         to_degree =kwargs.pop("to_degree", False)
         if to_degree :
@@ -3795,16 +3799,16 @@ class sHphz(object) :
         
         Parameters
         ----------
-        * shphz_array : ndarray, en rad 
-                        E-Field phase observed . 
-                        The default is None.
-        * number_of_frequencies : int , optional
-                        number of frequencies for survey.
-                        The default is None.
-        * number_of_stations : int , optional
-                     number_of stations. The default is None.
-        * to_degree : bool,
-                     compute angle todegree .
+            * shphz_array : ndarray, en rad 
+                            E-Field phase observed . 
+                            The default is None.
+            * number_of_frequencies : int , optional
+                            number of frequencies for survey.
+                            The default is None.
+            * number_of_stations : int , optional
+                         number_of stations. The default is None.
+            * to_degree : bool,
+                         compute angle todegree .
                      
         """
         to_degree =kwargs.pop("to_degree", False)

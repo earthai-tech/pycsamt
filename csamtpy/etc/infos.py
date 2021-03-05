@@ -19,7 +19,18 @@
     along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
 
 ===============================================================================  
+.. _module-Infos::`csamtpy.etc.infos`
 
+    :synopsis: Module contains various parameters  of files handling and 
+        glossary of some technical words.
+
+.. warnings:: `_sensible` class is parser class. It parses of differents inputs 
+                format recognized  by the software. Editing this class could affect 
+                how others submodules could run. However, improving the code to become 
+                less expensive is welcome.
+                ...
+        
+        
 Created on Sat Dec 12 16:21:10 2020
 
 @author:KouaoLaurent alias @Daniel03
@@ -128,8 +139,10 @@ class suit :
 
 class _sensitive:
     """
-    .. note ::  sensitive class . Please must keep carefully the indice like it was.
-        Ways to avoid reduncdancy in pyCSAMT software. Very usefull : 
+    .. note :: `sensitive class` . Please keep carefully the indices like 
+        it's ranged. Better Ways to avoid redundancy in code during the program 
+        design. Core of parser of each files except files from :ref:`module-geodrill`.
+        Aims are:
         1. to check file . it is was the right file provided or not 
         2. to write file . to Zonge Avg_format or J-Format or EDI -format and else.
         3. to compute value . Indice are used for computation , set and get specific value.
@@ -219,42 +232,40 @@ class _sensitive:
             **filename*** :str 
                             corresponding file to read , pathLike 
             **deep** : bool , 
-                control reading : False for just control the extension file ,
-                not opening file . 
-                True : control in deeper file and find which file were inputted.
+                    control reading : False for just control the extension file ,
+                    not opening file . 
+                    True : control in deeper file and find which file were inputted.
                 
         Returns  
         ---------
          str 
             FileType could be ['avg' | j | 'edi' | 'resp' | 'mesh' | 'occamdat' |
                  'stn' | 'model' | 'iter' | 'logfile' | 'startup']
-            
-
-        List of files read by pyCSAMT: 
         
-        ===============   =====================================================
+       
+        List of files read by pyCSAMT 
+        
+       ==============  =======================================================
         CodeFile                        DESCRIPTION 
-        ===============   =====================================================
+       ==============  =======================================================
+        *avg*           Zonge Engineering file Plainty file of ASTATIC file. 
+        *j*              A.G .Jonhson J=Format file. 
+        *edi*           SEG (Society of Exploration Geophysics) Electrical
+                        Data Interchange file (SEG-EDI) .
+        *stn*           Zonge Engineering station file. 
+        *occamdat*      deGroot-Hedlin, C., and S. Constable, Occam file. 
+        *mesh*          Constable, S. C., R. L. Parker, and C. G. Constable 
+                        mesh file .
+        *model*         Occam Model file . 
+        *startup*       Occam startup file  
+        *iter*          Occam iteration file get after Inversion . 
+        *resp*          Occam response file , Get after inversion 
+        *logfile*       Occam Logfile, Get after inverson (Inversion file )
+        ==============  ======================================================= 
         
-            - avg           Zonge Engineering file Plainty file of ASTATIC file. 
-            - j              A.G .Jonhson J=Format file. 
-            - edi           SEG (Society of Exploration Geophysics) Electrical
-                            Data Interchange file (SEG-EDI) .
-            - stn           Zonge Engineering station file. 
-            - occamdat      deGroot-Hedlin, C., and S. Constable, Occam file. 
-            - mesh          Constable, S. C., R. L. Parker, and C. G. Constable 
-                            mesh file .
-            - model         Occam Model file . 
-            - startup       Occam startup file  
-            - iter          Occam iteration file get after Inversion . 
-            - resp          Occam response file , Get after inversion 
-            - logfile       Occam Logfile, Get after inverson (Inversion file )
-        
-       ===============   ===================================================== 
-        
-   
+       
         :Example:
-            
+       
             >>> files = ['K1_exp.bln','LCS01.avg' ,'LCS01_2_to_1.avg', 'K1.stn',
             ...            'csi000.dat','csa250.edi','LogFile.logfile',
             ...                 'Occam2DMesh','Occam2DModel', 'OccamDataFile.dat',

@@ -246,19 +246,19 @@ class _sensitive:
         List of files read by pyCSAMT :
         
         ==============  =======================================================
-        CodeFile                        DESCRIPTION 
+        CodeFile                        Description
         ==============  =======================================================
         *avg*           Zonge Engineering file Plainty file of ASTATIC file. 
         *j*             A.G .Jonhson J=Format file. 
         *edi*           SEG (Society of Exploration Geophysics) Electrical
-                        Data Interchange file (SEG-EDI) .
-        *stn*           Zonge Engineering station file. 
+                        Data Interchange file (SEG-EDI) 
+        *stn*           Zonge Engineering station file 
         *occamdat*      deGroot-Hedlin, C., and S. Constable, Occam file. 
         *mesh*          Constable, S. C., R. L. Parker, and C. G. Constable 
-                        mesh file .
-        *model*         Occam Model file . 
+                        mesh file 
+        *model*         Occam Model file  
         *startup*       Occam startup file  
-        *iter*          Occam iteration file get after Inversion . 
+        *iter*          Occam iteration file get after Inversion  
         *resp*          Occam response file , Get after inversion 
         *logfile*       Occam Logfile, Get after inverson (Inversion file )
         ==============  ======================================================= 

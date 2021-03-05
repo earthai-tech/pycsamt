@@ -215,6 +215,7 @@ class fold_axial_plane(object):
     =================  =============  ========================================
 
     More attributes can be added by inputing a key word dictionary
+    
     """
     def __init__(self, **kwargs):
         
@@ -234,7 +235,7 @@ class fold_axial_plane(object):
             
     def _set_fold_axial_plane(self):
         """
-        methode to populates attributes
+        Methode to populates attributes.
 
         """
         baxis=strato()[1]
@@ -577,7 +578,7 @@ class Geo_formation (object):
         
    
     
-    .. note :: replace in attributes param "**" by  the *name of struture*
+    .. note:: replace in attributes param "**" by  the *name of struture*
     
     ==================  ============  =========================================
     Attributes          Type           Explanation

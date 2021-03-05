@@ -157,6 +157,7 @@ class GeoDataBase (object):
       
         :param struture_name:   name of geological rock or layer 
         :type struture_name: str
+        
         """
         if structure_name is not None :self.geo_structure_name = structure_name.lower() 
         
@@ -229,7 +230,7 @@ class GeoDataBase (object):
                              if not an error occurs 
         :type geo_formation_name: str
         
-         - Update the electrical property of basement rocks = [1e99, 1e6 ]
+        - Update the electrical property of basement rocks = [1e99, 1e6 ]
         
         :Example:
             
@@ -411,6 +412,7 @@ class GeoDataBase (object):
   
             :returns: geological formation code 
             :rtype: str 
+            
             """
             def _rev_func_code (code, CODE): 
                 """
@@ -420,7 +422,8 @@ class GeoDataBase (object):
                 :param code:  new_generate code 
                 :type code: str 
                 :param CODE: codes already exists in dataBase 
-                :type CODE: str  
+                :type CODE: str 
+                
                 """
                 # actually the lencode is > than 3 
                 mm=0
@@ -697,7 +700,7 @@ class GeoDataBase (object):
         """
         configure electrical property
         
-        ..note:: Electrical_property of rocks must a tuple of resisvity , max and Min
+        .. note:: Electrical_property of rocks must a tuple of resisvity , max and Min
                 bounds  eg : [2.36e-13, 2.36e-3]
         """
         if isinstance(range_of_rocks_resvalues , str) : # electrical props were initialse by float 0. 
@@ -830,15 +833,15 @@ class Recorder_sql(object):
     
     Arguments 
     -----------
-    **database** : str , 
-            name of sql database 
-            
-    **table** : str , 
-            name of table in dict_app
-
-    **Glob.dicoT** : dict,
-            dicoT is from dict_app module , Global class for sql variable 
-            encapsulated on particular dictionnary.
+        **database** : str , 
+                name of sql database 
+                
+        **table** : str , 
+                name of table in dict_app
+    
+        **Glob.dicoT** : dict,
+                dicoT is from dict_app module , Global class for sql variable 
+                encapsulated on particular dictionnary.
                 
     =========================  ==============================================
     Methods                    Description 
@@ -1017,25 +1020,25 @@ class Recorder_sql(object):
         
         Parameters
         ----------
-        * data : str, np.array, list, or pd.core.DataFrame object
-                Data ca, be on the format above or filename of data 
-                if the argument "data" is a filename, we must be convert on ".csv" format.
-            
-        * new_tablename : str, optional
-                Name of database. if name is not given , the 
-                function return only list . The default is None.
+            * data : str, np.array, list, or pd.core.DataFrame object
+                    Data ca, be on the format above or filename of data 
+                    if the argument "data" is a filename, we must be convert on ".csv" format.
+                
+            * new_tablename : str, optional
+                    Name of database. if name is not given , the 
+                    function return only list . The default is None.
  
         Raises
         ------
-        IndexError.
-             if lengh of number of columns like heads of data 
-            does not match the data.shape[0], then errors will occurs.  
+            IndexError.
+                 if lengh of number of columns like heads of data 
+                does not match the data.shape[0], then errors will occurs.  
 
         Returns
         -------
-        list  
-            list of value in the case of no name is providen for tablename.
-            else  return dict if name of datatable is providen.
+            list  
+                list of value in the case of no name is providen for tablename.
+                else  return dict if name of datatable is providen.
             
         """
         
@@ -1121,18 +1124,18 @@ class Recorder_sql(object):
         
         Parameters
         ----------
-        * datalist : list, dict
-            list of value providen for fill the dict_app.
+            * datalist : list, dict
+                list of value providen for fill the dict_app.
 
         Raises
         ------
-         pyCSAMTError_SQL_manager
-            None dataname detected
+             pyCSAMTError_SQL_manager
+                None dataname detected
 
         Returns
         -------
-        dict
-            datalist, Data arranged according to  dict_app arrangement.
+            dict
+                datalist, Data arranged according to  dict_app arrangement.
         """
         
         comments=kwargs.pop('comments', None)
@@ -1198,25 +1201,25 @@ class Recorder_sql(object):
         
         Parameters
         ----------
-        * data : str, np.array, list,  pd.core.DataFrame object
-                Data ca, be on the format above or filename of data 
-                if the argument "data" is a filename, we must be convert on ".csv" format.
-            
-        * new_tablename : str, optional
-                Name of database. if name is not given , the 
+            * data : str, np.array, list,  pd.core.DataFrame object
+                    Data ca, be on the format above or filename of data 
+                    if the argument "data" is a filename, we must be convert on ".csv" format.
+                
+            * new_tablename : str, optional
+                    Name of database. if name is not given , the 
                 function return only list . The default is None.
 
         Raises
         ------
-        IndexError
-             if lengh of number of columns like heads of data 
-             does not match the data.shape[0], then errors will occurs.  
+            IndexError
+                 if lengh of number of columns like heads of data 
+                 does not match the data.shape[0], then errors will occurs.  
 
         Returns
         -------
-        list , dict
-            list of value in the case of no name is providen for tablename.
-            else return dict if name of datatable is providen.
+            list , dict
+                list of value in the case of no name is providen for tablename.
+                else return dict if name of datatable is providen.
 
         :Example:
             
@@ -1309,18 +1312,18 @@ class Recorder_sql(object):
 
         Parameters
         ----------
-        * datalist : list, dict
-            list of value providen for fill the dict_app.
+            * datalist : list, dict
+                list of value providen for fill the dict_app.
 
         Raises
         ------
-        pyCSAMTError_SQL_manager 
-            DataBase no found
+            pyCSAMTError_SQL_manager 
+                DataBase no found
 
         Returns
         -------
-        dict
-            datalist , Data arranged according to  dict_app arrangement.
+            dict
+                datalist , Data arranged according to  dict_app arrangement.
         """
         
         comments=kwargs.pop('comments', None)

@@ -1,0 +1,134 @@
+tmp/*
+temp/*
+Session.vim
+build
+dist
+_build
+docs/man/*.gz
+docs/source/api/generated
+docs/gh-pages
+docs/_build*
+docs/_themes
+IPython/frontend/html/notebook/static/mathjax
+*.py[co]
+build
+_build
+.build
+*.egg-info
+*~
+*.bak
+*.swp
+*.swo
+.commitmsg
+*.aux
+*.toc
+*.log
+*.bbl
+
+*~
+*.py[cod]
+*.pyc
+*.pyo
+
+__pycache__
+dist
+sdist
+*.so
+pip-log.txt
+.DS_Store
+*.egg
+*.egg-info
+
+# Unit test / coverage reports
+.coverage
+.tox
+nosetests.xml
+
+# PyCharm / IntelliJ
+*.iml
+.idea
+*.ipr
+
+# Eclipse
+.project
+.pydevproject
+
+# local private
+_Private
+_private
+private
+localsandpit
+localdir
+
+tmp
+temp
+nohup*
+*.mine
+OldWorks
+
+# exempt logfiles 
+logs
+*.log
+
+# spyder project extension
+__pycache__/
+*.pylind.d
+*$py.class
+*.spyproject/
+.eggs/
+
+#libraries
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+.hypothesis/
+
+# Translations
+*.mo
+*.pot
+
+# spyder stuff:
+*.log
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# pyenv python configuration file
+.python-version
+
+# jupyther notebooks
+.ipynb_checkpoints
+#*.png
+
+# ignore quick examples docs 
+quick_examples/
+_logfile/
+add.info/

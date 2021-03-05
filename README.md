@@ -1,4 +1,4 @@
-# pyCSAMT (Python  for Controlled Source Audio-frequency Magnetotelluric )
+# pyCSAMT (Python  for Controlled Source Audio-frequency Magnetotellurics )
 [![Documentation Status](https://readthedocs.org/projects/pycsamt/badge/?version=latest)](https://pycsamt.readthedocs.io/en/latest/?badge=latest)
      
 
@@ -26,7 +26,7 @@ developers and users of that software.
  
  For the first release, The python toolbox gives a basic tools and  works only in far field. Furhermore , it uses  [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) open source sofware as modeling software , nevertheless several  outputs are provided for other modeling softwares.  
 ## Documentation 
-* API Documentation  : https://pycsamt.readthedocs.io/en/master/index.html#  
+* API Documentation  : https://readthedocs.org/projects/pycsamt/
 
 ## Licence 
 pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/pyCSAMT/blob/master/LICENSE.md)
@@ -81,7 +81,7 @@ Few steps of Python shell to visualize a "pseudo-stratigraphy log" of site 01  a
 ![fig3](https://user-images.githubusercontent.com/59920007/109377936-923bef00-7909-11eb-97bb-ad800176d94b.png)
 
 ## System requirements 
-* Python 3.6 /3.7 
+* Python 3.6+ 
 
 ## Contributing 
 Your suggestions are really welcome...

@@ -9,8 +9,6 @@ Package GeoDataBase
 .. automodule:: geodrill.geoDB.sql_recorder
 	:members:
 	:private-members:
-	:class: geodrill.geoDB.sql_recorder.GeoDataBase
-	:class: geodrill.geoDB.sql_recorder.Recorder_sql
 	
 **Module Interface**
 ============================

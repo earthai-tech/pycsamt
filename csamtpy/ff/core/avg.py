@@ -1986,11 +1986,9 @@ class  Station(object):
     
     Parameters
     -----------
-         * norm_station_value: bool 
-                             True or False , if True , station will numbered
-                             starting by 0 . 
-                             *Default* is True 
- 
+        * norm_station_value: bool 
+               If True, station will numbered starting by 0.*Default* is True
+
     ================  ===========  ============================================
     Attributes        Type          Explanation
     ================  ===========  ============================================

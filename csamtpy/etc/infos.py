@@ -245,9 +245,9 @@ class _sensitive:
        
         List of files read by pyCSAMT 
         
-       ==============  =======================================================
+        ==============  =======================================================
         CodeFile                        DESCRIPTION 
-       ==============  =======================================================
+        ==============  =======================================================
         *avg*           Zonge Engineering file Plainty file of ASTATIC file. 
         *j*              A.G .Jonhson J=Format file. 
         *edi*           SEG (Society of Exploration Geophysics) Electrical

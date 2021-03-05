@@ -107,7 +107,6 @@ class Geodrill (object):
     the pogramm to make a correlation  between data fromtruth layers and the model
     values.
 
-  
 
     Arguments
     ----------

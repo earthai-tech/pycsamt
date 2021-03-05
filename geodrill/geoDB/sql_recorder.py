@@ -70,12 +70,18 @@ except Exception as error :
 
 class GeoDataBase (object): 
     """
-     Geodatabase class . Currently we do not create the specific pattern 
-     for each geostructures. DataBase is built is built following the   
-        codef `code`,   `label`,`__description`,`pattern`, `pat_size`,`pat_density`,
-        `pat_thickness`,`RGBA`, `electrical_props`, `hatch`, `colorMPL`, `FGDC` .
+    Geodatabase class . Currently we do not create the specific pattern 
+    for each geostructures. DataBase is built is built following the   
+       codef `code`,   `label`,`__description`,`pattern`, `pat_size`,`pat_density`,
+       `pat_thickness`,`RGBA`, `electrical_props`, `hatch`, `colorMPL`, `FGDC` .
+       
         
-    .. note:: FGDC is Digital cartographic Standard for Geological  Map Symbolisation. 
+    Arguments
+    -----------
+        **geo_structure_name** : str 
+                Name of geological rocks , strata or layer.
+                
+    .. seealso:: FGDC-Digital cartographic Standard for Geological  Map Symbolisation. 
     
     """
     #  FGDC is not set yet , we use the  matplotlib pattern symbol makers 

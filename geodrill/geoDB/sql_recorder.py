@@ -71,7 +71,7 @@ except Exception as error :
 sys.path.insert(0, os.path.abspath('.'))  
 sys.path.insert(0, os.path.abspath('..')) 
 sys.path.insert(0, os.path.abspath('../..'))  
-sys.path.insert(0, os.path.abspath('geodrill/geoDB/sql_utils//sql_DB'))  # for consistency  
+sys.path.insert(0, os.path.abspath('geodrill/geoDB/sql_utils/sql_DB'))  # for consistency  
 
 # =============================================================================
 
@@ -100,7 +100,7 @@ class GeoDataBase (object):
                  'electrical_props', 'hatch', 'colorMPL', 'FGDC' ]
     # geoDataBase=os.path.join(os.environ['pyCSAMT'],
     #                'geodrill', 'geoDB','sql_utils', 'sql_DB', 'memory.sq3') # locate the geodataBase
-    geoDataBase = os.path.join(os.path.abspath('geodrill/geoDB/sql_utils//sql_DB'), 
+    geoDataBase = os.path.join(os.path.abspath('geodrill/geoDB/sql_utils/sql_DB'), 
                                'memory.sq3')
     
     # :memory: is faster we chose this options :geoDataBase.sq3 in sql_DB contains drill holes and wells Tables 

@@ -85,7 +85,7 @@ class GeoDataBase (object):
     
     codef = ['code','label','__description','pattern', 'pat_size',	'pat_density','pat_thickness','rgb',
                  'electrical_props', 'hatch', 'colorMPL', 'FGDC' ]
-    geoDataBase=os.path.join(os.environ ['pyCSAMT'],
+    geoDataBase=os.path.join(os.environ['pyCSAMT'],
                    'geodrill', 'geoDB','sql_utils', 'sql_DB', 'memory.sq3') # locate the geodataBase
     
     # :memory: is faster we chose this options :geoDataBase.sq3 in sql_DB contains drill holes and wells Tables 

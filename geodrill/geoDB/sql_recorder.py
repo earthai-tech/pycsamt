@@ -37,6 +37,7 @@ Created on Wed Oct 14 13:38:13 2020
 
 # =============================================================================
 import os
+import sys
 import numpy as np  
 import pandas as pd 
 import warnings
@@ -64,7 +65,13 @@ except Exception as error :
     warnings.warn_explicit('you may configure logFile', category=DeprecationWarning,
                            filename=filename, lineno=1)
     pass 
-    
+
+# let set the systeme path find memory dataBase
+ 
+sys.path.insert(0, os.path.abspath('.'))  
+sys.path.insert(0, os.path.abspath('..')) 
+sys.path.insert(0, os.path.abspath('../..'))  
+sys.path.insert(0, os.path.abspath('geodrill/geoDB/sql_utils//sql_DB'))  # for consistency  
 
 # =============================================================================
 
@@ -91,8 +98,10 @@ class GeoDataBase (object):
     
     codef = ['code','label','__description','pattern', 'pat_size',	'pat_density','pat_thickness','rgb',
                  'electrical_props', 'hatch', 'colorMPL', 'FGDC' ]
-    geoDataBase=os.path.join(os.environ['pyCSAMT'],
-                   'geodrill', 'geoDB','sql_utils', 'sql_DB', 'memory.sq3') # locate the geodataBase
+    # geoDataBase=os.path.join(os.environ['pyCSAMT'],
+    #                'geodrill', 'geoDB','sql_utils', 'sql_DB', 'memory.sq3') # locate the geodataBase
+    geoDataBase = os.path.join(os.path.abspath('geodrill/geoDB/sql_utils//sql_DB'), 
+                               'memory.sq3')
     
     # :memory: is faster we chose this options :geoDataBase.sq3 in sql_DB contains drill holes and wells Tables 
     # will develop in the future extensions 

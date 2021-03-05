@@ -41,11 +41,13 @@ class Glob(object):
     dictionnary can be set outside the container class Glob,
     following the dicoT datastructuration . 
     
-     :Example: :: 
-         value_DB =[('id_new', 'i', 'new_vision'),
-            ('infoTab','k','no comment'), 
-            ('collar','d','collarDH')]
-         Glob.dicoT.__setitem__('TableDB_set',value_DB )
+    :Example: 
+        
+        >>> value_DB =[('id_new', 'i', 'new_vision'),
+        ...   ('infoTab','k','no comment'), 
+        ...   ('collar','d','collarDH')]
+        >>> Glob.dicoT.__setitem__('TableDB_set',value_DB )
+        
     """
     
     

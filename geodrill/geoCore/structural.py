@@ -46,20 +46,19 @@ class geo_pattern:
     dict, can be add and change. This pattern  will be depreacted later , to create for pyCSAMT,
     its owwn geological pattern in coformity with the conventional geological swatches .
      deal with USGS(US Geological Survey ) swatches- references and FGDC (Digital cartographic 
-    Standard for Geological  Map Symbolisation):
+    Standard for Geological  Map Symbolisation -FGDCgeostdTM11A2_A-37-01cs2.eps)
          
-    .. FGDCgeostdTM11A2_A-37-01cs2.eps :: 
-        make _pattern:{'/', '\', '|', '-', '+', 'x', 'o', 'O', '.', '*'}
-                /   - diagonal hatching
-                \   - back diagonal
-                |   - vertical
-                -   - horizontal
-                +   - crossed
-                x   - crossed diagonal
-                o   - small circle
-                O   - large circle
-                .   - dots
-                *   - stars
+    make _pattern:{'/', '\', '|', '-', '+', 'x', 'o', 'O', '.', '*'}
+            /   - diagonal hatching
+            \   - back diagonal
+            |   - vertical
+            -   - horizontal
+            +   - crossed
+            x   - crossed diagonal
+            o   - small circle
+            O   - large circle
+            .   - dots
+            *   - stars
     """
     pattern={
                         "basement rocks" :      ['.+++++.', (.25, .5, .5)],
@@ -96,9 +95,9 @@ class Structure :
                   
     Holds the following information:
         
-    ==========================  ===============  ===============================
+    ==========================  ===============  ===================================
     Attributes                  Type             Explanation
-    ==========================  ===============  ===============================
+    ==========================  ===============  ===================================
     boudin_axis                 geos_obj         boudin    
     fold_axial_plane            geos_obj         axial plam of structural fold.
     banding_gneissosity         geos_obj         gneissossity of boudin plan  
@@ -109,7 +108,7 @@ class Structure :
     sharp_contact               geos_obj         sharp contact `various discrepancy` 
                                                  contact `stratigraphy discrepancy`  
                                                  fracture or fault discrepancies
-    ==========================  ===============  ================================
+    ==========================  ===============  ====================================
 
     More attributes can be added by inputing a key word dictionary
 

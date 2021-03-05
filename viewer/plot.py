@@ -94,7 +94,7 @@ class Plot1d :
     ==========================  ===============================================
     Methods                     Description
     ==========================  ===============================================
-    plot_topo_sep_azim :        plot_topography , station separation and 
+    plot_topo_sep_azim          plot_topography , station separation and 
                                 azimuth  profile can plot individually or 
                                 grouped by.
     penetrated1D                skindepth plot. penetration depth at different
@@ -107,6 +107,7 @@ class Plot1d :
     plot_RhoPhase errors        plot errors bar of resistivities in ohm.m and 
                                 phase in degree. 
     ==========================  ===============================================
+    
     """
     
     def __init__(self,**kwargs):
@@ -163,31 +164,30 @@ class Plot1d :
         
         Parameters
         ------------
-     
-        * fn : str
-            full path to [EDI|J|AVG] file. 
-            
-        * profile_fn : str 
-            path to file  may Zonge Engineering *.stn  file 
-            
-        * plot : str     
-            type of plot ,  default is '*' mean of three profile.
-            
-        * Station_Names: list   
-                list of station names , User could provide. Default is None 
-                compute automatically 
+            * fn : str
+                full path to [EDI|J|AVG] file. 
                 
-        * set_station_names : bool  
-                display the station name on figure axis . Default is False.
+            * profile_fn : str 
+                path to file  may Zonge Engineering *.stn  file 
                 
-        * elevation : (ndarray,1)
-                Array_like of elevation
+            * plot : str     
+                type of plot ,  default is '*' mean of three profile.
                 
-        * station_pk : array_like, 
-                array_like station dipole center value.
-                
-        * savefig : str 
-                path  to save figure. 
+            * Station_Names: list   
+                    list of station names , User could provide. Default is None 
+                    compute automatically 
+                    
+            * set_station_names : bool  
+                    display the station name on figure axis . Default is False.
+                    
+            * elevation : (ndarray,1)
+                    Array_like of elevation
+                    
+            * station_pk : array_like, 
+                    array_like station dipole center value.
+                    
+            * savefig : str 
+                    path  to save figure. 
                 
         ======================  ===============================================
         Key Words               Description        
@@ -830,7 +830,7 @@ class Plot1d :
                                    i.e [8, 511,1024 ]
         :type selected_frequency: list 
         
-        .. Note :: browse to see others plot config.
+        .. note:: browse to see others plot config.
         
         =================  ===============  ==================================
         Params             Default          Description 
@@ -1278,6 +1278,7 @@ class Plot1d :
         target         float            RMS target weexpected to reach .
                                         Default is   1.0
         ============  ===============  ========================================
+        
         """
        
         orientation =kwargs.pop('fig_orientation', None)  
@@ -1419,22 +1420,22 @@ class Plot1d :
         
         Parameters
         -----------
-        * fn : str   
-            full path to profile station file  of Zonge Engineering station
-            profile file . format egal to *.stn
-            
-        * straighten_type : str 
-            type of straingther profile   
-            it may be `classic`, `equisistant` or `distord`
-            *Default* is 'classic'
-            
-        * reajust_coordinates : list 
-            list of float x, y values  
+            * fn : str   
+                full path to profile station file  of Zonge Engineering station
+                profile file . format egal to *.stn
+                
+            * straighten_type : str 
+                type of straingther profile   
+                it may be `classic`, `equisistant` or `distord`
+                *Default* is 'classic'
+                
+            * reajust_coordinates : list 
+                list of float x, y values  
                                         
         :Example: 
             
             >>> path =  os.path.join(os.environ["pyCSAMT"], 
-                      'csamtpy','data', 'avg', 'K1.stn')
+            ...          'csamtpy','data', 'avg', 'K1.stn')
             >>> plot_1d_obj= Plot1d()
             >>> plot_1d_obj.plot_station_profile(fn = path)
         """
@@ -1556,7 +1557,8 @@ class Plot1d :
                 list of arrays  of Y coordinates values : can be easting 
                      or northing
                      
-        .. note ::  `X` and `Y` MUST be the same length        
+        .. note::  `X` and `Y` MUST be the same length  
+        
         """
         
         savefig =kwargs.pop('savefig', None )
@@ -1974,22 +1976,23 @@ class Plot2d (object):
     def penetration2D(self, fn=None , profile_fn =None, 
                       savefig =None, doi= '2km',  **kwargs): 
         """
-        plot penetration 2D 
+        Plot penetration 2D. 
+        
         Parameters
         -----------
-        * fn : str 
-            full path to [EDI|AVG|J] files. 
-            
-        * doi : float 
-            depth assumed to be imaged , default is 2000m For  CSAMT ,
-            2km is enought to have more info about near surface.
-             * Default* unit is "m".
-             
-        * profile_fn : str 
-            full path to profile *stn file 
-            
-        * savefig : str 
-            outdir 
+            * fn : str 
+                full path to [EDI|AVG|J] files. 
+                
+            * doi : float 
+                depth assumed to be imaged , default is 2000m For  CSAMT ,
+                2km is enought to have more info about near surface.
+                 * Default* unit is "m".
+                 
+            * profile_fn : str 
+                full path to profile *stn file 
+                
+            * savefig : str 
+                outdir 
             
         ==============  ===================  ===================================
         Params          Type                 Description 
@@ -2208,7 +2211,7 @@ class Plot2d (object):
         """
         def controle_delineate_curve(res_deline =None , phase_deline =None ): 
             """
-            fonction to controle delineate value given  and return value ceilling . 
+            Fonction to controle delineate value given  and return value ceilling . 
 
             :param res_deline: resistivity value  to delineate.
             :type res_deline: float, int, list  
@@ -3241,7 +3244,7 @@ class Plot2d (object):
                             number starts from 1 to the end .
         :type station_id:  str, int
             
-        .. Note :: User caneither use Occam 2D inversions files to plot or 
+        .. note:: User caneither use Occam 2D inversions files to plot or 
                 BoYang (x, y, file)+ station location file (*bln) to plot 
                 if the two types of files are provided , program with give 
                 priority to Occam 2D inversion files.

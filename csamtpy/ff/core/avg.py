@@ -1984,9 +1984,9 @@ class  Station(object):
     """
     Stations informations 
     
-    Parameters
+    Arguments
     -----------
-        * norm_station_value: bool 
+        **norm_station_value**: bool 
                If True, station will numbered starting by 0.*Default* is True
 
     ================  ===========  ============================================
@@ -2459,7 +2459,7 @@ class Emag (object):
     Arguments 
     ----------
         **e_mag_array**: ndarray
-                        E_field magnitude Class  
+                E_field magnitude Class  
                   
     ================  ===========  ============================================
     Attributes         Type        Explanation

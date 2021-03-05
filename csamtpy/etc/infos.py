@@ -229,27 +229,27 @@ class _sensitive:
         
         Parameters
         ----------
-            **filename*** :str 
+            **filename** :str 
                             corresponding file to read , pathLike 
             **deep** : bool , 
                     control reading : False for just control the extension file ,
-                    not opening file . 
-                    True : control in deeper file and find which file were inputted.
+                    not opening file . True  control in deeper file and
+                     find which file were inputted.
                 
         Returns  
         ---------
-         str 
-            FileType could be ['avg' | j | 'edi' | 'resp' | 'mesh' | 'occamdat' |
-                 'stn' | 'model' | 'iter' | 'logfile' | 'startup']
+            str 
+               FileType could be [`avg` | `j` | `edi` | `resp` | `mesh` | `occamdat` |
+                    `stn` | `model` | `iter` | `logfile` | `startup`]
         
        
-        List of files read by pyCSAMT 
+        List of files read by pyCSAMT :
         
         ==============  =======================================================
         CodeFile                        DESCRIPTION 
         ==============  =======================================================
         *avg*           Zonge Engineering file Plainty file of ASTATIC file. 
-        *j*              A.G .Jonhson J=Format file. 
+        *j*             A.G .Jonhson J=Format file. 
         *edi*           SEG (Society of Exploration Geophysics) Electrical
                         Data Interchange file (SEG-EDI) .
         *stn*           Zonge Engineering station file. 

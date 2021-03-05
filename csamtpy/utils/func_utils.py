@@ -343,9 +343,9 @@ def transfer_array_(data, index_key,start_value_depth, end_value_depth,
         >>> test=transfer_array_(data=dico, index_key=11.4, 
         ...                      start_value_depth=-14, end_value_depth=23,
         ...                      column_order_selection=1)
-        >>> print("sis1\n:",sis1)
-        >>> print("sis2\n:",sis2)
-        >>> print("Finaltest\n", test)
+        >>> print("sis1:",sis1)
+        >>> print("sis2:",sis2)
+        >>> print("Finaltest", test)
     """
 
     start_value_depth=abs(start_value_depth)

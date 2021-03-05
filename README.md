@@ -75,7 +75,7 @@ Few steps of Python shell to visualize a "pseudo-stratigraphy log" of site 01  a
                             input_layers =INPUT_LAYERS ,
                             step_descent =STEP_DESCENT,
                             doi =DOI)
-...output :
+...
 ````
 
 ![fig3](https://user-images.githubusercontent.com/59920007/109377936-923bef00-7909-11eb-97bb-ad800176d94b.png)

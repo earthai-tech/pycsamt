@@ -8,8 +8,11 @@ python:
  virtualenv:
   system_site_packages: true
 # command to install dependencies
+#before_install:
+#  - python -m pip install --upgrade pip
 install:
-  - pip install -r requirements.txt
+  - pip install -r requirements.txt #ip install --user -r requirements.txt fi python language is not used 
+                                        # add --use-feature=2020-resolver if before install is uncommented 
   - pip install .
 # command to run tests
 script: pytest

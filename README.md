@@ -64,6 +64,7 @@ Few steps of Python shell to visualize a "pseudo-stratigraphy log" of site 01  a
 "step descent param " is the distance in deep where the program breaks and forces inverted model values to be close to input true resistivity values fit by boreholes/well data.
 
 ```
+>>> from viewer.plot import Plot2d
 >>> DOI = 1km 
 >>> filename ='ybro'
 >>> station_to_visualize =1 

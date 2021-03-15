@@ -24,7 +24,7 @@ path =os.path.join(os.environ['pyCSAMT'],
                    
 profile_stn =None 
 #---selected station to plot 
-station_reference =[ 24]             # can be only string  like ["S04,"S25"]
+station_reference ='S10'#[ 24]             # can be only string  like ["S04,"S25"]
 #---> rename your station 
 new_stations = None 
 #--> see error bar 

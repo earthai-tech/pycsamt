@@ -30,11 +30,12 @@ avgfile = 'K1.AVG'
 station_profile_file = 'K1.stn'
 
 #---Appply filter . 
-add_filter =None            # can be "TMA", "AMA" or "FLMA" filters :
+add_filter ='tma'            # can be "TMA", "AMA" or "FLMA" filters :
                             #actually only TMA is  available, work for AMA and FLMA are 
                             # on progress
 
-
+# add reference_frequency if used TMA filter 
+reference_frequency = None         # if none value is provided will, computed automatically 
 #-- Call avgobject 
 
 avg_obj= avg.Avg()
@@ -42,5 +43,7 @@ avg_obj= avg.Avg()
 avg_obj.avg_to_edifile(data_fn= os.path.join(path_to_avgfile, avgfile) , 
                        profile_fn = os.path.join(path_to_avgfile, station_profile_file), 
                        savepath =save_edipath, 
-                       apply_filter=add_filter ) 
+                       apply_filter=add_filter, 
+                       reference_frequency= reference_frequency
+                       ) 
 

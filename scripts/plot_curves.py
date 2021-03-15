@@ -24,7 +24,7 @@ avgPath  = os.path.join(os.environ["pyCSAMT"],
 see_errobar = True              # set to False if you dont want to see errorbar on the plot 
 
 #station to plot : can reas station name liKE "S00".station number start by one . 
-station_id= [1,10, 20]          # can be [S00, S01 , 18 ] etc.. for multiples stations plot , put stations on list
+station_id= [1,21, 39, 47]          # can be [S00, S01 , 18 ] etc.. for multiples stations plot , put stations on list
                           
 # create plot_obj 
 plot_1d_obj =Plot1d()

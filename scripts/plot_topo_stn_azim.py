@@ -29,7 +29,7 @@ see_documentation=False
 PLOT=True 
 # set "*" for three profile. 
 
-plot_type ='*'          # could be |"topography or "topo" |"speration" or "stn"| "azimuth or "az|
+plot_type ='3'          # could be |"topography or "topo" |"speration" or "stn"| "azimuth or "az|
                         # could use only the two first letter or more for ploting or 1,2,3 or 123|*
 set_stnNames =True      # set it to True if you want to see station names appear on xaxis 
 

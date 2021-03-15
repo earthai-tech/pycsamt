@@ -284,7 +284,8 @@ class Plot1d :
             DipoleLength = csamt_obj.dipolelength
             
                 
-        elif profile_fn is None and fn is None  : raise CSex.pyCSAMTError_plot('None path is found. Please spceify you data path.')
+        elif profile_fn is None and fn is None  :
+            raise CSex.pyCSAMTError_plot('None path is found. Please spceify you data path.')
             
         
         #-----------------------------Build fonction --------------------------------------------
@@ -1554,7 +1555,7 @@ class Plot1d :
                  survey line. Can be easting or Northing  
                  
             * Y:  list 
-                list of arrays  of Y coordinates values : can be easting 
+                list of arrays  of Y coordinates values , can be easting 
                      or northing
                      
         .. note::  `X` and `Y` MUST be the same length  

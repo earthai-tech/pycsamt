@@ -103,7 +103,7 @@ class Edi_collection :
                                             site eg stn :S00, S01 , .., Snn
     =====================  ===============  ===================================
     
-    :Example : 
+    :Example: 
         
        >>> from csamtpy.ff.core.edi import Edi_collection 
        >>> edilist = [os.path.join(path, edi)for edi in os.listdir 
@@ -135,7 +135,7 @@ class Edi_collection :
         
         if self.edifiles is None and edipath is None : 
             warnings.warn ('May provided a least alist of edifiles or edipath where edifiles are located.'
-                           ' None value cannot be computed.Please get check your path or your edilist. ')
+                           ' None value cannot be computed.Please check your path or your edilist. ')
             self._logging.warning('May provided a least alist of edifiles or edipath where edifiles are located.'
                            ' None value cannot be computed.Please get check your path or your edilist. ')
             raise CSex.pyCSAMTError_EDI('Empty list and wrong edipath can not be read. Please provided either the list of edifiles '
@@ -742,7 +742,8 @@ class Edi :
             self.typefile= datatype 
         
         if f==1 :
-            new_edifilename = new_edifilename.format(self.Head.dataid, self.typefile,datetime.datetime.now().year) # set the name of new_filename 
+            new_edifilename = new_edifilename.format(self.Head.dataid,
+                                                     self.typefile,datetime.datetime.now().year) # set the name of new_filename 
                                                      
                                                      
         # write frequency >!****FREQUENCIES****!
@@ -821,7 +822,8 @@ class Edi :
                                                                       comp_key = z_rho_phs_labels[1][ii][jj])
                         phs_datalines = self._write_components_blocks(edi_datacomp = phs[:, ii, jj],
                                                                       comp_key = z_rho_phs_labels[2][ii][jj])
-                        res_datalines.append('\n'), phs_datalines.append('\n'), 
+                        res_datalines.append('\n')
+                        phs_datalines.append('\n') 
                         
                         edi_rhophs_infolines.extend(res_datalines)
                         edi_rhophs_infolines.extend(phs_datalines)
@@ -830,12 +832,13 @@ class Edi :
                             fres_datalines = self._write_components_blocks(edi_datacomp = frho[:, ii, jj],
                                                                       comp_key = z_rho_phs_labels[3][ii][jj])
                         
+                            fres_datalines.append('\n')
                             edi_rhophs_infolines.extend(fres_datalines)
+                            edi_rhophs_infolines.append('\n')
                             
-            
             edi_z_data_infolines = edi_z_data_infolines[:-1] # delete one more return 
 
-            
+   
         #===============================================================
         # write EMAP  pass :***TIPPER  *** 
         #---------------------------------------------------------------

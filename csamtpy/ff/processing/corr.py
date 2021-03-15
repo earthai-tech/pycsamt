@@ -270,7 +270,7 @@ class shifting(object):
         if reference_freq is not None :self.referencefreq=reference_freq
         elif reference_freq is None : 
             if flag ==1 : 
-                self.referencefreq= Zcc.perforce_reference_freq(data_set=CSAMTavg.Avg().Data_section._data_array, 
+                self.referencefreq= Zcc.perforce_reference_freq(dataset=CSAMTavg.Avg().Data_section._data_array, 
                                                                   frequency_array=self.frequency) 
             else : self.referencefreq= self.frequency.max() # interpolate to highestv frequency value
         

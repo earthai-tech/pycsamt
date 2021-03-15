@@ -1084,7 +1084,7 @@ class Profile (object):
 
         # otherwise: # have 90 degree ambiguity in strike determination# choose strike which offers larger angle with profile
         # if profile azimuth is in [0,90].
-        print(self.profile_angle)
+    
         self.profile_angle=np.around(self.profile_angle,2)
         
         print('----> profile angle = {} degrees N.E'.format(self.profile_angle))
@@ -1105,7 +1105,7 @@ class Profile (object):
 
         self.geoelectric_strike =np.floor(self.geoelectric_strike)
         
-        print('----> Geoelectrike  strike = {} degrees N.E'.format(self.geoelectric_strike))
+        print('----> geoelectrike  strike = {} degrees N.E'.format(self.geoelectric_strike))
         
         return self.profile_angle, self.geoelectric_strike
     

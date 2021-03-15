@@ -266,7 +266,7 @@ def compute_components_Z_Phz(magn_E_field , magn_H_field, phz_E_field,
         
     Raises
     ------
-        CSex :pyCSAMT exception , 
+        CSex.pyCSAMTError_z(), 
             Exceptions if units entered by the user doesnt match or are messy.
 
     Returns
@@ -703,12 +703,12 @@ def get_data_from_reference_frequency(array_loc, freq_array, reffreq_value):
     :param freq_array:  frequency array 
     :type  freq_array: array_like
     
-    :param reffreq_value: float or int , reffrence value  If the reference value
-                            is not in frequency array ,  function will force to interpolate
-                            value amd find the correlative array.
+    :param reffreq_value:  reffrence value, If the reference value is not in frequency array ,
+                            function will force to interpolate value amd find the correlative array.
+                           
     :type reffreq_value: float or int 
             
-    :returns:  an array of reference value at specific index .
+    :returns:  an array of reference value at specific index 
     :rtype: array_like 
             
     :Example: 

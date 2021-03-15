@@ -30,12 +30,13 @@ avgfile = 'K1.AVG'
 station_profile_file = 'K1.stn'
 
 #---Appply filter . 
-add_filter ='tma'            # can be "TMA", "AMA" or "FLMA" filters :
-                            #actually only TMA is  available, work for AMA and FLMA are 
-                            # on progress
+add_filter =None               # can be "TMA", "AMA" or "FLMA" filters :
+                                #actually only TMA is  available, work for AMA and FLMA are 
+                                # on progress
 
 # add reference frequency 
-reference_frequency =8000 # if None , will compute automatically if add filter is not None 
+reference_frequency =None       # if reference frequency is None AND add filter is not None , 
+                                # reference frequency  will be compute automatically  
 #-- Call avgobject 
 
 avg_obj= avg.Avg()

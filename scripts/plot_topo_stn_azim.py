@@ -13,15 +13,18 @@ Created on Wed Dec 30 19:27:04 2020
 import os 
 from viewer.plot import Plot1d
 
-# set the pyCSAMT environment : 
-os.environ['pyCSAMT']=r'C:/Users\Administrator\OneDrive\Python\project\pyCSAMT'
 
-# set the stn profile file or EDI-file  
-file_stn='K6.stn'
-edipath_or_jpath = os.path.join(os.environ["pyCSAMT"],'csamtpy','data')
-
+# set the stn profile file or EDI-file
 # set path to your profile file 
-path =  os.path.join(os.environ["pyCSAMT"],'csamtpy','data', file_stn)
+
+file_stn='K6.stn'           # name of zonge station profile file 
+# uncomment `path_to_stn_profile_file is zonge station file is used 
+path_to_stn_profile_file = None #  os.path.join(os.environ["pyCSAMT"],'csamtpy','data', file_stn) 
+            # OR 
+            
+# provided edipath or jpath when used edifiles or jfiles and 
+edipath_or_jpath = os.path.join(os.environ["pyCSAMT"],'data','edi') # None 
+#edipath_or_jpath =None                     # uncomment section if station stn file is provided 
 
 # to see documentation of that function , set "see_documentation " to 'true'. 
 see_documentation=False
@@ -38,7 +41,8 @@ set_stnNames =True      # set it to True if you want to see station names appear
 plot_1d_obj= Plot1d()
 
 if PLOT: 
-    plot_1d_obj.plot_topo_sep_azim(fn = path , profile_fn= path , 
+    plot_1d_obj.plot_topo_sep_azim(fn = edipath_or_jpath,
+                                   profile_fn= path_to_stn_profile_file ,
                                    plot=plot_type,
                                    set_station_names=set_stnNames,
                                    )

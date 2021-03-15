@@ -110,28 +110,26 @@ class Geodrill (object):
 
     Arguments
     ----------
-        **model_fn** : str  
+        **model_fn** : str,  
                     full path to Occam model  file .                             
-        **iter_fn** :  str                
+        **iter_fn** :  str,                
                     full path to occam iteration  file
                                                         
-        **data_fn** :  str  
+        **data_fn** :  str,  
                     full path to occam_data file 
-        **input_resistivities** :   array_like 
+        **input_resistivities** :   array_like, 
                             Truth values of resistivities 
-        **step_descent**: float   
+        **step_descent**: float,   
                         step to enforce the model resistivities to
                          keep the  truth layers values as reference
                          Step to cut out data and to  force resistivites 
                          calcualted to match the reference data as input 
                          resistivities if not provided the step will be
                          20% of D0I
-        **input_layers** :  array_like  
+        **input_layers** :  array_like,  
                         True input_layers names : geological 
                         informations of encountered layers 
 
-    .. note:: In this class, all resistivites are in ohm.meter not in log10.
-       
     =============  ===========  ===============================================
     Attributes     Type         Explanation 
     =============  ===========  ===============================================
@@ -146,6 +144,8 @@ class Geodrill (object):
     bln_file       str          full path to station location file  additional 
                                 file issue from Bo Yang (x, y, z file)
     =============  ===========  ===============================================
+    
+    .. note:: In this module, all resistivites are in ohm.meter not in log10.
     
     :Example: 
         
@@ -486,7 +486,7 @@ class Geodrill (object):
                     
  
             
-        Example of table  of geoinformation collected on the field somewhere: 
+        Example of table  of geoinformation collected on the field somewhere 
         
         ====================  ====================  ===========================
         Structure	          Rho mean value (Ω.m)	Rho range  (Ω.m)
@@ -510,7 +510,7 @@ class Geodrill (object):
             Parameters
             ------------
                 * rowlines :  array_like ,
-                                array of resistivities values 
+                        array of resistivities values 
                 * value_range : array_like 
                             array of resistivities from survey area.
             Returns 
@@ -744,10 +744,6 @@ class Geodrill (object):
         by considering the  conventional electrical property of rocks 
         can be find through this link :
             
-        .. seealso:: https://www.eoas.ubc.ca/ubcgif/iag/foundations/properties/resistivity.htm
-                list is not exhaustive and depend of the geological formations of 
-                survey area. 
-        
         Parameters
         ------------
             * input_resistivity :array_like
@@ -761,7 +757,7 @@ class Geodrill (object):
         A Sample of electrical_properties_of_rocks is below
             
         =========================  ===================  =======================
-        Rocks                       Max Rho             Min Rho (ohm-m)
+        Rocks                           Max Rho             Min Rho (ohm-m)
         =========================  ===================  =======================
         igneous rocks                   10^6                10^3 
         duricrust                       5.10^3              5.10^2
@@ -785,6 +781,10 @@ class Geodrill (object):
         Graphite                        10^-2.5             10^-3.5
         =========================  ===================  =======================
         
+        .. seealso:: https://www.eoas.ubc.ca/ubcgif/iag/foundations/properties/resistivity.htm
+                list is not exhaustive and depend of the geological formations of 
+                survey area. 
+                
         .. note:: list is not Exhaustive, use the data base script to populate 
                     most of goeological electrical properties.
         """
@@ -1229,12 +1229,12 @@ class Geodrill (object):
         Holding a followings informations:
             
         ===================  ================  ================================
-        Other params          Type                   Explanation 
+        Optional params          Type                   Explanation 
         ===================  ================  ================================
         elevation              array_like       elevation of survey area 
         to_negative_depth      bool             export deth in negative 
                                                 value or positive 
-                                                default is "negative"
+                                                default is "negative".
         scale                  str              scale to export data .Must be
                                                 *m* or `km`. *default* is **m**       
         ===================  ================  ================================
@@ -1424,8 +1424,10 @@ class Geodrill (object):
                             equal easting and  `index2` equal 
                             Nothing.*Default* is (0,0).
 
+        Holding a followings informations:
+            
         =================  ==============  ====================================
-        Other params        Type            Explanation 
+        Optional params         Type            Explanation 
         =================  ==============  ====================================
         filename            str             New name of output file .
                                             *Default* is None 
@@ -1793,7 +1795,9 @@ class Geosurface :
         **path**: string 
                 path to oasis ouput files , frequently the files generated by
                 `geodrill`modules.
-            
+       
+    Holding a followings informations:
+        
     ==============  =============  ============================================
     Key Words       Type                        Description    
     ==============  =============  ============================================

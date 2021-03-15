@@ -272,6 +272,9 @@ class Plot1d :
             azimuth_array = profile_obj.azimuth
             stn_separation_array =profile_obj.stn_interval
             DipoleLength = profile_obj.dipole_length
+            profile_obj.get_profile_angle(easting = easting,
+                                          northing =northing )
+            lineazimuth =profile_obj.profile_angle 
         # elif profile_fn is None : 
         #     DipoleLength = stn_separation_array.mean()
         elif profile_fn is None and fn is not None : 
@@ -282,6 +285,9 @@ class Plot1d :
             azimuth_array = func.compute_azimuth(easting = easting, northing =northing, extrapolate=True) 
             stn_separation_array = csamt_obj.station_separation
             DipoleLength = csamt_obj.dipolelength
+            lineazimuth, pmess= geoD.geostrike.compute_profile_angle(easting= easting , 
+                                                                 northing =northing)
+            print('---> ' + pmess)        # display profile angle message
             
                 
         elif profile_fn is None and fn is None  : raise CSex.pyCSAMTError_plot('None path is found. Please spceify you data path.')
@@ -374,10 +380,12 @@ class Plot1d :
             axes.minorticks_on()    
             axes.grid(color='k', ls=':', lw =0.25, alpha=0.7, which ='major') # customize specific grid
             #add text on azimuth profile . 
-            axes.text(2* station_pk.min(), azimuth_array.min() , 
-                      '$Line Azimuth~:{0}°$'.format(np.around(azimuth_array.mean(),2)), 
+            axes.text(2* station_pk.min(),
+                      azimuth_array.min() , 
+                      '$Line Azimuth~:{0}°$'.format( np.around(lineazimuth,2)), #np.around(azimuth_array.mean(),2)), 
                       verticalalignment='bottom', 
-                      c='k', fontsize =12 )
+                      c='k',
+                      fontsize =12 )
             
             axes.set_ylabel ('azimuth (°)', color='black', fontsize =  x_ticks_labelsize[2])
             axes.legend( azim_profile, ['$azimuth$'])

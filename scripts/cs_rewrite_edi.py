@@ -20,7 +20,7 @@ from csamtpy.ff.core.edi import Edi
 
 #---> set edipath 
 # exmple : r'F:\__main__csamt__\paper2_data_old\data_edifiles - numStations\K1_edi\new_EDI'
-path = os.path.join(os.environ['pyCSAMT'], 'data', 'edi')
+path = os.path.join(os.environ['pyCSAMT'], 'data', '_outputAVG2EDI_')#'edi')
 
 # path = r'C:\Users\Administrator\OneDrive\Python\project\pyCSAMT\csamtpy\data'
 

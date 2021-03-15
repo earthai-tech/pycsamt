@@ -150,6 +150,9 @@ class shifting(object):
         return self._reference_frequency 
     @referencefreq.setter
     def referencefreq(self, reffreq):
+        
+        if isinstance(reffreq, tuple) : # the case where value are preforced 
+            reffreq = reffreq[0]
         try :reffreq =float(reffreq)
         except:raise CSex.pyCSAMTError_frequency('Reference frequency must be a float or int number.')
         if reffreq not in self.frequency:
@@ -269,8 +272,9 @@ class shifting(object):
         #---> set reference frequency . if not will detect automatically   as higher frequency with clean data 
         if reference_freq is not None :self.referencefreq=reference_freq
         elif reference_freq is None : 
-            if flag ==1 : 
-                self.referencefreq= Zcc.perforce_reference_freq(data_set=CSAMTavg.Avg().Data_section._data_array, 
+            if flag ==1 :
+      
+                self.referencefreq= Zcc.perforce_reference_freq(dataset=csamt_obj.Data_section._data_array, 
                                                                   frequency_array=self.frequency) 
             else : self.referencefreq= self.frequency.max() # interpolate to highestv frequency value
         
@@ -397,7 +401,7 @@ def interp_to_reference_freq(freq_array, rho_array,  reference_freq, plot=False)
 
 # if __name__=='__main__':
     
-#     from csamtpy.pyCS.core.cs import CSAMT
+#     from csamtpy.ff.core.cs import CSAMT
     
 #     edipath = r'C:\Users\Administrator\Desktop\test\edirewrite'
 #     csamt_obj =CSAMT(edipath =edipath)

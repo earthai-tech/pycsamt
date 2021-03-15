@@ -758,7 +758,7 @@ class Geodrill (object):
             * input_layers : list or array 
                         layers_names , eg `granite`, `fault`, `river` 
         
-        A Sample of electrical_properties_of_rocks: 
+        A Sample of electrical_properties_of_rocks is below
             
         =========================  ===================  =======================
         Rocks                       Max Rho             Min Rho (ohm-m)
@@ -785,7 +785,7 @@ class Geodrill (object):
         Graphite                        10^-2.5             10^-3.5
         =========================  ===================  =======================
         
-        .. note :: list is not Exhaustive, use the data base script to populate 
+        .. note:: list is not Exhaustive, use the data base script to populate 
                     most of goeological electrical properties.
         """
 
@@ -1225,6 +1225,8 @@ class Geodrill (object):
             * savepath :  str, 
                     full path to the savepath ,
                     if None , will create folder name to savepath 
+                    
+        Holding a followings informations:
             
         ===================  ================  ================================
         Other params          Type                   Explanation 

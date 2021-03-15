@@ -631,7 +631,7 @@ class Avg (object):
         
         
     def avg_to_edifile (self, data_fn =None , profile_fn =None , 
-                        savepath =None , utm_zone =None, apply_filter =None):
+                        savepath =None , utm_zone =None, apply_filter =None, reference_frequency =None):
         """
         Method to write avg file to SEG-EDIfile.Convert both files.Astatic or plainty avg file .
         if ASTATIC file is provided , will add the filter and filter values .
@@ -742,11 +742,15 @@ class Avg (object):
         #-----------------------------------------------------------------------------------------
         if apply_filter is not None : 
             if apply_filter.lower() =='tma': 
+                corr_obj= corr.shifting()
                 self._logging.info (
                     'Computing static shift Triming moving average (TMA).'\
                         'Number by default for TMA computing is set to five(5).')
-                res_TMA= corr.Shifting().TMA(data_fn =data_fn, number_of_TMA_points =5 ) # dictionnary of value computed 
-            
+                res_TMA= corr_obj.TMA(data_fn =data_fn,
+                                             number_of_TMA_points =7 , 
+                                             reference_freq=reference_frequency) # dictionnary of value computed 
+                reference_frequency =corr_obj.referencefreq
+                
             elif apply_filter.lower() in ['ama', 'flma']: 
                        msg =''.join([
                             '!--> Sorry , Actually the available filter is only',
@@ -758,9 +762,9 @@ class Avg (object):
                        apply_filter == None   
                        
             elif apply_filter.lower() not in ['tma, ama, flma']: 
-                warnings.warn('filter %s provided is unacceptable.'\
-                              ' Pogramm work currently only wwith : TMA ,'\
-                              ' AMA and FLMA filters.Please provided '\
+                warnings.warn('filter %s provided is unacceptable.'
+                              ' Pogramm work currently only wwith : TMA ,'
+                              ' AMA and FLMA filters.Please provided '
                                   'the right filters for computing'% apply_filter)
                 raise CSex.pyCSAMTError_processing(
                     'Filter provided is wrong. only "TMA","AMA" AND "FLMA" are aceptable ')
@@ -771,6 +775,11 @@ class Avg (object):
             descritipfilter = self.Header.HardwareInfos.sconfig_dict['']
             
         else : avgfilter, descritipfilter = '', ""
+        
+        if apply_filter  is not None :
+            avgfilter ="{0}.{1}.Filter =TMA for 7pts.".format(
+                'pycsamt','v1.0.01' )
+            descritipfilter = '7 tma filter at {} hertz'.format(reference_frequency)
 
 
         if profile_fn  is None : 
@@ -792,7 +801,7 @@ class Avg (object):
         #create Ediobj 
         edi_obj =Edi()
         # import module Hmeasurement and Emeasurement
-        from csamtpy.pyCS.core.edi import Hmeasurement, Emeasurement
+        from csamtpy.ff.core.edi import Hmeasurement, Emeasurement
         # from csamtpy.utils import gis_tools as gis 
         
         for ii, stn in enumerate(head_dataid_list): #   for stn in head_dataid_list : #loop for all station or dataid 
@@ -928,6 +937,9 @@ class Avg (object):
             # write edifiles ...
             if AS_flag ==1 :
                 edi_obj.write_edifile(savepath = savepath, add_filter_array =res_as_array )
+            elif apply_filter is not None:
+               edi_obj.write_edifile(savepath = savepath, add_filter_array = fres_array )
+               
             else : edi_obj.write_edifile(savepath = savepath)
                 
         

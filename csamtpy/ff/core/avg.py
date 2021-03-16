@@ -631,7 +631,8 @@ class Avg (object):
         
         
     def avg_to_edifile (self, data_fn =None , profile_fn =None , 
-                        savepath =None , utm_zone =None, apply_filter =None, reference_frequency =None):
+                        savepath =None , utm_zone =None, apply_filter =None, 
+                        reference_frequency =None):
         """
         Method to write avg file to SEG-EDIfile.Convert both files.Astatic or plainty avg file .
         if ASTATIC file is provided , will add the filter and filter values .

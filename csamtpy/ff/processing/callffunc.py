@@ -446,6 +446,116 @@ def dipole_center_position (dipole_position=None):
                  pp, pos in enumerate( dipole_position) if ( pp>0 and pp <= dipole_position.size) ])
         
 
+def get_matrix_from_dict(dict_array, flip_freq =False , 
+                         freq_array= None , transpose =False ):
+    """
+    Function to collect dictionnary  station data with values as array 
+    and build matrix along the line, The rowlines is assumed to be frequency 
+    and colums as stations names. If `freq_array` is provided , `flip_freq` is
+    not usefull.
+    
+    Parameters
+    ----------
+    dict_array : dict
+        stations dictionnary array, keys are stations names and values are 
+        stations values on array_like.
+    transpose : bool, optional
+        transpose  matrix , if true wwill transpose data and 
+        stations should be read as rowlines and frequency as columns.
+        The default is False.
+    freq_array : array , optional 
+        array of frequency, if provided will check if frequency are range from 
+        highest to lowest .Defalut is True
+    flip_freq :bool, optional 
+        set to false if you want frequency to be lowest to highest otherwise
+         frequency are sorted Highest to lowest. Default is False
+
+    Returns
+    -------
+    ndarray(len(stations,), len(frequency))
+        matrix of dictionnary values 
+    bool, 
+        flip_freq, ascertain if frequency array is flipped or not. 
+    """
+    
+    if not isinstance(dict_array, dict): 
+        raise CSex.pyCSAMTError_processing('Main argument `dict array`'
+                                           ' should be dictionnary'
+                                           ', not {0}'.type(dict_array))
+        
+    if freq_array is not None :
+        if isinstance(freq_array, (list, tuple)):
+            freq_array =np.array(freq_array)
+            try :
+                freq_array=freq_array.astype('float')
+            except :
+                raise CSex.pyCSAMTError_float('Could not convert array to value !')
+        # now check the order 
+        if freq_array[0] < freq_array[-1]: 
+            freq_array = freq_array[::-1]
+            flip_freq = True        # set flip to True to flip data values  
+            
+    tem= [values for stn , values in dict_array.items()]
+    matrix = func.concat_array_from_list(tem, concat_axis=1)
+    
+    if flip_freq is True : matrix =matrix [::-1]    # reverse matrix 
+    if transpose is True : matrix =matrix.T         # Transpose matrix 
+    
+    return matrix, flip_freq
+        
+
+def plot_reference_frequency (reference_array, frequency_array, 
+                              data_array,
+                              station_names =None ,  **kwargs):
+    """
+    Function to plot reference frequency 
+    
+    Parameters
+    ----------
+    reference_array : array_like, 
+        array_of average_impedance Z_avg.
+    frequency_array: array_like 
+        array of frequency on sites 
+    data_array : ndarray,
+        nadarray of sounding curve, ndarray(len(frequency), len(number_ofstaions).
+
+    Returns
+    -------
+    viewer
+    """
+    import matplotlib.pyplot as plt 
+    
+    ls =kwargs.pop('ls', '-')
+    marker =kwargs.pop('marker', 'o')
+    ms=kwargs.pop('ms', 0.2)
+    lw =kwargs.pop('lw', 2)
+    fs =kwargs.pop('fs', 0.8)
+    if isinstance(data_array, dict): 
+        data_array =sorted(data_array)  # sorted ditionnaries 
+        station_names = list(data_array.keys())
+        data_array = func.concat_array_from_list(list(data_array.values(), 
+                                                      concat_axis=1))
+    
+    if station_names is None : 
+        station_names =['S{0:02}'.format(ii) 
+                        for ii in range(data_array.shape[1])]
+    
+    fig =plt.figure()
+    ax =fig.add_subplot(111)
+    
+    ax.loglog(frequency_array,
+                reference_array, 
+                c='r', ls =ls, lw=lw, ms=ms *fs , 
+                marker =marker)
+    for ii in range(data_array.shape[1]):
+        
+        ax.loglog(frequency_array, data_array[:, ii])
+        
+    plt.show()
+    
+    
+    
+    
 
 # if __name__=='__main__':
     

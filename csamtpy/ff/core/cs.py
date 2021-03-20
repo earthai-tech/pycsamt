@@ -538,6 +538,7 @@ class CSAMT(object):
         #--- set attribute --- 
         self._res =avg_obj.Data_section.Resistivity.loc
         self.station = avg_obj.Data_section.Station.names
+        self._data_section = avg_obj.Data_section._data_array
         
         emag_obj ,hmag_obj =avg_obj.Data_section.Emag.loc, avg_obj.Data_section.Hmag.loc  
         c_var_emag_obj , c_var_hmag_obj = avg_obj.Data_section.pcEmag.loc , avg_obj.Data_section.pcHmag.loc
@@ -602,7 +603,7 @@ class CSAMT(object):
         # self.elev =profile_obj.elev
        
         self.elev = self.Profile.elev
-
+ 
     #-----------------------------------------------------
     # reseetting specific attributes 
     #----------------------------------------------------

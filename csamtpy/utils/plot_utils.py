@@ -1515,18 +1515,6 @@ def annotate_tip(layer_thickness , layer_names):
 
 
     
-#     # rho_aver, dep_aver= average_rho_in_deep(dep_array=pseudo_depth, rho_array=rho, value=200)
-#     pseudo_depth=np.array([  0. ,  6. , 13. , 20.  ,29. , 39.,  49. , 59. , 69. , 89., 109. ,129., 149. ,179.,
-#                       209. ,249. ,289., 339., 399., 459. ,529. ,609., 699., 799., 899., 999.])
-#     #pseudo_depth = np.arange(0, 1220, 20)
-#     rho = np.random.randn(len(pseudo_depth))
-#     rho_aver, dep_aver= average_rho_in_deep(dep_array=pseudo_depth,
-#                                             rho_array=rho, 
-#                                             step_descent=20.)
-#     rho_2,dep_2 =   average_rho_in_deeper (dep_array= pseudo_depth,
-#                                              rho_array=rho,
-#                                              step_descent=1000) 
-    
 
     
 

@@ -631,8 +631,9 @@ class Avg (object):
         
         
     def avg_to_edifile (self, data_fn =None , profile_fn =None , 
-                        savepath =None , utm_zone =None, apply_filter =None, 
-                        reference_frequency =None):
+                        savepath =None , apply_filter =None, 
+                        reference_frequency =None, number_of_points=7.,
+                        dipole_length=50., **kwargs):
         """
         Method to write avg file to SEG-EDIfile.Convert both files.Astatic or plainty avg file .
         if ASTATIC file is provided , will add the filter and filter values .
@@ -658,16 +659,31 @@ class Avg (object):
                         FLMA - Fixed dipoleLength moving 
                         average (number of point=7)
                         Dipolelength willbe computed automatically 
-                                                
+        
+        Holdings additionals parameters :
+            
+        ====================  ==========  =====================================
+        Optionalparams          Type        Description 
+        ====================  ==========  =====================================
+        reference_frequency     float       frequency at clean data.Default is 
+                                            computed automatically
+        number_of_points=7.    int          number of point to for weighted  
+                                            window,. *Default* is 7.
+        dipole_length          float        length of dipole in meter. 
+                                             For CSAMT, Default is 50.m
+        ====================  ==========  =====================================
+                                     
         :Example:   
             
-            >>> from csamtpy.pyCS.core import avg 
+            >>> from csamtpy.ff.core import avg 
             >>> avg_obj= avg.Avg()
             >>> avg_obj.avg_to_edifile(data_fn= os.path.join(path_to_avgfile, avgfile) , 
             ...           profile_fn = os.path.join(path_to_avgfile, station_profile_file), 
             ...           savepath =save_edipath, 
             ...           apply_filter=None ) 
         """
+        
+        utm_zone = kwargs.pop('utm_zone', None)
         
         if data_fn is not None : self.data_fn = data_fn 
         if self.data_fn is None : 
@@ -741,48 +757,106 @@ class Avg (object):
         phase_obj ={key: 180 * phase * 1e-3/np.pi for key, phase in phase_obj.items()}
     
         #-----------------------------------------------------------------------------------------
-        if apply_filter is not None : 
-            if apply_filter.lower() =='tma': 
-                corr_obj= corr.shifting()
+        if apply_filter is not None :
+            try :
+                apply_filter= apply_filter.lower()
+            except:
+                print("---> ErrorType: Filters' names must a str of"
+                              " `tma` or `ama`. not {0}".format(type(apply_filter)))
+                
+                warnings.warn("TypeError ,Filters' names must a str of"
+                              " `tma` or `ama`. not {0}".format(type(apply_filter)))
+                apply_filter=None
+            else :
+                print('{0:-^77}'.format('Filter Infos'))
+                print('** {0:<27} {1} {2}'.format('Filter applied', '=', apply_filter.upper()))
+                
+            if apply_filter =='tma':
                 self._logging.info (
-                    'Computing static shift Triming moving average (TMA).'\
-                        'Number by default for TMA computing is set to five(5).')
+                    'Computing static shift Trimming moving average (TMA).')
+                        
+                corr_obj= corr.shifting()
                 res_TMA= corr_obj.TMA(data_fn =data_fn,
-                                             number_of_TMA_points =7 , 
-                                             reference_freq=reference_frequency) # dictionnary of value computed 
+                                      number_of_TMA_points =number_of_points , 
+                                      reference_freq=reference_frequency, 
+                                      profile_fn = profile_fn) # dictionnary of value computed 
                 reference_frequency =corr_obj.referencefreq
                 
-            elif apply_filter.lower() in ['ama', 'flma']: 
+                print('** {0:<27} {1} {2}'.format('TMA filter points', 
+                                                  '=', number_of_points))
+                print('** {0:<27} {1} {2} Hz.'.format('Reference frequency',
+                                                      '=', reference_frequency))
+                
+            elif apply_filter =='flma':
+                self._logging.info (
+                    'Computing static shift fixed-length moving average (FLMA).')
+                        
+                corr_obj = corr.shifting()
+                res_FLMA = corr_obj.FLMA(data_fn =data_fn,
+                                        profile_fn =profile_fn ,
+                                        number_of_points=number_of_points , 
+                                        reference_freq=reference_frequency)
+                
+                dipolelength= corr_obj.dipolelength
+                reference_frequency =corr_obj.referencefreq
+                
+                
+                print('** {0:<27} {1} {2}'.format('FLMA filter points',
+                                                  '=', number_of_points))
+                print('** {0:<27} {1} {2} Hz.'.format('Reference frequency',
+                                                  '=', reference_frequency))
+                print('** {0:<27} {1} {2} m.'.format('Dipole length ',
+                                                     '=', dipolelength))
+            elif apply_filter == 'ama': 
                        msg =''.join([
-                            '!--> Sorry , Actually the available filter is only',
-                                ' `tma`.The work to add filters `ama` and `flma`',
-                                    ' is on progress. It will be available soon! '])
+                            '!--> Sorry , Actually the available filter are only',
+                                ' `tma` and `flma`.adaptive moving average `AMA`'
+                                ' will be available soon!you may use '
+                                ' filters `tma`or `flma`.'])
+                       
                        print(' >{0}'.format(msg))
                        self._logging.debug(msg)
                        warnings.warn(msg)
-                       apply_filter == None   
+                       apply_filter = None   
                        
-            elif apply_filter.lower() not in ['tma, ama, flma']: 
-                warnings.warn('filter %s provided is unacceptable.'
-                              ' Pogramm work currently only wwith : TMA ,'
-                              ' AMA and FLMA filters.Please provided '
-                                  'the right filters for computing'% apply_filter)
+            elif apply_filter is not None and apply_filter  not in ['tma, ama, flma']: 
+                warnings.warn('filter %s provided is UNrecognizing.'
+                              ' Pogram worsk currently with : TMA or FLMA ,'
+                              ' Please provided the right filters'
+                              ' for computing.'% apply_filter)
+                                  
                 raise CSex.pyCSAMTError_processing(
-                    'Filter provided is wrong. only "TMA","AMA" AND "FLMA" are aceptable ')
+                    'Filters provided is not acceptable.'
+                    ' Recognized filters are "TMA","AMA" AND "FLMA"')
         
-        if self.Header.HardwareInfos.astatic_version is not None : 
-            avgfilter ="{0}.{1}.Filter =TMA for 5pts.".format(
-                'Astatic',self.Header.HardwareInfos.astatic_version )
-            descritipfilter = self.Header.HardwareInfos.sconfig_dict['']
+        if apply_filter is None : 
+            if self.Header.HardwareInfos.numfilterfreq is None\
+                and self.Header.HardwareInfos.freq_filter is None :
+                 avgfilter, descritipfilter = '', ""   
+    
+            elif self.Header.HardwareInfos.astatic_version is not None : 
+                avgfilter ="{0}.{1}.Filter =TMA for 5pts.".format(
+                    'Astatic',self.Header.HardwareInfos.astatic_version )
+                descritipfilter = self.Header.HardwareInfos.sconfig_dict['']
             
-        else : avgfilter, descritipfilter = '', ""
+            else : avgfilter, descritipfilter = '', ""
         
         if apply_filter  is not None :
-            avgfilter ="{0}.{1}.Filter =TMA for 7pts.".format(
-                'pycsamt','v1.0.01' )
-            descritipfilter = '7 tma filter at {} hertz'.format(reference_frequency)
+            msf=''
+            if apply_filter =='flma':
+                descritipfilter = ' {0} dipoles for FLMA filter'\
+                    ' at {1} hertz with {2} m dipole length'.format(
+                int(number_of_points), reference_frequency, dipolelength)
+                msf='dip'
+            elif apply_filter =='tma':
+                descritipfilter = ' {0} points for TMA filter at {1} hertz'.format(
+                    int(number_of_points), reference_frequency)
+                msf='pts' 
 
-
+            avgfilter ="{0}.{1}.Filter ={2} for {3} {4}.".format(
+                   'pycsamt','v1.0.01', apply_filter.upper(),  
+                   int(number_of_points) , msf)
+            
         if profile_fn  is None : 
             #---> set to 0. lon , lat and elev if profile _fn is not provided
             #--> create dictionnary of zero value of lat and lon 
@@ -799,13 +873,13 @@ class Avg (object):
              head_edi_elev = site_obj.elev 
         
         #------------------------START SETTING EDI ATTRIBUTE -----------------------------
-        #create Ediobj 
-        edi_obj =Edi()
         # import module Hmeasurement and Emeasurement
         from csamtpy.ff.core.edi import Hmeasurement, Emeasurement
         # from csamtpy.utils import gis_tools as gis 
         
         for ii, stn in enumerate(head_dataid_list): #   for stn in head_dataid_list : #loop for all station or dataid 
+            #create Ediobj for eac datalist 
+            edi_obj =Edi()
             
             #====> set edi_obj Header attributes
             edi_obj.Head.dataid= head_dataid_list[ii] # ii mean for all the list 
@@ -926,20 +1000,25 @@ class Avg (object):
                 res_as_array [:, 0, 1]  = AS_rho [stn]
             
             if apply_filter is not None : 
+                fres_array = np.zeros((nfreq, 2,2 ), dtype = np.float)
                 if apply_filter.lower() =='tma' :
-                    fres_array = np.zeros((nfreq, 2,2 ), dtype = np.float)
                     fres_array  [: , 0 , 1]  = res_TMA[stn]
-  
+                elif apply_filter.lower() =='flma' :
+                    fres_array  [: , 0 , 1]  = res_FLMA[stn]
                     
             #---> computing z with resistivities , phase by using propagrations errors 
-            edi_obj.Z.set_res_phase(res_array = res_array, phase_array=phs_array, freq=  edi_obj.Z.freq, 
-                                    res_err_array=res_array_err, phase_err_array=phs_array_err)
-            
+            edi_obj.Z.set_res_phase(res_array = res_array, phase_array=phs_array, 
+                                    freq=  edi_obj.Z.freq, 
+                                    res_err_array=res_array_err,
+                                    phase_err_array=phs_array_err)
             # write edifiles ...
             if AS_flag ==1 :
-                edi_obj.write_edifile(savepath = savepath, add_filter_array =res_as_array )
+                edi_obj.write_edifile(savepath = savepath, 
+                                      add_filter_array =res_as_array )
+                
             elif apply_filter is not None:
-               edi_obj.write_edifile(savepath = savepath, add_filter_array = fres_array )
+               edi_obj.write_edifile(savepath = savepath, 
+                                     add_filter_array = fres_array )
                
             else : edi_obj.write_edifile(savepath = savepath)
                 

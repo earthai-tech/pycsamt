@@ -8,23 +8,23 @@
 * [Definition](#Definition)
 
 CSAMT is geophysical method well-established  as resistivity exploration 
-tool  for the detection in deep geological structure  within a geophysic community.
-The method is broadly applied in a diversity of exploration problems such as mineral , hydrocarbon,  groundwater resources, 
+tool  for the detection in deep geological structure. The method is broadly applied in a diversity of exploration problems such as mineral , hydrocarbon,  groundwater resources, 
 as well as mapping the fault-zones etc. 
 
 * [Purpose](#Purpose)
 
-The software try to overcome the lack of  unified software as open source software 
-for CSAMT data processing in the academic community and to enhance geophysical interpretation. 
+The software, unified open source software, contains bacics steps to CSAMT standard data processing  and  and try to improve it as well as the modeling using OCCAM2D.
+The software also contains its inner database composed of geological structures, electrical properties of rocks, to generate  a pseudo-stratigraphy 2D map to enhance geophysical interpretation especially in more geological complex area( with various tectonic accidents). 
 
 * [Targets](#Targets)
 
-Firstly it's the scientific geophysics community.Secondly our regards point out to the community of 
+The first target is  the scientific geophysics community and those who work and grounwater exploration and secondly, the toolbox points out to the community of 
 developers and users of that software.
 
  * [Note](#Note)
  
- For the first release, The python toolbox gives a basic tools and  works only in far field. Furhermore , it uses  [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) open source sofware as modeling software , nevertheless several  outputs are provided for other modeling softwares.  
+The Python toolbox gives a basic tools and  works only in far field. Furhermore , it uses  [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) open source sofware as modeling software , nevertheless several  outputs are provided for other external modeling softwares like [OasisMontaj](http://updates.geosoft.com/downloads/files/how-to-guides/Oasis_montaj_Gridding.pdf) and [GoldenSoftware](https://www.goldensoftware.com/products/surfer).
+
 ## Documentation 
 * API Documentation  : https://pycsamt.readthedocs.io/en/latest/
 
@@ -56,8 +56,9 @@ pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/p
 * Step Descent : SD param  in meter 
 * Input true resistivity in ohm-meter
 
-## A quick illustration for resitivities correctness 
-Fixed length dipole moving average can be used to correct apparanets resitivities, here is a sample test :
+## A sample illustration using FLMA filter application 
+A fixed-length-moving-average (FLMA)  filter can be used  to estimate average apparent resistivities at a single static-correction-reference frequency.
+A  few line of codes yields the following output: 
 ```
 >>> from viewer.plot import Plot2d
 >>> edipath =data/                 # Current work directory assume to be os.path.join(os.environ["pyCSAMT"],'data')
@@ -71,6 +72,8 @@ Fixed length dipole moving average can be used to correct apparanets resitivitie
 ```
 ![image](https://user-images.githubusercontent.com/59920007/111862592-33f6af00-8991-11eb-994d-43039d2345bb.png)
 
+Another filter like TMA (trimmed-moving-average) can be applied to correct apparent resistivities. MT data can also be read and corrected using  `ss` for static shift removal and `dist` for distorsion removal).
+
 ## System requirements 
 * Python 3.6+ 
 
@@ -78,4 +81,4 @@ Fixed length dipole moving average can be used to correct apparanets resitivitie
 Your suggestions are really welcome...
 
 
-*_Contributor's name_: ***@Daniel03*** , _etanoyau@gmail.com_
+*_Developer's name:_ ***@Daniel03*** , _etanoyau@gmail.com_

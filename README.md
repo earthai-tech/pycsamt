@@ -56,30 +56,20 @@ pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/p
 * Step Descent : SD param  in meter 
 * Input true resistivity in ohm-meter
 
-
-## A quick illustration of "pseudo-stratigraphy log" 
-An inner database allows to generate a pseudo-stratigraphy log based on 2D model 
-resistivity  by including  the true resistivity values,  well data and/or borehole data from field or collected from firms.
-Few steps of Python shell to visualize a "pseudo-stratigraphy log" of site 01  at 1km depth (DOI).
-"step descent param " is the distance in deep where the program breaks and forces inverted model values to be close to input true resistivity values fit by boreholes/well data.
-
+## A quick illustration for resitivities correctness 
+Fixed length dipole moving average can be used to correct apparanets resitivities, here is a sample test :
 ```
 >>> from viewer.plot import Plot2d
->>> DOI = 1km 
->>> filename ='ybro'
->>> station_to_visualize =1 
->>> STEP_DESCENT = 200 
->>> INPUT_RESISTIVITIES = [312, 525, 1235, 2202., 4000., 7000.] 
->>> INPUT_LAYERS = ['alluvium', 'amphibolite','altered rock','augen gneiss', 'granite']
->>>> plot2d().plot_Pseudolog( station_id= station_to_visualize, 
-                            input_resistivities=INPUT_RESISTIVITIES, 
-                            input_layers =INPUT_LAYERS ,
-                            step_descent =STEP_DESCENT,
-                            doi =DOI)
+>>> edipath =data/                 # Current work directory assume to be os.path.join(os.environ["pyCSAMT"],'data')
+>>> contourRes= 1000.              #contour delinetation value in ohm.meters 
+>>> plotStyle =None                # default `imshow` can be `pcolormesh`.
+>>> for path2edi_obj in [data/edi, data/correctedEdi]:
+>>>       plot2d().pseudocrossResPhase(fn=path2edi_obj, 
+                                delineate_resistivity=contourRes,
+                                plot_style =plotStyle)
 ...
-````
-
-![fig3](https://user-images.githubusercontent.com/59920007/109377936-923bef00-7909-11eb-97bb-ad800176d94b.png)
+```
+![image](https://user-images.githubusercontent.com/59920007/111862592-33f6af00-8991-11eb-994d-43039d2345bb.png)
 
 ## System requirements 
 * Python 3.6+ 

@@ -47,6 +47,7 @@ import matplotlib.colorbar as mplcb
 # from matplotlib.ticker import MultipleLocator, NullLocator
 import matplotlib.gridspec as gspec
 
+from csamtpy.ff.core import avg as CSMATavg 
 from csamtpy.ff.core.cs import CSAMT
 from csamtpy.ff.core.cs import Profile
 from csamtpy.modeling import occam2d
@@ -125,7 +126,7 @@ class Plot1d :
         
         self.font_size =kwargs.pop('font_size',3.)
         self.font_style=kwargs.pop('font_style', 'italic')
-        self.fs =kwargs.pop('fs', 6.)
+        self.fs =kwargs.pop('fs', 2.)
         
         
         self.mstyle =kwargs.pop('maker_style', 'o')
@@ -501,11 +502,16 @@ class Plot1d :
             plt.show()
         
         
-    def plot_static_correction(self, data_fn, profile_fn =None , 
+    def plot_static_correction(self, data_fn, profile_fn =None , dipole_length =50., 
                                frequency_id  =1 , ADD_FILTER ='tma' ,  **kwargs): 
         """
-        plot coorected apparent resistivities at different stations by reducing 
-        the problem of static shift . 
+        Plot corrected apparent resistivities at different stations to solve 
+        the problem of static shift by adding either Trimimg Moving average (TMA)
+        filter or fixed-length-moving-average(FLMA) filter or Adaptative 
+        moving-average (AMA). Actually FLMA and TMA filter are available and 
+        default filTer is TMA. To plot all filter into one figure add the joker `*`
+        to arguments `ADD_FILER`.
+        
             
         :param data_fn: full path to file , can be [AVG|EDI|J] files
         :type data_fn: str 
@@ -513,11 +519,13 @@ class Plot1d :
         :param profile_fn:  pathLike  full path to Zonge Engeneering *.station file .
         :type profile_fn: str 
         
-        .. note::  If user provide raw Zonge AVG file , 
-                    may also add profile file (*.stn)  
+        :param dipole_length: length of dipole in meters when user applied for FLMA 
+        :type dipole_length: float, int
         
+        Holding others informations :
+            
         ===============  ===========  =========================================
-        params           Default      Description 
+        Params           Default        Description 
         ===============  ===========  =========================================
         frequency_id      str or int    plot the filtered frequency,
                                         eg  frequency_id = 1023 means  
@@ -530,6 +538,11 @@ class Plot1d :
                                         FLMA  Fixed Length moving average
         ===============  ===========  =========================================
         
+        .. note:: Profile file (*.stn) is compolsory when provide raw Zonge AVG 
+                otherwise no need to profile for EDI or J file. In addition 
+                when FLMA filter is used m, provided `dipole_length` and 
+                `number_of_points` for window width are necessaries.
+   
         :Example: 
             
             >>> from from viewer.plot import Plot1d 
@@ -537,46 +550,106 @@ class Plot1d :
             ...              'csamtpy','data', file_1)
             >>> plot_1d_obj =Plot1d()
             ... plot_1d_obj.plot_static_correction(data_fn =path , 
-                                               profile_fn= os.path.join(
-                                                os.path.dirname(path), 'K1.stn'), 
-                                               frequency_id =1023)
+            ...                                   profile_fn= os.path.join(
+            ...                                    os.path.dirname(path), 'K1.stn'), 
+            ...                                   frequency_id =1023)
         """
         
-        FILTER =['tma', 'ama', 'flma']
-        #-------------------------------------------Fonction properties -------
-        TMApoints =kwargs.pop('number_of_TMA_points',5)
+        FILTER =['tma', 'flma','ama' ,'*']
         
-        marker = kwargs.pop('marker', 'D')
-        ms = kwargs.pop('ms', 7)
-        ls = kwargs.pop('ls', '-')
-        markeredgecolor = kwargs.pop('markeredgecolor', 'k')
-        fs = kwargs.pop('fs', .7)
-        lw=kwargs.pop('lw', 7.)
+            
+        #-------------------------------------------Fonction properties -------
+        # TMApoints =kwargs.pop('number_of_points',5)
+        FILTERpoints =kwargs.pop('number_of_points',5)
+  
         savefig =kwargs.pop('save_figure', None)
         orient =kwargs.pop('orientation', 'landscape')
         addstn= kwargs.pop('set_station_names', False)
+        
         fill_between =kwargs.pop('fill_between', False)
+        fillbc=kwargs.pop('fill_between_color', 'thistle')
+        
+        tma_color = kwargs.pop('tma_color', 'blue')
+        flma_color =kwargs.pop('flma_color', 'aqua')
+        
         #--- define CSAMT objets and apply filter -----------------------------
         csamt_obj = CSAMT(data_fn = data_fn, profile_fn =profile_fn)
+        
         csamt_freq_obj = csamt_obj.freq 
         csamt_stn_num_obj = csamt_obj.station_distance 
         csamt_res_obj = csamt_obj.resistivity 
         csamt_phase_obj = csamt_obj.phase 
         stnnames = sorted(list(csamt_obj.resistivity.keys()))
         
-        if ADD_FILTER.lower() not in  FILTER :
-            warnings.warn('Currently , the filter availbale is Trimming Moving Average.'
-                          ' Later we will add other filters.Please Try to use the availabe filter.')
-            raise CSex.pyCSAMTError_plot('Input filter <{0}> isnot available.'
-                                          ' Please use TMA , AMA, or FLMA')
-        
-        #---> corrected data TMA filter  ---------
-        if ADD_FILTER.lower()=='tma':
-            res_cor_obj = Scor().TMA(freq_array=csamt_freq_obj, res_array= csamt_res_obj, 
-                                   phase_array= csamt_phase_obj , number_of_TMA_points=TMApoints)
-        
+        #control filter provided 
+      
+        if ADD_FILTER not in FILTER : 
+            try :
+                ADD_FILTER = int(ADD_FILTER)
+            except : 
+                if isinstance( ADD_FILTER, str):
+                    if ADD_FILTER.lower() not in FILTER:       
+                        warnings.warn('Currently , filters availabale are '
+                                      'trimming moving-average (TMA).'
+                                      ' and  fixed-length-moving-average(FLMA)'
+                                      'Please Try to use the availabe filters.')
+                        raise CSex.pyCSAMTError_plot(
+                            'Input filter <{0}> is not available.'
+                              ' Please use `tma` or `flma` filters!')
+                        
+                ADD_FILTER = ADD_FILTER.lower()  
+            else : 
+                if ADD_FILTER ==1 or ADD_FILTER ==0: ADD_FILTER='tma'
+                elif ADD_FILTER ==2 : ADD_FILTER='flma'
+                elif ADD_FILTER ==3 : ADD_FILTER ='*'
+                else :
+                    ADD_FILTER ='tma' # block to default filter
+
+        if ADD_FILTER =='ama': ADD_FILTER='tma'
+            
+        #---> corrected data TMA and FLMA filters  ---------
+
+        if ADD_FILTER =='*':
+            # create correct TMA obj 
+            tma_cor_obj = Scor().TMA(freq_array=csamt_freq_obj, 
+                                     res_array= csamt_res_obj, 
+                                   phase_array= csamt_phase_obj , 
+                                   number_of_TMA_points=FILTERpoints,
+                                   profile_fn = profile_fn)
+            
+            #create FLMA object 
+            flma_cor_obj = Scor().FLMA(data_fn =data_fn, 
+                                      profile_fn=profile_fn,
+                                      dipole_length =dipole_length , 
+                                      number_of_points =FILTERpoints, 
+                                      reference_frequency=frequency_id)
+            
+            ADD_FILTER ='*'
+            messf ='TMA & FLMA'
+            print('---> Filters {} are done !'.format(messf) )
+        else :
+            if ADD_FILTER.lower()=='tma':
+                res_cor_obj = Scor().TMA(freq_array=csamt_freq_obj,
+                                         res_array= csamt_res_obj, 
+                                       phase_array= csamt_phase_obj ,
+                                       number_of_TMA_points=FILTERpoints, 
+                                       profile_fn = profile_fn )
+                messf = 'TMA'
+                print('---> Filter {} is done !'.format(messf) )
+                
+            elif ADD_FILTER.lower()=='flma':
+                res_cor_obj = Scor().FLMA(data_fn =data_fn,
+                                          dipole_length =dipole_length , 
+                                          number_of_points =FILTERpoints, 
+                                          reference_frequency=frequency_id, 
+                                          profile_fn = profile_fn)
+                
+                messf = 'FLMA'
+                print('---> Filter {} is done !'.format(messf) )
         # call function to fixe freauency for plotting 
-        freqID = mplotus.get_frequency_id(freq_array=csamt_freq_obj, frequency_id=frequency_id)
+        freqID = mplotus.get_frequency_id(freq_array=csamt_freq_obj,
+                                          frequency_id=frequency_id)
+
         for referfreq in freqID : 
             #-----------------------Build figure ----------------------------------
             
@@ -590,29 +663,105 @@ class Plot1d :
             RES_UNCOR = Zcc.get_data_from_reference_frequency(array_loc=csamt_res_obj, 
                                                               freq_array=csamt_freq_obj, 
                                                   reffreq_value=referfreq )
-            RES_COR = Zcc.get_data_from_reference_frequency(array_loc=res_cor_obj,
-                                                            freq_array=csamt_freq_obj, 
-                                                  reffreq_value=referfreq )
+            
+            mark,  = axe.semilogy (csamt_stn_num_obj,RES_UNCOR ,
+                                   c= 'white', 
+                                   marker =self.mstyle,
+                                  markersize = self.ms*2*self.fs ,
+                                  markeredgecolor= self.markeredgecolor 
+                                  )
+            
+            resPlots,= axe.semilogy(csamt_stn_num_obj,
+                                    RES_UNCOR ,
+                                    lw =self.lw*self.fs,
+                                    c='k',
+                                ls =self.ls,
+                                label='$Uncorrected apparent resistivity$'
+                                )
+            
+   
+            
+            if ADD_FILTER =='*': 
+                
+                TMA_RES_COR = Zcc.get_data_from_reference_frequency(
+                                            array_loc=tma_cor_obj,
+                                            freq_array=csamt_freq_obj, 
+                                            reffreq_value=referfreq )
+               
+                FLMA_RES_COR = Zcc.get_data_from_reference_frequency(
+                                           array_loc=flma_cor_obj,
+                                           freq_array=csamt_freq_obj, 
+                                           reffreq_value=referfreq )
+                
+                marki,  = axe.semilogy (csamt_stn_num_obj,TMA_RES_COR,
+                                        c= 'white', 
+                                        marker ='D',
+                                        markersize = self.ms*2*self.fs ,
+                                        markeredgecolor= tma_color ,
+                                        alpha =0.8)
+                
+                marki,  = axe.semilogy (csamt_stn_num_obj,FLMA_RES_COR,
+                        c= 'white', marker ='o',
+                        markersize = self.ms*2*self.fs ,
+                        markeredgecolor= flma_color ,
+                        alpha =0.8)
+                
+                tma_corPlots, = axe.semilogy(csamt_stn_num_obj,TMA_RES_COR ,
+                                             lw =self.lw*self.fs, 
+                                             c=tma_color,
+                                            ls =self.ls, 
+                                            label = '$Corrected\resistivity :'\
+                                            ' TMA filter at {0} points$'.
+                                            format( FILTERpoints))
+                    
+                flma_corPlots, = axe.semilogy(csamt_stn_num_obj,FLMA_RES_COR ,
+                             lw =self.lw*self.fs, 
+                            c=flma_color,
+                            ls =self.ls, 
+                            label = '$Corrected\resistivity :'\
+                            ' FLMA filter at {0} points$'.
+                            format( FILTERpoints))
+                    
+                    
+                axe.legend( [resPlots, tma_corPlots,flma_corPlots ], 
+                           ['$Uncorrected\ app. Rho$',
+                            '$Rhofiltered: TMA at\ {0}\ points$'.
+                                                   format( FILTERpoints), 
+                            '$Rhofiltered: FLMA at\ {0}\ points$'.
+                                                   format( FILTERpoints) 
+                                                   ])# 
+            else:
+                if ADD_FILTER=='tma': color =tma_color
+                elif ADD_FILTER=='flma': color =flma_color
+            
+                RES_COR = Zcc.get_data_from_reference_frequency(array_loc=res_cor_obj,
+                                                                freq_array=csamt_freq_obj, 
+                                                      reffreq_value=referfreq )
             
            
-            mark,  = axe.semilogy (csamt_stn_num_obj,RES_UNCOR , c= 'white', marker =marker,
-                                  markersize = ms*2*fs ,
-                                  markeredgecolor= markeredgecolor )
+                marki,  = axe.semilogy (csamt_stn_num_obj,RES_COR , 
+                                        c= 'white',
+                                        marker ='o',
+                                     markersize = self.ms*2*self.fs ,
+                                     markeredgecolor= color , 
+                                     alpha =0.8)
+                
             
-            resPlots,= axe.semilogy(csamt_stn_num_obj,RES_UNCOR , lw =lw*fs, c='k',
-                                ls =ls, label='$Uncorrected apparent resistivity$' )
+                corPlots, = axe.semilogy(csamt_stn_num_obj,RES_COR ,
+                                         lw =self.lw*self.fs,
+                                         c=color ,
+                                ls =self.ls, 
+                                label = '$Corrected\resistivity :'\
+                                ' {0} filter at {1} points$'.format( messf, FILTERpoints))
             
-            marki,  = axe.semilogy (csamt_stn_num_obj,RES_COR , c= 'white', marker ='o',
-                                  markersize = ms*2*fs ,
-                                  markeredgecolor= 'blue' , alpha =0.8)
-            
-            corPlots, = axe.semilogy(csamt_stn_num_obj,RES_COR , lw =lw*fs, c='blue',
-                                ls =ls, label = '$Corrected\resistivity :'\
-                                    ' TMA filter at {0} points$'.format(TMApoints))
-            
+                # ['$ApparentResistivity$', '$TMA at {0}$'.format(TMApoints)])
+                axe.legend( [resPlots, corPlots ], ['$Uncorrected\ app. Rho$',
+                                               '$Rhofiltered: {0}\ at\ {1}\ points$'.\
+                                                   format(messf,FILTERpoints) ])
             axe.minorticks_on()
             
-            axe.grid(color='k', ls=':', lw =0.25, alpha=0.8, which ='minor') # customize specific grid
+            axe.grid(color='k', ls=':', lw =0.25,
+                     alpha=0.8, which ='minor') # customize specific grid
        
             axe.set_xlabel('$Station\ distance(m)$' , fontdict={'color': 'k',
                                                                 'size': self.x_minorticks*14,
@@ -621,33 +770,47 @@ class Plot1d :
             axe.set_ylabel ('$Resistivity(Ω.m)$', color='black',
                             fontsize =  self.y_minorticks*14, 
                             fontweight=self.fontweight)
-            # axe.legend([resPlots], ['$Uncorrected apparent resistivity$'] )
-            # axe.legend([corPlots], ['$Corrected resistivity : TMA filter at {0} points$'.format(TMApoints)] )
             
-            axe.legend( [resPlots, corPlots ], ['$Uncorrected\ app. Rho$',
-                                                '$Rhofiltered: TMA\ at\ {0}\ points$'.\
-                                                    format(TMApoints) ])# , ['$ApparentResistivity$', '$TMA at {0}$'.format(TMApoints)])
+            
             
             axe.text(2* csamt_stn_num_obj.min(), RES_UNCOR.min() ,
                      '$ Filtered\ ref.frequency: <{0}>Hz$'.format(referfreq), 
-                      verticalalignment='bottom', fontweight =self.fontweight,
-                      c='k', fontsize =12 )
-            if fill_between : axe.fill_between(csamt_stn_num_obj, RES_UNCOR, RES_COR,
-                                               facecolor='orange', 
-                                               color='thistle', 
-                                               alpha =0.7)
+                      verticalalignment='bottom',
+                      fontweight =self.fontweight,
+                      c='k', 
+                      fontsize =12 )
+            
+            if ADD_FILTER !='*':
+                if fill_between : axe.fill_between(csamt_stn_num_obj, RES_UNCOR, RES_COR,
+                                                   facecolor='orange', 
+                                                   color=fillbc, 
+                                                   alpha =0.7)
+            elif ADD_FILTER =='*':
+                if fill_between : axe.fill_between(csamt_stn_num_obj,
+                                                   TMA_RES_COR,
+                                                   FLMA_RES_COR,
+                                                   facecolor='orange', 
+                                                   color=fillbc, 
+                                                   alpha =0.7)
             if addstn ==True : 
                 axe.set_xticks(ticks= csamt_stn_num_obj, minor=False ) 
-                # axx .set_xlim([station_pk.min(), station_pk.max()])
-                axe .grid(color='k', ls='--', lw =0.25, alpha=0.3)
+
+                axe .grid(color='k',
+                          ls='--',
+                          lw =0.25, 
+                          alpha=0.3)
                 axe.set_xticklabels(stnnames , rotation=45)
                 
-            # fig.suptitle(' Filtered frequency : <{0}>Hz'.format(referfreq),  fontsize= self.font_size)
+          
             plt.tight_layout()
             fig.suptitle('Static correction plot ', 
-                          style ='italic',  bbox =dict(boxstyle='round',facecolor ='lightgrey'))
+                          style ='italic', 
+                          bbox =dict(boxstyle='round',
+                                     facecolor ='lightgrey'))
             if savefig is not None :
-                plt.savefig(savefig, dpi=self.fig_dpi, orientation =orient)
+                plt.savefig(savefig,
+                            dpi=self.fig_dpi,
+                            orientation =orient)
         
             
 
@@ -683,12 +846,7 @@ class Plot1d :
                                             *Default* is False.
         =================  ==============  ===================================
         """
-        marker = kwargs.pop('marker', 'D')
-        ms = kwargs.pop('ms', 7)
-        ls = kwargs.pop('ls', '-')
-        markeredgecolor = kwargs.pop('markeredgecolor', 'k')
-        fs = kwargs.pop('fs', .7)
-        lw=kwargs.pop('lw', 4.)
+
         savefig=kwargs.pop('savefig', None)
         orient = kwargs.pop('orientation', 'portrait')
         rename_stations = kwargs.pop('rename_stations', None)
@@ -742,12 +900,16 @@ class Plot1d :
                                 color='r',)
                 
             
-            mark,  = axe1.loglog (csamt_freq_obj ,csamt_res_obj[stn], c= 'white', marker =marker,
-                                  markersize = self.ms*3*fs ,
-                                  markeredgecolor= markeredgecolor )
+            mark,  = axe1.loglog (csamt_freq_obj ,csamt_res_obj[stn], 
+                                  c= 'white',
+                                  marker =self.mstyle,
+                                  markersize = self.ms* self.fs ,
+                                  markeredgecolor= self.markeredgecolor)
             
             
-            logfreqres= axe1.loglog(csamt_freq_obj ,csamt_res_obj[stn] , lw =lw *fs, c='k',
+            logfreqres= axe1.loglog(csamt_freq_obj ,
+                                    csamt_res_obj[stn] ,
+                                    lw =self.lw *self.fs, c='k',
                         ls =self.ls, 
                         label = 'App. resistivity curve')# ,marker ='D', 
                          #alpha = 1)   
@@ -772,20 +934,29 @@ class Plot1d :
             
             #------------------ define axe2 ------------- 
             if show_error_bar : 
-                 axe2.errorbar(csamt_freq_obj ,csamt_phase_obj[stn], yerr=csamt_phs_err_obj[stn], 
-                                               fmt='none', ecolor = 'r', lolims=True, uplims=True, 
+                 axe2.errorbar(csamt_freq_obj ,
+                               csamt_phase_obj[stn],
+                               yerr=csamt_phs_err_obj[stn], 
+                                               fmt='none', 
+                                               ecolor = 'r', 
+                                               lolims=True, 
+                                               uplims=True, 
                                                xlolims =True, xuplims=True, 
                                                lw=0.1, marker = '.', 
                                                 color='yellow',)
             
-            marki, = axe2.semilogx (csamt_freq_obj , csamt_phase_obj[stn], c= 'white', marker ='o', alpha =1,
-                                    markersize = self.ms*4*fs ,
+            marki, = axe2.semilogx (csamt_freq_obj , csamt_phase_obj[stn],
+                                    c= 'white', marker ='o', alpha =1,
+                                    markersize = self.ms*self.fs ,
                                         markeredgecolor= 'cyan')
             
                 
             
-            logfreqphase =axe2.semilogx(csamt_freq_obj , csamt_phase_obj[stn] ,
-                                        lw=lw *fs, ls =':' , c='k',
+            logfreqphase =axe2.semilogx(csamt_freq_obj , 
+                                        csamt_phase_obj[stn] ,
+                                        lw=self.lw *self.fs,
+                                        ls =':' ,
+                                        c='k',
                                         label ='Phase curve') 
             
 
@@ -1050,7 +1221,7 @@ class Plot1d :
         
         
         #-----------IMPORT OBJ AND DEFINE COMPONENTS ------------------
-        from csamtpy.ff.core import avg as CSMATavg 
+
         zonge_csamt_obj = CSMATavg.Avg(data_fn= fn )
         zonge_freq_obj = zonge_csamt_obj.Data_section.Frequency.value 
         zonge_res_obj = zonge_csamt_obj.Data_section.Resistivity.loc 

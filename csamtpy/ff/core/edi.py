@@ -124,9 +124,16 @@ class Edi_collection :
         
         if self.edifiles is None and edipath is not None : 
             self._logging.info ('Getting edifiles from edipath <%s>'% edipath )
-            self.edifiles = [os.path.join(edipath , ediobj) for ediobj
-                             in os.listdir(edipath) if ediobj.endswith('.edi') ]
-        
+            
+            if os.path.isfile(edipath) is True : 
+                if edipath.endswith('.edi') is True : self.edifiles =[edipath] 
+            else:
+                try :os.path.isdir(edipath)
+                except :raise CSex.pyCSAMTError_EDI(
+                        'Wrong Path, Does not exist, Please provided right path !')
+                else :
+                    self.edifiles = [os.path.join(edipath , ediobj) for ediobj
+                                 in os.listdir(edipath) if ediobj.endswith('.edi') ]
         if len(self.edifiles ) < 1 : 
             warnings.warn('No edifiles found in the path provided <%s>.'\
                           ' Iseems the edipath does not match the right edipath.'% edipath)
@@ -188,7 +195,7 @@ class Edi_collection :
             
       
     def _collect_edifiles(self, edifiles_list =None,
-                          ediobjs =None ):
+                          ediobjs =None, edipath =None ):
         """
         collect edifiles and set appropriates attributes for each stations. 
 
@@ -228,7 +235,7 @@ class Edi_collection :
             self.edi_obj_list= list(ediobjs)
             
         assert len(self.edi_obj_list) > 0 , CSex.pyCSAMTError_EDI(
-            "Can't read none value. Porvided at least one edifiles!")
+            "Can't read none value. Provided at least one edifiles!")
             
         self._logging.info ('Running list of <%s> edifiles'% len(self.edifiles))
         print('Number of edifiles or stations read successfully = <%s>'% len(self.edifiles))
@@ -661,7 +668,7 @@ class Edi :
 
     
     def write_edifile (self, edi_fn=None,  new_edifilename=None, datatype =None , 
-                       savepath =None, add_filter_array =None  ): 
+                       savepath =None, add_filter_array =None, **kwargs  ): 
         """
         Method to write edifiles from data setting oin attribute of Edi or from existing file. 
         can write also EMAP data are filled attribute of EDI.
@@ -764,6 +771,8 @@ class Edi :
         #--> Write impedance data and tipper 
         # for consistency , may replace if exist nan number by np.nan
         
+        
+        
         self.Z.z , self.Z.z_err  =np.nan_to_num(self.Z.z), np.nan_to_num (self.Z.z_err)
         self.Z.resistivity , self.Z.phase = np.nan_to_num(self.Z.resistivity), np.nan_to_num (self.Z.phase)
 
@@ -804,13 +813,23 @@ class Edi :
                 
                 frho [:, 1 , 0] = add_filter_array[:, 0, 1]
                 frho [:, 0 , 1] = add_filter_array[:, 1, 0]
+            
+            rho [:, 0, 0]  = self.Z.res_xx
+            rho [:, 0, 1]  = self.Z.res_err_xx **2
+            rho  [:, 0, 2] = self.Z.res_err_xx
+            
+            rho [:, 1, 0]  = self.Z.res_xy
+            rho  [:, 1, 1] = self.Z.res_err_xy**2
+            rho [:, 1, 2]  = self.Z.res_err_xy  
+            
+            phs [:, 0, 0]  = self.Z.phase_xx
+            phs [:, 0, 1]  = self.Z.phase_err_xx **2
+            phs  [:, 0, 2] = self.Z.phase_err_xx
+            
+            phs [:, 1, 0]  = self.Z.phase_xy
+            phs [:, 1, 1]  = self.Z.phase_err_xy**2 
+            phs [:, 1, 2]  = self.Z.phase_err_xy        
                 
-            rho [:, 0, 0] , rho [:, 0, 1], rho  [:, 0, 2] = self.Z.res_xx, self.Z.res_err_xx **2, self.Z.res_err_xx
-            rho [:, 1, 0], rho  [:, 1, 1], rho [:, 1, 2]= self.Z.res_xy, self.Z.res_err_xy**2 , self.Z.res_err_xy  
-            
-            phs [:, 0, 0] , phs [:, 0, 1], phs  [:, 0, 2] = self.Z.phase_xx, self.Z.phase_err_xx **2, self.Z.phase_err_xx
-            phs [:, 1, 0], phs [:, 1, 1], phs [:, 1, 2]= self.Z.phase_xy, self.Z.phase_err_xy**2 , self.Z.phase_err_xy    
-            
             # convert np.nan to number 
             rho , phs = np.nan_to_num(rho), np.nan_to_num(phs)
             
@@ -915,8 +934,8 @@ class Edi :
                         warnings.warn ('File <{0}> already exists ,'\
                                        ' New file will be set on new folder {1}:' \
                                .format(os.path.basename(new_edifilename), ('new_edi.{0}.{1}'.\
-                                                          format('pyCS', datetime.datetime.now().month))))
-                        new_path = 'new_edi.{0}.{1}'.format('pyCS', datetime.datetime.now().month)
+                                                          format('ff', datetime.datetime.now().month))))
+                        new_path = 'new_edi.{0}.{1}'.format('ff', datetime.datetime.now().month)
                         os.mkdir(os.path.join(savepath, new_path))
                         
                         self.logging.info ('Create newpath <%s> to save edifile'% os.path.join(savepath, new_path))
@@ -2072,7 +2091,7 @@ class MTEMAP (object):
     Attributes        Description                  Default       Restriction 
     ==============  ==========================  =============  ================
     sectid          Name of this section           None         str or""
-    nfreq           Number of frequencies          required       int >=1
+    nfreq           Number of frequencies          required     int >=1
     maxblks         maximum number of blocks 
                     of this section                None         int>=1
     ndipole         Number of dipoles in 

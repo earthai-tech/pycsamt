@@ -661,7 +661,7 @@ def compute_TMA (data_array=None, number_of_TMApoints=None ):
     
     if data_array is None or number_of_TMApoints is None :raise CSex.pyCSAMTError_processing('NoneType arguments can not be computed!.')
     if data_array.dtype not in ['float', 'int']: 
-        try :data_array=[float(dd) for dd in data_array]
+        try :data_array=np.array([float(dd) for dd in data_array])
         except : raise CSex.pyCSAMTError_AvgData('Data must be on array_like float number.!')
     if type(number_of_TMApoints) is not int :
         try : number_of_TMApoints=np.int(number_of_TMApoints)
@@ -671,20 +671,30 @@ def compute_TMA (data_array=None, number_of_TMApoints=None ):
 
     for ii, value in enumerate(data_array): 
         if ii < window:
-            get_TMA_value =np.delete(data_array[ii:number_of_TMApoints+ii], np.array([data_array[ii:number_of_TMApoints+ii].argmin(), 
-                                                                                      data_array[ii:number_of_TMApoints+ii].argmax()])).mean()
+            get_TMA_value =np.delete(data_array[ii:number_of_TMApoints+ii], 
+                                     np.array([data_array[ii:number_of_TMApoints+ii].argmin(), 
+                                     data_array[ii:number_of_TMApoints+ii].argmax()])).mean()
             roll_TMA.append(get_TMA_value)
+            
         elif ii == window or ii < data_array.size - window :
-            if ii == data_array.size - (window+1) :get_TMA_value =np.delete(data_array[ii-window:], np.array([data_array[ii-window:].argmin(),
+            if ii == data_array.size - (window+1) :
+                get_TMA_value =np.delete(data_array[ii-window:],
+                                         np.array([data_array[ii-window:].argmin(),
                                                                                                                data_array[ii-window:].argmax()])).mean() 
-            else :get_TMA_value =np.delete(data_array[ii-window:ii+window+1], np.array([data_array[ii-window:ii+window+1].argmin(), 
-                                                                                  data_array[ii-window:ii+window+1].argmax()])).mean()
+            else :get_TMA_value =np.delete(data_array[ii-window:ii+window+1],
+                                           np.array([data_array[ii-window:ii+window+1].argmin(), 
+                                           data_array[ii-window:ii+window+1].argmax()])).mean()
             roll_TMA.append(get_TMA_value)
+            
         elif ii >=data_array.size - window:
-            if value == data_array[-1]:get_TMA_value =np.delete(data_array[ii-number_of_TMApoints-1:], np.array([data_array[ii-number_of_TMApoints-1:].argmin(), 
-                                                                                  data_array[ii-number_of_TMApoints-1:].argmax()])).mean()
-            else :get_TMA_value =np.delete(data_array[ii-number_of_TMApoints:], np.array([data_array[ii-number_of_TMApoints+1:ii+1].argmin(), 
-                                                                                  data_array[ii-number_of_TMApoints+1:ii+1].argmax()])).mean()  
+            if value == data_array[-1]:
+                get_TMA_value =np.delete(data_array[ii-number_of_TMApoints-1:],
+                                         np.array([data_array[ii-number_of_TMApoints-1:].argmin(), 
+                                         data_array[ii-number_of_TMApoints-1:].argmax()])).mean()
+                
+            else :get_TMA_value =np.delete(data_array[ii-number_of_TMApoints:],
+                                           np.array([data_array[ii-number_of_TMApoints+1:ii+1].argmin(), 
+                                           data_array[ii-number_of_TMApoints+1:ii+1].argmax()])).mean()  
             roll_TMA.append(get_TMA_value) 
             
     return np.array(roll_TMA)      
@@ -704,7 +714,7 @@ def get_data_from_reference_frequency(array_loc, freq_array, reffreq_value):
     :type  freq_array: array_like
     
     :param reffreq_value:  reffrence value, If the reference value is not in frequency array ,
-                            function will force to interpolate value amd find the correlative array.
+                            function will force to interpolate value and find the correlative array.
                            
     :type reffreq_value: float or int 
             
@@ -724,13 +734,17 @@ def get_data_from_reference_frequency(array_loc, freq_array, reffreq_value):
     #find the size of array loc : seem to be the size of stationsNames .
     stn_size =np.array(list(array_loc.keys())).size
     # # we sorted data for ensurity
-    reffreq_array= np.array([values[np.where(freq_array==reffreq_value)[0]] for keys, values in sorted(array_loc.items())])
+    reffreq_array= np.array([values[np.where(freq_array==reffreq_value)[0]]
+                             for keys, values in sorted(array_loc.items())])
 
     if reffreq_value not in freq_array : 
-        reffreq_array= get_data_from_reference_frequency(array_loc=array_loc, freq_array=freq_array, reffreq_value=\
-                                                                      find_reference_frequency(freq_array =freq_array, 
-                                                                                               reffreq_value =reffreq_value ,
-                                                                                               sharp =True, etching=True))
+        reffreq_array= get_data_from_reference_frequency(array_loc=array_loc,
+                                                         freq_array=freq_array,
+                                                         reffreq_value=find_reference_frequency(
+                                                                      freq_array =freq_array, 
+                                                                      reffreq_value =reffreq_value ,
+                                                                      sharp =True, 
+                                                                      etching=True))
     if reffreq_array.size == stn_size :
         return reffreq_array.reshape(reffreq_array.shape[0],)
     else :
@@ -767,18 +781,23 @@ def perforce_reference_freq(dataset, frequency_array=None ):
     import copy
     new_data_array =copy.deepcopy(dataset)
     if frequency_array is None :
-        frequency_array=np.unique(new_data_array[:,1]) #find according to AVGData disposal . 
-    
+        frequency_array=np.unique(new_data_array[:,1]) #find according to AVGData disposal .
+        
+    # ifall data are cleaned the take the highst freqeuncy 
     if np.isnan(new_data_array).sum()/new_data_array.size ==0: 
-        print('--> we estimated the reference frequency to <{0}> Hz'.format(frequency_array[-1]))
-        return  frequency_array[-1], frequency_array.size -1,0.
+        if frequency_array[0] < frequency_array[-1] :
+            reffreq_value = frequency_array[-1] 
+        else : reffreq_value = frequency_array[0]
+        print('--> Reference frequency is estimated to <{0}> Hz'.format(reffreq_value ))
+        
+        return  reffreq_value , frequency_array.size -1,0.
     
     elif np.isnan(new_data_array).sum()/new_data_array.size !=0 : 
         nan_ratio = np.isnan(new_data_array).sum()/new_data_array.size 
         new_data_array=np.nan_to_num(new_data_array, nan = -99999)
         # uncover_index = np.where(new_data_array==-99999)   
         reffreq_value = frequency_array[np.where(new_data_array==-99999)[0][0]]
-        print('--> we estimated the reference frequency to <{0}> Hz'.format(reffreq_value))
+        print('--> Reference frequency is estimated to <{0}> Hz'.format(reffreq_value))
         return reffreq_value, np.where(new_data_array==-99999)[0][0],  nan_ratio 
 
 def hanning (dipole_length=50., number_of_points=7, large_band=False):
@@ -877,7 +896,8 @@ def weight_beta (dipole_length =50. , number_of_points = 7, window_width=None):
     return np.array(beta_range)
     # for xj in enra
 
-def compute_FLMA ( z_array =None  , weighted_window=None , dipole_length = None , number_of_points =None ):
+def compute_AMA ( z_array =None  , weighted_window=None ,
+                  dipole_length = None , number_of_points =None ):
     """
     .. note:: 
         We will add this filter later !
@@ -886,16 +906,17 @@ def compute_FLMA ( z_array =None  , weighted_window=None , dipole_length = None 
      
     if z_array is None : raise CSex.pyCSAMTError_Z('NoneType Impedance can not be computed.')
     if weighted_window is None : 
-        if dipole_length is None or number_of_points is None : raise CSex.pyCSAMTError_inputarguments('Please check '\
-                                                'your Inputs values ! NoneType values of dipole length or number_of_stations'\
-                                                    ' can not be computed.!')
+        if dipole_length is None or number_of_points is None :
+            raise CSex.pyCSAMTError_inputarguments('Please check '
+                'your Inputs values ! NoneType values of dipole length or number_of_stations'
+                ' can not be computed.!')
         try : 
             dipole_length , number_of_points  = np.float(dipole_length) , np.int(number_of_points)
         except : raise CSex.pyCSAMTError_float('Dipole length, number of points must be a float, and '\
                                                ' int  number respectively.!')
 
         weighted_window =weight_beta(dipole_length=dipole_length, 
-                                                              number_of_points=number_of_points)
+                                      number_of_points=number_of_points)
 
     xc_pk , cFLAM , cut_off = np.int(np.floor(weighted_window.size / 2)), [], -1 
 
@@ -1031,7 +1052,7 @@ def hanning_x (x_point_value, dipole_length =50.,  number_of_points=7,
         
     return  hann_xp
 
-def wbetaX (Xpos, dipole_length=50., number_of_points=7) :
+def wbetaX2 (Xpos, dipole_length=50., number_of_points=5) :
     """
     weight Beta is  computed following the paper of 
     Torres-verdfn, C., and F. X. Bostick, 1992, Principles of spatial surface electric field 
@@ -1051,9 +1072,7 @@ def wbetaX (Xpos, dipole_length=50., number_of_points=7) :
     window_width = dipole_length * number_of_points 
     xk = window_width/2
     
-    
-    X =np.arange(dipole_length/2, window_width , dipole_length) 
-    
+
     # if np.abs(xp - xk) <= window_width /2 : 
     beta_xpos = ((1/window_width) * ((Xpos + dipole_length/2 - xk) +(window_width/ 2* np.pi)*\
                (np.sin(2* np.pi * (Xpos + dipole_length/2 -xk )/window_width))))-\
@@ -1107,8 +1126,155 @@ def compute_sigmas_e_h_and_sigma_rho(pc_emag , pc_hmag, pc_app_rho, app_rho, ema
    
     return  sigma_e , sigma_h, sigma_rho 
     
+def compute_weight_factor_betaj(Xpos , dipole_length=50. , number_of_points =5. ):
+    """
+    weight Beta is  computed following the paper of Torres-verdfn, C., and F. X. Bostick, 1992,
+     Principles of spatial surface electric field filtering in magnetotellurics - Electromagnetic 
+    array profiling ( EMAP )- Geophysics, 57(4), 25–34. 
+        
+    :param Xpos: reference position on the field 
+    :type Xpos: str 
+    
+    :param dipole_length: length of dipole measurement
+    :type dipole_length: float 
+    
+    :param number_of_points:  point to stand filters , windowed width 
+    :type number_of_points: int 
+    
+    """
+    #figureout the center ot dipole_lenght  and  compute the window width 
+    
+    window_width = dipole_length * number_of_points  #+  dipole_length # for extrema 
+    
+    xk = window_width/2
+    
+    # declare limit of integrating hanning 
+    
+    xsup_lim = Xpos + dipole_length/2 
+    xinf_lim = Xpos - dipole_length /2 
+    
+    X =np.arange(0, window_width, dipole_length) 
 
+    betapos = (1/ window_width) * ((xsup_lim - xk + (window_width /(2 * np.pi)) *\
+                                 np.sin( 2* np.pi *(xsup_lim - xk)/ window_width )) - (
+                                xinf_lim - xk + window_width /(2 * np.pi) *\
+                                 np.sin( 2* np.pi *(xinf_lim - xk)/ window_width ))) 
+            
+    return betapos, window_width, X 
 
+def compute_FLMA ( z_array =None  , weighted_window=None ,
+                  dipole_length = 50. , number_of_points =5. ):
+    """
+    Use a fixed-length-moving-average filter to estimate average apparent
+    resistivities at a single static-correction-reference frequency
+    
+    :param z_array:  array of uncorrected impedance values.
+    :type z_array: arry_like, complex
+    
+    :param dipole_length: length of dipole on survey
+    :type dipole_length: float 
+    
+    :param number_of_points: survey point or number point to apply.
+    :type number_of_points: int 
+    
+    :param weighted_window: bandwidth of hanning window,
+                            if window is None , will computed automatically once 
+                            wwith number of points or dipoles and dipole length
+    :type weighted_window: float 
+ 
+    :returns: windowed hanning , filtered window.
+    :rtype: array_like 
+    
+    """
+     
+    if z_array is None : 
+        raise CSex.pyCSAMTError_Z('NoneType Impedance can not be computed.')
+    if weighted_window is None : 
+        if dipole_length is None or number_of_points is None :
+            raise CSex.pyCSAMTError_inputarguments('Please check '
+                'your Inputs values ! NoneType values of dipole length '
+                ' or number_of_stations can not be computed.!')
+        try : 
+            dipole_length = np.float(dipole_length) 
+            number_of_points= np.int(number_of_points)
+            
+        except :
+            raise CSex.pyCSAMTError_float(
+                'Dipole length, number of points must be a float, and '
+                    ' int  number respectively.!')
 
+        weighted_window = np.arange(0, dipole_length * number_of_points , 
+                                    dipole_length)
+        
+    # compute weight factor Bj 
+    wk = np.array([compute_weight_factor_betaj(Xpos , dipole_length=dipole_length , 
+                                number_of_points =number_of_points)[0] 
+          for Xpos in weighted_window])
+    
+    #seek the center point  index xc_pk  
+    
+    if wk.size %2 ==0 : #mean number is even 
+        xc_pk = np.int(wk.size /2) -1  # backward for one index 
+    elif wk.size %2 !=0 :
+       xc_pk =  np.int(wk.size /2)   # weight array size is odd 
+       
+    
+    cFLMA , cut_off = [], -1  # take a minimum 
 
+    import copy 
+    tem_wk = copy.deepcopy(wk)
+    
+    for kk , zz in enumerate(z_array): 
+        if kk < xc_pk : 
+            cut_off += 1  # cut off to shrink one index  
+            tem_wk [:xc_pk -cut_off] = 0. # where wk 0 outside of the Hanning window
+            tem_z= z_array[:kk + xc_pk +1] # keep main array 
+            # buid array with number of 0 outside the window 
+            add0 = len(wk)- len(tem_z)  
+            # build array as the same dim with hanning window centered a k position
+            tem_z = np.concatenate((np.repeat(0., add0), tem_z))
+            zz_new= tem_z * tem_wk # compute value 
+            cFLMA.append(zz_new.sum())
+            
+            tem_wk =copy.deepcopy(wk) # copy once again for next loop if exist 
+            
+   
+        elif  xc_pk <= kk < z_array.size - xc_pk: 
+            if xc_pk %2 ==0 :
+                zz_new= z_array[kk - xc_pk: kk + xc_pk +1  ] * wk # when center point is even 
+            else : # when odd 
+                zz_new= z_array[kk - xc_pk  : kk + xc_pk + 1  ] * wk
+                
+            cut_off =0
+            cFLMA.append(zz_new.sum())
+   
+        elif kk >= z_array.size - xc_pk:
+       
+            cut_off -= 1
+            tem_z = z_array[kk-xc_pk:] 
+            add0 = len(wk) - len(tem_z)  
+            tem_wk = np.concatenate((tem_z, np.repeat(0.,add0)))
+
+            zz_new =tem_wk * wk
+            
+            cFLMA.append(zz_new.sum())
+    
+            
+    return np.array(cFLMA)    
+
+    
+if __name__=='__main__': 
+    
+    z1= np.array([2.46073791 +3.00162006j ,
+         9.74193019 +1.82209497j,
+         15.68879141 + 12.91164264j ,
+         5.84384925 +3.6899018j, 
+         2.4430065  +0.57175607j])
+  
+    X= np.arange(0, 250, 50)
+    wk = np.array([compute_weight_factor_betaj(va, dipole_length=50, 
+                                                number_of_points=5.)[0] for va in X])
+
+ 
+    
     

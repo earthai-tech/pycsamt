@@ -15,13 +15,18 @@ from viewer.plot import Plot2d
 
 #----path to your EDI|J|AVG 
 #--- avg filename 
-avgfile = 'K1.AVG' # can plot directly from abg path using : 
-    # path_to_avgfile =os.path.join(os.environ["pyCSAMT"], 'data', 'avg', avgfile)
+avgfile = 'K1.AVG' # can plot directly from avg using path path below : 
+#pathfile =os.path.join(os.environ["pyCSAMT"], 'data', 'avg', avgfile)
 
-# path to avgfile 
-pathfile  = os.path.join(os.environ["pyCSAMT"], 'data', 'j') # can change your path 
-#---If pathfile point to AVG FILE . bring  also profile file . 
-profile_stn = None 
+# path to EDifile or jfile 
+pathfile  = os.path.join(os.environ["pyCSAMT"], 'data', 'j') 
+#pathfile  = os.path.join(os.environ["pyCSAMT"],'data', 'correctedEDI') # test with corrected edi
+
+#---If path points to avg file . bring  also profile file . 
+profile_file = 'K1.stn' 
+#profile_stn =os.path.join(os.environ["pyCSAMT"], 'data', 'avg', profile_file)
+# otherwise set to None 
+profile_stn = None          
 
 #---depth to image : ImageDepth units is in Meter (m)
 imageDepth = 2000               # 2000 means 2km . user can use the str ["2km"|2000m"]

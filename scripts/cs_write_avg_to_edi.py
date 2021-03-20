@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
     .Script to write edifiles from Zonge Engineering AVG format . Script accept 3 filters "
-    "TMA" : Triminf Moving Average , "AMA": Adaptative Moving Average of Torres abd verding 
-    "FLMA": Fixed Lend dipole Moving average . Actually only filter "TMA" works , for the next upgrade , 
-    will input the AMA and FLMA. Once applied it , it will generate Rho corrected into 
+    "TMA" : Triming Moving Average , "AMA": Adaptative Moving Average of Torres abd verding 
+    "FLMA": Fixed Length dipole moving average . Actuallyfilters "TMA & FLMA" work, 
+    AMA filter will be add soon. Once applied it , it will generate Rho corrected into 
     your output edifiles. If filter is None , just write edifile , no filter will be applied. 
-    iF astatic filed is given , programm will take account to write both resistivites . 
+    If  zonge astatic file is given , program will take account to write both resistivites . 
     the non corrected apparent resistivities RHO and the static shift corrected FRHO. 
    
 Created on Sat Jan 16 19:55:58 2021
@@ -30,10 +30,9 @@ avgfile = 'K1.AVG'
 station_profile_file = 'K1.stn'
 
 #---Appply filter . 
-add_filter = None               # can be "TMA", "AMA" or "FLMA" filters :
-                                #actually only TMA is  available, work for AMA and FLMA are 
-                                # on progress
-
+add_filter = None              # can be "tma" or "lma" filters , if filter is not None
+                                # will compute FRHO
+                               
 # add reference frequency 
 reference_frequency = None      #8192  # if reference frequency is None AND add filter is not None , 
                                 # reference frequency  will be compute automatically  

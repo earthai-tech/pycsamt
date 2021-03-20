@@ -16,7 +16,7 @@ from viewer.plot import Plot2d
 #path file 
 
 pathfile =  os.path.join(os.environ["pyCSAMT"],'data','j' )
-
+# pathfile= os.path.join(os.environ["pyCSAMT"],'data', 'correctedEDI') # test with corrected edi
 # if user user avg file , add the profile fn 
 profile_fn =None                # not necessary when use [EDI|J] file. 
 
@@ -37,4 +37,4 @@ plot2d_obj.pseudocrossResPhase(fn=pathfile,
                                 delineate_phase=contourPhase,
                                 plot_style =plotStyle)
 
-# csamt_obj =CSAMT(data_fn=path, profile_fn=os.path.join(os.
+

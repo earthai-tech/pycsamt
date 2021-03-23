@@ -32,7 +32,7 @@ import numpy as np
 from csamtpy.etc import infos
 from csamtpy.utils import exceptions as CSex
 from csamtpy.utils import func_utils as func
-from csamtpy.utils.decorator import redirect_cls_or_func
+from csamtpy.utils.decorator import deprecated, redirect_cls_or_func
 from csamtpy.utils._csamtpylog import csamtpylog 
 
 _logger =csamtpylog.get_csamtpy_logger(__name__)
@@ -643,61 +643,10 @@ def find_reference_frequency(freq_array =None, reffreq_value =None , sharp =Fals
                    format(np.float(reffreq_value), np.around(float(new_reference_value ),2)))
         return force_interpolation(value_to_steep=new_reference_value  )
     elif sharp ==False :return new_reference_value 
-    
-def compute_TMA (data_array=None, number_of_TMApoints=None ):
-    """
-    function to compute a trimmed-moving-average filter to estimate average apparent resistivities.
 
-    :param data_array:  content of value to be trimmed 
-    :type data_array: array_like(ndarray,1) 
-    
-    :param number_of_TMA points:  number of filter points .
-    :type number_of_TMA points: int 
-    
-    :returns:  value corrected with TMA  
-    :rtype: array_like (ndarray, 1)
-          
-    """
-    
-    if data_array is None or number_of_TMApoints is None :raise CSex.pyCSAMTError_processing('NoneType arguments can not be computed!.')
-    if data_array.dtype not in ['float', 'int']: 
-        try :data_array=np.array([float(dd) for dd in data_array])
-        except : raise CSex.pyCSAMTError_AvgData('Data must be on array_like float number.!')
-    if type(number_of_TMApoints) is not int :
-        try : number_of_TMApoints=np.int(number_of_TMApoints)
-        except : raise CSex.pyCSAMTError_parameter_number('TMA filter point must be integer.')
-    
-    roll_TMA,window  =[], np.int(np.trunc(number_of_TMApoints/2)),
 
-    for ii, value in enumerate(data_array): 
-        if ii < window:
-            get_TMA_value =np.delete(data_array[ii:number_of_TMApoints+ii], 
-                                     np.array([data_array[ii:number_of_TMApoints+ii].argmin(), 
-                                     data_array[ii:number_of_TMApoints+ii].argmax()])).mean()
-            roll_TMA.append(get_TMA_value)
-            
-        elif ii == window or ii < data_array.size - window :
-            if ii == data_array.size - (window+1) :
-                get_TMA_value =np.delete(data_array[ii-window:],
-                                         np.array([data_array[ii-window:].argmin(),
-                                                                                                               data_array[ii-window:].argmax()])).mean() 
-            else :get_TMA_value =np.delete(data_array[ii-window:ii+window+1],
-                                           np.array([data_array[ii-window:ii+window+1].argmin(), 
-                                           data_array[ii-window:ii+window+1].argmax()])).mean()
-            roll_TMA.append(get_TMA_value)
-            
-        elif ii >=data_array.size - window:
-            if value == data_array[-1]:
-                get_TMA_value =np.delete(data_array[ii-number_of_TMApoints-1:],
-                                         np.array([data_array[ii-number_of_TMApoints-1:].argmin(), 
-                                         data_array[ii-number_of_TMApoints-1:].argmax()])).mean()
-                
-            else :get_TMA_value =np.delete(data_array[ii-number_of_TMApoints:],
-                                           np.array([data_array[ii-number_of_TMApoints+1:ii+1].argmin(), 
-                                           data_array[ii-number_of_TMApoints+1:ii+1].argmax()])).mean()  
-            roll_TMA.append(get_TMA_value) 
-            
-    return np.array(roll_TMA)      
+
+     
                                                               
 def get_data_from_reference_frequency(array_loc, freq_array, reffreq_value):
     """
@@ -781,7 +730,7 @@ def perforce_reference_freq(dataset, frequency_array=None ):
     import copy
     new_data_array =copy.deepcopy(dataset)
     if frequency_array is None :
-        frequency_array=np.unique(new_data_array[:,1]) #find according to AVGData disposal .
+        frequency_array,*_=np.unique(new_data_array[:,1], return_counts=True) #find according to AVGData disposal .
         
     # ifall data are cleaned the take the highst freqeuncy 
     if np.isnan(new_data_array).sum()/new_data_array.size ==0: 
@@ -821,8 +770,11 @@ def hanning (dipole_length=50., number_of_points=7, large_band=False):
     
     if type(dipole_length) !=float or type(number_of_points) !=int: 
         
-        try : dipole_length, number_of_points = np.float(dipole_length), np.int(np.floor(number_of_points))
-        except :raise CSex.pyCSAMTError_processing('Dipole length and number of'\
+        try : 
+            dipole_length = np.float(dipole_length)
+            number_of_points = np.int(np.floor(number_of_points))
+        except :
+            raise CSex.pyCSAMTError_processing('Dipole length and number of'\
                                            ' points must be a float number.')
         
     window_width = number_of_points * dipole_length
@@ -831,7 +783,8 @@ def hanning (dipole_length=50., number_of_points=7, large_band=False):
     # X = np.arange(  -xk , xk, dipole_length)
     # xpos= np.arange(number_of_points+1)*xk 
     
-    if large_band == True : return np.array([(1/window_width * (1+ np.cos(2* np.pi * xx / window_width))) for xx in X ])
+    if large_band == True : return np.array([(1/window_width * \
+                                              (1+ np.cos(2* np.pi * xx / window_width))) for xx in X ])
 
     for xx in X : 
         if xx <= 0: hannx= 1/window_width * (1+ np.cos(2* np.pi * xx / window_width))
@@ -895,13 +848,13 @@ def weight_beta (dipole_length =50. , number_of_points = 7, window_width=None):
     
     return np.array(beta_range)
     # for xj in enra
-
-def compute_AMA ( z_array =None  , weighted_window=None ,
+    
+@deprecated('Function deprecated') 
+def compute_adaptative_moving_average ( z_array =None  , weighted_window=None ,
                   dipole_length = None , number_of_points =None ):
     """
     .. note:: 
-        We will add this filter later !
-    ***future plan ***
+        see `compute_AMA` !
     """
      
     if z_array is None : raise CSex.pyCSAMTError_Z('NoneType Impedance can not be computed.')
@@ -1126,7 +1079,8 @@ def compute_sigmas_e_h_and_sigma_rho(pc_emag , pc_hmag, pc_app_rho, app_rho, ema
    
     return  sigma_e , sigma_h, sigma_rho 
     
-def compute_weight_factor_betaj(Xpos , dipole_length=50. , number_of_points =5. ):
+def compute_weight_factor_betaj(Xpos , dipole_length=50. , number_of_points =5. , 
+                                window_width=None):
     """
     weight Beta is  computed following the paper of Torres-verdfn, C., and F. X. Bostick, 1992,
      Principles of spatial surface electric field filtering in magnetotellurics - Electromagnetic 
@@ -1143,8 +1097,8 @@ def compute_weight_factor_betaj(Xpos , dipole_length=50. , number_of_points =5. 
     
     """
     #figureout the center ot dipole_lenght  and  compute the window width 
-    
-    window_width = dipole_length * number_of_points  #+  dipole_length # for extrema 
+    if window_width is None : 
+        window_width = dipole_length * number_of_points  #+  dipole_length # for extrema 
     
     xk = window_width/2
     
@@ -1163,7 +1117,7 @@ def compute_weight_factor_betaj(Xpos , dipole_length=50. , number_of_points =5. 
     return betapos, window_width, X 
 
 def compute_FLMA ( z_array =None  , weighted_window=None ,
-                  dipole_length = 50. , number_of_points =5. ):
+                  dipole_length = 50. , number_of_points =5., **kwargs ):
     """
     Use a fixed-length-moving-average filter to estimate average apparent
     resistivities at a single static-correction-reference frequency
@@ -1177,16 +1131,31 @@ def compute_FLMA ( z_array =None  , weighted_window=None ,
     :param number_of_points: survey point or number point to apply.
     :type number_of_points: int 
     
-    :param weighted_window: bandwidth of hanning window,
-                            if window is None , will computed automatically once 
-                            wwith number of points or dipoles and dipole length
-    :type weighted_window: float 
+    :param weighted_window: bandwidth of hanning window filter lengths,
+                           skin_depth arrays at each station.
+    :type weighted_window: array_like 
  
+    :param app_rho: array of apparent resistivities in ohm.m , if not provided 
+                    will use impedance zrho to compute app_rho with reference_frequency 
+    :type app_rho: array_like 
+    
     :returns: windowed hanning , filtered window.
     :rtype: array_like 
     
+    :Example:
+        
+        >>> from csamtpy.ff.core.processing import zcalculator as Zcc
+        >>> z1= np.array([2.46073791 +3.00162006j ,
+        ...             9.74193019 +1.82209497j,
+        ...             15.68879141 + 12.91164264j ,
+        ...             5.84384925 +3.6899018j, 
+        ...             2.4430065  +0.57175607j])
+        >>> flma= compute_FLMA(z_array=z1, dipole_length=50. ,
+                               number_of_points=4)
+        >>> print(flma)
     """
-     
+    #reference_freq= kwargs.pop('reference_freq', 8192.)
+    
     if z_array is None : 
         raise CSex.pyCSAMTError_Z('NoneType Impedance can not be computed.')
     if weighted_window is None : 
@@ -1205,18 +1174,15 @@ def compute_FLMA ( z_array =None  , weighted_window=None ,
 
         weighted_window = np.arange(0, dipole_length * number_of_points , 
                                     dipole_length)
-        
+       
     # compute weight factor Bj 
     wk = np.array([compute_weight_factor_betaj(Xpos , dipole_length=dipole_length , 
                                 number_of_points =number_of_points)[0] 
           for Xpos in weighted_window])
     
     #seek the center point  index xc_pk  
-    
-    if wk.size %2 ==0 : #mean number is even 
-        xc_pk = np.int(wk.size /2) -1  # backward for one index 
-    elif wk.size %2 !=0 :
-       xc_pk =  np.int(wk.size /2)   # weight array size is odd 
+
+    xc_pk =  np.int(wk.size /2)   # weight array size is odd 
        
     
     cFLMA , cut_off = [], -1  # take a minimum 
@@ -1238,31 +1204,483 @@ def compute_FLMA ( z_array =None  , weighted_window=None ,
             
             tem_wk =copy.deepcopy(wk) # copy once again for next loop if exist 
             
-   
-        elif  xc_pk <= kk < z_array.size - xc_pk: 
-            if xc_pk %2 ==0 :
-                zz_new= z_array[kk - xc_pk: kk + xc_pk +1  ] * wk # when center point is even 
-            else : # when odd 
-                zz_new= z_array[kk - xc_pk  : kk + xc_pk + 1  ] * wk
-                
-            cut_off =0
-            cFLMA.append(zz_new.sum())
-   
-        elif kk >= z_array.size - xc_pk:
-       
-            cut_off -= 1
-            tem_z = z_array[kk-xc_pk:] 
-            add0 = len(wk) - len(tem_z)  
-            tem_wk = np.concatenate((tem_z, np.repeat(0.,add0)))
+        elif xc_pk <= kk:
+            if len(wk) %2 !=0: # if window weight len is odd 
+                if  kk < z_array.size - xc_pk:
+                    zz_new= z_array[kk - xc_pk: kk + xc_pk +1  ] * wk # when center point is even 
+                elif  kk >= z_array.size - xc_pk:
+                    tem_z = z_array[kk-xc_pk:] 
+                    add0 = len(wk) - len(tem_z)  
+                    tem_wk = np.concatenate((tem_z, np.repeat(0.,add0)))
+                    zz_new =tem_wk * wk
 
-            zz_new =tem_wk * wk
+            elif len(wk) %2 ==0:# when window length is even.
+                if kk <= z_array.size - xc_pk:
+                    zz_new= z_array[kk - xc_pk  : kk + xc_pk] * wk
+      
+                elif  kk > z_array.size - xc_pk:
+                    tem_z = z_array[kk-xc_pk:] 
+                    add0 = len(wk) - len(tem_z)  
+                    tem_wk = np.concatenate((tem_z, np.repeat(0.,add0)))
+                    zz_new =tem_wk * wk    
+                    
+            cFLMA.append(zz_new.sum())    
             
-            cFLMA.append(zz_new.sum())
-    
-            
+    print('** {0:<27} {1} {2} dipoles.'.format("Filter's width",
+                                '=', int(number_of_points)))   
+             
     return np.array(cFLMA)    
 
+def compute_TMA (data_array=None, number_of_TMApoints=5. ):
+    """
+    function to compute a trimmed-moving-average filter 
+    to estimate average apparent resistivities.
+
+    :param data_array:  content of value to be trimmed 
+    :type data_array: array_like(ndarray,1) 
     
+    :param number_of_TMA points:  number of filter points .
+    :type number_of_TMA points: int 
+    
+    :returns:  value corrected with TMA  
+    :rtype: array_like (ndarray, 1)
+    
+    :Example:
+        
+        >>> from csamtpy.ff.core.processing import zcalculator as Zcc
+        >>> z2 = np.array([2.46073791 , 3.00162006 ,
+        ...     9.74193019 ])# 1.82209497,
+        ...     # 15.68879141 ,  12.91164264 ,
+        ...     # 5.84384925 , 3.6899018, 
+        ...     # 2.4430065  ,0.57175607])
+        >>> tma= Zcc.compute_TMA(data_array=z2,
+        ...                     number_of_TMApoints= 7)
+        ... print(tma)
+
+    """
+    
+    if data_array is None :
+        raise CSex.pyCSAMTError_processing(
+            'NoneType arguments can not be computed!.')
+    
+    if data_array.dtype not in ['float', 'int']: 
+        try :data_array=np.array([float(dd) for dd in data_array])
+        except : 
+            raise CSex.pyCSAMTError_float(
+                'Data must be on array_like float number.!')
+    if type(number_of_TMApoints) is not int :
+        try : 
+            number_of_TMApoints=np.int(number_of_TMApoints)
+        except : 
+            raise CSex.pyCSAMTError_parameter_number(
+                'TMA filter point must be integer.')
+    
+    roll_TMA =[]
+    # let compute TMA for one points, 1 poinst will return the data array
+    # Ascertqin number of TMA point and Data _array
+    
+    if number_of_TMApoints > len(data_array) : 
+        warnings.warn("Number of TMA points = {}  is too large !".
+                      format(number_of_TMApoints))
+        number_of_TMApoints =5 # reset temporray to 5.
+        
+    if len(data_array) < 5: #find the TMA point accessible for computation
+        # window width 
+        number_of_TMApoints = len(data_array)
+        
+        if len(data_array) <= 2:
+            
+            warnings.warn(" Number of sites explored are too short !")
+            print("--> Investigation sites too short !")
+            
+            print('** {0:<27} {1} {2} pts.'.format('Filter width  ',
+                                '=', int(number_of_TMApoints))) 
+            
+            if len(data_array) ==1 :  return data_array 
+            if len(data_array) ==2 : # take the mean of both value 
+                return np.repeat(data_array.mean(), len(data_array))
+        
+        if len(data_array)==3: # loop the window and take mean value at each time
+            print("--> ! Less number of TMA points  for higher frequencies mitigation.!")
+                  
+            for kk in range(len(data_array)): # add add overall mean to the last value 
+                if kk ==len(data_array)-1:
+                    tma = np.array([data_array.mean(),
+                                    data_array[-1]]).mean()
+                    roll_TMA.append(float(tma)) 
+                else : 
+                    roll_TMA.append(data_array[kk:kk+2].mean())
+            
+            print('** {0:<27} {1} {2} pts.'.format('Filter width  ',
+                                '=', int(number_of_TMApoints)))     
+            return np.array(roll_TMA)
+        
+     
+    if len(data_array) >= 5 and number_of_TMApoints < 5: 
+
+        if number_of_TMApoints <= 3 :
+            warnings.warn("Number of points provided to compute TMA are not enough "
+                          "for higher frequencies reduction.TMA points less than three (3)  "
+                          " are not consistent to correct data."
+                          )
+            print("-->  Number of points are not enough for higher frequencies attenuation."
+                  "For consistency, provide TMA points more than three.")
+        
+        if len(data_array)== 5 : mesf ="equal to"
+        else : mesf = "more than"
+        
+        warnings.warn("Number of sites explored is estimated "
+                      "to {}, then  number of TMA points is resetting "
+                      "to 5 as default value.".format(len(data_array)))
+        
+        print("--> Number of explored sites is {0}  five(5).".format(mesf))
+        print("--> TMA points was resseting  to 5.")
+        
+        number_of_TMApoints=5
+        
+    
+    xk_cp  = np.int(np.trunc(number_of_TMApoints/2)) # centered point
+    
+    cut_off=-1          #starting point 
+    for kk, value in enumerate(data_array): 
+        if kk < xk_cp : 
+            cut_off +=1 
+            tma= data_array[kk-cut_off: kk+ xk_cp+1]
+            
+        elif xk_cp <= kk <= data_array.size - xk_cp:
+            tma = data_array[kk- xk_cp:kk + xk_cp +1] # for Python index 
+        
+        elif kk > data_array.size - xk_cp:
+            tma = data_array[kk-xk_cp:]
+
+        get_TMA_value= np.delete(tma, 
+                       np.array(tma.argmin(), tma.argmax())
+                        )
+        #tma = np.delete(tma, np.argmax(rho_tem), axis = 0)
+        roll_TMA.append(get_TMA_value.mean())
+        
+    print('** {0:<27} {1} {2} pts.'.format('Filter width  ',
+                                '=', int(number_of_TMApoints)))     
+    return np.array(roll_TMA)   
+
+@deprecated('Function too  expensive, redirected to `compute_TMA` more faster.')    
+@redirect_cls_or_func(compute_TMA, "short and faster than the func below")    
+def compute_trimming_moving_average (data_array=None, number_of_TMApoints=None ):
+    """
+    function to compute a trimmed-moving-average filter
+    to estimate average apparent resistivities.
+
+    :param data_array:  content of value to be trimmed 
+    :type data_array: array_like(ndarray,1) 
+    
+    :param number_of_TMA points:  number of filter points .
+    :type number_of_TMA points: int 
+    
+    :returns:  value corrected with TMA  
+    :rtype: array_like (ndarray, 1)
+          
+    :Example:
+        
+        >>> from csamtpy.ff.core.processing import zcalculator as Zcc
+        >>> z2 = np.array([2.46073791 , 3.00162006 ,
+        ...     9.74193019 ])# 1.82209497,
+        ...     # 15.68879141 ,  12.91164264 ,
+        ...     # 5.84384925 , 3.6899018, 
+        ...     # 2.4430065  ,0.57175607])
+        >>>  tma= Zcc.compute_trimming_moving_average(data_array=z2,
+        ...                                          number_of_TMApoints= 4)
+        >>> print(tma)
+        >>> print(z2.shape)
+        >>> print(tma.shape)
+    """
+    
+    if data_array is None or number_of_TMApoints is None :
+        raise CSex.pyCSAMTError_processing('NoneType arguments can not be computed!.')
+        
+    if data_array.dtype not in ['float', 'int']: 
+        try :data_array=np.array([float(dd) for dd in data_array])
+        except : raise CSex.pyCSAMTError_AvgData('Data must be on array_like float number.!')
+    if type(number_of_TMApoints) is not int :
+        try : number_of_TMApoints=np.int(number_of_TMApoints)
+        except : raise CSex.pyCSAMTError_parameter_number('TMA filter point must be integer.')
+    
+    roll_TMA,window  =[], np.int(np.trunc(number_of_TMApoints/2)),
+
+    for ii, value in enumerate(data_array): 
+        if ii < window:
+            get_TMA_value =np.delete(data_array[ii:number_of_TMApoints+ii], 
+                                     np.array([data_array[ii:number_of_TMApoints+ii].argmin(), 
+                                     data_array[ii:number_of_TMApoints+ii].argmax()])).mean()
+            roll_TMA.append(get_TMA_value)
+            
+        elif ii == window or ii < data_array.size - window :
+            if ii == data_array.size - (window+1) :
+                get_TMA_value =np.delete(data_array[ii-window:],
+                                         np.array([data_array[ii-window:].argmin(),
+                                                                                                               data_array[ii-window:].argmax()])).mean() 
+            else :get_TMA_value =np.delete(data_array[ii-window:ii+window+1],
+                                           np.array([data_array[ii-window:ii+window+1].argmin(), 
+                                           data_array[ii-window:ii+window+1].argmax()])).mean()
+            roll_TMA.append(get_TMA_value)
+            
+        elif ii >=data_array.size - window:
+            if value == data_array[-1]:
+                get_TMA_value =np.delete(data_array[ii-number_of_TMApoints-1:],
+                                         np.array([data_array[ii-number_of_TMApoints-1:].argmin(), 
+                                         data_array[ii-number_of_TMApoints-1:].argmax()])).mean()
+                
+            else :get_TMA_value =np.delete(data_array[ii-number_of_TMApoints:],
+                                           np.array([data_array[ii-number_of_TMApoints+1:ii+1].argmin(), 
+                                           data_array[ii-number_of_TMApoints+1:ii+1].argmax()])).mean()  
+            roll_TMA.append(get_TMA_value) 
+            
+    return np.array(roll_TMA)  
+           
+def compute_AMA(reference_freq=None, z_array =None, 
+                 number_of_skin_depth=1., dipole_length = 50., 
+                  **kwargs  ):
+    """
+    Use an adaptive-moving-average filter to estimate average apparent
+    resistivities at a single static-correction-reference frequency. Adaptive
+    filtering is based on ideas presented inTorres-Verdin and Bostick, 1992,
+    Principles of spatial surface electric field filtering in magnetotellurics
+    -electromagnetic array profiling (EMAP), Geophysics, v57, p603-622.
+    
+    :param reference_frequency: frequency with clean data in Hertz 
+    :type reference_frequency: float 
+    
+    :param z_array:  array of uncorrected impedance values.
+    :type z_array: arry_like, complex
+    
+    :param dipole_length: length of dipole on survey
+    :type dipole_length: float 
+    
+    :param number_of_skin_depth: arbitrary real constant, can be changed 
+                to any value between 1 and 10 skin depths, by experiency, 
+                value shoulb be 1<= c <= 4
+    :type number_of_skin_depth: int , default is 1.
+    
+    :param weighted_window: bandwidth of hanning window filter lengths,
+                           skin_depth arrays at each station.
+    :type weighted_window: array_like 
+ 
+    :param app_rho: array of apparent resistivities in ohm.m , if not provided 
+                    will use impedance zrho to compute app_rho with reference_frequency 
+    :type app_rho: array_like 
+    
+    :returns: windowed hanning , filtered window.
+    :rtype: array_like 
+    
+    .. note:: If resistivities array is provided, provided also uncorrected phase
+            array  to compute `impedance array`.
+    
+    :Example:
+        
+        >>> from csamtpy.ff.core.processing import zcalculator as Zcc
+        >>> z1= np.array([2.46073791 +3.00162006j ,
+        ...     9.74193019 +1.82209497j,
+        ...     15.68879141 + 12.91164264j ,
+        ...     5.84384925 +3.6899018j, 
+        ...     2.4430065  +0.57175607j])
+        ...
+        >>> reference_frequency = 8192.
+        >>> znew= compute_AMA(reference_frequency=8192.,
+        ...                   number_of_skin_depth= 1., dipole_length =50.,
+        ...                   z_array=z1)
+        ... print(znew)
+    
+    """
+    
+    if reference_freq is None : 
+        raise CSex.pyCSAMTError_frequency('Please add your reference frequency!')
+        
+    mu0 = 4* np.pi * 1e-7 
+    omega_reffreq  = 2* np.pi *  reference_freq  
+    
+    resistivities = kwargs.pop('app_rho', None)
+    phase =kwargs.pop('phase', None)
+    adaptative_value =kwargs.pop('scale', 10.)
+
+    if resistivities is None : 
+        if  z_array is None :
+            warnings.warn('`Impedance` is None. could not compute'
+                          ' `apparent resistivities`')
+            raise CSex.pyCSAMTError_processing('`Impedance`  is None.'
+                'Could not compute `resistivities`. Please provided  {0}')
+    
+        resistivities = np.abs(z_array) ** 2 / (mu0 * omega_reffreq )
+        
+    elif resistivities is not None and z_array is None :
+        
+        if phase is None  and reference_freq is None:
+            warnings.warn('Could not compute `impedance` without phase values'
+                          ' and reference frequency!')
+            raise CSex.pyCSAMTError_processing(
+                'None Type could not be computed. '
+                'Please provided phase values |reference frequency')
+            
+        z_array = np.sqrt(resistivities * omega_reffreq * mu0 ) * (
+            np.cos(phase)+  1j * np.sin( phase) ) 
+    
+    # compute skin depths base of uncorrected apparent resistivities
+    skin_depths = 503. *  np.sqrt(resistivities/reference_freq)
+
+    # window_width = number_of_skin_depth * skin_depth
+    def adapted_skindepth (skin_window, scale_value=10.):
+        """
+        Adapted windo width and ans scale value to adapt value to be 
+        close to dipole length 
+        
+        :param skin_window: array of skin depth 1D botstick penetration 
+                or window width 
+        :type skin_window: array_like 
+        
+        :return: window width scaled and adapted 
+        :rtype: array_like 
+        
+        """
+        # Adjusted each filter  iteratively at each station
+        window_width = np.array([
+            func.round_dipole_length(value, round_value=scale_value) # round dipole 
+                                 for value in skin_window ])
+        #adjusting filter width to with ten to ten range 
+        for ii,  ww in enumerate(window_width): 
+            if  ii ==0 or ii == len(window_width)-1:
+                if ww < dipole_length:
+                    window_width[ii]=func.round_dipole_length(
+                        dipole_length, round_value=scale_value)
+            elif ww < dipole_length:
+                window_width[ii]=func.round_dipole_length(
+                    window_width[ii-1:ii+2].mean(), round_value =scale_value)
+
+        return  window_width
+    
+    def compute_filter_length(skindepth, ref_freq, 
+                              dipole_length=dipole_length ):
+        """
+        :param skindepth: Bostick skin depth calculated with
+                    apparent ressistivities at each station 
+        :type skin_depth: array_like, 
+        
+        :param ref_freq: frequency at clean data at each station 
+        :type ref_freq: float
+        
+        :param dipole_length: dipole length of the survey in meters 
+        :type dipole_length: float, default is 50.
+        
+        :return: weight factor beta j at the station 
+        :type: array_like 
+        
+        """
+        npoints =np.around(skindepth/dipole_length) 
+        # adjusted width  and recompute  and adapthed with 
+        npoints_array = np.arange(0, dipole_length * npoints, dipole_length) 
+                                    
+        
+        bj= np.array([compute_weight_factor_betaj(val, dipole_length=dipole_length, 
+                                                  number_of_points=npoints)[0]
+                      for val in  npoints_array])
+  
+        return bj, bj.sum()
+    
+    # collect list of each factor of all  station 
+    skin_depths= adapted_skindepth(skin_window=skin_depths,
+                                   scale_value=adaptative_value)
+
+    weight_factors= [compute_filter_length(skindepth = skin, ref_freq=reference_freq, 
+                              dipole_length=dipole_length )[0] for skin in skin_depths]
+    
+    # compute new impedance with base impedance and  list of weight factors 
+    zxy_impedancef = compute_zxy_xk_omega(z_imp=z_array, coeffs_bj= weight_factors)
+    
+    # recompute new apparent resistivity 
+    resistivities =np.abs( zxy_impedancef) ** 2 / (mu0 * omega_reffreq )
+    
+    # now recompute new window width that and multiply with arbiraty constant c
+    z_bostick_depth = np.abs(zxy_impedancef) / (omega_reffreq * mu0)
+    
+    z_bostick_depth= adapted_skindepth(skin_window=z_bostick_depth,
+                                    scale_value=adaptative_value)
+    
+    # adaptative winodw with with number of skin depth 
+    w_window_width = number_of_skin_depth * z_bostick_depth 
+    
+    # recompute again impedance so to get adaptative impedance 
+    n_weight_factors= [compute_filter_length(skindepth = skin, ref_freq=reference_freq, 
+                              dipole_length=dipole_length )[0] for skin in w_window_width]
+    
+    #-----------------------text will FLMA computation --------
+    # npoints= int(w_window_width.mean()/dipole_length)
+    # cAMA= compute_FLMA(z_array=zxy_impedancef, dipole_length=dipole_length, 
+    #                     number_of_points= npoints)
+    #------------------------------------------------------------
+    cAMA = compute_zxy_xk_omega(z_imp=z_array, coeffs_bj= n_weight_factors)
+    
+    print('** {0:<27} {1} {2} skinDepths.'.format("Filter's width",
+                                '=', int(number_of_skin_depth)))    
+
+    return cAMA  
+
+def compute_zxy_xk_omega(z_imp, coeffs_bj):
+    """
+    Compute adaptative impedance with variable length Hanning window
+    :param z_imp: impedance value to be filtered 
+    :type z_imp: complex 
+    
+    :param coeff_bj: list coefficients of weighted window at each stations
+    :type coeffs_bj : list 
+    
+    :return: array of  new impedance filtered 
+    :rtype: complex 
+    
+    :Example: 
+        
+        >>> from csamtpy.ff.processing import z_calculator as Zcc 
+        >>> z1= np.array([2.46073791 +3.00162006j ,
+        ...     9.74193019 +1.82209497j,
+        ...     15.68879141 + 12.91164264j ,
+        ...     5.84384925 +3.6899018j, 
+        ...     2.4430065  +0.57175607j])
+        >>> weight_betaj = [array([0.18169011, 0.81830989]), 
+        ...                array([0.02492092, 0.25, 0.47507908, 0.25]),
+        ...                array([0.00224272, 0.02771308, 0.09220631, 0.16554531, 0.21341394,
+        ...                0.21341394, 0.16554531, 0.09220631, 0.02771308]),
+        ...                 array([0.05766889, 0.47116556, 0.47116556]),
+        ...                 array([1.])]
+        >>> Zcc.compute_zxy_xk_omega(coeffs_bj=weight_betaj , z_imp=z1)
+        ... [2.01364616+2.45625537j 9.16556955+4.84395488j 6.83942027+4.21606008j
+        ...     4.80923612+2.75254645j 2.4430065 +0.57175607j]   
+                      
+    """
+    znew_f=[]
+    for kk, zz in enumerate(z_imp):
+        wlen=len(coeffs_bj[kk]) 
+        xk_cp=int(wlen/2)
+        try :
+            if wlen%2 !=0:
+                ss=z_imp[kk- xk_cp:kk+ xk_cp+1] * coeffs_bj[kk] # for Python index 
+            elif wlen%2 ==0 :
+                 ss=z_imp[kk- xk_cp:kk+ xk_cp] * coeffs_bj[kk]
+        except:
+            # check back lengh and forelength so to fill outside window with wk=0 
+            b0 = len(coeffs_bj[kk][:xk_cp]) - len(z_imp[:kk]) # control the pad backward
+            f0 = len(coeffs_bj[kk][xk_cp:]) - len(z_imp[kk:]) # control the pad forward 
+            if b0 >0:               # if pad doesnt not meet 
+                bnew= np.concatenate((np.repeat(0., b0),z_imp[:kk])) # add 0 outside 
+            else :bnew = z_imp[kk-xk_cp:kk]
+            if f0 >0:
+                fnew= np.concatenate((z_imp[kk:], np.repeat(0., f0)))#add 0 outside the window
+            else :
+                if wlen %2 ==0 : fnew=z_imp[kk: kk + xk_cp] 
+                else : fnew=z_imp[kk: kk + xk_cp +1] 
+    
+            ss = np.concatenate((bnew, fnew))* coeffs_bj[kk]
+    
+        znew_f.append(ss.sum())
+                
+    return np.array(znew_f)
+
+                          
 if __name__=='__main__': 
     
     z1= np.array([2.46073791 +3.00162006j ,
@@ -1270,11 +1688,15 @@ if __name__=='__main__':
          15.68879141 + 12.91164264j ,
          5.84384925 +3.6899018j, 
          2.4430065  +0.57175607j])
-  
-    X= np.arange(0, 250, 50)
-    wk = np.array([compute_weight_factor_betaj(va, dipole_length=50, 
-                                                number_of_points=5.)[0] for va in X])
-
- 
     
+    reference_frequency = 8192.
+    resistivities = np.abs(z1) ** 2 / (4* np.pi*1e-7 * 2* np.pi * reference_frequency )
+    dipole_length =50
+    znew= compute_AMA(reference_freq=reference_frequency,
+                       number_of_skin_depth= 1., dipole_length =50.,
+                       z_array=z1)
+    print(resistivities)
+    new_resistivities = np.abs(znew) ** 2 / (4* np.pi*1e-7 * 2* np.pi * reference_frequency )
+    print(new_resistivities)
+  
     

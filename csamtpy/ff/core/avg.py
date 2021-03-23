@@ -468,9 +468,12 @@ class Avg (object):
         self._logging.info('write Jformat file')
         
         if avg_data_fn is not None : self.data_fn = avg_data_fn 
-        if self.data_fn is None : raise CSex.pyCSAMTError_avg_file("Could not find any path to read .'\
-                                                                   Please provide your right AVG file.")
-        if station_fn is  None : raise CSex.pyCSAMTError_station('Need  absolutely station file. please provide your ".STN" file.')
+        if self.data_fn is None :
+            raise CSex.pyCSAMTError_avg_file("Could not find any path to read ."
+                                              "Please provide your right AVG file.")
+        if station_fn is  None :
+            raise CSex.pyCSAMTError_station(
+                'Need  absolutely station file. please provide your ".STN" file.')
         
         #---> read the avg file 
         self._read_avg_file(data_fn=self.data_fn)
@@ -633,7 +636,7 @@ class Avg (object):
     def avg_to_edifile (self, data_fn =None , profile_fn =None , 
                         savepath =None , apply_filter =None, 
                         reference_frequency =None, number_of_points=7.,
-                        dipole_length=50., **kwargs):
+                        dipole_length=50.,number_of_skin_depth=3., **kwargs):
         """
         Method to write avg file to SEG-EDIfile.Convert both files.Astatic or plainty avg file .
         if ASTATIC file is provided , will add the filter and filter values .
@@ -653,37 +656,48 @@ class Avg (object):
             * apply_filter: str 
                         add the name of filter to process the
                         avg file exported in edifiles. 
-                        can be ; [TMA | AMA| FLMA]
+                        can be  [TMA | AMA| FLMA]
                         TMA - Trimming Moving Average
                         AMA - Adaptative Moving avarage , 
                         FLMA - Fixed dipoleLength moving 
                         average (number of point=7)
                         Dipolelength willbe computed automatically 
         
-        Holdings additionals parameters :
+        Returns
+        --------
+            obj, edi_obj  
+                edi outputfiles or edi filtered file.
+            
+        Holdings additionals parameters 
             
         ====================  ==========  =====================================
-        Optionalparams          Type        Description 
+        Optional                Type        Description            
         ====================  ==========  =====================================
-        reference_frequency     float       frequency at clean data.Default is 
+        reference_frequency    float        frequency at clean data.Default is 
                                             computed automatically
         number_of_points=7.    int          number of point to for weighted  
                                             window,. *Default* is 7.
-        dipole_length          float        length of dipole in meter. 
-                                             For CSAMT, Default is 50.m
+        dipole_length          float        length of dipole in meter. For  
+                                            CSAMT, *Default* is 50.
+        number_of_skin_depth   float        number of skin_depth can be 1 to 10
+                                            when using filter AMA. 
+                                            *Default* is 3.
         ====================  ==========  =====================================
                                      
         :Example:   
             
             >>> from csamtpy.ff.core import avg 
             >>> avg_obj= avg.Avg()
-            >>> avg_obj.avg_to_edifile(data_fn= os.path.join(path_to_avgfile, avgfile) , 
-            ...           profile_fn = os.path.join(path_to_avgfile, station_profile_file), 
+            >>> avg_obj.avg_to_edifile(data_fn= os.path.join(
+            ...    path_to_avgfile, avgfile) , 
+            ...           profile_fn = os.path.join(
+            ...    path_to_avgfile, station_profile_file), 
             ...           savepath =save_edipath, 
             ...           apply_filter=None ) 
         """
         
         utm_zone = kwargs.pop('utm_zone', None)
+        
         
         if data_fn is not None : self.data_fn = data_fn 
         if self.data_fn is None : 
@@ -762,24 +776,29 @@ class Avg (object):
                 apply_filter= apply_filter.lower()
             except:
                 print("---> ErrorType: Filters' names must a str of"
-                              " `tma` or `ama`. not {0}".format(type(apply_filter)))
+                              " `tma` `flma` or `ama`. not {0}".format(type(apply_filter)))
                 
-                warnings.warn("TypeError ,Filters' names must a str of"
-                              " `tma` or `ama`. not {0}".format(type(apply_filter)))
+                warnings.warn("TypeError ,Filters' names must be a str of"
+                              " `tma` ,`flma` or  `ama`. not {0}".format(type(apply_filter)))
                 apply_filter=None
             else :
                 print('{0:-^77}'.format('Filter Infos'))
                 print('** {0:<27} {1} {2}'.format('Filter applied', '=', apply_filter.upper()))
                 
+        if apply_filter in ['ama', 'tma', 'flma']:
+            # create processing_obj , unique obj for all filters  
+            corr_obj= corr.shifting(data_fn = self.data_fn,
+                                    profile_fn=profile_fn)
+                
             if apply_filter =='tma':
                 self._logging.info (
-                    'Computing static shift Trimming moving average (TMA).')
+                    'Computing  rho with Trimming moving average (TMA) filter.')
                         
-                corr_obj= corr.shifting()
-                res_TMA= corr_obj.TMA(data_fn =data_fn,
-                                      number_of_TMA_points =number_of_points , 
+                # corr_obj= corr.shifting()
+                res_TMA= corr_obj.TMA(number_of_TMA_points =number_of_points , 
                                       reference_freq=reference_frequency, 
-                                      profile_fn = profile_fn) # dictionnary of value computed 
+                                      )
+                
                 reference_frequency =corr_obj.referencefreq
                 
                 print('** {0:<27} {1} {2}'.format('TMA filter points', 
@@ -789,18 +808,14 @@ class Avg (object):
                 
             elif apply_filter =='flma':
                 self._logging.info (
-                    'Computing static shift fixed-length moving average (FLMA).')
-                        
-                corr_obj = corr.shifting()
-                res_FLMA = corr_obj.FLMA(data_fn =data_fn,
-                                        profile_fn =profile_fn ,
-                                        number_of_points=number_of_points , 
+                    'Computing rho with fixed-length moving average (FLMA) filter.')
+     
+                res_FLMA = corr_obj.FLMA(number_of_dipole=number_of_points, 
                                         reference_freq=reference_frequency)
                 
                 dipolelength= corr_obj.dipolelength
                 reference_frequency =corr_obj.referencefreq
-                
-                
+
                 print('** {0:<27} {1} {2}'.format('FLMA filter points',
                                                   '=', number_of_points))
                 print('** {0:<27} {1} {2} Hz.'.format('Reference frequency',
@@ -808,17 +823,22 @@ class Avg (object):
                 print('** {0:<27} {1} {2} m.'.format('Dipole length ',
                                                      '=', dipolelength))
             elif apply_filter == 'ama': 
-                       msg =''.join([
-                            '!--> Sorry , Actually the available filter are only',
-                                ' `tma` and `flma`.adaptive moving average `AMA`'
-                                ' will be available soon!you may use '
-                                ' filters `tma`or `flma`.'])
-                       
-                       print(' >{0}'.format(msg))
-                       self._logging.debug(msg)
-                       warnings.warn(msg)
-                       apply_filter = None   
-                       
+                self._logging.info (
+                    'Computing rho with adaptative moving average (AMA) filter.')
+    
+                res_AMA = corr_obj.AMA(number_of_skin_depth=number_of_skin_depth, 
+                                        reference_freq=reference_frequency)
+  
+                dipolelength= corr_obj.dipolelength
+                reference_frequency =corr_obj.referencefreq
+                
+                print('** {0:<27} {1} {2}'.format('Number of skin depths',
+                                                  '=', int(number_of_skin_depth)))
+                print('** {0:<27} {1} {2} Hz.'.format('Reference frequency',
+                                                  '=', reference_frequency))
+                print('** {0:<27} {1} {2} m.'.format('Dipole length ',
+                                                     '=', dipolelength))
+     
             elif apply_filter is not None and apply_filter  not in ['tma, ama, flma']: 
                 warnings.warn('filter %s provided is UNrecognizing.'
                               ' Pogram worsk currently with : TMA or FLMA ,'
@@ -852,10 +872,17 @@ class Avg (object):
                 descritipfilter = ' {0} points for TMA filter at {1} hertz'.format(
                     int(number_of_points), reference_frequency)
                 msf='pts' 
+                
+            elif apply_filter =='ama':
+                descritipfilter = ' {0} skin depths for AMA filter at {1} hertz'.format(
+                    int(number_of_skin_depth), reference_frequency)
+                number_of_points=number_of_skin_depth
+                msf='sdepths'
 
             avgfilter ="{0}.{1}.Filter ={2} for {3} {4}.".format(
                    'pycsamt','v1.0.01', apply_filter.upper(),  
                    int(number_of_points) , msf)
+            
             
         if profile_fn  is None : 
             #---> set to 0. lon , lat and elev if profile _fn is not provided
@@ -1005,6 +1032,8 @@ class Avg (object):
                     fres_array  [: , 0 , 1]  = res_TMA[stn]
                 elif apply_filter.lower() =='flma' :
                     fres_array  [: , 0 , 1]  = res_FLMA[stn]
+                elif apply_filter.lower() =='ama' :
+                    fres_array  [: , 0 , 1]  = res_AMA[stn]
                     
             #---> computing z with resistivities , phase by using propagrations errors 
             edi_obj.Z.set_res_phase(res_array = res_array, phase_array=phs_array, 
@@ -2125,7 +2154,7 @@ class  Station(object):
         self.max=None 
         self.min =None 
         self.last_station_name =None 
-        self.lenght =None 
+        self.length =None 
         self.value =None 
         
 
@@ -2159,7 +2188,7 @@ class  Station(object):
  
         #---> check if stations_data provided are each the same length. 
         if np.all(repsta, axis=0) != True : 
-            raise CSex.pyCSAMTError_station('Stations provided must be the same lenght of reccurency.')
+            raise CSex.pyCSAMTError_station('Stations provided must be the same length of reccurency.')
         if repsta[0] ==1 : self.value = self.station_data_array 
         elif  repsta[0] !=1  : self.value =num_station_counts
             

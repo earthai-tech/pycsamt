@@ -189,12 +189,16 @@ class Plot1d :
                     
             * savefig : str 
                     path  to save figure. 
-                
+        Returns
+        -------
+            obj, 
+                plot_obj azim, topo and station separation 
+        
         ======================  ===============================================
-        Key Words               Description        
+        Keywords                Description        
         ======================  ===============================================
         lw                      line width . *default* is 1.5
-        ls                      [ '-' | '.' | ':' ] line style of lines
+        ls                      line style of lines,[ '-' | '.' | ':' ] 
                                 *default* is "['-', ':', '-.']" for 3 profiles.
         marker                  marker of stations  *default* is 'o'
         ms                      size of marker in points. *default* is 6
@@ -522,20 +526,20 @@ class Plot1d :
         :param dipole_length: length of dipole in meters when user applied for FLMA 
         :type dipole_length: float, int
         
-        Holding others informations :
+        Holding others informations 
             
         ===============  ===========  =========================================
-        Params           Default        Description 
+        Params              Default         Description
         ===============  ===========  =========================================
-        frequency_id      str or int    plot the filtered frequency,
-                                        eg  frequency_id = 1023 means  
-                                        plot  uncorrected rho and static rho 
-                                        at that frequency . set on list to plot
-                                        multiple frequency [8,1101 ].
-        ADD_FILTER          str         name of filter to apply . 
-                                        TMA  Trimming moving average
-                                        AMA  Adaptative moving average 
-                                        FLMA  Fixed Length moving average
+        frequency_id        str,int         plot the filtered frequency,
+                                            eg  frequency_id = 1023 means  
+                                            plot  uncorrected rho and static rho 
+                                            at that frequency . set on list to 
+                                            plot multiple frequency [8,1101 ].
+        ADD_FILTER          str             name of filter to apply . 
+                                            TMA  Trimming moving average
+                                            AMA  Adaptative moving average 
+                                            FLMA  Fixed Length moving average
         ===============  ===========  =========================================
         
         .. note:: Profile file (*.stn) is compolsory when provide raw Zonge AVG 
@@ -559,9 +563,9 @@ class Plot1d :
         
             
         #-------------------------------------------Fonction properties -------
-        # TMApoints =kwargs.pop('number_of_points',5)
         FILTERpoints =kwargs.pop('number_of_points',5)
-  
+        number_of_skin_depth =kwargs.pop('number_of_skin_depth', 1.)
+        
         savefig =kwargs.pop('save_figure', None)
         orient =kwargs.pop('orientation', 'landscape')
         addstn= kwargs.pop('set_station_names', False)
@@ -571,16 +575,9 @@ class Plot1d :
         
         tma_color = kwargs.pop('tma_color', 'blue')
         flma_color =kwargs.pop('flma_color', 'aqua')
+        ama_color =kwargs.pop('ama_color', 'lime')
         
-        #--- define CSAMT objets and apply filter -----------------------------
-        csamt_obj = CSAMT(data_fn = data_fn, profile_fn =profile_fn)
-        
-        csamt_freq_obj = csamt_obj.freq 
-        csamt_stn_num_obj = csamt_obj.station_distance 
-        csamt_res_obj = csamt_obj.resistivity 
-        csamt_phase_obj = csamt_obj.phase 
-        stnnames = sorted(list(csamt_obj.resistivity.keys()))
-        
+
         #control filter provided 
       
         if ADD_FILTER not in FILTER : 
@@ -601,50 +598,55 @@ class Plot1d :
             else : 
                 if ADD_FILTER ==1 or ADD_FILTER ==0: ADD_FILTER='tma'
                 elif ADD_FILTER ==2 : ADD_FILTER='flma'
-                elif ADD_FILTER ==3 : ADD_FILTER ='*'
+                elif ADD_FILTER ==3 : ADD_FILTER ='ama'
+                elif ADD_FILTER ==123: ADD_FILTER ='*'
                 else :
                     ADD_FILTER ='tma' # block to default filter
 
-        if ADD_FILTER =='ama': ADD_FILTER='tma'
+        #if ADD_FILTER =='ama': ADD_FILTER='tma'
             
-        #---> corrected data TMA and FLMA filters  ---------
+        #---> corrected data TMA , FLMA and AMA filters   ---------
+        # if ADD_FILTER is not None : 
+        corr_obj = Scor(data_fn=data_fn , profile_fn=profile_fn,
+                        reference_freq=frequency_id )
+        csamt_freq_obj=corr_obj.frequency
+        csamt_res_obj= corr_obj.res_app_obj
+        csamt_stn_num_obj = corr_obj.station_distance 
+        stnnames =corr_obj.site_id 
 
         if ADD_FILTER =='*':
-            # create correct TMA obj 
-            tma_cor_obj = Scor().TMA(freq_array=csamt_freq_obj, 
-                                     res_array= csamt_res_obj, 
-                                   phase_array= csamt_phase_obj , 
-                                   number_of_TMA_points=FILTERpoints,
-                                   profile_fn = profile_fn)
             
-            #create FLMA object 
-            flma_cor_obj = Scor().FLMA(data_fn =data_fn, 
-                                      profile_fn=profile_fn,
-                                      dipole_length =dipole_length , 
-                                      number_of_points =FILTERpoints, 
-                                      reference_frequency=frequency_id)
+            # create correct TMA obj 
+            tma_cor_obj= corr_obj.TMA(number_of_TMA_points=FILTERpoints)
+            # create correct FLMA obj 
+            flma_cor_obj = corr_obj.FLMA(dipole_length =dipole_length , 
+                                      number_of_dipole =FILTERpoints)
+            # create correct TMA obj 
+            ama_cor_obj = corr_obj.AMA(dipole_length =dipole_length , 
+                                      number_of_skin_depth =number_of_skin_depth)
             
             ADD_FILTER ='*'
-            messf ='TMA & FLMA'
+            messf ='TMA & FLMA & AMA'
             print('---> Filters {} are done !'.format(messf) )
         else :
             if ADD_FILTER.lower()=='tma':
-                res_cor_obj = Scor().TMA(freq_array=csamt_freq_obj,
-                                         res_array= csamt_res_obj, 
-                                       phase_array= csamt_phase_obj ,
-                                       number_of_TMA_points=FILTERpoints, 
-                                       profile_fn = profile_fn )
+                res_cor_obj = corr_obj.TMA(number_of_TMA_points=FILTERpoints)
+                
                 messf = 'TMA'
                 print('---> Filter {} is done !'.format(messf) )
                 
             elif ADD_FILTER.lower()=='flma':
-                res_cor_obj = Scor().FLMA(data_fn =data_fn,
-                                          dipole_length =dipole_length , 
-                                          number_of_points =FILTERpoints, 
-                                          reference_frequency=frequency_id, 
-                                          profile_fn = profile_fn)
+                res_cor_obj = corr_obj.FLMA(dipole_length =dipole_length , 
+                                      number_of_dipole =FILTERpoints)
+
                 
                 messf = 'FLMA'
+                print('---> Filter {} is done !'.format(messf) )
+                
+            elif ADD_FILTER.lower()=='ama':
+                res_cor_obj = corr_obj.AMA(dipole_length =dipole_length , 
+                                      number_of_skin_depth =number_of_skin_depth)
+                messf = 'AMA'
                 print('---> Filter {} is done !'.format(messf) )
         # call function to fixe freauency for plotting 
         freqID = mplotus.get_frequency_id(freq_array=csamt_freq_obj,
@@ -693,6 +695,11 @@ class Plot1d :
                                            freq_array=csamt_freq_obj, 
                                            reffreq_value=referfreq )
                 
+                AMA_RES_COR = Zcc.get_data_from_reference_frequency(
+                                           array_loc=ama_cor_obj,
+                                           freq_array=csamt_freq_obj, 
+                                           reffreq_value=referfreq )
+                
                 marki,  = axe.semilogy (csamt_stn_num_obj,TMA_RES_COR,
                                         c= 'white', 
                                         marker ='D',
@@ -704,6 +711,12 @@ class Plot1d :
                         c= 'white', marker ='o',
                         markersize = self.ms*2*self.fs ,
                         markeredgecolor= flma_color ,
+                        alpha =0.8)
+                
+                marki,  = axe.semilogy (csamt_stn_num_obj,AMA_RES_COR,
+                        c= 'white', marker ='o',
+                        markersize = self.ms*2*self.fs ,
+                        markeredgecolor= ama_color ,
                         alpha =0.8)
                 
                 tma_corPlots, = axe.semilogy(csamt_stn_num_obj,TMA_RES_COR ,
@@ -719,20 +732,31 @@ class Plot1d :
                             c=flma_color,
                             ls =self.ls, 
                             label = '$Corrected\resistivity :'\
-                            ' FLMA filter at {0} points$'.
+                            ' FLMA filter at {0} dipole$'.
                             format( FILTERpoints))
                     
+                ama_corPlots, = axe.semilogy(csamt_stn_num_obj,AMA_RES_COR ,
+                         lw =self.lw*self.fs, 
+                        c=ama_color,
+                        ls =self.ls, 
+                        label = '$Corrected\resistivity :'\
+                        ' AMA filter at {0} skin depth $'.
+                        format( int(number_of_skin_depth)))
                     
-                axe.legend( [resPlots, tma_corPlots,flma_corPlots ], 
+                    
+                axe.legend( [resPlots, tma_corPlots,flma_corPlots,ama_corPlots ], 
                            ['$Uncorrected\ app. Rho$',
                             '$Rhofiltered: TMA at\ {0}\ points$'.
-                                                   format( FILTERpoints), 
-                            '$Rhofiltered: FLMA at\ {0}\ points$'.
-                                                   format( FILTERpoints) 
+                                                   format( int(FILTERpoints)), 
+                            '$Rhofiltered: FLMA at\ {0}\ dipoles$'.
+                                                   format( int(FILTERpoints)), 
+                            '$Rhofiltered: AMA at\ {0}\ skin depths$'.
+                                        format( int(number_of_skin_depth))
                                                    ])# 
             else:
                 if ADD_FILTER=='tma': color =tma_color
                 elif ADD_FILTER=='flma': color =flma_color
+                elif ADD_FILTER=='ama': color =ama_color
             
                 RES_COR = Zcc.get_data_from_reference_frequency(array_loc=res_cor_obj,
                                                                 freq_array=csamt_freq_obj, 
@@ -746,18 +770,24 @@ class Plot1d :
                                      markeredgecolor= color , 
                                      alpha =0.8)
                 
-            
+                if ADD_FILTER=='ama':
+                    ffmt,sfmt= '{0}'.format(int(number_of_skin_depth)),'skin depth(s).' 
+                elif ADD_FILTER=='flma':
+                    ffmt,sfmt= '{0}'.format(int(FILTERpoints)),'dipoles'
+                else :
+                    ffmt,sfmt= '{0}'.format(int(FILTERpoints)),'points'
+                    
                 corPlots, = axe.semilogy(csamt_stn_num_obj,RES_COR ,
                                          lw =self.lw*self.fs,
                                          c=color ,
                                 ls =self.ls, 
                                 label = '$Corrected\resistivity :'\
-                                ' {0} filter at {1} points$'.format( messf, FILTERpoints))
+                                ' {0} filter at {1} {2}$'.format( messf, ffmt, sfmt))
             
                 # ['$ApparentResistivity$', '$TMA at {0}$'.format(TMApoints)])
                 axe.legend( [resPlots, corPlots ], ['$Uncorrected\ app. Rho$',
-                                               '$Rhofiltered: {0}\ at\ {1}\ points$'.\
-                                                   format(messf,FILTERpoints) ])
+                                               '$Rhofiltered: {0}\ at\ {1}\ {2}$'.\
+                                                   format(messf,ffmt, sfmt) ])
             axe.minorticks_on()
             
             axe.grid(color='k', ls=':', lw =0.25,
@@ -1009,8 +1039,6 @@ class Plot1d :
                                    i.e [8, 511,1024 ]
         :type selected_frequency: list 
         
-        .. note:: browse to see others plot config.
-        
         =================  ===============  ==================================
         Params             Default          Description 
         =================  ===============  ==================================
@@ -1026,6 +1054,8 @@ class Plot1d :
         plot_grid           bool            add grid on your plot . 
                                             Default is False 
         =================  ===============  ==================================
+        
+        .. note:: browse to see others plot config.
         
         :Example: 
             
@@ -1440,12 +1470,14 @@ class Plot1d :
            * target : float 
                target supposed RMS to reach . Default is 1. 
         
-        .. note:: 
-            If occam2d logfile is availbale , dont need other parameters , except 
-            the path "fn" and as possible the "target". 
+    
+        Returns 
+        -------
+            obj , plot_RMS obj 
+            
             
         ============  ===============  ========================================
-        Params         Type             Description
+        Params          Type            Description    
         ============  ===============  ========================================
         rms            array_like       RootMeanSquare array . 
         iteration      int              number of interation reached .
@@ -1458,6 +1490,9 @@ class Plot1d :
                                         Default is   1.0
         ============  ===============  ========================================
         
+         .. note:: If occam2d logfile is availbale , dont need other parameters ,
+             except the path "fn" and as possible the "target". 
+             
         """
        
         orientation =kwargs.pop('fig_orientation', None)  
@@ -2172,16 +2207,21 @@ class Plot2d (object):
                 
             * savefig : str 
                 outdir 
-            
-        ==============  ===================  ===================================
-        Params          Type                 Description 
-        ==============  ===================  ===================================
+         Returns
+         --------
+             obj ,
+                 plot prnetration obj 
+             
+        ==============  ===================  ==================================
+        Params          Type                    Description 
+        ==============  ===================  ==================================
         plot_style      str                     pcolormesh or imshow 
                                                 Default is **pcolormesh**
-        ms              int                     markersize: *Default is .7 ,ie.9*fs
-        cm              str                     mpl.colormap .Default is "Purples".
+        ms              int                     markersize *Default* is .9*fs
+        cm              str                     mpl.colormap ,
+                                                *Default* is"Purples".
         rename_station  list                    can set new_stationname. 
-        ==============  ===================  ===================================
+        ==============  ===================  ==================================
         
         :Example:
             
@@ -2211,7 +2251,7 @@ class Plot2d (object):
             
         if stnnames is not None : 
             assert len(stnnames ) ==len(csamt_stn_obj),\
-                CSex.pyCSAMTError_station('Station provided must have the '\
+                CSex.pyCSAMTError_station('Station provided must have the '
                                           'same lenght with default stations.')
             csamt_stn_obj = stnnames 
             

@@ -30,27 +30,34 @@
 Created on Sat Dec 12 13:55:47 2020
 
 @author: @Daniel03
+
 """
 
-import os, warnings 
+import os, warnings
+
 import numpy as np 
-import scipy as sp
 import matplotlib.pyplot as plt
 import scipy.interpolate  as spi 
 
-from csamtpy.etc import infos 
+# from csamtpy.etc import infos 
+
 from csamtpy.ff.core.cs import CSAMT
 from csamtpy.ff.core  import avg as CSAMTavg
 from csamtpy.ff.core  import edi as CSAMTedi
 from csamtpy.ff.core  import z as CSAMTz
 
 from csamtpy.ff.processing import zcalculator as Zcc
-from csamtpy.utils._csamtpylog import csamtpylog
-from csamtpy.utils import func_utils as func
 from csamtpy.ff.processing import callffunc as cfunc 
+
+from csamtpy.utils._csamtpylog import csamtpylog
+from csamtpy.utils.decorator import deprecated
+
+# from csamtpy.utils import func_utils as func
 from csamtpy.utils import exceptions as CSex
 
 #-------------------- end import module ---------------------------
+
+
 class shifting(object):
     """ 
     processing class : shifting processing workflow 
@@ -129,6 +136,8 @@ class shifting(object):
         for keys in list(kwargs.keys()): 
             setattr(self, keys, kwargs[keys])
         
+        if self.data_fn is not None : 
+            self.read_processing_file()
         
     @property 
     def frequency (self): 
@@ -161,9 +170,18 @@ class shifting(object):
             reffreq = reffreq[0]
         try :reffreq =float(reffreq)
         except:raise CSex.pyCSAMTError_frequency('Reference frequency must be a float or int number.')
-        if reffreq not in self.frequency:
 
-            self._reference_frequency =Zcc.find_reference_frequency(freq_array=self.frequency, reffreq_value=reffreq ,
+        if reffreq not in self.frequency:
+            print('---> Reference frequency is not in frequeny range'
+                  ' frequency should be will be interpolated')
+            if reffreq < self._freq_array.min() or reffreq > self._freq_array.max():
+                warnings.warn('Frequency out off the range, Please provide frequency'
+                              'inside the range <{0}  to {1}>'.format(self._freq_array.min(),
+                                                                    self._freq_array.max()))
+                raise CSex.pyCSAMTError_frequency('Frequency out of the range !')
+                
+            self._reference_frequency =Zcc.find_reference_frequency(freq_array=self.frequency, 
+                                                                    reffreq_value=reffreq ,
                                                                     sharp=True, etching=True)
         else : self._reference_frequency= reffreq
 
@@ -178,17 +196,167 @@ class shifting(object):
 
         self._phase_array=phz
         
+
+    def read_processing_file(self, data_fn=None , profile_fn=None,
+                              reference_freq=None,  **kwargs ):
+        """
+        Mehod read processing fikes and load attributes for use
+        
+        :param data_fn: full path to data file ,  coulb be `avg` of 
+            Zonge International Engineering  or `edi`  of Society of Exploration 
+            Geophysics or `j|dat` format of AG.Jones MT.
+        :type data_fn: str 
+        
+        :param profile_fn: full path to station profile file. It's compulsory
+            to provide this file when read avgfile.
+        :type profile_fn: str 
+        
+        """
+        freq_array =kwargs.pop('freq_array', None)
+        res_array = kwargs.pop('res_dict_arrays', None)
+        phase_array =kwargs.pop('phase_dict_arrays', None)
+ 
+        self._logging.info('Load attraibutes for processing')
+        
+        if data_fn is not None : self.data_fn =data_fn 
+        if profile_fn is not None : self.profile_fn = profile_fn 
+        if freq_array  is not None : self.frequency = freq_array
+        
+        if res_array is not None : self.res_app_obj = res_array 
+        if phase_array is not None: self.phase_obj = phase_array
+        
+        flag = 0            # flag to figure out edifiles to to use avg  file
+                            # without it profile stn could be possible 
+                            
+        if self.data_fn is None :
+            if self.frequency is None or self.res_app_obj is None or \
+                self.phase_obj is None :
+                mess= 'NoneType data can not be computed. Please provide you'+\
+                    ' data path or station dictionnaries of resistivities'+\
+                    ' and phases values or ndarray(len(frequency),len(sites))'+\
+                    ' of resistivities and phases values in degree.'
+                    
+                self._logging.info(mess)
+                warnings.warn(mess)
+                
+                raise CSex.pyCSAMTError_processing(
+                    'Could not process data with Nonetype obj!'
+                    'Please provide your right data files or '
+                    ' ndarray|dict of resistivies and phases values in degree.')
+                
+            else: # enter in this loop assumes that value are in degree
+                # check the len of dictionnaries
+                for pobj, pname in zip([self.res_app_obj,self.phase_obj ],
+                                       ['res_obj', 'phs_obj']):
+                    if isinstance(pobj, np.ndarray) :
+                        if pobj.ndim==1: self.site_id='S00' # only one site
+                        else :
+                            # ndarray( len(frequency) x len(number of stations)) 
+                            self.site_id =[ 'S{0:02}'.format(ii) 
+                                       for ii in range(pobj.shape[1])]
+                        if pname =='res_obj':
+                            # create a dict obj of ndarray 
+                            self.res_app_obj ={self.site_id[ii]: pobj[:, ii] 
+                                          for ii in range(pobj.shape[1])}
+                        if pname =='phs_obj':
+                            self.phase_obj ={self.site_id[ii]:pobj[:, ii] 
+                                          for ii in range(pobj.shape[1])}
+                            
+                if len(self.res_app_obj) != len(self.phase_obj ) : 
+                    mess='Resistivity and phase length must be the same.'+\
+                        'The resistivity size is ={0} and phase is= {1}'
+                    warnings.warn(mess.format(len(self.res_app_obj,
+                                                  len(self.phase_obj))))
+                    self._logging.error(mess.format(len(self.res_app_obj,
+                                                        len(self.phase_obj))))              
+                    raise CSex.pyCSAMTError_processing(
+                        'Resistivity and phase must be the same length')
+                    
+                # convert values in rad 
+                self.phase_obj = {stn: np.deg2rad(phs_values)%90
+                             for stn,phs_values in self.phase_obj.items()}
+                              
+        if self.data_fn is not None :
+            
+            if (self.data_fn.endswith('avg') is True  or \
+                self.data_fn.endswith('avg'.upper())) is True  :
+                flag=1
+                
+            try :
+                csamt_obj = CSAMT(data_fn = self.data_fn, 
+                                    profile_fn =self.profile_fn)
+                self.frequency = csamt_obj.freq 
+                self.res_app_obj = csamt_obj.resistivity
+                self.phase_obj ={ key:np.deg2rad(values) 
+                            for key, values in csamt_obj.phase.items()}
+                self.site_id= sorted(self.res_app_obj.keys())
+                self.station_distance = csamt_obj.station_distance 
+                
+                # try to get dipole length attribute 
+                try :
+                    self.dipolelength =csamt_obj.dipolelength 
+                except:
+                    mess='No station profile is detected ! could not compute dipole length'+\
+                        'Value provided is approximated. should be set to 50.m '
+                    self._logging.debug(mess)
+                    warnings.warn(mess)
+                    print('---> !'+ mess)
+                    self.dipolelength = 50.
+                else :
+                    if self.dipolelength is None : 
+                        print('---> ! No station profile file is given.'
+                              ' Value of dipole length is set to 50.m')
+                        self.dipolelength = 50.
+            except : 
+                if self.profile_fn is None and  flag==1: 
+                    # force to read only avg data from avg object without station profile file
+                    csamt_obj =CSAMTavg.Avg(data_fn =self.data_fn)
+                    self.res_app_obj= csamt_obj.Data_section.Resistivity.loc
+                    
+                    # Zonge phase are in mrad then converted to rad 
+                    # for consistency converted to degree and rad again 
+                    self.phase_obj =csamt_obj.Data_section.Phase.loc
+                    self.phase_obj ={stn:  np.deg2rad(
+                        np.rad2deg(phase_values/ 1e3)%90)
+                        for stn, phase_values in self.phase_obj.items()}
+                    
+                    #self.site_id=sorted(avg_obj.Data_section.Station.names)
+                    self.site_id=sorted(self.res_app_obj.keys()) 
+                    # get avg data and seek the reference frequency at safety data 
+                    avg_data_section = csamt_obj.Data_section._data_array
+                    
+                    self.frequency= csamt_obj.Data_section.Frequency.value 
+                    self.station_distance = csamt_obj.Data_section.Station.value
+                    
+                    
+        #-----------------------------------------------------------        
+        #---> set reference frequency . if not will detect automatically  
+        # as higher frequency with clean data 
+        if reference_freq is not None :
+            self.referencefreq=reference_freq
+        
+        if  self.referencefreq is None : 
+            if flag ==1 :
+                try : 
+                    self.referencefreq, *_= Zcc.perforce_reference_freq(
+                        dataset=avg_data_section,
+                        frequency_array=self.frequency)
     
-    def TMA (self, data_fn=None , freq_array=None, res_array=None,
-             phase_array=None, reference_freq=None,
-             number_of_TMA_points =5, **kwargs ): 
-        """ 
-        Trimmed-moving-average filter to estimate average apparent resistivities at a
+                except : 
+
+                    self.referencefreq= self.frequency.max() 
+                                                                   
+            else : 
+                self.referencefreq= self.frequency.max() 
+ 
+
+    def TMA (self, data_fn=None ,  reference_freq=None,
+             number_of_TMA_points =5., **kwargs ):
+        """
+        Corrected apparent resistivities with Trimmed-moving-average filter(TMA) 
+        filter.TMA estimates average apparent resistivities at a
         single static-correction-reference frequency. 
-        User can compute TMA by inputing only the data file . 
-        the program vill find automatically other parameters . 
-        If not may provide all the parameters excepth the 
-        data file . 
+        if reference frequency is not provided , will find automatically.
         
         Parameters
         -----------
@@ -241,65 +409,48 @@ class shifting(object):
             ...                            phase_array =csamt_obj.phase ,
             ...                            number_of_TMA_points=5)
             ... print(static_cor)
-
+            
         """
-        flag= 0
-        profile_fn = kwargs.pop('profile_fn', None)
-        #stnVSrho_loc=kwargs.pop('stnVSrho_loc',None)
+        profile_fn= kwargs.pop('profile_fn', None)
+        phase_array = kwargs.pop('phase_dict_arrays', None)
+        res_array = kwargs.pop('res_dict_arrays', None)
+        freq_array =kwargs.pop('freq_array', None)
+    
+        print('** {0:<27} {1} {2}'.format("Filter's name",
+                                          '=', 
+                                          "Trimming moving-average(TMA)"))
         
         self._logging.info (
-            'Computing Trimming Moving Average of apparent resistivities.!')
+            'Computing Trimming Moving Average  filter to correct'
+            ' apparent resistivities.!')
         
-        if data_fn is not None : self.data_fn = data_fn 
-        if profile_fn is not None : self.profile_fn = profile_fn 
+        if data_fn is not None : self.data_fn  = data_fn 
+        if profile_fn is not None : self.profile_fn = profile_fn
         
+        # print(reference_freq)
+        # if reference_freq is not None : self.referencefreq = reference_freq 
+        
+        if res_array is not None : self.res_app_obj = res_array 
+        if phase_array is not None : self.phase_obj = phase_array
+        if freq_array is not None : self.frequency = freq_array
+        
+
         if self.data_fn is not None :
-            
-            csamt_obj = CSAMT(data_fn = self.data_fn, 
-                              profile_fn =self.profile_fn)
-            self.frequency = csamt_obj.freq 
-            res_app_obj = csamt_obj.resistivity
-
-            phase_obj ={ key:np.deg2rad(values) 
-                        for key, values in csamt_obj.phase.items()}
-
-            if (self.data_fn.endswith('avg') is True  or \
-                self.data_fn.endswith('avg'.upper())) is True  :
-                avg_data_section = csamt_obj._data_section
-                                                    # to get real reference frequency
-                flag=1
-                   
-        else : 
-            if freq_array is not None :self.frequency= freq_array 
-            if (self.frequency is None)  or (res_array is None ) or \
-                (phase_array is None)  : 
-                    raise CSex.pyCSAMTError_inputarguments(
-                        'None values can not be computed . Please check your value.')
-                                                           
-            res_app_obj=res_array
-            phase_obj=phase_array
-            self.frequency=freq_array
+            self.read_processing_file(reference_freq = reference_freq )
         
-        #---> set reference frequency . if not will detect automatically  
-        # as higher frequency with clean data 
-        if reference_freq is not None :self.referencefreq=reference_freq
-        elif reference_freq is None : 
-            if flag ==1 :
-                try : 
-                    self.referencefreq= Zcc.perforce_reference_freq(
-                        dataset=avg_data_section, frequency_array=self.frequency)
-                except : self.referencefreq= self.frequency.max() 
-                                                                   
-            else : self.referencefreq= self.frequency.max() # interpolate to highest  frequency value
+        print('** {0:<27} {1} {2} Hz.'.format("Reference frequency",
+                                          '=', self.referencefreq))
+                                          
+        # ---> use the TMA filter to correct apparent resistivities 
         
-        self.app_rho =Zcc.get_data_from_reference_frequency(array_loc=res_app_obj,
+        self.app_rho =Zcc.get_data_from_reference_frequency(array_loc=self.res_app_obj,
                                                           freq_array=self.frequency,
                                                           reffreq_value=self.referencefreq)
-        self.phase=Zcc.get_data_from_reference_frequency(array_loc=phase_obj,
+        self.phase=Zcc.get_data_from_reference_frequency(array_loc=self.phase_obj,
                                                           freq_array=self.frequency,
                                                           reffreq_value=self.referencefreq)
         
-        self.stnVSrho_loc=res_app_obj     # make a copy of dict_loc of apparent resistivity 
+        self.stnVSrho_loc=self.res_app_obj     # make a copy of dict_loc of apparent resistivity 
             
         slopej =np.arctan((self.phase/(np.pi/4)-1))*(np.pi/2)**-1     # compute the slope 
         
@@ -308,7 +459,6 @@ class shifting(object):
         # collect a group of five log(rj+), i.e. for station index j, i = j-2 to j+2.
         # Discard the lowest and highest valued log(rj+) from the group of five and average the remaining
         # three => avg_log
-
         log_app_rj_tma = Zcc.compute_TMA (data_array=rho_app_jplus,
                                           number_of_TMApoints=number_of_TMA_points)
         # The target static-correction apparent resistivity for station j
@@ -335,40 +485,43 @@ class shifting(object):
         #dict is that , we dont need to  check frequency range and flipped it 
         # at every time.
         #-----------------------------------------------------------------------
-        self.TMA ={}
-        stnNames =sorted(self.stnVSrho_loc.keys())
+        self.tma ={}
+        stnNames = sorted(self.site_id)#sorted(self.stnVSrho_loc.keys())
         rj_fd={key:value for key, value in zip (stnNames,self._rj.tolist())}
         for stn , rho_values in self.stnVSrho_loc.items():
-            self.TMA[stn]= np.apply_along_axis(
+            self.tma[stn]= np.apply_along_axis(
                         lambda rhoS: rhoS /rj_fd[stn],0, rho_values)
         
         # compte corrected phase  in degree 
         self.phase_corrected ={}  # reconverted phase in radians to degree values 
-        for stn , phase_values in phase_obj.items():
+        for stn , phase_values in self.phase_obj.items():
             self.phase_corrected[stn]= np.apply_along_axis(
                 lambda phaseS: (phaseS /rj_fd[stn]) %90 , 0, phase_values)
 
-        return self.TMA
-    
-    def FLMA (self, data_fn=None , dipole_length = 50., number_of_points=5.,
-              window_width=None, freq_array=None, res_array=None, phase_array=None, 
-              stnVSrho_loc=None,   reference_freq=None, **kwargs ):
-        """
-        The FLMA filter estimates static-corrected apparent resistivities at 
-        a single reference frequency by calculating a profile of average
-        impedances along the length of the line. Sounding curves are then
-        shifted so that they intersect the averaged profile. The highest
-        frequency with clean data should be selected as the static-correction
-        reference frequency.
+        return self.tma
         
+        
+   
+    
+    def FLMA(self, data_fn=None ,dipole_length = 50., number_of_dipole=5.,
+               reference_freq=None, **kwargs ):
+        """
+        Fixed length-dipole moving average `FLMA` to correct apparent
+        resistivities.The FLMA filter estimates static-corrected apparent 
+        resistivities at a single reference frequency by calculating a profile
+        of average impedances along the length of the line. Sounding curves
+        are then shifted so that they intersect the averaged profile.
+        The highest frequency with clean data should be selected as the
+        static-correction reference frequency.
+
         :param data_fn: full path to data file , could be[AVG|EDI|J]
         :type data_fn: str 
         
         :param dipole_length: value of dipole length in meters 
         :type dipole_length: float, default is 50.
         
-        :param number_of_points: number of station to cover hanning widow width 
-        :type number_of_points : int, float, default is 5.
+        :param number_of_dipole: number of dipole to cover hanning window width 
+        :type number_of_dipole : int, float, default is 5.
         
         :param reference_freq: reference frequency at clean data , if not provided
                     reference will be compute automaticcally 
@@ -377,19 +530,22 @@ class shifting(object):
         :param freq_array: array of survey frequency of the field  
         :type freq_array: array_like 
         
-        :param res_array: resistivity array of data collected on the field, 
+        :param res_dict_arrays: resistivity array of data collected on the field, 
             could be a ndarray of resistivites at each frequency of each sites
             or a dictionnary of array 
-        :type res_array: ndarray_array, dict , optional
+        :type res_dict_arrays: ndarray_array, dict , optional
         
-        :param phase_array: phase values of data at each stations 
+        :param phase_dict_arrays: phase values of data at each stations 
                     could be an ndarray of phase with ndarray(len(freq),
                     len(nstaions)) or dictionnary of phase values at each stations.
-        :type phase_array: ndarray, optional 
+        :type phase_dict_arrays: ndarray, optional 
         
         :return:  rho corrected at each survey sites
         :type: dict 
         
+         .. note:: skin depth param is not to used for `FLMA` filter application.
+                  It is not necessary to provide when apply for `FLMA` filter.
+                  
         1. read from edipath or jpath 
         
         :Example:
@@ -397,7 +553,7 @@ class shifting(object):
             >>> from csamtpy.ff.processing.corr import shifting 
             >>> edipath =os.path.join(os.environ['pyCSAMT'], 'data', 'edi')
             >>> corr_obj= shifting(data_fn =edipath)
-            >>> corrapp  = corr_obj.FLMA(number_of_points=7,
+            >>> corrapp  = corr_obj.FLMA(number_of_dipole=7,
             ...                             reference_freq=1024.)
             >>> corr_obj._rj
             >>> corrapp
@@ -412,26 +568,271 @@ class shifting(object):
             ...                  profile_fn=os.path.join(avg_path, 'K2.stn'))
             >>> corr_obj= shifting(data_fn =os.path.join(avg_path, 'K2.AVG'),
             ...                     profile_fn=os.path.join(avg_path, 'K2.stn'))
-            >>> corrapp  = corr_obj.FLMA(number_of_points=5, reference_freq=8000.)
+            >>> corrapp  = corr_obj.FLMA(number_of_dipole=7, reference_freq=8000.)
+            >>> print(corr_obj._rj)
+            >>> print(corrapp)
+        
+        """
+        profile_fn= kwargs.pop('profile_fn', None)
+        
+        phase_array = kwargs.pop('phase_dict_arrays', None)
+        res_array = kwargs.pop('res_dict_arrays', None)
+        freq_array=kwargs.pop('freq_array', None)
+        
+        _filter_name =kwargs.pop('fname', 'flma')
+        
+        number_of_skin_depth =kwargs.pop('number_of_skin_depth', 3.)
+
+        self.flip_freq =False 
+        
+        # use this tip to also compute AMA with this method
+        if _filter_name =='flma':
+            lfname = 'Fixed length-dipole moving-average(FLMA)'
+            __filter_func =Zcc.compute_FLMA
+        elif _filter_name =='ama' :
+            lfname = 'Adaptative moving-average(AMA)'
+            __filter_func = Zcc.compute_AMA
+    
+        print('** {0:<27} {1} {2}'.format(
+            "Filter's name",'=',lfname))
+        
+        self._logging.info ('Computing {} to correct apparent resistivities.!'.
+                            format(lfname.lower()))
+
+        if data_fn is not None : self.data_fn  = data_fn 
+        if profile_fn is not None : self.profile_fn = profile_fn
+       
+        # load other optional params 
+        
+        if res_array is not None : self.res_app_obj = res_array 
+        if phase_array is not None : self.phase_obj = phase_array
+        if freq_array is not None : self.frequency = freq_array
+        
+        if self.data_fn is not None :
+            self.read_processing_file(reference_freq = reference_freq )
+        
+        print('** {0:<27} {1} {2} Hz.'.format("Reference frequency",
+                                  '=', self.referencefreq))
+        #---> Applied FLMA to correctedapparent resistivities 
+        # check flip frequency 
+        
+        if self.frequency[0] < self.frequency [-1]:
+            self.frequency =self.frequency [::-1]
+            print('--> Frequencies are flipped'
+                  ' to default order ( Highest to lowest)! ' )
+            warnings.warn('Frequencies flipped from Highest to lowest !')
+            self.flip_freq =True 
+        
+        #build matrix  if values constitutes adict of stations names and array 
+        import copy 
+        self.stnVSrho_loc= copy.deepcopy(self.res_app_obj)   
+        # then compute matrix and flip matrix arrays 
+        res_app_obj, _= cfunc.get_matrix_from_dict(
+            dict_array= self.res_app_obj, flip_freq=self.flip_freq )
+                                                    
+        phase_obj,_ = cfunc.get_matrix_from_dict(
+            dict_array= self.phase_obj, freq_array= self.frequency) 
+    
+        # get apparent resistivity and phase  at reference frequency 
+        self.app_rho =res_app_obj[ int(np.where(
+            self.frequency==self.referencefreq)[0]),:]
+        self.phase= phase_obj[int(np.where(
+            self.frequency==self.referencefreq)[0]),:]
+    
+        # Apparent resistivity and impedance phase are converted 
+        #to impedance values, Zj, for each station # compute Z_absolute an average Z
+        # compute omega 
+        mu0 = 4* np.pi * 1e-7 
+        omega_reffreq  = 2* np.pi *  self.referencefreq  
+        
+        zj = np.sqrt(self.app_rho * omega_reffreq * mu0 ) * (
+            np.cos(self.phase)+  1j * np.sin(self.phase) ) 
+        # compute FLMA 
+        #Filter weights are adjusted for finite-length dipoles by integrating a segment
+        #of the Hanning window over one dipole length at each station.
+        z_target_j =  __filter_func(z_array= zj, 
+                                      dipole_length= dipole_length, 
+                                      number_of_points=number_of_dipole,
+                                      number_of_skin_depth=number_of_skin_depth, 
+                                      reference_freq= self.referencefreq)
+
+        #Recover static-corrected apparent resistivity at reference frequency from Zj.
+        # recover_Zj  = np.abs(zj)**2/ (omega_reffreq * mu0)
+        rho_static_targetj  = np.abs(z_target_j)**2 / (omega_reffreq * mu0)
+         
+        #Shift sounding curves at all frequencies by multiplying by factor rstaticj/rj.
+        # and  compute the rstatic factor rj : 
+    
+        self._rj =  rho_static_targetj/self.app_rho  
+        
+        # build rj static matrix  to  shift all sounding curves 
+        rj_matrix= np.repeat(
+            self._rj.reshape(1,self._rj.shape[0]),
+                                res_app_obj.shape[0],axis =0)
+        
+        mm_rho = res_app_obj * rj_matrix 
+        mm_phase = phase_obj * rj_matrix 
+        
+        if self.flip_freq is True : #flip static correction 
+           mm_rho =mm_rho [::-1]
+           mm_phase =  mm_phase[::-1]
+           print('--> Data are  flipped recomputed from '
+                 ' Lowest to Highest as raw frequencies order !')
+           
+        # resetting  data on dict 
+        self.flma ={stn: mm_rho[:,ii] 
+                    for ii , stn in enumerate(self.site_id)}
+        # compte corrected phase  in degree 
+        self.phase_corrected = {stn: np.rad2deg(mm_phase[:,ii]) %90 
+                                for ii , stn in enumerate(self.site_id)}
+
+        return self.flma
+
+    def AMA (self, data_fn=None , dipole_length = 50., number_of_skin_depth=3.,
+              freq_array=None, reference_freq=None, **kwargs ):
+              
+        """
+        Adapative moving average `AMA` to correct apparent resistivities.
+        AMA filter estimates static-corrected apparent resistivities
+        at a single reference frequency by calculating a profile of average
+         impedances along the length of the line. Sounding curves are then
+        shifted so that they intersect the averaged profile. The highest 
+        frequency with clean data should be selected as the static-correction
+        reference frequency.
+        
+        :param number_of_skin_depths: skin depth for filter length 
+        :type number_of_skin_depths : int, float, default is 3.
+        
+        :return: resistivities corrected with ama filter 
+        :rtype:dict , 
+        
+        .. seealso:: for other parameters explanations 
+                 see  the docstring of `FlMA`
+                 
+         
+        1. read from edipath or jpath 
+        
+        :Example:
+            
+            >>> from csamtpy.ff.processing.corr import shifting 
+            >>> edipath =os.path.join(os.environ['pyCSAMT'], 'data', 'edi')
+            >>> corr_obj= shifting(data_fn =edipath)
+            >>> corrapp  = corr_obj.AMA(number_of_points=7,
+            ...                             reference_freq=1024.)
+            >>> corr_obj._rj
+            >>> corrapp
+           
+        2. read Zonge avg file 
+         
+        :Example:
+            
+            >>> from csamtpy.ff.processing.corr import shifting 
+            >>> avg_path = os.path.join(os.environ['pyCSAMT'], 'data', 'avg')
+            >>>  csamt_obj =CSAMT(data_fn =os.path.join(avg_path, 'K2.AVG'),
+            ...                  profile_fn=os.path.join(avg_path, 'K2.stn'))
+            >>> corr_obj= shifting(data_fn =os.path.join(avg_path, 'K2.AVG'),
+            ...                     profile_fn=os.path.join(avg_path, 'K2.stn'))
+            >>> corrapp  = corr_obj.AMA(number_of_points=5, reference_freq=8000.)
             >>> print(corr_obj._rj)
             >>> print(corrapp)
             
         """
-        self._logging.info('Computing FLMA Filtering')
+        profile_fn= kwargs.pop('profile_fn', None)
+        phase_array = kwargs.pop('phase_dict_arrays', None)
+        res_array = kwargs.pop('res_dict_arrays', None)
+        freq_array = kwargs.pop('freq_array', None)
+        
+        self.ama = self.FLMA(data_fn =data_fn , 
+                              number_of_skin_depth =number_of_skin_depth ,
+                              dipole_length= dipole_length ,
+                              reference_freq=reference_freq,
+                              profile_fn =profile_fn , 
+                              phase_dict_arrays=phase_array, 
+                              res_dict_arrays=res_array,
+                              fname='ama', 
+                              freq_array=freq_array)
+
+        return self.ama
     
-        profile_fn =kwargs.pop('profile_fn', None)
+    @deprecated('Deprecated to compute methods `AMA` and `FLMA` more conscise.')
+    def compute_fixed_and_adaptative_moving_average(self, filterfunc, 
+                         data_fn =None, profile_fn =None ,
+                         dipole_length =50., reference_freq=None, 
+                         **kwargs):
+        """
+        Can use this fonction  to compute at the same time FLMA and AMA by 
+        setting only the `filter func` argument . If the function is used 
+        set the param `filterfunc` to the filter we need. Avoid repetition 
+        in the code Later.
+        
+        .. _filter-AMA::`csamtpy.ff.core.processing.zcalculator.compute_AMA`
+        .. _filter-AMA::`csamtpy.ff.core.processing.zcalculator.compute_FLMA`
+        
+        :param filterfunc: filter fonction , can be :ref:`filter-AMA` or 
+                            :ref:`filter-FLMA`
+        :type filterfunc: obj
+        
+        :param data_fn: full path to data file , could be[AVG|EDI|J]
+        :type data_fn: str 
+        
+        :param dipole_length: value of dipole length in meters 
+        :type dipole_length: float, default is 50.
+        
+        :param number_of_skin_depths: skin depth for filter length 
+        :type number_of_skin_depths : int, float, default is 5.
+        
+        :param reference_freq: reference frequency at clean data , if not provided
+                    reference will be compute automaticcally 
+        :type reference_freq: int, float 
+        
+        1. compute fixed length dipole moving average FLMA 
+        
+        :Example:
+            
+            >>> from csamtpy.ff.processing.corr import shifting 
+            >>> edipath =os.path.join(os.environ['pyCSAMT'], 'data', 'edi')
+            >>> corr_obj= shifting(data_fn =edipath)
+            >>> res_flma_obj  = corr_obj.compute_fixed_and_adaptative_moving_average(
+                filterfunc=Zcc.compute_FLMA,  number_of_points=7,
+            ...                             reference_freq=8192.)
+            >>> corr_obj._rj
+            >>> res_flma_obj 
+            
+        2. compute adaptative moving-average AMA
+        
+        :Example:
+            
+            >>> from csamtpy.ff.processing.corr import shifting 
+            >>> edipath =os.path.join(os.environ['pyCSAMT'], 'data', 'edi')
+            >>> corr_obj= shifting(data_fn =edipath)
+            >>> res_ama_obj   = corr_obj.compute_fixed_and_adaptative_moving_average(
+                filterfunc=Zcc.compute_FLMA,  number_of_skin_depth=7,
+            ...                             reference_freq=8192.)
+            >>> corr_obj._rj
+            >>> res_ama_obj 
+ 
+        """
+        self._logging.info('Computing AMA Filtering')
+        
+        res_array =kwargs.pop('res_array', None)
+        phase_array =kwargs.pop('phase_array', None)
+        freq_array =kwargs.pop('freq_array', None)
+        number_of_skin_depth=kwargs.pop('number_of_skin_depth',3.)
+
+        #------------ check the reading file ------------------------------
+    
         # set flag to controle the path values provided  and flip to control the 
         # check the frequency range : Default is Highest to lowest  
         # set attribute to keep copy of res-array dict
         flag =0        
         self.flip_freq =False
         self.__setattr__('stnVSrho_loc', None) 
-        
         # statements parameters 
         if data_fn is not None : 
             self.data_fn =data_fn 
         if profile_fn is not None : self.profile_fn = profile_fn
         #check statemt if provided 
+        
         if self.data_fn is None : 
             if res_array is not None: res_app_obj =res_array 
             if phase_array is not None :  phase_obj =phase_array 
@@ -452,6 +853,7 @@ class shifting(object):
             phase_obj = csamt_obj.phase 
             self.frequency =csamt_obj.freq
             self.dipolelength = csamt_obj.dipolelength
+            
             flag=1
             
             if (self.data_fn.endswith('avg') is True  or \
@@ -491,7 +893,8 @@ class shifting(object):
                 
                 
         if reference_freq is not None :
-            self.referencefreq =reference_freq     
+            self.referencefreq =reference_freq 
+            
         elif reference_freq is None : 
             self.referencefreq= Zcc.perforce_reference_freq(
                 dataset=res_app_obj, frequency_array=self.frequency)
@@ -511,34 +914,35 @@ class shifting(object):
             self.frequency==self.referencefreq)[0]),:]
         self.phase= phase_obj[int(np.where(
             self.frequency==self.referencefreq)[0]),:]
-    
         # Apparent resistivity and impedance phase are converted 
         #to impedance values, Zj, for each station # compute Z_absolute an average Z
-
-        # compute omega 
+        
+        #------------------------------computation filter part -----------------------
+         # compute omega n
         mu0 = 4* np.pi * 1e-7 
         omega_reffreq  = 2* np.pi *  self.referencefreq  
         
         zj = np.sqrt(self.app_rho * omega_reffreq * mu0 ) * (
             np.cos(self.phase)+  1j * np.sin(self.phase) ) 
-        
         # compute FLMA 
         #Filter weights are adjusted for finite-length dipoles by integrating a segment
         #of the Hanning window over one dipole length at each station.
-        z_target_j = Zcc.compute_FLMA(z_array= zj, 
+        
+        z_target_j = filterfunc(reference_freq = self.referencefreq, 
+                                     phase =self.phase,
+                                     app_rho = self.app_rho,
                                       dipole_length= dipole_length, 
-                                      number_of_points=number_of_points)
-
+                                      number_of_skin_depth =number_of_skin_depth, 
+                                      z_array=zj)
         #Recover static-corrected apparent resistivity at reference frequency from Zj.
         # recover_Zj  = np.abs(zj)**2/ (omega_reffreq * mu0)
+        
+        #------------------------ computation of rj static factor -------------------
+        
         rho_static_targetj  = np.abs(z_target_j)**2 / (omega_reffreq * mu0)
-         
-
         #Shift sounding curves at all frequencies by multiplying by factor rstaticj/rj.
         # and  compute the rstatic factor rj : 
-    
         self._rj =  rho_static_targetj/self.app_rho  
-        
         # build rj static matrix  to  shift all sounding curves 
         rj_matrix= np.repeat(
             self._rj.reshape(1,self._rj.shape[0]),
@@ -546,7 +950,6 @@ class shifting(object):
         
         mm_rho = res_app_obj * rj_matrix 
         mm_phase = phase_obj * rj_matrix 
-        
         if self.flip_freq is True : #flip static correction 
            mm_rho =mm_rho [::-1]
            mm_phase =  mm_phase[::-1]
@@ -554,22 +957,14 @@ class shifting(object):
                  ' Lowest to Highest as raw frequencies order !')
            
         # resetting  data on dict 
-        self.FLMA ={stn: mm_rho[:,ii] 
+        self.flma_or_ama ={stn: mm_rho[:,ii] 
                     for ii , stn in enumerate(stnNames)}
         # compte corrected phase  in degree 
         self.phase_corrected = {stn: np.rad2deg(mm_phase[:,ii]) %90 
                                 for ii , stn in enumerate(stnNames)}
-
-        return self.FLMA
+        return self.flma_or_ama      
             
-        
-
-    def AMA (self):
-        """
-        **future plan ***
-        """
-        pass 
-
+    
     def write_corrected_edi (self, data_fn =None,
                              reference_frequency=None, 
                              FILTER ='tma' , **kwargs):
@@ -651,6 +1046,7 @@ class shifting(object):
         new_edifilename =kwargs.pop('edi_newname', None)
         number_of_points= kwargs.pop('number_of_points', 1)
         dipole_length = kwargs.pop('dipole_length', 50.)
+        number_of_skin_depth= kwargs.pop('number_of_skin_depth', 3.)
         
         reduce_res_factor_x=kwargs.pop('reduce_res_factor_x', 1.)
         reduce_res_factor_y =kwargs.pop('reduce_res_factor_y', 1.)
@@ -680,10 +1076,6 @@ class shifting(object):
            
            raise CSex.pyCSAMTError_processing('Filter provided is Unrecognizable!')
            
-        if _filter =='ama':
-            warnings.warn('Filter `ama` is not available,')
-            print('--> Filter is resetting to TMA')
-        
         self._logging.info('Rewrite edifiles by applying filters')
         
 
@@ -726,7 +1118,7 @@ class shifting(object):
             
     
         if datatype =='emap':           # read EMAP edifiles and apply filters 
-            if _filter not in ['flma', 'tma']:
+            if _filter not in ['flma', 'tma', 'ama']:
                 print('--> Filter no found! Reseeting filter'
                       ' to  default filter :`tma`')
                 _filter ='tma'
@@ -748,7 +1140,22 @@ class shifting(object):
             else : frequency_array =corr_obj.frequency
         
         elif _filter =='flma':
-            res_corrected =  corr_obj.FLMA(number_of_points= number_of_points, 
+            res_corrected =  corr_obj.FLMA(number_of_dipole= number_of_points, 
+                                    reference_freq = reference_frequency,
+                                    dipole_length = dipole_length
+                                    )
+       
+            phase_corrected = corr_obj.phase_corrected
+            
+            flip_freq =corr_obj.flip_freq 
+            
+            # for consistency 
+            if corr_obj.frequency [0] < corr_obj.frequency[-1]:
+               frequency_array =corr_obj.frequency[::-1]
+            else :frequency_array =corr_obj.frequency
+            
+        elif _filter =='ama':
+            res_corrected =  corr_obj.AMA(number_of_skin_depth= number_of_skin_depth, 
                                     reference_freq = reference_frequency,
                                     dipole_length = dipole_length
                                     )
@@ -782,7 +1189,7 @@ class shifting(object):
             res_array = np.zeros((frequency_array.size, 2,2 ), dtype = np.float)
             phs_array = np.zeros((frequency_array.size, 2,2 ), dtype = np.float)
             
-            if _filter in [ 'tma', 'flma']:
+            if _filter in [ 'tma', 'flma', 'ama']:
                 if flip_freq is True :     # flip array if frequency is sorted lowest to Highest
                     res_corrected[stn] = res_corrected[stn][::-1]
                     phase_corrected[stn] =phase_corrected[stn] [::-1]
@@ -876,6 +1283,13 @@ class shifting(object):
                                                           '=', dipole_length ))
                     print('** {0:<27} {1} {2} Hz.'.format('Reference frequency ',
                                                           '=', reference_frequency))
+                if _filter=='ama':
+                    print('** {0:<27} {1} {2}'.format('Number of skin depth ',
+                                                      '=', int(number_of_skin_depth)))
+                    print('** {0:<27} {1} {2} m.'.format('Dipole length ', 
+                                                          '=', dipole_length ))
+                    print('** {0:<27} {1} {2} Hz.'.format('Reference frequency ',
+                                                          '=', reference_frequency))
  
         
         print('** {0:<27} {1} {2}'.format('Frequency numbers',
@@ -887,7 +1301,8 @@ class shifting(object):
         
         print('-'*77)
             
-            
+
+      
 
 def interp_to_reference_freq(freq_array, rho_array, 
                              reference_freq, plot=False): 
@@ -961,11 +1376,29 @@ if __name__=='__main__':
     
     edipath =os.path.join(os.environ['pyCSAMT'], 'data', 'edi')#, 'new_csa000.edi' )
     corr_obj= shifting()
-    corr_obj.write_corrected_edi(data_fn = edipath, number_of_points =1., 
-                                 dipole_length =50., FILTER='ss')
-
-    
-    
+    # corr_obj.write_corrected_edi(data_fn = edipath, number_of_points =1., 
+    #                               dipole_length =50., FILTER='ss')
+    avg_path = os.path.join(os.environ['pyCSAMT'], 'data', 'avg')
+    # # csamt_obj =CSAMT(data_fn =os.path.join(avg_path, 'K2.AVG'),
+    # #                   profile_fn=os.path.join(avg_path, 'K2.stn'))
+    corr_obj= shifting(data_fn =os.path.join(avg_path, 'K2.AVG'),
+                          #profile_fn=os.path.join(avg_path, 'K2.stn'), 
+                          reference_freq =8192.)
+    # ss=corr_obj.compute_fixed_and_adaptative_moving_average(filterfunc=Zcc.compute_AMA,  
+    #                          reference_freq=8192., number_of_skin_depth=1.)
+    # stma =corr_obj.TMA( data_fn =edipath, 
+    #                      number_of_TMA_points=7.)
+    # rjt= corr_obj._rj
+    # sflma =corr_obj.FLMA(data_fn =edipath,  reference_freq =8192., 
+    #                      number_of_TMA_points=7.)
+    # rjf= corr_obj._rj
+    # sama =corr_obj.AMA(data_fn =edipath,  reference_freq =8192., 
+    #                  number_of_TMA_points=7.)
+    # rja= corr_obj._rj
+    # print(rjf)
+    # print(rja)
+    # print(rjt)
+  
     
     
     

@@ -16,7 +16,7 @@ from viewer.plot import Plot2d
 #path file 
 
 pathfile =  os.path.join(os.environ["pyCSAMT"],'data','j' )
-# pathfile= os.path.join(os.environ["pyCSAMT"],'data', 'correctedEDI') # test with corrected edi
+#pathfile= os.path.join(os.environ["pyCSAMT"],'data', 'correctedEDI_AMA') # test with corrected edi
 # if user user avg file , add the profile fn 
 profile_fn =None                # not necessary when use [EDI|J] file. 
 

@@ -2070,7 +2070,7 @@ class MTEMAP (object):
     sounding and Defines the measurments which makeup an EMAP lines. 
     
     ===========================  ==============================================
-         >=EMAPSECT                        >=EMAPSECT
+         >=MTSECT                        >=EMAPSECT
     ===========================  ==============================================
         - SECTID=""                       - SECTID=S00
         - NFREQ=**                        - NCHAN=4

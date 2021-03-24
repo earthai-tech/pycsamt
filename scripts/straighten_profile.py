@@ -5,7 +5,7 @@
     Due to the aleas of the terrain being in mountainous or in forest regions, the land harvesting
     is not an exact distance. This script offers several possibilities for recovery: 
         
-    1- Classical reajustment {"classic"} in linear regime. Here all the coordinates are straightened in the form
+    1- Classical reajustment {"classic"} in linear regim. Here all the coordinates are straightened in the form
         of a function y = f (dl) : dl = dipole length . 
     2. Natural or distorted recovery {"natural|distored"}. In this type of reajustment the staion, seperation respects 
         the distance  of the dipole, but the poinst do not form a line regime.
@@ -29,22 +29,22 @@ from csamtpy.ff.core.cs import Profile
 # full path to your profile file : stn 
 path =  os.path.join(os.environ["pyCSAMT"],# 'STN-28800_reaj.stn')
                       'data', 'avg', 'K1.stn')            # change your path 
-
+#path =r'C:\Users\Administrator\Desktop\ThesisImp\raw_stn_file\K9.stn'
 #saveyour figure path 
-savepath =None 
+savepath = None                 #r'C:\Users\Administrator\Desktop\ThesisImp\K_reaj'
 
 # if stn file is not available , set CREATE to True and REAJUST to False
-# Then you will generate your own stn file r=for reajusting coordinates
+# Then you will generate your own stn file rfor reajusting coordinates
 CREATE =False
 REAJUST=True 
 # choose the type to straithen your profile 
 straigthen_out_mode ='classic'          # can be 'distored|natural, or "equisistant".Default is "classic".
 # correct coordinates : 
-X = 0.                                  # correct easting value : eg : X =2800               
-Y = 0.                                  # correct northing coordinates : eg Y = 3330.
+X = 0.                                  # correct easting value : eg : X =300238.702               
+Y = 0.                                  # correct northing coordinates : eg Y = 2369.252
 
-# set to True if ou want to get new coordinates values 
-ouputnew_stnfile = True 
+# set to True if ou want to output new coordinates values 
+ouputnew_stnfile = True
 #===============================================================================================
 # if Zonge *.stn file is available , dont need to fill this part , set only REAJUST to True.
 easting = None                         # (ndarray, 1) or list # station easting coordinates(required) 
@@ -76,6 +76,6 @@ if REAJUST :
     plot_1d_obj.plot_station_profile(fn = path, 
                                      reajust_coordinates=(X,Y),
                                      straighten_type =straigthen_out_mode, 
-                                     savefig=savepath  , 
+                                     savefig=savepath, 
                                      outputfile =ouputnew_stnfile  
                                      )

@@ -919,8 +919,9 @@ class Profile (object):
                     decision , stn_headlines_id = _validate_stnprofile(
                         profile_lines= data_lines , spliting=split_type)
                     if decision <2:
-                        raise CSex.pyCSAMTError_profile('Please provide  for profile at least the Easting'\
-                                                ' and northing coordinates values or lat/lon values for parsing. ')
+                        raise CSex.pyCSAMTError_profile(
+                            'Please provide  for profile at least the Easting'
+                             ' and northing coordinates values or lat/lon values for parsing. ')
             
                     else :
                         data_list_of_array= [np.array (line.strip().split(split_type)) 
@@ -932,15 +933,21 @@ class Profile (object):
 
                 for lab, index in stn_headlines_id: 
                     if ref =='scalled': 
-                        warnings.warn("It seems the data <{0}> is already scaled. We don't need to reascale. "\
-                                      "To force rescalement , please use func.{Profile.reajust_coordinates_value}. ")
+                        warnings.warn("It seems the data <{0}> is already"
+                                      "scaled. We don't need to rescale. "
+                                      "To force scaling , please use "
+                                      "func.{Profile.reajust_coordinates_value}. ")
                         coords_array = data_array[1:, index]
                     else : 
-                        self._logging.info('Rescalling stations positions from file <%s>'% os.path.basename(self.profile_fn))
-                        warnings.warn('Rescalling stations positions : Usually Zonge Hardware provides stations locations at each electrodes NOT in center of each dipoles. '\
-                              'Station locations and EM component orientations are taken at each electrodes point.'\
-                                  ' So , we will rescale stations to dipole center position.'\
-                                      ' Distance will stay the same along profile but the number of points will be minus 1.')
+                        self._logging.info('Rescaling stations positions'
+                                           ' from file <%s>'% os.path.basename(self.profile_fn))
+                        warnings.warn('Scaling stations positions : Usually Zonge'
+                            ' Hardware provides stations locations at'
+                            '  each electrodes NOT in center of each dipoles. '
+                              'Station locations and EM component orientations are taken'
+                              ' at each electrodes point.So , we will rescale stations  '
+                              ' to dipolecenter position.Distance will stay the same along'
+                              '  profile but the number of points will be minus 1.')
                         try :
                             coords_array =cfunc.dipole_center_position(
                                 dipole_position = data_array[1:,index])
@@ -998,8 +1005,10 @@ class Profile (object):
         
         elif _pflag ==2 or _pflag ==3 : 
             if _pflag == 2 : 
-                assert easting.size == northing.size , CSex.pyCSAMTError_profile('Easting and Northing must have the same size.'\
-                                                                                ' Easting|northing size are currentlysize is <{0}|{1}>.'.format(easting.size, northing.size))
+                assert easting.size == northing.size ,\
+                    CSex.pyCSAMTError_profile('Easting and Northing must have the same size.'
+                                 ' Easting|northing size are currentlysize is <{0}|{1}>.'.\
+                                     format(easting.size, northing.size))
                 self.east =easting 
                 self.north =northing
                 if self.azimuth is None :
@@ -1008,8 +1017,9 @@ class Profile (object):
                 else :self.azimuth =azim 
                 
             elif _pflag ==3 :
-                assert lat.size == lon.size , CSex.pyCSAMTError_profile('Easting and Northing must have the same size.'\
-                                                                                ' lat|lon size are currentlysize is <{0}|{1}>.'.format(lat.size, lon.size))
+                assert lat.size == lon.size ,\
+                    CSex.pyCSAMTError_profile('Easting and Northing must have the same size.'
+                          ' lat|lon size are currentlysize is <{0}|{1}>.'.format(lat.size, lon.size))
                 self.Location.convert_location_2_utm(latitude=lat ,
                                                      longitude= lon )
                 self.easting =self.Location.easting  
@@ -1207,6 +1217,7 @@ class Profile (object):
                     break
                 
             spT = func.stn_check_split_type(data_lines= fstn)
+            if spT is None :spT=' '
             headc = fstn[0].strip().split(spT)
             
             eastindex,dotindex ,northindex,  elevindex = [0 for ii in range (4)]   # initialise index values
@@ -1269,18 +1280,22 @@ class Profile (object):
                 stn_write_lines.append(''.join(['{0:<7}{1}'.format(station_pk[ii], spT), 
                                                 '{:>12.3f}{}'.format(easting[ii], spT), 
                                                  '{:>12.3f}{}'.format(northing[ii], spT), 
-                                                 '{:>7}'.format(elevation[ii])
+                                                 '{:>8}'.format(elevation[ii])
                                                 ]))
                 stn_write_lines.append('\n')
             if stn_fn is None : fnew_='STN{0}_reaj'.format(time.timezone)    
-            else : fnew_= os.path.basename(stn_fn).split('.')[0] + '_reaj'
-            
+            else : 
+                fnew_= os.path.basename(stn_fn).split('.')[0] + '_reaj'
+                
             with open(''.join([fnew_, '.stn']), 'w', encoding='utf8') as fid : 
                 fid.writelines(stn_write_lines)
-            if savepath is not None :shutil.move(''.join([fnew_, '.stn']), savepath )
+                
+            if savepath is not None :
+                shutil.move( os.path.join(os.getcwd(),''.join([fnew_, '.stn'])),
+                                          savepath )
             elif savepath is None : savepath =os.getcwd()
-            
-            
+    
+   
             print('-'*77)
             print('---> New <{0}> station file has been rewritten.'.\
                   format(''.join([fnew_, '.stn'])))
@@ -1293,7 +1308,7 @@ class Profile (object):
         
     def straighten_profileline (self, X=None, Y=None ,
                                 straight_type ='classic', 
-                                reajust=(0,0), output =False):
+                                reajust=(0,0), output =False,**kwargs):
         """
         Method to straighten profile line and/or rescaled 
         coordinates.  User can readjust coordinateq 
@@ -1332,7 +1347,10 @@ class Profile (object):
                             'are readjusting. Method to reajust is <{2}>'.\
                                 format(X, Y, straight_type))
         
-
+        savepath =kwargs.pop('savepath', None)
+        
+        REW=False               # coordinates scaling flag and control new outputs
+        
         if X is not None : self.east = X 
         if Y is not None : self.north = Y
         if self.east is None or self.north is None :
@@ -1345,6 +1363,8 @@ class Profile (object):
                        'Line cannot be redressed. '
                          'Please provide the same size of both arrays'.\
                              format(self.east.size, self.north.size))
+                
+        # rescalled the coordinates 
         if reajust is not None :
             if len(reajust) !=2 : 
                 raise CSex.pyCSAMTError_profile(
@@ -1352,6 +1372,7 @@ class Profile (object):
                     "Only x =reajust[0] and y=reajust[1] can be accepted. ")
                 
             if self.dipole_length is None: 
+                print('--> Dipolelength  is computing to straighten out  profile.')
                 self._logging.info ('We are computing dipolelength  to straight  profile. ')
                 
                 dipolLeng , stn_pk = self.compute_dipolelength_from_coords(
@@ -1364,27 +1385,33 @@ class Profile (object):
                 
             else : 
                 stn_pk = np.arange(int(self.dipole_length/2), 
-                                   self.east.size * self.dipole_length,
-                                   self.dipole_length)
+                                    self.east.size * self.dipole_length,
+                                    self.dipole_length)
                 warnings.warn('Dipole length is = {0} m. Stations are assumed '
                               'to be in center of each dipole.'
                               ' Total length is = {1} m'.\
                                   format(self.dipole_length,
-                                     (self.east.size - 1) * self.dipole_length ))
+                                      (self.east.size - 1) * self.dipole_length ))
         
             if self.elev is not None : elev =np.around(self.elev,2) 
             else : elev = np.repeat(0., self.east.size)
-            if output is True : REW =True 
-            else: 
-                REW =False 
-                self.reajust_coordinates_values(
-                                            easting= self.east, northing =self.north , 
-                                            x=reajust[0], y=reajust[1], station_pk=stn_pk, 
-                                            rewrite=REW, elevation= elev)
-            print("--->Locations coordinates are reajusting to straight"
-                  " profile and we'll add elevation.")
+            # if output is True : REW =False # firtly ,
+            #adjust coordinates without output file  set REW to False 
+            _, self.east, self.north ,*_= self.reajust_coordinates_values(
+                                        easting= self.east, northing =self.north , 
+                                        x=reajust[0], y=reajust[1], station_pk=stn_pk, 
+                                        rewrite=REW, elevation= elev)
+            
+            print("---> Locations coordinates are reajusting to straightening out"
+                  " profile. Elevation is added.")
             self._logging.info ("Locations coordinates are reajusting to"
-                                " straight profile and we'll top elevation.")
+                                " straighten out profile and we'll top elevation.")
+            REW =True 
+        
+        #then reascaled 
+        #  keep the adjustments values for others purposes.
+        self.__setattr__('e_east', self.east)
+        self.__setattr__('n_north', self.north)
         
         if re.match(r'^clas+', straight_type) is not None :
             # rj_factor = (self.east [-1] -self.east[0]) /(self.east.size -1) 
@@ -1403,7 +1430,8 @@ class Profile (object):
         elif (re.match(r'^nat+', straight_type) is not None) or (
                 re.match(r'^dis+', straight_type) is not None) :
             
-            #a kind of straighthen with equisdistant value between station but not straight , king or natural aspect on the site . 
+            #a kind of straighthen with equisdistant value between station but not straight ,
+            #king or natural aspect on the site . 
             rf_X = np.array([value - self.east[ii+1] for ii , value in enumerate(self.east) \
                               if ii <= self.east.size - 2 ]).mean()
 
@@ -1418,6 +1446,19 @@ class Profile (object):
                 if  jj > 0 : temp_nn [jj]=self.north[jj-1]- rf_Y
             
             self.east , self.north = temp_ee , temp_nn 
+        
+        if output is True : # export the file without scaling , set X, Y to 0. 
+        # and keep the new easting and Northing coordinates 
+            _,self.east, self.north,*_= self.reajust_coordinates_values(
+                                        easting= self.east, northing =self.north ,
+                                        x=0., y=0., station_pk=stn_pk, 
+                                        rewrite=REW, elevation= elev, savepath =savepath)
+            
+            self._logging.info ("Locations coordinates are reajusting to"
+                                " straighten out profile and we'll top elevation.")
+            
+            print("---> Locations coordinates are reajusting to straightening out"
+                  " profile. Elevation is added.")
         
     def rewrite_station_profile (self, easting =None , 
                                  northing=None ,

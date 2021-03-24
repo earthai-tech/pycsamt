@@ -200,7 +200,7 @@ class shifting(object):
     def read_processing_file(self, data_fn=None , profile_fn=None,
                               reference_freq=None,  **kwargs ):
         """
-        Mehod read processing fikes and load attributes for use
+        Mehod read processing files and load attributes for use.
         
         :param data_fn: full path to data file ,  coulb be `avg` of 
             Zonge International Engineering  or `edi`  of Society of Exploration 
@@ -216,7 +216,7 @@ class shifting(object):
         res_array = kwargs.pop('res_dict_arrays', None)
         phase_array =kwargs.pop('phase_dict_arrays', None)
  
-        self._logging.info('Load attraibutes for processing')
+        self._logging.info('Load attributes for processing')
         
         if data_fn is not None : self.data_fn =data_fn 
         if profile_fn is not None : self.profile_fn = profile_fn 
@@ -231,7 +231,7 @@ class shifting(object):
         if self.data_fn is None :
             if self.frequency is None or self.res_app_obj is None or \
                 self.phase_obj is None :
-                mess= 'NoneType data can not be computed. Please provide you'+\
+                mess= 'NoneType data can not be computed. Please provide your'+\
                     ' data path or station dictionnaries of resistivities'+\
                     ' and phases values or ndarray(len(frequency),len(sites))'+\
                     ' of resistivities and phases values in degree.'
@@ -244,7 +244,8 @@ class shifting(object):
                     'Please provide your right data files or '
                     ' ndarray|dict of resistivies and phases values in degree.')
                 
-            else: # enter in this loop assumes that value are in degree
+            else: # enter in this loop assumes that res and  phase value are are 
+            #provided manually , phase values are in degree.
                 # check the len of dictionnaries
                 for pobj, pname in zip([self.res_app_obj,self.phase_obj ],
                                        ['res_obj', 'phs_obj']):
@@ -270,10 +271,10 @@ class shifting(object):
                     self._logging.error(mess.format(len(self.res_app_obj,
                                                         len(self.phase_obj))))              
                     raise CSex.pyCSAMTError_processing(
-                        'Resistivity and phase must be the same length')
+                        'Resistivity and phase must be the same length!')
                     
                 # convert values in rad 
-                self.phase_obj = {stn: np.deg2rad(phs_values)%90
+                self.phase_obj = {stn: np.deg2rad(phs_values %90)
                              for stn,phs_values in self.phase_obj.items()}
                               
         if self.data_fn is not None :
@@ -314,7 +315,7 @@ class shifting(object):
                     self.res_app_obj= csamt_obj.Data_section.Resistivity.loc
                     
                     # Zonge phase are in mrad then converted to rad 
-                    # for consistency converted to degree and rad again 
+                    # for consistency converted to degree and read again 
                     self.phase_obj =csamt_obj.Data_section.Phase.loc
                     self.phase_obj ={stn:  np.deg2rad(
                         np.rad2deg(phase_values/ 1e3)%90)
@@ -1226,7 +1227,7 @@ class shifting(object):
                         print('---> Remove distorsion Error ! Provided distortion '
                               'Tensor as 2x2 matrices. ')
                         CSex.pyCSAMTError_processing(
-                            'Could not remode distorsion.Please provided real distortion'
+                            'Could not remove distorsion.Please provided real distortion'
                             ' 2x2 matrixes')
                     _, z_corrected, z_corrected_err = \
                         edi_obj.Z.remove_distortion(distortion_tensor =distortion_tensor,

@@ -23,7 +23,9 @@ developers and users of that software.
 
  * [Note](#Note)
  
-Actually pyCSAMT only works  in far field. Furhermore , it uses [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) open source sofware as modeling software. Nevertheless, several  outputs are provided for other external modeling softwares like [OasisMontaj](http://updates.geosoft.com/downloads/files/how-to-guides/Oasis_montaj_Gridding.pdf) and [GoldenSoftware](https://www.goldensoftware.com/products/surfer).
+Actually pyCSAMT only works  in far field. Furhermore , it uses [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) open source sofware as modeling software. Nevertheless,
+several  outputs are provided for other external modeling softwares like [MTpy](https://github.com/MTgeophysics/mtpy), [OasisMontaj](http://updates.geosoft.com/downloads/files/how-to-guides/Oasis_montaj_Gridding.pdf)
+and [GoldenSoftware](https://www.goldensoftware.com/products/surfer).
 
 ## Documentation 
 * API Documentation  : https://pycsamt.readthedocs.io/en/latest/
@@ -38,18 +40,18 @@ pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/p
 4. plot pseudo-cross section of phase and  resistivy 
 4. plot resistivity model /plot roughness model and residual model 
 5. plot "pseudostratigraphy log " with true resistivity values 
-6. generate true resistivity model from true resistivity values and layer names. 
-7. rescale profile coordinates 
-8. read /Write EMAP EDI data format 
-9. plot RMS, topography , azimuth and station separation 
-10. rescale profile 
+6. generate true resistivity model from true resistivity values and layer names 
+7. rescale profile coordinates either `natural or distored`, `classic` or `equidistant`
+8. read /Write  EMAP or MT EDI data format 
+9. plot RMS, topography , azimuth and station-separation 
+10. write corrected EDI.
 
-* Available filters
-1. *Trimming moving average* (TMA) mostly used by [Zonge](http://zonge.com/) AMTAVG hardware.
-2. *Fixed-length-dipole moving average* (FLMA) suggested by [Zonge](https://zonge.com.au/)
+* **Available filters**
+1. *Trimming moving average* (TMA) mostly used by [Zonge International Engineering](http://zonge.com/) 
+2. *Fixed-length-dipole moving average* (FLMA) suggested by [Zonge International Engineering](https://zonge.com.au/).
 3. *Adaptative moving-average* (AMA) based on idea of [Torres-Verdin](https://sci-hub.se/http://dx.doi.org/10.1190/1.1443273)
 4. *Removal distorsion* (`dist`) usefull to correct magnetotelluric (MT) data 
-5. *static shift removal* (`ss`) very interesting when applied to MT data
+5. *static shift removal* (`ss`) very interesting when applying to MT data
 
 ## Units used    
 * Apparent resistivy(Rho) : in ohm.meter 

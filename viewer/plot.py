@@ -1657,22 +1657,27 @@ class Plot1d :
         alpha  =kwargs.pop('alpha', 0.5)
         font_style =kwargs.pop('font_style', None)
         fw =kwargs.pop('font_weight', 'bold')
-        ann_stn = kwargs.pop('annotate_stations', True)
         output_reajfile =kwargs.pop('outputfile', False)
         
         # call profile _obj abd get special attribute 
         profile_obj =Profile(profile_fn= fn )
         prof_east_obj = profile_obj.east
         prof_north_obj = profile_obj.north 
-        # apply readjustmen 
+        # apply readjustment 
         profile_obj.straighten_profileline(X=prof_east_obj, 
                                            Y=prof_north_obj, 
                                            straight_type=straighten_type, 
                                            reajust=reajust_coordinates, 
-                                           output=output_reajfile)
+                                           output=output_reajfile, 
+                                           savepath = savefig
+                                           )
+        
+        prof_east_obj = profile_obj.e_east
+        prof_north_obj = profile_obj.n_north 
+        
         new_prof_east_obj = profile_obj.east 
         new_prof_north_obj = profile_obj.north 
-        
+
         #get profile name though Site_obj
         profile_obj.Site.set_site_info(data_fn =fn)#easting =new_prof_east_obj , northing =new_prof_north_obj)
 

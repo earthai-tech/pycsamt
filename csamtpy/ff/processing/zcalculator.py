@@ -1226,8 +1226,8 @@ def compute_FLMA ( z_array =None  , weighted_window=None ,
                     
             cFLMA.append(zz_new.sum())    
             
-    print('** {0:<27} {1} {2} dipoles.'.format("Filter's width",
-                                '=', int(number_of_points)))   
+    print('** {0:<27} {1} {2} m.'.format("Filter's width",
+                                '=', int(number_of_points)* dipole_length))   
              
     return np.array(cFLMA)    
 
@@ -1506,7 +1506,8 @@ def compute_AMA(reference_freq=None, z_array =None,
             warnings.warn('`Impedance` is None. could not compute'
                           ' `apparent resistivities`')
             raise CSex.pyCSAMTError_processing('`Impedance`  is None.'
-                'Could not compute `resistivities`. Please provided  {0}')
+                'Could not compute `resistivities`.'
+                ' Please provided at least an `impedance array`.')
     
         resistivities = np.abs(z_array) ** 2 / (mu0 * omega_reffreq )
         
@@ -1573,7 +1574,7 @@ def compute_AMA(reference_freq=None, z_array =None,
         
         """
         npoints =np.around(skindepth/dipole_length) 
-        # adjusted width  and recompute  and adapthed with 
+        # adjusted width  and recompute  and adapthed width 
         npoints_array = np.arange(0, dipole_length * npoints, dipole_length) 
                                     
         
@@ -1602,7 +1603,7 @@ def compute_AMA(reference_freq=None, z_array =None,
     z_bostick_depth= adapted_skindepth(skin_window=z_bostick_depth,
                                     scale_value=adaptative_value)
     
-    # adaptative winodw with with number of skin depth 
+    # adaptative window width with number of skin depth 
     w_window_width = number_of_skin_depth * z_bostick_depth 
     
     # recompute again impedance so to get adaptative impedance 
@@ -1616,8 +1617,8 @@ def compute_AMA(reference_freq=None, z_array =None,
     #------------------------------------------------------------
     cAMA = compute_zxy_xk_omega(z_imp=z_array, coeffs_bj= n_weight_factors)
     
-    print('** {0:<27} {1} {2} skinDepths.'.format("Filter's width",
-                                '=', int(number_of_skin_depth)))    
+    print('** {0:<27} {1} {2} m.'.format("Filter's width",
+                                '=', np.around(w_window_width.mean(),2)))    
 
     return cAMA  
 

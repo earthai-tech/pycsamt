@@ -896,7 +896,9 @@ class Profile (object):
         if _pflag ==1:
             if inFO._sensitive.which_file(filename =self.profile_fn ) =='stn': 
                 ref='none' 
-                if os.path.basename(self.profile_fn).find('reaj') >=0 : 
+                if os.path.basename(self.profile_fn).find('reaj') >=0  or\
+                    os.path.basename(self.profile_fn).find('cor') >=0 or \
+                        os.path.basename(self.profile_fn).find('sca') >=0 : 
                     ref ='scalled'
    
                 with open(self.profile_fn, 'r', encoding='utf8') as fn :
@@ -905,7 +907,8 @@ class Profile (object):
                     if split_type is None : 
                         split_type = func.stn_check_split_type(data_lines=data_lines)
                     
-                    # in the case where user provide the file written by that software , ignore the  #healines start by '> or '!
+                    # in the case where user provide the file written by that software ,
+                    #ignore the  #healines start by '> or '!
                    
                     temp=[]             # rebuild a new data lines for safety
                     for hh , values  in enumerate(data_lines) : 
@@ -1007,7 +1010,7 @@ class Profile (object):
             if _pflag == 2 : 
                 assert easting.size == northing.size ,\
                     CSex.pyCSAMTError_profile('Easting and Northing must have the same size.'
-                                 ' Easting|northing size are currentlysize is <{0}|{1}>.'.\
+                                 ' easting|northing size are currentlysize is <{0}|{1}>.'.\
                                      format(easting.size, northing.size))
                 self.east =easting 
                 self.north =northing

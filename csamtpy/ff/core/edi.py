@@ -717,12 +717,21 @@ class Edi :
         
         if edi_fn is not None : self.edifile =edi_fn 
         
+        if new_edifilename is not None : 
+            try: 
+                new_edifilename += '.{0}.edi'
+                f=2 
+            except: 
+                new_edifilename =None 
+                f=0
+            
         if new_edifilename is None : 
             if self.edifile is not None : new_edifilename = '{0}{1}'.format(
                     'new_', os.path.basename(self.edifile)) 
             else : 
                 f = 1
                 new_edifilename = '{0}_{1}.{2}.edi'
+            
         
         if self.Head.dataid is None : 
             self.read_edi()
@@ -741,17 +750,20 @@ class Edi :
         # if self.typefile is None :
             self.typefile = edi_mtemap_infolines[0][2:-5].lower()
         elif datatype is not None : 
-            if re.match(datatype.lower(), 'emapsect') is None  and re.match(datatype.lower(), 'mtsect') is None :
+            if re.match(datatype.lower(), 'emapsect') is None \
+                and re.match(datatype.lower(), 'mtsect') is None :
                 warnings.warn ('Currently <pyCSAMT> can write ">=MTSECT" or ">=EMAPSECT".'\
                                ' The only dataType keys acceptables are either "mt" or "emap".')
-                raise CSex.pyCSAMTError_EDI('Datatype provided is not acceptable .Please try "mt" or "emap".')
+                raise CSex.pyCSAMTError_EDI(
+                    'Datatype provided is not acceptable .Please try "mt" or "emap".')
 
             self.typefile= datatype 
         
         if f==1 :
             new_edifilename = new_edifilename.format(self.Head.dataid,
-                                                     self.typefile,datetime.datetime.now().year) # set the name of new_filename 
-                                                     
+                                                     self.typefile, datetime.datetime.now().year) # set the name of new_filename 
+        elif f==2:
+               new_edifilename=new_edifilename.format(self.Head.dataid)                              
                                                      
         # write frequency >!****FREQUENCIES****!
         edi_freq_infolines = [self.data_head_com.format('frequencies'.upper())]
@@ -916,31 +928,37 @@ class Edi :
             
         if savepath  is None : # create a folder in your current work directory
             try :
-                
                 savepath = os.path.join(os.getcwd(), '_outputEDI_')
                 if not os.path.isdir(savepath):
                     os.mkdir(savepath)
                 self.logging.info ('Create newpath <%s> to save edifile'% savepath)    
             except : 
-
                 warnings.warn("It seems the path already exists !")
         
         if savepath is not None :
             try : 
                 if os.path.exists(savepath) : 
-                    shutil.move(new_edifilename, savepath )
+                    shutil.move(os.path.join(os.getcwd(),new_edifilename), 
+                                savepath )
                 else : 
                     try :
-                        warnings.warn ('File <{0}> already exists ,'\
-                                       ' New file will be set on new folder {1}:' \
-                               .format(os.path.basename(new_edifilename), ('new_edi.{0}.{1}'.\
-                                                          format('ff', datetime.datetime.now().month))))
-                        new_path = 'new_edi.{0}.{1}'.format('ff', datetime.datetime.now().month)
+                        warnings.warn ('File <{0}> already exists ,New file will be'
+                                       '  set on new folder {1}:' 
+                               .format(os.path.basename(new_edifilename),
+                                       ('new_edi.{0}.{1}'.\
+                                        format('ff', datetime.datetime.now().month))))
+                        new_path = 'new_edi.{0}.{1}'.\
+                            format('ff', datetime.datetime.now().month)
+                        
                         os.mkdir(os.path.join(savepath, new_path))
                         
-                        self.logging.info ('Create newpath <%s> to save edifile'% os.path.join(savepath, new_path))
+                        self.logging.info ('Create newpath <%s> to save edifile'% \
+                                           os.path.join(savepath, new_path))
                     except :pass 
-                    else : shutil.move(new_edifilename, os.path.join(os.getcwd(), new_path))
+                    
+                    else : 
+                        shutil.move(os.path.join(os.getcwd(),new_edifilename),
+                                    os.path.join(os.getcwd(), new_path))
             except : pass 
 
         write_edilines=[]

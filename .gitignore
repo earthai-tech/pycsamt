@@ -76,6 +76,7 @@ __pycache__/
 *$py.class
 *.spyproject/
 .eggs/
+.ini.bak
 
 #libraries
 lib/
@@ -129,6 +130,6 @@ target/
 #*.png
 
 # ignore quick examples docs 
-quick_examples/
+#quick_examples/
 _logfile/
 add.info/

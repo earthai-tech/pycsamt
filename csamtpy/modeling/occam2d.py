@@ -1311,6 +1311,7 @@ class Mesh(object):
             else : 
                 mess ='No Mesh file detected. Please provide the right occam2d mesh files.'
                 warnings.warn(mess), self._logging.error(mess)
+                raise CSex.pyCSAMTError_occam2d(mess)
         
         mesh_char = occam_mesh_lines[1].strip().split()         # characteristic of the mesh (nblocks +1)
         num_h_nodes ,num_v_nodes = int(mesh_char[1]), int(mesh_char[2]) # horizontal nodes , verticales nodes (nlayers+1)
@@ -1328,34 +1329,38 @@ class Mesh(object):
             for mval in mitems: 
                 self.mesh_x_nodes[count_xnodes]=float(mval)
                 count_xnodes += 1 
-            if count_xnodes >= num_h_nodes -2 :  # asssume to get (number of blocks =x_nodes -1 -1 of python readlines )
+            if count_xnodes >= num_h_nodes -1 :  # asssume to get (number of blocks =x_nodes -1 -1 of Python readlines )
                 starting_lines_counter += mii
                 break 
+        # print(self.mesh_x_nodes)
+        # print(starting_lines_counter)
         #sometimes there is between xnodes and verticales nodes a lines of spaces , skip it if exists 
+        # and go to the line to count the vertical nodes 
         if occam_mesh_lines[starting_lines_counter +1] =='' or\
             occam_mesh_lines[starting_lines_counter +1] =='\n': 
-            starting_lines_counter +=2
-        
+            starting_lines_counter +=1
+ 
         #--> read vertical nodes part 
-        for mii, mitems in enumerate(occam_mesh_lines[starting_lines_counter:]): 
+        for mii, mitems in enumerate(occam_mesh_lines[starting_lines_counter +1:]): 
             mitems =mitems.strip().split() 
             for mj, mvalues in enumerate(mitems): 
-                self.mesh_z_nodes [count_z_nodes]= float(mvalues) 
+                self.mesh_z_nodes [count_z_nodes]= float(mvalues)
                 count_z_nodes +=1 
-            if count_z_nodes >= num_v_nodes -2 : 
+            if count_z_nodes >= num_v_nodes -1 : # substract the number of blocks =1 with the Python index 
                 starting_lines_counter += mii 
                 break 
         # be sure line counter match the 
-        try :
-            
-            if int(occam_mesh_lines[starting_lines_counter +1]) == 0: # end of nodes , should
-                                                                #There should always be a zero before the next section
-                                                                # so add +1 to comtime line 
+        
+        # Check whether we are at the end of nodes  for consistency , it 
+        #There should always be a zero before the next section  # so add +1 to index line 
+        try :      
+            if int(occam_mesh_lines[starting_lines_counter +1]) == 0:                               
                 starting_lines_counter +=1
         except :pass
 
         # --> fill model values with parameter specs {???}
-        self._logging.info("Reading of parameters specification of mesh and fill model values")
+        self._logging.info("Reading of parameters"
+                           " specification of mesh and fill model values")
         
         for specs, paramline in enumerate(occam_mesh_lines[starting_lines_counter+ 1:], 
                                    starting_lines_counter):
@@ -1366,9 +1371,12 @@ class Mesh(object):
                 list_paramspecs = list(paramline)
                 if len(list_paramspecs) != num_h_nodes - 1:
                     print('-'*77)
-                    mess= ''.join( ["---> Params specification for line = {0} from <{1}> have too many columns.", 
-                                    "Should be {2} instead of {3}. Please check your mesh file."])
-                    print(mess.format(specs, os.path.basename(self.mesh_fn),num_h_nodes,len(list_paramspecs)  ))
+                    mess= ''.join( ["---> Params specification for line = {0}"
+                                    " from <{1}> have too many columns.", 
+                                    "Should be {2} instead of {3}. "
+                                    "Please check your mesh file."])
+                    print(mess.format(specs, os.path.basename(self.mesh_fn),
+                                      num_h_nodes,len(list_paramspecs)  ))
                     print('-'*77)
    
                     list_paramspecs =  list_paramspecs[0:num_h_nodes]
@@ -1395,9 +1403,11 @@ class Mesh(object):
 
     
         print('{0:-^77}'.format('Occam 2D Mesh params '))
-        for im , nodes  in zip (['Horizontal', 'Vertical'], [[new_h_nodes,num_h_nodes ], 
-                                                             [new_v_nodes,num_v_nodes]]) : 
-            mess='*** {0} nodes read = {1} instead of {2} in mesh files.'.format(im, nodes[0], nodes[1])
+        for im , nodes  in zip (['Horizontal', 'Vertical'],
+                                [[new_h_nodes,num_h_nodes ], 
+                                 [new_v_nodes,num_v_nodes]]) : 
+            mess='*** {0} nodes read = {1} instead of {2} in '\
+                'mesh files.'.format(im, nodes[0], nodes[1])
             print(mess), self._logging.info(mess)
       
         # generate mesh x_grid and z_grid
@@ -1411,8 +1421,10 @@ class Mesh(object):
         self.mesh_z_grid = np.array([self.mesh_z_nodes[:ii].sum()
                                 for ii in range(self.mesh_z_nodes.shape[0])])
         
-        print('---> {0:<20} {1} {2}'.format('Horizontal nodes','=',self.mesh_x_nodes.shape[0]))
-        print('---> {0:<20} {1} {2}'.format('Vertical nodes','=',self.mesh_z_nodes.shape[0]))
+        print('---> {0:<20} {1} {2}'.format('Horizontal nodes',
+                                            '=',self.mesh_x_nodes.shape[0]))
+        print('---> {0:<20} {1} {2}'.format('Vertical nodes',
+                                            '=',self.mesh_z_nodes.shape[0]))
         
   
 class Iter2Dat (object): 
@@ -1445,7 +1457,7 @@ class Iter2Dat (object):
                 path to occamfiles : put on one directory 
         
     ==================  ==============  =======================================
-    Attributes              type         Description
+    Attributes              Type         Description
     ==================  ==============  =======================================
     ** Data             obj             Occam Data object 
     **Iter              obj             occam Iteration object

@@ -997,7 +997,7 @@ class shifting(object):
         =====================  ==========  ====================================
         Params                  Type            Description 
         =====================  ==========  ====================================
-        new_edifilename         str         name of output edifiles
+        filename                str         name of output edifiles
         number_of_points        int         weighted window. *Default* is 7. 
                                             if one edifile is provided , change 
                                             weigthed point to 1.
@@ -1044,7 +1044,7 @@ class shifting(object):
             
         """
        
-        new_edifilename =kwargs.pop('edi_newname', None)
+        new_edifilename =kwargs.pop('filename', None)
         number_of_points= kwargs.pop('number_of_points', 1)
         dipole_length = kwargs.pop('dipole_length', 50.)
         number_of_skin_depth= kwargs.pop('number_of_skin_depth', 3.)

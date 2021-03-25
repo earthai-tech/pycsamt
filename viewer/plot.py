@@ -566,7 +566,7 @@ class Plot1d :
         FILTERpoints =kwargs.pop('number_of_points',5)
         number_of_skin_depth =kwargs.pop('number_of_skin_depth', 1.)
         
-        savefig =kwargs.pop('save_figure', None)
+        savefig =kwargs.pop('savefig', None)
         orient =kwargs.pop('orientation', 'landscape')
         addstn= kwargs.pop('set_station_names', False)
         
@@ -2479,8 +2479,8 @@ class Plot2d (object):
         #tolerance_value =kws.pop('atol', 0.2)
         delineate_phase_curve = kws.pop('delineate_phase', None)
         mplcmap =kws.pop('cm', 'seismic')
-        contourlines =kws.pop('contour_lines_styles', '-')
-        contourcolors =kws.pop('contour_lines_colors', 'white')
+        contourlines =kws.pop('contour_lines_style', '-')
+        contourcolors =kws.pop('contour_lines_color', 'white')
         
         #--create obj ----
         csamt_obj =CSAMT(data_fn=fn , profile_fn=profile_fn)
@@ -2546,15 +2546,43 @@ class Plot2d (object):
                                               cmap =cmap, 
                                               )
             
-            MAT = [[xres_matrix, yres_matrix ,csamt_RES_obj], [xphase_matrix , yphase_matrix ,csamt_PHS_obj]]
+            MAT = [[xres_matrix, yres_matrix ,csamt_RES_obj], 
+                   [xphase_matrix , yphase_matrix ,csamt_PHS_obj]]
             for ii, (axe, deline)  in enumerate( zip ([axe_res, axe_phase], 
                                       [delineate_resistivity_curve,delineate_phase_curve])) : # loop the dict and get value 
                 if  deline is not None : 
-                    contps = axe.contour(*MAT[ii], colors =contourcolors, linestyles=contourlines)
-                    axe.clabel(contps, deline ,
-                                    inline=True, fmt='%1.1f',
+                    contps = axe.contour(*MAT[ii], 
+                                         colors =contourcolors, 
+                                         linestyles=contourlines)
+                    try :
+                        axe.clabel(contps, deline ,
+                                        inline=True, fmt='%1.1f',
+                                        fontsize =self.font_size,
+                                                  )
+                    except:
+                        # deline =None and set all contours
+                        if ii==0 : mesf = 'resistivity'
+                        else : mesf ='phase'
+                    
+                        warnings.warn(
+                            'Values {0} given as {1} contours levels does not match !'
+                            'Contours levels are resseting to default levels !'.format(deline, mesf))
+                        
+                        print('---> Values {0} given can not be set as  {1} contours levels.'
+                              ' Default levels are {2}.'.format(deline, mesf,  contps.levels))
+    
+                        print('.--> ! {0} contours levels = {1} are resseting to '
+                              'to default levels!'.format(mesf.capitalize(), deline))
+                        
+                        self._logging.debug ('values {0} given as contours levels does not match ! '
+                              'availables contours levels are set to default values.')
+                        
+                        axe.clabel(contps, 
+                                    inline=True,
+                                    fmt='%1.1f',
                                     fontsize =self.font_size,
-                                              )
+                                                  )
+                    
         if plot_style.lower() =='imshow': 
             xres_matrix , yres_matrix =np.meshgrid(csamt_stnDis_obj, csamt_freq_obj) 
             xphase_matrix , yphase_matrix = np.meshgrid(csamt_stnDis_obj, csamt_freq_obj)

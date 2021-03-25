@@ -1332,7 +1332,8 @@ class Mesh(object):
                 starting_lines_counter += mii
                 break 
         #sometimes there is between xnodes and verticales nodes a lines of spaces , skip it if exists 
-        if occam_mesh_lines[starting_lines_counter +1] =='' or occam_mesh_lines[starting_lines_counter +1] =='\n': 
+        if occam_mesh_lines[starting_lines_counter +1] =='' or\
+            occam_mesh_lines[starting_lines_counter +1] =='\n': 
             starting_lines_counter +=2
         
         #--> read vertical nodes part 
@@ -1345,12 +1346,13 @@ class Mesh(object):
                 starting_lines_counter += mii 
                 break 
         # be sure line counter match the 
-
-        if int(occam_mesh_lines[starting_lines_counter +1]) == 0: # end of nodes , should
-                                                            #There should always be a zero before the next section
-                                                            # so add +1 to comtime line 
-            starting_lines_counter +=1
-        
+        try :
+            
+            if int(occam_mesh_lines[starting_lines_counter +1]) == 0: # end of nodes , should
+                                                                #There should always be a zero before the next section
+                                                                # so add +1 to comtime line 
+                starting_lines_counter +=1
+        except :pass
 
         # --> fill model values with parameter specs {???}
         self._logging.info("Reading of parameters specification of mesh and fill model values")

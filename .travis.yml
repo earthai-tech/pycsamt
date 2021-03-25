@@ -22,11 +22,11 @@ install:
     # - conda info -a
     # - conda create -q -n test-env python=$TRAVIS_PYTHON_VERSION pytest pytest-cov pyyaml
     # - source activate test-env
-    - pip install -r requirements.txt #ip install --user -r requirements.txt fi python language is not used 
+    - pip install --user -r requirements.txt #ip install --user -r requirements.txt fi python language is not used 
                                             # add --use-feature=2020-resolver if before install is uncommented 
-    - pip install .
+    #- pip install .
 # command to run tests
 script:
-    # - pytest
-    - python -m pytest ./test
+     - pytest
+    # - python -m pytest ./test
     # -- pytest -v --cov=pyCSAMT --cov-report= tests --ignore=tests/SmartMT

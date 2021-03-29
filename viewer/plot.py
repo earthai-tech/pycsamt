@@ -2572,7 +2572,7 @@ class Plot2d (object):
                               ' Default levels are {2}.'.format(deline, mesf,  contps.levels))
     
                         print('.--> ! {0} contours levels = {1} are resseting to '
-                              'to default levels!'.format(mesf.capitalize(), deline))
+                              ' default levels!'.format(mesf.capitalize(), deline))
                         
                         self._logging.debug ('values {0} given as contours levels does not match ! '
                               'availables contours levels are set to default values.')

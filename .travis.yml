@@ -1,32 +1,56 @@
-language: python
-python:
-  - "3.6"
-  - "3.7"
+{
+  "language": "python",
+  "os": [
+    "linux"
+  ],
+  "dist": "xenial",
+  "python": [
+    "3.6",
+    "3.7"
+  ],
+  "virtualenv": {
+    "system_site_packages": true
+  },
+  "before_install": [
+    "python -m pip install --upgrade pip"
+  ],
+  "install": [
+    "pip install --user -r requirements.txt"
+  ],
+  "script": [
+    "pytest"
+  ]
+}
 
-  # PyPy versions
-  #- "pypy"   # currently Python 2.7.13, PyPy 7.1.1
-  #- "pypy3"  # currently Python 3.6.1,  PyPy 7.1.1-beta0
-virtualenv:
-  system_site_packages: true
-# command to install dependencies
-before_install:
-    - python -m pip install --upgrade pip
+# language: python
+# python:
+#   - "3.6"
+#   - "3.7"
 
-install:
-    # - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-    # - bash miniconda.sh -b -p $HOME/miniconda
-    # - export PATH="$HOME/miniconda/bin:$PATH"
-    # - hash -r
-    # - conda config --set always_yes yes --set changeps1 no
-    # - conda update -q conda
-    # - conda info -a
-    # - conda create -q -n test-env python=$TRAVIS_PYTHON_VERSION pytest pytest-cov pyyaml
-    # - source activate test-env
-    - pip install --user -r requirements.txt #ip install --user -r requirements.txt fi python language is not used 
-                                            # add --use-feature=2020-resolver if before install is uncommented 
-    #- pip install .
-# command to run tests
-script:
-     - pytest
-    # - python -m pytest ./test
-    # -- pytest -v --cov=pyCSAMT --cov-report= tests --ignore=tests/SmartMT
+#   # PyPy versions
+#   #- "pypy"   # currently Python 2.7.13, PyPy 7.1.1
+#   #- "pypy3"  # currently Python 3.6.1,  PyPy 7.1.1-beta0
+# virtualenv:
+#   system_site_packages: true
+# # command to install dependencies
+# before_install:
+#     - python -m pip install --upgrade pip
+
+# install:
+#     # - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+#     # - bash miniconda.sh -b -p $HOME/miniconda
+#     # - export PATH="$HOME/miniconda/bin:$PATH"
+#     # - hash -r
+#     # - conda config --set always_yes yes --set changeps1 no
+#     # - conda update -q conda
+#     # - conda info -a
+#     # - conda create -q -n test-env python=$TRAVIS_PYTHON_VERSION pytest pytest-cov pyyaml
+#     # - source activate test-env
+#     - pip install --user -r requirements.txt #ip install --user -r requirements.txt fi python language is not used 
+#                                             # add --use-feature=2020-resolver if before install is uncommented 
+#     #- pip install .
+# # command to run tests
+# script:
+#      - pytest
+#     # - python -m pytest ./test
+#     # -- pytest -v --cov=pyCSAMT --cov-report= tests --ignore=tests/SmartMT

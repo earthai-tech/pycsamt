@@ -205,8 +205,9 @@ class Geodrill (object):
     geoparams =['geo_offsets', 'geo_depth', 'geo_res', 'geo_name', 
                     'geo_location', 'geo_elevation']
     
-    def __init__(self, iter2dat_fn=None , model_fn =None , data_fn=None , iter_fn=None , mesh_fn=None ,
-                 bln_fn =None , **kwargs):
+    def __init__(self, iter2dat_fn=None , model_fn =None , data_fn=None ,
+                 iter_fn=None , mesh_fn=None , bln_fn =None , **kwargs):
+                
         self._logging = csamtpylog.get_csamtpy_logger(self.__class__.__name__)
         
         self.iter2dat_fn = iter2dat_fn
@@ -268,7 +269,8 @@ class Geodrill (object):
         
         print('{0:-^77}'.format('GeoDrill *Data* info'))
         
-        def frame_each_site_into_3_offsets(site_name, model_res, model_offset, site_offset): 
+        def frame_each_site_into_3_offsets(site_name, model_res, 
+                                           model_offset, site_offset): 
             """
             Fonction to frame each site into 3 offsets and put array 
 
@@ -357,8 +359,9 @@ class Geodrill (object):
                                ' You can also use occam2D output files like model, mesh, data, and iteration files.'])
                 warnings.warn('! Error reading *.bln flile !' + mess)
                 self._logging.error(mess)
-                raise CSex.pyCSAMTError_geodrill_inputarguments('! Error reading *.bln flile ! '\
-                                                              'No (*bln) station file found. Need sites names and sites locations.')
+                raise CSex.pyCSAMTError_geodrill_inputarguments(
+                    '! Error reading *.bln flile ! No (*bln) station file found.'
+                     ' Need sites names and sites locations.')
             i2d_obj = occam2d.Iter2Dat(iter2dat_fn=self.iter2dat_fn,
                                        bln_fn = self.bln_fn)
 
@@ -414,7 +417,7 @@ class Geodrill (object):
         
         if self.doi > self.model_z_nodes.max (): 
             mess='Maximum Input doi value = {0} m is larger'\
-                          ' than model depth = {1} m. Investigation depth "doi" will be resetting at = "{1}"m.'.\
+                  ' than model depth = {1} m. Investigation depth "doi" will be resetting at = "{1}"m.'.\
                               format(self.doi, self.model_z_nodes.max())
             
             self.doi = self.model_z_nodes.max()         # resseting doi to maximum value in model depth 
@@ -471,9 +474,9 @@ class Geodrill (object):
         """
        Allow ro replace the calculated resistivities from model
        to real resistivites obtained on survey area with other companies. 
-       The accuracy depend How many number of resistivites are.
-       More resitivities ,more accuracy in the designed of underground model
-       geostratigrapyhy model.
+       The accuracy depend the significant values of input  resistivites.
+       More input resitivities are,more accuracy in the design of underground model
+       geostratigrapyhy model should be.
 
        :param input_resistivity_range: an array of resistivity on the site
        :type input_resistivity_range: array_like 
@@ -484,8 +487,7 @@ class Geodrill (object):
        :param depth_range: array _of depth of specific layer 
        :type depth_range: array _like
                     
- 
-            
+   
         Example of table  of geoinformation collected on the field somewhere 
         
         ====================  ====================  ===========================
@@ -522,8 +524,9 @@ class Geodrill (object):
             try : 
                 value_range= np.array([float(ss) for ss in value_range])
             except : 
-                raise CSex.pyCSAMTError_geodrill_inputarguments('Value provided as resistivity'\
-                                                                ' range must be an array of float number.')
+                raise CSex.pyCSAMTError_geodrill_inputarguments(
+                    'Value provided as resistivity range must be an array of float number.')
+                                                                
             tem=[]
             for mm in value_range :     # loop the value range 
                 op = rowlines-mm        # substract rowlines from value range to seek the minimum close
@@ -588,11 +591,15 @@ class Geodrill (object):
                 n_layers =7.  # number of slices layer juged by the program 7 
             else : n_layers =len(self.input_layers)
             
-            mess="".join(["Resistivity range is not provided . Sites Depth will be cout out into {0} slices as possible layers ".format(int( n_layers)), 
-                          "  below the site. If the number of slices doesnt suit the purpose , please change the number ",
-                          "  of slices using argument <input_layers> to provided the real layer's names."])
-            warnings.warn(mess) 
-            self._logging.info(mess)
+            mess="".join(["Resistivity range is not provided . Sites Depth will",
+                          " be cout out into {0} slices as possible layers ", 
+                          "  below the site. If the number of slices doesnt",
+                          " suit the purpose , please change the number ",
+                          "  of slices using argument <input_layers> ",
+                          "to provided the real layer's names."])
+            
+            warnings.warn(mess.format(int( n_layers))) 
+            self._logging.info(mess.format(int( n_layers)))
            
           
             # get the model resistivities minimum and maximum from selected doi, it is much  better 
@@ -614,14 +621,19 @@ class Geodrill (object):
             try : 
                 self.input_resistivities = float(self.input_resistivities )
             except : 
-                raise CSex.pyCSAMTError_plot_geoinputargument('Can not converted value <%s> into float number.'\
-                                                              ' Please provide a float number.'%self.input_resistivities )
+                raise CSex.pyCSAMTError_plot_geoinputargument(
+                    'Can not converted value <%s> into float number.'\
+                    ' Please provide a float number.'%self.input_resistivities )
                 
         # Display infos 
-        print('**{0:<37} {1} {2}'.format('{0} Layers sliced'.format(auto_mess ),'=' , len(self.input_resistivities  )))
-        print('**{0:<37} {1} {2} (Ω.m)'.format('{0} Rho range'.format(auto_mess ),'=' , tuple(self.input_resistivities  ) ))
-        print('**{0:<37} {1} {2} {3}'.format(' Minimum rho ','=' ,self.input_resistivities.min(), 'Ω.m' ))
-        print('**{0:<37} {1} {2} {3}'.format(' Minimum rho ','=' , self.input_resistivities.max(), 'Ω.m' ))
+        print('**{0:<37} {1} {2}'.format('{0} Layers sliced'.format(auto_mess ),
+                                         '=' , len(self.input_resistivities  )))
+        print('**{0:<37} {1} {2} (Ω.m)'.format('{0} Rho range'.format(auto_mess ),
+                                               '=' , tuple(self.input_resistivities  ) ))
+        print('**{0:<37} {1} {2} {3}'.format(' Minimum rho ',
+                                             '=' ,self.input_resistivities.min(), 'Ω.m' ))
+        print('**{0:<37} {1} {2} {3}'.format(' Minimum rho ',
+                                             '=' , self.input_resistivities.max(), 'Ω.m' ))
        
         # so to get the structures for each input resistivities 
                  # ascertain unput layers first if no misleading value is inputted 
@@ -679,8 +691,9 @@ class Geodrill (object):
         if isinstance(resistivities_range, (tuple, list, np.ndarray)):  # for consistency , chek again input values 
             try :  resistivities_range =np.array([float(ss) for ss in resistivities_range])
             except : 
-                raise CSex.pyCSAMTError_geodrill_inputarguments('Input argument provided is wrong. '\
-                                                                'Please check your resistivities range, values must be a float number.')
+                raise CSex.pyCSAMTError_geodrill_inputarguments(
+                    'Input argument provided is wrong.Please check your resistivities '
+                    ' range, values must be a float number.')
              
         geo_structures=[]                   # in fact append the idde of resistivities values located 
                                             # so to be sure that the resistivities will match exactly the layer found in geo_electricl_property of rocks 
@@ -742,7 +755,7 @@ class Geodrill (object):
         Read resistivits data  got on survey area and build geological strata block. 
         If constrained_electrical_properties_of_rocks is False , will build a log 
         by considering the  conventional electrical property of rocks 
-        can be find through this link :
+        can be find through this link.
             
         Parameters
         ------------
@@ -754,6 +767,12 @@ class Geodrill (object):
             * input_layers : list or array 
                         layers_names , eg `granite`, `fault`, `river` 
         
+        Returns 
+        ---------
+            obj , 
+                Build stratigraphy log obj 
+            
+            
         A Sample of electrical_properties_of_rocks is below
             
         =========================  ===================  =======================
@@ -789,7 +808,7 @@ class Geodrill (object):
                     most of goeological electrical properties.
         """
 
-        def get_conductive_zone (dep_array, rho_array, step_in_deep)   :
+        def get_conductive_zone (dep_array, rho_array, step_in_deep):
             
             """
             Get a conductive zone is important for many purposes .In the case of 
@@ -819,7 +838,7 @@ class Geodrill (object):
                     rho average for each station dep_averaged for each station
                                  
             
-            .. note :: Much larger is the step , the accuracy becomes weak , 
+            .. note:: Much larger is the step , the accuracy becomes weak , 
                         it must be as possible 1/20 of investigation depth (doi)
                         
             :Example: 
@@ -908,13 +927,9 @@ class Geodrill (object):
         for stn, vrho in self.geo_d.items(): 
             # transpose data so to read rowlines S01,S02 etc 
 
-            self.geo_daver[stn] =  Geodrill.get_average_rho( data_array= vrho, transpose =True)
+            self.geo_daver[stn] =  Geodrill.get_average_rho( data_array= vrho,
+                                                            transpose =True)
             
-        # if constrained_electrical_properties_of_rocks is True : 
-        #     for ii in range (7): 
-        #         for stn ,constrainedrho in self.geo_daver.items(): 
-        #             self.geo_daver[stn] =  Geodrill.get_average_rho( data_array= constrainedrho, transpose =True)
-        
         self.qc += .25 
         #----- set attribute of geo_dstep_descent ---------------------------------------------------
         self.geo_dstep_descent={}
@@ -1225,7 +1240,12 @@ class Geodrill (object):
             * savepath :  str, 
                     full path to the savepath ,
                     if None , will create folder name to savepath 
-                    
+           
+        Returns 
+        ----------
+            obj , str 
+             golden software outputfiles `_rr.dat`, `_aver.dat`, `_sd.dat`. 
+         
         Holding a followings informations:
             
         ===================  ================  ================================
@@ -1253,7 +1273,8 @@ class Geodrill (object):
         else : df =1.
         
         if input_layers is not None : self.input_layers = input_layers 
-        if input_resistivities is not None : self.input_resistivities  = input_resistivities 
+        if input_resistivities is not None : 
+            self.input_resistivities  = input_resistivities 
         if step_descent is not None : self.step_descent= step_descent 
         if elevation is not None : self.elevation = elevation 
         
@@ -1369,8 +1390,8 @@ class Geodrill (object):
         filenames =[filename + '_aver.dat', filename +'_rr.dat',
                                             filename +'_sd.dat', filename + '_yb.bln']   
 
-        print('---> geo output files {0}, {1}, {2}  & {3}'\
-              'have been successfully written to  <{4}>.'.format(*filenames, savepath))
+        print('---> geo output files {0}, {1}, {2}  & {3}'
+              ' have been successfully written to  <{4}>.'.format(*filenames, savepath))
            
     def to_oasis_montaj (self,  model_fn=None , iter_fn=None ,profile_fn =None, 
                          mesh_fn=None  , data_fn=None , filename=None,
@@ -1424,6 +1445,11 @@ class Geodrill (object):
                             equal easting and  `index2` equal 
                             Nothing.*Default* is (0,0).
 
+         Returns 
+         --------
+            obj , str 
+             oasis outputfiles `.xlxs`, `.csv`
+         
         Holding a followings informations:
             
         =================  ==============  ====================================
@@ -1550,11 +1576,13 @@ class Geodrill (object):
         if filename is None : 
             filename = '.{0}'.format(datetime.datetime.now().month)
         else: 
-            filename ='{0}.{1}'.format(os.path.basename(filename), datetime.datetime.now().month)
+            filename ='{0}.{1}'.format(os.path.basename(filename),
+                                       datetime.datetime.now().month)
 
         # statements of arguments ----
 
-        for mattar, mfile in zip(['model_fn', 'mesh_fn', 'data_fn', 'iter_fn', 'iter2dat_fn', 'bln_fn' ],   
+        for mattar, mfile in zip(['model_fn', 'mesh_fn', 'data_fn',
+                                  'iter_fn', 'iter2dat_fn', 'bln_fn' ],   
                                   [model_fn, mesh_fn, data_fn, iter_fn, iter2dat_fn, bln_fn ]):
             if mfile is not None : 
                 setattr(self, mattar, mfile)
@@ -1570,9 +1598,9 @@ class Geodrill (object):
         
         profile_angle, geo_electric_strike = profile_obj.get_profile_angle()
         
-        print('** {0:<37} {1} {2} {3}'.format(' profile angle ','=',
+        print('** {0:<37} {1} {2} {3}'.format(' Profile angle ','=',
                                               round(profile_angle, 2), 'deg N.E' ))
-        print('** {0:<37} {1} {2} {3}'.format('geo_electric strike','=',
+        print('** {0:<37} {1} {2} {3}'.format('Geo_electric strike','=',
                                               round(geo_electric_strike , 2), 'deg N.E' ))
         
         # In the case where elevation is contain on the profile stn file , get elevation 
@@ -1609,7 +1637,8 @@ class Geodrill (object):
             spacing_depth =abs(self.geo_depth.max()- self.geo_depth.min())/ (len(self.geo_depth)-1)
     
             print('---> Depth normalized !')
-            print('---> {0:<37} {1} {2} {3}.'.format('new spacing depth','=', round(spacing_depth), 'm' ))
+            print('---> {0:<37} {1} {2} {3}.'.format('new spacing depth',
+                                                     '=', round(spacing_depth), 'm' ))
         else :
             print('---> UNnormalized  depth!')
            
@@ -1626,7 +1655,9 @@ class Geodrill (object):
         
         if to_log10: np.log10( model_oasis_montaj )
         
-        data_oasis = np.concatenate((infos_oasis_montaj, depth_oasis_montaj, model_oasis_montaj), axis =1)
+        data_oasis = np.concatenate((infos_oasis_montaj,
+                                     depth_oasis_montaj, 
+                                     model_oasis_montaj), axis =1)
         # buidd pandas columns 
         depres_pandas_columns = info_list + ['dep_{0}'.format(int(dd)) for dd in geo_depth] +\
             ['res_{0}'.format(int(dd)) for dd in geo_depth] 
@@ -1665,14 +1696,23 @@ class Geodrill (object):
                 model_geo_roughness=np.log10(model_geo_roughness)
                 model_average_rho =np.log10( model_average_rho)
             
-            data_oas_stepDescent = np.concatenate((infos_oasis_montaj, depth_oasis_montaj,model_step_descent), axis =1)
-            data_oas_roughness = np.concatenate((infos_oasis_montaj, depth_oasis_montaj, model_geo_roughness), axis =1)
-            data_oas_averageRho = np.concatenate((infos_oasis_montaj, depth_oasis_montaj, model_average_rho), axis =1)
+            data_oas_stepDescent = np.concatenate((infos_oasis_montaj,
+                                                   depth_oasis_montaj,
+                                                   model_step_descent), axis =1)
+            data_oas_roughness = np.concatenate((infos_oasis_montaj,
+                                                 depth_oasis_montaj,
+                                                 model_geo_roughness), axis =1)
+            data_oas_averageRho = np.concatenate((infos_oasis_montaj,
+                                                  depth_oasis_montaj,
+                                                  model_average_rho), axis =1)
             # create pandas dataFrame 
             
-            STD_pandas = pd.DataFrame(data=data_oas_stepDescent, columns=depres_pandas_columns)
-            ROUGH_pandas = pd.DataFrame(data=data_oas_roughness, columns=depres_pandas_columns)
-            AVER_pandas = pd.DataFrame(data=data_oas_averageRho, columns=depres_pandas_columns)
+            STD_pandas = pd.DataFrame(data=data_oas_stepDescent,
+                                      columns=depres_pandas_columns)
+            ROUGH_pandas = pd.DataFrame(data=data_oas_roughness,
+                                        columns=depres_pandas_columns)
+            AVER_pandas = pd.DataFrame(data=data_oas_averageRho,
+                                       columns=depres_pandas_columns)
             
             
             
@@ -1735,23 +1775,34 @@ class Geodrill (object):
                     for jj, file in enumerate(  ['.main.', '_sd', '_rr', '_aver']):
                         if fex ==0 : 
                             if jj ==1 : break # donc continue because other files does not exists  
-                        shutil.move(os.path.join(os.getcwd(),''.join([filename, file, '_cor_oas', writeType])) ,
-                            os.path.join(savepath , ''.join([filename, file, '_cor_oas', writeType])))
+                        shutil.move(os.path.join(os.getcwd(),
+                                                 ''.join([filename, file, 
+                                                          '_cor_oas', writeType])) ,
+                            os.path.join(savepath , 
+                                         ''.join([filename, file, 
+                                                  '_cor_oas', writeType])))
             except : 
                 warnings.warn("It seems the files already exists !")
         
         # write Infos 
-        print('** {0:<37} {1} {2} '.format('number of stations','=', len(self.station_names)))
-        print('** {0:<37} {1} {2} {3}'.format('minimum offset','=', self.station_location.min(), 'm' ))
-        print('** {0:<37} {1} {2} {3}'.format('maximum offset','=', self.station_location.max(), 'm' ))
-        print('** {0:<37} {1} {2} {3}'.format('maximum depth','=', geo_depth.max(), 'm' ))
-        print('** {0:<37} {1} {2} {3}'.format('spacing depth ','=', round(spacing_depth,2), 'm' ))
+        print('** {0:<37} {1} {2} '.format('number of stations',
+                                           '=', len(self.station_names)))
+        print('** {0:<37} {1} {2} {3}'.format('minimum offset',
+                                              '=', self.station_location.min(), 'm' ))
+        print('** {0:<37} {1} {2} {3}'.format('maximum offset',
+                                              '=', self.station_location.max(), 'm' ))
+        print('** {0:<37} {1} {2} {3}'.format('maximum depth',
+                                              '=', geo_depth.max(), 'm' ))
+        print('** {0:<37} {1} {2} {3}'.format('spacing depth ',
+                                              '=', round(spacing_depth,2), 'm' ))
         if self.elevation is None or np.all(self.elevation ==0.) : 
             print('--->  Elevation no added !')
         else : 
 
-            print('** {0:<37} {1} {2} {3}'.format('minumum elevation','=', self.elevation.min(), 'm' ))
-            print('** {0:<37} {1} {2} {3}'.format('maximum elevation ','=', self.elevation.max(), 'm' ))
+            print('** {0:<37} {1} {2} {3}'.format('minumum elevation',
+                                                  '=', self.elevation.min(), 'm' ))
+            print('** {0:<37} {1} {2} {3}'.format('maximum elevation ',
+                                                  '=', self.elevation.max(), 'm' ))
         
         print('** {0:<37} {1} {2} {3}'.format('minumum resistivity value','=',
                                               round(model_oasis_montaj.min(), 2), 'Ω.m' ))
@@ -1799,7 +1850,7 @@ class Geosurface :
     Holding a followings informations:
         
     ==============  =============  ============================================
-    Key Words       Type                        Description    
+    KeyWords        Type                        Description    
     ==============  =============  ============================================
     depth _values   array_like      Values of depth for imaging .
                                     can be a list of depth like [38,912]
@@ -1810,7 +1861,7 @@ class Geosurface :
                                     will create an a new directory 
     ==============  =============  ============================================
         
-    :Example :
+    :Example:
         
         >>> from geodrill.geoCore.geodrill import Geosurface 
         >>> gs_obj = geosurface (path =os.path.join(os.environ['pyCSAMT'], 
@@ -2528,17 +2579,11 @@ class Drill(object):
         self.wdico.__setitem__("Mask", self.mask)
         self.dh_rh=np.zeros((self.wdata.shape[0]))
         self.wdico.__setitem__("DH_RH", self.dh_rh)  
-        # print(self.wdico['DH_RH'])
-         
-        
-        # print(set -attribute)
-        # for keys , values in kwargs.items():
+
         for keys in kwargs.keys():
             self.__setattr__(keys, kwargs[keys])
             
-            # for key in not list(kwargs.keys()):
-            # setattr(self, key, kwargs[key])
-            
+ 
   
     def _collar(self, DH_Top=None,add_elevation =None ):
         """

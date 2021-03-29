@@ -16,7 +16,7 @@ handlers:
         class: logging.handlers.RotatingFileHandler
         level: DEBUG
         formatter: simple
-        filename: C:/Users/Administrator/OneDrive/Python/project/pyCSAMT/_logfiles/infos.log
+        filename: _logfile/infos.log
         maxBytes: 1000000 # 1MB
         backupCount: 2
         encoding: utf8
@@ -25,7 +25,7 @@ handlers:
         class: logging.handlers.RotatingFileHandler
         level: ERROR
         formatter: simple
-        filename: C:/Users/Administrator/OneDrive/Python/project/pyCSAMT/_logfiles/errors.log
+        filename: _logfile/errors.log
         maxBytes: 1000000 # 1MB
         backupCount: 2
         encoding: utf8

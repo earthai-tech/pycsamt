@@ -9,6 +9,7 @@ docs/source/api/generated
 docs/gh-pages
 docs/_build*
 docs/_themes
+
 IPython/frontend/html/notebook/static/mathjax
 *.py[co]
 build
@@ -77,6 +78,8 @@ __pycache__/
 *.spyproject/
 .eggs/
 .ini.bak
+.cpython-37.pyc
+
 
 #libraries
 lib/
@@ -131,5 +134,5 @@ target/
 
 # ignore quick examples docs 
 #quick_examples/
-_logfile/
+#_logfile/
 add.info/

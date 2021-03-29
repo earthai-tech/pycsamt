@@ -77,8 +77,8 @@ __pycache__/
 *$py.class
 *.spyproject/
 .eggs/
-.ini.bak
-.cpython-37.pyc
+*.ini.bak
+*.cpython-37.pyc
 
 
 #libraries

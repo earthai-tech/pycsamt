@@ -29,4 +29,4 @@ install:
 script:
     # -- pytest -v --cov=pyCSAMT --cov-report= tests --test_occam2d_models.py
     # - python -m unittest tests/modeling/tes_occam2d_
-    -- pytest -v --cov=pyCSAMT --cov-report= tests --ignore=tests/modeling
+    - pytest -v --cov=pyCSAMT --cov-report= tests --ignore=tests/modeling/

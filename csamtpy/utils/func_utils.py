@@ -2262,7 +2262,7 @@ def minimum_parser_to_write_edi (edilines, parser = '='):
     return edilines 
             
 
-def round_dipole_length(value): 
+def round_dipole_length(value, round_value =5.): 
     """ 
     small function to graduate dipole length 5 to 5. Goes to be reality and 
     simple computation .
@@ -2273,9 +2273,9 @@ def round_dipole_length(value):
     :returns: value of dipole length rounded 5 to 5 
     :rtype: float
     """ 
-    mm = value % 5 
+    mm = value % round_value 
     if mm < 3 :return np.around(value - mm)
-    elif mm >= 3 and mm < 7 :return np.around(value -mm +5) 
+    elif mm >= 3 and mm < 7 :return np.around(value -mm +round_value) 
     else:return np.around(value - mm +10.)
     
 

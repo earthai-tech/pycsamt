@@ -31,27 +31,28 @@ and [GoldenSoftware](https://www.goldensoftware.com/products/surfer).
 * API Documentation  : https://pycsamt.readthedocs.io/en/latest/
 
 ## Licence 
-pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/pyCSAMT/blob/master/LICENSE.md)
+pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/pyCSAMT/blob/master/LICENSE.md).
 
 ## Some Features 
-1. convert *.avg, *.j(.data)  to SEG Electrical Data Interchange(EDI)
+1. convert *.avg, *.j(.*dat) file  to SEG Electrical Data Interchange(EDI)
 2. analysis and correct CSAMT static shift effects 
 3. plot penetration depth(1D, 2D ) as function of depth 
 4. plot pseudo-cross section of phase and  resistivy 
 4. plot resistivity model /plot roughness model and residual model 
 5. plot "pseudostratigraphy log " with true resistivity values 
-6. generate true resistivity model from true resistivity values and layer names 
-7. rescale profile coordinates either `natural or distored`, `classic` or `equidistant`
+6. generate true resistivity model from true resistivity values and true layer names 
+7. rescale profile coordinates using  `natural|distorded`, `classic` or `equidistant` keywords 
 8. read /Write  EMAP or MT EDI data format 
 9. plot RMS, topography , azimuth and station-separation 
-10. write corrected EDI.
+10. write corrected EDI,
+11. write occam2D inputfiles by straightforwardly calling [MTpy](https://github.com/MTgeophysics/mtpy.git) software. 
 
 * **Available filters**
-1. *Trimming moving average* (TMA) mostly used by [Zonge International Engineering](http://zonge.com/) 
-2. *Fixed-length-dipole moving average* (FLMA) suggested by [Zonge International Engineering](https://zonge.com.au/).
-3. *Adaptative moving-average* (AMA) based on idea of [Torres-Verdin](https://sci-hub.se/http://dx.doi.org/10.1190/1.1443273)
-4. *Removal distorsion* (`dist`) usefull to correct magnetotelluric (MT) data 
-5. *static shift removal* (`ss`) very interesting when applying to MT data
+1. *Trimming moving average* (TMA) mostly used by [Zonge International Engineering](http://zonge.com/) .
+2. *Fixed-length-dipole moving average* (FLMA) also used by [Zonge International Engineering](https://zonge.com.au/).
+3. *Adaptative moving-average* (AMA) based on idea of [Torres-Verdin](https://sci-hub.se/http://dx.doi.org/10.1190/1.1443273).
+4. *Removal distorsion* (`dist`) usefull to correct magnetotellurics (MT) data. 
+5. *Static shift removal* (`ss`) 
 
 ## Units used    
 * Apparent resistivy(Rho) : in ohm.meter 
@@ -89,7 +90,7 @@ Filters TMA  and AMA  can also applied to correct apparent resistivities. MT dat
 * Python 3.6+ 
 
 ## Contributing 
-Your suggestions are really welcome...
+Any suggestion to improve the software is welcome ...
 
 
 *_Developer's name:_ ***@Daniel03*** , _etanoyau@gmail.com_

@@ -5,7 +5,6 @@ language: python
 python:
   - "3.7"
 
- 
 # command to install dependencies
 before_script: null
 # before_install:
@@ -28,5 +27,5 @@ install:
 # command to run tests
 script:
     # -- pytest -v --cov=pyCSAMT --cov-report= tests --test_occam2d_models.py
-    # - python -m unittest tests/modeling/tes_occam2d_
-    - pytest -v --cov=pyCSAMT --cov-report= tests --ignore=tests/modeling/
+    - python -m unittest tests/modeling/test_occam2d_models.py
+    # - pytest -v --cov=pyCSAMT --cov-report= tests --ignore=tests/modeling/test_occam2d_models.py

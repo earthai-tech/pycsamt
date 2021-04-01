@@ -1,12 +1,8 @@
 
 from __future__ import print_function
 
-# import functools
-# import inspect
 import os
 import sys
-# import threading
-# from unittest import TestCase
 
 import matplotlib
 
@@ -14,21 +10,22 @@ from csamtpy.utils._csamtpylog import csamtpylog
 
 from difflib import unified_diff
 
-# from tests import TEST_DIR, make_temp_dir, TEST_TEMP_DIR
 
 
 if os.name == "posix" and 'DISPLAY' not in os.environ:
+    
     print("MATPLOTLIB: No Display found, using non-interactive svg backend", file=sys.stderr)
     matplotlib.use('svg')
     import matplotlib.pyplot as plt
-    MTPY_TEST_HAS_DISPLAY = False
+    
+    pyCSAMT_TEST_HAS_DISPLAY = False
 else:
-    # matplotlib.use('svg')
+    #matplotlib.use('svg')
     import matplotlib.pyplot as plt
-    MTPY_TEST_HAS_DISPLAY = True
+    pyCSAMT_TEST_HAS_DISPLAY  = True
     plt.ion()
     
-csamtpylog.get_mtpy_logger(__name__).info("Testing using matplotlib backend {}".\
+csamtpylog.get_csamtpy_logger(__name__).info("Testing using matplotlib backend {}".\
                                           format(matplotlib.rcParams['backend']))
 def diff_files(after, before, ignores=None):
     """
@@ -78,6 +75,7 @@ def reset_matplotlib():
     matplotlib.rcdefaults()  # reset the rcparams to default
     matplotlib.rcParams['backend'] = backend
     matplotlib.rcParams['interactive'] = interactive
-    logger = csamtpylog().get_mtpy_logger(__name__)
+    logger = csamtpylog().get_csamtpy_logger(__name__)
+    
     logger.info("Testing using matplotlib backend {}".format(matplotlib.rcParams['backend']))
     

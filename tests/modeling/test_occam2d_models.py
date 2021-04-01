@@ -10,7 +10,7 @@ References:
     scripts/read_occam2d_res_model.py
 
 CreationDate:   25/03/2021
-Developer:      kkouao@zju.edu.cn
+Developer:      etanoyau@gmail.com/kkouao@zju.edu.cn
 
     
 """

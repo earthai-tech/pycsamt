@@ -77,7 +77,7 @@ class csamtpylog:
                                    configfile)
             
             logging.info('Effective yaml configuration file %s', yaml_path)
-            
+
             if os.path.exists(yaml_path) :
                 with open (yaml_path,"rt") as f :
                     config=yaml.safe_load(f.read())
@@ -287,19 +287,7 @@ def test_jsaon_configfile():
 
 
 if __name__=="__main__":
-    # ownUserLogger="_main_logging_configfile.yml"
-    # dir_= os.path.join(os.path.dirname(os.path.dirname(
-    #     os.path.abspath(__file__))),"geoDrill",'_logfiles',ownUserLogger)
-    
-    # os.chdir(os.path.dirname(dir_))
-    
-    #TEST YAML CONFIGURE()
-    
-    
-    # myobj=AvgPyLog()
-    # myobj.load_configure(os.path.join(dir_,ownUserLogger))
-    # logger=myobj.get_avgpy_logger(__name__)
-    # AvgPyLog.load_configure(os.path.join(dir_,ownUserLogger))
+
     csamtpylog.load_configure_set_logfile()
     logger=csamtpylog.get_csamtpy_logger(__name__)
     # this_func_name=inspect.getframeinfo(inspect.currentframe())[1]
@@ -310,24 +298,7 @@ if __name__=="__main__":
     logger.error(' __error message')
     logger.critical(' __critical message')
     
-    # # test of test_none_configfile()
-    # mobj=AvgPyLog.load_configure(path2configure=None)
-    # test_none_configfile()
-    # AvgPyLog.logger_output()
-    
-    # # TEST CONFIG FILE 
-    # UserOwnLogger='logging.conf'
-    # test_config_configfile(configfile=os.path.join(dir_,UserOwnLogger))
-    # myobj=AvgPyLog()
-    # myobj.load_configure(path2configure= os.path.join(dir_,UserOwnLogger))
-    # myobj.get_avgpy_logger(__name__)
-    
-    # TEST NO Path2cofigure File 
-    
-    # myobj=AvgPyLog()
-    # # _logBase=myobj.logger_output()
-    # myobj.load_configure(OwnloggerBaseConf=True)
-    
+   
     
     
     

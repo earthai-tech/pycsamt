@@ -32,31 +32,53 @@
 .. seealso::
         - http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html 
         - https://marineemlab.ucsd.edu/~kkey/Software.php
+        - and  .. _MTpy:: `MTpy<https://github.com/MTgeophysics/mtpy.git>`
             ...
             
 .. note:: Actually this module is not able to write Occam2D meshes file or build 
-        OccamInputfiles. You can import  MTpy and use it to build Occam2Dinputfiles.
-        for next realease , we will call mtpy directly.
+        OccamInputfiles. However , you can import ocam module of :ref: `MTpy` toolbox     
+       
         
 @author: KouaoLaurent alias @Daniel03
 Created on Fri Jan 22 20:31:14 2021
 """
 
+from csamtpy.modeling.__init__ import  SUCCESS_IMPORT_MTPY
 
 import os, warnings
 import datetime
 import numpy as np 
+
+
 import csamtpy.utils.exceptions as CSex
 from csamtpy.utils import func_utils as func
 
 from csamtpy.etc.infos import _sensitive as SB 
 from csamtpy.utils._csamtpylog import csamtpylog 
 
-__logger =csamtpylog.get_csamtpy_logger(__name__)
-# try import MTpy module 
-try : 
-    import mtpy.modeling.occam2d as occam2d 
-except : pass 
+_logger =csamtpylog.get_csamtpy_logger(__name__)
+
+if  SUCCESS_IMPORT_MTPY :
+
+    _logger.info('successfull imported :ref:`MTpy`')
+    try : 
+        from mtpy.modeling import occam2d as MToccam2d
+        _logger.info('`occam2d` module sucessfully imported  from `MTpy`.')
+        
+        SUCCESS_IMPORT_MTPY =True 
+    except :
+        _logger.info('loading  `occam2d` module from `MTpy`packages  failed')
+        warnings.warn('Loading occam2d module from "MTpy" package failed ! Please try again')
+        
+        SUCCESS_IMPORT_MTPY  =False 
+    
+else: 
+    _logger.info('Unable to import `MTpy`packages. Loading failed !')
+    warnings.warn('Tries to import :ref:`MTpy` failed !'
+                  ' you can get "MTPY" from :ref:`MTpy`.')
+     
+    SUCCESS_IMPORT_MTPY =False 
+    
 
 
 class occamLog (object) : 
@@ -183,6 +205,26 @@ class Data(object):
     **data                (ndarray,4)       array of {site, freq, type, datum,
                                             error} . datacollected                  
     ===================  ================  ====================================
+    
+    Reads data files and find list of explanations of model model mode .  
+
+    ===================== =====================================================
+    Model Modes           Description                     
+    ===================== =====================================================
+    1 or log_all          Log resistivity of TE and TM plus Tipper
+    2 or log_te_tip       Log resistivity of TE plus Tipper
+    3 or log_tm_tip       Log resistivity of TM plus Tipper
+    4 or log_te_tm        Log resistivity of TE and TM
+    5 or log_te           Log resistivity of TE
+    6 or log_tm           Log resistivity of TM
+    7 or all              TE, TM and Tipper
+    8 or te_tip           TE plus Tipper
+    9 or tm_tip           TM plus Tipper
+    10 or te_tm           TE and TM mode
+    11 or te              TE mode
+    12 or tm              TM mode
+    13 or tip             Only Tipper
+    ===================== =====================================================
     
     """
     occam_data_type= {'te_log10':1, 
@@ -2032,7 +2074,288 @@ class Iter2Dat (object):
                 print('**{0:<27} {1} {2}'.format(' Minimum elevation (m)','=' , self.elevation.min()))
                 print('**{0:<27} {1} {2}'.format(' Maximum elevation (m)','=' , self.elevation.max()))
                 
-
+                
+class occam2d_write(object):
+    """
+    Special class to build occam2d imput files with :ref:`MTpy` module .
+    
+    Arguments
+    --------
+        **edi_fn**: str 
+            full path to edifiles locations
+        **freq_num** :float 
+            number of frequencies to use in inversion
+        **interpolate_freq**: bool,
+            frequency interpolation , default is *False*
+        **geoelectric_strike**: bool
+             geoelectric strike angle assuming N = 0, E = 90.
+             If True , provided , losgspace interpolation as tuple value
+        
+    Others important attributes can be  found in : 
+        
+    ======================  ===================================================
+    Key Words/Attributes    Description
+    ======================  ===================================================
+    edi_fn                  full path to data file
+    n_layers                number of vertical layers in mesh
+                            *default* is 31. 
+    num_layers              [ int ] number of regularization layers.
+    num_z_pad_cells         number of vertical padding cells below 
+    iterations_to_run       maximum number of iterations to run
+                            *default* is 20
+    resistivity_start       starting resistivity value.  If model_values is
+                            not given, then all values with in model_values
+                            array will be set to resistivity_start
+    save_path               directory path to save startup file to
+                            *default* is current working directory  
+    startup_basename        basename of startup file name. 
+                            *default* is Occam2DStartup
+    startup_fn              full path to startup file.
+                            *default* is save_path/startup_basename  
+    target_misfit           target misfit value.
+                            *default* is 1.
+    x_pad_multiplier        horizontal padding cells will increase by this
+                            multiple out to the edge of the grid.
+                            *default* is 1.7
+    z1_layer                thickness of the first layer in the model.
+                            Should be at least 1/4 of the first skin depth
+                            *default* is 10
+    z_bottom                bottom depth of the model (m).  Needs to be large 
+                            enough to be 1D at the edge. 
+                            *default* is 200000.0 
+    z_target_depth          depth to deepest target of interest.  Below this
+                            depth cells will be padded to z_bottom
+    cell_width              width of cells with in station area in meters
+                            *default* is 100
+    phase_te_err            percent error in phase for TE mode. *default* is 5
+    phase_tm_err            percent error in phase for TM mode. *default* is 20. 
+    res_te_err              percent error in resistivity for TE mode. 
+                              *default* is 10
+    res_tm_err              percent error in resistivity for TM mode.
+    trigger                 [ float ] multiplier to merge model blocks at 
+                            depth.  A higher number increases the number of
+                            model blocks at depth.  *default* is .1.12
+    model_mode              model mode to use for inversion, see module`Data`. 
+    ======================  ===================================================
+    
+    .. note:: We consider occam2D buildingInputs file is focused on CSAMT data in
+            TM mode then default configuration as  setting according this feature. 
+            If input `edi_fn` are MT data , please resetting configuration
+            you SEG `edi-fn` data provided !.
+            ... 
             
+    :Example:
+        
+        >>> from csamtpy.modeling.occam2d import occam2d_write 
+        >>>  occam2d_write.buildingInputfiles(os.path.join(os.environ['pyCSAMT'], 
+        ...                                              'data', 'edi'), 
+        ...                        savepath =os.path.join(os.environ['pyCSAMT'],
+        ...                                               'data', 'tesocc2' ),
+        ...                        geolectricke_strike=34.)
+  
+    """
+    
+    if SUCCESS_IMPORT_MTPY is False :
+        
+            mess = ''.join(['Failed to import MTpy module ! Could not build inputOccam2D files.', 
+                            ' Please try to install :ref:`MTpy` manually !'])
+            print('---> '+ mess)
+    
+    @staticmethod 
+    def buildingInputfiles(edi_fn, freq_num =None , savepath =None , interpolate_freq =False, 
+                               geoelectric_strike =None , **kwargs): 
+        """
+        Method to build Occam2D inputfiles. Deal with :ref:`MTpy` module. 
+        Try to install :ref:`MTpy` is not installed yet.
+        
+        :param edi_fn: full path to edifiles 
+        :type edi_fn: str 
+        
+        :param freq_num:  number of frequencies to use in inversion
+        :type freq_num: float
+        
+        :param interpolate_freq: frequency interpolation , default is *False*
+        :type interpolate_freq: bool 
+        
+        :param geoelectric_strike: geoelectric strike angle assuming N = 0, E = 90.
+                            If True , provided , losgspace interpolation as tuple value
+        :type geoelectric_strike: float
+        
+        :return: outfiles building occam2d inputfiles 
+        :rtype: str , sys.stdout
    
+        """
+        
+        if SUCCESS_IMPORT_MTPY is False : return 
+           
+        freq_logspace =kwargs.pop('intp_freq_logspace', (-1,4,17 ))
+        startup_basename =kwargs.pop('startup_basename', 'Startup')
+        
+        res_tm_error_floor =kwargs.pop('res_tm_err', 10.)
+        phase_tm_error_floor =kwargs.pop('phase_tm_err', 20.)
+        
+        occam_model_mode =kwargs.pop('occam_mode', '6')
+        
+        res_te_error_floor =kwargs.pop('res_te_err', 10.)
+        phase_te_error_floor =kwargs.pop('phs_te_err', 20.)
+        
+        number_of_layers = int(kwargs.pop('n_layers', 31.))
+    
+        cell_width =kwargs.pop('cell_width', 5.)
+        x_pad_multiplier = kwargs.pop('x_pad_multiplier', 1.7)
+        trigger =kwargs.pop('trigger', 1.12)
+        
+        z_bottom =kwargs.pop('z_bottom', 5000.)
+        z1_layer=kwargs.pop('z1_layer', 5.)
+        z_target_depth =kwargs.pop('z_target', 1100.)
+        
+        iterations_to_run =kwargs.pop('iteration_to_run', 100.)
+        resistivity_start =kwargs.pop('resistivity_start', 1.)
+        OccamDataFile = kwargs.pop('occamDataFile','OccamDataFile.dat' )
+        
+        
+        if savepath is None : 
+            savepath = os.path.join(os.path.abspath('.'),'occam2dBuildInputfiles')
+            
+        if not os.path.exists(savepath):
+            os.mkdir(savepath)
+        
+        # collected the list of stations from edifile object 
+        
+        slst=[edi[0:-4] for edi in os.listdir(edi_fn) if edi.find('.edi')>0]
+        
+    
+        # create an occam data object
+        
+        _logger.info('Read occam2d Data, write data and build regularization mesh ')
+        
+        ocd = MToccam2d.Data(edi_path=edi_fn,
+                           station_list=slst,
+                           interpolate_freq=True,
+                           freq=np.logspace(*freq_logspace)
+                           )
+        ocd.save_path = savepath
+        ocd.freq_num = freq_num# number of frequencies to invert
+        
+        #### make data file
+        # geoelectric strike for rotation
+        # if not specified will calculate from the data
+        
+        ocd.geoelectric_strike = geoelectric_strike
+        print('---> geoelectric strike added !')
+        
+       
+        if occam_model_mode not in ['{}'.format(mm) 
+                                    for mm in list(Data.occam_dataType.keys())]: 
+            msg='Occam model mode provided is wrong ! Please select the convenient'+\
+                ' mode between  the following list modes: {0}'
+                
+            _logger.error('occam model value given is out of the model mode range . ')
+            
+            print('-- > '+ msg.format(['{}'.format(mm) 
+                                    for mm in list(Data.occam_dataType.keys())]))
+            return 
+        
+         # added error floors
+        if occam_model_mode in ['5','6']: 
+            ocd.model_mode= "6"
+            ocd.res_tm_err = res_tm_error_floor
+            ocd.phase_tm_err = phase_tm_error_floor
+        elif occam_model_mode in ['1', '2']: 
+            ocd.res_te_err = res_te_error_floor 
+            ocd.phase_te_err = phase_te_error_floor 
+            
+        print('---> Errors floors successfully  added !')
+        
+        # now write occam_data_file 
+        ocd.write_data_file()
+        
+        print('---> Read occam2D data and write occam Data done !')
+        # make model and mesh files
+        ocr = MToccam2d.Regularization(ocd.station_locations, 
+                                       n_layers =number_of_layers, 
+                                       cell_width = cell_width, 
+                                       x_pad_multiplier = x_pad_multiplier, 
+                                       trigger= trigger, 
+                                       z1_layer = z1_layer,
+                                       z_target_depth = z_target_depth , 
+                                       save_path=ocd.save_path,
+                                       z_bottom =z_bottom ,
+                                        )
+    
+        ocr.build_mesh()
+        ocr.build_regularization()
+        ocr.write_mesh_file()
+        ocr.write_regularization_file()
+        ocr.plot_mesh()
+        
+        print('---> Build occam2d Regularization mesh  done !')
+        # make startup file
+        ocs=MToccam2d.Startup(iterations_to_run=iterations_to_run, 
+                              startup_basename=startup_basename, 
+                              data_fn=os.path.join(ocd.save_path,OccamDataFile), 
+                              resistivity_start=resistivity_start)
+        ocr.get_num_free_params()
+        ocs.param_count=ocr.num_free_param
+        ocs.save_path=ocd.save_path
+        ocs.model_fn=ocr.reg_fn
+        ocs.write_startup_file()
+    
+        print('---> Build write occam2D startup file done !')
+        
+        print('{0:-^77}'.format('Summary *occam2d input params* infos'))  
+        
+        print('**{0:<27} {1} {2}'.format(' Given frequency number',
+                                         '=' , freq_num))
+        print('**{0:<27} {1} {2}'.format(' Interpolate frequencies range',
+                                         '=' , freq_logspace))
+        
+        print('**{0:<27} {1} {2}'.format(' Occam model mode',
+                                         '=' , occam_model_mode))
+        
+        if occam_model_mode in ['6', '5']:
+            print('**{0:<27} {1} {2} %.'.format(' TM rho error floors',
+                                                '=' , res_tm_error_floor))
+            print('**{0:<27} {1} {2} %.'.format(' TM phase error floors',
+                                                '=' , phase_tm_error_floor))
+        elif occam_model_mode in ['1', '2']:
+            print('**{0:<27} {1} {2} %.'.format(' TE rho error floors',
+                                                '=' , res_te_error_floor))
+            print('**{0:<27} {1} {2} %.'.format(' TE phase error floors',
+                                                '=' , phase_te_error_floor))
+            
+        print('**{0:<27} {1} {2}'.format(' Model cell width',
+                                         '=' , cell_width ))
+        print('**{0:<27} {1} {2}'.format(' model horizontal pad',
+                                         '=' , x_pad_multiplier ))
+        print('**{0:<27} {1} {2}'.format(' Model bricks trigger',
+                                         '=' , trigger ))
+        
+        print('**{0:<27} {1} {2}'.format(' Number of model layers',
+                                         '=' , int(number_of_layers) ))
+        print('**{0:<27} {1} {2} m.'.format(' Top layer thickness',
+                                            '=' , z1_layer ))
+        print('**{0:<27} {1} {2} m.'.format(' Expected image depth',
+                                            '=' , z_target_depth))
+        print('**{0:<27} {1} {2} m.'.format(' Model bottom',
+                                            '=' , z_bottom ))
+        
+        print('**{0:<27} {1} {2}'.format(' Expected iteration to run',
+                                         '=' , iterations_to_run ))
+        print('**{0:<27} {1} {2} ohm.m'.format(' starting model resistivity',
+                                               '=' , np.power(10, resistivity_start) ))
+        
+        print('**{0:<27} {1} +{2} degrees E of N'.format(' Geoelectric strike',
+                                                         '=' ,geoelectric_strike))
+        
+        print('-'*77)  
 
+        print('---> Building occamInputfiles  function successfully run. !')            
+   
+   
+if __name__=='__main__': 
+    
+    # print(list(Data.occam_dataType.keys()))
+    occam2d_write.buildingInputfiles(os.path.join(os.environ['pyCSAMT'], 'data', 'edi'), 
+                                savepath =os.path.join(os.environ['pyCSAMT'], 'data', 'tesocc2' ),
+                                geoelectric_strike=34.)

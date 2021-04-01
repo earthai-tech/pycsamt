@@ -189,10 +189,11 @@ class Plot1d :
                     
             * savefig : str 
                     path  to save figure. 
+                    
         Returns
-        -------
+        ---------
             obj, 
-                plot_obj azim, topo and station separation 
+                plot_obj azim- topo and station separation. 
         
         ======================  ===============================================
         Keywords                Description        
@@ -2212,10 +2213,11 @@ class Plot2d (object):
                 
             * savefig : str 
                 outdir 
+                
          Returns
          --------
              obj ,
-                 plot prnetration obj 
+                 plot penetration obj. 
              
         ==============  ===================  ==================================
         Params          Type                    Description 

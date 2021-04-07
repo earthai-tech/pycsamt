@@ -3,7 +3,7 @@ import os
 import shutil
 # import sys 
 
-from csamtpy.utils._csamtpylog import csamtpylog
+from pycsamt.utils._csamtpylog import csamtpylog
 
 # sys.path.insert(0, os.path.abspath('..'))
 
@@ -44,7 +44,16 @@ DRILL_PARSER_DIR = os.path.normpath(
 OC2D_DIR = os.path.normpath(
     os.path.join(TEST_pyCSAMT_ROOT, 'data/occam2D'))
 
+STN_DIR = os.path.normpath(
+    os.path.join(TEST_pyCSAMT_ROOT,'data/stn_profiles'))
+
+I2DAT_DIR = os .path.normpath(
+    os.path.join(TEST_pyCSAMT_ROOT,'data/_iter2data_2'))
+
+survey_testname ='nibykro_survey'        # give a survey area or location
+
 # set test logging configure
 csamtpylog.load_configure(
-    os.path.join(os.path.abspath('.'), '_logfile', "main_logging_configfile.yml"))
+    os.path.join(os.path.abspath('.'), 'pycsamt', '_logfile',
+                 "main_logging_configfile.yml"))
 

@@ -6,7 +6,7 @@ import sys
 
 import matplotlib
 
-from csamtpy.utils._csamtpylog import csamtpylog
+from pycsamt.utils._csamtpylog import csamtpylog
 
 from difflib import unified_diff
 

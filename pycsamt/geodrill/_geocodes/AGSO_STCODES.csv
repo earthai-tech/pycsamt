@@ -1,0 +1,9 @@
+﻿CODE,LABEL,__DESCRIPTION,PATTERN,PAT_SIZE,PAT_DENSITY,PAT_THICKNESS,COLOR
+lsb,lsb,Boudin Axis,0,,,,R128GB
+pfp,pfp,Fold Axial Plane,0,,,,B
+pmb,pmb,Banding/gneissosity,0,,,,RG
+pss,pss,S fabric,0,,,,RG128B64
+prp,prp,Fault plane,0,,,,R
+prt,prt,Fracture / Joint Set,0,,,,G
+pup,pup,Undifferentiated plane,0,,,,G128
+pzs,pzs,Sharp Contact,0,,,,RB

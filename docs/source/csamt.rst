@@ -6,29 +6,29 @@ Package CSAMT
 
 **Module AVG**
 =================
-.. automodule:: csamtpy.ff.core.avg
+.. automodule:: pycsamt.ff.core.avg
 	:members:
 	
 **Module CS**
 ==================
-.. automodule:: csamtpy.ff.core.cs
+.. automodule:: pycsamt.ff.core.cs
 	:members:
 	
 **Module EDI**
 ===================
-.. automodule:: csamtpy.ff.core.edi
+.. automodule:: pycsamt.ff.core.edi
     :members:
 
 
 **Module J**
 ===================
-.. automodule:: csamtpy.ff.core.j
+.. automodule:: pycsamt.ff.core.j
     :members:
 
 
 **Module z**
 ====================
-.. automodule:: csamtpy.ff.core.z
+.. automodule:: pycsamt.ff.core.z
     :members:
 
 

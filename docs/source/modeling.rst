@@ -6,6 +6,6 @@ Package Modeling
 
 **Module Occam2D**
 ===================
-.. automodule:: csamtpy.modeling.occam2d
+.. automodule:: pycsamt.modeling.occam2d
 	:members:
 

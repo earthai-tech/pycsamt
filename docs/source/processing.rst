@@ -6,19 +6,19 @@ Package Processing
 
 **Module Dispatcher**
 =========================
-.. automodule:: csamtpy.ff.processing.callffunc
+.. automodule:: pycsamt.ff.processing.callffunc
 	:members:
 
 	
 **Module Shifting**
 =========================
-.. automodule:: csamtpy.ff.processing.corr
+.. automodule:: pycsamt.ff.processing.corr
 	:members:
 	
 	
 **Module ZCalculator**
 =========================
-.. automodule:: csamtpy.ff.processing.zcalculator
+.. automodule:: pycsamt.ff.processing.zcalculator
     :members:
 
 

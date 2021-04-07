@@ -6,17 +6,17 @@ Package GeoCore
 
 **Module Geodrill**
 ===================
-.. automodule:: geodrill.geoCore.geodrill
+.. automodule:: pycsamt.geodrill.geoCore.geodrill
 	:members:
 	
 **Module Structural**
 =====================
-.. automodule:: geodrill.geoCore.structural
+.. automodule:: pycsamt.geodrill.geoCore.structural
     :members:
 
 **Module Strata**
 ==================
-.. automodule:: geodrill.geoCore.strata
+.. automodule:: pycsamt.geodrill.geoCore.strata
 	:members:
 	
 

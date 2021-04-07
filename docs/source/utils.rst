@@ -6,35 +6,35 @@ Package Utils
 
 **Module Agso**
 ================
-.. automodule:: csamtpy.utils.agso
+.. automodule:: pycsamt.utils.agso
 	:members:
 
 	
 **Module Decorator**
 =====================
-.. automodule:: csamtpy.utils.decorator
+.. automodule:: pycsamt.utils.decorator
 	:members:
 	
 	
 **Module Func-utils**
 =====================
-.. automodule:: csamtpy.utils.func_utils
+.. automodule:: pycsamt.utils.func_utils
     :members:
 
 **Module Gis-tools**
 =====================
-.. automodule::csamtpy.utils.gis_tools
+.. automodule::pycsamt.utils.gis_tools
     :members:
 
 **Module Infos**
 =====================
-.. automodule:: csamtpy.etc.infos
+.. automodule:: pycsamt.etc.infos
     :members:
     :private-members:
 
 
 **Module Plot-utils**
 =====================
-.. automodule:: csamtpy.utils.plot_utils
+.. automodule:: pycsamt.utils.plot_utils
     :members:
 

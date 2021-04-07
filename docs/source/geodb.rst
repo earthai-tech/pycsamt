@@ -6,22 +6,22 @@ Package GeoDataBase
 
 **Module Recorder**
 ==========================
-.. automodule:: geodrill.geoDB.sql_recorder
+.. automodule:: pycsamt.geodrill.geoDB.sql_recorder
 	:members:
 	:private-members:
 	
 **Module Interface**
 ============================
-.. automodule:: geodrill.geoDB.interfaceDB
+.. automodule:: pycsamt.geodrill.geoDB.interfaceDB
     :members:
 
 **Module Request**
 ==========================
-.. automodule:: geodrill.geoDB.sqlrequests
+.. automodule:: pycsamt.geodrill.geoDB.sqlrequests
     :members:
 
 	
 **Module DictApp**
 ==========================
-.. automodule:: geodrill.geoDB.dict_app
+.. automodule:: pycsamt.geodrill.geoDB.dict_app
 	:members:

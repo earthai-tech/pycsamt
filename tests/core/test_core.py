@@ -378,7 +378,6 @@ class TestPROFILE(unittest.TestCase):
         """
         #create profile object
         refin, refout =[[] for i in range(2)]
-  
         list_of_station_profiles =[os.path.join(STN_DIR, pfile)
                                    for pfile in os.listdir(STN_DIR) if 
                                    pfile.endswith('.stn')]
@@ -395,9 +394,8 @@ class TestPROFILE(unittest.TestCase):
             else :
                 outputname = survey_testname + os.path.basename(psfile)[:int(
                     len(os.path.basename(psfile))/2)]
-                        
                 try : 
-                   
+                    
                     profile_obj.rewrite_station_profile ( easting = profile_obj.east, 
                                                          northing= profile_obj.north,
                                                          elevation = profile_obj.elev, 
@@ -405,7 +403,8 @@ class TestPROFILE(unittest.TestCase):
                                                     username =self.USERNAME, 
                                                     add_azimuth =self.compute_AZ, 
                                                     savepath =os.path.join(
-                                                    TEST_TEMP_DIR, self.__class__.__name__) , 
+                                                        TEST_TEMP_DIR, 
+                                                        self.__class__.__name__) , 
                                                     output_name =outputname)
     
                 except : 
@@ -414,7 +413,9 @@ class TestPROFILE(unittest.TestCase):
                 else :
                     #collect files read successfully
                     refin.append(psfile)
-                    refout.append(outputname)
+                    
+                refout.append(outputname)
+                
         try : 
             self.assertEqual(len(refin), len(refout),
                              'Size of `refin` and `ref out` are not the same.')
@@ -434,18 +435,16 @@ class TestPROFILE(unittest.TestCase):
         # let create expected stn files 
         expected_stn_files = [os.path.join(save_outdir, ouname +'.stn')
                               for ouname in refout]
-        
         self.assertListEqual(save_stn_files, expected_stn_files,
-                             'Ref output and ref input must have the same size.'
-                             'ref outsize is = %s while ref input '
-                             'is =%s'%(len(expected_stn_files),len(save_stn_files)))
+                              'Ref output and ref expected list must have the same size.'
+                              'ref outsize is = %s while ref expectsize '
+                              'is =%s'%(len(save_stn_files),len(expected_stn_files)))
         
         # now compared files 
         compare_diff_files(refout=save_stn_files, refexp=expected_stn_files)
         
 if __name__=='__main__':
-    # p_obj = TestPROFILE()
-    # p_obj.test_create_station_profile()
+
     unittest.main()
                 
     

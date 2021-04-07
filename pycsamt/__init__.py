@@ -15,11 +15,3 @@ csamtpylog.load_configure(os.path.join(os.path.abspath('.'),
 # set loging Level
 logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
-# let set the systeme path find memory dataBase
-sys.path.insert(0, os.path.abspath('.'))  
-sys.path.insert(0, os.path.abspath('./viewer')) 
-sys.path.insert(0, os.path.abspath('./geodrill'))
-
-# if __name__=='__main__': 
-
-    # print(sys.path)

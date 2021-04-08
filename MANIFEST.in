@@ -1,0 +1,11 @@
+
+graft docs
+
+
+include LICENSE.md
+include README.md
+
+include pycsamt/utils/epsg.npy
+include .travis.yml .readthedocs.yml 
+
+global-exclude *.py[cod] __pycache__/* *.so *.dylib .coverage .coverage.*

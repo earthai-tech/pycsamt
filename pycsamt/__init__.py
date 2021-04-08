@@ -5,12 +5,12 @@ __version__ = "1.0.03"
 # load pycsamt default logging config
 import os 
 import logging 
-import sys
+
 from pycsamt.utils._csamtpylog import csamtpylog
 
 csamtpylog.load_configure(os.path.join(os.path.abspath('.'),
-                                       'pycsamt', '_logfile',
-                                       "main_logging_configfile.yml"))
+                                        'pycsamt', '_logfile',
+                                        "main_logging_configfile.yml"))
 
 # set loging Level
 logging.getLogger('matplotlib').setLevel(logging.WARNING)

@@ -119,6 +119,7 @@ coverage.xml
 *.log
 .spyproject/config/backups/workspace.ini.bak
 .spyproject/config/workspace.ini
+.pylint.d/
 
 # Sphinx documentation
 docs/_build/

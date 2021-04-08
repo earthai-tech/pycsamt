@@ -23,9 +23,11 @@ install:
     - pip install --user -r requirements.txt #ip install --user -r requirements.txt fi python language is not used 
                                             # add --use-feature=2020-resolver if before install is uncommented 
     - pip install configparser
+
     
 # command to run tests
 script:
     # -- pytest -v --cov=pyCSAMT --cov-report= tests --test_occam2d_models.py
-    - python -m unittest tests/core/test_core.py
+    #- python -m unittest tests/core/test_core.py
+    - pytest -v --cov=pyCSAMT --cov-report= tests/
     # - pytest -v --cov=pyCSAMT --cov-report= tests --ignore=tests/modeling/test_occam2d_models.py

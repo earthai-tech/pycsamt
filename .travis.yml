@@ -28,6 +28,6 @@ install:
 # command to run tests
 script:
     # -- pytest -v --cov=pyCSAMT --cov-report= tests --test_occam2d_models.py
-    #- python -m unittest tests/core/test_core.py
-    - pytest -v --cov=pyCSAMT --cov-report= tests/
+    - python -m unittest tests/ #core/test_core.py
+    #- pytest -v --cov=pyCSAMT --cov-report= tests/
     # - pytest -v --cov=pyCSAMT --cov-report= tests --ignore=tests/modeling/test_occam2d_models.py

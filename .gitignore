@@ -4,14 +4,6 @@ Session.vim
 build
 dist
 _build
-docs/man/*.gz
-docs/source/api/generated
-docs/gh-pages
-docs/_build*
-docs/_themes
-docs/_static
-docs/_templates 
-
 
 IPython/frontend/html/notebook/static/mathjax
 *.py[co]
@@ -126,7 +118,14 @@ coverage.xml
 *.log
 
 # Sphinx documentation
-#docs/_build/
+docs/_build/
+docs/man/*.gz
+docs/source/api/generated
+docs/gh-pages
+docs/_build*
+docs/_themes
+docs/_static
+docs/_templates 
 
 # PyBuilder
 target/

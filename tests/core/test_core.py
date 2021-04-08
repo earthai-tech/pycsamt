@@ -17,7 +17,7 @@ Created on Wed Apr  7 13:27:27 2021
 """
 from tests.modeling.__init__ import reset_matplotlib, csamtpylog, diff_files
 
-import os 
+import os
 
 import  unittest 
 
@@ -337,7 +337,7 @@ def compare_diff_files(refout, refexp):
                             "The output file is not the same with the baseline file.")
     
     
-class TestPROFILE(unittest.TestCase):
+class TestProfile(unittest.TestCase):
     """
     Test profile. Two specific test is proposed 
     1. rewrite station profile 
@@ -354,6 +354,10 @@ class TestPROFILE(unittest.TestCase):
     USERNAME = 'BomoAG.'
     NEW_STNNAME =survey_testname [:-4] +'civ' #output new coordinates values 
     
+    # get a list of stn file in STN_DIR
+    list_of_station_profiles =[os.path.join(STN_DIR, pfile)
+                                  for pfile in os.listdir(STN_DIR) if 
+                                  pfile.endswith('.stn')]
 
     @classmethod 
     def setUpClass(cls):
@@ -373,76 +377,168 @@ class TestPROFILE(unittest.TestCase):
    
     def test_create_station_profile(self):
         """
-        to create stn profile
+        To create stn profile.
         
         """
         #create profile object
         refin, refout =[[] for i in range(2)]
-        list_of_station_profiles =[os.path.join(STN_DIR, pfile)
-                                   for pfile in os.listdir(STN_DIR) if 
-                                   pfile.endswith('.stn')]
-        
-        for psfile in list_of_station_profiles : 
-            
-            self.assertTrue(os.path.isfile(psfile) ,
-                            'Ref input data must be a station profile file !.')
-            try :
-                profile_obj =cs.Profile(profile_fn= psfile)
-            except :
+        # assert if this file is really a readeable file.
+        for psfile in sorted(self.list_of_station_profiles) : 
+            try : 
+                self.assertTrue(os.path.isfile(psfile) ,
+                                'Ref input data must be a station profile file !.')
+            except : 
                 csamtpylog().get_csamtpy_logger().error(
-                    'Something wrong happening when reading profile object ! ')
-            else :
-                outputname = survey_testname + os.path.basename(psfile)[:int(
-                    len(os.path.basename(psfile))/2)]
-                try : 
-                    
-                    profile_obj.rewrite_station_profile ( easting = profile_obj.east, 
-                                                         northing= profile_obj.north,
-                                                         elevation = profile_obj.elev, 
-                                                    area_name =self.NEW_STNNAME, 
-                                                    username =self.USERNAME, 
-                                                    add_azimuth =self.compute_AZ, 
-                                                    savepath =os.path.join(
-                                                        TEST_TEMP_DIR, 
-                                                        self.__class__.__name__) , 
-                                                    output_name =outputname)
-    
-                except : 
-                    csamtpylog().get_csamtpy_logger().error(
-                    'Could not rewrite profile_obj !')
-                else :
-                    #collect files read successfully
-                    refin.append(psfile)
-                    
-                refout.append(outputname)
+                    'Station profile {} is not zonge .stn file.')
+            else : 
+                refin.append(psfile)
                 
+        #now create for each file a specila obj 
         try : 
-            self.assertEqual(len(refin), len(refout),
-                             'Size of `refin` and `ref out` are not the same.')
-        except :
+            p_objs = [cs.Profile(profile_fn =ps_obj) for ps_obj in refin]
+        except : 
             csamtpylog().get_csamtpy_logger().error(
-                'Diffennce size found betwen input stations size ={} files and'
-                'Expected output files with size ={}.'.format(len(refin), len(refout)))
-        else :
-            print('---> ref input station file and ref output size'
-                  ' match perfectly , is = {}'.format(len(refout)))
-                  
+                    'Something wrong happening when reading'
+                    ' station profile source file ! ')
+        # create outputnames to create expected files 
+        outp_names = [survey_testname + os.path.basename(psfile)[:int(
+                    len(os.path.basename(psfile))/2)] 
+                    for psfile in refin]
+        # then loop for all object 
+        for pp, p_obj in enumerate(p_objs ):
+            try : 
+                p_obj.rewrite_station_profile (
+                                easting = p_obj.east, 
+                                northing= p_obj.north,
+                                elevation = p_obj.elev, 
+                                area_name =self.NEW_STNNAME, 
+                                username =self.USERNAME, 
+                                add_azimuth =self.compute_AZ, 
+                                savepath =os.path.join(
+                                    TEST_TEMP_DIR, 
+                                    self.__class__.__name__) , 
+                                output_name =outp_names[pp]
+                                )
+        
+            except : 
+                csamtpylog().get_csamtpy_logger().error(
+                'Could not rewrite station profile ,it seems something wrong !'
+                ' happened while reading `rewrite_station_profile` method.')
+
+            #collect files read successfully
+            refout.append(outp_names[pp])
+           
         # collect expected files 
         save_outdir = os.path.join(TEST_TEMP_DIR, self.__class__.__name__)
-        
+        refout =[os.path.join(save_outdir, ouname) for ouname in refout]
+           
+        # controle whether all .stn files found are successfully converted as 
+        # station profile_obj
+        if len(refout) != len(refin):
+            print('---> Size of `refin` and `ref out` are not the same.'
+                  'refin size = {0} & ref out size = {1}.'.
+                  format(len(refin), len(refout)))
+            try :
+                self.assertLess(len(refout), len(refin),
+                                'Impossible to get number of .stn file read succeessfully '
+                                'greater than the number of files collected.')
+            except :
+                csamtpylog().get_csamtpy_logger().error(
+                    'Difference size found between inputs stations size ={}  and'
+                    'expected outputs size ={}.'.format(len(refin), len(refout)))
+    
+        elif len(refin) == len(refout):
+            print('---> ref input station file and ref output size'
+                  ' match perfectly , is = {0}'.format(len(refout)))
+                  
+        #---> collect outputfiles and expected files 
         save_stn_files = [os.path.join(save_outdir, ofile) 
-                          for ofile in os.listdir(save_outdir)]  
-        # let create expected stn files 
+                          for ofile in os.listdir(save_outdir)] 
+        
         expected_stn_files = [os.path.join(save_outdir, ouname +'.stn')
-                              for ouname in refout]
+                              for ouname in refout] # expected files creating
+
         self.assertListEqual(save_stn_files, expected_stn_files,
                               'Ref output and ref expected list must have the same size.'
                               'ref outsize is = %s while ref expectsize '
                               'is =%s'%(len(save_stn_files),len(expected_stn_files)))
         
-        # now compared files 
+        # now compared differences between files 
         compare_diff_files(refout=save_stn_files, refexp=expected_stn_files)
         
+    def test_scale_station_profile(self):
+        """
+        Test to scaled coordinates values from `x`and  `y`
+        UTM coordinates and rewrite new scaled stn files.
+        
+        """
+         
+        scaled_utm__x_coordinates=-300238.702 
+        scaled_utm__y_coordinates= -2369.252
+        
+        rewrite_scaled_stn_file =True 
+        
+        # collected files in stn directory 
+        readablefiles, success_read_objs =[],[]
+        for readable_file in sorted(self.list_of_station_profiles): 
+            try : 
+                self.assertTrue(os.path.isfile(readable_file),
+                                ' %s is not a readable file !'% readable_file)
+            except :
+                csamtpylog().get_csamtpy_logger().error(
+                    'Error finding readable profile file.!')
+            else :
+                #collect readable file 
+                readablefiles.append(readable_file)
+                
+        #collect pObjs from readables files 
+        try :
+            pObjs=[cs.Profile(profile_fn=readfs) for readfs in readablefiles]
+        except :
+            csamtpylog().get_csamtpy_logger().error(
+                'Error collection profile objs from readable stn files collected.'
+                "It's obvious some readables files are not zonge station profile file.")
+
+        # read readfiles and save it to outdir 
+        tem_save_files = os.path.join(TEST_TEMP_DIR, self.__class__.__name__)
+        
+        for ii, pr_obj in enumerate(pObjs):
+            try : 
+                pr_obj.reajust_coordinates_values(x=scaled_utm__x_coordinates ,
+                                                  y=scaled_utm__y_coordinates , 
+                                                stn_fn=readablefiles[ii] ,
+                                                rewrite = rewrite_scaled_stn_file, 
+                                                savepath=tem_save_files )
+            
+            except :csamtpylog().get_csamtpy_logger().error(
+                    'Problem occurs while trying to scaled sites coordinates !')
+            else :
+                success_read_objs.append(readablefiles[ii])
+        
+        if len(success_read_objs) != len(readablefiles):
+            self.assertLess(len(success_read_objs), len(readablefiles), 
+                            'In fact obj read must be greater than'
+                            ' readables files collected!')
+        elif len(success_read_objs) == len(readablefiles):
+            print('All readable files successfully read !')
+            
+            
+        # create expected files only 
+        expected_files =[os.path.join(tem_save_files, 
+                                os.path.basename(stn_fn).split('.')[0] + '_reaj.stn')
+                                for stn_fn in success_read_objs]
+        scaled_stn_files= [os.path.join(tem_save_files, file) 
+                           for file in os.listdir(tem_save_files)
+                           if file.endswith('_reaj.stn')]
+        
+        #now compare  difference between expected files & outputfiles
+        self.assertEqual(len(scaled_stn_files), len(expected_files),
+                         'Difference sizes found between'
+                         ' ref outs = {0} & expected files = {1}'.
+                         format(len(scaled_stn_files),len(expected_files)))
+        
+        compare_diff_files(refout=scaled_stn_files, refexp=expected_files)
+
 if __name__=='__main__':
 
     unittest.main()

@@ -458,9 +458,9 @@ class TestProfile(unittest.TestCase):
         expected_stn_files = [os.path.join(save_outdir, ouname +'.stn')
                               for ouname in refout] # expected files creating
 
-        self.assertListEqual(save_stn_files, expected_stn_files,
-                              'Ref output and ref expected list must have the same size.'
-                              'ref outsize is = %s while ref expectsize '
+        self.assertEqual(len(save_stn_files), len(expected_stn_files),
+                              'Ref output and ref expected  must have the same size.'
+                              'ref outsize is = %s while ref expect size '
                               'is =%s'%(len(save_stn_files),len(expected_stn_files)))
         
         # now compared differences between files 

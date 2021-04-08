@@ -32,12 +32,13 @@
 .. seealso::
         - http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html 
         - https://marineemlab.ucsd.edu/~kkey/Software.php
-        - and  .. _MTpy:: `MTpy<https://github.com/MTgeophysics/mtpy.git>`
             ...
             
 .. note:: Actually this module is not able to write Occam2D meshes file or build 
-        OccamInputfiles. However , you can import ocam module of :ref: `MTpy` toolbox     
-       
+        OccamInputfiles. However , you can import ocam module of :ref: `MTpy` toolbox 
+        ...
+        
+.. _MTpy::`MTpy<https://github.com/MTgeophysics/mtpy.git>`      
         
 @author: KouaoLaurent alias @Daniel03
 Created on Fri Jan 22 20:31:14 2021

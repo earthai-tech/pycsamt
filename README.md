@@ -1,5 +1,5 @@
 # pyCSAMT (Python  for Controlled Source Audio-frequency Magnetotellurics )
-[![Documentation Status](https://readthedocs.org/projects/pycsamt/badge/?version=master)](https://pycsamt.readthedocs.io/en/latest/?badge=master) [![Build Status](https://travis-ci.com/WEgeophysics/pyCSAMT.svg?branch=master)](https://travis-ci.com/WEgeophysics/pyCSAMT) [![Requirements Status](https://requires.io/github/pytest-dev/pytest-cov/requirements.svg?branch=master)](https://requires.io/github/pytest-dev/pytest-cov/requirements/?branch=master)
+[![Documentation Status](https://readthedocs.org/projects/pycsamt/badge/?version=latest)](https://pycsamt.readthedocs.io/en/latest/?badge=latest) [![Build Status](https://travis-ci.com/WEgeophysics/pyCSAMT.svg?branch=master)](https://travis-ci.com/WEgeophysics/pyCSAMT) [![Requirements Status](https://requires.io/github/pytest-dev/pytest-cov/requirements.svg?branch=master)](https://requires.io/github/pytest-dev/pytest-cov/requirements/?branch=master)
      
 
 
@@ -28,7 +28,7 @@ several  outputs are provided for other external modeling softwares like [MTpy](
 and [GoldenSoftware](https://www.goldensoftware.com/products/surfer).
 
 ## Documentation 
-* API Documentation  : https://pycsamt.readthedocs.io/en/master/
+* API Documentation  : https://pycsamt.readthedocs.io/en/latest/
 
 ## Licence 
 pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/pyCSAMT/blob/master/LICENSE.md).

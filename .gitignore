@@ -70,6 +70,7 @@ logs
 # spyder project extension
 __pycache__/
 .spyproject/config/
+.spyproject/
 
 *.pylind.d
 *$py.class

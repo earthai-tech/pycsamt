@@ -39,10 +39,6 @@ from pycsamt.utils._csamtpylog import csamtpylog
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
 #---- End import modules --------
-# let set the systeme path find memory dataBase
- 
-sys.path.insert(0, os.path.abspath('.'))  
-sys.path.insert(0, os.path.abspath('..'))  
 
 class geo_pattern: 
     """

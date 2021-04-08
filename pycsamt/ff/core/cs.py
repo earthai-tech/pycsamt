@@ -1604,7 +1604,9 @@ class Profile (object):
                 fid.writelines(write_profile_lines)
         
         if savepath is not None :
-            shutil.move (''.join([output_name,'.stn']), savepath)
+            shutil.move (os.path.join(os.getcwd(),
+                                     ''.join([output_name,'.stn'])),
+                         savepath)
             
     def stn_separation(self, easting  =None , northing =None ,interpolate =False): 
         """

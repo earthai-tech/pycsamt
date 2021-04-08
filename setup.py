@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import pycsamt
+import os 
 
 # Check for setuptools package:
 
@@ -12,10 +13,14 @@ except ImportError:
 else:
     setuptools = True
 
-LONG_DESCRIPTION = """
-pyCSAMT is a far field basic  open source software of controlled source audio-frequency magnetotellurics 
-for standard data processing , modeling and geophysical interpretation  enhancement.  
-"""
+# LONG_DESCRIPTION = """
+# pyCSAMT is a far field basic  open source software of controlled source audio-frequency magnetotellurics 
+# for standard data processing , modeling and geophysical interpretation  enhancement.  
+# """
+with open(os.path.join(os.path.abspath('.'), 
+                       'project_description.md'), 'r') as fm:
+    LONG_DESCRIPTION ="""{}""".format(
+        ' '.join([descp for descp in fm.readlines() ]))
 
 # The advantage of setuptools is that EXE wrappers are created on Windows,
 # which allows Tab-completion for the script names from the system Scripts

@@ -93,14 +93,14 @@ class wrap_cscripts(object):
                         break 
                     else : user_response = None  # value no found then ask the user 
                 if user_response is None : #  request the user   
-                    user_response = input('{0} [{1}]:'.format(knames, values))
+                    user_response = input('> {0} [{1}]: '.format(knames, values))
                     if user_response in ['','\n' , ' ']:
                         user_response = values
                         print('--> set to default = {}'.format(values))
 
             elif len(list(self.input_kwargs.keys())) ==0 :
 
-                user_response = input('{0} [{1}]:'.format(knames, values))
+                user_response = input('> {0} [{1}]: '.format(knames, values))
                 if user_response in ['','\n' , ' ']:
                     user_response = values
                     print('--> set to default = {}'.format(values))

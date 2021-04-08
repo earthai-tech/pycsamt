@@ -1,0 +1,135 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>pycsamt.geodrill.geoDB.sqlrequests &#8212; pyCSAMT v1.0.03 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pyCSAMT v1.0.03 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pycsamt.geodrill.geoDB.sqlrequests</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">===============================================================================</span>
+<span class="sd">    Copyright © 2021  Kouadio K.Laurent</span>
+<span class="sd">    </span>
+<span class="sd">    This file is part of pyCSAMT.</span>
+<span class="sd">    </span>
+<span class="sd">    pyCSAMT is free software: you can redistribute it and/or modify</span>
+<span class="sd">    it under the terms of the GNU Lesser General Public License as published by</span>
+<span class="sd">    the Free Software Foundation, either version 3 of the License, or</span>
+<span class="sd">    (at your option) any later version.</span>
+<span class="sd">    </span>
+<span class="sd">    pyCSAMT is distributed in the hope that it will be useful,</span>
+<span class="sd">    but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="sd">    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="sd">    GNU Lesser General Public License for more details.</span>
+<span class="sd">    </span>
+<span class="sd">    You should have received a copy of the GNU Lesser General Public License</span>
+<span class="sd">    along with pyCSAMT.  If not, see &lt;https://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">===============================================================================  </span>
+<span class="sd">.. _module-Request::`pycsamt.geodrill.geoDB.sqlrequests`</span>
+
+<span class="sd">    :synopsis: Deal with Boreholes and well data , requests to DataBase</span>
+<span class="sd">    </span>
+<span class="sd">Created on Tue Oct 13 17:36:35 2020</span>
+
+<span class="sd">@author: @Daniel03</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SqlQ"><a class="viewcode-back" href="../../../../geodb.html#pycsamt.geodrill.geoDB.sqlrequests.SqlQ">[docs]</a><span class="k">class</span> <span class="nc">SqlQ</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build sql _requests - Not use for others</span>
+<span class="sd">    you may populate request for your purpose. the request in not general , </span>
+<span class="sd">    the user must change the request according its will . </span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">sql_req</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;select Formation, WellName, Depth, GR, ILD_log10, DeltaPHI, PHIND from nofacies_db &#39;</span>\
+                   <span class="s1">&#39;join blind_stuart_db using(WellName)&#39;</span><span class="p">,</span>
+                   
+               <span class="s1">&#39;select * from nofacies_db join blind_stuart_db using(WellName) order by a_mort&#39;</span><span class="p">,</span>
+               
+               <span class="s1">&#39;select WellName from nofacies_db intersect select WellName from blind_stuart_db&#39;</span><span class="p">,</span>
+               
+               <span class="s1">&#39;select WellName from nofacies_db except select WellName from blind_stuart_db&#39;</span><span class="p">,</span>
+               
+               <span class="s1">&#39;select WellName from blind_stuart_db except select WellName from nofacies_db&#39;</span><span class="p">,</span>
+               
+               <span class="s1">&#39;select distinct WellName from nofacies_db union select WellName from blind_stuart_db &#39;</span><span class="p">,</span>
+               
+               <span class="s1">&#39;select s2.Formation,s2.WellName, s2.Depth, s2.GR, s2.ILD_log10, s2.DeltaPHI, s2.PHIND,&#39;</span>\
+                       <span class="s1">&#39; s2.PE, s2.NM_M, s2.RELPOS, s1.Depth,s1.Facies,s1.LithLabel from nofacies_db as s2,&#39;</span>\
+                        <span class="s1">&#39; blind_stuart_db as s1 where s2.WellName=s1.WellName and s1.Depth=s2.Depth&#39;</span><span class="p">,</span>
+                       <span class="p">]</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pyCSAMT v1.0.03 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2021, Kouadio K. Laurent.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.4.0.
+    </div>
+  </body>
+</html>

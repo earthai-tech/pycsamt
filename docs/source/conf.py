@@ -15,9 +15,7 @@
 import os
 import sys
 # sys.path.insert(0, os.path.abspath('.'))
-# sys.path.insert(0, os.path.abspath('..'))
-sys.path.insert(0, os.path.abspath('../pyCSAMT'))
-
+sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 
@@ -28,7 +26,7 @@ author = u'Kouadio K. Laurent'
 # The short X.Y version
 version = u'1.0'
 # The full version, including alpha/beta/rc tags
-release = u'v1.0.01'
+release = u'v1.0.03'
 
 
 # -- General configuration ---------------------------------------------------
@@ -48,7 +46,7 @@ extensions = [
     'sphinx.ext.imgmath',
     'numpydoc',
     'sphinx.ext.napoleon',
-    #'sphinx.ext.autosummary',
+    'sphinx.ext.autosummary',
     'sphinx.ext.githubpages',
 ]
 
@@ -165,7 +163,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'pyCSAMT', u'pyCSAMT Documentation',
-     author, 'pyCSAMT', 'One line description of project.',
+     author, 'pyCSAMT', 'An open source Python toolbox for controlled source audio-frequency magnetotellurics.',
      'Miscellaneous'),
 ]
 
@@ -198,7 +196,7 @@ MOCK_MODULES = [
     'osgeo.ogr',
     'osgeo.gdal',
     'osgeo.osr',
-    'strata',
+    'strata',#'mtpy',
 ]
 
 import mock

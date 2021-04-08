@@ -1,0 +1,930 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Package Modeling &#8212; pyCSAMT v1.0.03 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Package GeoCore" href="geocore.html" />
+    <link rel="prev" title="Package Processing" href="processing.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="geocore.html" title="Package GeoCore"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="processing.html" title="Package Processing"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyCSAMT v1.0.03 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="package-modeling">
+<h1>Package Modeling<a class="headerlink" href="#package-modeling" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-pycsamt.modeling.occam2d">
+<span id="module-occam2d"></span><h2><strong>Module Occam2D</strong><a class="headerlink" href="#module-pycsamt.modeling.occam2d" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>This file is part of pyCSAMT.</p>
+<p>pyCSAMT is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.</p>
+<p>pyCSAMT is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.</p>
+<p>You should have received a copy of the GNU Lesser General Public License
+along with pyCSAMT.  If not, see &lt;<a class="reference external" href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.</p>
+</div></blockquote>
+<hr class="docutils" />
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<ul class="simple">
+<li><p><a class="reference external" href="http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html">http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html</a></p></li>
+<li><p><a class="reference external" href="https://marineemlab.ucsd.edu/~kkey/Software.php">https://marineemlab.ucsd.edu/~kkey/Software.php</a></p></li>
+<li><dl class="simple">
+<dt>and  .. _MTpy:: <cite>MTpy&lt;https://github.com/MTgeophysics/mtpy.git&gt;</cite></dt><dd><p>…</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Actually this module is not able to write Occam2D meshes file or build
+OccamInputfiles. However , you can import ocam module of :ref: <cite>MTpy</cite> toolbox</p>
+</div>
+<p>&#64;author: KouaoLaurent alias &#64;Daniel03
+Created on Fri Jan 22 20:31:14 2021</p>
+<dl class="class">
+<dt id="pycsamt.modeling.occam2d.Data">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.modeling.occam2d.</code><code class="sig-name descname">Data</code><span class="sig-paren">(</span><em class="sig-param">data_fn=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read and write Occam data</p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.modeling.occam2d.Data.read_occam2d_datafile" title="pycsamt.modeling.occam2d.Data.read_occam2d_datafile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_occam2d_datafile</span></code></a>([data_fn])</p></td>
+<td><p>read_occam_data file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pycsamt.modeling.occam2d.Data.write_occam2d_data" title="pycsamt.modeling.occam2d.Data.write_occam2d_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_occam2d_data</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pycsamt.modeling.occam2d.Data.read_occam2d_datafile">
+<code class="sig-name descname">read_occam2d_datafile</code><span class="sig-paren">(</span><em class="sig-param">data_fn=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Data.read_occam2d_datafile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Data.read_occam2d_datafile" title="Permalink to this definition">¶</a></dt>
+<dd><p>read_occam_data file. and populates attributes</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>fn</strong> (<em>str</em>) – full path to occam data file .</p>
+</dd>
+<dt class="field-even">Example</dt>
+<dd class="field-even"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">path</span> <span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span>
+<span class="gp">... </span>                      <span class="s1">&#39;pycsamt&#39;</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;occam2D&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="s1">&#39;OccamDataFile.dat&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">occamdata_obj</span> <span class="o">=</span><span class="n">Data</span><span class="p">(</span><span class="n">fn</span> <span class="o">=</span> <span class="n">path</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">occamdata_obj</span><span class="o">.</span><span class="n">occam_data_format</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">occamdata_obj</span><span class="o">.</span><span class="n">occam_data_blocks</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">occamdata_obj</span><span class="o">.</span><span class="n">occam_data_title</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">occamdata_obj</span><span class="o">.</span><span class="n">occam_data_sites</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">occamdata_obj</span><span class="o">.</span><span class="n">occam_data_frequencies</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">occamdata_obj</span><span class="o">.</span><span class="n">occam_data_offsets</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">occamDATA</span> <span class="o">=</span> <span class="n">occamdata_obj</span><span class="o">.</span><span class="n">occam_data</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.modeling.occam2d.Data.write_occam2d_data">
+<code class="sig-name descname">write_occam2d_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Data.write_occam2d_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Data.write_occam2d_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.modeling.occam2d.DataBlock">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.modeling.occam2d.</code><code class="sig-name descname">DataBlock</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#DataBlock"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.DataBlock" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read OccamDataBlock aand set corresponding attributes</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 70%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attributes</p></th>
+<th class="head"><p>Description (Restriction)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>site</p></td>
+<td><p>number of the site from the site list that this data
+belongs to.</p></td>
+</tr>
+<tr class="row-odd"><td><p>freq</p></td>
+<td><p>number of the frequency from the frequency list.</p></td>
+</tr>
+<tr class="row-even"><td><p>type</p></td>
+<td><p>type of data</p></td>
+</tr>
+<tr class="row-odd"><td><p>datum</p></td>
+<td><p>data value</p></td>
+</tr>
+<tr class="row-even"><td><p>error</p></td>
+<td><p>size of the error for this measurement
+For log10 resistivity this value can look a little
+strange. It is derived from the calculation
+d(log_10(x))/dx = 1/[x ln(10)]. So for 10% error,
+dx = 0.10x thus d(log_10(x)) = 0.10x / x ln(10)
+=.1/ln(10) = 0.0434</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="field-list">
+<dt class="field-odd">Example</dt>
+<dd class="field-odd"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">form</span> <span class="n">pycsamt</span><span class="o">.</span><span class="n">modeling</span> <span class="kn">import</span> <span class="nn">DataBlock</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1983</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dblocks_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;site&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="s1">&#39;S</span><span class="si">{0:02}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ii</span><span class="p">)</span>  <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span> <span class="p">(</span><span class="mi">10</span><span class="p">)],</span>
+<span class="gp">... </span>               <span class="s1">&#39;freq&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">8912</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+<span class="gp">... </span>               <span class="s1">&#39;type&#39;</span> <span class="p">:(</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">),</span>
+<span class="gp">... </span>               <span class="s1">&#39;data&#39;</span> <span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">20</span><span class="o">*</span><span class="mi">2</span><span class="p">)),</span>
+<span class="gp">... </span>               <span class="s1">&#39;error&#39;</span> <span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span>
+<span class="gp">... </span>               <span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dblock_obj</span> <span class="o">=</span> <span class="n">DataBlock</span><span class="p">(</span><span class="o">**</span><span class="n">dblocks_dict</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">dblock_obj</span><span class="o">.</span><span class="n">freq</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">dblock_obj</span><span class="o">.</span><span class="n">error</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">dblock_obj</span><span class="o">.</span><span class="n">site</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.modeling.occam2d.DataBlock.decode_each_site_data" title="pycsamt.modeling.occam2d.DataBlock.decode_each_site_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">decode_each_site_data</span></code></a>(data_blocks, …)</p></td>
+<td><p>Decode each site data and get differents values array :param datablocks:  datafrom differents blocks :type datablocks: ndarray</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pycsamt.modeling.occam2d.DataBlock.decode_each_site_data">
+<em class="property">static </em><code class="sig-name descname">decode_each_site_data</code><span class="sig-paren">(</span><em class="sig-param">data_blocks</em>, <em class="sig-param">data_type_index</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#DataBlock.decode_each_site_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.DataBlock.decode_each_site_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decode each site data and get differents values array
+:param datablocks:  datafrom differents blocks
+:type datablocks: ndarray</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>data_type_index</strong> (<em>int</em>) – specify the data type index</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.modeling.occam2d.Iter">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.modeling.occam2d.</code><code class="sig-name descname">Iter</code><span class="sig-paren">(</span><em class="sig-param">iter_fn=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Iter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Iter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Occam iteration file, inherets from startup obj ,
+in fact two object a similar the same</p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.modeling.occam2d.Iter.read_occam2d_iterfile" title="pycsamt.modeling.occam2d.Iter.read_occam2d_iterfile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_occam2d_iterfile</span></code></a>([iter_fn])</p></td>
+<td><p>read_occam iteration file  and populate attributes</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_occam2d_startupfile</span></code>([startup_fn])</p></td>
+<td><p>read occam2d_startupfile</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pycsamt.modeling.occam2d.Iter.read_occam2d_iterfile">
+<code class="sig-name descname">read_occam2d_iterfile</code><span class="sig-paren">(</span><em class="sig-param">iter_fn=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Iter.read_occam2d_iterfile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Iter.read_occam2d_iterfile" title="Permalink to this definition">¶</a></dt>
+<dd><p>read_occam iteration file  and populate attributes</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>iter_fn</strong> (<em>str</em>) – full path to iteration file</p>
+</dd>
+<dt class="field-even">Example</dt>
+<dd class="field-even"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pycsamt.modeling.occam2d</span> <span class="kn">import</span> <span class="n">Iter</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span> <span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span> <span class="s1">&#39;pycsamt&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;occam2D&#39;</span><span class="p">,</span> <span class="s1">&#39;ITER17.iter&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iter_obj</span><span class="o">=</span><span class="n">Iter</span><span class="p">(</span><span class="n">iter_fn</span><span class="o">=</span> <span class="n">path</span><span class="p">)</span>
+<span class="gp">... </span><span class="nb">print</span><span class="p">(</span><span class="n">iter_obj</span><span class="o">.</span><span class="n">occam_iter_param_count</span><span class="p">)</span>
+<span class="gp">... </span><span class="n">iterDATA</span><span class="o">=</span> <span class="n">iter_obj</span><span class="o">.</span><span class="n">occam_iter_data</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.modeling.occam2d.Iter2Dat">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.modeling.occam2d.</code><code class="sig-name descname">Iter2Dat</code><span class="sig-paren">(</span><em class="sig-param">iter2dat_fn=None</em>, <em class="sig-param">model_fn=None</em>, <em class="sig-param">data_fn=None</em>, <em class="sig-param">iter_fn=None</em>, <em class="sig-param">mesh_fn=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Iter2Dat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Iter2Dat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iter2Dat is a format converter which convert <a href="#id1"><span class="problematic" id="id2">*</span></a>.iter file and related mesh
+files to so called ‘x,y,z’ <a href="#id3"><span class="problematic" id="id4">*</span></a>.data file for post-processing.
+The class was inpired from the Bo Yang matlab script . reading functions come
+from ‘plotOccam2DMT.m’ routine</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><cite>Occam routine &lt;http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html &gt;</cite>
+of SIO, UCSD.</p>
+</div>
+<p>Bo Yang matlab-script is on <cite>add.info</cite> sub-packages of pyCSAMT.
+If your are familiar with matlab and you want to rewrite  the script
+please contact author at:</p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.modeling.occam2d.Iter2Dat.read_iter2dat" title="pycsamt.modeling.occam2d.Iter2Dat.read_iter2dat"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_iter2dat</span></code></a>([iter2dat_fn, bln_fn, scale, …])</p></td>
+<td><p>Read YangBo iter2data file or provided  Occam 2D specific files .</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pycsamt.modeling.occam2d.Iter2Dat.read_occamfiles" title="pycsamt.modeling.occam2d.Iter2Dat.read_occamfiles"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_occamfiles</span></code></a>([path_to_occamfiles])</p></td>
+<td><p>getffiles and readfiles to populates speciales attributes</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.modeling.occam2d.Iter2Dat.write_iter2dat_file" title="pycsamt.modeling.occam2d.Iter2Dat.write_iter2dat_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_iter2dat_file</span></code></a>([filename, model_fn, …])</p></td>
+<td><p>write  ‘x,y,z’ <a href="#id5"><span class="problematic" id="id6">*</span></a>.data file for post-processing can read and rewrite iter2dat file</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pycsamt.modeling.occam2d.Iter2Dat.read_iter2dat">
+<code class="sig-name descname">read_iter2dat</code><span class="sig-paren">(</span><em class="sig-param">iter2dat_fn=None</em>, <em class="sig-param">bln_fn=None</em>, <em class="sig-param">scale='km'</em>, <em class="sig-param">model_fn=None</em>, <em class="sig-param">iter_fn=None</em>, <em class="sig-param">mesh_fn=None</em>, <em class="sig-param">doi='1km'</em>, <em class="sig-param">data_fn=None</em>, <em class="sig-param">occam_model_obj=None</em>, <em class="sig-param">**kws</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Iter2Dat.read_iter2dat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Iter2Dat.read_iter2dat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read YangBo iter2data file or provided  Occam 2D specific files .</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>iter2dat_fn</strong> (<em>str</em>) – full path to iter2dat file</p></li>
+<li><p><strong>bln_file</strong> (<em>str</em>) – full path to bln file</p></li>
+<li><p><strong>scale</strong> – <p>str ,  scale of output data . Most of time ,
+Bo yang iter2Dat file is converted in kilometer . If not turn</p>
+<blockquote>
+<div><p>the scale to <cite>m</cite>.</p>
+</div></blockquote>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Example</dt>
+<dd class="field-even"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pycsamt.modeling.occam2d</span> <span class="kn">import</span> <span class="n">Iter2Dat</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">i2d</span><span class="o">=</span><span class="s1">&#39;iter17.2412.dat&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">i2d_2</span><span class="o">=</span><span class="s1">&#39;K1.iter.dat&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bln</span><span class="o">=</span><span class="s1">&#39;iter17.2412.bln&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bln_2</span> <span class="o">=</span> <span class="s1">&#39;K1.bln&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pathiter</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">]),</span>
+<span class="gp">... </span>                           <span class="s1">&#39;_iter2dat_&#39;</span><span class="p">,</span> <span class="n">i2d_2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pathbln</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">]),</span>
+<span class="gp">... </span>                          <span class="s1">&#39;_iter2dat_&#39;</span><span class="p">,</span> <span class="n">bln_2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">occam_iter2dat_obj</span> <span class="o">=</span><span class="n">Iter2Dat</span><span class="p">(</span><span class="n">iter2dat_fn</span><span class="o">=</span><span class="n">pathiter</span><span class="p">,</span>
+<span class="gp">... </span>                                <span class="n">bln_fn</span> <span class="o">=</span><span class="n">pathbln</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">i2d_data</span> <span class="o">=</span> <span class="n">occam_iter2dat_obj</span><span class="o">.</span><span class="n">read_iter2datfile</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">i2d_sta</span><span class="p">,</span> <span class="n">i2d_depth</span> <span class="o">=</span> <span class="n">occam_iter2dat_obj</span><span class="o">.</span><span class="n">model_x_nodes</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">occam_iter2dat_obj</span><span class="o">.</span><span class="n">model_z_nodes</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">i2d_model_res</span> <span class="o">=</span> <span class="n">occam_iter2dat_obj</span><span class="o">.</span><span class="n">model_res</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.modeling.occam2d.Iter2Dat.read_occamfiles">
+<code class="sig-name descname">read_occamfiles</code><span class="sig-paren">(</span><em class="sig-param">path_to_occamfiles=None</em>, <em class="sig-param">**kws</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Iter2Dat.read_occamfiles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Iter2Dat.read_occamfiles" title="Permalink to this definition">¶</a></dt>
+<dd><p>getffiles and readfiles to populates speciales attributes</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path_to_occamfiles</strong> (<em>str</em>) – full path to occamfiles [ITER|DATA|RESP] files.</p>
+</dd>
+<dt class="field-even">Example</dt>
+<dd class="field-even"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">path</span> <span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span> <span class="s1">&#39;pycsamt&#39;</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;occam2D&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iter2_obj</span><span class="o">=</span><span class="n">Iter2Dat</span><span class="p">(</span><span class="n">path_to_occamfiles</span><span class="o">=</span> <span class="n">path</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sites</span><span class="o">=</span> <span class="n">iter2_obj</span><span class="o">.</span><span class="n">OccamData</span><span class="o">.</span><span class="n">occam_data_sites</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">freq</span> <span class="o">=</span><span class="n">iter2_obj</span><span class="o">.</span><span class="n">OccamData</span><span class="o">.</span><span class="n">occam_data_frequencies</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iter_roughn</span> <span class="o">=</span><span class="n">iter2_obj</span><span class="o">.</span><span class="n">OccamIter</span><span class="o">.</span><span class="n">occam_iter_roughness_value</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iter_misfit</span><span class="o">=</span><span class="n">iter2_obj</span><span class="o">.</span><span class="n">OccamIter</span><span class="o">.</span><span class="n">occam_iter_misfit_reached</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">forward_data</span> <span class="o">=</span> <span class="n">iter2_obj</span><span class="o">.</span><span class="n">OccamResponse</span><span class="o">.</span><span class="n">forward_data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">residual_data</span> <span class="o">=</span> <span class="n">iter2_obj</span><span class="o">.</span><span class="n">OccamResponse</span><span class="o">.</span><span class="n">residual</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.modeling.occam2d.Iter2Dat.write_iter2dat_file">
+<code class="sig-name descname">write_iter2dat_file</code><span class="sig-paren">(</span><em class="sig-param">filename=None</em>, <em class="sig-param">model_fn=None</em>, <em class="sig-param">iter_fn=None</em>, <em class="sig-param">mesh_fn=None</em>, <em class="sig-param">data_fn=None</em>, <em class="sig-param">doi='1km'</em>, <em class="sig-param">savepath=None</em>, <em class="sig-param">occam_model_obj=None</em>, <em class="sig-param">negative_depth=True</em>, <em class="sig-param">scale='km'</em>, <em class="sig-param">**kws</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Iter2Dat.write_iter2dat_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Iter2Dat.write_iter2dat_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>write  ‘x,y,z’ <a href="#id7"><span class="problematic" id="id8">*</span></a>.data file for post-processing
+can read and rewrite iter2dat file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>array_like</em>) – offset</p></li>
+<li><p><strong>y</strong> (<em>array_like</em>) – depth</p></li>
+<li><p><strong>z</strong> (<em>array_like</em>) – log10 resistivities</p></li>
+</ul>
+</dd>
+</dl>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 58%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>params</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>model_fn</p></td>
+<td><p>str</p></td>
+<td><p>full path to occam model file</p></td>
+</tr>
+<tr class="row-odd"><td><p>iter_fn</p></td>
+<td><p>str</p></td>
+<td><p>full path to iteration file</p></td>
+</tr>
+<tr class="row-even"><td><p>mesh_fn</p></td>
+<td><p>str</p></td>
+<td><p>full path to occam mesh file</p></td>
+</tr>
+<tr class="row-odd"><td><p>data_fn</p></td>
+<td><p>str</p></td>
+<td><p>fll path to occam data file</p></td>
+</tr>
+<tr class="row-even"><td><p>filename</p></td>
+<td><p>str</p></td>
+<td><p>output of iter2dat file</p></td>
+</tr>
+<tr class="row-odd"><td><p>doi</p></td>
+<td><p>str of float</p></td>
+<td><p>depth of investigation. default is 1km
+if your povide  value on float,
+default unit is “meter” eg : 2000=2000m</p></td>
+</tr>
+<tr class="row-even"><td><p>negative_depth</p></td>
+<td><p>bool</p></td>
+<td><p>if True , will provide file with
+negative depth value</p></td>
+</tr>
+<tr class="row-odd"><td><p>scale</p></td>
+<td><p>str</p></td>
+<td><p>scaled the offset value and elevation .
+might be [m|km]</p></td>
+</tr>
+<tr class="row-even"><td><p>elevation</p></td>
+<td><p>ndarray|list</p></td>
+<td><p>can be provided if usefull</p></td>
+</tr>
+</tbody>
+</table>
+<ol class="arabic simple">
+<li><p>Write with Occam 2D files</p></li>
+</ol>
+<dl class="field-list">
+<dt class="field-odd">Examples</dt>
+<dd class="field-odd"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pycsamt.modeling.occam2d</span> <span class="kn">import</span> <span class="n">Iter2Dat</span> <span class="k">as</span> <span class="n">i2d</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">=</span><span class="s1">&#39;OccamDataFile.dat&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span> <span class="o">=</span> <span class="s1">&#39;Occam2DMesh&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="s1">&#39;Occam2DModel&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span> <span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span> <span class="s1">&#39;pycsamt&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;occam2D&#39;</span><span class="p">)</span>
+<span class="gp">... </span>                  <span class="c1">#,&#39;OccamDataFile.dat&#39;)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pathi2d</span> <span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span> <span class="s1">&#39;pycsamt&#39;</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;_iter2dat_&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">occam_iter2dat_obj</span> <span class="o">=</span><span class="n">i2d</span><span class="p">(</span><span class="n">mesh_fn</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mesh</span><span class="p">),</span>
+<span class="gp">... </span>                   <span class="n">iter_fn</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">iter_</span><span class="p">),</span>
+<span class="gp">... </span>                   <span class="n">model_fn</span> <span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">model</span><span class="p">),</span>
+<span class="gp">... </span>                   <span class="n">data_fn</span> <span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">occam_iter2dat_obj</span><span class="o">.</span><span class="n">write_iter2dat_file</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<ol class="arabic simple" start="2">
+<li><p>Rewrite the  with iter2dat file</p></li>
+</ol>
+<dl class="field-list">
+<dt class="field-odd">Example</dt>
+<dd class="field-odd"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pycsamt.modeling.occam2d</span> <span class="kn">import</span> <span class="n">Iter2Dat</span> <span class="k">as</span> <span class="n">i2d</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iter_</span><span class="o">=</span><span class="s1">&#39;ITER17.iter&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">idat</span> <span class="o">=</span> <span class="n">K1</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="mf">20142.</span><span class="n">dat</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bln</span> <span class="o">=</span> <span class="n">K1</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="mf">20142.</span><span class="n">bln</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">occam_iter2dat_obj</span> <span class="o">=</span><span class="n">i2d</span><span class="p">(</span><span class="n">iter2dat_fn</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pathi2d</span><span class="p">,</span> <span class="n">idat</span><span class="p">),</span>
+<span class="go">                            bln_fn = os.path.join(pathi2d, bln)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">occam_iter2dat_obj</span><span class="o">.</span><span class="n">write_iter2dat_file</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.modeling.occam2d.Mesh">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.modeling.occam2d.</code><code class="sig-name descname">Mesh</code><span class="sig-paren">(</span><em class="sig-param">mesh_fn=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read Occam read mesh file</p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.modeling.occam2d.Mesh.read_occam2d_mesh" title="pycsamt.modeling.occam2d.Mesh.read_occam2d_mesh"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_occam2d_mesh</span></code></a>([mesh_fn])</p></td>
+<td><p>Read mesh and get mesh values data and populates attributes</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pycsamt.modeling.occam2d.Mesh.read_occam2d_mesh">
+<code class="sig-name descname">read_occam2d_mesh</code><span class="sig-paren">(</span><em class="sig-param">mesh_fn=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Mesh.read_occam2d_mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Mesh.read_occam2d_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read mesh and get mesh values data and populates attributes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>mesh_fn</strong> (<em>str</em>) – full path to mesh file</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.modeling.occam2d.Model">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.modeling.occam2d.</code><code class="sig-name descname">Model</code><span class="sig-paren">(</span><em class="sig-param">model_fn=None</em>, <em class="sig-param">iter_fn=None</em>, <em class="sig-param">mesh_fn=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Occam Model , Actually read model file</p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.modeling.occam2d.Model.read_occam2d_modelfile" title="pycsamt.modeling.occam2d.Model.read_occam2d_modelfile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_occam2d_modelfile</span></code></a>([model_fn, mesh_fn, …])</p></td>
+<td><p>read   and ascertain modelfile.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pycsamt.modeling.occam2d.Model.read_occam2d_modelfile">
+<code class="sig-name descname">read_occam2d_modelfile</code><span class="sig-paren">(</span><em class="sig-param">model_fn=None</em>, <em class="sig-param">mesh_fn=None</em>, <em class="sig-param">iter_fn=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Model.read_occam2d_modelfile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Model.read_occam2d_modelfile" title="Permalink to this definition">¶</a></dt>
+<dd><p>read   and ascertain modelfile.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_fn</strong> (<em>str</em>) – full path to OCCAM2D model file</p></li>
+<li><p><strong>mesh_fn</strong> (<em>str</em>) – full path to MESH model file</p></li>
+<li><p><strong>iter_fn</strong> (<em>str</em>) – full path to ITER model file</p></li>
+</ul>
+</dd>
+<dt class="field-even">Example</dt>
+<dd class="field-even"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">path</span> <span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span> <span class="s1">&#39;pycsamt&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;occam2D&#39;</span><span class="p">,</span> <span class="s1">&#39;Occam2DModel&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">occammodel_obj</span> <span class="o">=</span><span class="n">Model</span><span class="p">(</span><span class="n">model_fn</span> <span class="o">=</span> <span class="n">path</span><span class="p">)</span>
+<span class="gp">... </span><span class="nb">print</span><span class="p">(</span><span class="n">occammodel_obj</span><span class="o">.</span><span class="n">model_name</span><span class="p">)</span>
+<span class="gp">... </span><span class="nb">print</span><span class="p">(</span><span class="n">occammodel_obj</span><span class="o">.</span><span class="n">model_mesh_file</span><span class="p">)</span>
+<span class="gp">... </span><span class="nb">print</span><span class="p">(</span><span class="n">occammodel_obj</span><span class="o">.</span><span class="n">model_num_layers</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.modeling.occam2d.Response">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.modeling.occam2d.</code><code class="sig-name descname">Response</code><span class="sig-paren">(</span><em class="sig-param">response_fn=None</em>, <em class="sig-param">data_fn=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Response"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Response" title="Permalink to this definition">¶</a></dt>
+<dd><p>Occam response file . Response is paired with the iteration file above.
+One is output at the end of each successful iteration.
+Inherets from Occam 2D data file .</p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_occam2d_datafile</span></code>([data_fn])</p></td>
+<td><p>read_occam_data file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pycsamt.modeling.occam2d.Response.read_occam2d_responsefile" title="pycsamt.modeling.occam2d.Response.read_occam2d_responsefile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_occam2d_responsefile</span></code></a>([response_fn])</p></td>
+<td><p>Read Occam2D response file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_occam2d_data</span></code>()</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pycsamt.modeling.occam2d.Response.read_occam2d_responsefile">
+<code class="sig-name descname">read_occam2d_responsefile</code><span class="sig-paren">(</span><em class="sig-param">response_fn=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Response.read_occam2d_responsefile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Response.read_occam2d_responsefile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read Occam2D response file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>response_fn</strong> – full path to response file</p>
+</dd>
+</dl>
+<p>:type response_fn:str</p>
+<dl class="field-list">
+<dt class="field-odd">Example</dt>
+<dd class="field-odd"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pycsamt.modeling.occam2d</span> <span class="kn">import</span> <span class="n">Response</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pathresp</span> <span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span> <span class="s1">&#39;pycsamt&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                          <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;occam2D&#39;</span><span class="p">,</span><span class="n">RESP17</span><span class="o">.</span><span class="n">resp</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path_data</span> <span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span> <span class="s1">&#39;pycsamt&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                           <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;occam2D&#39;</span><span class="p">,</span><span class="n">OccamDataFile</span><span class="o">.</span><span class="n">dat</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">resp_obj</span> <span class="o">=</span> <span class="n">Response</span><span class="p">(</span><span class="n">response_fn</span><span class="o">=</span><span class="n">pathresp</span><span class="p">,</span> <span class="n">data_fn</span> <span class="o">=</span> <span class="n">path_data</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">respDATA</span><span class="o">=</span> <span class="n">resp_obj</span><span class="o">.</span><span class="n">resp_data_value</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">resp_obj</span><span class="o">.</span><span class="n">occam_mode</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">resp_obj</span><span class="o">.</span><span class="n">occam_dtype</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">forward_data</span> <span class="o">=</span> <span class="n">resp_obj</span><span class="o">.</span><span class="n">resp_forward_value</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">residual_data</span> <span class="o">=</span> <span class="n">resp_obj</span><span class="o">.</span><span class="n">resp_residual_value</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tm_log10</span><span class="o">=</span> <span class="n">resp_obj</span><span class="o">.</span><span class="n">resp_tm_log10</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tm_phase</span><span class="o">=</span><span class="n">resp_obj</span><span class="o">.</span><span class="n">resp_tm_phase</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tm_forward</span> <span class="o">=</span> <span class="n">resp_obj</span><span class="o">.</span><span class="n">resp_tm_log10_forward</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tm_residual</span> <span class="o">=</span> <span class="n">resp_obj</span><span class="o">.</span><span class="n">resp_tm_log10_forward</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tm_forward</span> <span class="o">=</span> <span class="n">resp_obj</span><span class="o">.</span><span class="n">resp_tm_log10_residual</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tm_phase_error</span> <span class="o">=</span> <span class="n">resp_obj</span><span class="o">.</span><span class="n">resp_tm_phase_err</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tm_phase_err</span> <span class="o">=</span> <span class="n">occam_resp_obj</span><span class="o">.</span><span class="n">resp_tm_log10_forward_phase</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tm_residual_phase_err</span> <span class="o">=</span> <span class="n">occam_resp_obj</span><span class="o">.</span><span class="n">resp_tm_log10_residual_phase_err</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.modeling.occam2d.Startup">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.modeling.occam2d.</code><code class="sig-name descname">Startup</code><span class="sig-paren">(</span><em class="sig-param">startup_fn=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Startup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Startup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Occam startup file  Actually read startup file.
+for more detail:</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference external" href="http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html">http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html</a></p>
+</div>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.modeling.occam2d.Startup.read_occam2d_startupfile" title="pycsamt.modeling.occam2d.Startup.read_occam2d_startupfile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_occam2d_startupfile</span></code></a>([startup_fn])</p></td>
+<td><p>read occam2d_startupfile</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pycsamt.modeling.occam2d.Startup.read_occam2d_startupfile">
+<code class="sig-name descname">read_occam2d_startupfile</code><span class="sig-paren">(</span><em class="sig-param">startup_fn=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#Startup.read_occam2d_startupfile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.Startup.read_occam2d_startupfile" title="Permalink to this definition">¶</a></dt>
+<dd><p>read occam2d_startupfile</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>startup_fn</strong> (<em>str</em>) – full path to startup_file</p>
+</dd>
+<dt class="field-even">Example</dt>
+<dd class="field-even"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pycsamt.modeling.occam2d</span> <span class="kn">import</span> <span class="n">Startup</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span> <span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span>
+<span class="gp">... </span>                      <span class="s1">&#39;pycsamt&#39;</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;occam2D&#39;</span><span class="p">,</span> <span class="s1">&#39;Startup&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">startup_obj</span><span class="o">=</span><span class="n">Startup</span><span class="p">(</span><span class="n">startup_fn</span> <span class="o">=</span> <span class="n">path</span><span class="p">)</span>
+<span class="gp">... </span><span class="nb">print</span><span class="p">(</span><span class="n">startup_obj</span><span class="o">.</span><span class="n">occam_startup_data_file</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.modeling.occam2d.occam2d_write">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.modeling.occam2d.</code><code class="sig-name descname">occam2d_write</code><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#occam2d_write"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.occam2d_write" title="Permalink to this definition">¶</a></dt>
+<dd><p>Special class to build occam2d imput files with <span class="xref std std-ref">MTpy</span> module .</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>**edi_fn**</strong> (<em>str</em>) – full path to edifiles locations</p></li>
+<li><p><strong>**freq_num**</strong> (<em>float</em>) – number of frequencies to use in inversion</p></li>
+<li><p><strong>**interpolate_freq**</strong> (<em>bool</em><em>,</em>) – frequency interpolation , default is <em>False</em></p></li>
+<li><p><strong>**geoelectric_strike**</strong> (<em>bool</em>) – geoelectric strike angle assuming N = 0, E = 90.
+If True , provided , losgspace interpolation as tuple value</p></li>
+</ul>
+</dd>
+</dl>
+<p>Others important attributes can be  found in :</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 70%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Key Words/Attributes</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>edi_fn</p></td>
+<td><p>full path to data file</p></td>
+</tr>
+<tr class="row-odd"><td><p>n_layers</p></td>
+<td><p>number of vertical layers in mesh
+<em>default</em> is 31.</p></td>
+</tr>
+<tr class="row-even"><td><p>num_layers</p></td>
+<td><p>[ int ] number of regularization layers.</p></td>
+</tr>
+<tr class="row-odd"><td><p>num_z_pad_cells</p></td>
+<td><p>number of vertical padding cells below</p></td>
+</tr>
+<tr class="row-even"><td><p>iterations_to_run</p></td>
+<td><p>maximum number of iterations to run
+<em>default</em> is 20</p></td>
+</tr>
+<tr class="row-odd"><td><p>resistivity_start</p></td>
+<td><p>starting resistivity value.  If model_values is
+not given, then all values with in model_values
+array will be set to resistivity_start</p></td>
+</tr>
+<tr class="row-even"><td><p>save_path</p></td>
+<td><p>directory path to save startup file to
+<em>default</em> is current working directory</p></td>
+</tr>
+<tr class="row-odd"><td><p>startup_basename</p></td>
+<td><p>basename of startup file name.
+<em>default</em> is Occam2DStartup</p></td>
+</tr>
+<tr class="row-even"><td><p>startup_fn</p></td>
+<td><p>full path to startup file.
+<em>default</em> is save_path/startup_basename</p></td>
+</tr>
+<tr class="row-odd"><td><p>target_misfit</p></td>
+<td><p>target misfit value.
+<em>default</em> is 1.</p></td>
+</tr>
+<tr class="row-even"><td><p>x_pad_multiplier</p></td>
+<td><p>horizontal padding cells will increase by this
+multiple out to the edge of the grid.
+<em>default</em> is 1.7</p></td>
+</tr>
+<tr class="row-odd"><td><p>z1_layer</p></td>
+<td><p>thickness of the first layer in the model.
+Should be at least 1/4 of the first skin depth
+<em>default</em> is 10</p></td>
+</tr>
+<tr class="row-even"><td><p>z_bottom</p></td>
+<td><p>bottom depth of the model (m).  Needs to be large
+enough to be 1D at the edge.
+<em>default</em> is 200000.0</p></td>
+</tr>
+<tr class="row-odd"><td><p>z_target_depth</p></td>
+<td><p>depth to deepest target of interest.  Below this
+depth cells will be padded to z_bottom</p></td>
+</tr>
+<tr class="row-even"><td><p>cell_width</p></td>
+<td><p>width of cells with in station area in meters
+<em>default</em> is 100</p></td>
+</tr>
+<tr class="row-odd"><td><p>phase_te_err</p></td>
+<td><p>percent error in phase for TE mode. <em>default</em> is 5</p></td>
+</tr>
+<tr class="row-even"><td><p>phase_tm_err</p></td>
+<td><p>percent error in phase for TM mode. <em>default</em> is 20.</p></td>
+</tr>
+<tr class="row-odd"><td><p>res_te_err</p></td>
+<td><dl class="simple">
+<dt>percent error in resistivity for TE mode.</dt><dd><p><em>default</em> is 10</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="row-even"><td><p>res_tm_err</p></td>
+<td><p>percent error in resistivity for TM mode.</p></td>
+</tr>
+<tr class="row-odd"><td><p>trigger</p></td>
+<td><p>[ float ] multiplier to merge model blocks at
+depth.  A higher number increases the number of
+model blocks at depth.  <em>default</em> is .1.12</p></td>
+</tr>
+<tr class="row-even"><td><p>model_mode</p></td>
+<td><p>model mode to use for inversion, see module`Data`.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We consider occam2D buildingInputs file is focused on CSAMT data in
+TM mode then default configuration as  setting according this feature.
+If input <cite>edi_fn</cite> are MT data , please resetting configuration
+you SEG <cite>edi-fn</cite> data provided !.
+…</p>
+</div>
+<dl class="field-list">
+<dt class="field-odd">Example</dt>
+<dd class="field-odd"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pycsamt.modeling.occam2d</span> <span class="kn">import</span> <span class="n">occam2d_write</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="n">occam2d_write</span><span class="o">.</span><span class="n">buildingInputfiles</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span>
+<span class="gp">... </span>                                             <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;edi&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                       <span class="n">savepath</span> <span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span>
+<span class="gp">... </span>                                              <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;tesocc2&#39;</span> <span class="p">),</span>
+<span class="gp">... </span>                       <span class="n">geolectricke_strike</span><span class="o">=</span><span class="mf">34.</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.modeling.occam2d.occam2d_write.buildingInputfiles" title="pycsamt.modeling.occam2d.occam2d_write.buildingInputfiles"><code class="xref py py-obj docutils literal notranslate"><span class="pre">buildingInputfiles</span></code></a>(edi_fn[, freq_num, …])</p></td>
+<td><p>Method to build Occam2D inputfiles.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pycsamt.modeling.occam2d.occam2d_write.buildingInputfiles">
+<em class="property">static </em><code class="sig-name descname">buildingInputfiles</code><span class="sig-paren">(</span><em class="sig-param">edi_fn</em>, <em class="sig-param">freq_num=None</em>, <em class="sig-param">savepath=None</em>, <em class="sig-param">interpolate_freq=False</em>, <em class="sig-param">geoelectric_strike=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#occam2d_write.buildingInputfiles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.occam2d_write.buildingInputfiles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to build Occam2D inputfiles. Deal with <span class="xref std std-ref">MTpy</span> module.
+Try to install <span class="xref std std-ref">MTpy</span> is not installed yet.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>edi_fn</strong> (<em>str</em>) – full path to edifiles</p></li>
+<li><p><strong>freq_num</strong> (<em>float</em>) – number of frequencies to use in inversion</p></li>
+<li><p><strong>interpolate_freq</strong> (<em>bool</em>) – frequency interpolation , default is <em>False</em></p></li>
+<li><p><strong>geoelectric_strike</strong> (<em>float</em>) – geoelectric strike angle assuming N = 0, E = 90.
+If True , provided , losgspace interpolation as tuple value</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>outfiles building occam2d inputfiles</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str , sys.stdout</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.modeling.occam2d.occamLog">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.modeling.occam2d.</code><code class="sig-name descname">occamLog</code><span class="sig-paren">(</span><em class="sig-param">fn=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#occamLog"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.occamLog" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to deal with occcam 2d logfile . File output after inverted data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>fn</strong></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.modeling.occam2d.occamLog.read_occam2d_logfile" title="pycsamt.modeling.occam2d.occamLog.read_occam2d_logfile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_occam2d_logfile</span></code></a>([fn])</p></td>
+<td><p>Read occam file and populate attributes.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pycsamt.modeling.occam2d.occamLog.read_occam2d_logfile">
+<code class="sig-name descname">read_occam2d_logfile</code><span class="sig-paren">(</span><em class="sig-param">fn=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/modeling/occam2d.html#occamLog.read_occam2d_logfile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.modeling.occam2d.occamLog.read_occam2d_logfile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read occam file and populate attributes.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>fn</strong> (<em>str</em>) – full path to occam2d log file</p>
+</dd>
+<dt class="field-even">Example</dt>
+<dd class="field-even"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pycsamt.modeling</span> <span class="kn">import</span> <span class="n">occam2d</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span> <span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span> <span class="s1">&#39;pycsamt&#39;</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                      <span class="s1">&#39;occam2D&#39;</span><span class="p">,</span> <span class="s1">&#39;logFile.logfile&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">occamlog_obj</span> <span class="o">=</span><span class="n">occam2d</span><span class="o">.</span><span class="n">Log</span><span class="p">(</span><span class="n">fn</span> <span class="o">=</span> <span class="n">path</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">occamlog_obj</span><span class="o">.</span><span class="n">rms</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">occamlog_obj</span><span class="o">.</span><span class="n">roughness</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Package Modeling</a><ul>
+<li><a class="reference internal" href="#module-pycsamt.modeling.occam2d"><strong>Module Occam2D</strong></a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="processing.html"
+                        title="previous chapter">Package Processing</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="geocore.html"
+                        title="next chapter">Package GeoCore</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/modeling.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="geocore.html" title="Package GeoCore"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="processing.html" title="Package Processing"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyCSAMT v1.0.03 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2021, Kouadio K. Laurent.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.4.0.
+    </div>
+  </body>
+</html>

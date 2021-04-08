@@ -1,0 +1,1834 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Package GeoCore &#8212; pyCSAMT v1.0.03 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Package GeoDataBase" href="geodb.html" />
+    <link rel="prev" title="Package Modeling" href="modeling.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="geodb.html" title="Package GeoDataBase"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="modeling.html" title="Package Modeling"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyCSAMT v1.0.03 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="package-geocore">
+<h1>Package GeoCore<a class="headerlink" href="#package-geocore" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-pycsamt.geodrill.geoCore.geodrill">
+<span id="module-geodrill"></span><h2><strong>Module Geodrill</strong><a class="headerlink" href="#module-pycsamt.geodrill.geoCore.geodrill" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>This file is part of pyCSAMT.</p>
+<p>pyCSAMT is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.</p>
+<p>pyCSAMT is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.</p>
+<p>You should have received a copy of the GNU Lesser General Public License
+along with pyCSAMT.  If not, see &lt;<a class="reference external" href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.</p>
+</div></blockquote>
+<hr class="docutils" />
+<p>Created on Sat Sep 19 12:37:42 2020
+&#64;author: Daniel03</p>
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Drill">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.geodrill.</code><code class="sig-name descname">Drill</code><span class="sig-paren">(</span><em class="sig-param">well_filename=None</em>, <em class="sig-param">build_manually_welldata=False</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Drill"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Drill" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class is focus on well logs . How to generate well Log for Oasis:</p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Drill.dhGeology" title="pycsamt.geodrill.geoCore.geodrill.Drill.dhGeology"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dhGeology</span></code></a>([dh_geomask])</p></td>
+<td><p>Method to build geology drillhole log.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Drill.dhSample" title="pycsamt.geodrill.geoCore.geodrill.Drill.dhSample"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dhSample</span></code></a>([path_to_agso_codefile, dh_sampmask])</p></td>
+<td><p>Method to build Sample log.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Drill.dhSurveyElevAz" title="pycsamt.geodrill.geoCore.geodrill.Drill.dhSurveyElevAz"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dhSurveyElevAz</span></code></a>([add_elevation, add_azimuth])</p></td>
+<td><p>Method to build Elevation &amp; Azimuth DH logs.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Drill.writeDHData" title="pycsamt.geodrill.geoCore.geodrill.Drill.writeDHData"><code class="xref py py-obj docutils literal notranslate"><span class="pre">writeDHData</span></code></a>([data2write])</p></td>
+<td><p>Method to write allDH logs.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Drill.dhGeology">
+<code class="sig-name descname">dhGeology</code><span class="sig-paren">(</span><em class="sig-param">dh_geomask=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Drill.dhGeology"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Drill.dhGeology" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to build geology drillhole log. The name of input rock must feell exaction accordinag to
+a convention AGSO file . If not sure for the name of rock and Description and label .
+you may consult the geocode folder before building the well_filename. If the entirely
+rock name is given , program will search on the AGSO file the corresponding Label and code .
+If the rock name is  founc then it will take its CODE else it will generate exception.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>* dh_geomask</strong><span class="classifier">np.ndarray, optional</span></dt><dd><p>geology mask. send mask value can take exactly
+the np.ndarray(num_of_geology set ,). The better way
+to set geology maskis to fill on the wellfilename.
+if not , programm will take the general mask value.
+The <em>default</em> is None.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt>pd.DataFrame</dt><dd><p>geology drillhole log.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Drill.dhSample">
+<code class="sig-name descname">dhSample</code><span class="sig-paren">(</span><em class="sig-param">path_to_agso_codefile=None</em>, <em class="sig-param">dh_sampmask=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Drill.dhSample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Drill.dhSample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to build Sample log. This method focuses on the sample obtained
+during the DH trip.it may georeferenced as the well_filename needed.
+A main thing is to set the AGSO_STCODES file. AGSO_STCODES is the
+conventional code of structurals sample. If you have an own AGSO_STCODES ,
+you may provide the path * kwargs=path_to_ags_codefile * .
+the program will read and generate logs according to the  DESCRIPTION
+and STCODES figured. if None, the program will take it STCODES  and set
+the samplelogs. When you set the Sample code aor sample name ,
+make sur that the name match the same name on STCODES. If not ,
+program will raises an error.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>* path_to_agso_codefile</strong><span class="classifier">str, optional</span></dt><dd><blockquote>
+<div><p>path to conventional
+AGSO_STRUCTURAL CODES.
+The <em>default</em> is None.</p>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt>dh_sampmask<span class="classifier">np.ndarray, optional</span></dt><dd><p>Structural mask. The default is None.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt>pd.DataFrame</dt><dd><p>Sample DH log.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Drill.dhSurveyElevAz">
+<code class="sig-name descname">dhSurveyElevAz</code><span class="sig-paren">(</span><em class="sig-param">add_elevation=None</em>, <em class="sig-param">add_azimuth=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Drill.dhSurveyElevAz"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Drill.dhSurveyElevAz" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to build Elevation &amp; Azimuth DH logs. if add_elevation and .
+add_azimuth are set . The programm will ignore the computated azimuth,
+and it will replace to the new azimuth   provided . all elevation will
+be ignore and set by the new elevation . <a href="#id1"><span class="problematic" id="id2">*</span></a>kwargs arguments
+{add_elevation , add-azimuth }  must match the same size like the
+number of Drillholes . Each one must be on ndarray(num_of_holes, 1).</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>* add_elevation</strong><span class="classifier">np.nadarray , optional</span></dt><dd><blockquote>
+<div><p>elevation data (num_of_holes, 1)
+The <em>default</em> is None.</p>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt>add_azimuth<span class="classifier">np.ndarray , optional</span></dt><dd><p>azimuth data (num_of_holes,1).
+The <em>default</em> is None.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>DH_RL :np.float or np.ndarray(num_of_hole,1),</dt><dd><p>if not provided , it’s set to 0. means No topography is added’.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl>
+<dt>pd.Dataframe</dt><dd><blockquote>
+<div><p>Elevation DH log .</p>
+</div></blockquote>
+<dl class="simple">
+<dt>pd.DataFrame</dt><dd><p>Azimuth DH log.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Drill.writeDHData">
+<code class="sig-name descname">writeDHData</code><span class="sig-paren">(</span><em class="sig-param">data2write=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Drill.writeDHData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Drill.writeDHData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to write allDH logs. It depends to the users to sort which data
+want to export and which format. the program support only two format
+(.xlsx and .csv) if one is set , it will ouptput the convenience format.
+Users can give a list of  the name of log he want to export.
+Program is dynamic and flexible. It tolerates quite symbols number to</p>
+<blockquote>
+<div><p>extract data logs.</p>
+</div></blockquote>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>* data2write</strong><span class="classifier">str or list , optional</span></dt><dd><blockquote>
+<div><p>the search key. The default is None.</p>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt>datafn :str</dt><dd><p>savepath to exported file
+<em>Default</em> is current work directory.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>write_index_on_sheet<span class="classifier">bool,</span></dt><dd><p>choice to write the sheet with pandas.Dataframe index.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>writeType<span class="classifier">str ,</span></dt><dd><p>file type . its may <em>.csv or *.xlsx .
+*Default</em> is <a href="#id3"><span class="problematic" id="id4">*</span></a>.xlsx</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>add_header<span class="classifier">bool,</span></dt><dd><p>add head on exported sheet. set False to mask heads.
+<em>Default</em> is True.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>csv_separateType<span class="classifier">str ,</span></dt><dd><p>Indicated for csv exported files ,
+the type of comma delimited . defaut is ‘,’.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Geodrill">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.geodrill.</code><code class="sig-name descname">Geodrill</code><span class="sig-paren">(</span><em class="sig-param">iter2dat_fn=None</em>, <em class="sig-param">model_fn=None</em>, <em class="sig-param">data_fn=None</em>, <em class="sig-param">iter_fn=None</em>, <em class="sig-param">mesh_fn=None</em>, <em class="sig-param">bln_fn=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Geodrill"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to manage data from Occam2D and Model so to create section of each
+sites and it depth.</p>
+<p>Each station constitues an attribute framed by two closest
+point of station offsets from model resistivities.
+Deal with  True resistivities get on the survey or with others firms.
+In fact , input truth resistivities values into our model , produce an accuracy
+underground map.The challenge to build pseudolog allow to know how layers are
+disposal in underground so to emphasize the large conductive zone  especially
+in the case of groundwater exploration.  Program works in combinaison with
+geophysic data especially Occam 2D inversion data,  and  geological data.
+Actually the program deal only with  Occam 2D inversion files or  Bo Yang
+(x,y,z) files. We intend to extend later with other external softares but
+can generate output directly see use with Golder sofware(‘surfer’). If user</p>
+<blockquote>
+<div><p>has a golder software installed on its computer , It can use  output files
+generated here  to produce 2D map so to compare both maps to see how far</p>
+</div></blockquote>
+<p>is the difference between  Model map and detail-sequences map )
+“pseudosequences model” could match better the reality of underground).
+Details sequences map is most closest to the reality  When {step descent}
+parameter is not too  small at all. Indeed True geological data allow
+to harmonize the value of resistivity produced by Occam2D model so to force
+the pogramm to make a correlation  between data fromtruth layers and the model
+values.</p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.geo_build_strata_logs" title="pycsamt.geodrill.geoCore.geodrill.Geodrill.geo_build_strata_logs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">geo_build_strata_logs</span></code></a>([input_resistivities, …])</p></td>
+<td><p><p>”</p>
+</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.geo_replace_rho" title="pycsamt.geodrill.geoCore.geodrill.Geodrill.geo_replace_rho"><code class="xref py py-obj docutils literal notranslate"><span class="pre">geo_replace_rho</span></code></a>([input_resistivity_range, …])</p></td>
+<td><p>Allow ro replace the calculated resistivities from model to real resistivites obtained on survey area with other companies.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.get_average_rho" title="pycsamt.geodrill.geoCore.geodrill.Geodrill.get_average_rho"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_average_rho</span></code></a>(data_array[, transpose])</p></td>
+<td><p>Function to average rho to one point to onother .</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.get_geo_formation_properties" title="pycsamt.geodrill.geoCore.geodrill.Geodrill.get_geo_formation_properties"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_geo_formation_properties</span></code></a>(…[, …])</p></td>
+<td><p>Get the list of stuctures and their names of after replaced , flexible tools.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.get_structure" title="pycsamt.geodrill.geoCore.geodrill.Geodrill.get_structure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_structure</span></code></a>(resistivities_range)</p></td>
+<td><p>function to get according the range of resistivities values , the corresponding associated geological rocks The list of electrical properties of rocks is not exhaustive , can be fill by others</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.set_geodata" title="pycsamt.geodrill.geoCore.geodrill.Geodrill.set_geodata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_geodata</span></code></a>([iter2dat_fn, model_fn, …])</p></td>
+<td><p>Readmodel data and collected from each site its value from surface to depth</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.to_golden_software" title="pycsamt.geodrill.geoCore.geodrill.Geodrill.to_golden_software"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_golden_software</span></code></a>([input_resistivities, …])</p></td>
+<td><p>Output average files, rehoreplaced files, spseudosequennces files and station locations files  will generate 3 outputs for Golden software plots</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.to_oasis_montaj" title="pycsamt.geodrill.geoCore.geodrill.Geodrill.to_oasis_montaj"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_oasis_montaj</span></code></a>([model_fn, iter_fn, …])</p></td>
+<td><p>write output to oasis montaj when station loocation and profile coordinates are provided .</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Geodrill.geo_build_strata_logs">
+<code class="sig-name descname">geo_build_strata_logs</code><span class="sig-paren">(</span><em class="sig-param">input_resistivities=None</em>, <em class="sig-param">input_layers=None</em>, <em class="sig-param">step_descent=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Geodrill.geo_build_strata_logs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.geo_build_strata_logs" title="Permalink to this definition">¶</a></dt>
+<dd><p>”
+Read resistivits data  got on survey area and build geological strata block.
+If constrained_electrical_properties_of_rocks is False , will build a log
+by considering the  conventional electrical property of rocks
+can be find through this link.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>* input_resistivity :array_like</strong></dt><dd><blockquote>
+<div><p>an array of resistivity on the site</p>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt>step_descent<span class="classifier">float</span></dt><dd><p>depth value to averaged rho . Must be smaller as possible
+if None , it take the 2% times the investigation depth</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>input_layers<span class="classifier">list or array</span></dt><dd><p>layers_names , eg <cite>granite</cite>, <cite>fault</cite>, <cite>river</cite></p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt>obj ,</dt><dd><p>Build stratigraphy log obj</p>
+</dd>
+<dt>A Sample of electrical_properties_of_rocks is below</dt><dd></dd>
+</dl>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 37%" />
+<col style="width: 28%" />
+<col style="width: 34%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"></th>
+<th class="head"></th>
+<th class="head"></th>
+</tr>
+<tr class="row-even"><th class="head"><p>Rocks</p></th>
+<th class="head"><p>Max Rho</p></th>
+<th class="head"><p>Min Rho (ohm-m)</p></th>
+</tr>
+<tr class="row-odd"><th class="head"></th>
+<th class="head"></th>
+<th class="head"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>igneous rocks</p></td>
+<td><p>10^6</p></td>
+<td><p>10^3</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>duricrust</p></td>
+<td><p>5.10^3</p></td>
+<td><p>5.10^2</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>gravel and sand</p></td>
+<td><p>10^4</p></td>
+<td><p>10^2.90(800)</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>conglomerate</p></td>
+<td><p>10^4</p></td>
+<td><p>10^1.95(90)</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>dolomite/limestone</p></td>
+<td><p>10^5</p></td>
+<td><p>10^3</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>permafrost</p></td>
+<td><p>10^5</p></td>
+<td><p>10^2.62(750)</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>metamorphic rocks</p></td>
+<td><p>5.10^2</p></td>
+<td><p>10.^1</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>tills</p></td>
+<td><p>8.10^2</p></td>
+<td><p>10^1.93(85)</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>standstone conglomerate</p></td>
+<td><p>10^4</p></td>
+<td><p>10^1.92 (80)</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>lignite/coal</p></td>
+<td><p>10^2.89(790)</p></td>
+<td><p>10^1</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>shales</p></td>
+<td><p>10^1.7(50)</p></td>
+<td><p>10^1.48(30)</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>clays</p></td>
+<td><p>10^2</p></td>
+<td><p>10^1.7(50)</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>saprolite</p></td>
+<td><p>10^2.08(120)</p></td>
+<td><p>10^1.48(30)</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>sedimentary rocks</p></td>
+<td><p>10^4</p></td>
+<td><p>10^0</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>fresh water</p></td>
+<td><p>3.10^2</p></td>
+<td><p>10^0</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>salt water</p></td>
+<td><p>10^0</p></td>
+<td><p>10^-0.15</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>massive sulfide</p></td>
+<td><p>10^0</p></td>
+<td><p>10^-2</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>sea water</p></td>
+<td><p>10^-0.09(0.8)</p></td>
+<td><p>10^-1</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>ore minerals</p></td>
+<td><p>10^0</p></td>
+<td><p>10^-4</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>Graphite</p></td>
+<td><p>10^-2.5</p></td>
+<td><p>10^-3.5</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<div></div></blockquote>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference external" href="https://www.eoas.ubc.ca/ubcgif/iag/foundations/properties/resistivity.htm">https://www.eoas.ubc.ca/ubcgif/iag/foundations/properties/resistivity.htm</a>
+list is not exhaustive and depend of the geological formations of
+survey area.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>list is not Exhaustive, use the data base script to populate
+most of goeological electrical properties.</p>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Geodrill.geo_replace_rho">
+<code class="sig-name descname">geo_replace_rho</code><span class="sig-paren">(</span><em class="sig-param">input_resistivity_range=None</em>, <em class="sig-param">input_layers=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Geodrill.geo_replace_rho"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.geo_replace_rho" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow ro replace the calculated resistivities from model
+to real resistivites obtained on survey area with other companies.
+The accuracy depend the significant values of input  resistivites.
+More input resitivities are,more accuracy in the design of underground model
+geostratigrapyhy model should be.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_resistivity_range</strong> (<em>array_like</em>) – an array of resistivity on the site</p></li>
+<li><p><strong>input_layers</strong> – layers_names , eg .`granite`, <cite>fault</cite>, <a href="#id5"><span class="problematic" id="id6">`</span></a>river `</p></li>
+<li><p><strong>input_layers</strong> – list or arrays</p></li>
+<li><p><strong>depth_range</strong> – array _of depth of specific layer</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Geodrill.get_average_rho">
+<em class="property">static </em><code class="sig-name descname">get_average_rho</code><span class="sig-paren">(</span><em class="sig-param">data_array</em>, <em class="sig-param">transpose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Geodrill.get_average_rho"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.get_average_rho" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to average rho to one point to onother .
+It show the lowest point and the maximum point averaged . Function averaged rho
+value between local maximum and local minima values .
+if data  values of station are located on columnlines , set transpose to True
+then rotate the matrix to find minima and maxima  locals value then
+calculated averaged rho after will return matrix transpose</p>
+<blockquote>
+<div><p>as the same shape as inputted . .Defaut is <strong>False</strong> .</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>data_array</strong> (<em>ndarray</em>) – data of resistivities collected at the site point</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Geodrill.get_geo_formation_properties">
+<em class="property">static </em><code class="sig-name descname">get_geo_formation_properties</code><span class="sig-paren">(</span><em class="sig-param">structures_resistivities</em>, <em class="sig-param">real_layer_names=None</em>, <em class="sig-param">constrained_electrical_properties_of_rocks=True</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Geodrill.get_geo_formation_properties"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.get_geo_formation_properties" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the list of stuctures and their names of after replaced , flexible tools.
+wherever structures provided, the name, color ,  as well as the pattern .
+if constrained electrical properties if True , will keep the resistivities with their
+corresponding layers as reference. If the layer names if found on the data Base then ,
+will return its pattern and color else defaultcolor is black and patter is “+.-“.
+if constrained_electrical_properties_of_rocks is False , will check under data base
+to find the resistivities that match better the layers</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>* structures resistivities</strong><span class="classifier">array_like,</span></dt><dd><blockquote>
+<div><p>resistivities of structures</p>
+</div></blockquote>
+<ul>
+<li><dl>
+<dt>real_layer_names<span class="classifier">array_like <a href="#id7"><span class="problematic" id="id8">|</span></a>list</span></dt><dd><p>names of layer of survey area
+if not provided , will use resistivities to find the closet
+layer that match the best the resistivities</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>constrained_electrical_properties_of_rocks: bool</dt><dd><p>set to True mean the realy_layer is provided. if not program
+will enforce to False , will use default conventional layers
+Default is False, assume to povided layer names for  accuracy</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl>
+<dt>f_name: array_like</dt><dd><blockquote>
+<div><p>names of formations find with their corresponding rho</p>
+</div></blockquote>
+<dl class="simple">
+<dt>f_pattern: array_like</dt><dd><p>patter of differents geological formations</p>
+</dd>
+<dt>f_color: array_like</dt><dd><p>color of differents geological formations</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Geodrill.get_structure">
+<em class="property">static </em><code class="sig-name descname">get_structure</code><span class="sig-paren">(</span><em class="sig-param">resistivities_range</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Geodrill.get_structure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.get_structure" title="Permalink to this definition">¶</a></dt>
+<dd><p>function to get according the range of resistivities values ,
+the corresponding associated geological rocks
+The list of electrical properties of rocks is not exhaustive ,
+can be fill by others</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>resistivities_range</strong> (<em>array_like</em><em>,</em>) – array of input_resistivities</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the list of geological structures
+form go_electrical _rocks properties</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Geodrill.set_geodata">
+<code class="sig-name descname">set_geodata</code><span class="sig-paren">(</span><em class="sig-param">iter2dat_fn=None</em>, <em class="sig-param">model_fn=None</em>, <em class="sig-param">data_fn=None</em>, <em class="sig-param">iter_fn=None</em>, <em class="sig-param">mesh_fn=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Geodrill.set_geodata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.set_geodata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Readmodel data and collected from each site its value from surface to depth</p>
+<ol class="arabic simple">
+<li><p>Read with Occam 2D outputs files</p></li>
+</ol>
+<dl class="field-list">
+<dt class="field-odd">Example</dt>
+<dd class="field-odd"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">form</span> <span class="n">pycsamt</span><span class="o">.</span><span class="n">geodrill</span> <span class="kn">import</span> <span class="nn">Geodrill</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path_occam2d</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span>
+<span class="gp">... </span>                                <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;occam2D&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path_i2d</span> <span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;pyCSAMT&#39;</span><span class="p">],</span>
+<span class="gp">... </span>                           <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;_iter2dat_2&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geo_obj</span> <span class="o">=</span><span class="n">Geodrill</span><span class="p">(</span><span class="n">model_fn</span>  <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path_occam2d</span><span class="p">,</span><span class="s1">&#39;Occam2DModel&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">mesh_fn</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path_occam2d</span><span class="p">,</span> <span class="s1">&#39;Occam2DMesh&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">iter_fn</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path_occam2d</span><span class="p">,</span> <span class="s1">&#39;ITER17.iter&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">data_fn</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path_occam2d</span><span class="p">,</span> <span class="s1">&#39;OccamDataFile.dat&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<ol class="arabic simple" start="2">
+<li><p>Read with only iter2dat file and bln file</p></li>
+</ol>
+<dl class="field-list">
+<dt class="field-odd">Example</dt>
+<dd class="field-odd"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">form</span> <span class="n">pycsamt</span><span class="o">.</span><span class="n">geodrill</span> <span class="kn">import</span> <span class="nn">Geodrill</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geo_obj</span> <span class="o">=</span><span class="n">Geodrill</span><span class="p">(</span><span class="n">iter2dat_fn</span>  <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path_i2d</span><span class="p">,</span> <span class="s1">&#39;K1.iter.dat&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">bln_fn</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path_i2d</span><span class="p">,</span> <span class="s1">&#39;K1.bln&#39;</span><span class="p">),)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geo_model_off</span> <span class="o">=</span> <span class="n">geo_obj</span><span class="o">.</span><span class="n">model_x_nodes</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geo_model_res</span><span class="o">=</span> <span class="n">geo_obj</span><span class="o">.</span><span class="n">model_res</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geoS01</span> <span class="o">=</span> <span class="n">geo_obj</span><span class="o">.</span><span class="n">geo_name_S01</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geoS00</span><span class="o">=</span> <span class="n">geo_obj</span><span class="o">.</span><span class="n">geo_name_S00</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geoS46</span><span class="o">=</span><span class="n">geo_obj</span><span class="o">.</span><span class="n">geo_name_S46</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Geodrill.to_golden_software">
+<code class="sig-name descname">to_golden_software</code><span class="sig-paren">(</span><em class="sig-param">input_resistivities=None</em>, <em class="sig-param">input_layers=None</em>, <em class="sig-param">step_descent=None</em>, <em class="sig-param">filename=None</em>, <em class="sig-param">savepath=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Geodrill.to_golden_software"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.to_golden_software" title="Permalink to this definition">¶</a></dt>
+<dd><p>Output average files, rehoreplaced files, spseudosequennces
+files and station locations files  will generate 3 outputs for
+Golden software plots</p>
+<ol class="arabic simple">
+<li><dl class="simple">
+<dt>One model for rho averaged (<a href="#id9"><span class="problematic" id="id10">*</span></a>_aver), transitory data betwen</dt><dd><p>the calculated rho and true rho.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>second for rho value replaced . Replaced calcualted model</dt><dd><p>structures resistivities</p>
+</dd>
+</dl>
+</li>
+</ol>
+<dl class="simple">
+<dt>to their closest resistivities as resistivities reference from</dt><dd><p>input resistivities.</p>
+</dd>
+</dl>
+<ol class="arabic simple" start="3">
+<li><dl class="simple">
+<dt>the most important files: the  cut out resistivities value</dt><dd><p>with step descent (._sd) show most dominant stratigraphy sequences .</p>
+</dd>
+</dl>
+</li>
+<li><p>the station location file (.bln)</p></li>
+</ol>
+<p>Plot the 3 files in Golden software to see transition from model
+calculation to truthsequence detail models which is most closest to reality.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>* input_resistivities</strong><span class="classifier">array_like</span></dt><dd><blockquote>
+<div><p>Truth values of resistivities</p>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt>filename :str</dt><dd><p>name of output file</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>step_descent<span class="classifier">float,</span></dt><dd><dl class="simple">
+<dt>Step to cut out data and to  force resistivites calcualted</dt><dd><p>to match the reference data as input resistivities
+if not provided the step will be 20% of D0I.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>input_layers<span class="classifier">array_like</span></dt><dd><dl class="simple">
+<dt>True input_layers names ( geological informations of</dt><dd><p>encountered layers )</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>savepath<span class="classifier">str,</span></dt><dd><p>full path to the savepath ,
+if None , will create folder name to savepath</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt>obj , str</dt><dd><p>golden software outputfiles <cite>_rr.dat</cite>, <cite>_aver.dat</cite>, <cite>_sd.dat</cite>.</p>
+</dd>
+<dt>Holding a followings informations:</dt><dd></dd>
+</dl>
+<blockquote>
+<div></div></blockquote>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Geodrill.to_oasis_montaj">
+<code class="sig-name descname">to_oasis_montaj</code><span class="sig-paren">(</span><em class="sig-param">model_fn=None</em>, <em class="sig-param">iter_fn=None</em>, <em class="sig-param">profile_fn=None</em>, <em class="sig-param">mesh_fn=None</em>, <em class="sig-param">data_fn=None</em>, <em class="sig-param">filename=None</em>, <em class="sig-param">savepath=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Geodrill.to_oasis_montaj"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Geodrill.to_oasis_montaj" title="Permalink to this definition">¶</a></dt>
+<dd><p>write output to oasis montaj when station loocation and profile
+coordinates are provided . We assune before using this method , you are
+already the coordinates files at disposal(<a href="#id11"><span class="problematic" id="id12">*</span></a>stn), if not  use the method
+<cite>to_golden_software</cite>.Coordinated files are Easting Northing value
+not in degree decimals . It uses occam 2D outputfiles or Bo Yang iter2Dat file
+also add profile XY coordinates (utm_zone ).</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>* model_fn</strong><span class="classifier">str</span></dt><dd><blockquote>
+<div><p>full path to Occam2D model file</p>
+</div></blockquote>
+<ul>
+<li><dl class="simple">
+<dt>mesh_fn<span class="classifier">str</span></dt><dd><p>full path to Occam2D mesh file</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>data_fn<span class="classifier">str</span></dt><dd><p>full path to Occam2D data file</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>iter_fn<span class="classifier">str</span></dt><dd><p>full path to Occam2D iteration file
+OR Bo Yang (x, y, z ) files</p>
+</dd>
+</dl>
+</li>
+<li><dl>
+<dt>iter2dat_fn<span class="classifier">str</span></dt><dd><p>full path to iter2dat file
+(see _occam2d module to see which file is it. or call</p>
+<blockquote>
+<div><p>occam2d.Iter2Dat.__doc__)</p>
+</div></blockquote>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>bln<span class="classifier">str</span></dt><dd><p>full path to satation location file
+profile files (Easting , Northing Coordinates) ,
+“see :ref:module-cs”</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>profile_fn: str</dt><dd><p>full path to station profile file . You can
+useProfile module to rewrite _coordinate files</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>write_negative_depth:  bool</dt><dd><p>output negative depth.
+<em>Default</em> is True</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>scalled_east_north:  tuple</dt><dd><p>scalled the easting and northing.
+Substract or add value to easting
+or northing values. first <cite>index1</cite>
+equal easting and  <cite>index2</cite> equal
+Nothing.*Default* is (0,0).</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt>obj , str</dt><dd><p>oasis outputfiles <cite>.xlxs</cite>, <cite>.csv</cite></p>
+</dd>
+<dt>Holding a followings informations:</dt><dd></dd>
+</dl>
+<blockquote>
+<div></div></blockquote>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Geosurface">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.geodrill.</code><code class="sig-name descname">Geosurface</code><span class="sig-paren">(</span><em class="sig-param">path=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Geosurface"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Geosurface" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read Multidata from oasis montaj output files  generated by <cite>geodrill</cite>
+module . Class to Build  a depth surface map for imaging .</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>extension_file</strong></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Geosurface.get_depth_surfaces" title="pycsamt.geodrill.geoCore.geodrill.Geosurface.get_depth_surfaces"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_depth_surfaces</span></code></a>([path, depth_values])</p></td>
+<td><p>get the depth surfaces for multi-lines and build the numpy corresponding array  at that depth .</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Geosurface.read_oasis_files" title="pycsamt.geodrill.geoCore.geodrill.Geosurface.read_oasis_files"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_oasis_files</span></code></a>([path])</p></td>
+<td><p>Method to get depth spacing , station info  data infos, Each line becomes it own attributes components of info values are  <cite>Stations</cite>, <cite>Easting_X_m</cite>,`Northing_Y_m`, <cite>v_H_m</cite>,`x_m`   <cite>Norm_h_m</cite>,`sets_m`     <cite>DOI_max_m</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.Geosurface.write_file" title="pycsamt.geodrill.geoCore.geodrill.Geosurface.write_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_file</span></code></a>([path, depth_values, fileformat])</p></td>
+<td><p>Write output files.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Geosurface.get_depth_surfaces">
+<code class="sig-name descname">get_depth_surfaces</code><span class="sig-paren">(</span><em class="sig-param">path=None</em>, <em class="sig-param">depth_values=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Geosurface.get_depth_surfaces"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Geosurface.get_depth_surfaces" title="Permalink to this definition">¶</a></dt>
+<dd><p>get the depth surfaces for multi-lines and build the numpy
+corresponding array  at that depth .</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>depth_values</strong> (<em>float</em><em>  or </em><em>array_like</em>) – array of depth</p></li>
+<li><p><strong>path</strong> (<em>str</em>) – full path to oasis outputfiles .</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Geosurface.read_oasis_files">
+<code class="sig-name descname">read_oasis_files</code><span class="sig-paren">(</span><em class="sig-param">path=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Geosurface.read_oasis_files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Geosurface.read_oasis_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to get depth spacing , station info  data infos,
+Each line becomes it own attributes components
+of info values are  <cite>Stations</cite>, <cite>Easting_X_m</cite>,`Northing_Y_m`,
+<cite>v_H_m</cite>,`x_m`   <cite>Norm_h_m</cite>,`sets_m`     <cite>DOI_max_m</cite>.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – full path to the oasis files .</p>
+</dd>
+<dt class="field-even">Example</dt>
+<dd class="field-even"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pycsamt.geodrill.geoCore.geodrill</span>  <span class="kn">import</span> <span class="n">Geosurface</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span> <span class="o">=</span>  <span class="sa">r</span><span class="s1">&#39;F:/__main__csamt__\oasis data\OASISWORKSll_data&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geo_surface_obj</span> <span class="o">=</span> <span class="n">Geosurface</span><span class="p">(</span> <span class="n">path</span> <span class="o">=</span><span class="n">path</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geo_surface_obj</span><span class="o">.</span><span class="n">read_oasis_files</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geofilenames</span> <span class="o">=</span> <span class="n">geo_surface_obj</span><span class="o">.</span><span class="n">filenames</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<dl class="simple">
+<dt>… note::To get the values of line K1_cor_oas “K1_cor_oas.csv</dt><dd><p>do <code class="docutils literal notranslate"><span class="pre">k1_obj</span> <span class="pre">=</span> <span class="pre">geo_surface_obj.K1_cor_oas</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.Geosurface.write_file">
+<code class="sig-name descname">write_file</code><span class="sig-paren">(</span><em class="sig-param">path=None</em>, <em class="sig-param">depth_values=None</em>, <em class="sig-param">fileformat='.csv'</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#Geosurface.write_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.Geosurface.write_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write output files. Output files are <cite>.xlsx</cite> or <cite>.csv</cite> .</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – full path to  <cite>geodrill</cite> ouput files</p></li>
+<li><p><strong>depth_value</strong> (<em>float</em><em> or </em><em>array_like</em>) – depth values for imaging</p></li>
+</ul>
+</dd>
+</dl>
+<p>:param fileformat:<cite>xlsx</cite> or <cite>csv</cite> are actually the acceptable formats.
+:type fileformat: str</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="pycsamt.geodrill.geoCore.geodrill.ascertain_layers_with_its_resistivities">
+<code class="sig-prename descclassname">pycsamt.geodrill.geoCore.geodrill.</code><code class="sig-name descname">ascertain_layers_with_its_resistivities</code><span class="sig-paren">(</span><em class="sig-param">real_layer_names</em>, <em class="sig-param">real_layer_resistivities</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#ascertain_layers_with_its_resistivities"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.ascertain_layers_with_its_resistivities" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assert the length of of real resistivites with their corresponding layers.
+If length of resistivities of larger that the layer’s names, then will add
+layer that match the best the remained resistivities. If the length
+of layer is larger than resistivities , to avoid miscomputation , will
+cut out this more layer and work only the length of resistivities provided.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>* real_layer_names: array_like , list</strong></dt><dd><blockquote>
+<div><p>list of input layer names as real
+layers names encountered in area</p>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt>real_layer_resistivities :array_like , list</dt><dd><p>list of resistivities get on survey area</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt>list</dt><dd><p>real_layer_names,  new list of input layers</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="pycsamt.geodrill.geoCore.geodrill.geo_length_checker">
+<code class="sig-prename descclassname">pycsamt.geodrill.geoCore.geodrill.</code><code class="sig-name descname">geo_length_checker</code><span class="sig-paren">(</span><em class="sig-param">main_param</em>, <em class="sig-param">optional_param</em>, <em class="sig-param">force=False</em>, <em class="sig-param">param_names=('input_resistivities'</em>, <em class="sig-param">'input_layers')</em>, <em class="sig-param">**kws</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#geo_length_checker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.geo_length_checker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Geo checker is a function to check differents length of different params.</p>
+<p>the length of optional params  depend of the length of main params . if
+the length of optional params is larger than the length of main
+params, the length of optional params will be reduce to the length of main params .
+if the optional params  length is shorther than the length of
+main params, will filled it either with “None” if dtype param is string
+of 0.if dtype params is float or 0 if integer.if Force  is set True ,
+it will absolutely check if the main params and the optional params have
+the same length. if not the case ,   will generate an error occurs.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>* main_param</strong><span class="classifier">array_like, list</span></dt><dd><blockquote>
+<div><p>main parameter that must took
+its length as reference length</p>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt>optional params<span class="classifier">array_like, list</span></dt><dd><p>optional params, whom length depend
+to the length of main params</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>param_names<span class="classifier">tuple or str</span></dt><dd><p>names of main params and optional params
+so to generate error if exits.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>fill_value: str, float, optional</dt><dd><p>Default value to fill thearray in the case where
+the length of optional param is
+less than the length of the  main param .If None ,
+will fill according to array dtype</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt>array_like</dt><dd><p>optional param truncated according to the man params</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.geodrill.geostrike">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.geodrill.</code><code class="sig-name descname">geostrike</code><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#geostrike"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.geostrike" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to deal with computation with profile angle and geo_electrical strike.
+Compute Profile angle and strike angle</p>
+<blockquote>
+<div><p>Need to import scipy.stats as one module . Sometimes import scipy</p>
+</div></blockquote>
+<p>differently  with stats may not work .
+either <cite>import scipy.stats</cite> rather than <cite>import scipy as sp</cite> to use :</p>
+<blockquote>
+<div><p><cite>sp.stats.linregress</cite> .</p>
+</div></blockquote>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.geostrike.compute_geoelectric_strike" title="pycsamt.geodrill.geoCore.geodrill.geostrike.compute_geoelectric_strike"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_geoelectric_strike</span></code></a>([profile_angle, …])</p></td>
+<td><p>Compute geoelectric strike</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pycsamt.geodrill.geoCore.geodrill.geostrike.compute_profile_angle" title="pycsamt.geodrill.geoCore.geodrill.geostrike.compute_profile_angle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_profile_angle</span></code></a>([easting, northing])</p></td>
+<td><p>Essentially dedicated to compute geoprofile angle.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.geostrike.compute_geoelectric_strike">
+<em class="property">static </em><code class="sig-name descname">compute_geoelectric_strike</code><span class="sig-paren">(</span><em class="sig-param">profile_angle=None</em>, <em class="sig-param">easting=None</em>, <em class="sig-param">northing=None</em>, <em class="sig-param">**kws</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#geostrike.compute_geoelectric_strike"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.geostrike.compute_geoelectric_strike" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute geoelectric strike</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>*  profile_angle</strong><span class="classifier">float</span></dt><dd><blockquote>
+<div><p>If not provided , will comput with
+easting and northing coordinates</p>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt>easting<span class="classifier">array_like</span></dt><dd><p>Easting coordiantes values</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>northing<span class="classifier">array_like</span></dt><dd><p>Northing coordinates values</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>geo_strike<span class="classifier">float</span></dt><dd><p>strike value , if provided, will
+recomputed geo_electric strike .</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt><strong>Returns</strong></dt><dd></dd>
+<dt><strong>——–</strong></dt><dd><dl class="simple">
+<dt>float</dt><dd><p>profile_angle in degree E of N</p>
+</dd>
+<dt>float</dt><dd><p>geo_electric_strike in degrees E of N</p>
+</dd>
+<dt>str</dt><dd><p>message of return</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycsamt.geodrill.geoCore.geodrill.geostrike.compute_profile_angle">
+<em class="property">static </em><code class="sig-name descname">compute_profile_angle</code><span class="sig-paren">(</span><em class="sig-param">easting=None</em>, <em class="sig-param">northing=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#geostrike.compute_profile_angle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.geostrike.compute_profile_angle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Essentially dedicated to compute geoprofile angle.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>* easting</strong><span class="classifier">array_like</span></dt><dd><blockquote>
+<div><p>easting coordiantes values</p>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt>northing<span class="classifier">array_like</span></dt><dd><p>northing coordinates values</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl>
+<dt>float</dt><dd><blockquote>
+<div><p>profile_angle</p>
+</div></blockquote>
+<dl class="simple">
+<dt>float</dt><dd><p>geo_electric_strike</p>
+</dd>
+<dt>str</dt><dd><p>message of return</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="pycsamt.geodrill.geoCore.geodrill.get_closest_value">
+<code class="sig-prename descclassname">pycsamt.geodrill.geoCore.geodrill.</code><code class="sig-name descname">get_closest_value</code><span class="sig-paren">(</span><em class="sig-param">values_range</em>, <em class="sig-param">input_value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/geodrill.html#get_closest_value"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.geodrill.get_closest_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fonction  to get closest values when input values is not in the values range
+we assume that values are single on array. if the same value is repeated
+will take the first index and the value at that index</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>values_range</strong> (<em>array_like</em>) – values to get</p></li>
+<li><p><strong>input_value</strong> (<em>float</em><em>,</em>) – specific value</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the closest value and its index</p>
+</dd>
+<dt class="field-odd">Rtye</dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pycsamt.geodrill.geoCore.structural">
+<span id="module-structural"></span><h2><strong>Module Structural</strong><a class="headerlink" href="#module-pycsamt.geodrill.geoCore.structural" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>This file is part of pyCSAMT.</p>
+<p>pyCSAMT is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.</p>
+<p>pyCSAMT is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.</p>
+<p>You should have received a copy of the GNU Lesser General Public License
+along with pyCSAMT.  If not, see &lt;<a class="reference external" href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.</p>
+</div></blockquote>
+<blockquote>
+<div><dl class="simple">
+<dt>:synopsis:class for  geological structural analysis</dt><dd><p>contains some conventional structure can populate the data</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>Created on Sat Nov 28 21:19:13 2020</p>
+<p>&#64;author: &#64;Daniel03</p>
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.structural.Geo_formation">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.structural.</code><code class="sig-name descname">Geo_formation</code><span class="sig-paren">(</span><em class="sig-param">agso_file=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/structural.html#Geo_formation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.structural.Geo_formation" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class is an axilliary class to supplement geodatabase ,
+if the GeodataBase doesnt reply  to SQL request  , then use this class
+to secah information about structures .  If SQL is done as well ,
+program won’t call this class as rescure .
+Containers of more than  150 geological strutures.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>replace in attributes param “**” by  the <em>name of struture</em></p>
+</div>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 17%" />
+<col style="width: 58%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attributes</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>names</p></td>
+<td><p>array_like</p></td>
+<td><p>names of all geological strutures</p></td>
+</tr>
+<tr class="row-odd"><td><p>codes</p></td>
+<td><p>array_like</p></td>
+<td><p>names of all geological codes</p></td>
+</tr>
+<tr class="row-even"><td><p><a href="#id13"><span class="problematic" id="id14">**</span></a>code</p></td>
+<td><p>str</p></td>
+<td><p>code of specific geological structure</p></td>
+</tr>
+<tr class="row-odd"><td><p><a href="#id15"><span class="problematic" id="id16">**</span></a>label</p></td>
+<td><p>str</p></td>
+<td><p>label of specific structure</p></td>
+</tr>
+<tr class="row-even"><td><p><a href="#id17"><span class="problematic" id="id18">**</span></a>name</p></td>
+<td><p>str</p></td>
+<td><p>label of specific structure</p></td>
+</tr>
+<tr class="row-odd"><td><p><a href="#id19"><span class="problematic" id="id20">**</span></a>pattern</p></td>
+<td><p>str</p></td>
+<td><p>pattern of specific structure</p></td>
+</tr>
+<tr class="row-even"><td><p><a href="#id21"><span class="problematic" id="id22">**</span></a>pat_size</p></td>
+<td><p>str</p></td>
+<td><p>pattern size  of specific structure</p></td>
+</tr>
+<tr class="row-odd"><td><p><a href="#id23"><span class="problematic" id="id24">**</span></a>pat_density</p></td>
+<td><p>str</p></td>
+<td><p>pattern density l of specific structure</p></td>
+</tr>
+<tr class="row-even"><td><p><a href="#id25"><span class="problematic" id="id26">**</span></a>pat_thickness</p></td>
+<td><p>str</p></td>
+<td><p>pttern thickess of specific structure</p></td>
+</tr>
+<tr class="row-odd"><td><p><a href="#id27"><span class="problematic" id="id28">**</span></a>color</p></td>
+<td><p>str</p></td>
+<td><p>color of specific structure</p></td>
+</tr>
+</tbody>
+</table>
+<ol class="arabic simple">
+<li><p>To see the names of strutures , write the script below</p></li>
+</ol>
+<dl class="field-list">
+<dt class="field-odd">Example</dt>
+<dd class="field-odd"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pycsamt.geodrill.geoCore.strutural</span> <span class="kn">import</span> <span class="n">Geo_formation</span> <span class="k">as</span> <span class="n">gf</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geo_structure</span> <span class="o">=</span> <span class="n">gf</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geo_structure</span><span class="o">.</span><span class="n">names</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<ol class="arabic simple" start="2">
+<li><p>To extract color  and to get the code of structure  like amphibolite</p></li>
+</ol>
+<dl class="field-list">
+<dt class="field-odd">Example</dt>
+<dd class="field-odd"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pycsamt.geodrill.geoCore.strutural</span> <span class="kn">import</span> <span class="n">Geo_formation</span> <span class="k">as</span> <span class="n">gf</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geo_structure</span> <span class="o">=</span> <span class="n">gf</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geo_structure</span><span class="o">.</span><span class="n">amphibolite</span><span class="p">[</span><span class="s1">&#39;color&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geo_structure</span><span class="o">.</span><span class="n">amphibolite</span><span class="p">[</span><span class="s1">&#39;code&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geoformation_obj</span><span class="o">.</span><span class="n">AMP</span><span class="p">[</span><span class="s1">&#39;color&#39;</span><span class="p">]</span>
+<span class="gp">... </span><span class="s1">&#39;R128G128&#39;</span>
+</pre></div>
+</div>
+</dd>
+<dt class="field-even">Attributes</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>agso_fn</strong></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.structural.Structure">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.structural.</code><code class="sig-name descname">Structure</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/structural.html#Structure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.structural.Structure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for typical geological strutural conventions
+for AGSO_STCODES .  All geological structural informations are
+geostructral object.</p>
+<p>Holds the following information:</p>
+<p>More attributes can be added by inputing a key word dictionary</p>
+<dl class="field-list">
+<dt class="field-odd">Example</dt>
+<dd class="field-odd"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pycsamt.geodrill.geoCore.structural</span> <span class="kn">import</span> <span class="n">Structure</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">structural</span><span class="o">=</span><span class="n">Structure</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">boudin</span><span class="o">=</span><span class="n">boudin_axis</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">boudin</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">structural</span><span class="o">.</span><span class="n">boudin_axis</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">structural</span><span class="o">.</span><span class="n">boudin_axis</span><span class="o">.</span><span class="n">color</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.structural.banding_gneissosity">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.structural.</code><code class="sig-name descname">banding_gneissosity</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/structural.html#banding_gneissosity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.structural.banding_gneissosity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Special class for banding_gneissosity</p>
+<p>Holds the following information:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 19%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attributes</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>code</p></td>
+<td><p>str</p></td>
+<td><p>conventional code</p></td>
+</tr>
+<tr class="row-odd"><td><p>label</p></td>
+<td><p>str</p></td>
+<td><p>named label</p></td>
+</tr>
+<tr class="row-even"><td><p>size</p></td>
+<td><p>str</p></td>
+<td><p>drawing size</p></td>
+</tr>
+<tr class="row-odd"><td><p>pattern</p></td>
+<td><p>str</p></td>
+<td><p>drawing pattern</p></td>
+</tr>
+<tr class="row-even"><td><p>density</p></td>
+<td><p>str</p></td>
+<td><p>elmts density</p></td>
+</tr>
+<tr class="row-odd"><td><p>thickness</p></td>
+<td><p>str</p></td>
+<td><p>drawing thickness</p></td>
+</tr>
+<tr class="row-even"><td><p>color</p></td>
+<td><p>str</p></td>
+<td><p>color set</p></td>
+</tr>
+</tbody>
+</table>
+<p>More attributes can be added by inputing a key word dictionary</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.structural.boudin_axis">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.structural.</code><code class="sig-name descname">boudin_axis</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/structural.html#boudin_axis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.structural.boudin_axis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Special class for boudins_axis</p>
+<p>Holds the following information:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 19%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attributes</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>code</p></td>
+<td><p>str</p></td>
+<td><p>conventional code</p></td>
+</tr>
+<tr class="row-odd"><td><p>label</p></td>
+<td><p>str</p></td>
+<td><p>named label</p></td>
+</tr>
+<tr class="row-even"><td><p>size</p></td>
+<td><p>str</p></td>
+<td><p>drawing size</p></td>
+</tr>
+<tr class="row-odd"><td><p>pattern</p></td>
+<td><p>str</p></td>
+<td><p>drawing pattern</p></td>
+</tr>
+<tr class="row-even"><td><p>density</p></td>
+<td><p>str</p></td>
+<td><p>elmts density</p></td>
+</tr>
+<tr class="row-odd"><td><p>thickness</p></td>
+<td><p>str</p></td>
+<td><p>drawing thickness</p></td>
+</tr>
+<tr class="row-even"><td><p>color</p></td>
+<td><p>str</p></td>
+<td><p>color set</p></td>
+</tr>
+</tbody>
+</table>
+<p>More attributes can be added by inputing a key word dictionary</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.structural.fault_plane">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.structural.</code><code class="sig-name descname">fault_plane</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/structural.html#fault_plane"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.structural.fault_plane" title="Permalink to this definition">¶</a></dt>
+<dd><p>Special class for fault_plane</p>
+<p>Holds the following information:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 19%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attributes</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>code</p></td>
+<td><p>str</p></td>
+<td><p>conventional code</p></td>
+</tr>
+<tr class="row-odd"><td><p>label</p></td>
+<td><p>str</p></td>
+<td><p>named label</p></td>
+</tr>
+<tr class="row-even"><td><p>size</p></td>
+<td><p>str</p></td>
+<td><p>drawing size</p></td>
+</tr>
+<tr class="row-odd"><td><p>pattern</p></td>
+<td><p>str</p></td>
+<td><p>drawing pattern</p></td>
+</tr>
+<tr class="row-even"><td><p>density</p></td>
+<td><p>str</p></td>
+<td><p>elmts density</p></td>
+</tr>
+<tr class="row-odd"><td><p>thickness</p></td>
+<td><p>str</p></td>
+<td><p>drawing thickness</p></td>
+</tr>
+<tr class="row-even"><td><p>color</p></td>
+<td><p>str</p></td>
+<td><p>color set</p></td>
+</tr>
+</tbody>
+</table>
+<p>More attributes can be added by inputing a key word dictionary</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.structural.fold_axial_plane">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.structural.</code><code class="sig-name descname">fold_axial_plane</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/structural.html#fold_axial_plane"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.structural.fold_axial_plane" title="Permalink to this definition">¶</a></dt>
+<dd><p>Special class for fold_axial_plane</p>
+<p>Holds the following information:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 19%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attributes</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>code</p></td>
+<td><p>str</p></td>
+<td><p>conventional code</p></td>
+</tr>
+<tr class="row-odd"><td><p>label</p></td>
+<td><p>str</p></td>
+<td><p>named label</p></td>
+</tr>
+<tr class="row-even"><td><p>size</p></td>
+<td><p>str</p></td>
+<td><p>drawing size</p></td>
+</tr>
+<tr class="row-odd"><td><p>pattern</p></td>
+<td><p>str</p></td>
+<td><p>drawing pattern</p></td>
+</tr>
+<tr class="row-even"><td><p>density</p></td>
+<td><p>str</p></td>
+<td><p>elmts density</p></td>
+</tr>
+<tr class="row-odd"><td><p>thickness</p></td>
+<td><p>str</p></td>
+<td><p>drawing thickness</p></td>
+</tr>
+<tr class="row-even"><td><p>color</p></td>
+<td><p>str</p></td>
+<td><p>color set</p></td>
+</tr>
+</tbody>
+</table>
+<p>More attributes can be added by inputing a key word dictionary</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.structural.fracture_joint_set">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.structural.</code><code class="sig-name descname">fracture_joint_set</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/structural.html#fracture_joint_set"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.structural.fracture_joint_set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Special class for fracture_joint_set</p>
+<p>Holds the following information:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 19%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attributes</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>code</p></td>
+<td><p>str</p></td>
+<td><p>conventional code</p></td>
+</tr>
+<tr class="row-odd"><td><p>label</p></td>
+<td><p>str</p></td>
+<td><p>named label</p></td>
+</tr>
+<tr class="row-even"><td><p>size</p></td>
+<td><p>str</p></td>
+<td><p>drawing size</p></td>
+</tr>
+<tr class="row-odd"><td><p>pattern</p></td>
+<td><p>str</p></td>
+<td><p>drawing pattern</p></td>
+</tr>
+<tr class="row-even"><td><p>density</p></td>
+<td><p>str</p></td>
+<td><p>elmts density</p></td>
+</tr>
+<tr class="row-odd"><td><p>thickness</p></td>
+<td><p>str</p></td>
+<td><p>drawing thickness</p></td>
+</tr>
+<tr class="row-even"><td><p>color</p></td>
+<td><p>str</p></td>
+<td><p>color set</p></td>
+</tr>
+</tbody>
+</table>
+<p>More attributes can be added by inputing a key word dictionary</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.structural.geo_pattern">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.structural.</code><code class="sig-name descname">geo_pattern</code><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/structural.html#geo_pattern"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.structural.geo_pattern" title="Permalink to this definition">¶</a></dt>
+<dd><p>Singleton class to deal with geopattern  with other modules. It is and exhaustive pattern
+dict, can be add and change. This pattern  will be depreacted later , to create for pyCSAMT,
+its owwn geological pattern in coformity with the conventional geological swatches .</p>
+<blockquote>
+<div><p>deal with USGS(US Geological Survey ) swatches- references and FGDC (Digital cartographic</p>
+</div></blockquote>
+<p>Standard for Geological  Map Symbolisation -FGDCgeostdTM11A2_A-37-01cs2.eps)</p>
+<dl class="simple">
+<dt>make _pattern:{‘/’, ‘’, ‘|’, ‘-‘, ‘+’, ‘x’, ‘o’, ‘O’, ‘.’, ‘*’}</dt><dd><p>/   - diagonal hatching
+  - back diagonal
+|   - vertical
+-   - horizontal
++   - crossed
+x   - crossed diagonal
+o   - small circle
+O   - large circle
+.   - dots
+*   - stars</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="pycsamt.geodrill.geoCore.structural.get_color_palette">
+<code class="sig-prename descclassname">pycsamt.geodrill.geoCore.structural.</code><code class="sig-name descname">get_color_palette</code><span class="sig-paren">(</span><em class="sig-param">RGB_color_palette</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/structural.html#get_color_palette"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.structural.get_color_palette" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert RGB color into matplotlib color palette. In the RGB color system two bits
+of data are used for each color, red, green, and blue. That means that each color runs
+on a scale from 0 to 255. Black would be 00,00,00, while white would be 255,255,255.
+Matplotlib has lots of pre-defined colormaps for us . They are all normalized to 255,
+so they run from 0 to 1. So you need only normalize data, then we can manually
+select colors from a color map</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>RGB_color_palette</strong> (<em>str</em>) – str value of RGB value</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>rgba, tuple of (R, G, B)</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+<dt class="field-even">Example</dt>
+<dd class="field-even"><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pycsamt.geodrill.geoCore.structural</span> <span class="kn">import</span> <span class="n">get_color_palette</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">get_color_palette</span> <span class="p">(</span><span class="n">RGB_color_palette</span> <span class="o">=</span><span class="s1">&#39;R128B128&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.structural.s_fabric">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.structural.</code><code class="sig-name descname">s_fabric</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/structural.html#s_fabric"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.structural.s_fabric" title="Permalink to this definition">¶</a></dt>
+<dd><p>Special class for s_fabric</p>
+<p>Holds the following information:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 19%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attributes</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>code</p></td>
+<td><p>str</p></td>
+<td><p>conventional code</p></td>
+</tr>
+<tr class="row-odd"><td><p>label</p></td>
+<td><p>str</p></td>
+<td><p>named label</p></td>
+</tr>
+<tr class="row-even"><td><p>size</p></td>
+<td><p>str</p></td>
+<td><p>drawing size</p></td>
+</tr>
+<tr class="row-odd"><td><p>pattern</p></td>
+<td><p>str</p></td>
+<td><p>drawing pattern</p></td>
+</tr>
+<tr class="row-even"><td><p>density</p></td>
+<td><p>str</p></td>
+<td><p>elmts density</p></td>
+</tr>
+<tr class="row-odd"><td><p>thickness</p></td>
+<td><p>str</p></td>
+<td><p>drawing thickness</p></td>
+</tr>
+<tr class="row-even"><td><p>color</p></td>
+<td><p>str</p></td>
+<td><p>color set</p></td>
+</tr>
+</tbody>
+</table>
+<p>More attributes can be added by inputing a key word dictionary</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.structural.sharp_contact">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.structural.</code><code class="sig-name descname">sharp_contact</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/structural.html#sharp_contact"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.structural.sharp_contact" title="Permalink to this definition">¶</a></dt>
+<dd><p>Special class for sharp_contact</p>
+<p>Holds the following information:</p>
+<p>More attributes can be added by inputing a key word dictionary</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pycsamt.geodrill.geoCore.structural.undifferentiated_plane">
+<em class="property">class </em><code class="sig-prename descclassname">pycsamt.geodrill.geoCore.structural.</code><code class="sig-name descname">undifferentiated_plane</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pycsamt/geodrill/geoCore/structural.html#undifferentiated_plane"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pycsamt.geodrill.geoCore.structural.undifferentiated_plane" title="Permalink to this definition">¶</a></dt>
+<dd><p>Special class for undifferentiated_plane</p>
+<p>Holds the following information:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 19%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attributes</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>code</p></td>
+<td><p>str</p></td>
+<td><p>conventional code</p></td>
+</tr>
+<tr class="row-odd"><td><p>label</p></td>
+<td><p>str</p></td>
+<td><p>named label</p></td>
+</tr>
+<tr class="row-even"><td><p>size</p></td>
+<td><p>str</p></td>
+<td><p>drawing size</p></td>
+</tr>
+<tr class="row-odd"><td><p>pattern</p></td>
+<td><p>str</p></td>
+<td><p>drawing pattern</p></td>
+</tr>
+<tr class="row-even"><td><p>density</p></td>
+<td><p>str</p></td>
+<td><p>elmts density</p></td>
+</tr>
+<tr class="row-odd"><td><p>thickness</p></td>
+<td><p>str</p></td>
+<td><p>drawing thickness</p></td>
+</tr>
+<tr class="row-even"><td><p>color</p></td>
+<td><p>str</p></td>
+<td><p>color set</p></td>
+</tr>
+</tbody>
+</table>
+<p>More attributes can be added by inputing a key word dictionary</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-strata">
+<h2><strong>Module Strata</strong><a class="headerlink" href="#module-strata" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Package GeoCore</a><ul>
+<li><a class="reference internal" href="#module-pycsamt.geodrill.geoCore.geodrill"><strong>Module Geodrill</strong></a></li>
+<li><a class="reference internal" href="#module-pycsamt.geodrill.geoCore.structural"><strong>Module Structural</strong></a></li>
+<li><a class="reference internal" href="#module-strata"><strong>Module Strata</strong></a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="modeling.html"
+                        title="previous chapter">Package Modeling</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="geodb.html"
+                        title="next chapter">Package GeoDataBase</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/geocore.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="geodb.html" title="Package GeoDataBase"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="modeling.html" title="Package Modeling"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyCSAMT v1.0.03 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2021, Kouadio K. Laurent.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.4.0.
+    </div>
+  </body>
+</html>

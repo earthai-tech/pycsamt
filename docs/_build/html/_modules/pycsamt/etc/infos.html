@@ -1,0 +1,529 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>pycsamt.etc.infos &#8212; pyCSAMT v1.0.03 documentation</title>
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyCSAMT v1.0.03 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pycsamt.etc.infos</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">===============================================================================</span>
+<span class="sd">    Copyright © 2021  Kouadio K.Laurent</span>
+<span class="sd">    </span>
+<span class="sd">    This file is part of pyCSAMT.</span>
+<span class="sd">    </span>
+<span class="sd">    pyCSAMT is free software: you can redistribute it and/or modify</span>
+<span class="sd">    it under the terms of the GNU Lesser General Public License as published by</span>
+<span class="sd">    the Free Software Foundation, either version 3 of the License, or</span>
+<span class="sd">    (at your option) any later version.</span>
+<span class="sd">    </span>
+<span class="sd">    pyCSAMT is distributed in the hope that it will be useful,</span>
+<span class="sd">    but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="sd">    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="sd">    GNU Lesser General Public License for more details.</span>
+<span class="sd">    </span>
+<span class="sd">    You should have received a copy of the GNU Lesser General Public License</span>
+<span class="sd">    along with pyCSAMT.  If not, see &lt;https://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">===============================================================================  </span>
+<span class="sd">.. _module-Infos::`csamtpy.etc.infos`</span>
+
+<span class="sd">    :synopsis: Module contains various parameters  of files handling and </span>
+<span class="sd">        glossary of some technical words.</span>
+
+<span class="sd">.. warnings:: `_sensible` class is parser class. It parses of differents inputs </span>
+<span class="sd">                format recognized  by the software. Editing this class could affect </span>
+<span class="sd">                how others submodules could run. However, improving the code to become </span>
+<span class="sd">                less expensive is welcome.</span>
+<span class="sd">                ...</span>
+<span class="sd">        </span>
+<span class="sd">        </span>
+<span class="sd">Created on Sat Dec 12 16:21:10 2020</span>
+
+<span class="sd">@author:KouaoLaurent alias @Daniel03</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">re</span> <span class="o">,</span><span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span> 
+<span class="kn">from</span> <span class="nn">pycsamt.utils._csamtpylog</span> <span class="kn">import</span> <span class="n">csamtpylog</span> 
+<span class="kn">from</span> <span class="nn">pycsamt.utils.exceptions</span> <span class="kn">import</span> <span class="n">pyCSAMTError_file_handling</span>
+
+
+
+
+<div class="viewcode-block" id="notion"><a class="viewcode-back" href="../../../utils.html#pycsamt.etc.infos.notion">[docs]</a><span class="k">class</span> <span class="nc">notion</span> <span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Singular class to explain CSAMT technical word in details. Also usefull for user to have info </span>
+<span class="sd">    about any scientific context is does Know. Just call the word directly in warnings to give an overview</span>
+<span class="sd">    of why error occurs. It like a short documentation  using pyCSAMT software. </span>
+<span class="sd">    Used everywhere in the script . </span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">reference_frequency</span> <span class="o">=</span><span class="s1">&#39;&quot;Reference number &quot; is The highest frequency with clean data.&#39;</span>
+    
+    <span class="n">TMA</span><span class="o">=</span><span class="s1">&#39;Trimmed-Moving-Average filter : design to remove single-station offsets&#39;</span>\
+        <span class="s1">&#39;while preserving broader scale changes.it is uded to estimate average apparent&#39;</span>\
+        <span class="s1">&#39;resistivities at a single static-correction-reference frequency.&#39;</span>
+        
+    <span class="n">AVG</span><span class="o">=</span><span class="s1">&#39;AVG is typical file from AMTAVG Zonge Engeneering software. It averages GDP CSAMT (CSAM) and Harmonic CSAMT (CSHA) raw data. Several files may be&#39;</span>\
+        <span class="s1">&#39;created, including a log file (.LOG-file), listing file (.AL-file), average data files (.AD- and .AVG-file),&#39;</span>\
+        <span class="s1">&#39; plot file (.Z-file), and vector files (.Xnn-files).&#39;</span>
+            
+    <span class="n">FMLA</span><span class="o">=</span> <span class="s1">&#39;The FLMA filter estimates static-corrected apparent resistivities at a single reference frequency by&#39;</span> \
+            <span class="s1">&#39;calculating a profile of average impedances along the length of the line. Use a fixed-length-moving-average&#39;</span>\
+            <span class="s1">&#39;filter to estimate average apparent resistivities at a single static-correction-reference frequency.&#39;</span>
+            
+    <span class="n">Hanning_window</span> <span class="o">=</span> <span class="s1">&#39;The Hanning window is a taper formed by using a weighted cosine.&#39;</span>\
+        <span class="s1">&#39; The Hanning was named for Julius von Hann, an Austrian meteorologist.&#39;</span>\
+        <span class="s1">&#39; It is also known as the Cosine Bell. Some authors prefer that it be called a&#39;</span>\
+        <span class="s1">&#39; Hann window, to help avoid confusion with the very similar Hamming window.&#39;</span>   
+    
+    <span class="n">weighted_Beta</span> <span class="o">=</span> <span class="s1">&#39;The coefficient Betaj describe the way in which dipole responses adjacent to the sounding site x = Xk&#39;</span>\
+                    <span class="s1">&#39;are weighted to emulate the shape of a Hanning window. For a given window width Wand center point Xko these weights&#39;</span>\
+                    <span class="s1">&#39;can be adjusted so that the difference between the continuous Hanning window h( x - X k) and the synthesized version&#39;</span>\
+                    <span class="s1">&#39;of it h(x. xd is minimized in a least-squares sense.&#39;</span>
+    <span class="n">j</span><span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;J-format is Magnetotelluric data file  written by A.G. Jones file format:&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39; The convention used is for RXY to represent the E-polarization (TE) mode,&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;and for RYX to represent the B-polarization mode. &#39;</span><span class="p">,</span> <span class="s1">&#39;Consulting http://mtnet.info/docs/jformat.txt &#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;for more documentation. Some example file can be find at : http://mtnet.info/docs/jformat_example.txt &#39;</span><span class="p">])</span>
+    
+    <span class="n">occam_mesh_parameter_specs_info</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;Params specs is four lines for each layer.&#39;</span><span class="p">,</span>
+                                          <span class="s1">&#39;The four lines contain symbols which represent the value of four triangles in each mesh block.&#39;</span><span class="p">,</span> 
+                                          <span class="s1">&#39; These four lines stand for the top, left, bottom, and right-hand triangles of each block in a layer.&#39;</span><span class="p">,</span>
+                                          <span class="s1">&#39;The character &lt;?,Z,A|Y,0&gt; indicates what resistivity value is to be assigned to the triangle.&#39;</span>
+                                          <span class="p">])</span>                           
+    <span class="n">occam_mesh_parameter_specs_meaning</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ZZZZZZZZZZZZ&#39;</span><span class="p">:</span> <span class="s1">&#39;means that the triangle contains seawater&#39;</span><span class="p">,</span> 
+                                          <span class="s1">&#39;????????????&#39;</span><span class="p">:</span> <span class="s1">&#39;means that the triangle is a free parameter to be calculated&#39;</span><span class="p">,</span>
+                                          <span class="s1">&#39;000000000000&#39;</span><span class="p">:</span> <span class="s1">&#39;means that it contains air&#39;</span><span class="p">,</span>
+                                          <span class="s1">&#39;YYYAAAAAAAYYY&#39;</span> <span class="p">:</span><span class="s1">&#39;‘A’ through ‘Y’indicate fixed resistivity valuesas specified above.&#39;</span> <span class="p">}</span>
+    
+    <span class="n">j_recordR</span> <span class="o">=</span><span class="p">{</span><span class="s1">&#39;period&#39;</span><span class="p">:</span> <span class="s1">&#39;period in s, if negative then is frequency in Hz.&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;rho&#39;</span>   <span class="p">:</span> <span class="s1">&#39;apparent resistivity, if negative then rejected.&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;pha&#39;</span>   <span class="p">:</span> <span class="s1">&#39;phase in degrees&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;rhomax&#39;</span><span class="p">:</span> <span class="s1">&#39;rho + 1 standard error&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;rhomin&#39;</span><span class="p">:</span> <span class="s1">&#39;rho - 1 standard error&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;phamax&#39;</span><span class="p">:</span> <span class="s1">&#39;pha + 1 standard error&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;phamin&#39;</span><span class="p">:</span> <span class="s1">&#39;pha - 1 standard error&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;wrho&#39;</span>  <span class="p">:</span> <span class="s1">&#39;weight for rho, if &lt;0 then rejected&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;wpha&#39;</span>  <span class="p">:</span> <span class="s1">&#39;weight for phase&#39;</span><span class="p">,</span>
+                        <span class="o">-</span><span class="mf">999.</span> <span class="p">:</span> <span class="s1">&#39;missing data marker&#39;</span>
+            <span class="p">}</span>
+    <span class="n">j_recordZ</span> <span class="o">=</span><span class="p">{</span> <span class="s1">&#39;period&#39;</span><span class="p">:</span> <span class="s1">&#39;period in s, if negative then is frequency in Hz.&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;real&#39;</span>  <span class="p">:</span> <span class="s1">&#39;real part of the transfer function.&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;imag&#39;</span>  <span class="p">:</span> <span class="s1">&#39;imaginary part of the transfer function.&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;error&#39;</span> <span class="p">:</span> <span class="s1">&#39;standard error.&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;weight&#39;</span><span class="p">:</span> <span class="s1">&#39;weight (Note: some weights are in error!).&#39;</span><span class="p">,</span>
+                        <span class="o">-</span><span class="mf">999.</span> <span class="p">:</span> <span class="s1">&#39;missing data marker.&#39;</span><span class="p">,</span>
+                <span class="p">}</span>
+    
+    <span class="n">utm_zone_dict_designator</span> <span class="o">=</span><span class="p">{</span>
+                  <span class="s1">&#39;X&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">72</span><span class="p">,</span><span class="mi">84</span><span class="p">],</span> <span class="s1">&#39;W&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">64</span><span class="p">,</span><span class="mi">72</span><span class="p">],</span> <span class="s1">&#39;V&#39;</span><span class="p">:[</span><span class="mi">56</span><span class="p">,</span><span class="mi">64</span><span class="p">],</span> <span class="s1">&#39;U&#39;</span><span class="p">:[</span><span class="mi">48</span><span class="p">,</span><span class="mi">56</span><span class="p">],</span>
+                  <span class="s1">&#39;T&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">40</span><span class="p">,</span><span class="mi">48</span><span class="p">],</span> <span class="s1">&#39;S&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">32</span><span class="p">,</span><span class="mi">40</span><span class="p">],</span> <span class="s1">&#39;R&#39;</span><span class="p">:[</span><span class="mi">24</span><span class="p">,</span><span class="mi">32</span><span class="p">],</span> <span class="s1">&#39;Q&#39;</span><span class="p">:[</span><span class="mi">16</span><span class="p">,</span><span class="mi">24</span><span class="p">],</span> 
+                                      <span class="s1">&#39;P&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">8</span><span class="p">,</span><span class="mi">16</span><span class="p">],</span>  <span class="s1">&#39;N&#39;</span><span class="p">:[</span><span class="mi">0</span><span class="p">,</span><span class="mi">8</span><span class="p">],</span> <span class="s1">&#39;M&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">8</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;L&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">16</span><span class="p">,</span> <span class="mi">8</span><span class="p">],</span> 
+                                      <span class="s1">&#39;K&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">24</span><span class="p">,</span><span class="o">-</span><span class="mi">16</span><span class="p">],</span> <span class="s1">&#39;J&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">32</span><span class="p">,</span><span class="o">-</span><span class="mi">24</span><span class="p">],</span> <span class="s1">&#39;H&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">40</span><span class="p">,</span><span class="o">-</span><span class="mi">32</span><span class="p">],</span> <span class="s1">&#39;G&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">48</span><span class="p">,</span><span class="o">-</span><span class="mi">40</span><span class="p">],</span> 
+                                      <span class="s1">&#39;F&#39;</span><span class="p">:</span> <span class="p">[</span><span class="o">-</span><span class="mi">56</span><span class="p">,</span><span class="o">-</span><span class="mi">48</span><span class="p">],</span> <span class="s1">&#39;E&#39;</span><span class="p">:</span> <span class="p">[</span><span class="o">-</span><span class="mi">64</span><span class="p">,</span> <span class="o">-</span><span class="mi">56</span><span class="p">],</span> <span class="s1">&#39;D&#39;</span><span class="p">:</span> <span class="p">[</span><span class="o">-</span><span class="mi">72</span><span class="p">,</span><span class="o">-</span><span class="mi">64</span><span class="p">],</span> <span class="s1">&#39;C&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">80</span><span class="p">,</span><span class="o">-</span><span class="mi">72</span><span class="p">],</span>
+                                      <span class="s1">&#39;Z&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">80</span><span class="p">,</span><span class="mi">84</span><span class="p">]</span>
+                      <span class="p">}</span></div>
+        
+<div class="viewcode-block" id="suit"><a class="viewcode-back" href="../../../utils.html#pycsamt.etc.infos.suit">[docs]</a><span class="k">class</span> <span class="nc">suit</span> <span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Singular class to easy manipulate word. used everywhere in the script to avoid redondancy. </span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">idle</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;nan&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span><span class="s1">&#39;NaN&#39;</span><span class="p">,</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;**&#39;</span> <span class="p">]</span>
+    <span class="n">longitude</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="s1">&#39;Longitude&#39;</span><span class="p">,</span> <span class="s1">&#39;LONGITUDE&#39;</span><span class="p">,</span> <span class="s1">&#39;LON&#39;</span><span class="p">,</span> <span class="s1">&#39;LONG&#39;</span><span class="p">,</span> <span class="s1">&#39;longitude&#39;</span><span class="p">]</span>
+    <span class="n">latitude</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;Latitude&#39;</span><span class="p">,</span> <span class="s1">&#39;LATITUDE&#39;</span><span class="p">,</span> <span class="s1">&#39;LAT&#39;</span><span class="p">,</span> <span class="s1">&#39;Lat&#39;</span><span class="p">,</span> <span class="s1">&#39;latitude&#39;</span><span class="p">]</span>
+    <span class="n">easting</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;e&#39;</span><span class="p">,</span><span class="s1">&#39;east&#39;</span><span class="p">,</span> <span class="s1">&#39;EASTING&#39;</span><span class="p">,</span> <span class="s1">&#39;easting&#39;</span><span class="p">]</span> 
+    <span class="n">northing</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">,</span><span class="s1">&#39;north&#39;</span><span class="p">,</span> <span class="s1">&#39;NORTHING&#39;</span><span class="p">,</span> <span class="s1">&#39;northing&#39;</span><span class="p">]</span> 
+    <span class="n">station</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;dot&#39;</span><span class="p">,</span> <span class="s1">&#39;station&#39;</span><span class="p">,</span> <span class="s1">&#39;sta&#39;</span><span class="p">,</span><span class="s1">&#39;st&#39;</span><span class="p">]</span>
+    <span class="n">elevation</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;h&#39;</span><span class="p">,</span> <span class="s1">&#39;elev&#39;</span><span class="p">,</span> <span class="s1">&#39;elevation&#39;</span><span class="p">,</span> <span class="s1">&#39;ELEV&#39;</span><span class="p">,</span> <span class="s1">&#39;ELEVATION&#39;</span><span class="p">]</span>
+    <span class="n">topography</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;topography&#39;</span><span class="p">]</span>
+    <span class="n">stn_separation</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;station separation stn&#39;</span><span class="p">]</span>
+    <span class="n">azimuth</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;azimuth&#39;</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="_sensitive"><a class="viewcode-back" href="../../../utils.html#pycsamt.etc.infos._sensitive">[docs]</a><span class="k">class</span> <span class="nc">_sensitive</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    .. note :: `sensitive class` . Please keep carefully the indices like </span>
+<span class="sd">        it&#39;s ranged. Better Ways to avoid redundancy in code during the program </span>
+<span class="sd">        design. Core of parser of each files except files from :ref:`module-geodrill`.</span>
+<span class="sd">        Aims are:</span>
+<span class="sd">        1. to check file . it is was the right file provided or not </span>
+<span class="sd">        2. to write file . to Zonge Avg_format or J-Format or EDI -format and else.</span>
+<span class="sd">        3. to compute value . Indice are used for computation , set and get specific value.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_logger</span> <span class="o">=</span><span class="n">csamtpylog</span><span class="o">.</span><span class="n">get_csamtpy_logger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+    
+    <span class="n">_j</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;&gt;AZIMUTH&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;LATITUDE&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;LONGITUDE&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ELEVATION&#39;</span><span class="p">,</span>
+       <span class="s1">&#39;RXX&#39;</span><span class="p">,</span> <span class="s1">&#39;RXY&#39;</span><span class="p">,</span> <span class="s1">&#39;RYX&#39;</span><span class="p">,</span> <span class="s1">&#39;RYY&#39;</span><span class="p">,</span> <span class="s1">&#39;RTE&#39;</span><span class="p">,</span> <span class="s1">&#39;RTM&#39;</span><span class="p">,</span> <span class="s1">&#39;RAV&#39;</span><span class="p">,</span>
+       <span class="s1">&#39;RDE&#39;</span><span class="p">,</span> <span class="s1">&#39;RZX&#39;</span><span class="p">,</span> <span class="s1">&#39;RZY&#39;</span><span class="p">,</span> <span class="s1">&#39;SXX&#39;</span><span class="p">,</span> <span class="s1">&#39;SXY&#39;</span><span class="p">,</span> <span class="s1">&#39;SYX&#39;</span><span class="p">,</span> <span class="s1">&#39;SYY&#39;</span><span class="p">,</span> <span class="s1">&#39;STE&#39;</span><span class="p">,</span>
+       <span class="s1">&#39;STM&#39;</span><span class="p">,</span> <span class="s1">&#39;SAV&#39;</span><span class="p">,</span> <span class="s1">&#39;SDE&#39;</span><span class="p">,</span> <span class="s1">&#39;SZX&#39;</span><span class="p">,</span> <span class="s1">&#39;SZY&#39;</span><span class="p">,</span> <span class="s1">&#39;ZXX&#39;</span><span class="p">,</span> <span class="s1">&#39;ZXY&#39;</span><span class="p">,</span> <span class="s1">&#39;ZYX&#39;</span><span class="p">,</span> 
+                   <span class="s1">&#39;ZYY&#39;</span><span class="p">,</span> <span class="s1">&#39;ZTE&#39;</span><span class="p">,</span> <span class="s1">&#39;ZTM&#39;</span><span class="p">,</span> <span class="s1">&#39;ZAV&#39;</span><span class="p">,</span> <span class="s1">&#39;ZDE&#39;</span><span class="p">,</span> <span class="s1">&#39;ZZX&#39;</span><span class="p">,</span> <span class="s1">&#39;ZZY&#39;</span><span class="p">,</span> <span class="s1">&#39;QXX&#39;</span><span class="p">,</span>
+                   <span class="s1">&#39;QXY&#39;</span><span class="p">,</span> <span class="s1">&#39;QYX&#39;</span><span class="p">,</span> <span class="s1">&#39;QYY&#39;</span><span class="p">,</span> <span class="s1">&#39;QTE&#39;</span><span class="p">,</span> <span class="s1">&#39;QTM&#39;</span><span class="p">,</span> <span class="s1">&#39;QAV&#39;</span><span class="p">,</span> <span class="s1">&#39;QDE&#39;</span><span class="p">,</span> <span class="s1">&#39;QZX&#39;</span><span class="p">,</span>
+                   <span class="s1">&#39;QZY&#39;</span><span class="p">,</span> <span class="s1">&#39;CXX&#39;</span><span class="p">,</span> <span class="s1">&#39;CXY&#39;</span><span class="p">,</span> <span class="s1">&#39;CYX&#39;</span><span class="p">,</span> <span class="s1">&#39;CYY&#39;</span><span class="p">,</span> <span class="s1">&#39;CTE&#39;</span><span class="p">,</span> <span class="s1">&#39;CTM&#39;</span><span class="p">,</span> <span class="s1">&#39;CAV&#39;</span><span class="p">,</span> 
+                   <span class="s1">&#39;CDE&#39;</span><span class="p">,</span> <span class="s1">&#39;CZX&#39;</span><span class="p">,</span> <span class="s1">&#39;CZY&#39;</span><span class="p">,</span> <span class="s1">&#39;TXX&#39;</span><span class="p">,</span> <span class="s1">&#39;TXY&#39;</span><span class="p">,</span> <span class="s1">&#39;TYX&#39;</span><span class="p">,</span> <span class="s1">&#39;TYY&#39;</span><span class="p">,</span> <span class="s1">&#39;TTE&#39;</span><span class="p">,</span> 
+                   <span class="s1">&#39;TTM&#39;</span><span class="p">,</span> <span class="s1">&#39;TAV&#39;</span><span class="p">,</span> <span class="s1">&#39;TDE&#39;</span><span class="p">,</span> <span class="s1">&#39;TZX&#39;</span><span class="p">,</span> <span class="s1">&#39;TZY&#39;</span> <span class="p">,</span><span class="s1">&#39;ZXX&#39;</span><span class="p">,</span> <span class="s1">&#39;ZXY&#39;</span><span class="p">,</span><span class="s1">&#39;ZYX&#39;</span><span class="p">]</span>
+    
+    <span class="n">_avg</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;skp&#39;</span><span class="p">,</span><span class="s1">&#39;Station&#39;</span><span class="p">,</span><span class="s1">&#39; Freq&#39;</span><span class="p">,</span><span class="s1">&#39;Comp&#39;</span><span class="p">,</span><span class="s1">&#39; Amps&#39;</span><span class="p">,</span><span class="s1">&#39;Emag&#39;</span><span class="p">,</span>
+         <span class="s1">&#39;Ephz&#39;</span><span class="p">,</span><span class="s1">&#39;Hmag&#39;</span><span class="p">,</span><span class="s1">&#39;Hphz&#39;</span><span class="p">,</span><span class="s1">&#39;Resistivity&#39;</span><span class="p">,</span><span class="s1">&#39;Phase&#39;</span><span class="p">,</span>
+         <span class="s1">&#39;</span><span class="si">%E</span><span class="s1">mag&#39;</span><span class="p">,</span><span class="s1">&#39;sEphz&#39;</span><span class="p">,</span><span class="s1">&#39;%Hmag&#39;</span><span class="p">,</span><span class="s1">&#39;sHphz&#39;</span><span class="p">,</span><span class="s1">&#39;%Rho&#39;</span><span class="p">,</span><span class="s1">&#39;sPhz&#39;</span><span class="p">,</span> 
+                             <span class="s1">&#39;Tx.Amp&#39;</span><span class="p">,</span><span class="s1">&#39;E.mag&#39;</span><span class="p">,</span><span class="s1">&#39;E.phz&#39;</span><span class="p">,</span><span class="s1">&#39;B.mag&#39;</span><span class="p">,</span><span class="s1">&#39;B.phz&#39;</span><span class="p">,</span><span class="s1">&#39;Z.mag&#39;</span><span class="p">,</span>
+                             <span class="s1">&#39;Z.phz&#39;</span><span class="p">,</span><span class="s1">&#39;ARes.mag&#39;</span><span class="p">,</span><span class="s1">&#39;SRes&#39;</span><span class="p">,</span><span class="s1">&#39;E.wgt&#39;</span><span class="p">,</span> <span class="s1">&#39;B.wgt&#39;</span><span class="p">,</span><span class="s1">&#39;E.</span><span class="si">%e</span><span class="s1">rr&#39;</span><span class="p">,</span>
+                             <span class="s1">&#39;E.perr&#39;</span><span class="p">,</span><span class="s1">&#39;B.</span><span class="si">%e</span><span class="s1">rr&#39;</span><span class="p">,</span><span class="s1">&#39;B.perr&#39;</span><span class="p">,</span><span class="s1">&#39;Z.</span><span class="si">%e</span><span class="s1">rr&#39;</span><span class="p">,</span><span class="s1">&#39;Z.perr&#39;</span><span class="p">,</span>
+                             <span class="s1">&#39;ARes.</span><span class="si">%e</span><span class="s1">rr&#39;</span><span class="p">]</span>
+    
+    
+    <span class="n">_edi</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;&gt;HEAD&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;INFO&#39;</span><span class="p">,</span> <span class="c1">#Head=Infos-Freuency-Rhorot,Zrot and end blocks</span>
+        <span class="s1">&#39;&gt;=DEFINEMEAS&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;=MTSECT&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;FREQ ORDER=INC&#39;</span><span class="p">,</span> <span class="c1">#Definitions Measurments Blocks</span>
+        <span class="s1">&#39;&gt;ZROT&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;RHOROT&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;!Comment&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FREQ&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;HMEAS&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;EMEAS&#39;</span><span class="p">,</span>
+        
+              <span class="s1">&#39;&gt;RHOXY&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSXY&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;RHOXY.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSXY.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;RHOXY.ERR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSXY.ERR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;RHOXY.FIT&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSXY.FIT&#39;</span><span class="p">,</span> <span class="c1">#Apparents Resistivities  and Phase Blocks</span>
+              <span class="s1">&#39;&gt;RHOYX&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSYX&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;RHOYX.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSYX.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;RHOYX.ERR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSYX.ERR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;RHOYX.FIT&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSYX.FIT&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;&gt;RHOXX&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSXX&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;RHOXX.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSXX.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;RHOXX.ERR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSXX.ERR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;RHOXX.FIT&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSXX.FIT&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;&gt;RHOYY&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSYY&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;RHOYY.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSYY.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;RHOYY.ERR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSYY.ERR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;RHOYY.FIT&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;PHSYY.FIT&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;&gt;FRHOXY&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FPHSXY&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FRHOXY.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FPHSXY.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FRHOXY.ERR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FPHSXY.ERR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FRHOXY.FIT&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FPHSXY.FIT&#39;</span><span class="p">,</span> 
+              <span class="s1">&#39;&gt;FRHOXX&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FPHSXX&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FRHOXX.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FPHSXX.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FRHOXX.ERR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FPHSXX.ERR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FRHOXX.FIT&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FPHSXX.FIT&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;&gt;TSERIESSECT&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;TSERIES&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;=SPECTRASECT&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;=EMAPSECT&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;=OTHERSECT&#39;</span><span class="p">,</span> <span class="c1">#Time series-Sepctra and EM/OTHERSECT</span>
+                              
+                        <span class="s1">&#39;&gt;ZXYR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZXYI&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZXY.VAR&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;ZXYR.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZXYI.VAR&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;ZXY.COV&#39;</span><span class="p">,</span> <span class="c1">#Impedance Data Blocks</span>
+                        <span class="s1">&#39;&gt;ZYXR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZYXI&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZYX.VAR&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;ZYXR.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZYXI.VAR&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;ZYX.COV&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;&gt;ZYYR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZYYI&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZYY.VAR&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;ZYYR.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZYYI.VAR&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;ZYY.COV&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;&gt;ZXXR&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;ZXXI&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZXXR.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZXXI.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZXX.VAR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZXX.COV&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;&gt;FZXXR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FZXXI&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FZXYR&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FZXYI&#39;</span><span class="p">,</span> 
+
+                                      <span class="s1">&#39;&gt;RES1DXX&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;DEP1DXX&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;RES1DXY&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;DEP1DXY&#39;</span><span class="p">,</span> <span class="c1">#Continuous 1D inversion </span>
+                                      <span class="s1">&#39;&gt;RES1DYX&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;DEP1DYX&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;RES1DYY&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;DEP1DYY&#39;</span><span class="p">,</span>
+                                      <span class="s1">&#39;&gt;FRES1DXX&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;FDEP1DXX&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;FRES1DXY&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;FDEP1DXY&#39;</span><span class="p">,</span>
+          
+                        <span class="s1">&#39;&gt;COH&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;EPREDCOH&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;HPREDCOH&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;SIGAMP&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;SIGNOISE&#39;</span><span class="p">,</span> <span class="c1"># Coherency and Signal Data Blocks</span>
+          
+                        <span class="s1">&#39;&gt;TIPMAG&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;TIPPHS&#39;</span><span class="p">,</span><span class="s1">&#39;TIPMAG.ERR&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;TIPMAG.FIT&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;TIPPHS.FIT&#39;</span><span class="p">,</span> <span class="c1">#Tipper Data blocks </span>
+                        <span class="s1">&#39;&gt;TXR.EXP&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;TXI.EXP&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;TXVAR.EXP&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;TYR.EXP&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;TYI.EXP&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;TYVAR.EXP&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;&gt;ZSTRIKE&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZSKEW&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;ZELLIP&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;TSTRIKE&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;TSKEW&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;TELLIP&#39;</span><span class="p">,</span> <span class="c1">#Strike, Skew, and Ellipticity Data Blocks </span>
+                        
+                        <span class="s1">&#39;&gt;FILWIDTH&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;FILANGLE&#39;</span><span class="p">,</span><span class="s1">&#39;&gt;EQUIVLEN&#39;</span> <span class="p">,</span> <span class="s1">&#39;&gt;END&#39;</span><span class="p">]</span> <span class="c1">#Spatial filter blocks</span>
+    
+    <span class="n">_occam_startup</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;Format&#39;</span><span class="p">,</span> <span class="s1">&#39;Description&#39;</span><span class="p">,</span> <span class="s1">&#39;Model File&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Data File&#39;</span><span class="p">,</span><span class="s1">&#39;Date/Time&#39;</span><span class="p">,</span> <span class="s1">&#39;Iterations to run&#39;</span><span class="p">,</span><span class="s1">&#39;Target Misfit&#39;</span><span class="p">,</span><span class="s1">&#39;Roughness Type&#39;</span><span class="p">,</span><span class="s1">&#39;Diagonal Penalties&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Stepsize Cut Count&#39;</span><span class="p">,</span><span class="s1">&#39;Model Limits&#39;</span><span class="p">,</span><span class="s1">&#39;Model Value Steps&#39;</span><span class="p">,</span><span class="s1">&#39;Debug Level&#39;</span><span class="p">,</span><span class="s1">&#39;Iteration&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Lagrange Value&#39;</span><span class="p">,</span><span class="s1">&#39;Roughness Value&#39;</span><span class="p">,</span><span class="s1">&#39;Misfit Value&#39;</span><span class="p">,</span><span class="s1">&#39;Misfit Reached&#39;</span><span class="p">,</span><span class="s1">&#39;Param Count&#39;</span><span class="p">]</span> <span class="c1"># end with file or startup </span>
+    
+    <span class="n">_occam_datafile</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;FORMAT&#39;</span><span class="p">,</span><span class="s1">&#39;TITLE&#39;</span><span class="p">,</span><span class="s1">&#39;SITES&#39;</span><span class="p">,</span><span class="s1">&#39;OFFSETS (M)&#39;</span><span class="p">,</span><span class="s1">&#39;FREQUENCIES&#39;</span><span class="p">,</span><span class="s1">&#39;DATA BLOCKS&#39;</span><span class="p">,</span><span class="s1">&#39;DATUM&#39;</span><span class="p">,</span><span class="s1">&#39;ERROR&#39;</span><span class="p">]</span> <span class="c1">#data of simple file.or dat </span>
+                     
+    <span class="n">_occam_modelfile</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;FORMAT&#39;</span><span class="p">,</span> <span class="s1">&#39;MODEL NAME&#39;</span><span class="p">,</span><span class="s1">&#39;DESCRIPTION&#39;</span><span class="p">,</span><span class="s1">&#39;MESH FILE&#39;</span><span class="p">,</span><span class="s1">&#39;MESH TYPE&#39;</span><span class="p">,</span><span class="s1">&#39;STATICS FILE&#39;</span><span class="p">,</span><span class="s1">&#39;PREJUDICE FILE&#39;</span><span class="p">,</span><span class="s1">&#39;BINDING OFFSET&#39;</span><span class="p">,</span><span class="s1">&#39;NUM LAYERS&#39;</span><span class="p">]</span> <span class="c1"># model of simple file </span>
+                      
+    <span class="n">_occam_meshfile</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;?????????????&#39;</span><span class="p">,</span><span class="s1">&#39;ZZZZZZZZZZZZ&#39;</span><span class="p">,</span><span class="s1">&#39;YYYYYYYYYYYY&#39;</span><span class="p">,</span><span class="s1">&#39;000000000000&#39;</span><span class="p">,</span> <span class="s1">&#39;AAAAAAAAAAAAA&#39;</span><span class="p">]</span> <span class="c1"># end by mesh or simple file </span>
+                            <span class="c1">#Check the firstS layer (LIST NUMBER 0 135 52 0 0 2) SPECIFIED the catacteristik of mesh</span>
+                            <span class="c1">#only difference between the startup is at the end , the startup file have the same number so </span>
+                            <span class="c1"># the iter is not the same case , number change .</span>
+                            <span class="c1">#response file , check if the range or the lenght == 7. </span>
+    <span class="n">_occam_logfile</span> <span class="o">=</span><span class="p">[</span><span class="s1">&#39;STARTING R.M.S&#39;</span><span class="p">,</span> <span class="s1">&#39; ** ITERATION&#39;</span><span class="p">,</span><span class="s1">&#39;TOFMU: MISFIT&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;AND IS&#39;</span><span class="p">,</span><span class="s1">&#39;USING&#39;</span><span class="p">,</span><span class="s1">&#39;STEPSIZE IS&#39;</span><span class="p">,</span><span class="s1">&#39;ROUGHNESS IS&#39;</span><span class="p">]</span>          <span class="c1">#or end with Logfile.</span>
+    
+    <span class="n">_stn</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;&quot;&quot;dot&#39;</span><span class="p">,</span><span class="s1">&#39;&quot;&quot;e&#39;</span><span class="p">,</span><span class="s1">&#39;&quot;&quot;h&#39;</span><span class="p">,</span> <span class="s1">&#39;&quot;&quot;n&#39;</span><span class="p">,</span><span class="s1">&#39;&quot;&quot;sta&#39;</span><span class="p">,</span><span class="s1">&#39;&quot;&quot;len&#39;</span><span class="p">,</span><span class="s1">&#39;&quot;&quot;east&#39;</span><span class="p">,</span>
+         <span class="s1">&#39;&quot;&quot;north&#39;</span><span class="p">,</span><span class="s1">&#39;&quot;&quot;lat&#39;</span><span class="p">,</span><span class="s1">&#39;&quot;&quot;long&#39;</span><span class="p">,</span><span class="s1">&#39;&quot;&quot;elev&#39;</span><span class="p">,</span><span class="s1">&#39;&quot;&quot;azim&#39;</span><span class="p">,</span><span class="s1">&#39;&quot;&quot;stn&#39;</span><span class="p">]</span>
+    
+    
+<div class="viewcode-block" id="_sensitive.which_file"><a class="viewcode-back" href="../../../utils.html#pycsamt.etc.infos._sensitive.which_file">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">which_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">deep</span><span class="o">=</span> <span class="kc">True</span><span class="p">):</span> 
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Which file is class method . List of files are the typical files able</span>
+<span class="sd">        to read by pyCSAMT softwares.</span>
+<span class="sd">        Sensitive class method. </span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">            **filename** :str </span>
+<span class="sd">                            corresponding file to read , pathLike </span>
+<span class="sd">            **deep** : bool , </span>
+<span class="sd">                    control reading : False for just control the extension file ,</span>
+<span class="sd">                    not opening file . True  control in deeper file and</span>
+<span class="sd">                     find which file were inputted.</span>
+<span class="sd">                </span>
+<span class="sd">        Returns  </span>
+<span class="sd">        ---------</span>
+<span class="sd">            str </span>
+<span class="sd">               FileType could be [`avg` | `j` | `edi` | `resp` | `mesh` | `occamdat` |</span>
+<span class="sd">                    `stn` | `model` | `iter` | `logfile` | `startup`]</span>
+<span class="sd">        </span>
+<span class="sd">       </span>
+<span class="sd">        List of files read by pyCSAMT :</span>
+<span class="sd">        </span>
+<span class="sd">        ==============  =======================================================</span>
+<span class="sd">        CodeFile                        Description</span>
+<span class="sd">        ==============  =======================================================</span>
+<span class="sd">        *avg*           Zonge Engineering file Plainty file of ASTATIC file. </span>
+<span class="sd">        *j*             A.G .Jonhson J=Format file. </span>
+<span class="sd">        *edi*           SEG (Society of Exploration Geophysics) Electrical</span>
+<span class="sd">                        Data Interchange file (SEG-EDI) </span>
+<span class="sd">        *stn*           Zonge Engineering station file </span>
+<span class="sd">        *occamdat*      deGroot-Hedlin, C., and S. Constable, Occam file. </span>
+<span class="sd">        *mesh*          Constable, S. C., R. L. Parker, and C. G. Constable </span>
+<span class="sd">                        mesh file </span>
+<span class="sd">        *model*         Occam Model file  </span>
+<span class="sd">        *startup*       Occam startup file  </span>
+<span class="sd">        *iter*          Occam iteration file get after Inversion  </span>
+<span class="sd">        *resp*          Occam response file , Get after inversion </span>
+<span class="sd">        *logfile*       Occam Logfile, Get after inverson (Inversion file )</span>
+<span class="sd">        ==============  ======================================================= </span>
+<span class="sd">        </span>
+<span class="sd">       </span>
+<span class="sd">        :Example:</span>
+<span class="sd">       </span>
+<span class="sd">            &gt;&gt;&gt; files = [&#39;K1_exp.bln&#39;,&#39;LCS01.avg&#39; ,&#39;LCS01_2_to_1.avg&#39;, &#39;K1.stn&#39;,</span>
+<span class="sd">            ...            &#39;csi000.dat&#39;,&#39;csa250.edi&#39;,&#39;LogFile.logfile&#39;,</span>
+<span class="sd">            ...                 &#39;Occam2DMesh&#39;,&#39;Occam2DModel&#39;, &#39;OccamDataFile.dat&#39;,</span>
+<span class="sd">            ...            &#39;S00_ss.edi&#39;, &#39;Startup&#39;,&#39;RESP13.resp&#39;, </span>
+<span class="sd">            ...                 &#39;ITER02.iter&#39;]</span>
+<span class="sd">            &gt;&gt;&gt;  for ii in files : </span>
+<span class="sd">            &gt;&gt;&gt;      path =  os.path.join(os.environ[&quot;pyCSAMT&quot;], </span>
+<span class="sd">            ...                                  &#39;csamtpy&#39;,&#39;data&#39;, ii)</span>
+<span class="sd">            ...       try : </span>
+<span class="sd">            ...         print(_sensitive.which_file(path,deep=True))</span>
+<span class="sd">            ...       except :pass </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">_code</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;edi&#39;</span><span class="p">:</span><span class="bp">cls</span><span class="o">.</span><span class="n">_edi</span> <span class="p">,</span> <span class="s1">&#39;j&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_j</span><span class="p">,</span> <span class="s1">&#39;startup&#39;</span><span class="p">:</span><span class="bp">cls</span><span class="o">.</span><span class="n">_occam_startup</span><span class="p">,</span> 
+                 <span class="s1">&#39;occamdat&#39;</span><span class="p">:</span><span class="bp">cls</span><span class="o">.</span><span class="n">_occam_datafile</span><span class="p">,</span><span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_occam_modelfile</span><span class="p">,</span>
+                 <span class="s1">&#39;mesh&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_occam_meshfile</span><span class="p">,</span> <span class="s1">&#39;iter&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_occam_startup</span><span class="p">,</span> 
+                 <span class="s1">&#39;avg&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_avg</span><span class="p">,</span>  <span class="s1">&#39;stn&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_stn</span><span class="p">,</span><span class="s1">&#39;logfile&#39;</span><span class="p">:</span><span class="bp">cls</span><span class="o">.</span><span class="n">_occam_logfile</span><span class="p">,</span>
+                 <span class="s1">&#39;resp&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;none&#39;</span><span class="p">,</span><span class="s1">&#39;none&#39;</span><span class="p">],</span>
+                  <span class="p">}</span>
+        
+        
+        <span class="n">_filename</span> <span class="o">=</span> <span class="n">filename</span>
+        
+        <span class="k">if</span> <span class="n">_filename</span> <span class="ow">is</span> <span class="kc">None</span> <span class="p">:</span> <span class="n">pyCSAMTError_file_handling</span><span class="p">(</span><span class="s1">&#39;Error file: NoneType can not be computed. Check your right path.&#39;</span><span class="p">)</span> 
+        <span class="k">if</span> <span class="n">_filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="p">:</span> 
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_filename</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">_code</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span> <span class="c1">#code file recognized</span>
+                <span class="n">_flag</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_filename</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">deep</span> <span class="o">==</span><span class="kc">False</span> <span class="p">:</span><span class="k">return</span> <span class="n">_flag</span>
+            <span class="k">else</span> <span class="p">:</span> <span class="n">_flag</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1">#file not recognized </span>
+
+        <span class="c1"># Open the file now </span>
+        <span class="k">with</span> <span class="nb">open</span> <span class="p">(</span><span class="n">_filename</span> <span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span> <span class="o">=</span><span class="s1">&#39;utf8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">_f</span> <span class="p">:</span> 
+                <span class="n">_data_lines</span> <span class="o">=</span><span class="n">_f</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+                
+        <span class="k">if</span> <span class="n">_flag</span> <span class="o">!=</span><span class="mi">0</span> <span class="p">:</span>  
+                                   <span class="c1"># file extension has been recognized on dict code keys. </span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Reading </span><span class="si">%s</span><span class="s1"> file&#39;</span> <span class="o">%</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_filename</span><span class="p">))</span>
+            
+            <span class="n">_value_code</span> <span class="o">=</span> <span class="n">_code</span><span class="p">[</span><span class="n">_flag</span><span class="p">]</span>
+            
+            <span class="k">if</span> <span class="n">_flag</span> <span class="o">==</span><span class="s1">&#39;edi&#39;</span><span class="p">:</span>                   <span class="c1">#avoid expensive function then controle 2thing before continue </span>
+                <span class="k">if</span> <span class="n">_value_code</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span>  <span class="n">_data_lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">:</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;File probably is incorrect. Please consult EDI_Main file components : </span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span>\
+                                      <span class="nb">format</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_edi</span><span class="p">)))</span>
+                        <span class="k">raise</span> <span class="n">pyCSAMTError_file_handling</span><span class="p">(</span><span class="s2">&quot;Wrong SEG-EDI file. It&#39;seems -File provided doesnt include &#39;&gt;HEAD. Please provide the right EDI-FORMAT&quot;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">_value_code</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_data_lines</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="p">:</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;File probably incorrect. Please consult EDI_Main file composents : </span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span>\
+                                  <span class="nb">format</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_edi</span><span class="p">)))</span>
+                    <span class="k">raise</span> <span class="n">pyCSAMTError_file_handling</span><span class="p">(</span><span class="s2">&quot;Wrong SEG-EDI file. It&#39;seems -File provided doesnt include &#39;&gt;END. Please provide the right EDI-FORMAT&quot;</span><span class="p">)</span>
+            
+            <span class="k">elif</span> <span class="n">_flag</span> <span class="o">==</span><span class="s1">&#39;resp&#39;</span> <span class="p">:</span>               <span class="c1"># control quick response file</span>
+                                                <span class="c1">#check if the len of resp= 7 </span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span> <span class="n">_data_lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">())</span> <span class="o">!=</span><span class="mi">7</span> <span class="p">:</span> 
+                    <span class="k">raise</span> <span class="n">pyCSAMTError_file_handling</span><span class="p">(</span><span class="s2">&quot;Wrong OCCAM-RESPONSE file. Please provide the right response file.&quot;</span><span class="p">)</span>
+                <span class="k">else</span> <span class="p">:</span> <span class="k">return</span> <span class="n">_flag</span> 
+                
+            <span class="k">elif</span> <span class="n">_flag</span> <span class="o">==</span><span class="s1">&#39;avg&#39;</span><span class="p">:</span> 
+                <span class="n">_reason</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">validate_avg</span><span class="p">(</span><span class="n">avg_data_lines</span><span class="o">=</span><span class="n">_data_lines</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">_reason</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;yesAST&#39;</span><span class="p">,</span> <span class="s1">&#39;yes&#39;</span><span class="p">]</span> <span class="p">:</span> 
+                    <span class="n">warnings</span><span class="p">(</span><span class="s1">&#39;File &lt;</span><span class="si">{0}</span><span class="s1">&gt; does not match Zonge AVGfile. Get info to </span><span class="si">{1}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_filename</span><span class="p">),</span> <span class="n">notion</span><span class="o">.</span><span class="n">AVG</span><span class="p">))</span>
+                    <span class="k">raise</span> <span class="n">pyCSAMTError_file_handling</span><span class="p">(</span><span class="s2">&quot;Wrong &lt;</span><span class="si">{0}</span><span class="s2">&gt;Zonge AVG-file. Please provide the right file.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_filename</span><span class="p">)))</span>
+                <span class="k">return</span> <span class="n">_flag</span>
+            
+            <span class="k">elif</span> <span class="n">_flag</span> <span class="o">==</span><span class="s1">&#39;mesh&#39;</span><span class="p">:</span> 
+               <span class="k">try</span> <span class="p">:[</span><span class="nb">float</span><span class="p">(</span><span class="n">ss</span><span class="p">)</span> <span class="k">for</span> <span class="n">ss</span> <span class="ow">in</span> <span class="n">_data_lines</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()]</span> <span class="c1">#check the first occam layer </span>
+               <span class="k">except</span> <span class="p">:</span>
+                   <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Wrong OCCAM-MESH file.Get more info on that site :https://marineemlab.ucsd.edu/Projects/Occam/index.html&#39;</span><span class="p">)</span>
+                   <span class="k">raise</span> <span class="n">pyCSAMTError_file_handling</span><span class="p">(</span><span class="s2">&quot;Wrong OCCAM-MESH &lt;</span><span class="si">%s</span><span class="s2">&gt;file .We don&#39;t find the characteristic of thefirst layer.&quot;</span>\
+                                                    <span class="s2">&quot;Please provide the right OCCAM meshfile.&quot;</span> <span class="o">%</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_filename</span><span class="p">))</span> 
+               <span class="k">for</span> <span class="n">_meshcodec</span> <span class="ow">in</span> <span class="n">_value_code</span><span class="p">:</span> 
+                   <span class="k">if</span> <span class="n">_meshcodec</span> <span class="ow">in</span> <span class="n">_data_lines</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span> <span class="k">return</span> <span class="n">_flag</span> 
+                   <span class="k">else</span> <span class="p">:</span>
+                       <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Trouble occurs while reading the &quot;OCCAM-params specs.More details in :</span><span class="si">{0}</span><span class="s1">.</span><span class="se">\n</span><span class="s1"> </span><span class="si">{1}</span><span class="s1">&#39;</span><span class="o">.</span>
+                                     <span class="nb">format</span><span class="p">(</span><span class="n">notion</span><span class="o">.</span><span class="n">occam_mesh_parameter_specs_info</span><span class="p">,</span> <span class="n">notion</span><span class="o">.</span><span class="n">occam_mesh_parameter_specs_meaning</span><span class="p">))</span>
+                       <span class="k">raise</span> <span class="n">pyCSAMTError_file_handling</span><span class="p">(</span><span class="s1">&#39;We do not find a &quot;Parameter specs&quot; in your &lt;</span><span class="si">{0}</span><span class="s1">&gt;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_filename</span><span class="p">)))</span>
+                   
+                   
+            <span class="c1">#once both thing has already been controled . then continue . avoid avg because already has deep controlled </span>
+            <span class="c1"># with special static method then pass </span>
+            <span class="n">_ccounter</span> <span class="o">=</span><span class="mi">0</span> <span class="c1"># threshold control is match to 7 except stn.</span>
+            <span class="k">for</span> <span class="n">_codec</span> <span class="ow">in</span> <span class="n">_value_code</span> <span class="p">:</span> <span class="c1"># loop the dict value of code  #loop now all the</span>
+                <span class="k">if</span> <span class="n">_flag</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;avg&#39;</span><span class="p">,</span> <span class="s1">&#39;resp&#39;</span><span class="p">,</span><span class="s1">&#39;mesh&#39;</span><span class="p">]:</span> 
+                    <span class="k">for</span> <span class="n">num</span> <span class="p">,</span> <span class="n">_data_item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_data_lines</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="n">_codec</span> <span class="ow">in</span> <span class="n">_data_item</span> <span class="p">:</span>
+                            <span class="n">_ccounter</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">_flag</span> <span class="o">==</span><span class="s1">&#39;stn&#39;</span><span class="p">:</span> 
+                        <span class="k">if</span> <span class="n">_ccounter</span> <span class="o">&gt;=</span> <span class="mi">3</span> <span class="p">:</span> <span class="k">return</span> <span class="n">_flag</span> 
+                    <span class="k">elif</span> <span class="n">_flag</span> <span class="o">==</span><span class="s1">&#39;j&#39;</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">_ccounter</span> <span class="o">&gt;=</span><span class="mi">5</span> <span class="p">:</span> <span class="k">return</span> <span class="n">_flag</span>
+                    <span class="k">if</span> <span class="n">_ccounter</span><span class="o">&gt;=</span><span class="mi">7</span> <span class="p">:</span><span class="k">return</span> <span class="n">_flag</span> 
+            <span class="k">if</span> <span class="n">_ccounter</span> <span class="o">&lt;</span><span class="mi">7</span> <span class="p">:</span><span class="k">raise</span> <span class="n">pyCSAMTError_file_handling</span><span class="p">(</span><span class="s1">&#39;ERROR occurs while reading file !&lt;</span><span class="si">{0}</span><span class="s1">&gt;. &#39;</span>\
+                                                              <span class="s1">&#39;File doesnt not match the typical &lt;</span><span class="si">{1}</span><span class="s1">&gt; Format.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_filename</span><span class="p">),</span> <span class="n">_flag</span><span class="p">))</span>  
+        
+        <span class="k">elif</span> <span class="n">_flag</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">:</span> <span class="c1">#file not recognized in _codekeys , </span>
+                             <span class="c1">#then try to read and to find which file mastch the best.</span>
+            <span class="n">_ccounter</span><span class="o">=</span><span class="mi">0</span>
+            <span class="k">for</span> <span class="n">_keycode</span><span class="p">,</span> <span class="n">_value_code</span> <span class="ow">in</span> <span class="n">_code</span><span class="o">.</span><span class="n">items</span><span class="p">():</span> 
+                <span class="k">for</span> <span class="n">num</span><span class="p">,</span> <span class="n">valueitem</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_data_lines</span><span class="p">)</span> <span class="p">:</span>
+                    <span class="k">for</span> <span class="n">codec</span>  <span class="ow">in</span> <span class="n">_value_code</span> <span class="p">:</span> <span class="c1">#read value in code </span>
+                        <span class="k">if</span> <span class="n">codec</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">valueitem</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span> 
+                            <span class="n">_ccounter</span> <span class="o">+=</span><span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">_keycode</span> <span class="o">==</span><span class="s1">&#39;j&#39;</span> <span class="p">:</span>
+                        <span class="k">if</span> <span class="n">_ccounter</span> <span class="o">&gt;=</span><span class="mi">4</span> <span class="p">:</span><span class="k">return</span> <span class="n">_keycode</span>
+                    <span class="k">if</span> <span class="n">_ccounter</span> <span class="o">&gt;=</span> <span class="mi">7</span> <span class="p">:</span>
+                        <span class="k">if</span> <span class="n">_keycode</span> <span class="o">==</span><span class="s1">&#39;startup&#39;</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="nb">all</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">_data_lines</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">_value_code</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()])</span> <span class="o">==</span> <span class="kc">False</span> <span class="p">:</span>
+                                <span class="k">return</span> <span class="s1">&#39;iter&#39;</span>
+                            <span class="k">else</span> <span class="p">:</span><span class="k">return</span> <span class="n">_keycode</span>
+                        <span class="k">return</span> <span class="n">_keycode</span>
+                    
+            <span class="c1">#Now we assune that the file must be the response file then read according response control </span>
+            <span class="k">try</span> <span class="p">:</span>
+                <span class="n">resp0</span> <span class="o">=</span><span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">ss</span><span class="p">)</span> <span class="k">for</span> <span class="n">ss</span> <span class="ow">in</span> <span class="n">_data_lines</span> <span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                <span class="n">resp_end</span> <span class="o">=</span><span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">ss</span><span class="p">)</span> <span class="k">for</span> <span class="n">ss</span> <span class="ow">in</span> <span class="n">_data_lines</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+                <span class="n">resp_mid</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">ss</span><span class="p">)</span> <span class="k">for</span> <span class="n">ss</span> <span class="ow">in</span> <span class="n">_data_lines</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">_data_lines</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)]]</span> <span class="c1"># get the middele of file and try float converter </span>
+                <span class="k">assert</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">resp0</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">resp_end</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">resp_end</span><span class="p">)</span><span class="o">==</span><span class="nb">len</span><span class="p">(</span><span class="n">resp_mid</span><span class="p">)),</span>\
+                    <span class="n">pyCSAMTError_file_handling</span><span class="p">(</span><span class="s1">&#39;We presume that  RESP &lt;</span><span class="si">{0}</span><span class="s1">&gt; file doesnt not match a OCCAM-RESPONSE file.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_filename</span><span class="p">)))</span>
+            <span class="k">except</span> <span class="p">:</span>
+                
+                <span class="n">message</span> <span class="o">=</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;Error reading File. pyCSAMT can read only &lt;</span><span class="si">{0}</span><span class="s1">&gt; Format file.&#39;</span><span class="p">,</span> 
+                             <span class="s1">&#39;Format file. Program can not find the type of that file : &lt;</span><span class="si">{1}</span><span class="s1">&gt;.&#39;</span><span class="p">,</span> 
+                             <span class="s1">&#39;You may use script &lt;rewriteXXX&gt; of  pyCSAMT to try to rewrite file&#39;</span><span class="p">,</span> 
+                             <span class="s1">&#39;either to SEG-EDI |j|STN|AVG| or OCCAM{DAT, RESP,MODEL,ITER} files.&#39;</span><span class="p">)</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;|&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">_code</span><span class="o">.</span><span class="n">keys</span><span class="p">())),</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_filename</span><span class="p">)</span> <span class="p">))</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;|&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">_code</span><span class="o">.</span><span class="n">keys</span><span class="p">())),</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_filename</span><span class="p">)</span> <span class="p">))</span>
+
+                <span class="k">return</span> 
+            
+            <span class="k">return</span> <span class="s1">&#39;resp&#39;</span></div>
+
+
+                 
+<div class="viewcode-block" id="_sensitive.validate_avg"><a class="viewcode-back" href="../../../utils.html#pycsamt.etc.infos._sensitive.validate_avg">[docs]</a>    <span class="nd">@staticmethod</span> 
+    <span class="k">def</span> <span class="nf">validate_avg</span><span class="p">(</span><span class="n">avg_data_lines</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Core function  to validate avg file .</span>
+<span class="sd">        </span>
+<span class="sd">        :param avg_data_lines: list of avgfile</span>
+<span class="sd">        :type avg_data_lines: list </span>
+<span class="sd">        </span>
+<span class="sd">        :returns: &#39;yesAST&#39; or &#39;yes&#39; where  &#39;yesAST&#39; is  Astatic file </span>
+<span class="sd">                    and  &#39;yes&#39;  is plainty avg file (the main file)  </span>
+<span class="sd">        :rtype: str </span>
+<span class="sd">        </span>
+<span class="sd">        :returns: item, spliting the headAvg components strutured by file.</span>
+<span class="sd">        :rtype: list </span>
+<span class="sd">        </span>
+<span class="sd">        :Example:</span>
+<span class="sd">            </span>
+<span class="sd">            &gt;&gt;&gt; from csamtpy.etc.infos.Infos inmport _sensistive as SB</span>
+<span class="sd">            &gt;&gt;&gt; path =  os.path.join(os.environ[&quot;pyCSAMT&quot;], </span>
+<span class="sd">            ...                                  &#39;csamtpy&#39;,&#39;data&#39;, LCS01_2_to_1.avg)</span>
+<span class="sd">            ... with open (path, &#39;r&#39;, encoding =&#39;utf8&#39;) as f : </span>
+<span class="sd">            ...   datalines = f.readlines()</span>
+<span class="sd">            ... ss =SB._sensitive.validate_avg(avg_data_lines=datalines)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">num</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">jj</span><span class="p">,</span> <span class="n">code</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="s1">&#39;ASTATIC&#39;</span><span class="p">,</span><span class="s1">&#39;$Stn&#39;</span><span class="p">,</span><span class="s1">&#39;$Survey&#39;</span><span class="p">,</span> <span class="s1">&#39;$Tx&#39;</span><span class="p">,</span><span class="s1">&#39;$Rx&#39;</span><span class="p">,</span>
+                                   <span class="s1">&#39;ARes.mag&#39;</span><span class="p">,</span><span class="s1">&#39;SRes&#39;</span><span class="p">,</span><span class="s1">&#39;Z.phz&#39;</span><span class="p">,</span><span class="s1">&#39;Tx.Amp&#39;</span><span class="p">,</span><span class="s1">&#39;ARes.</span><span class="si">%e</span><span class="s1">rr&#39;</span><span class="p">]):</span>
+            <span class="k">for</span> <span class="n">items</span> <span class="ow">in</span> <span class="n">avg_data_lines</span> <span class="p">:</span>
+                <span class="k">if</span> <span class="n">items</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">code</span><span class="p">)</span><span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span><span class="n">num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> 
+                <span class="k">if</span> <span class="n">jj</span> <span class="o">&gt;=</span><span class="mi">5</span> <span class="ow">and</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">num</span><span class="p">)</span> <span class="o">&gt;=</span><span class="mi">3</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">items</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">code</span><span class="p">)</span><span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="n">item</span> <span class="o">=</span><span class="n">items</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="p">(</span><span class="s1">&#39;yesAST&#39;</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">jj</span> <span class="o">&gt;=</span><span class="mi">5</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">num</span><span class="p">)</span><span class="o">&lt;</span><span class="mi">3</span><span class="p">):</span><span class="k">break</span>
+
+        <span class="k">for</span> <span class="n">jj</span><span class="p">,</span> <span class="n">code</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="s1">&#39;AMTAVG&#39;</span><span class="p">,</span><span class="s1">&#39;ASPACE&#39;</span> <span class="p">,</span><span class="s1">&#39;XMTR&#39;</span> <span class="p">,</span><span class="s1">&#39;skp&#39;</span> <span class="p">,</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">-&#39;</span><span class="p">,</span>
+                                    <span class="s1">&#39;Resistivity&#39;</span><span class="p">,</span><span class="s1">&#39;Phase&#39;</span><span class="p">,</span><span class="s1">&#39;Comp&#39;</span><span class="p">,</span><span class="s1">&#39; Amps&#39;</span><span class="p">,</span><span class="s1">&#39;%Rho&#39;</span><span class="p">]):</span>
+            <span class="k">for</span> <span class="n">items</span> <span class="ow">in</span> <span class="n">avg_data_lines</span> <span class="p">:</span>
+                <span class="k">if</span> <span class="n">items</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">code</span><span class="p">)</span><span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span><span class="n">num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> 
+                <span class="k">if</span> <span class="n">jj</span> <span class="o">&gt;=</span><span class="mi">4</span> <span class="ow">and</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">num</span><span class="p">)</span> <span class="o">&gt;=</span><span class="mi">3</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">items</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">code</span><span class="p">)</span><span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">item</span> <span class="o">=</span><span class="n">items</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                        <span class="k">return</span> <span class="p">(</span><span class="s1">&#39;yes&#39;</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span> 
+                    
+        <span class="k">if</span> <span class="nb">sum</span><span class="p">(</span><span class="n">num</span><span class="p">)</span> <span class="o">==</span><span class="mi">0</span> <span class="p">:</span> <span class="k">raise</span> <span class="n">pyCSAMTError_file_handling</span><span class="p">(</span>
+                <span class="s1">&#39;Data format provided are not typically issued from Zonge AVG format .&#39;</span><span class="p">)</span></div></div>
+           
+ 
+    
+    
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyCSAMT v1.0.03 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2021, Kouadio K. Laurent.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.4.0.
+    </div>
+  </body>
+</html>

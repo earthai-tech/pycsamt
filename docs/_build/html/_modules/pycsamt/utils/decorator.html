@@ -1,0 +1,296 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>pycsamt.utils.decorator &#8212; pyCSAMT v1.0.03 documentation</title>
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyCSAMT v1.0.03 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pycsamt.utils.decorator</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">functools</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">pycsamt.utils._csamtpylog</span> <span class="kn">import</span> <span class="n">csamtpylog</span>
+
+
+<div class="viewcode-block" id="deprecated"><a class="viewcode-back" href="../../../utils.html#pycsamt.utils.decorator.deprecated">[docs]</a><span class="k">class</span> <span class="nc">deprecated</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Description:</span>
+<span class="sd">            used to mark functions, methods and classes deprecated, and prints warning message when it called</span>
+<span class="sd">            decorators based on https://stackoverflow.com/a/40301488</span>
+
+<span class="sd">        Usage:</span>
+<span class="sd">            todo: write usage</span>
+
+<span class="sd">        Author: YingzhiGou</span>
+<span class="sd">        Date: 20/06/2017</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reason</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+        <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isclass</span><span class="p">(</span><span class="n">reason</span><span class="p">)</span> <span class="ow">or</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isfunction</span><span class="p">(</span><span class="n">reason</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Reason for deprecation must be supplied&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reason</span> <span class="o">=</span> <span class="n">reason</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cls_or_func</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+        <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isfunction</span><span class="p">(</span><span class="n">cls_or_func</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">cls_or_func</span><span class="p">,</span> <span class="s1">&#39;func_code&#39;</span><span class="p">):</span>
+                <span class="n">_code</span> <span class="o">=</span> <span class="n">cls_or_func</span><span class="o">.</span><span class="vm">__code__</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">_code</span> <span class="o">=</span> <span class="n">cls_or_func</span><span class="o">.</span><span class="vm">__code__</span>
+            <span class="n">fmt</span> <span class="o">=</span> <span class="s2">&quot;Call to deprecated function or method </span><span class="si">{name}</span><span class="s2"> (</span><span class="si">{reason}</span><span class="s2">).&quot;</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">_code</span><span class="o">.</span><span class="n">co_filename</span>
+            <span class="n">lineno</span> <span class="o">=</span> <span class="n">_code</span><span class="o">.</span><span class="n">co_firstlineno</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="k">elif</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isclass</span><span class="p">(</span><span class="n">cls_or_func</span><span class="p">):</span>
+            <span class="n">fmt</span> <span class="o">=</span> <span class="s2">&quot;Call to deprecated class </span><span class="si">{name}</span><span class="s2"> (</span><span class="si">{reason}</span><span class="s2">).&quot;</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">cls_or_func</span><span class="o">.</span><span class="vm">__module__</span>
+            <span class="n">lineno</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">cls_or_func</span><span class="p">))</span>
+
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">fmt</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">cls_or_func</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">reason</span><span class="p">)</span>
+
+        <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">cls_or_func</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">new_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+            <span class="kn">import</span> <span class="nn">warnings</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s1">&#39;always&#39;</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>  <span class="c1"># turn off filter</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn_explicit</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">DeprecationWarning</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span> <span class="n">lineno</span><span class="o">=</span><span class="n">lineno</span><span class="p">)</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s1">&#39;default&#39;</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>  <span class="c1"># reset filter</span>
+            <span class="k">return</span> <span class="n">cls_or_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">new_func</span></div>
+
+
+<span class="k">class</span> <span class="nc">gdal_data_check</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="n">_has_checked</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">_gdal_data_found</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">_logger</span> <span class="o">=</span> <span class="n">csamtpylog</span><span class="o">.</span><span class="n">get_csamtpy_logger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">raise_error</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        this decorator should only be used for the function that requres gdal and gdal-data</span>
+<span class="sd">        to function correctly.</span>
+
+<span class="sd">        the decorator will check if the GDAL_DATA is set and the path in GDAL_DATA is exist.</span>
+<span class="sd">        If GDAL_DATA is not set, then try to use external program &quot;gdal-config --datadir&quot; to</span>
+<span class="sd">        findout where the data files are installed.</span>
+
+<span class="sd">        If failed to find the data file, then ImportError will be raised.</span>
+
+<span class="sd">        :param func: function to be decorated</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_func</span> <span class="o">=</span> <span class="n">func</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_checked</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_gdal_data_found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_gdal_data</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_has_checked</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gdal_data_found</span><span class="p">:</span>
+            <span class="k">if</span><span class="p">(</span><span class="n">raise_error</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;GDAL  is NOT installed correctly&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;Ignore GDAL as it is not working. Will use pyproj&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_check_gdal_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s1">&#39;GDAL_DATA&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+            <span class="c1"># gdal data not defined, try to define</span>
+            <span class="kn">from</span> <span class="nn">subprocess</span> <span class="kn">import</span> <span class="n">Popen</span><span class="p">,</span> <span class="n">PIPE</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;GDAL_DATA environment variable is not set  Please see https://trac.osgeo.org/gdal/wiki/FAQInstallationAndBuilding#HowtosetGDAL_DATAvariable &quot;</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># try to find out gdal_data path using gdal-config</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Trying to find gdal-data path ...&quot;</span><span class="p">)</span>
+                <span class="n">process</span> <span class="o">=</span> <span class="n">Popen</span><span class="p">([</span><span class="s1">&#39;gdal-config&#39;</span><span class="p">,</span> <span class="s1">&#39;--datadir&#39;</span><span class="p">],</span> <span class="n">stdout</span><span class="o">=</span><span class="n">PIPE</span><span class="p">)</span>
+                <span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span> <span class="o">=</span> <span class="n">process</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+                <span class="n">exit_code</span> <span class="o">=</span> <span class="n">process</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">exit_code</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output</span><span class="p">):</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;GDAL_DATA&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">output</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Found gdal-data path: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">output</span><span class="p">))</span>
+                    <span class="k">return</span> <span class="kc">True</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                        <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">Cannot find gdal-data path. Please find the gdal-data path of your installation and set it to &quot;</span>
+                        <span class="s2">&quot;</span><span class="se">\&quot;</span><span class="s2">GDAL_DATA</span><span class="se">\&quot;</span><span class="s2"> environment variable. Please see &quot;</span>
+                        <span class="s2">&quot;https://trac.osgeo.org/gdal/wiki/FAQInstallationAndBuilding#HowtosetGDAL_DATAvariable for &quot;</span>
+                        <span class="s2">&quot;more information.&quot;</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;GDAL_DATA&#39;</span><span class="p">]):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;GDAL_DATA is set to: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;GDAL_DATA&#39;</span><span class="p">]))</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="kn">from</span> <span class="nn">osgeo</span> <span class="kn">import</span> <span class="n">osr</span>
+                    <span class="kn">from</span> <span class="nn">osgeo.ogr</span> <span class="kn">import</span> <span class="n">OGRERR_NONE</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Failed to load module osgeo; looks like GDAL is NOT working&quot;</span><span class="p">)</span>
+                    <span class="c1"># print (&quot;Failed to load module osgeo !!! &quot;)</span>
+
+                    <span class="k">return</span> <span class="kc">False</span>
+                <span class="c1"># end try</span>
+
+                <span class="k">return</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;GDAL_DATA is set to: </span><span class="si">{}</span><span class="s2">, but the path does not exist.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;GDAL_DATA&#39;</span><span class="p">]))</span>
+                <span class="k">return</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="redirect_cls_or_func"><a class="viewcode-back" href="../../../utils.html#pycsamt.utils.decorator.redirect_cls_or_func">[docs]</a><span class="k">class</span> <span class="nc">redirect_cls_or_func</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span> <span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Description:</span>
+<span class="sd">            used to redirected functions or classes. Deprecated functions or class </span>
+<span class="sd">            can call others use functions or classes.</span>
+<span class="sd">            </span>
+<span class="sd">        Usage:</span>
+<span class="sd">            .. todo:: use new function or class to replace old function method or class</span>
+<span class="sd">                with multiple parameters.</span>
+
+<span class="sd">        Author: @Daniel03</span>
+<span class="sd">        Date: 18/10/2020</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">_logger</span> <span class="o">=</span> <span class="n">csamtpylog</span><span class="o">.</span><span class="n">get_csamtpy_logger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        self.new_func_or_cls is just a message of deprecating </span>
+<span class="sd">        warning . It could be a name of new function  to let user </span>
+<span class="sd">        tracking its code everytime he needs . </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reason</span><span class="o">=</span><span class="p">[</span><span class="n">func_or_reason</span> <span class="k">for</span> <span class="n">func_or_reason</span> <span class="ow">in</span> <span class="n">args</span> <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">func_or_reason</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reason</span> <span class="ow">is</span> <span class="kc">None</span> <span class="p">:</span>
+            
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot; Redirected reason must be supplied&quot;</span><span class="p">)</span>
+        
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_new_func_or_cls</span> <span class="o">=</span> <span class="p">[</span><span class="n">func_or_reason</span> <span class="k">for</span> <span class="n">func_or_reason</span> <span class="ow">in</span> \
+                                 <span class="n">args</span> <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">func_or_reason</span><span class="p">)</span><span class="o">!=</span><span class="nb">str</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_new_func_or_cls</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot; At least one argument must be a func_method_or class.&quot;</span>
+                            <span class="s2">&quot;</span><span class="se">\b</span><span class="s2">ut it&#39;s </span><span class="si">%s</span><span class="s2">.&quot;</span><span class="o">%</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_new_func_or_cls</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2"> first input argument argument must be a func_method_or class.&quot;</span>
+                            <span class="s2">&quot;</span><span class="se">\b</span><span class="s2">ut it&#39;s </span><span class="si">%s</span><span class="s2">.&quot;</span><span class="o">%</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_new_func_or_cls</span><span class="p">))</span>
+            
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cls_or_func</span><span class="p">)</span>  <span class="p">:</span> <span class="c1">#pragma :no cover</span>
+
+        <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isfunction</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_new_func_or_cls</span><span class="p">)</span> <span class="p">:</span> 
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_new_func_or_cls</span><span class="p">,</span> <span class="s1">&#39;func_code&#39;</span><span class="p">):</span>
+                <span class="n">_code</span> <span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_new_func_or_cls</span><span class="o">.</span><span class="vm">__code__</span>
+                <span class="n">lineno</span><span class="o">=</span><span class="n">_code</span><span class="o">.</span><span class="n">co_firstlineno</span><span class="o">+</span><span class="mi">1</span>
+            <span class="k">else</span> <span class="p">:</span>
+                <span class="c1"># do it once the method is decorated method like staticmethods</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">_code</span> <span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_new_func_or_cls</span><span class="o">.</span><span class="vm">__code__</span> 
+                <span class="k">except</span> <span class="p">:</span> 
+                    <span class="k">pass</span>
+
+            <span class="n">lineno</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_new_func_or_cls</span><span class="o">.</span><span class="vm">__code__</span><span class="o">.</span><span class="n">co_firstlineno</span>
+            
+            <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;redirected decorated func/methods .&lt;</span><span class="si">{reason}</span><span class="s2">&gt; &quot;</span>\
+                <span class="s2">&quot;see line </span><span class="si">{lineno}</span><span class="s2">.&quot;</span>
+            
+        <span class="k">elif</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isclass</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_new_func_or_cls</span><span class="p">):</span> 
+            <span class="n">_code</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_new_func_or_cls</span><span class="o">.</span><span class="vm">__module__</span>
+            <span class="c1"># filename=os.path.basename(_code.co_filename)</span>
+            <span class="n">lineno</span><span class="o">=</span> <span class="mi">1</span>
+            
+            <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;redirected decorated class :&lt;</span><span class="si">{reason}</span><span class="s2">&gt; &quot;</span>\
+                <span class="s2">&quot;see line </span><span class="si">{lineno}</span><span class="s2">.&quot;</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="c1"># lineno=cls_or_func.__code__.co_firstlineno</span>
+            <span class="n">lineno</span><span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getframeinfo</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">currentframe</span><span class="p">())[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;redirected decorated method :&lt;</span><span class="si">{reason}</span><span class="s2">&gt; &quot;</span>\
+                <span class="s2">&quot;see line </span><span class="si">{lineno}</span><span class="s2">.&quot;</span>
+        
+        <span class="n">msg</span><span class="o">=</span><span class="n">fmt</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">reason</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reason</span><span class="p">,</span> <span class="n">lineno</span><span class="o">=</span><span class="n">lineno</span><span class="p">)</span>
+        <span class="c1"># print(msg)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="c1">#count variables : func.__code__.co_argscounts</span>
+            <span class="c1">#find variables in function : func.__code__.co_varnames</span>
+        <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">cls_or_func</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">new_func</span> <span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            
+            <span class="k">return</span> <span class="n">cls_or_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_new_func_or_cls</span></div>
+        
+
+            
+
+        
+            
+    
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyCSAMT v1.0.03 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2021, Kouadio K. Laurent.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.4.0.
+    </div>
+  </body>
+</html>

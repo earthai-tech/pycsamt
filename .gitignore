@@ -117,6 +117,8 @@ coverage.xml
 
 # spyder stuff:
 *.log
+.spyproject/config/backups/workspace.ini.bak
+.spyproject/config/workspace.ini
 
 # Sphinx documentation
 docs/_build/

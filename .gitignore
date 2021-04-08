@@ -9,6 +9,9 @@ docs/source/api/generated
 docs/gh-pages
 docs/_build*
 docs/_themes
+docs/_static
+docs/_templates 
+
 
 IPython/frontend/html/notebook/static/mathjax
 *.py[co]
@@ -71,6 +74,7 @@ OldWorks
 logs
 *.log
 
+
 # spyder project extension
 __pycache__/
 .spyproject/config/
@@ -122,7 +126,7 @@ coverage.xml
 *.log
 
 # Sphinx documentation
-docs/_build/
+#docs/_build/
 
 # PyBuilder
 target/
@@ -136,5 +140,5 @@ target/
 
 # ignore quick examples docs 
 #quick_examples/
-#_logfile/
+_logfile/
 add.info/

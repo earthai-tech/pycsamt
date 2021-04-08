@@ -43,4 +43,4 @@ For more information read the full documentation on [installing pycsamt](#pycsam
 
 ## Contributing
 
-If you would like to help modify or enhance the project, you’ll find more information on [issue template] file located in [git repository](https://github.com/WEgeophysics/pycsamt).
+If you would like to help modify or enhance the project, you’ll find more information on [issue template](https://github.com/WEgeophysics/pyCSAMT/blob/master/ISSUE_TEMPLATE.md) file located in [git repository](https://github.com/WEgeophysics/pycsamt).

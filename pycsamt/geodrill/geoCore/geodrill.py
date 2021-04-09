@@ -1176,7 +1176,7 @@ class Geodrill (object):
                  # actually will use the default pattern : Then check the resistivities inot geoelectrical 
                  #    propertty. if structures found , then took it pattern 
                   
-                for ii, ( keyprop , resprops)  in enumerate( pycsamt.geodrill.geo_rocks_properties.items ()) : 
+                for ii, ( keyprop , resprops)  in enumerate( Geodrill.geo_rocks_properties.items ()) : 
                     if min(resprops) <= res <= max(resprops) : #resprops)[-1] <= res <= resprops[0] :
                         if '/' in keyprop:  # split and search for their appropriate pattern
                             if res <= np.array(resprops).mean() : keyprop=keyprop.split('/')[1] # take the first na
@@ -1665,7 +1665,7 @@ class Geodrill (object):
             
         oas_pandas = pd.DataFrame(data=data_oasis, columns=depres_pandas_columns)
         
-        fex=0  # falg to write external files 
+        fex=0  # flag to write external files 
         if write_external_files is True :
             if input_layers is not None : self.input_layers = input_layers
             if step_descent is not None : self.step_descent = step_descent 
@@ -1723,7 +1723,7 @@ class Geodrill (object):
         if writeType.lower().find('exc')>= 0 or writeType.lower().find('xls')>=0 :
             writeType = '.xlsx'
             if fex ==1 :  # write all files into one worksheet 
-                with pd.ExcelWriter(''.join([filename + '_cor_oas',writeType])) as writer :
+                with pd.ExcelWriter(''.join([filename + '.main._cor_oas',writeType])) as writer :
                     for  sname , df_ in zip(['.main.', '_sd', '_rr', '_aver'],
                                             [oas_pandas, STD_pandas,ROUGH_pandas, AVER_pandas ]):
                         df_.to_excel(writer,sheet_name=sname, index =writeIndex)
@@ -1764,17 +1764,17 @@ class Geodrill (object):
             except : 
                 warnings.warn("It seems the path already exists !")
                 
-        #savefile inot it savepath 
+         
         if savepath is not None : 
             import shutil 
             try :
                 if fex ==2 : 
-                   shutil.move(os.path.join(os.getcwd(),''.join([filename,'_cor_oas', writeType])) ,
-                   os.path.join(savepath , ''.join([filename,'_cor_oas', writeType])))
+                   shutil.move(os.path.join(os.getcwd(),''.join([filename,'.main._cor_oas', writeType])) ,
+                   os.path.join(savepath , ''.join([filename,'.main._cor_oas', writeType])))
                 else : 
                     for jj, file in enumerate(  ['.main.', '_sd', '_rr', '_aver']):
                         if fex ==0 : 
-                            if jj ==1 : break # donc continue because other files does not exists  
+                            if jj ==1 : break # dont continue because other files does not exists  
                         shutil.move(os.path.join(os.getcwd(),
                                                  ''.join([filename, file, 
                                                           '_cor_oas', writeType])) ,
@@ -1809,23 +1809,23 @@ class Geodrill (object):
         print('** {0:<37} {1} {2} {3}'.format('maximum resistivity value','=',
                                               round(model_oasis_montaj.max(), 2), 'Ω.m' ))
    
-        print('** {0:<37} {1} {2} '.format('Lowest sation','=',self.station_names[ 
+        print('** {0:<37} {1} {2} '.format('Lowest station','=',self.station_names[ 
                                     int(np.where(nivelize_elevation==nivelize_elevation.min())[0])] ))
         
-        print('** {0:<37} {1} {2}'.format('Highest site','=', self.station_names[ 
+        print('** {0:<37} {1} {2}'.format('Highest station','=', self.station_names[ 
                                     int(np.where(nivelize_elevation==nivelize_elevation.max())[0])]))
         print('** {0:<37} {1} {2} {3}'.format('Altitude gap','=', nivelize_elevation.max(), 'm' ))
         print('** {0:<37} {1} {2}'.format('Number of running ','=', 
                                           len(depres_pandas_columns) * len(self.station_location)))
         
         
-        if fex ==0 : 
+        if fex ==0 or fex==2: 
             print('---> geo output file {0},  has been successfully written to  <{1}>.'.\
                   format(''.join([filename, '.main._cor_oas', writeType]), savepath))
         elif fex ==1 : #read external files 
 
             filenames =[ filename + file +'_cor_oas'+ writeType for file ,
-                        exten in zip(['main.', '_sd', '_rr', '_aver'], 
+                        exten in zip(['.main.', '_sd', '_rr', '_aver'], 
                                      [writeType for i in range(4)])]
                         
 
@@ -2803,8 +2803,10 @@ class Drill(object):
         #Try to check the name of sample and their acronym
         
         if path_to_agso_codefile is None:
-            path_to_agso_codefile= os.path.join(os.environ ['pyCSAMT'],
+            path_to_agso_codefile=os.path.join(os.path.abspath('.'), 'pycsamt', 
                                                 'geodrill','_geocodes' )
+            # os.path.join(os.environ ['pyCSAMT'],
+            #                                     'geodrill','_geocodes' )
        
             agsofilename=[file for file in os.listdir(path_to_agso_codefile) 
                           if file =='AGSO_STCODES.csv' ]
@@ -3255,7 +3257,7 @@ def ascertain_layers_with_its_resistivities(real_layer_names ,
          # get the last value of resistivities  to find the structres names ans structures sresistivities 
         sec_res = real_layer_resistivities[len(real_layer_names):]        
        
-        geos =pycsamt.geodrill.get_structure(resistivities_range=sec_res) # get the name of structure as possible 
+        geos =Geodrill.get_structure(resistivities_range=sec_res) # get the name of structure as possible 
         if len(geos)>1 : tm = 's'
         else :tm =''
         print('---> !We added other {0} geological struture{1}.'\

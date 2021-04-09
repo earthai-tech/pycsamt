@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-.Console scripts. 
+.Console scripts.
+ 
     $ python pycsamt write_occam2oasis
     
     write model occam2d file to oasis montaj file from input resistivities 

@@ -615,6 +615,8 @@ class Plot1d :
         csamt_res_obj= corr_obj.res_app_obj
         csamt_stn_num_obj = corr_obj.station_distance 
         stnnames =corr_obj.site_id 
+        if frequency_id is None :
+            frequency_id =corr_obj.referencefreq
 
         if ADD_FILTER =='*':
             
@@ -1022,7 +1024,7 @@ class Plot1d :
             
             plt.draw()
         
-    def penetrated1D(self, fn =None , profile_fn =None , 
+    def penetration1D(self, fn =None , profile_fn =None , 
                      selected_frequency =None,  **kwargs):
         """
         Pentration1D depth : Show skin depth at selected frequencies .
@@ -2754,7 +2756,7 @@ class Plot2d (object):
         
         
         plot_style =kwargs.pop('plot_style', None )
-        if plot_style is None : plot_style = 'imshow'#'pcolormesh'
+        if plot_style is None : plot_style = 'pcolormesh'
         
         
         show_contour =kwargs.pop('show_contour', False)
@@ -2762,7 +2764,7 @@ class Plot2d (object):
         contourcolors =kwargs.pop('contour_lines_colors', 'white')
         delineate_resistivity_curve =kwargs.pop('delineate_rho', None)
         grid_alpha =kwargs.pop('alpha', 0.5)
-        show_report=kwargs.pop('show_report', True)
+        show_report=kwargs.pop('show_report', False)
         
         set_station_label=kwargs.pop('show_station_id', True)
         
@@ -2883,10 +2885,11 @@ class Plot2d (object):
         
         
         #---------------------PLOTS STATEMENTS -----------------------------------------
+        
                 #fist option is "pcolormesh " 
+        self._logging.info ('Ready to plot Model with matplotlib "{0}" style.'.format(plot_style))     
         if plot_style =='pcolormesh':
             
-            self._logging.info ('Ready to plot Model with matplotlib "pcolormesh"')
             # if you keep plot_x_axis and plot_z_axis in meter , be sure to divided py dz 
             # meshes respectively 
             
@@ -2913,9 +2916,10 @@ class Plot2d (object):
                                     fontsize =self.font_size,
                                       )
             
-        self._logging.info ('Ready to plot Model with matplotlib "imshow"')
+        
         
         if plot_style.lower() =='imshow': 
+
             mesh_x  , mesh_z= np.meshgrid(plot_x_axis  , plot_z_axis )
 
             axm.imshow (occam_model_resistiviy_obj,

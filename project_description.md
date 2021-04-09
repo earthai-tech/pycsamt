@@ -18,7 +18,7 @@ as well as mapping the fault-zones etc.
 
 * [Purpose](#Purpose)
 
-pyCSAMT contains bacics steps and improve CSAMT standard data processing as well as the modeling using [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html).
+pyCSAMT contains basic steps and improves CSAMT standard data processing as well as the modeling using [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html).
 The software deals with more than 150  geological structures and electrical properties of rocks to generate a pseudo-stratigraphy 2D map to enhance geophysical interpretation especially in more geological complex area ( with various tectonic accidents). 
 
 

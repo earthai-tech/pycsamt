@@ -2,6 +2,7 @@
 """
 Created on Tue Apr  6 17:43:47 2021
     .Console scripts. 
+    
     $ python pycsamt plot_model_oc2d
     
  `**` before the default keys means to convrt input values into `float`

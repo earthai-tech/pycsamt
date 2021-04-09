@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
  .Console scripts. 
+ 
     $ python pycsamt plot_pseudolog
     
  `**` before the default keys means to convrt input values into float

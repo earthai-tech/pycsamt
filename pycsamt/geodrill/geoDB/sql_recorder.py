@@ -212,7 +212,7 @@ class GeoDataBase (object):
         :type geo_structure_name: str 
         
         """
-        mess ='--->"{}" Request successfully introduced ! '  
+        mess ='--->"{}" Querry  successfully executed ! '  
         
         if geo_structure_name is not None : self.geo_structure_name = geo_structure_name.lower() 
         

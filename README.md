@@ -29,6 +29,10 @@ and [GoldenSoftware](https://www.goldensoftware.com/products/surfer).
 
 ## Documentation 
 * API Documentation  : https://pycsamt.readthedocs.io/en/latest/
+* Home Page : https://github.com/WEgeophysics/pyCSAMT/wiki
+* Exercices: https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F
+* Installation : https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux
+
 
 ## Licence 
 pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/pyCSAMT/blob/master/LICENSE.md).
@@ -68,23 +72,36 @@ pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/p
 * Step Descent : SD param  in meter 
 * Input true resistivity in ohm-meter
 
-## A sample illustration using FLMA filter application 
-FLMA filter can be used  to estimate average apparent resistivities at a single static-correction-reference frequency.
-A  few line of codes yields the following output: 
+## A sample test using AMA and TMA  filter to correct raw *.edi files
+AMA  and TMA filter can be used  to estimate average apparent resistivities at a single static-correction-reference frequency.
+We firstly corrected all *.edi_ files at each station using the following line of codes:
+
 ```
->>> from viewer.plot import Plot2d
->>> edipath =data/                 # Current work directory assume to be os.path.join(os.environ["pyCSAMT"],'data')
->>> contourRes= 1000.              # contour delineation value in ohm.meters 
->>> plotStyle =None                # default `imshow` can be `pcolormesh`.
->>> for path2edi_obj in [data/edi, data/correctedEdi]:
+>>> from from pycsamt.ff.processing.corr import shifting
+>>> for _filter in ['tma', 'ama']:
+        corr_obj= shifting().write_corrected_edi(data_fn ='edi/data', 
+                             number_of_points =7.,
+                             reference_frequency=8192,      # in Hz
+                             number_of_skin_depth=7,  
+                             dipole_length =50.,            # in meter 
+                             FILTER=_filter, 
+                             )
+```
+Then use the corrected_edi outputs for pseudo-cross-section of resistivity and phase  plots and compare  the raw outputs with 
+the corrected outputs (`ama` & `tma`) 
+
+```
+>>> from pycsamt.viewer.plot import Plot2d
+>>> edipath ='data/edi'                     # Current work directory assume to be /pyCSAMT
+>>> contourRes= 1000.                       # resistivity contour delineation value in ohm.meters 
+>>> for path2edi_obj in ['data/edi', 'data/_outputFilteredEDI_TMA','data/_outputEDIFiltered_AMA']:
 >>>       Plot2d().pseudocrossResPhase(fn=path2edi_obj, 
                                 delineate_resistivity=contourRes,
                                 plot_style =plotStyle)
-...
-```
-![image](https://user-images.githubusercontent.com/59920007/111862592-33f6af00-8991-11eb-994d-43039d2345bb.png)
 
-Filters TMA  and AMA  can also applied to correct apparent resistivities. MT data can also be read and corrected using  `ss` for static shift removal and `dist` for distorsion removal.
+```
+
+click here to see the following output : [--> ref-output](#https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/corrected%20map%20with%20FLMA%20%20dipole%20length%2050%20m%207%20dipole%20reference%20frequency%208192.png)
 
 ## System requirements 
 * Python 3.6+ 
@@ -93,4 +110,4 @@ Filters TMA  and AMA  can also applied to correct apparent resistivities. MT dat
 Any suggestion to improve the software is welcome ...
 
 
-*_Developer's name:_ ***@Daniel03*** , _etanoyau@gmail.com_
+*_Developer's name: **_@Daniel03_**, _etanoyau@gmail.com_

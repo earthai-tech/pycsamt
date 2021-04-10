@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
     .Console scripts. 
+    
     $ python pycsamt occam2d_build_in 
     
     write  occam2d input files with edifiles.

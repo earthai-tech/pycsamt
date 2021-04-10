@@ -74,7 +74,7 @@ pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/p
 
 ## A sample test using AMA and TMA  filter to correct raw *.edi files
 AMA  and TMA filter can be used  to estimate average apparent resistivities at a single static-correction-reference frequency.
-We firstly corrected all *.edi_ files at each station using the following line of codes:
+We firstly corrected all _*.edi_ files at each station using the following line of codes:
 
 ```
 >>> from from pycsamt.ff.processing.corr import shifting
@@ -100,7 +100,7 @@ the corrected outputs (`ama` & `tma`)
                                 plot_style =plotStyle)
 
 ```
-click here to see the following output : [--> ref-output](#https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/corrected%20map%20with%20FLMA%20%20dipole%20length%2050%20m%207%20dipole%20reference%20frequency%208192.png)
+click [here](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/filterstests.png) to see the following output : [-->ref-output](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/filterstests.png)
 
 ## Geophysical interpretation enhancement 
 After inversion, if some geological informations are availbale such _true resistivities_ as well as the _true layer names_, used them to enhance your geophysical interpretation. 
@@ -108,9 +108,9 @@ This is possible using `plot_Pseudolog` function.
  
 ```
 >>> from pycsamt.viewer.plot  import Plot2d
->>> INPUT_LAYERS = ['river water', 'fracture zone', 'augen gneiss', 'altered rcoks', 'granite']
->>> INPUT_RESISTIVITIES =[66.,70., 180., 1235. , 2202., 7000.]
->>> STEP_DESCENT = 200 
+>>> INPUT_LAYERS = ['river water', 'fracture zone', 'augen gneiss', 'altered rocks', 'granite']  
+>>> INPUT_RESISTIVITIES =[66.,70., 180., 1235. , 2202., 7000.]        # in ohm.meters 
+>>> STEP_DESCENT = 200                                                # in meters
 >>> Plot2d().plot_Pseudolog( 
         mesh_fn= 'data/occam2D/Occam2DMesh',
         iter_fn = 'data/occam2D/ITER17.iter',
@@ -123,7 +123,8 @@ This is possible using `plot_Pseudolog` function.
                             doi ='1km')
 
 ```
-After applying the FDGC( Digital cartographic Standard for Geological Map Symbolization), click [here](#)  to see your interpretation map.
+After applying the FDGC( Digital cartographic Standard for Geological Map Symbolization), click [here](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/interpretation.PNG)  to see your interpretation map.
+
 
 ## System requirements 
 * Python 3.6+ 

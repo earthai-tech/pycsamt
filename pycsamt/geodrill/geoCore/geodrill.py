@@ -632,7 +632,7 @@ class Geodrill (object):
                                                '=' , tuple(self.input_resistivities  ) ))
         print('**{0:<37} {1} {2} {3}'.format(' Minimum rho ',
                                              '=' ,self.input_resistivities.min(), 'Ω.m' ))
-        print('**{0:<37} {1} {2} {3}'.format(' Minimum rho ',
+        print('**{0:<37} {1} {2} {3}'.format(' Maximum rho ',
                                              '=' , self.input_resistivities.max(), 'Ω.m' ))
        
         # so to get the structures for each input resistivities 

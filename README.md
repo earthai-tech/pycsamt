@@ -100,7 +100,7 @@ the corrected outputs (`ama` & `tma`)
                                 plot_style =plotStyle)
 
 ```
-click here to see the following output : [--> ref-output](#https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/corrected%20map%20with%20FLMA%20%20dipole%20length%2050%20m%207%20dipole%20reference%20frequency%208192.png)
+click here to see the following output : [-->ref-output](#https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/filterstests.png)
 
 ## Geophysical interpretation enhancement 
 After inversion, if some geological informations are availbale such _true resistivities_ as well as the _true layer names_, used them to enhance your geophysical interpretation. 
@@ -123,7 +123,8 @@ This is possible using `plot_Pseudolog` function.
                             doi ='1km')
 
 ```
-After applying the FDGC( Digital cartographic Standard for Geological Map Symbolization), click [here](#)  to see your interpretation map.
+After applying the FDGC( Digital cartographic Standard for Geological Map Symbolization), click [here](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/interpretation.PNG)  to see your interpretation map.
+
 
 ## System requirements 
 * Python 3.6+ 

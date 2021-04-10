@@ -100,8 +100,30 @@ the corrected outputs (`ama` & `tma`)
                                 plot_style =plotStyle)
 
 ```
-
 click here to see the following output : [--> ref-output](#https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/corrected%20map%20with%20FLMA%20%20dipole%20length%2050%20m%207%20dipole%20reference%20frequency%208192.png)
+
+## Geophysical interpretation enhancement 
+After inversion, if some geological informations are availbale such _true resistivities_ as well as the _true layer names_, used them to enhance your geophysical interpretation. 
+This is possible using `plot_Pseudolog` function.
+ 
+```
+>>> from pycsamt.viewer.plot  import Plot2d
+>>> INPUT_LAYERS = ['river water', 'fracture zone', 'augen gneiss', 'altered rcoks', 'granite']
+>>> INPUT_RESISTIVITIES =[66.,70., 180., 1235. , 2202., 7000.]
+>>> STEP_DESCENT = 200 
+>>> Plot2d().plot_Pseudolog( 
+        mesh_fn= 'data/occam2D/Occam2DMesh',
+        iter_fn = 'data/occam2D/ITER17.iter',
+        model_fn = 'data/occam2D/Occam2DModel',
+        data_fn = 'data/occam2D/OccamDataFile.dat' , 
+                            station_id= 'S43', 
+                            input_resistivities=INPUT_RESISTIVITIES, 
+                            input_layers =INPUT_LAYERS,
+                            step_descent =STEP_DESCENT,
+                            doi ='1km')
+
+```
+After applying the FDGC( Digital cartographic Standard for Geological Map Symbolization), click [here](#)  to see your interpretation map.
 
 ## System requirements 
 * Python 3.6+ 

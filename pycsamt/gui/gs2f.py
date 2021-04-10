@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 .Console scripts. 
+
     $ python pycsamt write_occam2golden
     
     write model occam2d file to golden software file from input resistivities 

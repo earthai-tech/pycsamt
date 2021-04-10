@@ -108,7 +108,7 @@ This is possible using `plot_Pseudolog` function.
  
 ```
 >>> from pycsamt.viewer.plot  import Plot2d
->>> INPUT_LAYERS = ['river water', 'fracture zone', 'augen gneiss', 'altered rocks', 'granite'] # layer names collected during the field
+>>> INPUT_LAYERS = ['river water', 'fracture zone', 'augen gneiss', 'altered rocks', 'granite'] # layer' names collected 
 >>> INPUT_RESISTIVITIES =[66.,70., 180., 1235. , 2202., 7000.]        # in ohm.meters 
 >>> STEP_DESCENT = 200                                                # in meters
 >>> Plot2d().plot_Pseudolog( 

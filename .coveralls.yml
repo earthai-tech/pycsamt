@@ -1,3 +1,4 @@
 
-pycsamt_token: GJ4QmR6zowQYq1rrHn5UGdvCGnqpPvhuFoSkC
+repo_token: repo_token: MH9MwX8wijZb9T1kgNK1vYDncJ1cW4cTt
+#pycsamt_token: GJ4QmR6zowQYq1rrHn5UGdvCGnqpPvhuFoSkC
 parallel: true  # merge the result from parallel build on travis

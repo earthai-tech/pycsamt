@@ -8,5 +8,5 @@ numpydoc>=1.0.0
 pytest
 flake8
 pyyaml
-pyproj==1.9.6
+pyproj>=1.9.6
 pandas

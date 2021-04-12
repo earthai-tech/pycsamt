@@ -29,9 +29,9 @@ install:
     
 # command to run tests
 script:
-    #- python -m unittest discover tests/
+    - python -m unittest discover tests/
     #- pytest -v --cov=mtpy --cov-report= tests/
-    - pytest -v --cov=pyCSAMT --cov-report= tests/ # --ignore=tests/SmartMT
+    #- pytest -v --cov=pyCSAMT --cov-report= tests/ # --ignore=tests/SmartMT
     
 after_success:
   - coveralls

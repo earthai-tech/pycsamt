@@ -23,7 +23,8 @@ install:
     - pip install --user -r requirements.txt #ip install --user -r requirements.txt fi python language is not used 
                                             # add --use-feature=2020-resolver if before install is uncommented 
     - pip install configparser
-
+    - pip install codecov
+    
     
 # command to run tests
 script:
@@ -32,3 +33,7 @@ script:
     - python -m unittest discover tests/
     #- pytest -v --cov=pyCSAMT --cov-report= tests/
     # - pytest -v --cov=pyCSAMT --cov-report= tests --ignore=tests/modeling/test_occam2d_models.py
+    - python -m pytest  --cov-report term --cov=app
+    
+after_success:
+  - codecov

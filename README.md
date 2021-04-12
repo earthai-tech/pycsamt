@@ -140,12 +140,14 @@ For instance :
 
 ## Contributors
   
-1. Key Laboratory of Geoscience Big Data and Deep Resource of Zhejiang Province , School of Earth Sciences, Zhejiang University, China
-2. Department of Geophysics, School of Geosciences and Info-physics, Central South University, China
-3. Laboratoire de Géophysique Appliquée, UFR des Sciences de la Terre et des Ressources Minières, Université Félix Houphouët-Boigny, Cote d'Ivoire
+a. Key Laboratory of Geoscience Big Data and Deep Resource of Zhejiang Province , School of Earth Sciences, Zhejiang University, China
 
-* _Developer's name_: 1,3. [_**@Daniel03**_](kkouao@zju.edu.cn), etanoyau@gmail.com_
-* _Contibutors name_:
+b. Department of Geophysics, School of Geosciences and Info-physics, Central South University, China
+
+c. Laboratoire de Géophysique Appliquée, UFR des Sciences de la Terre et des Ressources Minières, Université Félix Houphouët-Boigny, Cote d'Ivoire
+
+* Developer's name: a,c. [_**Kouadio K. Laurent**_](kkouao@zju.edu.cn), _etanoyau@gmail.com_
+* Contibutors' names:
     * 2. [_**Liu RONG**_](liurongkaoyang@126.com) 
     * 1. [_**BinBin MI**_](mibinbin@zju.edu.cn)
     * 2. [_**Chun-Ming LIU**_](lifuming001@163.com)

@@ -33,7 +33,8 @@ script:
     - python -m unittest discover tests/
     #- pytest -v --cov=pyCSAMT --cov-report= tests/
     # - pytest -v --cov=pyCSAMT --cov-report= tests --ignore=tests/modeling/test_occam2d_models.py
-    - python -m pytest  --cov-report term --cov=app
+    # - python -m pytest  --cov-report term --cov=app
+    - pytest -v --cov=mtpy --cov-report= tests/
     
 after_success:
   - codecov

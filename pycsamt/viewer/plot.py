@@ -3606,7 +3606,9 @@ class Plot2d (object):
         default_unknow_lcolor =kwargs.pop('unknow_layer_color', 'white')
         default_unknow_lpattern = kwargs.pop('unknow_layer_pattern', '+.+.+.')
         
-        
+        for key in list(kwargs.keys()):
+            setattr(self, key, kwargs[key]) 
+            
         # ----------------- Ascertainment of differents files --------------------------
         f,p=0,0                 # indicator with file provided for reading , program withcheck the corresponding files 
                                 # even mayfiles is provied , default is read Occam 2D files 
@@ -3620,12 +3622,16 @@ class Plot2d (object):
             if mm is not None : 
                 setattr(self, nn, mm)
                 f +=1
+            elif hasattr( Plot2d, mm):
+                f +=1
             else :  imf.append(nn)
         
         if f !=4 : 
             for nn, mm in zip(['iter2dat_fn', 'bln_fn'], [iter2dat_fn, bln_fn]): 
                 if mm is not None : 
                     setattr(self, nn, mm)
+                    p +=1
+                elif hasattr( Plot2d, mm):
                     p +=1
                 else :imp.append(nn)
                     

@@ -1,7 +1,9 @@
 # pyCSAMT (Python  for Controlled Source Audio-frequency Magnetotellurics )
 [![Documentation Status](https://readthedocs.org/projects/pycsamt/badge/?version=latest)](https://pycsamt.readthedocs.io/en/latest/?badge=latest) [![Build Status](https://travis-ci.com/WEgeophysics/pyCSAMT.svg?branch=master)](https://travis-ci.com/WEgeophysics/pyCSAMT) [![Requirements Status](https://requires.io/github/WEgeophysics/pyCSAMT/requirements.svg?branch=master)](https://requires.io/github/WEgeophysics/pyCSAMT/requirements/?branch=master)
  [![Coverage Status](https://coveralls.io/repos/github/WEgeophysics/pyCSAMT/badge.svg?branch=master)](https://coveralls.io/github/WEgeophysics/pyCSAMT?branch=master)    
-
+ [![GitHub](https://img.shields.io/github/license/WEgeophysics/pyCSAMT?color=blue&logo=GNU&logoColor=red)
+ [![GitHub release (latest by date)](https://img.shields.io/github/v/release/WEgeophysics/pyCSAMT?color=orange)
+ [![GitHub all releases](https://img.shields.io/github/downloads/WEgeophysics/pyCSAMT/total?color=green)
 
 ## Overview 
 
@@ -112,24 +114,37 @@ using `pycsamt.geodrill.geoCore.geodrill.to_golden_software ` or `pycsamt.geodri
 For instance :
  
 ```
+>>> from  pycsamt.viewer.plot import Plot2d
 >>> from pycsamt.geodrill.geoCore.geodrill import Geodrill 
->>> INPUT_LAYERS = ['river water', 'fracture zone', 'augen gneiss', 'altered rocks', 'granite']  
->>> INPUT_RESISTIVITIES =[66.,70., 180., 1235. , 2202., 7000.]      # in ohm.meters 
->>> STEP_DESCENT = 200                                              # in meters. see code implementation to get more info about this parameters. 
->>> inversion_kwargs =[                                             # occam2D inversion files of survey line
-                    mesh_fn: 'data/occam2D/Occam2DMesh',
-                    iter_fn : 'data/occam2D/ITER17.iter',
-                    model_fn : 'data/occam2D/Occam2DModel',
-                    data_fn : 'data/occam2D/OccamDataFile.dat'
-                    ]                                 
->>> Geodrill( **inversion_kwargs , 
-                 input_resistivities=INPUT_RESISTIVITIES, 
-                 input_layers =INPUT_LAYERS ,
-                 step_descent =STEP_DESCENT,
-                 doi ='1km'                                  # depth of investigation 
-                        ).to_golden_software(filename ='some-where-place',  # survey area name
-                                            to_negative_depth='True')       # export depth to negative value
 
+>>> INPUT_LAYERS = ['river water', 'fracture zone', 'augen gneiss', 'altered rocks', 'granite']  # layers' names collected 
+>>> INPUT_RESISTIVITIES =[66.,70., 180., 1235. , 2202., 7000.]      #  True resistivity values in ohm.meters collected 
+>>> STEP_DESCENT = 200                                              # in meters. see code implementation to get more info about this parameters. 
+>>> inversion_kwargs ={                                             # occam2D inversion files of 'some-where-place' survey line.
+                    'mesh_fn': 'data/occam2D/Occam2DMesh',
+                    'iter_fn' : 'data/occam2D/ITER17.iter',
+                    'model_fn' : 'data/occam2D/Occam2DModel',
+                    'data_fn' : 'data/occam2D/OccamDataFile.dat'
+                    } 
+>>> geo_inputs_kwargs={'input_resistivities':INPUT_RESISTIVITIES, 
+                 'input_layers' : INPUT_LAYERS,
+                 'step_descent' : STEP_DESCENT,
+                 'doi' ='1km'                   # depth of investigation 
+                 } 
+                     
+# ---> plot Peudolog station by stations:
+ 
+>>> Plot2d().plot_Pseudolog(station_id ='S43',  # station to visualize , can be integer as station_id = 44(43+1)
+                        **inversion_kwargs , 
+                        **geo_inputs_kwargs)     
+                        
+# ---> write new model of some-where-place area survey line :
+                                         
+>>> Geodrill( **inversion_kwargs , 
+            **geo_inputs_kwargs).to_golden_software(filename ='some-where-place',  # survey area name
+                                            to_negative_depth='True')       # export depth to negative value
+                                                   
+                       
 ```
 * **Note** : Inversion input-files can be generated from _*.edi_ files using `pycsamt.modeling.occam2d.occam2d_write.buildingInputfiles` from `modeling.occam2d` module . 
             After applying the FDGC( Digital cartographic Standard for Geological Map Symbolization), click [here](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/interpretation.PNG)  to see your expected interpretation map.
@@ -140,13 +155,13 @@ For instance :
 
 ## Contributors
   
-a. Key Laboratory of Geoscience Big Data and Deep Resource of Zhejiang Province , School of Earth Sciences, Zhejiang University, China
+1. Key Laboratory of Geoscience Big Data and Deep Resource of Zhejiang Province , School of Earth Sciences, Zhejiang University, China
 
-b. Department of Geophysics, School of Geosciences and Info-physics, Central South University, China
+2. Department of Geophysics, School of Geosciences and Info-physics, Central South University, China
 
-c. Laboratoire de Géophysique Appliquée, UFR des Sciences de la Terre et des Ressources Minières, Université Félix Houphouët-Boigny, Cote d'Ivoire
+3. Laboratoire de Géophysique Appliquée, UFR des Sciences de la Terre et des Ressources Minières, Université Félix Houphouët-Boigny, Cote d'Ivoire
 
-* Developer's name: a,c. [_**Kouadio K. Laurent**_](kkouao@zju.edu.cn), _etanoyau@gmail.com_
+* Developer's name: 1,3. [_**Kouadio K. Laurent**_](kkouao@zju.edu.cn), _etanoyau@gmail.com_
 * Contibutors' names:
     * 2. [_**Liu RONG**_](liurongkaoyang@126.com) 
     * 1. [_**BinBin MI**_](mibinbin@zju.edu.cn)

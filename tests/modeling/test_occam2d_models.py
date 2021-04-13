@@ -203,7 +203,7 @@ class OtherModelingTest(unittest.TestCase) :
             self.iter_roughness= i2d_obj.iter_roughness
             try :
                 i2d_obj.write_iter2dat_file(filename =None,
-                                   doi='1km', 
+                                   doi=1000., #1km
                                    savepath=os.path.join(self._expected_save_dir,
                                                          self.__class__.__name__ )
                                    )
@@ -258,7 +258,8 @@ class OtherModelingTest(unittest.TestCase) :
             
             
 if __name__=='__main__':
-
+    # ttt= OtherModelingTest()
+    # ttt.test_write_xyz_modelfile()
     unittest.main()
     
    

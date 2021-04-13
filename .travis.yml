@@ -32,7 +32,7 @@ script:
     #- python -m unittest discover tests/
     #- pytest -v --cov=mtpy --cov-report= tests/
     - pytest -v --cov=pyCSAMT --cov-report= tests/  --ignore=pycsamt/
-    - python -m pytest --cov=. --cov-fail-under=90      # coveral fail threshold 90%
+    - python -m pytest --cov=. --cov-fail-under=25      # coveral fail threshold 90%
     #- coverage run --source=home tests/
     
 after_success:

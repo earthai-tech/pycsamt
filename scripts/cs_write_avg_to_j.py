@@ -10,7 +10,7 @@ Created on Wed Jan  6 13:49:02 2021
 
 import os 
 
-from csamtpy.ff.core.avg import Avg 
+from pycsamt.ff.core.avg import Avg 
 
 #---> path to your avg file 
 path = r'C:\Users\Administrator\Desktop\test\avg_toj'

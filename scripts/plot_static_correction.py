@@ -17,17 +17,20 @@ Created on Tue Jan 19 16:57:08 2021
 
 """
 import os 
-from viewer.plot import Plot1d 
+from pycsamt.viewer.plot import Plot1d 
 
 #--- > path to your file 
 
-path_to_file = os.path.join(os.environ['pyCSAMT'],'data','avg','K1.AVG') 
+path_to_file = os.path.join(os.environ['pyCSAMT'],'data','avg','K1.AVG')
+
+#path_to_file = r'C:\Users\Administrator\Desktop\ThesisImp\edis\K9_edi' 
 #path_to_file =os.path.join(os.environ['pyCSAMT'],'data', 'edi' )
                            
-
+#save figure 
+savefigure = r'C:\Users\Administrator\Desktop\ThesisImp\plots\correction\K9.png'
 # stn station profile file 
-profile_stn = os.path.join(os.environ['pyCSAMT'],'data','avg','K1.stn')
-#profile_stn =None  #  
+#profile_stn = os.path.join(os.environ['pyCSAMT'],'data','avg','K1.stn')
+profile_stn =None  #  
 
 FILTER='*'                   # Can be `tma` or `flma`
 
@@ -44,7 +47,7 @@ FILERpoints = 7.
 reference_frequency =8192.
 
 # can fill between to delineate the correction effect 
-fillBetween =True 
+fillBetween =False 
 
 #customize plots 
 fill_between_color= 'thistle'
@@ -76,7 +79,8 @@ rhoplot_obj.plot_static_correction(data_fn =path_to_file ,
                                     fill_between_color= fill_between_color, 
                                     tma_color=tma_color, 
                                     flma_color= flma_color,
-                                    number_of_skin_depth = number_of_skinDepth)
+                                    number_of_skin_depth = number_of_skinDepth, 
+                                    savefig =savefigure)
 
 
 

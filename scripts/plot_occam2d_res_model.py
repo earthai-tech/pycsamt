@@ -11,7 +11,7 @@ Created on Fri Feb  5 21:53:08 2021
 """
 import os  
 
-from viewer.plot import Plot2d
+from pycsamt.viewer.plot import Plot2d
 
 
 # path to OCCAM 2D folder 

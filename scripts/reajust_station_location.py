@@ -7,7 +7,7 @@ Created on Tue Jan  5 17:38:54 2021
 @author: @Daniel03
 """
 import os 
-from csamtpy.ff.core.cs import Profile as prof_obj
+from pycsamt.ff.core.cs import Profile as prof_obj
 
 # --- > path to  your stn file
 path =os.path.join(os.environ['pyCSAMT'], 'data', 'stn_profiles') 

@@ -10,7 +10,7 @@ Created on Thu Jan 21 21:20:39 2021
 """
 
 import os 
-from viewer.plot import Plot2d
+from pycsamt.viewer.plot import Plot2d
 
 
 #----path to your EDI|J|AVG 
@@ -20,10 +20,15 @@ avgfile = 'K1.AVG' # can plot directly from avg using path path below :
 
 # path to EDifile or jfile 
 pathfile  = os.path.join(os.environ["pyCSAMT"], 'data', 'j') 
+
 #pathfile  = os.path.join(os.environ["pyCSAMT"],'data', 'correctedEDI') # test with corrected edi
 
+#save figure 
+savefigure = None # r'C:\Users\Administrator\Desktop\ThesisImp\plots\penetration2D\K6_2.png'
+
 #---If path points to avg file . bring  also profile file . 
-profile_file = 'K1.stn' 
+#profile_file = 'K1.stn' 
+
 #profile_stn =os.path.join(os.environ["pyCSAMT"], 'data', 'avg', profile_file)
 # otherwise set to None 
 profile_stn = None          
@@ -41,6 +46,6 @@ plot2d_obj= Plot2d()
 
 plot2d_obj.penetration2D(fn = pathfile, 
                          profile_fn= profile_stn ,
-                             plot_style=plotStyle,  
-                             doi=imageDepth , 
-                             )
+                         plot_style=plotStyle,  
+                        doi=imageDepth , 
+                            savefig=savefigure )

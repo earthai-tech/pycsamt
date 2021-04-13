@@ -16,23 +16,24 @@ Created on Sat Jan 16 19:55:58 2021
 """
 
 import os 
-from csamtpy.ff.core import avg 
+from pycsamt.ff.core import avg 
 
 
 #--> path to avg file : example where avg file  is located
 # avg file and station profile file must be located in the same path  
-path_to_avgfile =os.path.join(os.environ ['pyCSAMT'], 'data', 'avg') 
-
+#path_to_avgfile =os.path.join(os.environ ['pyCSAMT'], 'data', 'avg') 
+path_to_avgfile= r'C:\Users\Administrator\Desktop\ThesisImp\avg'
 #--savepath :
-save_edipath = None         #r'C:\Users\Administrator\Desktop\test\edi_from_avg'
-
+#save_edipath =  None         #r'C:\Users\Administrator\Desktop\test\edi_from_avg'
+save_edipath =r'C:\Users\Administrator\Desktop\ThesisImp\edis\K9_edi'
 #path to Zonge AVG file
-avgfile = 'K1.AVG'
+
+avgfile = 'K9.AVG'
 #--- > add profile file : 
-station_profile_file = 'K1.stn'
+station_profile_file = 'K9_reaj.stn'
 
 #---Appply filter . 
-add_filter = 'ama'              # can be "tma", 'flma' or "ama" filters , if filter is not None
+add_filter = None              # can be "tma", 'flma' or "ama" filters , if filter is not None
                                 # will compute FRHO
 #------------------------------------------------------------------------------
 # when applied filter , can set the number of points for FLMA or TMA filter and number of skin depth 

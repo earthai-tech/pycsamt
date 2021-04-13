@@ -4,7 +4,7 @@
     Engineering file. If such file is not at available , use 
     module  `rewrite_station_profile` from Profile class  to write *.stn file
     so to call it directly. 
-        ::>>> from csamtpy.pyCS.core.cs import Profile 
+        ::>>> from pycsamt.pyCS.core.cs import Profile 
         :::Profile.rewrite_station_profile(easting , northing, **kws) :: 
     User can provide also provide  `X`, `Y` coordinates
     for each survey  lines  on a list of eastings and northings.
@@ -17,19 +17,27 @@ Created on Mon Feb 22 22:14:59 2021
 @author: @Daniel03
 """
 import os 
-from viewer.plot import Plot1d
+from pycsamt.viewer.plot import Plot1d
 
 
 # path to station profiles files 
 
 path_to_profiles = os.path.join(os.environ['pyCSAMT'], 'data', 'stn_profiles')
-
+#path_to_profiles = r'C:\Users\Administrator\Desktop\ThesisImp\K_reaj'
 # profile_lines : specify the different lines , you want to plot 
 profile_lines = ['K9.stn', 'K8.stn']           # if Will plot all survey lines 
                                                 # located on path_to_profiles 
                                                 #directory 
-                                                
+# path to save figure 
+savefig = r'C:\Users\Administrator\Desktop\ThesisImp\plots\stations\ZHS.png'
 
+                                                
+# profile_lines =[
+#                 # 'K1_reaj.stn', 'K2_reaj.stn', 'K3_reaj.stn', 
+#                 # 'K4_reaj.stn', 'K5_reaj.stn', 
+#                 'K6_reaj.stn', 
+#                 'K7_reaj.stn', 'K8_reaj.stn', 'K9_reaj.stn'
+#                 ]
 #scaled the lines : scale :
 scale ='km'                     # can be `m` or `km` . Default is `m`
 
@@ -37,14 +45,13 @@ scale ='km'                     # can be `m` or `km` . Default is `m`
 show_station_labels = True                  # default is TRue  
 
 
-# path to save figure 
-savefig = None  
+ 
 figsize  =[5,3]                 # figure size 
     
 # call object 
 plot1d_obj = Plot1d( fig_size =figsize)
 plot1d_obj.plot_multiStations(path = path_to_profiles, 
-                              # profile_lines =profile_lines, 
+                               # profile_lines =profile_lines, 
                               scale =scale, 
                               savefig =savefig, 
                               show_station_labels = show_station_labels )

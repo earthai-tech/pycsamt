@@ -9,18 +9,19 @@ Created on Wed Jan 20 15:00:33 2021
 @author: @Daniel03
 """
 import os 
-from viewer.plot import Plot1d 
+from pycsamt.viewer.plot import Plot1d 
 
 
 #-----> path to your files , may be ED|J|OR AVG file 
-filespath = os.path.join(os.environ ['pyCSAMT'], 'data', 'edi')
+#filespath = os.path.join(os.environ ['pyCSAMT'], 'data', 'edi')
+filespath= r'C:\Users\Administrator\Desktop\ThesisImp\edis\_special_K6_edi\K6_edi_rew'
 
 #--> profile station file . Necessary if you bring AVG file 
 profile_stn =None
 # savefigure path 
-savefig =None 
+savefig =r'C:\Users\Administrator\Desktop\ThesisImp\plots\penetration1D\k6\k6.png'
 # -- > selected frequencies 
-selected_frequencies =[ 1024, 3010, 8000 ]            # for single frequency , you dont need to put on list 
+selected_frequencies =[ 1024, 3000, 8000 ]            # for single frequency , you dont need to put on list 
 
 #rotate station name in angle 
 rotstn =90 
@@ -32,7 +33,7 @@ orient = 'landscape'
 #-- define plot_obj 
 
 plot_1d_obj =Plot1d()
-plot1d_depth = plot_1d_obj.penetrated1D(fn =filespath ,
+plot1d_depth = plot_1d_obj.penetration1D(fn =filespath ,
                                         profile_fn= profile_stn, 
                                         selected_frequency =selected_frequencies, 
                                         rename_station =new_station_names, 

@@ -7,7 +7,7 @@ Created on Tue Feb 23 13:15:59 2021
 """
 
 import os 
-from csamtpy.ff.core.edi import Edi
+from pycsamt.ff.core.edi import Edi
 
 
 # Directory where edifiles are located 

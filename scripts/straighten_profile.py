@@ -23,18 +23,18 @@ Created on Fri Jan 29 18:57:32 2021
 
 """
 import os 
-from viewer.plot import Plot1d
-from csamtpy.ff.core.cs import Profile
+from pycsamt.viewer.plot import Plot1d
+from pycsamt.ff.core.cs import Profile
 
 # full path to your profile file : stn 
 path =  os.path.join(os.environ["pyCSAMT"],# 'STN-28800_reaj.stn')
                       'data', 'avg', 'K1.stn')            # change your path 
-#path =r'C:\Users\Administrator\Desktop\ThesisImp\raw_stn_file\K9.stn'
+path =r'C:\Users\Administrator\Desktop\ThesisImp\raw_stn_file\K6.stn'
 #saveyour figure path 
 savepath = None                 #r'C:\Users\Administrator\Desktop\ThesisImp\K_reaj'
 
 # if stn file is not available , set CREATE to True and REAJUST to False
-# Then you will generate your own stn file rfor reajusting coordinates
+# Then you will generate your own stn file for reajusting coordinates
 CREATE =False
 REAJUST=True 
 # choose the type to straithen your profile 
@@ -44,7 +44,7 @@ X = 0.                                  # correct easting value : eg : X =300238
 Y = 0.                                  # correct northing coordinates : eg Y = 2369.252
 
 # set to True if ou want to output new coordinates values 
-ouputnew_stnfile = True
+ouputnew_stnfile = False
 #===============================================================================================
 # if Zonge *.stn file is available , dont need to fill this part , set only REAJUST to True.
 easting = None                         # (ndarray, 1) or list # station easting coordinates(required) 

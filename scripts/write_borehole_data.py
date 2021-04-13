@@ -15,7 +15,7 @@ Created on Sun Feb 21 19:26:21 2021
 """
 
 import os 
-from geodrill.geoCore.geodrill import Drill 
+from pycsamt.geodrill.geoCore.geodrill import Drill 
 
 
 path_to_parser_files =os.path.join(os.environ['pyCSAMT'], 

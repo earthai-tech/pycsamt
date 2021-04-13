@@ -22,7 +22,7 @@ by: @Daniel03
 
 """
 
-from  csamtpy.modeling.occam2d import occam2d_write
+from  pycsamt.modeling.occam2d import occam2d_write
 
 import os
 

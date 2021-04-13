@@ -24,14 +24,16 @@ Created on Mon Feb 15 13:25:21 2021
 @author: @Daniel03
 """
 import os 
-from viewer.plot import Plot2d 
+from pycsamt.viewer.plot import Plot2d 
 
 # path to OCCAM 2D folder 
-path =os.path.join(os.environ ['pyCSAMT'], 'data', 'occam2D')
-path2 =os.path.join(os.environ ['pyCSAMT'], 'data', '_iter2dat_2')
+#path =os.path.join(os.environ ['pyCSAMT'], 'data', 'occam2D')
+path = r'C:\Users\Administrator\Desktop\ThesisImp\occam2D\invers+files\inver_res\K8'
+#path2 =os.path.join(os.environ ['pyCSAMT'], 'data', '_iter2dat_2')
 
 #savefigure path
-savefigure =None              # path to save fig
+#savefigure =None              # path to save fig
+savepath =r'C:\Users\Administrator\Desktop\ThesisImp\golden_software\K8_edi'
 # scale the output data 
 scale= None                # if None : default is "m" .can be [m|km]
 
@@ -40,7 +42,7 @@ DOI = '1km'                 #  can be float like 1000 = 1km
 
 
 # provided station id or number 
-station_to_plot = 10      # can be the station id like "S22" or 23 means the site number 23
+station_to_plot = -1      # can be the station id like "S22" or 23 means the site number 23
 
 # Main parameters : value must be less or eagl of DOI. if step =DOi WILL return your Occam model files.
 STEP_DESCENT = 200.         # float value. Step to cut out data and to  force resistivites calcualted 
@@ -49,13 +51,14 @@ STEP_DESCENT = 200.         # float value. Step to cut out data and to  force re
 
 # Truth resistivities values otained on the sites or from other companies
 #COMPULSORY parameter  
-INPUT_RESISTIVITIES = [312, 525, 1235., 2202., 4000, 7000.]   # list of resistivites values : order is insensitives 
+#INPUT_RESISTIVITIES = [312, 525, 1235., 2202., 4000, 7000.]   # list of resistivites values : order is insensitives 
+INPUT_RESISTIVITIES = [66,70, 180, 1000, 3000, 10000, 20000] 
 
 # Truth layer names if given must match the input resistivities 
 # if nname of layers not provided, program will seek in dataBase to find
 # the name of layer whom its resistivities is much closer to abose 
-INPUT_LAYERS = ['alluvium', 'amphibolite','altered rock','augen gneiss', 'granite'] #
-                                              
+#INPUT_LAYERS = ['alluvium', 'amphibolite','altered rock','augen gneiss', 'granite'] #
+INPUT_LAYERS = ['river zone', 'fracture zone' , 'granite ', 'Most Weathered', 'Less Weathered'] #                                              
 
 #-----Read Occam 2D output files  ---------
 # path to occam Data file
@@ -67,7 +70,7 @@ path_to_occam_mesh = 'Occam2DMesh'
 # path to occam Model file 
 path_to_occam_model = 'Occam2DModel'
 # path to Occam Iteration file 
-path_to_occam_iter='ITER17.iter'
+path_to_occam_iter='ITER12.iter'
 
 # ---------------Read with Iter2DAT FILE ------------------
 
@@ -85,7 +88,7 @@ station_label_rotation = None
 show_grid =True 
 font_size = 8. 
 lc = 'r'
-fig_size =[8,8]
+fig_size =[5,5]
 markeredgecolor ='k'
 markerfacecolor ='k'
 
@@ -100,7 +103,7 @@ font_dict_site = {'size': 8,
 plotStyle ="pcolormesh"            # if None Default is 'pcolormesh', can be 
                                     #["imshow"]
 unknow_layer_color=  'white'
-unknow_layer_pattern= '+.+.+.'
+unknow_layer_pattern= '//.'
 # can use other matplotlib to customize your plot 
 
 #----------------define plot 2D object ----------------------
@@ -118,16 +121,16 @@ plot2d_obj.plot_Pseudolog( station_id= station_to_plot,
                             input_layers =INPUT_LAYERS ,
                             step_descent =STEP_DESCENT,
                             doi =DOI, 
-                            # mesh_fn = os.path.join(path , path_to_occam_mesh),
-                            # iter_fn = os.path.join(path , path_to_occam_iter), 
-                            # model_fn =os.path.join(path, path_to_occam_model) , 
-                            # data_fn =os.path.join(path, path_to_occam_data ),
+                            mesh_fn = os.path.join(path , path_to_occam_mesh),
+                            iter_fn = os.path.join(path , path_to_occam_iter), 
+                            model_fn =os.path.join(path, path_to_occam_model) , 
+                            data_fn =os.path.join(path, path_to_occam_data ),
 
                             plot_style= plotStyle ,
                             scale =scale, 
                             lc_AD_curves= (average_curve_color, sequence_curve_color),
-                            iter2dat_fn = os.path.join(path2 , iter2dat_fn),
-                            bln_fn = os.path.join(path2 , bln_file),
+                            # iter2dat_fn = os.path.join(path2 , iter2dat_fn),
+                            # bln_fn = os.path.join(path2 , bln_file),
                             font_dict_site=font_dict_site, 
                             )
 

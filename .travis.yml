@@ -33,7 +33,7 @@ script:
     #- pytest -v --cov=mtpy --cov-report= tests/
     - pytest -v --cov=pycsamt --cov-report= tests/  --ignore=setup.py
     #- coverage run --source=pycsamt -m pytest tests/
-    - python -m pytest --cov=tests --cov-fail-under=25      # coveral fail threshold 90%
+    #- python -m pytest --cov=tests --cov-fail-under=25      # coveral fail threshold 90%
     #- coverage run --source=home tests/
     
 after_success:

@@ -10,3 +10,4 @@ flake8
 pyyaml
 pyproj>=1.9.6
 pandas
+python-coveralls

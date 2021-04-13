@@ -1,9 +1,9 @@
 # pyCSAMT (Python  for Controlled Source Audio-frequency Magnetotellurics )
 [![Documentation Status](https://readthedocs.org/projects/pycsamt/badge/?version=latest)](https://pycsamt.readthedocs.io/en/latest/?badge=latest) [![Build Status](https://travis-ci.com/WEgeophysics/pyCSAMT.svg?branch=master)](https://travis-ci.com/WEgeophysics/pyCSAMT) [![Requirements Status](https://requires.io/github/WEgeophysics/pyCSAMT/requirements.svg?branch=master)](https://requires.io/github/WEgeophysics/pyCSAMT/requirements/?branch=master)
  [![Coverage Status](https://coveralls.io/repos/github/WEgeophysics/pyCSAMT/badge.svg?branch=master)](https://coveralls.io/github/WEgeophysics/pyCSAMT?branch=master)    
- [![GitHub](https://img.shields.io/github/license/WEgeophysics/pyCSAMT?color=blue&logo=GNU&logoColor=red)
- [![GitHub release (latest by date)](https://img.shields.io/github/v/release/WEgeophysics/pyCSAMT?color=orange)
- [![GitHub all releases](https://img.shields.io/github/downloads/WEgeophysics/pyCSAMT/total?color=green)
+ ![GitHub](https://img.shields.io/github/license/WEgeophysics/pyCSAMT?color=blue&logo=GNU&logoColor=red)
+ ![GitHub release (latest by date)](https://img.shields.io/github/v/release/WEgeophysics/pyCSAMT?color=orange)
+ ![GitHub all releases](https://img.shields.io/github/downloads/WEgeophysics/pyCSAMT/total?color=green)
 
 ## Overview 
 

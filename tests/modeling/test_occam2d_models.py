@@ -188,34 +188,34 @@ class OtherModelingTest(unittest.TestCase) :
         
         self.ascertain_oc2d_inputfiles()
         
-        #try : 
-        i2d_obj = Iter2Dat(mesh_fn=self.oc2d_mesh, 
-            iter_fn = self.oc2d_iter, 
-            model_fn =self.oc2d_model, 
-            data_fn =self.oc2d_data)
-        #except :
-            # csamtpylog.get_csamtpy_logger().error( 
-            # 'Something wrong when initializing iter2dat object.' )
-        #else :
+        try : 
+            i2d_obj = Iter2Dat(mesh_fn=self.oc2d_mesh, 
+                iter_fn = self.oc2d_iter, 
+                model_fn =self.oc2d_model, 
+                data_fn =self.oc2d_data)
+        except :
+            csamtpylog.get_csamtpy_logger().error( 
+            'Something wrong when initializing iter2dat object.' )
+        else :
             # collect iteration number  and iterroughness to generate filename 
             # if file is not provided
-        self.iternum = i2d_obj.iter_num 
-        self.iter_roughness= i2d_obj.iter_roughness
-        #try :
-        i2d_obj.write_iter2dat_file(filename =None,
-                           doi=1000., #1km
-                           savepath=os.path.join(self._expected_save_dir,
-                                                 self.__class__.__name__ )
-                           )
-        # except :
-        #      csamtpylog.get_csamtpy_logger().error( 
-        #         'something wrong when writing model'
-        #         ' `x`, `y`,`z` files. May check either arguments params.')
-        # else : 
-            # check new outdir , if exists.
-        self.assertTrue(os.path.isdir(
-            os.path.join(self._expected_save_dir, self.__class__.__name__ )), 
-            'outdir doesnt not exist, should be created automatically.')
+            self.iternum = i2d_obj.iter_num 
+            self.iter_roughness= i2d_obj.iter_roughness
+            try :
+                i2d_obj.write_iter2dat_file(filename =None,
+                                   doi=1000., # or 1km
+                                   savepath=os.path.join(self._expected_save_dir,
+                                                         self.__class__.__name__ )
+                                   )
+            except :
+                  csamtpylog.get_csamtpy_logger().error( 
+                    'something wrong when writing model'
+                    ' `x`, `y`,`z` files. May check either arguments params.')
+            else : 
+                #check new outdir , if exists.
+                self.assertTrue(os.path.isdir(
+                    os.path.join(self._expected_save_dir, self.__class__.__name__ )), 
+                    'outdir doesnt not exist, should be created automatically.')
             
         output_xyz_dir = os.path.join(self._expected_save_dir, 
                                       self.__class__.__name__ )

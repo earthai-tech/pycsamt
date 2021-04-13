@@ -17,12 +17,12 @@ Created on Sat Feb 20 16:07:54 2021
 
 """
 import os
-from geodrill.geoCore.geodrill import Geodrill 
+from pycsamt.geodrill.geoCore.geodrill import Geodrill 
 
 # path to OCCAM 2D folder 
 path =os.path.join(os.environ ['pyCSAMT'],  'data', 'occam2D')
 path2 =os.path.join(os.environ ['pyCSAMT'],  'data', '_iter2dat_2')
-profile_path = profile_fn =os.path.join(os.environ['pyCSAMT'], 'data', 'avg')
+profile_path =os.path.join(os.environ['pyCSAMT'], 'data', 'avg')
                                                                 
 # station coordinates profile files 
 profile_fn = 'K1.stn'

@@ -13,7 +13,7 @@ Created on Wed Nov 25 11:39:11 2020
 
 """
 import os 
-from geodrill.geoCore.geodrill import Geosurface 
+from pycsamt.geodrill.geoCore.geodrill import Geosurface 
 
 #Oasis output files are input files  to use geosurface module 
 path_to_oasisfiles = os.path.join(os.environ['pyCSAMT'], 'data',

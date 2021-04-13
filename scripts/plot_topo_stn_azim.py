@@ -11,7 +11,7 @@ Created on Wed Dec 30 19:27:04 2020
 
 """
 import os 
-from viewer.plot import Plot1d
+from pycsamt.viewer.plot import Plot1d
 
 
 # set the stn profile file or EDI-file

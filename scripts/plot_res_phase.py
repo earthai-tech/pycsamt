@@ -10,7 +10,7 @@ Created on Thu Jan 21 08:57:20 2021
 
 """
 import os 
-from viewer.plot import Plot1d
+from pycsamt.viewer.plot import Plot1d
 
 
 #--- path to files [EDI|J|AVG] 

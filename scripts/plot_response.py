@@ -8,7 +8,7 @@ Created on Tue Feb  9 07:53:16 2021
 """
 
 import os 
-from viewer.plot import Plot2d
+from pycsamt.viewer.plot import Plot2d
 
 
 # par=th to occam folder 

@@ -6,5 +6,5 @@ save_non_project_files = False
 
 [main]
 version = 0.2.0
-recent_files = ['csamtpy\\ff\\core\\z.py', 'csamtpy\\ff\\core\\avg.py', 'docs\\source\\geocore.rst', 'docs\\source\\conf.py', 'geodrill\\geoCore\\structural.py', 'geodrill\\geoDB\\sql_recorder.py', 'scripts\\plot_pseudo_sequence.py', 'geodrill\\geoCore\\geodrill.py', 'scripts\\plot_curves.py', '__init__.py']
+recent_files = ['setup.py', 'project_description.md', 'README.md', '.readthedocs.yml', 'pycsamt\\viewer\\plot.py', 'scripts\\plot_static_correction.py', 'scripts\\plot_pseudo_sequence.py', 'pycsamt\\geodrill\\geoCore\\geodrill.py', 'scripts\\write_corrected_edi.py']
 

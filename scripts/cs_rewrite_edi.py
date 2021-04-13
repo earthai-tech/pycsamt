@@ -16,20 +16,22 @@ Created on Thu Jan 14 22:00:21 2021
 """
 import os 
 
-from csamtpy.ff.core.edi import Edi 
+from pycsamt.ff.core.edi import Edi 
 
 #---> set edipath 
-# exmple : r'F:\__main__csamt__\paper2_data_old\data_edifiles - numStations\K1_edi\new_EDI'
-path = os.path.join(os.environ['pyCSAMT'], 'data','edi') #'_outputAVG2EDI_')#
 
-# path = r'C:\Users\Administrator\OneDrive\Python\project\pyCSAMT\csamtpy\data'
+path = os.path.join(os.environ['pyCSAMT'], 'data','edi') #'_outputAVG2EDI_')#
+#path = r'C:\Users\Administrator\Desktop\ThesisImp\edis\_special_K6_edi\K6_edi'
+
 
 # path to save edifile # if None , save edi in your current work directory 
-save_path =  None #r'C:\Users\Administrator\Desktop\test\edirewrite'   
+save_path =  None # r'C:\Users\Administrator\Desktop\ThesisImp\edis\_special_K6_edi\K6_edi_rew'   
 
 #--> set the type of datasection 
-data_section  =None  #  may be "mt" or "emap"
+data_section  ='emap'  #  may be "mt" or "emap"
 
+# add new output edi name
+new_edi_name = None # 'k6'
 # get edilist 
 edilist = [os.path.join(path,edifile) for edifile in os.listdir(path) if edifile.endswith('.edi')]
 
@@ -37,6 +39,7 @@ edilist = [os.path.join(path,edifile) for edifile in os.listdir(path) if edifile
 for edi in edilist :
     edi_obj =Edi(edi_filename=edi )
     edi_obj.write_edifile(savepath =save_path,
-                          datatype=data_section )
+                          datatype=data_section,
+                          new_edifilename =new_edi_name )
     
 

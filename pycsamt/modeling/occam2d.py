@@ -1437,12 +1437,16 @@ class Mesh(object):
         
         if self.mesh_x_nodes.shape[0] != num_h_nodes: 
             new_h_nodes = self.mesh_x_nodes.shape[0]  # reshape the mesh vales 
-            self.mesh_values.resize(new_h_nodes , num_v_nodes, 4)
+            #self.mesh_values.resize(new_h_nodes , num_v_nodes, 4)
+            self.mesh_values =np.resize(self.mesh_values,
+                                        (new_h_nodes , num_v_nodes, 4) )
         else: new_h_nodes= num_h_nodes
             
         if self.mesh_z_nodes.shape[0] != num_v_nodes:
             new_v_nodes = self.mesh_z_nodes.shape[0]
-            self.mesh_values.resize(new_h_nodes, num_v_nodes, 4)
+            #self.mesh_values.resize(new_h_nodes, num_v_nodes, 4)
+            self.mesh_values =np.resize(self.mesh_values,
+                                        (new_h_nodes , num_v_nodes, 4))
 
     
         print('{0:-^77}'.format('Occam 2D Mesh params '))

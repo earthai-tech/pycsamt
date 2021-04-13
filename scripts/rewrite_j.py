@@ -8,7 +8,7 @@ Created on Tue Jan  5 12:11:07 2021
 
 """
 import os 
-from csamtpy.ff.core.j import J_collection as J 
+from pycsamt.ff.core.j import J_collection as J 
 
 #--- > set jfiles path 
 path =r'C:\Users\Administrator\Desktop\pyCS_datasets\testj'

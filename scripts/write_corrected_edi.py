@@ -13,16 +13,23 @@ Created on Fri Mar 19 19:15:46 2021
 @author: @Daniel03
 """
 import os 
-from csamtpy.ff.processing.corr import shifting
+from pycsamt.ff.processing.corr import shifting
 
 
-# from csamtpy.ff.processing.corr import shifting 
+# from pycsamt.ff.processing.corr import shifting 
 
 # profile edipath : full path to edifiles or single edifile 
 edipath =os.path.join(os.environ['pyCSAMT'], 'data','_outputEDIFiltered_AMA') #'edi')#, 'new_csa000.edi' )
+#edipath = r'C:\Users\Administrator\Desktop\ThesisImp\edis\_special_K6_edi\K6_edi_rew'
 
+# path to hold edi outputs files 
+savepath =None  # r'C:\Users\Administrator\Desktop\ThesisImp\edis\_special_K6_edi\k6_TMA'
+
+# new edi output filenames 
+new_edifilename = 'k6'                  #'ybro_survey' 
+ 
 # Applied filter 
-FILTER = 'ama'                        # availables filters [`tma`, `flma`,`ama`, `ss`, `dist`]
+FILTER = 'ama'                          # availables filters [`tma`, `flma`,`ama`, `ss`, `dist`]
                                         # default is `tma`
                                         
 # number of points : to computed the window width  
@@ -40,11 +47,8 @@ dipoleLength = 50.                      # default is 50m for CSAMT survey
 #datatype correspond either EMAP data or MT data , if None , will detect automatically       
 datatype = None                     # Type of edifile , can be `mt` or`emap` 
     
-# path to hold edi outputs files 
-savepath =  None
 
-# new edi output filenames 
-new_edifilename = None 
+
 #------------------------------------------------------------------------------
 # Optional params but usefull when used MT data 
 
@@ -66,11 +70,12 @@ corr_obj= shifting().write_corrected_edi(data_fn = edipath,
                              number_of_skin_depth=number_of_skin_depth, 
                              dipole_length =dipoleLength, 
                              FILTER=FILTER, 
-                             edi_newname = new_edifilename, 
+                             filename = new_edifilename, 
                              datatype =datatype, 
                              reduce_res_factor_x=reduce_res_factor_x, 
                              reduce_res_factor_y = reduce_res_factor_y, 
                              distortion_tensor= distortion_tensor, 
-                             distortion_err_tensor = distortion_err_tensor)
+                             distortion_err_tensor = distortion_err_tensor, 
+                             savepath =savepath )
 
 

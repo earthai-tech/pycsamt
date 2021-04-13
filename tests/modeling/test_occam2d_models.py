@@ -162,7 +162,7 @@ class OtherModelingTest(unittest.TestCase) :
                 if tfile.lower().find(ifile.lower())>=0 :
                     self.assertTrue(os.path.isfile(tfile),
                                     'Symlink for occam2dfile is wrong ')
-                    if 'mesh' in os.path.basename(tfile).lower(): 
+                    if os.path.basename(tfile).lower().find('mesh')>=0:
                         self.oc2d_mesh = tfile 
                     elif os.path.basename(tfile).lower().find('dataf')>=0:
                         self.oc2d_data = tfile
@@ -203,16 +203,16 @@ class OtherModelingTest(unittest.TestCase) :
             self.iter_roughness= i2d_obj.iter_roughness
             try :
                 i2d_obj.write_iter2dat_file(filename =None,
-                                   doi='1km', 
+                                   doi=1000., # or 1km
                                    savepath=os.path.join(self._expected_save_dir,
                                                          self.__class__.__name__ )
                                    )
             except :
-                 csamtpylog.get_csamtpy_logger().error( 
+                  csamtpylog.get_csamtpy_logger().error( 
                     'something wrong when writing model'
                     ' `x`, `y`,`z` files. May check either arguments params.')
             else : 
-                # check new outdir , if exists.
+                #check new outdir , if exists.
                 self.assertTrue(os.path.isdir(
                     os.path.join(self._expected_save_dir, self.__class__.__name__ )), 
                     'outdir doesnt not exist, should be created automatically.')
@@ -258,7 +258,8 @@ class OtherModelingTest(unittest.TestCase) :
             
             
 if __name__=='__main__':
-
+    # ttt= OtherModelingTest()
+    # ttt.test_write_xyz_modelfile()
     unittest.main()
     
    

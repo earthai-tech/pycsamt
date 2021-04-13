@@ -10,7 +10,7 @@ Created on Fri Feb  5 12:45:05 2021
 
 """
 import os 
-from csamtpy.modeling.occam2d import Iter2Dat as i2d
+from pycsamt.modeling.occam2d import Iter2Dat as i2d
 
 
 # path to OCCAM 2D folder 

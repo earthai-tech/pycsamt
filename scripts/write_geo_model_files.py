@@ -19,18 +19,22 @@ Created on Mon Feb 15 14:56:18 2021
 
 """
 import os
-from geodrill.geoCore.geodrill import Geodrill 
+from pycsamt.geodrill.geoCore.geodrill import Geodrill 
 
 # path to OCCAM 2D folder 
-path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D')
-path2 =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', '_iter2dat_2')
+#path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D')
+path = r'C:\Users\Administrator\Desktop\ThesisImp\occam2D\invers+files\inver_res\K8'
+#path2 =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', '_iter2dat_2')
+
 
 # 
-filename = 'ybkro'
+filename = 'k8' #'ybkro'
 
 #save path# path to save output files 
 
-savepath  = None                #os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data','_outputGeoSD_2')     
+#savepath  = None                #os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data','_outputGeoSD_2') 
+    
+savepath =r'C:\Users\Administrator\Desktop\ThesisImp\golden_software\K8_edi'
 
 #  Maximum depth investigation  for CSAMT , if not provided , will set to 1km 
 DOI = '1km'                 #  can be float like 1000 = 1km 
@@ -50,12 +54,13 @@ STEP_DESCENT = 200.         # float value. Step to cut out data and to  force re
                             # if not provided the step will be 20% of D0I
 # Truth resistivities values otained on the sites or from other companies
 #COMPULSORY parameter  
-INPUT_RESISTIVITIES = [312, 525, 1235., 2202., 4000, 7000.]   # list of resistivites values : order is insensitives 
-
+#INPUT_RESISTIVITIES = [312, 525, 1235., 2202., 4000, 7000.]   # list of resistivites values : order is insensitives 
+INPUT_RESISTIVITIES = [66,70, 180, 1000, 3000, 10000, 20000] 
 # Truth layer names if given must match the input resistivities 
 # if nname of layers not provided, program will seek in dataBase to find
 # the name of layer whom its resistivities is much closer to abose 
-INPUT_LAYERS = ['alluvium', 'amphibolite','altered rock','augen gneiss', 'granite'] #
+#INPUT_LAYERS = ['alluvium', 'amphibolite','altered rock','augen gneiss', 'granite'] #
+INPUT_LAYERS = ['river water', 'fracture zone' , 'granite ', 'Most Weathered', 'Less Weathered'] # 
 
 
 #-----Read Occam 2D output files  ---------
@@ -68,7 +73,7 @@ path_to_occam_mesh = 'Occam2DMesh'
 # path to occam Model file 
 path_to_occam_model = 'Occam2DModel'
 # path to Occam Iteration file 
-path_to_occam_iter='ITER17.iter'
+path_to_occam_iter='ITER12.iter'
 
 # ---------------Read with Iter2DAT FILE ------------------
 

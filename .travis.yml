@@ -25,16 +25,17 @@ install:
     - pip install configparser
     - pip install coveralls
 
+
     
     
 # command to run tests
 script:
     #- python -m unittest discover tests/
-    #- pytest -v --cov=mtpy --cov-report= tests/
     - pytest -v --cov=pycsamt --cov-report= tests/  --ignore=setup.py
     #- coverage run --source=pycsamt -m pytest tests/
     #- python -m pytest --cov=tests --cov-fail-under=25      # coveral fail threshold 90%
-    #- coverage run --source=home tests/
+    - tox -e $(echo py$TRAVIS_PYTHON_VERSION | tr -d . | sed -e 's/pypypy/pypy/')-cov41-pyyaml
+    - py.test coveralls/tests.py --doctest-modules --pep8 coveralls -v --cov coveralls --cov-report term-missing
     
 after_success:
   - coveralls

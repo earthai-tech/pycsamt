@@ -5,6 +5,7 @@ omit =
     # exclude everything from ui_asset as they ara either resources or code dynamically generated
     */ui_asset/*
 
+
 [report]
 # Regexes for lines to exclude from consideration
 exclude_lines =

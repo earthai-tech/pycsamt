@@ -31,7 +31,8 @@ install:
 script:
     #- python -m unittest discover tests/
     #- pytest -v --cov=mtpy --cov-report= tests/
-    - pytest -v --cov=pyCSAMT --cov-report= tests/  --ignore=pycsamt/
+    - pytest -v --cov=pycsamt --cov-report= tests/  --ignore=setup.py
+    - coverage run --source=pycsamt -m pytest tests/
     - python -m pytest --cov=. --cov-fail-under=25      # coveral fail threshold 90%
     #- coverage run --source=home tests/
     

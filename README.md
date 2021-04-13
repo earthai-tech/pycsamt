@@ -76,30 +76,15 @@ AMA  and TMA filters can be used  to estimate average apparent resistivities at 
 The following line of codes is an example to get new _*.edi_ corrected files from both filters application at each station,
 refering to the EDI directory `data/edi/`.
 
-```
->>> from from pycsamt.ff.processing.corr import shifting
->>> for _filter in ['tma', 'ama']:
-        shifting().write_corrected_edi(
-                        data_fn ='data/edi', 
-                        number_of_points =7.,
-                        reference_frequency=8192,      # in Hz
-                        number_of_skin_depth=7,  
-                        dipole_length =50.,            # in meter 
-                        FILTER=_filter, 
-                                        )
-```
+![](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/codes/demo_filter_ama_tma.PNG) 
+
+
 The script below can be used to compare pseudo-cross-section of resistivity and phase of _corrected_edi outputs_ after `ama` & `tma` application  with 
 _uncorrected edi_ . 
 
-```
->>> from pycsamt.viewer.plot import Plot2d
->>> contourRes= 1000.                       # resistivity contour delineation in Ω.m  
->>> for path2edi_obj in ['data/edi','data/_outputEDIFiltered_AMA','data/_outputFilteredEDI_TMA']:
->>>       Plot2d().pseudocrossResPhase(fn=path2edi_obj, 
-                                delineate_resistivity=contourRes,
-                                )
+![](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/codes/demo_edi_corrected.PNG) 
 
-```
+
 click [here](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/filterstests.png) to see the output.
 
 ## Geophysical interpretation enhancement
@@ -110,37 +95,22 @@ under each station using `pycsamt.viewer.plot.plot_Pseudolog` or to write new re
 using `pycsamt.geodrill.geoCore.geodrill.to_golden_software ` or `pycsamt.geodrill.geoCore.geodrill.to_asis_montaj` members from `Geodrill` module.
 For instance :
  
-```
-# ---> plot Peudolog station by stations:
->>> from  pycsamt.viewer.plot import Plot2d
->>> INPUT_LAYERS = ['river water', 'fracture zone', 'augen gneiss', 'altered rocks', 'granite']  # layers' names collected 
->>> INPUT_RESISTIVITIES =[66.,70., 180., 1235. , 2202., 7000.]      #  True resistivity values in ohm.meters collected 
->>> STEP_DESCENT = 200                          # in meters.see code implementation to get more info about this parameters. 
->>> inversion_kwargs ={                                         # occam2D inversion files of 'some-where-place' survey line.
-                    'mesh_fn': 'data/occam2D/Occam2DMesh',
-                    'iter_fn' : 'data/occam2D/ITER17.iter',
-                    'model_fn' : 'data/occam2D/Occam2DModel',
-                    'data_fn' : 'data/occam2D/OccamDataFile.dat'
-                    } 
->>> geo_inputs_kwargs={'input_resistivities':INPUT_RESISTIVITIES, 
-                 'input_layers' : INPUT_LAYERS,
-                 'step_descent' : STEP_DESCENT,
-                 'doi' ='1km'                   # depth of investigation 
-                 } 
->>> Plot2d().plot_Pseudolog(station_id ='S43',  # station to visualize , can be integer as station_id = 44(43+1)
-                        **inversion_kwargs , 
-                        **geo_inputs_kwargs)     
-                        
-# ---> write new model of some-where-place area survey line :
+* to plot stratigraphy log under each station,  we need to implement the command line below : 
+ 
+![](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/codes/demo_plot-pseulog.PNG)
 
->>> from pycsamt.geodrill.geoCore.geodrill import Geodrill                                         
->>> Geodrill( **inversion_kwargs , 
-            **geo_inputs_kwargs).to_golden_software(filename ='some-where-place',  # survey area name
-                                            to_negative_depth='True')       # export depth to negative value
+* to write new model of resistivity of survey line (here area is named  `some-where-place`), we merely need to import `.Geodrill` module  as:
+
+![](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/codes/demo_geodrill.PNG) 
+
+and after sucessfullly running, we will get the report below :
+
+![](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/codes/demo_reports_geodrill.PNG)
+
                                                                       
-```
 * **Note** : Inversion input-files can be generated from _*.edi_ files using `pycsamt.modeling.occam2d.occam2d_write.buildingInputfiles` from `modeling.occam2d` module . 
             After applying the FDGC( Digital cartographic Standard for Geological Map Symbolization), click [here](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/interpretation.PNG)  to see your expected interpretation map.
+
 
 
 ## System requirements 
@@ -154,12 +124,12 @@ For instance :
 
 3. Laboratoire de Géophysique Appliquée, UFR des Sciences de la Terre et des Ressources Minières, Université Félix Houphouët-Boigny, Cote d'Ivoire
 
-* Developer's name: 1,3. [_**Kouadio K. Laurent**_](kkouao@zju.edu.cn), _etanoyau@gmail.com_
+* Developer's name:  [_**Kouadio K. Laurent**_](kkouao@zju.edu.cn), _etanoyau@gmail.com_: 1,3
 * Contibutors' names:
-    * 2. [_**Liu RONG**_](liurongkaoyang@126.com) 
-    * 1. [_**BinBin MI**_](mibinbin@zju.edu.cn)
-    * 2. [_**Chun-Ming LIU**_](lifuming001@163.com)
-    * 1. [_**Albert O. Malory**_](amalory@zju.edu.cn) 
+    *  [_**Liu RONG**_](liurongkaoyang@126.com) : 2
+    *  [_**BinBin MI**_](mibinbin@zju.edu.cn) : 1
+    *  [_**Chun-Ming LIU**_](lifuming001@163.com): 2
+    *  [_**Albert O. Malory**_](amalory@zju.edu.cn) :1
     
 Any suggestion to improve the software is welcome ...
 

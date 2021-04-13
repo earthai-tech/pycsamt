@@ -162,7 +162,7 @@ class OtherModelingTest(unittest.TestCase) :
                 if tfile.lower().find(ifile.lower())>=0 :
                     self.assertTrue(os.path.isfile(tfile),
                                     'Symlink for occam2dfile is wrong ')
-                    if 'mesh' in os.path.basename(tfile).lower(): 
+                    if os.path.basename(tfile).lower().find('mesh')>=0:
                         self.oc2d_mesh = tfile 
                     elif os.path.basename(tfile).lower().find('dataf')>=0:
                         self.oc2d_data = tfile

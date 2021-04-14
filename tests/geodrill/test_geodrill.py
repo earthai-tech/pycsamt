@@ -167,7 +167,8 @@ class TestGEODRILL(unittest.TestCase):
                                     ]
                 
                 gf_outputfiles =[os.path.join(self.save_geo_outdir, outgff) for outgff in 
-                                 os.listdir(self.save_geo_outdir)]
+                                 os.listdir(self.save_geo_outdir) 
+                                 if (outgff.endswith('.dat') or outgff.endswith('.bln')) ]
                 #now compare files 
                 self.assertEqual(len(gf_expectedfiles), len(gf_outputfiles), 
                                  'Different size found between reference output ={0} '
@@ -320,15 +321,11 @@ class TestGEODRILL(unittest.TestCase):
                     compare_diff_files(refout = gs_outputfiles ,
                                        refexp = gs_expectedfiles )
                 
-                    
-                
-                
-                
-                    
+               
                     
 if __name__=='__main__': 
     # gt = TestGEODRILL()
-    # # gt.test_to_geolden_software() 
+    # gt.test_to_geolden_software() 
     # gt.test_to_oasis_montaj()   
     # gt.test_geosurface ()     
     unittest.main()

@@ -143,8 +143,8 @@ class TestEDICOR(unittest.TestCase):
                                    refexp = expected_edifiles)
                 # if ok , then keep values 
                 summary_outputs[successf]=(len(os.listdir(save_edi_corrected)),
-                                              [os.path.join(save_edi_corrected, file)
-                                               for file in os.listdir(save_edi_corrected)] )
+                                              sorted([os.path.join(save_edi_corrected, file)
+                                               for file in os.listdir(save_edi_corrected)]) )
                 
         # compare all outputs if there are the same 
         self.assertEqual(len(self._filters), len(summary_outputs), 

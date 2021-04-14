@@ -1,6 +1,6 @@
 # pyCSAMT (Python  for Controlled Source Audio-frequency Magnetotellurics )
 [![Documentation Status](https://readthedocs.org/projects/pycsamt/badge/?version=latest)](https://pycsamt.readthedocs.io/en/latest/?badge=latest) [![Build Status](https://travis-ci.com/WEgeophysics/pyCSAMT.svg?branch=master)](https://travis-ci.com/WEgeophysics/pyCSAMT) [![Requirements Status](https://requires.io/github/WEgeophysics/pyCSAMT/requirements.svg?branch=master)](https://requires.io/github/WEgeophysics/pyCSAMT/requirements/?branch=master)
- [![Coverage Status](https://coveralls.io/repos/github/WEgeophysics/pyCSAMT/badge.svg?branch=master)](https://coveralls.io/github/WEgeophysics/pyCSAMT?branch=master) ![GitHub](https://img.shields.io/github/license/WEgeophysics/pyCSAMT?color=blue&logo=GNU&logoColor=red) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/WEgeophysics/pyCSAMT?color=orange) ![GitHub all releases](https://img.shields.io/github/downloads/WEgeophysics/pyCSAMT/total?color=green)
+ ![GitHub](https://img.shields.io/github/license/WEgeophysics/pyCSAMT?color=blue&logo=GNU&logoColor=red) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/WEgeophysics/pyCSAMT?color=orange) ![GitHub all releases](https://img.shields.io/github/downloads/WEgeophysics/pyCSAMT/total?color=green)
 
 ## Overview 
 
@@ -91,7 +91,7 @@ click [here](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/
 
 If additional informations of survey area are available such as _true resistivity values_ as well as the _true layer names_, 
 It's possible to used them to enhance your geophysical interpretation. There is feasibility to plot stratigraphy log 
-under each station using `pycsamt.viewer.plot.plot_Pseudolog` or to write new resistivity model of entire survey line
+under each station using `pycsamt.viewer.plot.Plot2d.plot_Pseudolog` or to write new resistivity model of entire survey line
 using `pycsamt.geodrill.geoCore.geodrill.to_golden_software ` or `pycsamt.geodrill.geoCore.geodrill.to_asis_montaj` members from `Geodrill` module.
 For instance :
  
@@ -124,12 +124,12 @@ and after sucessfullly running, we will get the report below :
 
 3. Laboratoire de Géophysique Appliquée, UFR des Sciences de la Terre et des Ressources Minières, Université Félix Houphouët-Boigny, Cote d'Ivoire
 
-* Developer's name:  [_**Kouadio K. Laurent**_](kkouao@zju.edu.cn), _etanoyau@gmail.com_: 1,3
+* Developer's name:  [_Kouadio K. Laurent_](kkouao@zju.edu.cn), _etanoyau@gmail.com_: [1](http://www.zju.edu.cn/english/), [3](https://www.univ-fhb.edu.ci/index.php/ufr-strm/)
 * Contibutors' names:
-    *  [_**Liu RONG**_](liurongkaoyang@126.com) : 2
-    *  [_**BinBin MI**_](mibinbin@zju.edu.cn) : 1
-    *  [_**Chun-Ming LIU**_](lifuming001@163.com): 2
-    *  [_**Albert O. Malory**_](amalory@zju.edu.cn) :1
+    *  [_Rong LIU_](liurongkaoyang@126.com) : [2](http://en.csu.edu.cn/)
+    *  [_Binbin MI_](mibinbin@zju.edu.cn) : [1](http://www.zju.edu.cn/english/)
+    *  [_Chun-ming LIU_](lifuming001@163.com): [2](http://en.csu.edu.cn/)
+    *  [_Albert O. MALORY_](amalory@zju.edu.cn) :[1](http://www.zju.edu.cn/english/)
     
 Any suggestion to improve the software is welcome ...
 

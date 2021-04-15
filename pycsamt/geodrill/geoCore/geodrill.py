@@ -1744,8 +1744,9 @@ class Geodrill (object):
                                     [STD_pandas,ROUGH_pandas, AVER_pandas ]):
                     
                     _df.to_csv(''.join([filename + fnx,'_cor_oas', writeType]),
-                                header=csvsetHeader,index =writeIndex,
-                                sep=csvsep) 
+                                header=csvsetHeader,index =writeIndex,sep=csvsep) 
+                                         
+
                     
         else :
             mess = 'The type you provide is wrong. Support only *.xlsx and *.csv format'
@@ -2508,7 +2509,8 @@ class Drill(object):
         self.compute_azimuth=kwargs.pop("compute_azimuth",False)
         self.dip =kwargs.pop("Drill_dip",90)
         self.buttom=kwargs.pop("Drill_buttom", None)
-        # self.elevfile=kwargs.pop("elevation_file", None)
+        self.savepath =kwargs.pop('savepath', None )
+
         
         self.easts=None
         self.norths= None
@@ -2535,18 +2537,18 @@ class Drill(object):
                     'DH_RL':None,
                     }        
         
-        
         if self.buildmanuel is True and self.wfilename is None :
             
-            self.daTA=func.build_wellData (add_azimuth=False, 
+            self.daTA=func.build_wellData (add_azimuth=self.compute_azimuth, 
                                             utm_zone=self.utm_zone,
-                                            report_path=self.compute_azimuth)
+                                            report_path = self.savepath, 
+                                            )
             self.wdata=self.daTA[1]
             
-            self.wdico["DH_East"]   =   self.wadata[:,1]
+            self.wdico["DH_East"]   =   self.wdata[:,1]
             self.wdico["DH_North"]  =   self.wdata[:,2]
-            self.wdico["DH_Hole"]   =   self.wadata[:,0]
-            self.wdico['DH_Dip']    =   self.wadata[:,4]
+            self.wdico["DH_Hole"]   =   self.wdata[:,0]
+            self.wdico['DH_Dip']    =   self.wdata[:,4]
             self.wdico['DH_Bottom'] =   self.wdata[:,3]
             self.wdico['DH_Decr'] =   self.wdata[:,7]
             self.wdico['DH_PlanDepth'] =   self.wdata[:,6]
@@ -2618,13 +2620,13 @@ class Drill(object):
         if self._f == 0 :
             if add_elevation is None :
                 #No topography is added , set to 0 
-                add_elevation=np.full((len(self.wdico['DH_EAST']),1),0,dtype='<U12')
+                add_elevation=np.full((len(self.wdico['DH_East']),1),0,dtype='<U12')
             elif add_elevation is not None :
                 if type(add_elevation ) is list :
                     add_elevation =np.array(add_elevation)
-                assert add_elevation.shape[0]==self.wdico['DH_EAST'].shape[0],"INDEXERROR:"\
+                assert add_elevation.shape[0]==self.wdico['DH_East'].shape[0],"INDEXERROR:"\
                     " The the current dimention of Elevation data is {0}.It's must be"\
-                        " the size {1}.".format(add_elevation.shape[0],self.wdico['DH_EAST'].shape[0])
+                        " the size {1}.".format(add_elevation.shape[0],self.wdico['DH_East'].shape[0])
             
             self.wdico.__setitem__("Elevation", add_elevation)
                     
@@ -2793,6 +2795,9 @@ class Drill(object):
         
         wsamp=self.daTA[3]
         # print(wgeo)
+        if wsamp is None :
+            self.sampleDHDATA = None 
+            return  # mean no geochemistry sample is provided 
         
         self.wdico.__setitem__('DH_From', wsamp[:,1])
         self.wdico.__setitem__('DH_To', wsamp[:,2])
@@ -2919,13 +2924,13 @@ class Drill(object):
         if self._f == 0 :
             if add_elevation is None :
                 #No topography is added , set to 0 
-                add_elevation=np.full((len(self.wdico['DH_EAST']),1),0,dtype='<U12')
+                add_elevation=np.full((len(self.wdico['DH_East']),1),0,dtype='<U12')
             elif add_elevation is not None :
                 if type(add_elevation ) is list :
                     add_elevation =np.array(add_elevation)
-                assert add_elevation.shape[0]==self.wdico['DH_EAST'].shape[0],"INDEXERROR:"\
+                assert add_elevation.shape[0]==self.wdico['DH_East'].shape[0],"INDEXERROR:"\
                     " The the current dimention of Elevation data is {0}.It's must be"\
-                        " the size {1}.".format(add_elevation.shape[0],self.wdico['DH_EAST'].shape[0])
+                        " the size {1}.".format(add_elevation.shape[0],self.wdico['DH_East'].shape[0])
             
             self.wdico.__setitem__("Elevation", add_elevation)
                     
@@ -3043,10 +3048,10 @@ class Drill(object):
                     the type of comma delimited . defaut is ','.
         """
     
-        writepath =kwargs.pop("savepath",None )
+        savepath =kwargs.pop("savepath",None )
         writeIndex=kwargs.pop('write_index_on_sheet',False)
         writeType =kwargs.pop('writeType', 'xlsx')
-        csvencoding =kwargs.pop('encoding','utf-8')
+        # csvencoding =kwargs.pop('encoding','utf-8')
         csvsetHeader =kwargs.pop('add_header',True)
         csvsep =kwargs.pop('csv_separateType',',')
         
@@ -3074,9 +3079,10 @@ class Drill(object):
                  'survey_elevation':[['4','elev', 'topo','topography','e'], df_elevation],
                  'survey_azimuth': [['5','-1','azim','a'],df_azimuth]}
         
-            
+        if self.sampleDHDATA is None :  # skip the sample building  geochemistry doesnt exists 
+            data2write =['1','2','4','5']
+          
         if data2write is None or data2write in _all :  # write all 
-
             with pd.ExcelWriter(''.join([self.daTA[0][:-1],'.xlsx'])) as writer :
                 for keys, df_ in _dHDico.items():
                     df_[1].to_excel(writer,sheet_name=keys, index =writeIndex)
@@ -3086,13 +3092,13 @@ class Drill(object):
             
             if type(data2write) is not list:
                 data2write=str(data2write)
-                
-                try :
 
+                try :
                     if writeType in ['xlsx','.xlsx', 'excell','Excell','excel','Excel','*.xlsx']:
                         for keys, df in _dHDico.items():
                             if data2write ==keys or data2write.lower() in keys or  data2write in df[0]:
-                              df[1].to_excel('.'.join([self.daTA[0][:-1],'xlsx']),sheet_name=keys,index =writeIndex)  
+                              df[1].to_excel('.'.join([self.daTA[0][:-1],'xlsx']),
+                                             sheet_name=keys,index =writeIndex)  
 
                         
                     elif writeType in ['csv','.csv', 'comma delimited','*.csv',
@@ -3102,7 +3108,7 @@ class Drill(object):
                         for keys, df_ in _dHDico.items():
                             if data2write == keys or data2write.lower() in keys or data2write in df_[0]:
                               df_[1].to_csv(''.join([self.daTA[0][:-1],'.csv']), header=csvsetHeader,
-                                    index =writeIndex,sep=csvsep, encoding=csvencoding)  
+                                    index =writeIndex,sep=csvsep)  
 
                 except Exception as error :
                     self._logging.error ('The type you provide as WriteType argument is wrong.'
@@ -3113,7 +3119,7 @@ class Drill(object):
                 
             elif type(data2write) is list :
                 data2write=[str(elm) for elm in data2write] # check the string format
-                with pd.ExcelWriter(''.join([self.daTA[0][:-1],'.xlsx'])) as writer :
+                with pd.ExcelWriter(''.join([self.daTA[0][:-1],'xlsx'])) as writer :
                     for ii, df in enumerate (data2write):
                         for keys, df__ in _dHDico.items():
                             if df.lower() in keys or df in df__[0] : 
@@ -3127,34 +3133,38 @@ class Drill(object):
                                    'sample, elevation, azimuth] or all (*), not {0}'.format(data2write))
         
          # export to savepath 
-        if writepath is None : # create a folder in your current work directory
+        if savepath is not None : self.savepath = savepath 
+        
+        if self.savepath is None : # create a folder in your current work directory
             try :
-                writepath = os.path.join(os.getcwd(), '_outputDH_')
-                if not os.path.isdir(writepath):
-                    os.mkdir(writepath)#  mode =0o666)
+                self.savepath  = os.path.join(os.getcwd(), '_outputDH_')
+                if not os.path.isdir(self.savepath):
+                    os.mkdir(self.savepath)#  mode =0o666)
             except : 
                 warnings.warn("It seems the path already exists !")
         
         
-        if writepath is not None  :
+        if self.savepath is not None  :
             import shutil
             
             if writeType in ['csv','.csv', 'comma delimited',
                              'comma-separated-value','comma sperated value',
                                        'comsepval']:
                 shutil.move ( os.path.join(os.getcwd(),
-                                           ''.join([self.daTA[0][:-1],'csv'])),writepath)
+                                           ''.join([self.daTA[0][:-1],'csv'])),self.savepath)
                 print('---> Borehole output <{0}> has been written to {1}.'.\
                       format(os.path.basename(
-                    ''.join([self.daTA[0][:-1],'.csv'])), writepath))
+                    ''.join([self.daTA[0][:-1],'.csv'])), self.savepath))
                 
             elif writeType in ['xlsx','.xlsx', 'excell','Excell','excel','Excel']:
                 
-                shutil.move ('.'.join([self.daTA[0][:-1],'xlsx']),writepath)
+                shutil.move (os.path.join(os.getcwd(),
+                                           '.'.join([self.daTA[0][:-1],'xlsx'])),
+                             self.savepath)
                 
                 print('---> Borehole output <{0}> has been written to {1}.'.\
                       format(os.path.basename(
-                      ''.join([self.daTA[0][:-1],'.xlsx'])), writepath))
+                      ''.join([self.daTA[0][:-1],'xlsx'])), self.savepath))
                 
 #------Usefull functions --------------------------
 def get_closest_value (values_range, input_value): 

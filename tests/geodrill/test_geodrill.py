@@ -30,14 +30,16 @@ Refencences :
 
 from tests.modeling.__init__ import csamtpylog, reset_matplotlib
 from tests.processing.__init__ import compare_diff_files
+from tests.geodrill.__init__ import remove_control
 import os, datetime
 
-import  unittest 
+import  unittest
+import pytest 
 
 from pycsamt.geodrill.geoCore.geodrill import (Geodrill, Drill, Geosurface)
 
 from tests import  make_temp_dir, TEST_TEMP_DIR ,I2DAT_DIR, OC2D_DIR, AVG_DATA_DIR
-from tests import OAS_DIR
+from tests import OAS_DIR, DRILL_PARSER_DIR
 
 from tests import survey_testname
 
@@ -255,8 +257,7 @@ class TestGEODRILL(unittest.TestCase):
     def test_geosurface(self): 
         """
         Test build geosurface map at (38m, 100.) depth
-        
-        outputfiles is in `xlsx` and `csv`
+        outputfiles is in `xlsx` and `csv`.
         """
                                 
         # call geosurface object 
@@ -320,14 +321,55 @@ class TestGEODRILL(unittest.TestCase):
                 if xformat =='.csv': # compare files 
                     compare_diff_files(refout = gs_outputfiles ,
                                        refexp = gs_expectedfiles )
-                
-               
                     
+    @pytest.mark.skip(reason='Test succeeded on Windox env. with Python 3.7'
+                      'but required latest version of pandas library on Linux env.')            
+    def test_make_drillhole (self): 
+        """
+        Test to generate a new DH file. 
+        .. note: When parser file is provided , the praser file will read as 
+        as main even `build_mannually_welldata` is set to `True`.
+        Therefore , to force `buid borehle mannually` by entering data step by step
+        set 'build_manually_welldata' to True and set `well_filename` to None.
+        
+        Testes were passed while building borhole manually . see the report 
+        `Zoukougbeu_wellReport_` located in `data/` dir. 
+        
+        Now , we are going to set `build_manualy_welldata` param to False 
+        to test the automaticallay built.
+        """
+        parser_file = os.path.join(DRILL_PARSER_DIR, 'nbleDH.csv')
+        savepath = os.path.join(TEST_TEMP_DIR, self.__class__.__name__)
+        
+        for dh_type in [ 'collar', 'Geology','Sample','Elevation',
+                       'Azimuth', '*']: 
+            
+            filename=os.path.join(savepath, os.path.basename(parser_file).lower(
+                            ).replace('.csv','').replace('.xlsx',''))
+            
+            #remove the file after succesfully run
+            remove_control(rm_file=filename, type_of_file ='Borehole')
+            
+            try :
+                borehole_obj = Drill (well_filename= parser_file, 
+                               build_manually_welldata= False)
+            except : 
+                csamtpylog().get_csamtpy_logger().error(
+                    'Build borehole failed!  Unable to create borehole obj.')
+            else : 
+                # then read 
+                borehole_obj.writeDHData(data2write=dh_type, 
+                                         savepath = savepath, writeType='.xlsx')
+                refout = os.path.join(savepath, os.path.basename(parser_file).lower(
+                            ).replace('.csv','').replace('.xlsx','')+'.xlsx')
+                self.assertEqual(''.join([filename, '.xlsx']), refout, 
+                            'Difference found between reference output = {0} &'
+                            'Expected file = {1}.'.format(
+                                refout,''.join([filename, '.xlsx'])))
+                
+                
+              
 if __name__=='__main__': 
-    # gt = TestGEODRILL()
-    # gt.test_to_geolden_software() 
-    # gt.test_to_oasis_montaj()   
-    # gt.test_geosurface ()     
     unittest.main()
 
 

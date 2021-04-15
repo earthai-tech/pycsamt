@@ -21,15 +21,11 @@ install:
     - conda info -a
     - conda create -q -n test-env python=$TRAVIS_PYTHON_VERSION pytest pytest-cov pyyaml
     - source activate test-env
-    - pip install --user -r requirements.txt #ip install --user -r requirements.txt fi python language is not used 
-                                            # add --use-feature=2020-resolver if before install is uncommented 
-    #- conda install -c anaconda openpyxl # or python3 -m pip install --user xlsxwriter or pip3 install  openpyxl
+    - pip install --user -r requirements.txt #ip install --user -r requirements.txt fi python language is not used # add --use-feature=2020-resolver if before install is uncommented                      
     - pip install configparser
     - pip install coveralls 
-    #- python3 -m pip install --user xlsxwriter
-    - pip3 install openpyxl
+    - pip3 install openpyxl  #- python3 -m pip install --user xlsxwriter or  #- conda install -c anaconda openpyxl # or python3 -m pip install --user xlsxwriter or pip3 install  openpyxl
 
-# command to run tests
 script:
     #- python -m unittest discover tests/ 
     # coveral test /tests modules /skpip test_makeborehole/failure under threshold 50% & make a report 

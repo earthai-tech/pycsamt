@@ -1744,8 +1744,9 @@ class Geodrill (object):
                 for fnx, _df in zip( ['_sd', '_rr', '_aver'] ,
                                     [STD_pandas,ROUGH_pandas, AVER_pandas ]):
                     
-                    _df.to_excel(''.join([filename + fnx,'_cor_oas', writeType]),
-                                sheet_name=filename +fnx +'_cor_oas', index=writeIndex) 
+                    _df.to_csv(''.join([filename + fnx,'_cor_oas', writeType]),
+                                header=csvsetHeader,
+                                        index =writeIndex,sep=csvsep)  
                     
         else :
             mess = 'The type you provide is wrong. Support only *.xlsx and *.csv format'

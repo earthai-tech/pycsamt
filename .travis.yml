@@ -33,7 +33,7 @@ install:
 script:
     #- python -m unittest discover tests/ 
     # coveral test /tests modules /skpip test_makeborehole/failure under threshold 50% & make a report 
-    - pytest --cov=tests/ --ignore=test_make_borehole.py --cov-fail-under=50 --cov-report=tests/
+    - pytest -v --cov=tests/ --ignore=test_make_borehole.py --cov-fail-under=50 --cov-report=tests/
 
     
 after_success:

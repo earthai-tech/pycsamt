@@ -12,15 +12,18 @@ before_install:
     - python -m pip install --upgrade pip
 
 install:
-    - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-    - bash miniconda.sh -b -p $HOME/miniconda
-    - export PATH="$HOME/miniconda/bin:$PATH"
-    - hash -r
-    - conda config --set always_yes yes --set changeps1 no
-    - conda update -q conda
-    - conda info -a
-    - conda create -q -n test-env python=$TRAVIS_PYTHON_VERSION pytest pytest-cov pyyaml
-    - source activate test-env
+    - pip install pytest
+    - pip install pytest-cov
+    - pip install coveralls
+    # - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    # - bash miniconda.sh -b -p $HOME/miniconda
+    # - export PATH="$HOME/miniconda/bin:$PATH"
+    # - hash -r
+    # - conda config --set always_yes yes --set changeps1 no
+    # - conda update -q conda
+    # - conda info -a
+    # - conda create -q -n test-env python=$TRAVIS_PYTHON_VERSION pytest pytest-cov pyyaml
+    # - source activate test-env
     - pip install --user -r requirements.txt #ip install --user -r requirements.txt fi python language is not used 
                                             # add --use-feature=2020-resolver if before install is uncommented 
     - pip install configparser

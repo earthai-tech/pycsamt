@@ -29,7 +29,7 @@ install:
 # command to run tests
 script:
     #- python -m unittest discover tests/
-    - pytest -v --cov=pycsamt --cov-report= tests/  --ignore=setup.py
+    #- pytest -v --cov=pycsamt --cov-report= tests/  --ignore=setup.py
     - pytest --cov=pycsamt/
 
     #- python -m pytest --cov=tests --cov-fail-under=25      # coveral fail threshold 90%

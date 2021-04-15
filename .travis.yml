@@ -33,9 +33,8 @@ install:
 script:
     #- python -m unittest discover tests/
     # - pytest -v --cov=pycsamt --cov-report=tests/  --ignore=setup.py
-    - pytest --cov=tests/ #--ignore = test_make_borehole.py
-    
-    #- python -m pytest --cov=tests --cov-fail-under=25      # coveral fail threshold 90%
+    - pytest --cov=tests/ --ignore =test_make_borehole.py --cov-fail-under=50 --cov-report=tests/
+    #- python -m pytest --cov=tests/ --cov-fail-under=50      # coveral fail threshold 90%
     
 after_success:
   - coveralls

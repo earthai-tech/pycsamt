@@ -24,7 +24,7 @@ install:
     - pip install --user -r requirements.txt #ip install --user -r requirements.txt fi python language is not used 
                                             # add --use-feature=2020-resolver if before install is uncommented 
     - pip install configparser
-    - pip install coveralls --upgrade
+    - pip install coveralls 
 
 # command to run tests
 script:

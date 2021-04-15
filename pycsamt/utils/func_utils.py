@@ -1440,7 +1440,7 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
             shutil.move((os.path.join(os.getcwd(),"{0}_wellReport_".\
                                       format(name_of_location))),report_path)
         else :
-            raise OSError ("The path does not match in your O.S .Try to put the right path")
+            raise OSError ("The path does not exit.Try to put the right path")
             warnings.warn ("ignore","the report_path doesn't match properly.Try to fix it !")
         
     

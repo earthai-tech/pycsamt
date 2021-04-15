@@ -356,7 +356,7 @@ class TestGEODRILL(unittest.TestCase):
             else : 
                 # then read 
                 borehole_obj.writeDHData(data2write=kind_of_data2output, 
-                                         savepath  = savepath )
+                                         savepath = savepath)
                 refout = os.path.join(savepath, os.path.basename(parser_file).lower(
                             ).replace('.csv','').replace('.xlsx','')+'.xlsx')
                 self.assertEqual(''.join([filename, '.xlsx']), refout, 
@@ -366,12 +366,12 @@ class TestGEODRILL(unittest.TestCase):
                 
               
 if __name__=='__main__': 
-    # gt = TestGEODRILL()
+    gt = TestGEODRILL()
     # gt.test_to_geolden_software() 
     # gt.test_to_oasis_montaj()   
     # gt.test_geosurface ()   
-    # gt.test_make_drillhole()
-    unittest.main()
+    gt.test_make_drillhole()
+    # unittest.main()
 
 
                 

@@ -1426,7 +1426,7 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
         SampleData=None        
         
 
-    with open("{0}_wellReport_".format(name_of_location),"w", encoding="utf-8") as fid:
+    with open("{0}_wellReport_".format(name_of_location),"w") as fid:
         # for ii in reg_lines :
         fid.writelines(reg_lines)
     fid.close()

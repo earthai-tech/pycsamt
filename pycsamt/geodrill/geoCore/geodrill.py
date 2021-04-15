@@ -3051,7 +3051,7 @@ class Drill(object):
         savepath =kwargs.pop("savepath",None )
         writeIndex=kwargs.pop('write_index_on_sheet',False)
         writeType =kwargs.pop('writeType', 'xlsx')
-        csvencoding =kwargs.pop('encoding','utf-8')
+        # csvencoding =kwargs.pop('encoding','utf-8')
         csvsetHeader =kwargs.pop('add_header',True)
         csvsep =kwargs.pop('csv_separateType',',')
         
@@ -3108,7 +3108,7 @@ class Drill(object):
                         for keys, df_ in _dHDico.items():
                             if data2write == keys or data2write.lower() in keys or data2write in df_[0]:
                               df_[1].to_csv(''.join([self.daTA[0][:-1],'.csv']), header=csvsetHeader,
-                                    index =writeIndex,sep=csvsep, encoding=csvencoding)  
+                                    index =writeIndex,sep=csvsep)  
 
                 except Exception as error :
                     self._logging.error ('The type you provide as WriteType argument is wrong.'
@@ -3119,7 +3119,7 @@ class Drill(object):
                 
             elif type(data2write) is list :
                 data2write=[str(elm) for elm in data2write] # check the string format
-                with pd.ExcelWriter(''.join([self.daTA[0][:-1],'.xlsx'])) as writer :
+                with pd.ExcelWriter(''.join([self.daTA[0][:-1],'xlsx'])) as writer :
                     for ii, df in enumerate (data2write):
                         for keys, df__ in _dHDico.items():
                             if df.lower() in keys or df in df__[0] : 
@@ -3162,7 +3162,7 @@ class Drill(object):
                 
                 print('---> Borehole output <{0}> has been written to {1}.'.\
                       format(os.path.basename(
-                      ''.join([self.daTA[0][:-1],'.xlsx'])), self.savepath))
+                      ''.join([self.daTA[0][:-1],'xlsx'])), self.savepath))
                 
 #------Usefull functions --------------------------
 def get_closest_value (values_range, input_value): 

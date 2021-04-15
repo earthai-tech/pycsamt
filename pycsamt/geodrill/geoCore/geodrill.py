@@ -3092,12 +3092,13 @@ class Drill(object):
             
             if type(data2write) is not list:
                 data2write=str(data2write)
-                print(data2write)
+
                 try :
                     if writeType in ['xlsx','.xlsx', 'excell','Excell','excel','Excel','*.xlsx']:
                         for keys, df in _dHDico.items():
                             if data2write ==keys or data2write.lower() in keys or  data2write in df[0]:
-                              df[1].to_excel('.'.join([self.daTA[0][:-1],'xlsx']),sheet_name=keys,index =writeIndex)  
+                              df[1].to_excel('.'.join([self.daTA[0][:-1],'xlsx']),
+                                             sheet_name=keys,index =writeIndex)  
 
                         
                     elif writeType in ['csv','.csv', 'comma delimited','*.csv',
@@ -3157,7 +3158,9 @@ class Drill(object):
                 
             elif writeType in ['xlsx','.xlsx', 'excell','Excell','excel','Excel']:
                 
-                shutil.move ('.'.join([self.daTA[0][:-1],'xlsx']),self.savepath)
+                shutil.move (os.path.join(os.getcwd(),
+                                           '.'.join([self.daTA[0][:-1],'xlsx'])),
+                             self.savepath)
                 
                 print('---> Borehole output <{0}> has been written to {1}.'.\
                       format(os.path.basename(

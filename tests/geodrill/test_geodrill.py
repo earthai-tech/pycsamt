@@ -356,7 +356,7 @@ class TestGEODRILL(unittest.TestCase):
             else : 
                 # then read 
                 borehole_obj.writeDHData(data2write=kind_of_data2output, 
-                                         savepath = savepath)
+                                         savepath = savepath, writeType='.xlsx')
                 refout = os.path.join(savepath, os.path.basename(parser_file).lower(
                             ).replace('.csv','').replace('.xlsx','')+'.xlsx')
                 self.assertEqual(''.join([filename, '.xlsx']), refout, 

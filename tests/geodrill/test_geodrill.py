@@ -333,8 +333,8 @@ class TestGEODRILL(unittest.TestCase):
         parser_file = os.path.join(DRILL_PARSER_DIR, 'nbleDH.csv')
         savepath = os.path.join(TEST_TEMP_DIR, self.__class__.__name__)
         
-        for dh_type in [ 'collar', 'Collar','Geology','Sample','Elevation',
-                       'Azimuth', '*']: 
+        for dh_type in [ '*']:#collar', 'Geology','Sample','Elevation',
+                       #'Azimuth', '*','Collar']: 
             
             filename=os.path.join(savepath, os.path.basename(parser_file).lower(
                             ).replace('.csv','').replace('.xlsx',''))
@@ -366,12 +366,12 @@ class TestGEODRILL(unittest.TestCase):
                 
               
 if __name__=='__main__': 
-    gt = TestGEODRILL()
+    # gt = TestGEODRILL()
     # gt.test_to_geolden_software() 
     # gt.test_to_oasis_montaj()   
     # gt.test_geosurface ()   
-    gt.test_make_drillhole()
-    # unittest.main()
+    # gt.test_make_drillhole()
+    unittest.main()
 
 
                 

@@ -48,9 +48,12 @@ STN_DIR = os.path.normpath(
     os.path.join(TEST_pyCSAMT_ROOT,'data/stn_profiles'))
 
 I2DAT_DIR = os .path.normpath(
-    os.path.join(TEST_pyCSAMT_ROOT,'data/_iter2data_2'))
+    os.path.join(TEST_pyCSAMT_ROOT,'data/iter2dat'))
 
-survey_testname ='nibykro_survey'        # give a survey area or location
+OAS_DIR =os.path.normpath(
+    os.path.join(TEST_pyCSAMT_ROOT, 'data/InputOas'))
+
+survey_testname ='nibykro_survey'       
 
 # set test logging configure
 csamtpylog.load_configure(

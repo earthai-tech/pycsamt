@@ -12,7 +12,6 @@ before_install:
     - python -m pip install --upgrade pip
 
 install:
-
     - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
     - bash miniconda.sh -b -p $HOME/miniconda
     - export PATH="$HOME/miniconda/bin:$PATH"
@@ -22,7 +21,7 @@ install:
     - conda info -a
     - conda create -q -n test-env python=$TRAVIS_PYTHON_VERSION pytest pytest-cov pyyaml
     - source activate test-env
-    - pip install -r requirements.txt #ip install --user -r requirements.txt fi python language is not used 
+    - pip install --user -r requirements.txt #ip install --user -r requirements.txt fi python language is not used 
                                             # add --use-feature=2020-resolver if before install is uncommented 
     - pip install configparser
     - pip install coveralls --upgrade
@@ -30,9 +29,8 @@ install:
 # command to run tests
 script:
     #- python -m unittest discover tests/
-    #- pytest -v --cov=pycsamt --cov-report=tests/  --ignore=setup.py
+    # - pytest -v --cov=pycsamt --cov-report=tests/  --ignore=setup.py
     - pytest --cov=tests/
-
     #- python -m pytest --cov=tests --cov-fail-under=25      # coveral fail threshold 90%
     
 after_success:

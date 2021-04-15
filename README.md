@@ -77,16 +77,16 @@ AMA  and TMA filters can be used  to estimate average apparent resistivities at 
 The following line of codes is an example to get new _*.edi_ corrected files from both filters application at each station,
 refering to the EDI directory `data/edi/`.
 
-![](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/codes/demo_filter_ama_tma.PNG) 
+![](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/wiki-images_quick_works/codes/demo_filter_ama_tma.PNG) 
 
 
 The script below can be used to compare pseudo-cross-section of resistivity and phase of _corrected_edi outputs_ after `ama` & `tma` application  with 
 _uncorrected edi_ . 
 
-![](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/codes/demo_edi_corrected.PNG) 
+![](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/wiki-images_quick_works/codes/demo_edi_corrected.PNG) 
 
 
-click [here](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/filterstests.png) to see the output.
+click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/wiki-images_quick_works/codes/demo_filter_ama_tma.PNG) to see the output.
 
 ## Geophysical interpretation enhancement
 

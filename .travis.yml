@@ -26,7 +26,8 @@ install:
     #- conda install -c anaconda openpyxl # or python3 -m pip install --user xlsxwriter or pip3 install  openpyxl
     - pip install configparser
     - pip install coveralls 
-    - python3 -m pip install --user xlsxwriter
+    #- python3 -m pip install --user xlsxwriter
+    - pip3 install openpyxl
 
 # command to run tests
 script:

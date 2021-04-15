@@ -334,7 +334,7 @@ class TestGEODRILL(unittest.TestCase):
         savepath = os.path.join(TEST_TEMP_DIR, self.__class__.__name__)
         
         for dh_type in [ 'collar', 'Geology','Sample','Elevation',
-                       'Azimuth', '*','Collar']: 
+                       'Azimuth', '*']: 
             
             filename=os.path.join(savepath, os.path.basename(parser_file).lower(
                             ).replace('.csv','').replace('.xlsx',''))

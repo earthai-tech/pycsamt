@@ -3092,9 +3092,8 @@ class Drill(object):
             
             if type(data2write) is not list:
                 data2write=str(data2write)
-                
+                print(data2write)
                 try :
-
                     if writeType in ['xlsx','.xlsx', 'excell','Excell','excel','Excel','*.xlsx']:
                         for keys, df in _dHDico.items():
                             if data2write ==keys or data2write.lower() in keys or  data2write in df[0]:

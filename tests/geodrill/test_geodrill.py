@@ -332,6 +332,11 @@ class TestGEODRILL(unittest.TestCase):
         Therefore , to force `buid borehle mannually` by entering data step by step
         set 'build_manually_welldata' to True and set `well_filename` to None.
         
+        Testes were passed while building borhole manually . see the report 
+        `Zoukougbeu_wellReport_` located in `data/` dir. 
+        
+        Now , we are going to set `build_manualy_welldata` param to False 
+        to test the automaticallay built.
         """
         parser_file = os.path.join(DRILL_PARSER_DIR, 'nbleDH.csv')
         savepath = os.path.join(TEST_TEMP_DIR, self.__class__.__name__)
@@ -342,39 +347,30 @@ class TestGEODRILL(unittest.TestCase):
             filename=os.path.join(savepath, os.path.basename(parser_file).lower(
                             ).replace('.csv','').replace('.xlsx',''))
             
-            # remove the file after succesfully run
+            #remove the file after succesfully run
             remove_control(rm_file=filename, type_of_file ='Borehole')
-  
-            kind_of_data2output=dh_type
-            # we already test mannually, it's run well , than we test the outputs 
-             # of all dh_type 
-            buid_borehole_manually =False
-             
+            
             try :
                 borehole_obj = Drill (well_filename= parser_file, 
-                               build_manually_welldata= buid_borehole_manually)
+                               build_manually_welldata= False)
             except : 
                 csamtpylog().get_csamtpy_logger().error(
                     'Build borehole failed!  Unable to create borehole obj.')
             else : 
                 # then read 
-                borehole_obj.writeDHData(data2write=kind_of_data2output, 
+                borehole_obj.writeDHData(data2write=dh_type, 
                                          savepath = savepath, writeType='.xlsx')
                 refout = os.path.join(savepath, os.path.basename(parser_file).lower(
                             ).replace('.csv','').replace('.xlsx','')+'.xlsx')
                 self.assertEqual(''.join([filename, '.xlsx']), refout, 
                             'Difference found between reference output = {0} &'
-                            'Expected file = {1}.'.format(refout,''.join([filename, '.xlsx'])))
+                            'Expected file = {1}.'.format(
+                                refout,''.join([filename, '.xlsx'])))
                 
                 
               
 if __name__=='__main__': 
-    gt = TestGEODRILL()
-    # gt.test_to_geolden_software() 
-    # gt.test_to_oasis_montaj()   
-    # gt.test_geosurface ()   
-    gt.test_make_drillhole()
-    # unittest.main()
+    unittest.main()
 
 
                 

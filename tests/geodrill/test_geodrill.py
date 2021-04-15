@@ -333,8 +333,8 @@ class TestGEODRILL(unittest.TestCase):
         parser_file = os.path.join(DRILL_PARSER_DIR, 'nbleDH.csv')
         savepath = os.path.join(TEST_TEMP_DIR, self.__class__.__name__)
         
-        for dh_type in [ '*']:#collar', 'Geology','Sample','Elevation',
-                       #'Azimuth', '*','Collar']: 
+        for dh_type in [ 'collar', 'Geology','Sample','Elevation',
+                       'Azimuth', '*','Collar']: 
             
             filename=os.path.join(savepath, os.path.basename(parser_file).lower(
                             ).replace('.csv','').replace('.xlsx',''))

@@ -88,13 +88,14 @@ class Avg (object):
         >>> freq=DATA.Frequency.value
     """
     encodage ='utf8'
-    def __init__(self, data_fn=None , **kwargs):
+    def __init__(self, data_fn=None ,  **kwargs):
         self._logging =csamtpylog.get_csamtpy_logger(self.__class__.__name__)
         self.data_fn =data_fn
         self.Header=Header()
         self.Data_section =Data()
         self.Skip_flag =Skip_flag()
         
+        self.profile_fn =kwargs.pop('profile_fn', None)
         
 
         self._f1_labels , self._f2_labels=['skp','Station',
@@ -123,6 +124,8 @@ class Avg (object):
                                    'EyHx':'RYX', 
                                    'EyHy':'RYY'}
   
+        for key in list(kwargs.keys()):
+            self.__setattr__(key, kwargs[key])
             
         if self.data_fn is not None :                       
             self._read_avg_file ()
@@ -438,7 +441,7 @@ class Avg (object):
               format(os.path.basename(self.data_fn), 
                    ''.join([os.path.basename(self.data_fn)[:-4],'_2_to_1.avg'])))
                 
-    def avg_to_jfile (self, avg_data_fn=None , station_fn =None, j_extension='dat', 
+    def avg_to_jfile (self, avg_data_fn=None , profile_fn =None, j_extension='dat', 
                       utm_zone='49N',**kws):
         """
         Method to write avg file to Jfile, convert both files , Astatic or plainty
@@ -448,7 +451,7 @@ class Avg (object):
         -----------
             * avg_data_fn:str 
                         pathLike , path to your avg file 
-            * station_fn:  str
+            * profile_fn:  str
                         pathLike, path to your profile/station file .
             * j_extension: str
                         Extension type you want to export file .
@@ -478,7 +481,10 @@ class Avg (object):
         if self.data_fn is None :
             raise CSex.pyCSAMTError_avg_file("Could not find any path to read ."
                                               "Please provide your right AVG file.")
-        if station_fn is  None :
+        
+        if profile_fn is not None : self.profile_fn = profile_fn 
+        
+        if self.profile_fn is  None :
             raise CSex.pyCSAMTError_station(
                 'Need  absolutely station file. please provide your ".STN" file.')
         
@@ -486,7 +492,7 @@ class Avg (object):
         self._read_avg_file(data_fn=self.data_fn)
         
         #---> read profile_obj from site 
-        site_obj = Site(data_fn=station_fn, utm_zone=utm_zone)#.set_site_info(data_fn=, utm_zone = utm_zone)
+        site_obj = Site(data_fn=self.profile_fn, utm_zone=utm_zone)#.set_site_info(data_fn=, utm_zone = utm_zone)
 
         #---> get the list of stations 
         station_list = sorted(self.Data_section.Station.names)
@@ -721,17 +727,17 @@ class Avg (object):
             except : 
                 warnings.warn("It seems the path already exists !")
         
-        
-        if profile_fn is None : 
-            warnings.warn ('No station profile file will detected.'\
-                           ' Be aware sure , we will set location longitude ,'\
+        if profile_fn is not None : self.profile_fn = profile_fn 
+        if self.profile_fn is None : 
+            warnings.warn ('No station profile file will detected.'
+                           ' Be aware sure , we will set location longitude ,'
                                ' latitude and elevation to <0.>')
         
         # read avg file 
         self._read_avg_file(data_fn=self.data_fn)
         
-        if profile_fn is not None : 
-             site_obj = Site(data_fn=profile_fn, utm_zone=utm_zone)
+        if self.profile_fn is not None : 
+             site_obj = Site(data_fn=self.profile_fn, utm_zone=utm_zone)
                                                                    
         #---> get the list of stations 
         head_dataid_list = sorted(self.Data_section.Station.names)
@@ -795,7 +801,7 @@ class Avg (object):
         if apply_filter in ['ama', 'tma', 'flma']:
             # create processing_obj , unique obj for all filters  
             corr_obj= corr.shifting(data_fn = self.data_fn,
-                                    profile_fn=profile_fn)
+                                    profile_fn=self.profile_fn)
                 
             if apply_filter =='tma':
                 self._logging.info (
@@ -891,7 +897,7 @@ class Avg (object):
                    int(number_of_points) , msf)
             
             
-        if profile_fn  is None : 
+        if self.profile_fn  is None : 
             #---> set to 0. lon , lat and elev if profile _fn is not provided
             #--> create dictionnary of zero value of lat and lon 
             import copy 
@@ -901,7 +907,7 @@ class Avg (object):
             head_edi_lat = copy.deepcopy(head_edi_lon)
             head_edi_elev = copy.deepcopy(head_edi_lon)
             
-        elif profile_fn is not None : 
+        elif self.profile_fn is not None : 
              head_edi_lon = site_obj.lon
              head_edi_lat = site_obj.lat 
              head_edi_elev = site_obj.elev 

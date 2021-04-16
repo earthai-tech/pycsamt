@@ -21,6 +21,9 @@ _build
 *.log
 *.bbl
 
+# not import _demo_userguidefile
+demo_userguidefile.py
+
 *~
 *.py[cod]
 *.pyc

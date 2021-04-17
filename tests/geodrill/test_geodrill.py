@@ -327,10 +327,10 @@ class TestGEODRILL(unittest.TestCase):
     def test_make_drillhole (self): 
         """
         Test to generate a new DH file. 
-        .. note: When parser file is provided , the praser file will read as 
-        as main even `build_mannually_welldata` is set to `True`.
-        Therefore , to force `buid borehle mannually` by entering data step by step
-        set 'build_manually_welldata' to True and set `well_filename` to None.
+        .. note: When parser file is provided , the parser file will read as 
+        as main even `auto` is set to `False`.
+        Therefore , to force `buid borehole manually` by entering data step by step
+        set 'auto' to False and set `well_filename` to None.
         
         Testes were passed while building borhole manually . see the report 
         `Zoukougbeu_wellReport_` located in `data/` dir. 
@@ -352,7 +352,7 @@ class TestGEODRILL(unittest.TestCase):
             
             try :
                 borehole_obj = Drill (well_filename= parser_file, 
-                               build_manually_welldata= False)
+                               auto= True)
             except : 
                 csamtpylog().get_csamtpy_logger().error(
                     'Build borehole failed!  Unable to create borehole obj.')

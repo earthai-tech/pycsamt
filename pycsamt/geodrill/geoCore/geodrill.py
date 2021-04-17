@@ -566,7 +566,7 @@ class Geodrill (object):
                 geos =Geodrill.get_structure(resistivities_range=sec_res) # get the name of structure as possible 
                 if len(geos)>1 : tm = 's'
                 else :tm =''
-                print('---> !We added other {0} geological struture{1}. You may ignore it.'.format(len(geos), tm))
+                print('---> !We added other {0} geological structure{1}. You may ignore it.'.format(len(geos), tm))
                 ilay.extend(geos)                       # then , extend the list 
                 return ilay 
             elif len(ilay) > len(input_rho): 
@@ -960,7 +960,7 @@ class Geodrill (object):
             if stn =='S00' :            # first station id framed into three started at the left  
                 svm = punc.build_resistivity_barplot(depth_values=self.geo_depth,
                                            res_values=georr[:,0])
-            elif stn == self.station_names[-1] : # lst station id names start is lopcated at the right 
+            elif stn == self.station_names[-1] : # lst station id names start is located at the right 
                 svm = punc.build_resistivity_barplot(depth_values=self.geo_depth,
                                            res_values=georr[:,2])
             else :          # station id located at the midle framed into three stations 
@@ -976,7 +976,7 @@ class Geodrill (object):
         self.geo_secure_pseudo_sequence = np.array(sc)
         
         #---------------- Quality control --------------------------------.--------------------
-        mess =' !Your data passes safety the Quality Control of Geodrill'
+        mess =' Your data pass safety the Quality Control !'
         
         if len(self.geo_secure_pseudo_sequence) == len(self.station_location):
             self.qc +=.25 
@@ -984,10 +984,10 @@ class Geodrill (object):
                                                                 #cover the total depth
             self.qc += .25 
         else :
-            warnings.warn('Data provided are inconsistencies ,'\
+            warnings.warn('Data provided are inconsistencies ,'
                           ' Please you may try to undestand carefuuly the code.')
-            self._logging.debug('Data provided are inconsistencies ,'\
-                          ' Please you may try to undestand carefuuly the code.')
+            self._logging.debug('Data provided are inconsistencies ,'
+                          ' Please you may try to understand carefully the code.')
             
         if self.qc ==1. : 
             print('---> {}.'.format(mess))
@@ -2446,8 +2446,8 @@ class Drill(object):
                      only the typical well datafile. If None ,  the program will 
                     redirect to build mannually option . 
                     
-        **build_manually_welldata** : bool  
-                     option to build manually the well data . set to True 
+        **auto** : bool  
+                     option to automatically well data . set to True 
                       if you want to build manually a well data .
                      *default* is False
 
@@ -2497,12 +2497,12 @@ class Drill(object):
                                  savepath =None)
     """
     
-    def __init__(self, well_filename=None , build_manually_welldata=False, **kwargs):
+    def __init__(self, well_filename=None , auto=True, **kwargs):
         
         self._logging=csamtpylog.get_csamtpy_logger(self.__class__.__name__)
         
         self.wfilename=well_filename
-        self.buildmanuel=build_manually_welldata
+        self.auto=auto
         
         self.mask=kwargs.pop("mask",1)
         self.utm_zone=kwargs.pop("utm_zone","49N")
@@ -2537,7 +2537,7 @@ class Drill(object):
                     'DH_RL':None,
                     }        
         
-        if self.buildmanuel is True and self.wfilename is None :
+        if self.auto is False and self.wfilename is None :
             
             self.daTA=func.build_wellData (add_azimuth=self.compute_azimuth, 
                                             utm_zone=self.utm_zone,

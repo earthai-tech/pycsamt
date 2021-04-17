@@ -30,8 +30,7 @@ showGrid =False
 #---create obj -----------
 
 plot_1d_obj =Plot1d()
-
 plot_1d_obj.plotRMS(fn =logPath, 
-                    RMS_target=RMS_target, 
+                    target=RMS_target, 
                     show_grid =showGrid ,
-                    show_target_line = showTargetLine , savefig =savefigure )
+                    show_target_line = showTargetLine , savefig = savefigure )

@@ -178,7 +178,7 @@ class TestAVG(unittest.TestCase):
         try :
             avg_obj =avg.Avg()
             avg_obj.avg_to_jfile(avg_data_fn=os.path.join(AVG_DATA_DIR,'K1.AVG'), 
-                                        station_fn=os.path.join(AVG_DATA_DIR, 'K1.stn'),
+                                        profile_fn=os.path.join(AVG_DATA_DIR, 'K1.stn'),
                                         j_extension='.dat',
                                         savepath=os.path.join(
                                             TEST_TEMP_DIR, self.__class__.__name__),

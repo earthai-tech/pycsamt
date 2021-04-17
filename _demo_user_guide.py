@@ -9,28 +9,38 @@ Created on Fri Apr 16 15:11:29 2021
 import os 
 from pycsamt.ff.core.avg import Avg 
 from pycsamt.viewer.plot import Plot1d
-from pycsamt.ff.core.cs import Profile 
+from pycsamt.viewer.plot import Plot2d
+from pycsamt.ff.core.cs import Profile
+from pycsamt.ff.core.cs import Site
 # create profile_obj 
 profile_obj = Profile(station_profile)
 # to get 
 profile_obj.east    # get easting coordinate  
 profile_obj.north   # get northing coordinates 
-profile_obj.lon 
-profile_obj.lat 
-
+profile_obj.lon     # longitude value 
+profile_obj.lat     # latitue value 
+# to get dipole length in meters 
 profile_obj.dipole_length 
-profile_obj.stn_interval 
-profile_obj.stn_interval 
-profile_obj.azim 
-profile_obj.Site.stn_name
 
-profile_obj.Site.east['S00']
-profile_obj.Site.north['S00']
+profile_obj.stn_interval  # interval between stations 
+profile_obj.stn_position  # scaled position of each stations 
+profile_obj.azimuth          #  azimuth of profile_line 
 
 
-# Plot1d().plot_curves(fn = avg_file, selected_stations=['S00', 'S22', 'S46'])
-# convert avg file to SEG EDI file .
-# edipath ='data/edi' # path to edi-files 
-# selected_frequencies =[1024, 4096., 8000.] # selected frequencies to visualize
-# from pycsamt.viewer.plot import Plot2d
-# Plot1d().plot2d_obj.penetration2D(fn = edipath, doi ='2km') # can be doi=2000. 
+profile_obj.Site.stn_name # station id 
+
+# to get single value of latitude and longitude or easing northing at each station 
+# call Site obj 
+# 
+straighten_out_mode ='classic' # can be 'natural/distord' or equidistant
+# contrinute value for x,y coordinates hidden. 
+adjust__x_utm_coordinates = -300238.702 
+adjust__y_utm_coordinates = -2369.252
+get_new_station_profile =True 
+Plot1d().plot_station_profile(fn = station_profile_file, 
+                                 reajust_coordinates=(adjust__x_utm_coordinates,
+                                                      adjust__y_utm_coordinates),
+                                 straighten_type =straighten_out_mode , 
+                                 outputfile =get_new_station_profile, 
+                                 savefig=savepath)
+

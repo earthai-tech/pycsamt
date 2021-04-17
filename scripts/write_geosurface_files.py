@@ -27,13 +27,11 @@ values_for_imaging = [38, 100]      # mean surface at 38 m deep and 100 m deep
 # file format is default output format : 
 output_format = 'csv'               # could be '`xlsx` or `csv
                                     # default is `csv`
-                                    
-
+                                
 # call geosurface object 
 geo_surface_obj = Geosurface( path =path_to_oasisfiles, 
                              depth_values = values_for_imaging, 
                              )
-
 geo_surface_obj.write_file(fileformat = output_format, 
                             savepath =savepath )
 

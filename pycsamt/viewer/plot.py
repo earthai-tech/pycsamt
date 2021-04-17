@@ -3113,9 +3113,8 @@ class Plot2d (object):
         
         contourlines =kws.pop('contour_lines_styles', '-')
         contourcolors =kws.pop('contour_lines_colors', 'white')
-        delineate_resistivity_curve =kws.pop('delineate_rho', None)
-        
-        show_contour =kws.pop('show_contour', False)
+        delineate_resistivity_curve =kws.pop('delineate_resistivity', None)
+    
         show_report = kws.pop('show_report', True)
         
         grid_alpha =kws.pop('alpha', 0.5)
@@ -3312,45 +3311,60 @@ class Plot2d (object):
         axeRESI.set_ylim ([self.ylimits[1], self.ylimits[0]]) 
         
         # set delineate cure 
-        for axe, grid_response in zip([axeFW, axeRESI], [self.resp_forward, 
-                                                         self.resp_residual]): 
-            if show_contour is True :
-                contps = axe.contour(mesh_x  , 
-                                     mesh_y ,
-                                     grid_response,
-                                      colors =contourcolors, 
-                                      linestyles=contourlines)
-                if  delineate_resistivity_curve is not None : 
+        if  delineate_resistivity_curve is not None :
+            for ii, (axe, grid_response) in enumerate(zip([axeFW, axeRESI], [self.resp_forward, 
+                                                             self.resp_residual])): 
+                
+                if ii==0 : mesf = 'forward model'
+                else : mesf ='residual'
+
+                try :
+                    contps = axe.contour(mesh_x, 
+                                         mesh_y,
+                                         grid_response,
+                                          colors =contourcolors, 
+                                          linestyles=contourlines
+                                          )
+                except :
+                    self._logging.debug(
+                        'Shape of {0} x & y does not match that of z: found {1}'
+                        ' instead of {2} but we will plot instead.'.
+                        format(mesf, mesh_x.shape, grid_response.shape))
+                    contps = axe.contour(mesh_x[:-1, ::] , 
+                                         mesh_y[:-1, ::],
+                                         grid_response,
+                                          colors =contourcolors, 
+                                          linestyles=contourlines
+                                          )
+
+                try : 
                     axe.clabel(contps,  delineate_resistivity_curve ,
                                     inline=True, fmt='%1.1f',
                                     fontsize =self.font_size,
                                       )
+                except : 
+                    #deline =None and set all contours
+                    if ii==0 : mesf = 'Forward model'
+                    else : mesf ='residual'
+                
+                    warnings.warn(
+                        'Values {0} given as {1} contours levels does not match !'
+                        'Contours levels are resseting to default levels !'.
+                        format(delineate_resistivity_curve, mesf))
                     
-            if delineate_resistivity_curve is not None :
-               origin ='upper'
-               if axe == axeFW : 
-                   vmax , vmin = self.climits [0], self.climits[1]
-               else : vmax , vmin= self.resp_residual.max(), self.resisual.min()
-                  
-               contps = axe.contour(grid_response, colors =contourcolors, 
-                                     vmax=vmax,
-                                     vmin = vmin, 
-                                       linestyles=contourlines, 
-                                       extent =( self.xlimits[0],
-                                                 self.xlimits[1],
-                                                 self.ylimits[1], 
-                                                 self.ylimits[0]),
-                                                 #self.ylimits[0], 
-                                                 #self.ylimits[1]),
-                                       extend ='both',
-                                       origin= origin ,  
-                                      )
-               axe.clabel(contps, delineate_resistivity_curve ,
-                               inline=True, 
-                               fmt='%1.1f',
-                               fontsize =self.font_size,
-                                         )
-        
+                    print('.--> ! {0} contours levels = {1} are resseting to '
+                          ' default levels!'.format(mesf.capitalize(), delineate_resistivity_curve))
+
+                    self._logging.debug ('values {0} given as contours levels does not match ! '
+                          'availables contours levels are set to default values.')
+                    
+                    axe.clabel(contps, 
+                                inline=True,
+                                fmt='%1.1f',
+                                fontsize =self.font_size,
+                                              )
+                    
+            
             
         for offs , names in zip (self.resp_sites_offsets, self.resp_sites_names):
             # plot the station marker ' black triangle down ' 
@@ -3459,15 +3473,15 @@ class Plot2d (object):
 
         self.fig.suptitle('Occam 2D : Forward response & Residual',
                   ha='center',
-          fontsize= 10* self.fs, 
+          fontsize= 7* self.fs, 
           verticalalignment='center', 
           style =self.font_style,
-          bbox =dict(boxstyle='round',facecolor ='moccasin'))
+          bbox =dict(boxstyle='round',facecolor ='moccasin'), y=1.)
         
-        # tigh_layout plt.tight_layout
+        # tigh_layout   plt.tight_layout
+
         # ---------------------Print Reprot ----------------------------
        
-        
         if savefig is not None : 
             plt.savefig(savefig, dpi = self.fig_dpi)
         
@@ -3622,7 +3636,7 @@ class Plot2d (object):
             if mm is not None : 
                 setattr(self, nn, mm)
                 f +=1
-            elif hasattr( Plot2d, mm):
+            elif hasattr( Plot2d, nn):
                 f +=1
             else :  imf.append(nn)
         

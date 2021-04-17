@@ -19,7 +19,7 @@ from pycsamt.geodrill.geoCore.geodrill import Drill
 
 
 path_to_parser_files =os.path.join(os.environ['pyCSAMT'], 
-                                   'geodrill', 'data', 'drill_example_files')
+                                       'data', 'drill_example_files')
 
 #name of parserfile : eg: data collected from `location `nble`. 
 
@@ -34,20 +34,11 @@ kind_of_data2output = '*'       # can be '5',"all",
                                 #            or   `*`.
                                 #`*` is a joker , mean output all data .
 
-# if set to True , user will add step by step all data with the layer thicknesses 
-buid_borehole_manually =False 
-# if elevation of all borehole is there , upload , will take account 
-add_elevation =None 
-# if azimuth of all borehole is available , call it 
-add_azimuth = None  
+# if set to False , user will add step by step all data with the layer thicknesses 
+build_borehole_auto=True
 
 borehole_obj = Drill (well_filename= os.path.join(path_to_parser_files, parser_file)  , 
-                   build_manually_welldata= buid_borehole_manually)
-borehole_obj._collar()
-borehole_obj.dhGeology()
-borehole_obj.dhSample()
-borehole_obj.dhSurveyElevAz(add_azimuth=add_azimuth, 
-                            add_elevation=add_elevation)
+                   auto= build_borehole_auto)
 borehole_obj.writeDHData(data2write=kind_of_data2output, 
                          savepath  = savepath )
 

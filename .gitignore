@@ -142,9 +142,11 @@ target/
 # pyenv python configuration file
 .python-version
 
-# jupyther notebooks
+# jupyther notebooks tests 
 .ipynb_checkpoints
 #*.png
+pycsamt_user_guide/
+
 
 # ignore quick examples docs 
 #quick_examples/

@@ -123,4 +123,135 @@ Plot2d().plot_Response(data_fn ='data/occam2D/OccamDataFile.dat',
                          show_report =showReport , 
                          savefig =savefigure)
 
+from pycsamt.viewer.plot import Plot2d
 
+
+# additional geological informations collected 
+INPUT_RESISTIVITIES = [66.,70., 180.,
+                       1000., 3000., 10000., 20000.] 
+INPUT_LAYERS = ['river zone', 'fracture zone' , 
+                'granite ', 'Most Weathered', 
+                'Less Weathered'] 
+STEP_DESCENT =200.      # step descent in meters 
+DOI  ='1km'             # investigation depath 
+additional_geological_infos={
+        'doi':DOI,
+        'step_descent': STEP_DESCENT, 
+        'input_resistivities' : INPUT_RESISTIVITIES, 
+        'input_layers' : INPUT_LAYERS
+                    }
+
+from pycsamt.viewer.plot import Plot2d
+Plot2d().plot_Pseudolog(station_id = 'S43', # station to visualize
+                        **additional_geological_infos, 
+                        **oc2d_inversion_kwargs)
+
+i2d_files_kwargs={
+                 'iter2dat_fn' : 'data/iter2dat/K1.iter.dat',
+                 'bln_fn':'data/iter2dat/K1.bln'
+                 }
+Plot2d().plot_Pseudolog(station_id = 'S43', # station to visualize
+                        **additional_geological_infos, 
+                        **i2d_files_kwargs)       
+       
+
+
+from pycsamt.geodrill.geoCore.geodrill import Geodrill 
+# create a geological object from geodrill module 
+geo_obj = Geodrill(**oc2d_inversion_kwargs , **additional_geological_infos)
+# ca export to golden software 
+geo_obj.to_golden_software(filename= 'test_area', 
+                           to_negative_depth =True , # default output
+                           savepath=savepath) 
+
+from pycsamt.geodrill.geoCore.geodrill import Geodrill 
+geo_obj.to_oasis_montaj(profile_fn ='data/avg/K1.stn', # can be create if coordinates doesnt exists) 
+                           to_negative_depth =True , # default output
+                           to_log10=True,   #output resistivity to log10 values 
+                           filename ='test_area',
+                           savepath=savepath) 
+
+
+from pycsamt.geodrill.geoCore.geodrill import Geosurface
+path_to_oasisfiles ='data/InputOas' # loaction of oasis output files
+# section depth map assumed to be  40  m and 100m .
+output_format ='.csv'
+values_for_imaging = [40.,100.]  
+# we create self container of geosurface object        
+geo_surface_obj = Geosurface( path =path_to_oasisfiles, 
+                             depth_values = values_for_imaging, 
+                             )
+geo_surface_obj.write_file(fileformat = output_format, 
+                            savepath =savepath )
+
+parser_file ='nbleDH.csv'
+
+#savepath : path to save outfile borehole files 
+savepath = None 
+
+# if set to False , user will add step by step all data with the layer thicknesses 
+build_borehole_auto=True
+# create a borehole object 
+borehole_obj = Drill (well_filename= 'data/drill_example_files/nbleDH.csv', 
+                   auto= build_borehole_auto)
+# data2write : which kind of data do you want to output ?
+# borehole geology? borehole geochemistry sample ? or borehole survey elevation ? 
+kind_of_data2output = '*'   # can be 'collar' `geology` , `sample`
+borehole_obj.writeDHData(data2write=kind_of_data2output, 
+                         savepath  = savepath )
+
+
+# set the stn profile file or EDI-file
+# set path to your profile file 
+
+file_stn='K6.stn'           # name of zonge station profile file 
+# uncomment `path_to_stn_profile_file is zonge station file is used 
+path_to_stn_profile_file = None #  os.path.join(os.environ["pyCSAMT"],'csamtpy','data', file_stn) 
+            # OR 
+            
+# provided edipath or jpath when used edifiles or jfiles and 
+edipath_or_jpath = os.path.join(os.environ["pyCSAMT"],'data','edi') # None 
+#edipath_or_jpath =None                     # uncomment section if station stn file is provided 
+
+# to see documentation of that function , set "see_documentation " to 'true'. 
+see_documentation=False
+# to plot profile : set PLOT to "True"
+PLOT=True 
+# set "*" for three profile. 
+
+plot_type ='*'          # could be |"topography or "topo" |"speration" or "stn"| "azimuth or "az|
+                        # could use only the two first letter or more for ploting or 1,2,3 or 123|*
+set_stnNames =True      # set it to True if you want to see station names appear on xaxis 
+
+
+# create profile_obj 
+plot_1d_obj= Plot1d()
+
+from pycsamt.viewer.plot import Plot1d 
+set_stnNames =True # show staion names labels 
+plot_type ='*' #or 123  or can be [Top|az|sep] or [1|2|3] for individually
+path_to_stn_profile_file = 'data/avg/K1.stn'
+plot1d().plot_topo_sep_azim(fn = None, # set edipath or jpath 
+                               profile_fn= path_to_stn_profile_file ,
+                               plot=plot_type,
+                               set_station_names=set_stnNames,
+                               )
+plot1d_obj = Plot1d( fig_size =figsize)
+
+from pycsamt.viewer.plot import Plot1d 
+# path to profiles stn files location 
+path_to_profiles = 'data/stn_profiles'
+# if you want to plot some specific profiles betwen many profiles 
+# specify the profile lines  LIKE ['K9.stn', 'K8.stn']
+profile_lines = ['K9.stn', 'K8.stn'] #profile_lines = ['K9.stn', 'K8.stn'] 
+#scaled the line scale # can be `m` or `km` . Default is `m`
+scale ='km'                     
+#save figure 
+savefig ='test_multisites.png'
+#set to False if you dont want to see stations labels 
+show_station_labels = True  
+Plot1d().plot_multiStations(path = path_to_profiles, 
+                              profile_lines =profile_lines,
+                              scale =scale, 
+                              savefig =savefig, 
+                              show_station_labels = show_station_labels )

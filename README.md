@@ -88,7 +88,7 @@ _uncorrected edi_ .
 ![](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/wiki-images_quick_works/codes/demo_edi_corrected.PNG) 
 
 
-click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/wiki-images_quick_works/codes/demo_filter_ama_tma.PNG) to see the output.
+click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/filterstests.png) to see the output.
 
 ## Geophysical interpretation enhancement
 

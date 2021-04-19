@@ -32,6 +32,7 @@ and [GoldenSoftware](https://www.goldensoftware.com/products/surfer).
 * Home Page : https://github.com/WEgeophysics/pyCSAMT/wiki
 * Some codes implementation: https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F
 * Installation guide : https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux
+* User Guide : https://github.com/WEgeophysics/pyCSAMT/blob/develop/docs/pyCSAMT%20User%20Guide.pdf
 
 
 ## Licence 

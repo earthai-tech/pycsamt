@@ -23,6 +23,8 @@ _build
 
 # not import _demo_userguidefile
 demo_userguidefile.py
+# Jupyter notebook 
+pycsamt_user_guide/
 
 *~
 *.py[cod]

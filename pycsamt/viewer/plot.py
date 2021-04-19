@@ -2037,11 +2037,11 @@ class Plot1d :
                                 'style': self.font_style, 
                                 })
         
-        print('----> {0} stations plotted successfully.'.\
+        print('----> {0} stations plotted successfully.'.
               format(len(snames )))
         
         self.fig.suptitle('Plot {0:02} survey lines'.format(len(self.X)),
-                      fontsize= 4 * self.font_size, 
+                      fontsize= 2. * self.font_size, 
                       verticalalignment='center', 
                       style ='italic',
                       bbox =dict(boxstyle='round',facecolor ='moccasin'), 

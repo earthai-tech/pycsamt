@@ -1,4 +1,4 @@
 
 #COVERALLS_REPO_TOKEN=abcdef1234569abdcef coveralls
-repo_token: NF9VB3aOVc5Cyt687g3swOZ4D5YZLakRY
+repo_token: g1yrG8qWDVo7jqE9y03jgJE8N34IQZSTx 
 parallel: true  # merge the result from parallel build on travis

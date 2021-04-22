@@ -26,12 +26,10 @@ install:
     - pip install coveralls 
     - pip3 install openpyxl  #- python3 -m pip install --user xlsxwriter or  #- conda install -c anaconda openpyxl # or python3 -m pip install --user xlsxwriter or pip3 install  openpyxl
 
-script:
-    #- python -m unittest discover tests/ 
-    # coveral test /tests modules /skpip test_makeborehole/failure under threshold 50% & make a report 
-    #- pytest -v --cov=tests --cov-report=tests --ignore =setup.py
+script: 
+    #- pytest -v --cov=tests --cov-report=tests --ignore=setup.py
     - python -m pytest --cov=tests --cov-fail-under=50      # coveral fail threshold 90%
-
     
 after_success:
-  - coveralls
+  - coveralls --rcfile=.coveragerc
+  

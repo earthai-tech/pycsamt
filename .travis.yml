@@ -23,13 +23,15 @@ install:
     - source activate test-env
     - pip install --user -r requirements.txt #ip install --user -r requirements.txt fi python language is not used # add --use-feature=2020-resolver if before install is uncommented                      
     - pip install configparser
-    - pip install coveralls 
-    - pip3 install openpyxl  #- python3 -m pip install --user xlsxwriter or  #- conda install -c anaconda openpyxl # or python3 -m pip install --user xlsxwriter or pip3 install  openpyxl
+    - pip install -q coverage==4.5.4
+    - pip install -q QUnitSuite codecov coveralls
+    #- pip3 install openpyxl  #- python3 -m pip install --user xlsxwriter or  #- conda install -c anaconda openpyxl # or python3 -m pip install --user xlsxwriter or pip3 install  openpyxl
 
 script: 
     #- pytest -v --cov=tests --cov-report=tests --ignore=setup.py
     - python -m pytest --cov=tests --cov-fail-under=50      # coveral fail threshold 90%
     
 after_success:
-  - coveralls --rcfile=.coveragerc
+  - coveralls 
+  #- coveralls --rcfile=.coveragerc
   

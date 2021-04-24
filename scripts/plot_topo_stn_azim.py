@@ -35,7 +35,6 @@ set_stnNames =True      # set it to True if you want to see station names appear
 # create profile_obj 
 plot_1d_obj= Plot1d()
 
-
 plot_1d_obj.plot_topo_sep_azim(fn = edipath_or_jpath,
                                profile_fn= path_to_stn_profile_file ,
                                plot=plot_type,

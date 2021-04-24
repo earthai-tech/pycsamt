@@ -95,7 +95,7 @@ setup(
 	version=pycsamt.__version__,
 	author=" Kouadio Kouao Laurent",
     author_email="etanoyau@gmail.com",
-	description="A Python toolbox for standard controlled source audio-frequency magnetotellurics data processing.",
+	description="A Python open-source toolkit for standard Controlled Source Audio-frequency MagnetoTellurics (CSAMT)",
 	long_description=LONG_DESCRIPTION,
     url="https://github.com/WEgeophysics/pycsamt",
 	#data_files=[('', ['pycsamt/utils/epsg.npy',]),], #this will install datafiles in wearied palce such as ~/.local/

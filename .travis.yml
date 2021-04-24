@@ -1,16 +1,13 @@
 dist: xenial
 sudo: required
-
 language: python
 python:
-  - "3.7"
-  - "3.8"
-
-before_script: null
+- '3.7'
+- '3.8'
+before_script:null
 
 before_install:
     - python -m pip install --upgrade pip
-
 install:
     - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
     - bash miniconda.sh -b -p $HOME/miniconda
@@ -21,35 +18,28 @@ install:
     - conda info -a
     - conda create -q -n test-env python=$TRAVIS_PYTHON_VERSION pytest pytest-cov pyyaml
     - source activate test-env
-    - pip install --user -r requirements.txt                       
+    - pip install --user -r requirements.txt
     - pip install configparser
-    - pip install coveralls 
-
-script: 
-   
-    - python -m pytest --cov=tests --cov-fail-under=50      # coveral fail threshold 90%
-    
+    - pip install coveralls
+script:
+    - python -m pytest --cov=tests --cov-fail-under=50
 after_success:
-  - coveralls 
-
-  
+    - coveralls
 defore_deploy:
-    - gem install travis 
-    
-deploy :
-    provider: pypi
-    username: daniel03kl # ${{ secrets.PYPI_USERNAME }} #"__token__"
-    password: 
-        secure: AgEIcHlwaS5vcmcCJDFiNGQwODM2LTIwMTQtNDRhMi1hMGYzLWQ4NDI4NGI0ZGNkNgACJXsicGVybWlzc2lvbnMiOiAidXNlciIsICJ2ZXJzaW9uIjogMX0AAAYgnV5CQ5kq-ReVDYfKsmniGkimJh1z2Cl2-aoq74XvZkE
-        #${{ secrets.PYPI_PASSWORD }} # PYPI API token 
-    on :
-        branch: develop
-    skip_existing: true
-        
+    - gem install travis
+deploy:
+  provider: pypi
+  username: daniel03kl
+  password:
+    secure: AgEIcHlwaS5vcmcCJDFiNGQwODM2LTIwMTQtNDRhMi1hMGYzLWQ4NDI4NGI0ZGNkNgACJXsicGVybWlzc2lvbnMiOiAidXNlciIsICJ2ZXJzaW9uIjogMX0AAAYgnV5CQ5kq-ReVDYfKsmniGkimJh1z2Cl2-aoq74XvZkE
+  on:
+    branch: develop
+  skip_existing: true
+  
 after_deploy:
-    - pip search pycsamt 
+    - pip search pycsamt
     - pip show pycsamt
     - pip show https://pypi.org/project/pycsamt/
-    
-    
-  
+env:
+  global:
+    secure: QEZNlCO5Gxa0aoPTNZtpt/HjqaxWrye1v7XNbsILwlNLdtWsjtdaeklg/MVhJP+s6Yz8rfNKkpSB372xL0vE7s3EELJJcPwd3zq1bJz3i/mXebCWemsTv7kRyT58WM/H5zTtfg7HqiGj6yetjw3ANsyEEI3CFrMF+dea+6Ja4u+7KeCLQyiMfXbEtnVn6k8ydP6du2hRI2ax3odZwiepIMNG/V/YK/6D4G5roqGx2jdEGFxVJbHuLWzHCnb99bk3DKHnc0z7sf0jORK+ClcAkqxJrj4da4v2hQtKCVBiJKBciWJK2B/qHyV+2yB+PXdFHrsUUsaH0mbgV7U3j3E213ZfDxUCxIMlSvZUm22TRHiNYjs5oXdaYwYoJgPd15Zn8KQLVFW/ADkTp99BfM6QYAOLFwQ46zcTJRBk8d9MFNKd9Nnwh0sIcdZyKI/SLMcLfs2wrtItYOYtBSWy53r2mkoT9qkH21zN551OPpI2V+sqLzppfOfIGBYvqQy3y4jBD34uddOuBdTFabip3X63OO3Q3rTeln6bbDj1VYgxyUZVdq4mZnczCLVPTVy29GucegMHvXudYk9DYNTfVzzJt5B7dd+7T41er85b/WNAUn99WgM0ZBQ0Mq5qUJ1O+NEzy0D+mk+tQsOin+PKXJK4nRIJvLZmTHt/Uxldd63Y7gg=

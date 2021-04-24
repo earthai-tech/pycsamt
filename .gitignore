@@ -140,6 +140,8 @@ target/
 # jupyther notebooks
 .ipynb_checkpoints
 #*.png
+pycsamt_user_guide/
+
 
 # ignore quick examples docs 
 #quick_examples/

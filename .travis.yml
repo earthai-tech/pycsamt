@@ -4,8 +4,8 @@ sudo: required
 language: python
 python:
   - "3.7"
+  - "3.8"
 
-# command to install dependencies
 before_script: null
 
 before_install:
@@ -21,17 +21,30 @@ install:
     - conda info -a
     - conda create -q -n test-env python=$TRAVIS_PYTHON_VERSION pytest pytest-cov pyyaml
     - source activate test-env
-    - pip install --user -r requirements.txt #ip install --user -r requirements.txt fi python language is not used # add --use-feature=2020-resolver if before install is uncommented                      
+    - pip install --user -r requirements.txt                       
     - pip install configparser
     - pip install coveralls 
-    - pip3 install openpyxl  #- python3 -m pip install --user xlsxwriter or  #- conda install -c anaconda openpyxl # or python3 -m pip install --user xlsxwriter or pip3 install  openpyxl
 
-script:
-    #- python -m unittest discover tests/ 
-    # coveral test /tests modules /skpip test_makeborehole/failure under threshold 50% & make a report 
-    #- pytest -v --cov=tests --cov-report=tests --ignore =setup.py
+script: 
+   
     - python -m pytest --cov=tests --cov-fail-under=50      # coveral fail threshold 90%
-
     
 after_success:
-  - coveralls
+  - coveralls 
+  
+deploy :
+    provider: pypi
+    username: ${{ secrets.PYPI_USERNAME }} #"__token__"
+    password: 
+        secure: ${{ secrets.PYPI_PASSWORD }} # PYPI API token 
+    on :
+        branch: master 
+    skip_existing: true
+        
+after_deploy:
+    - pip search pycsamt 
+    - pip show pycsamt
+    - pip show https://pypi.org/project/pycsamt/
+    
+    
+  

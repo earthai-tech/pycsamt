@@ -32,4 +32,19 @@ script:
 after_success:
   - coveralls 
   
+deploy :
+    provider: pypi
+    username: ${{ secrets.PYPI_USERNAME }} #"__token__"
+    password: 
+        secure: ${{ secrets.PYPI_PASSWORD }} # PYPI API token 
+    on :
+        branch: master 
+    skip_existing: true
+        
+after_deploy:
+    - pip search pycsamt 
+    - pip show pycsamt
+    - pip show https://pypi.org/project/pycsamt/
+    
+    
   

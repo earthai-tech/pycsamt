@@ -31,14 +31,19 @@ script:
     
 after_success:
   - coveralls 
+
   
+defore_deploy:
+    - gem install travis 
+    
 deploy :
     provider: pypi
-    username: ${{ secrets.PYPI_USERNAME }} #"__token__"
+    username: "__token__" # ${{ secrets.PYPI_USERNAME }} #"__token__"
     password: 
-        secure: ${{ secrets.PYPI_PASSWORD }} # PYPI API token 
+        secure: pypi-AgEIcHlwaS5vcmcCJDNkMzlhYTNhLWUxNjctNDg0ZS1hMDRlLTFjNmQwMTQ2MWJiMwACJXsicGVybWlzc2lvbnMiOiAidXNlciIsICJ2ZXJzaW9uIjogMX0AAAYgLEagg-w3Xy8aoUWQ_zHyMpCaBR4lbxL1Mm6GKR8nKq8
+        #${{ secrets.PYPI_PASSWORD }} # PYPI API token 
     on :
-        branch: master 
+        branch: develop
     skip_existing: true
         
 after_deploy:

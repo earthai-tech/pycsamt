@@ -8,6 +8,7 @@ before_script:null
 
 before_install:
     - python -m pip install --upgrade pip
+    
 install:
     - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
     - bash miniconda.sh -b -p $HOME/miniconda
@@ -29,9 +30,10 @@ after_success:
 deploy:
   skip_existing: true
   provider: pypi
-  user: daniel03kl
-  password:
-     secure: QEZNlCO5Gxa0aoPTNZtpt/HjqaxWrye1v7XNbsILwlNLdtWsjtdaeklg/MVhJP+s6Yz8rfNKkpSB372xL0vE7s3EELJJcPwd3zq1bJz3i/mXebCWemsTv7kRyT58WM/H5zTtfg7HqiGj6yetjw3ANsyEEI3CFrMF+dea+6Ja4u+7KeCLQyiMfXbEtnVn6k8ydP6du2hRI2ax3odZwiepIMNG/V/YK/6D4G5roqGx2jdEGFxVJbHuLWzHCnb99bk3DKHnc0z7sf0jORK+ClcAkqxJrj4da4v2hQtKCVBiJKBciWJK2B/qHyV+2yB+PXdFHrsUUsaH0mbgV7U3j3E213ZfDxUCxIMlSvZUm22TRHiNYjs5oXdaYwYoJgPd15Zn8KQLVFW/ADkTp99BfM6QYAOLFwQ46zcTJRBk8d9MFNKd9Nnwh0sIcdZyKI/SLMcLfs2wrtItYOYtBSWy53r2mkoT9qkH21zN551OPpI2V+sqLzppfOfIGBYvqQy3y4jBD34uddOuBdTFabip3X63OO3Q3rTeln6bbDj1VYgxyUZVdq4mZnczCLVPTVy29GucegMHvXudYk9DYNTfVzzJt5B7dd+7T41er85b/WNAUn99WgM0ZBQ0Mq5qUJ1O+NEzy0D+mk+tQsOin+PKXJK4nRIJvLZmTHt/Uxldd63Y7gg= 
+  user: __token__
+  password:pypi-AgEIcHlwaS5vcmcCJDNkYWNlZmM3LTQ2NzMtNDg5Yy1hNmQ3LTVlNTlhMWNkYTEzOAACJXsicGVybWlzc2lvbnMiOiAidXNlciIsICJ2ZXJzaW9uIjogMX0AAAYg6mPztF74C-5wg9j9OR-ktqSxTKd5_f8jGZ8apvRj_0Y
+     #secure: 
+     #QEZNlCO5Gxa0aoPTNZtpt/HjqaxWrye1v7XNbsILwlNLdtWsjtdaeklg/MVhJP+s6Yz8rfNKkpSB372xL0vE7s3EELJJcPwd3zq1bJz3i/mXebCWemsTv7kRyT58WM/H5zTtfg7HqiGj6yetjw3ANsyEEI3CFrMF+dea+6Ja4u+7KeCLQyiMfXbEtnVn6k8ydP6du2hRI2ax3odZwiepIMNG/V/YK/6D4G5roqGx2jdEGFxVJbHuLWzHCnb99bk3DKHnc0z7sf0jORK+ClcAkqxJrj4da4v2hQtKCVBiJKBciWJK2B/qHyV+2yB+PXdFHrsUUsaH0mbgV7U3j3E213ZfDxUCxIMlSvZUm22TRHiNYjs5oXdaYwYoJgPd15Zn8KQLVFW/ADkTp99BfM6QYAOLFwQ46zcTJRBk8d9MFNKd9Nnwh0sIcdZyKI/SLMcLfs2wrtItYOYtBSWy53r2mkoT9qkH21zN551OPpI2V+sqLzppfOfIGBYvqQy3y4jBD34uddOuBdTFabip3X63OO3Q3rTeln6bbDj1VYgxyUZVdq4mZnczCLVPTVy29GucegMHvXudYk9DYNTfVzzJt5B7dd+7T41er85b/WNAUn99WgM0ZBQ0Mq5qUJ1O+NEzy0D+mk+tQsOin+PKXJK4nRIJvLZmTHt/Uxldd63Y7gg= 
   on:
     branch: develop
 

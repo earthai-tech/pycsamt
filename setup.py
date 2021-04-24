@@ -66,7 +66,7 @@ setup_kwargs['packages'] = [
                             'pycsamt.etc',
                             'pycsamt.ff',
                             'pycsamt.ff.core',
-                            'pycsamt.ff.gui',
+                            'pycsamt.gui',
                             'pycsamt.ff.processing',
                             'pycsamt.geodrill',
                             'pycsamt.geodrill.geoCore',

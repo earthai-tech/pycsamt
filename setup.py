@@ -98,7 +98,7 @@ setup(
 	name="pycsamt",
 	version=pycsamt.__version__,
 	author=' '.join([aa for aa in authors]),
-    author_email=' '.join([ee for ee in authors_emails]),
+    author_email='kkouao@zju.edu.cn',
     maintainer="Kouadio K. Laurent",
     maintainer_email='etanoyau@gmail.com',
 	description="A Python open-source toolkit for standard Controlled Source Audio-frequency MagnetoTellurics (CSAMT)",

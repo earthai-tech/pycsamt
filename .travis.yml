@@ -40,7 +40,7 @@ deploy :
     provider: pypi
     username: daniel03kl # ${{ secrets.PYPI_USERNAME }} #"__token__"
     password: 
-        secure: pypi-AgEIcHlwaS5vcmcCJDFiNGQwODM2LTIwMTQtNDRhMi1hMGYzLWQ4NDI4NGI0ZGNkNgACJXsicGVybWlzc2lvbnMiOiAidXNlciIsICJ2ZXJzaW9uIjogMX0AAAYgnV5CQ5kq-ReVDYfKsmniGkimJh1z2Cl2-aoq74XvZkE
+        secure: AgEIcHlwaS5vcmcCJDFiNGQwODM2LTIwMTQtNDRhMi1hMGYzLWQ4NDI4NGI0ZGNkNgACJXsicGVybWlzc2lvbnMiOiAidXNlciIsICJ2ZXJzaW9uIjogMX0AAAYgnV5CQ5kq-ReVDYfKsmniGkimJh1z2Cl2-aoq74XvZkE
         #${{ secrets.PYPI_PASSWORD }} # PYPI API token 
     on :
         branch: develop

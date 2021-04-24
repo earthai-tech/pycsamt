@@ -1,11 +1,12 @@
 # pyCSAMT : A Python open-source toolkit for Controlled Source Audio-frequency Magnetotellurics (CSAMT)
 
-[![Documentation Status](https://readthedocs.org/projects/pycsamt/badge/?version=latest)](https://pycsamt.readthedocs.io/en/latest/?badge=latest) [![Build Status](https://travis-ci.com/WEgeophysics/pyCSAMT.svg?branch=develop)](https://travis-ci.com/WEgeophysics/pyCSAMT) [![Requirements Status](https://requires.io/github/WEgeophysics/pyCSAMT/requirements.svg?branch=develop)](https://requires.io/github/WEgeophysics/pyCSAMT/requirements/?branch=develop)
- [![Coverage Status](https://coveralls.io/repos/github/WEgeophysics/pyCSAMT/badge.svg?branch=devlop)](https://coveralls.io/github/WEgeophysics/pyCSAMT?branch=develop) ![GitHub](https://img.shields.io/github/license/WEgeophysics/pyCSAMT?color=blue&logo=GNU&logoColor=red) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/WEgeophysics/pyCSAMT?color=orange) ![GitHub all releases](https://img.shields.io/github/downloads/WEgeophysics/pyCSAMT/total?color=green)
+[![Documentation Status](https://readthedocs.org/projects/pycsamt/badge/?version=latest)](https://pycsamt.readthedocs.io/en/latest/?badge=latest) [![Build Status](https://travis-ci.com/WEgeophysics/pyCSAMT.svg?branch=master)](https://travis-ci.com/WEgeophysics/pyCSAMT) [![Requirements Status](https://requires.io/github/WEgeophysics/pyCSAMT/requirements.svg?branch=master)](https://requires.io/github/WEgeophysics/pyCSAMT/requirements/?branch=master)
+  ![GitHub](https://img.shields.io/github/license/WEgeophysics/pyCSAMT?color=blue&logo=GNU&logoColor=red) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/WEgeophysics/pyCSAMT?color=orange) ![GitHub all releases](https://img.shields.io/github/downloads/WEgeophysics/pyCSAMT/total?color=lime)
 
 ## Overview 
 
 * **Definition**
+
 CSAMT is geophysical method well-established  as resistivity exploration 
 tool in deep geological structure detection. The method is broadly applied in  diverse of exploration problems such as mineral , hydrocarbon,  groundwater resources, 
 as well as mapping the fault-zones etc. 
@@ -29,8 +30,9 @@ and [GoldenSoftware](https://www.goldensoftware.com/products/surfer).
 ## Documentation 
 * API Documentation  : https://pycsamt.readthedocs.io/en/latest/
 * Home Page : https://github.com/WEgeophysics/pyCSAMT/wiki
-* Some codes implementation: https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F
-* Installation guide : https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux
+* Some Codes Implementation: https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F
+* Installation Guide : https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux
+* User Guide : https://github.com/WEgeophysics/pyCSAMT/blob/develop/docs/pyCSAMT%20User%20Guide.pdf
 
 
 ## Licence 
@@ -77,16 +79,16 @@ AMA  and TMA filters can be used  to estimate average apparent resistivities at 
 The following line of codes is an example to get new _*.edi_ corrected files from both filters application at each station,
 refering to the EDI directory `data/edi/`.
 
-![](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/codes/demo_filter_ama_tma.PNG) 
+![](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/wiki-images_quick_works/codes/demo_filter_ama_tma.PNG) 
 
 
 The script below can be used to compare pseudo-cross-section of resistivity and phase of _corrected_edi outputs_ after `ama` & `tma` application  with 
 _uncorrected edi_ . 
 
-![](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/codes/demo_edi_corrected.PNG) 
+![](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/wiki-images_quick_works/codes/demo_edi_corrected.PNG) 
 
 
-click [here](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/filterstests.png) to see the output.
+click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/filterstests.png) to see the output.
 
 ## Geophysical interpretation enhancement
 
@@ -112,6 +114,12 @@ and after sucessfullly running, we will get the report below :
 * **Note** : Inversion input-files can be generated from _*.edi_ files using `pycsamt.modeling.occam2d.occam2d_write.buildingInputfiles` from `modeling.occam2d` module . 
             After applying the FDGC( Digital cartographic Standard for Geological Map Symbolization), click [here](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/interpretation.PNG)  to see your expected interpretation map.
 
+## Credits
+
+We use or link some third-party software (beside the usual tool stack: numpy, scipy, matplotlib) and are grateful for all the work made by the authors of these awesome open-source tools:
+* mtpy : https://github.com/MTgeophysics/mtpy.git
+* pyplusplus: https://pypi.org/project/pyplusplus/
+* occam2d : https://marineemlab.ucsd.edu/Projects/Occam/index.html
 
 
 ## System requirements 

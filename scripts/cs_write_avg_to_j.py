@@ -43,7 +43,7 @@ path_to_station_file = os.path.join(path, station_file)
 avg_obj =Avg()
 if WRITE : 
     avg_obj.avg_to_jfile(avg_data_fn=path_to_avg, 
-                                station_fn=path_to_station_file,
+                                profile_fn=path_to_station_file,
                                 j_extension=j_extension,
                                 savepath=savepath  ,
                                 writeInfos=write_avg_file_infos, 

@@ -38,7 +38,7 @@ def main():
  
 
     borehole_obj = Drill (well_filename= os.path.join(path_to_parser_files, parser_file)  , 
-                       build_manually_welldata= False)
+                       auto= True)
     borehole_obj._collar()
     borehole_obj.dhGeology()
     borehole_obj.dhSample()

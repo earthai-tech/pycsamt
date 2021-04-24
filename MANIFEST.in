@@ -9,5 +9,6 @@ include pycsamt/utils/epsg.npy
 include .travis.yml .readthedocs.yml 
 
 exclude project_description.md
+exclude _demo_user_guide.py
 
 global-exclude *.py[cod] __pycache__/* *.so *.dylib .coverage .coverage.* 

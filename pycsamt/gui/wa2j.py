@@ -41,7 +41,7 @@ def main():
         if kwey.find('UTM') >=0 :utmZone = kwvalues
     
     avg.Avg().avg_to_jfile(avg_data_fn=path_to_avg, 
-                                station_fn=path_to_station_file,
+                                profile_fn=path_to_station_file,
                                 j_extension=j_extension,
                                 savepath=savepath  ,
                                 writeInfos=write_avg_file_infos, 

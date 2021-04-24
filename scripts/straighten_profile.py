@@ -38,7 +38,7 @@ savepath = None                 #r'C:\Users\Administrator\Desktop\ThesisImp\K_re
 CREATE =False
 REAJUST=True 
 # choose the type to straithen your profile 
-straigthen_out_mode ='classic'          # can be 'distored|natural, or "equisistant".Default is "classic".
+straighten_out_mode  ='classic'          # can be 'distored|natural, or "equisistant".Default is "classic".
 # correct coordinates : 
 X = 0.                                  # correct easting value : eg : X =300238.702               
 Y = 0.                                  # correct northing coordinates : eg Y = 2369.252
@@ -75,7 +75,7 @@ if REAJUST :
     plot_1d_obj= Plot1d()    
     plot_1d_obj.plot_station_profile(fn = path, 
                                      reajust_coordinates=(X,Y),
-                                     straighten_type =straigthen_out_mode, 
+                                     straighten_type =straighten_out_mode , 
                                      savefig=savepath, 
                                      outputfile =ouputnew_stnfile  
                                      )

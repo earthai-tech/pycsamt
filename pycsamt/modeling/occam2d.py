@@ -84,7 +84,8 @@ else:
 
 class occamLog (object) : 
     """
-    Class to deal with occcam 2d logfile . File output after inverted data.
+    Class to deal with occcam 2d logfile . output File  after inverted data.
+    most likely called `logFile.logfile`.
     
     Arguments
     ---------
@@ -152,7 +153,7 @@ class occamLog (object) :
         """
         
         if fn is not None : self.fn = fn 
-        self._logging.info ('Reading and setting OccamLog  atributes from logfiles <%s>.'% self.fn )
+        self._logging.info ('Reading and setting OccamLog  attributes from logfiles <%s>.'% self.fn )
         if self.fn is None : 
             raise CSex.pyCSAMTError_occam2d('None occam2dlog file detected. Please check your right path .')
 
@@ -1544,9 +1545,12 @@ class Iter2Dat (object):
         self.mesh_fn =mesh_fn 
         
         self.bln_fn =kwargs.pop('bln_fn', None)
-        
+        self.savepath =kwargs.pop('savepath', None)
         self.OccamModel=kwargs.pop('occam_model_obj', None)
         
+        for keys in list(kwargs.keys()):
+            self.__setattr__(keys, kwargs[keys])
+            
         # initialise the main attributes
         for key in self.iter2d_params :self.__setattr__(key, None )  
        
@@ -1680,6 +1684,7 @@ class Iter2Dat (object):
         if bln_fn is not None : self.bln_fn = bln_fn 
         if doi is not None : self.doi =doi
         
+        if savepath is not None : self.savepath =savepath
         # statement to do so to 
         if iter2dat_fn is not None : 
             self.iter2dat_fn= iter2dat_fn
@@ -1766,11 +1771,11 @@ class Iter2Dat (object):
                     '\n',
                     ]))
         
-        if savepath is None : # create a folder in your current work directory
+        if self.savepath is None : # create a folder in your current work directory
             try :
-                savepath = os.path.join(os.getcwd(), '_iter2dat_')
-                if not os.path.isdir(savepath):
-                    os.mkdir(savepath)#  mode =0o666)
+                self.savepath = os.path.join(os.getcwd(), '_iter2dat_')
+                if not os.path.isdir(self.savepath):
+                    os.mkdir(self.savepath)#  mode =0o666)
             except : 
                 warnings.warn("It seems the path already exists !")
         #writes files 
@@ -1784,7 +1789,7 @@ class Iter2Dat (object):
                 fw.writelines(wfiles)
                 
         #savefile
-        if savepath is not None : 
+        if self.savepath is not None : 
             import shutil 
             try :
                 for jj, file  in enumerate([filename +'.dat', filename+'.bln']): 
@@ -1792,12 +1797,12 @@ class Iter2Dat (object):
                         if self.station_location is None : break 
          
                     shutil.move(os.path.join(os.getcwd(),file) ,
-                        os.path.join(savepath , file))
+                        os.path.join(self.savepath , file))
             except : 
                 warnings.warn("It seems the files already exists !")
         if self.station_location is None :
             print('---> Only file {0}.dat have been'
-                  ' successfully written to  <{1}>.'.format(filename, savepath))
+                  ' successfully written to  <{1}>.'.format(filename, self.savepath))
             
             mess =''.join(['! Error writing "{0}.bln" file . Could not ', 
                            'write Golden software (*.bln) file without ',
@@ -1809,7 +1814,7 @@ class Iter2Dat (object):
             self._logging.debug(mess)
  
         else : print('---> files {0}.dat & {0}.bln have been '
-                     'successfully written to  <{1}>.'.format(filename, savepath))
+                     'successfully written to  <{1}>.'.format(filename, self.savepath))
     
     
     def read_iter2dat(self, iter2dat_fn =None, bln_fn =None, scale ='km',

@@ -19,18 +19,13 @@ from pycsamt.viewer.plot import Plot1d
 
 file_stn='K6.stn'           # name of zonge station profile file 
 # uncomment `path_to_stn_profile_file is zonge station file is used 
-path_to_stn_profile_file = None #  os.path.join(os.environ["pyCSAMT"],'csamtpy','data', file_stn) 
+path_to_stn_profile_file = None #  os.path.join('data', 'stn_profiles',file_stn)
             # OR 
             
 # provided edipath or jpath when used edifiles or jfiles and 
-edipath_or_jpath = os.path.join(os.environ["pyCSAMT"],'data','edi') # None 
+edipath_or_jpath = os.path.join(os.path.abspath('.'),'data','edi') # None 
 #edipath_or_jpath =None                     # uncomment section if station stn file is provided 
 
-# to see documentation of that function , set "see_documentation " to 'true'. 
-see_documentation=False
-# to plot profile : set PLOT to "True"
-PLOT=True 
-# set "*" for three profile. 
 
 plot_type ='*'          # could be |"topography or "topo" |"speration" or "stn"| "azimuth or "az|
                         # could use only the two first letter or more for ploting or 1,2,3 or 123|*
@@ -40,12 +35,10 @@ set_stnNames =True      # set it to True if you want to see station names appear
 # create profile_obj 
 plot_1d_obj= Plot1d()
 
-if PLOT: 
-    plot_1d_obj.plot_topo_sep_azim(fn = edipath_or_jpath,
-                                   profile_fn= path_to_stn_profile_file ,
-                                   plot=plot_type,
-                                   set_station_names=set_stnNames,
-                                   )
-    
-if see_documentation : help(plot_1d_obj.plot_topo_sep_azim)
-    #print (plot_1d_obj.plot_topo_sep_azim.__doc__)
+
+plot_1d_obj.plot_topo_sep_azim(fn = edipath_or_jpath,
+                               profile_fn= path_to_stn_profile_file ,
+                               plot=plot_type,
+                               set_station_names=set_stnNames,
+                               )
+

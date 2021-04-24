@@ -787,6 +787,8 @@ class Profile (object):
         self.dipole_length =None 
         self.azimuth =None 
         
+        self.utm_zone =kwargs.pop('utm_zone', '49N')
+        
         for keys in list(kwargs.keys()): 
             setattr(self, keys, kwargs[keys])
         
@@ -879,6 +881,7 @@ class Profile (object):
         azim =kwargs.pop('azimuth', None)
         utm_zone =kwargs.pop('utm_zone', None)
         
+        if utm_zone is not None : self.utm_zone = utm_zone
 
         _pflag =0
         if profile_fn is not None : 
@@ -896,9 +899,9 @@ class Profile (object):
         if _pflag ==1:
             if inFO._sensitive.which_file(filename =self.profile_fn ) =='stn': 
                 ref='none' 
-                if os.path.basename(self.profile_fn).find('reaj') >=0  or\
-                    os.path.basename(self.profile_fn).find('cor') >=0 or \
-                        os.path.basename(self.profile_fn).find('sca') >=0 : 
+                if os.path.basename(self.profile_fn).find('_reaj') >=0  or\
+                    os.path.basename(self.profile_fn).find('_cor') >=0 or \
+                        os.path.basename(self.profile_fn).find('_sca') >=0 : 
                     ref ='scalled'
    
                 with open(self.profile_fn, 'r', encoding='utf8') as fn :
@@ -988,8 +991,14 @@ class Profile (object):
                                                       interpolate=True)[0]
                 
                 self.dipole_length = round_dipole_length(self.stn_interval.mean())
-  
                 
+                try : 
+                    self.Location.convert_location_2_latlon(utm_zone=self.utm_zone)
+                except : 
+                    self._logging.debug(
+                        'Could not convert easting/northing to lat/lon'
+                        ' with utm_zone = {}.'.format(self.utm))
+        
             
             elif (self.lon is not None ) and (self.lat is not None): 
                 
@@ -1014,6 +1023,9 @@ class Profile (object):
                                      format(easting.size, northing.size))
                 self.east =easting 
                 self.north =northing
+                
+                self.Location.convert_location_2_latlon(utm_zone=self.utm_zone)
+                
                 if self.azimuth is None :
                     self.azimuth = func.compute_azimuth(easting=self.east, 
                                                         northing=self.north)
@@ -1493,11 +1505,13 @@ class Profile (object):
         """
         
     
-        utm_zone = kwargs.pop('UTM_Zone', '49N')
+        utm_zone = kwargs.pop('UTM_Zone', None)
         dipole_length =kwargs.pop('dipole_length', None)
         output_name =kwargs.pop('output_name', None)
         savepath =kwargs.pop('savepath', None)
         if output_name is None : output_name='new_profile'
+        
+        if utm_zone is not None : self.utm_zone = utm_zone
 
         write_profile_lines =[]
         if area_name is None : area_name ='' 
@@ -1519,12 +1533,12 @@ class Profile (object):
         write_profile_lines.append(''.join(['{0:<17}'.format('>DATE'),':'," {0:<70}".\
                                             format(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())) ])+'\n')
         write_profile_lines.append(''.join(['{0:<17}'.format(
-            '>UTM_ZONE'),':'," {0:<5}-{1:<7}".format('WGS84',utm_zone) ])+'\n')    
+            '>UTM_ZONE'),':'," {0:<5}-{1:<7}".format('WGS84',self.utm_zone) ])+'\n')    
         write_profile_lines.append(''.join(['{0:<17}'.format(
             '>SOFTWARE'),':'," {0:55}".format('pyCSAMT') ])+'\n')
         
         if self.lat is None  or self.lon is None : 
-            self.Location.convert_location_2_latlon(utm_zone=utm_zone)
+            self.Location.convert_location_2_latlon(utm_zone=self.utm_zone)
         
         if self.east is None or self.north is None : 
             self.Location.convert_location_2_utm(latitude=self.lat, longitude=self.lon)
@@ -2140,7 +2154,7 @@ class Site(object):
         
 
     def set_site_info(self, data_fn = None, easting =None ,
-                      northing =None , utm_zone='49N' ):
+                      northing =None , utm_zone=None ):
         """
         Set-info from site file, can read zonge *stn* profile fine or set easting 
         and northing coordinates.
@@ -2153,7 +2167,7 @@ class Site(object):
         :param utm_zone: Utm zone WGS84 
         :type utm_zone: str            
         """
-        self.utm_zone = utm_zone 
+        if utm_zone is not None : self.utm_zone =utm_zone 
         if data_fn is not None : self.sitedata = data_fn 
         if self.sitedata is None  and easting is None  and  northing is None :
             

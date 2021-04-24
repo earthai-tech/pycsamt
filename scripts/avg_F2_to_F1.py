@@ -25,3 +25,5 @@ avg_files = [path]
 for file in avg_files :
     Avg().avg_write_2_to_1(data_fn= file , #os.path.join(path, file),
                            savepath =savepath)
+
+

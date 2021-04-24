@@ -38,9 +38,9 @@ defore_deploy:
     
 deploy :
     provider: pypi
-    username: "__token__" # ${{ secrets.PYPI_USERNAME }} #"__token__"
+    username: daniel03kl # ${{ secrets.PYPI_USERNAME }} #"__token__"
     password: 
-        secure: pypi-AgEIcHlwaS5vcmcCJDNkMzlhYTNhLWUxNjctNDg0ZS1hMDRlLTFjNmQwMTQ2MWJiMwACJXsicGVybWlzc2lvbnMiOiAidXNlciIsICJ2ZXJzaW9uIjogMX0AAAYgLEagg-w3Xy8aoUWQ_zHyMpCaBR4lbxL1Mm6GKR8nKq8
+        secure: pypi-AgEIcHlwaS5vcmcCJDFiNGQwODM2LTIwMTQtNDRhMi1hMGYzLWQ4NDI4NGI0ZGNkNgACJXsicGVybWlzc2lvbnMiOiAidXNlciIsICJ2ZXJzaW9uIjogMX0AAAYgnV5CQ5kq-ReVDYfKsmniGkimJh1z2Cl2-aoq74XvZkE
         #${{ secrets.PYPI_PASSWORD }} # PYPI API token 
     on :
         branch: develop

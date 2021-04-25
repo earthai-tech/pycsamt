@@ -36,26 +36,5 @@ after_failure:
  
 after_success:
     - coveralls
-# env:
-#   global:
-#     secure: hZHRa7wfqugI9GH+CRV3NG3tkkbotNeK2IpsajCKVuAFuHC9QA2XYaZzmBsjMi6wOpqR1gkXo2L86vZxFdKBSfYb+VWl6y4lKk0A68lvsVQFqIJalACCQEcXJz9NjE/YS+t9jTDoxcwDY3ST5FvHnz6q0H7K+Ccl5ndcWZ4AorTk6RT9dh0k8nSL4+NFYSOzNmAmrL35UTGcIcqWaEidzg8Vg6y7ex+QgE2B9oKWh3eb6OKQr3gp2G2C6iSYei7FJpymlIZkmMQlMDMuR1jBQjb83srLtKVSauz0wwPaDhFJY2tBR5LVcWlHMqPnbr7TIZrkNO/AONXHFj7rVg59WzamR0xkigJiusSpL9N68IXkuH8CDRhsxA8bvVSHZWEc9SlWJgJX102Dqmxf5fLdIXc1AQHRbqZ9n8Vf6KxWxuAVs9N/orql7Rxpl+Dw6CNVZaiLw+rD9ht/hYHr3WFyGuOKQ00pa1PsAkZrukmkO3jTeMUky0PJbEt7gKkFinRQ8TlcGxfsCKb3uc3rnBZvg9zQgJabRU1qfIkMzm0VWQVmNYKxCZ4jdM6pdmn/MB1x/hM63tPPmqdEebt8ijZdRlkw2uK1MH7AN5iVjwXSR2xl2JXlC/F+4kBbXHveWwA4eASgy2z1UHUz1e94Ho3Qc7C3bDgyUhKA++o4EtCorbM=
 
-deploy:
-
-    skip_existing: true 
-    provider: pypi 
-    distributions: sdist
-    user: Daniel03
-    password:
-        secure: TbHiMVFW8lXLwCTIrMQaSmDv+uRr7/PJRZzIVhV1BOh4mNScyVg1+4ZpTq+yRI841XKJURJqAtCBieoeENz8dRK0PoUNQWGdkQJD/QAjqyyoQb7iWZKUVisd+THUlV6w3fcG6yMgnUg94qzHj4kSKLmA2e2mlT6Fl5fa3nyjvK38Xd22Ncp0KbGGOaOVp6ODw+2bC61C+aUx0Sp+RNz8ezAMPXkSbJXI53DywxooNyWqMeblWjoZNCGzB2NN9Gu/QCEYoP7rq/p19dlyqpLoBM2/kJWHOc/RB0P8pxntGZV//fryod1Y60EVMJ4nRMCB5nDKsoeOw+1B2y4+56ls7OWmocA4EOj/Asw7VL6N0TVeTL7S0m3ZN668b2+M+IHDApuYBBEEcPH50VEtzjutIJve2mxETuGPrBR2NThim2ixPihjOBw3o0bur1CZsq19ND8oKP2gdWnvYgwOPfscvB7NP85DL238wVtP0ikeXpAMgo0tq9v12E/2JQLghzKVwlpOvMPNdL70w5TCKjgVlItJfyD+0MemWNm9UTSO+2TFASlAvMIQ9EbeIx9CFNFEiRy+GOu0rn29l63x4X/tRYPHm2IAId3Fd1xtXnXVcJM1gx3Lyg8a2b+lEwarFevhNA9n16YLJLhAp1MvhUY2Z9e60jfYijG6wFR7V1M8WAs=
-    
-    skip_cleanup: true
-    on:
-        branch: master
-    skip_cleanup: true
-    
-after-deploy: 
-    - pip search pycsamt
-    - pip show pycsamt 
-    - pip show https://pypi.org/project/pycsamt/
     

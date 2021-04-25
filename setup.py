@@ -19,8 +19,9 @@ else:
 # """
 with open(os.path.join(os.path.abspath('.'), 
                        'project_description.md'), 'r') as fm:
-    LONG_DESCRIPTION ="""{}""".format(
-        ' '.join([descp for descp in fm.readlines() ]))
+    # LONG_DESCRIPTION ="""{}""".format(
+    #     ' '.join([descp for descp in fm.readlines() ]))
+    LONG_DESCRIPTION =fm.read()
 
 # The advantage of setuptools is that EXE wrappers are created on Windows,
 # which allows Tab-completion for the script names from the system Scripts
@@ -90,8 +91,8 @@ setup_kwargs['install_requires'] = ['numpy>=1.8.1',
                                      
 setup_kwargs['python_requires'] ='>=3.6'
 
-authors =["Kouadio K. Laurent", 'Rong Liu', 
-          'Binbin Mi','Chum-ning Liu', 'Albert O. Malory']
+authors =["Kouadio K. Laurent, ", 'Rong Liu, ', 
+          'Binbin Mi, ','Chum-ning Liu, ', 'Albert O. Malory.']
 authors_emails =['etanoyau@gmail.com', 'liurongkaoyang@126.com',
                 'mibinbin@zju.edu.cn', 'lifuming001@163.com','amalory@zju.edu.cn']
 setup(
@@ -101,12 +102,20 @@ setup(
     author_email='kkouao@zju.edu.cn',
     maintainer="Kouadio K. Laurent",
     maintainer_email='etanoyau@gmail.com',
-	description="A Python open-source toolkit for standard Controlled Source Audio-frequency MagnetoTellurics (CSAMT)",
+	description="A Python open-source toolkit for standard CSAMT data processing enhancement",
 	long_description=LONG_DESCRIPTION,
-    url="https://github.com/WEgeophysics/pycsamt",
+    long_description_content_type="text/markdown",
+    url="https://github.com/WEgeophysics/pyCSAMT",
+    project_urls={
+        "API Documentation"  : "https://pycsamt.readthedocs.io/en/latest/",
+        "Home page" : "https://github.com/WEgeophysics/pyCSAMT/wiki",
+        "Bugs tracker": "https://github.com/WEgeophysics/pyCSAMT/issues",
+        "Installation guide" : "https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux", 
+        "User guide" : "https://github.com/WEgeophysics/pyCSAMT/blob/develop/docs/pyCSAMT%20User%20Guide.pdf",
+        },
 	#data_files=[('', ['pycsamt/utils/epsg.npy',]),], #this will install datafiles in wearied palce such as ~/.local/
 	include_package_data=True,
-	license="GNU GENERAL PUBLIC LICENSE v3",
+	license="GNU LESSER GENERAL PUBLIC LICENSE v3",
 	classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",

@@ -1,11 +1,10 @@
 dist: xenial
 sudo: required
-language: python
-python:
-- '3.7'
-- '3.8'
-before_script:null
-
+language: generic
+env:
+    - TRAVIS_PYTHON_VERSION="3.7"
+    - TRAVIS_PYTHON_VERSION="3.8"
+    
 before_install:
     - python -m pip install --upgrade pip
     
@@ -17,27 +16,36 @@ install:
     - conda config --set always_yes yes --set changeps1 no
     - conda update -q conda
     - conda info -a
-    - conda create -q -n test-env python=$TRAVIS_PYTHON_VERSION pytest pytest-cov pyyaml
+    - conda create -q -n test-env python="${TRAVIS_PYTHON_VERSION}" pytest pytest-cov pyyaml
     - source activate test-env
     - pip install --user -r requirements.txt
     - pip install configparser
     - pip install coveralls
+    
 script:
-    - python -m pytest --cov=tests --cov-fail-under=50
+    - pytest -v --cov=pycsamt --cov-report=tests --ignore=pycsamt/gui | python -m pytest --cov-fail-under=20
+    
+after_failure:
+    - cat config.log
+    
 after_success:
     - coveralls
-
-# deploy:
-#   skip_existing: true
-#   provider: pypi
-#   user: __token__
-#   password:pypi-AgEIcHlwaS5vcmcCJDNkYWNlZmM3LTQ2NzMtNDg5Yy1hNmQ3LTVlNTlhMWNkYTEzOAACJXsicGVybWlzc2lvbnMiOiAidXNlciIsICJ2ZXJzaW9uIjogMX0AAAYg6mPztF74C-5wg9j9OR-ktqSxTKd5_f8jGZ8apvRj_0Y
-#      #secure: 
-#      #QEZNlCO5Gxa0aoPTNZtpt/HjqaxWrye1v7XNbsILwlNLdtWsjtdaeklg/MVhJP+s6Yz8rfNKkpSB372xL0vE7s3EELJJcPwd3zq1bJz3i/mXebCWemsTv7kRyT58WM/H5zTtfg7HqiGj6yetjw3ANsyEEI3CFrMF+dea+6Ja4u+7KeCLQyiMfXbEtnVn6k8ydP6du2hRI2ax3odZwiepIMNG/V/YK/6D4G5roqGx2jdEGFxVJbHuLWzHCnb99bk3DKHnc0z7sf0jORK+ClcAkqxJrj4da4v2hQtKCVBiJKBciWJK2B/qHyV+2yB+PXdFHrsUUsaH0mbgV7U3j3E213ZfDxUCxIMlSvZUm22TRHiNYjs5oXdaYwYoJgPd15Zn8KQLVFW/ADkTp99BfM6QYAOLFwQ46zcTJRBk8d9MFNKd9Nnwh0sIcdZyKI/SLMcLfs2wrtItYOYtBSWy53r2mkoT9qkH21zN551OPpI2V+sqLzppfOfIGBYvqQy3y4jBD34uddOuBdTFabip3X63OO3Q3rTeln6bbDj1VYgxyUZVdq4mZnczCLVPTVy29GucegMHvXudYk9DYNTfVzzJt5B7dd+7T41er85b/WNAUn99WgM0ZBQ0Mq5qUJ1O+NEzy0D+mk+tQsOin+PKXJK4nRIJvLZmTHt/Uxldd63Y7gg= 
-#   on:
-#     branch: master
-
-# after_deploy:
-#     - pip search pycsamt
-#     - pip show pycsamt
-#     - pip show https://pypi.org/project/pycsamt/
+    
+before-deploy: 
+    - python3 -m pip install --upgrade build
+    - python3 -m pip install --user --upgrade twine
+    
+deploy:
+    skip_existing: true
+    provider: pypi
+    user: daniel03kl
+    password:
+      secure: UZAHwiahUjupCcFUXd8VVMOzinzIAQwfMIxI3GeTXng2RUd7K3xRUWSftw2icHCgPZdRY7Hic9M3VYuu2todd8ZI8UTIdyAvFtUt9TQIZAtSc3TwFJTs5Rh7Z9lAyaxBaAIUCVZ9j9yFqSKK6/qh6dCwUpgna17UkhpZe2Tq/mtQR3Ls8e3WMp15Q20eVW0Wr70dwZbQPA9hxenDUFxG7TIXcVC+mkBru7jq6OXJPuPJD8KM8rtOzQvACnUtyv3Wao7ntmsl3hCHivQBqWDbnOeyTHfER5Ke0tTHQuzjM1elownoOvf7ujPpwWh2agNLBGbWiq6KI0pQpac4WZqACcIu3Z6snp9SJSXjE+dY5Q1cnmRaEVUpN7GQgBmg9qrorLWCQN/NubZa1jf4IAVt1/xTqBjADDABB81DylfH2uZnFg1Piak4a5mpbVI8gdPzLB5p3Oo4l9S9CGlKZIv55IiDHRLU/okSrI+rQkKBrZdWKCbT9k/qXVcZTCEFHoJtKSVB6ofSekqhW42BAsrQjdK3Gn0sr6TDuA4lTyO+ka+MdPA7VRCiatW0j05zGNKvTuhoQusGP9XbZ8ta1SBhaO0ejlAOgI/LNZTI4ngKl8/JArnIfAQ6Nf+xux8F05tIbUDm8oFD0MPaiq0OmPzCbhVyKU4dFZ0Ha2vqJXXDy/0=
+    on:
+      all_branches: true
+    skip_cleanup: true
+  
+after-deploy:
+    - pip search pycsamt
+    - pip show pycsamt
+    - pip show https://pypi.org/project/pycsamt/

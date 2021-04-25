@@ -84,6 +84,10 @@ __pycache__/
 *.ini.bak
 *.cpython-37.pyc
 
+# ignore description project
+project_description.md 
+
+
 
 #libraries
 lib/
@@ -100,6 +104,7 @@ var/
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+.pypirc
 
 # Installer logs
 pip-log.txt
@@ -152,3 +157,4 @@ pycsamt_user_guide/
 #quick_examples/
 _logfile/
 add.info/
+

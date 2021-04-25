@@ -37,8 +37,9 @@ after_success:
 #   global:
 #     secure: hZHRa7wfqugI9GH+CRV3NG3tkkbotNeK2IpsajCKVuAFuHC9QA2XYaZzmBsjMi6wOpqR1gkXo2L86vZxFdKBSfYb+VWl6y4lKk0A68lvsVQFqIJalACCQEcXJz9NjE/YS+t9jTDoxcwDY3ST5FvHnz6q0H7K+Ccl5ndcWZ4AorTk6RT9dh0k8nSL4+NFYSOzNmAmrL35UTGcIcqWaEidzg8Vg6y7ex+QgE2B9oKWh3eb6OKQr3gp2G2C6iSYei7FJpymlIZkmMQlMDMuR1jBQjb83srLtKVSauz0wwPaDhFJY2tBR5LVcWlHMqPnbr7TIZrkNO/AONXHFj7rVg59WzamR0xkigJiusSpL9N68IXkuH8CDRhsxA8bvVSHZWEc9SlWJgJX102Dqmxf5fLdIXc1AQHRbqZ9n8Vf6KxWxuAVs9N/orql7Rxpl+Dw6CNVZaiLw+rD9ht/hYHr3WFyGuOKQ00pa1PsAkZrukmkO3jTeMUky0PJbEt7gKkFinRQ8TlcGxfsCKb3uc3rnBZvg9zQgJabRU1qfIkMzm0VWQVmNYKxCZ4jdM6pdmn/MB1x/hM63tPPmqdEebt8ijZdRlkw2uK1MH7AN5iVjwXSR2xl2JXlC/F+4kBbXHveWwA4eASgy2z1UHUz1e94Ho3Qc7C3bDgyUhKA++o4EtCorbM=
 
+
 deploy:
-    skip_cleanup: true
+    # skip_cleanup: true
     skip_existing: true 
     provider: pypi 
     distributions: sdist

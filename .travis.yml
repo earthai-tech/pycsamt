@@ -40,7 +40,7 @@ after_success:
 deploy:
     skip_existing: true 
     provider: pypi 
-    username: __token__
+    user: __token__
     password:
       secure: TbHiMVFW8lXLwCTIrMQaSmDv+uRr7/PJRZzIVhV1BOh4mNScyVg1+4ZpTq+yRI841XKJURJqAtCBieoeENz8dRK0PoUNQWGdkQJD/QAjqyyoQb7iWZKUVisd+THUlV6w3fcG6yMgnUg94qzHj4kSKLmA2e2mlT6Fl5fa3nyjvK38Xd22Ncp0KbGGOaOVp6ODw+2bC61C+aUx0Sp+RNz8ezAMPXkSbJXI53DywxooNyWqMeblWjoZNCGzB2NN9Gu/QCEYoP7rq/p19dlyqpLoBM2/kJWHOc/RB0P8pxntGZV//fryod1Y60EVMJ4nRMCB5nDKsoeOw+1B2y4+56ls7OWmocA4EOj/Asw7VL6N0TVeTL7S0m3ZN668b2+M+IHDApuYBBEEcPH50VEtzjutIJve2mxETuGPrBR2NThim2ixPihjOBw3o0bur1CZsq19ND8oKP2gdWnvYgwOPfscvB7NP85DL238wVtP0ikeXpAMgo0tq9v12E/2JQLghzKVwlpOvMPNdL70w5TCKjgVlItJfyD+0MemWNm9UTSO+2TFASlAvMIQ9EbeIx9CFNFEiRy+GOu0rn29l63x4X/tRYPHm2IAId3Fd1xtXnXVcJM1gx3Lyg8a2b+lEwarFevhNA9n16YLJLhAp1MvhUY2Z9e60jfYijG6wFR7V1M8WAs=
     on :

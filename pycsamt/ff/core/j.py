@@ -247,9 +247,7 @@ class J_collection :
                     os.stat(jfn).st_ctime) # return the creation date of file 
                 
             edi_obj.Head.acqdate = csamt_jobj.jsites_infos 
-            #edi_obj.Head.acqdate = self.Header.HardwareInfos.dated
-            
-            edi_obj.Head.fileby = fileby #csamt_jobj.jprogvers 
+            edi_obj.Head.fileby = fileby 
             edi_obj.Head.filedate = datetime.datetime.now(
                 ).strftime('%m-%d-%Y %H:%M:%S')
             
@@ -263,18 +261,15 @@ class J_collection :
             setattr(edi_obj,'Head.county', county)
             
     
-            edi_obj.Head.lat = csamt_jobj.lat[ii] #head_edi_lat[stn]
-            edi_obj.Head.long = csamt_jobj.lon[ii] #head_edi_lon[stn]
+            edi_obj.Head.lat = csamt_jobj.lat[ii]
+            edi_obj.Head.long = csamt_jobj.lon[ii] 
             edi_obj.Head.elev = round(csamt_jobj.elev[ii], 2)
         
             edi_obj.Head.maxsect =1000
             
             if project_name is None :
                 project_name= os.path.basename(csamt_jobj._fn) 
-            
-            #      self.__setattr__('project_name ', os.path.basename(csamt_jobj._fn)) 
-            # else : self.__setattr__('project_name ', project_name) 
-            
+
             #=====>  set EDI OBJ INFOS
             # edi_obj.Info.maxinfo = 999
   
@@ -351,7 +346,6 @@ class J_collection :
             edi_obj.MTEMAP.__setattr__('hy', '{0:04}{1}'.format(ii * 10 + 4 , codeID_dec[1:] ))
             
             #Frequency blocks , impendance and resistivity blocs 
-            
             edi_obj.Z.freq = csamt_jobj.freq 
     
             
@@ -364,14 +358,12 @@ class J_collection :
             phs_array_err = np.zeros((edi_obj.Z.freq.size, 2,2 ), dtype = np.float)
             
             #dictionnary of components . we set only component into XY . 
-            res_array [:, 0 , 1 ] = csamt_jobj.resistivity[stn]  # app_rho_obj[stn]
-            res_array_err [:, 0 , 1] = csamt_jobj.resistivity[stn] #error_propag_rho [stn]
-            phs_array[: , 0, 1] = csamt_jobj.phase[stn] #phase_obj[stn] 
-            phs_array_err  [:, 0, 1]  = csamt_jobj.phase_err[stn] #error_propag_phs[stn]
+            res_array [:, 0 , 1 ] = csamt_jobj.resistivity[stn]  
+            res_array_err [:, 0 , 1] = csamt_jobj.resistivity[stn] 
+            phs_array[: , 0, 1] = csamt_jobj.phase[stn] 
+            phs_array_err  [:, 0, 1]  = csamt_jobj.phase_err[stn] 
         
-         
-            #---> Recomputing z with resistivities , phase by using propagrations errors 
-            
+            #---> Recomputing z with resistivities- phase by using propagrations errors 
             edi_obj.Z.set_res_phase(res_array = res_array, phase_array=phs_array, 
                                     freq=  edi_obj.Z.freq, 
                                     res_err_array=res_array_err,
@@ -379,8 +371,6 @@ class J_collection :
             
             edi_obj.write_edifile(savepath = savepath)
                 
-
-        
         if len(csamt_jobj.station) > 1: 
             print('-'*77)    
             print('---> {0} wrote sucessfully from j-files.\n---> see path:<{1}> '.\

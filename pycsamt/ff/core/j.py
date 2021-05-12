@@ -1177,26 +1177,7 @@ class J_infos (object):
             self.__setattr__(keys, kwargs[keys])
 
  
-    
-if __name__== '__main__': 
-    
-    jfile = r'C:\Users\Administrator\OneDrive\Python\pyCSAMT\data\j\S01.dat'
-    
-    jObjs= J_collection()
-    jObjs.j2edi(jfile)
-    
-    
-    # file_14 ='csi000.dat'
-
-    # path =  os.path.join(os.environ["pyCSAMT"], 
-    #                       'pycsamt','data', file_14)
-
-    # print(jfile.jnperiod)
-    # print(jfile.jelev)
-    # print(jfile.jwpha)
-    # print(jfile.jperiod)
-    
-    
+ 
     
     
     

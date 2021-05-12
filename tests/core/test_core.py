@@ -18,12 +18,15 @@ Created on Wed Apr  7 13:27:27 2021
 from tests.modeling.__init__ import reset_matplotlib, csamtpylog, diff_files
 
 import os
+import datetime
 
 import  unittest 
 
-from pycsamt.ff.core import ( avg, edi, cs)
+from pycsamt.ff.core import ( avg, edi, cs,j)
 
-from tests import EDI_DATA_DIR, AVG_DATA_DIR, make_temp_dir,TEST_TEMP_DIR , STN_DIR 
+from tests import EDI_DATA_DIR, AVG_DATA_DIR, make_temp_dir 
+from tests import J_DATA_DIR, TEST_TEMP_DIR , STN_DIR
+
 from tests import survey_testname
 
 
@@ -207,7 +210,6 @@ class TestAVG(unittest.TestCase):
 class TestEDI(unittest.TestCase):
     """
     Test edifile  write edifiles 
-    
     """  
     @classmethod 
     def setUpClass(cls):
@@ -221,7 +223,7 @@ class TestEDI(unittest.TestCase):
     def setUp(self): 
         
         if not os.path.isdir(TEST_TEMP_DIR):
-            print('--> outdir not exist , set to None !')
+            print('--> outdir does not exist , set to None !')
             csamtpylog().get_csamtpy_logger().error('Outdir does not exist !')
         
     def test_rewrite_edi(self):
@@ -250,7 +252,7 @@ class TestEDI(unittest.TestCase):
                                       new_edifilename =survey_testname)
                 edi_head_id.append(edi_obj.Head.dataid)
                 edi_type.append(edi_obj.typefile)
-                
+            
         except : 
                 csamtpylog().get_csamtpy_logger().error('An error occurs while reading and'
                                                         'Rewritting `edi file.')
@@ -260,14 +262,15 @@ class TestEDI(unittest.TestCase):
             expected_edi_output_files = [os.path.join(os.path.join(
                                                 TEST_TEMP_DIR, self.__class__.__name__),
                         survey_testname + '.{0}.edi'.format(edi_id))
-                for edi_id in edi_head_id
-                                        ]
+                for edi_id in edi_head_id ]
+                                        
             
         # now collect edioutfiles generated 
         save_edi_outdir =os.path.join(TEST_TEMP_DIR, self.__class__.__name__)
         save_edi_files = [os.path.join(save_edi_outdir, edi)
                           for edi in os.listdir(save_edi_outdir)]
         
+
         # fist check assert if number generate edifiles is the same than input files 
         self.assertEqual(len(list_of_edifiles), len(save_edi_files), 
                          'Difference found in expected edi output size = {0}'
@@ -310,6 +313,43 @@ class TestEDI(unittest.TestCase):
             self.assertTrue(is_identical, 
                             "The output file is not the same with the baseline file.")
 
+    def test_write_j2edi(self):
+        """
+        Convert AG.Jones files *j to SEG EDI files. we will not test all jfiles 
+        We select one file among the existing jfiles in jpath '/data/j' 
+        
+        """
+        import random 
+        
+        jfiles = os.listdir(J_DATA_DIR)
+        # we only selected one file from all jpath
+        selected_j = random.sample(jfiles, 1)  # return a list 
+        jf =os.path.join(J_DATA_DIR, selected_j[0])
+        csamtpylog().get_csamtpy_logger().info('{0} is successufully selected '
+                                                ' for a jedi test.'.format(jf))
+        # now check whether j as a file  
+        try : 
+            os.path.isfile(jf)
+        except : 
+            csamtpylog().get_csamtpy_logger().error(
+                '{0} is not a file. Please check your input file assumed '
+                'to be a AG. Jones files *.dat'.format(jf))
+        else : 
+            save_outdir = os.path.join(TEST_TEMP_DIR, self.__class__.__name__)
+            j.J_collection().j2edi(jfn=jf, savepath =save_outdir )
+            
+        # Now test whether the files is the right file generated
+        # get the name of the file and created expected output file name 
+        # remember Jfile is MT data file 
+        exp_jname = os.path.join(save_outdir, 
+                                  'S00_mt.{0}.edi'.format(
+                                   datetime.datetime.now().year))
+        
+        #compare both files 
+        refout = os.path.join(save_outdir, 
+                              os.listdir(save_outdir)[0])
+        compare_diff_files(refout=[refout], refexp=[exp_jname])
+       
 
 def compare_diff_files(refout, refexp):
     """
@@ -542,6 +582,8 @@ class TestProfile(unittest.TestCase):
 if __name__=='__main__':
 
     unittest.main()
+    
+    
                 
     
     

@@ -631,9 +631,11 @@ class Edi :
         #---> call Zmodule and populate attributes 
         self.Z._freq, self.Z._z_err , self.Z._z ,=freq_array ,z_error_array,  z_array 
         
-        
-        if 'zrot' in self.comp_dict.keys() :self.Z.rotation_angle =np.array (self.comp_dict['zrot'])
-        else : self.Z.rotation_angle = np.zeros_like (freq_array, dtype =np.float) # fill  zeros value as Zrot 
+        if 'zrot' in self.comp_dict.keys() :
+            self.Z.rotation_angle =np.array (self.comp_dict['zrot'])
+            
+        else : # fill  zeros value as Zrot 
+            self.Z.rotation_angle = np.zeros_like (freq_array, dtype =np.float) 
         self.Z.compute_resistivity_phase() # compute resistivity and phase 
         
         
@@ -752,7 +754,7 @@ class Edi :
         elif datatype is not None : 
             if re.match(datatype.lower(), 'emapsect') is None \
                 and re.match(datatype.lower(), 'mtsect') is None :
-                warnings.warn ('Currently <pyCSAMT> can write ">=MTSECT" or ">=EMAPSECT".'\
+                warnings.warn ('Currently <pyCSAMT> can write ">=MTSECT" or ">=EMAPSECT".'
                                ' The only dataType keys acceptables are either "mt" or "emap".')
                 raise CSex.pyCSAMTError_EDI(
                     'Datatype provided is not acceptable .Please try "mt" or "emap".')
@@ -761,21 +763,35 @@ class Edi :
         
         if f==1 :
             new_edifilename = new_edifilename.format(self.Head.dataid,
-                                                     self.typefile, datetime.datetime.now().year) # set the name of new_filename 
+                                                     self.typefile, 
+                                                     datetime.datetime.now().year) # set the name of new_filename 
         elif f==2:
                new_edifilename=new_edifilename.format(self.Head.dataid)                              
-                                                     
+                                                   
+
         # write frequency >!****FREQUENCIES****!
         edi_freq_infolines = [self.data_head_com.format('frequencies'.upper())]
-        edi_freq_infolines =edi_freq_infolines + self._write_components_blocks(edi_datacomp= self.Z.freq,
-                                                                       comp_key='freq')
+        edi_freq_infolines =edi_freq_infolines + self._write_components_blocks(
+                                                    edi_datacomp= self.Z.freq,
+                                                    comp_key='freq')
+        
+        # print(self.Z.rotation_angle)
         
         if self.typefile == 'mt' or 'mt' in self.typefile: 
             self.typefile = 'mt'
             # write impedance rotation angle : >!****IMPEDANCE ROTATION ANGLES****!
-            edi_zrot_infolines =[self.data_head_com.format('impedance rotation angles'.upper())]
-            edi_zrot_infolines =   edi_zrot_infolines + self._write_components_blocks(edi_datacomp= self.Z.rotation_angle,
-                                                                              comp_key = 'zrot')
+            #if rotation angle is =0 , for consistency, fill  zeros value as Zrot 
+            try : 
+                if self.Z.rotation_angle == 0. : 
+                    self.Z.rotation_angle = np.zeros_like (self.Z.freq,
+                                                           dtype =np.float)
+            except : pass 
+                
+            edi_zrot_infolines =[self.data_head_com.format(
+                'impedance rotation angles'.upper())]
+            edi_zrot_infolines =   edi_zrot_infolines +\
+                self._write_components_blocks(edi_datacomp= self.Z.rotation_angle,
+                                                           comp_key = 'zrot')
         if  self.typefile =='emap' or 'emap' in self.typefile :
             self.typefile ='emap'
             
@@ -785,10 +801,13 @@ class Edi :
         
         
         
-        self.Z.z , self.Z.z_err  =np.nan_to_num(self.Z.z), np.nan_to_num (self.Z.z_err)
-        self.Z.resistivity , self.Z.phase = np.nan_to_num(self.Z.resistivity), np.nan_to_num (self.Z.phase)
-
+        self.Z.z =np.nan_to_num(self.Z.z)
+        self.Z.z_err  = np.nan_to_num (self.Z.z_err)
         
+        self.Z.resistivity = np.nan_to_num(self.Z.resistivity)
+        self.Z.phase = np.nan_to_num (self.Z.phase)
+
+
         #--->  >!****IMPEDANCES****!
         edi_z_data_infolines = [self.data_head_com.format('impedances'.upper())]
         for ii in range (2):
@@ -797,27 +816,31 @@ class Edi :
                 #     or np.mean (self.Z.z[:, ii, jj].imag)==0.0 or np.mean(self.Z.z_err[:, ii, jj])==0.  :pass  # dont write this none value 
 
                 #else :
-                zreal_datalines =self._write_components_blocks(edi_datacomp = self.Z.z[:, ii, jj].real , 
-                                                              comp_key =z_rho_phs_labels [0][ii *2 + jj][0])
-                zimag_datalines =self._write_components_blocks(edi_datacomp = self.Z.z[:, ii, jj].imag, 
-                                                              comp_key =z_rho_phs_labels [0][ii *2 + jj][1])
+                zreal_datalines =self._write_components_blocks(
+                    edi_datacomp = self.Z.z[:, ii, jj].real , 
+                     comp_key =z_rho_phs_labels [0][ii *2 + jj][0])
+                zimag_datalines =self._write_components_blocks(
+                    edi_datacomp = self.Z.z[:, ii, jj].imag, 
+                    comp_key =z_rho_phs_labels [0][ii *2 + jj][1])
                 z_error_values  =self.Z.z_err[:, ii, jj] **2
-                zvariance_datalines =self._write_components_blocks(edi_datacomp =z_error_values, 
-                                                              comp_key =z_rho_phs_labels [0][ii *2 + jj][2])
-                zreal_datalines.append('\n'), zimag_datalines.append('\n'), zvariance_datalines.append('\n')
+                zvariance_datalines =self._write_components_blocks(
+                    edi_datacomp =z_error_values, 
+                    comp_key =z_rho_phs_labels [0][ii *2 + jj][2])
+                
+                zreal_datalines.append('\n'), zimag_datalines.append('\n')
+                zvariance_datalines.append('\n')
                 edi_z_data_infolines.extend(zreal_datalines)
                 edi_z_data_infolines.extend(zimag_datalines)
                 edi_z_data_infolines.extend(zvariance_datalines)
                 
-                
-                    
-                    
+       
         #===============================================================
         # write EMAP  :
         #---------------------------------------------------------------                      
         if self.typefile =='emap':
             # define rho and phase array 
-            edi_rhophs_infolines =[self.data_head_com.format('Resistivities and phases'.upper())]
+            edi_rhophs_infolines =[self.data_head_com.format(
+                'Resistivities and phases'.upper())]
             rho = np.zeros ((self.Z.freq.size , 2, 4), dtype=np.float)
             phs = np.zeros ((self.Z.freq.size , 2, 4), dtype=np.float)
             if add_filter_array is not None  :
@@ -1004,6 +1027,11 @@ class Edi :
         if datatype is None : 
             datatype =self.typefile
         
+        # print(edi_datacomp)
+        # print(len(edi_datacomp))
+        # print(type(edi_datacomp))
+        # print(edi_datacomp.size)
+    
         if comp_key.lower() =='freq':  comp_block_line=['>FREQ  //{0}\n'.format(edi_datacomp.size)]
         if datatype.lower() in ["mt", '>=mtsect', 'mtsect'] :
  

@@ -10,5 +10,6 @@ include .travis.yml .readthedocs.yml
 
 exclude project_description.md
 exclude _demo_user_guide.py
+exclude pycsamt_user_guide/*
 
 global-exclude *.py[cod] __pycache__/* *.so *.dylib .coverage .coverage.* 

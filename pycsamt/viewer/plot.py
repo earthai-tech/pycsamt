@@ -331,7 +331,7 @@ class Plot1d :
         def plot_stn_separation(axes =None, set_xlabel=True): 
             """
             plot station _separations  x_station / h- separtion(m)
-             dipole_length_curve show the line of overage value on de site beteen all stations  
+             dipole_length_curve show the line of overage value on de site between all stations  
             """
 
             stn_sep_profile = axes.plot(station_pk, stn_separation_array,

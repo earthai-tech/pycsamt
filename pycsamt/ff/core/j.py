@@ -37,8 +37,11 @@ import datetime, shutil
 import webbrowser
 import numpy as np 
 
+
 import pycsamt.ff.core.cs  as cs_obj
 from pycsamt.etc.infos import notion
+
+from pycsamt.ff.core.edi import Edi, Hmeasurement, Emeasurement 
 from pycsamt.etc.infos import _sensitive as SB 
 import pycsamt.utils.func_utils as func
 from pycsamt.utils import exceptions as CSex
@@ -183,6 +186,200 @@ class J_collection :
             except : raise CSex.pyCSAMTError_J('Stations names must be on list or the number of stations not <{0}>.'.format(type(jstnames)))
     
 
+    def j2edi(self, jfn=None, savepath =None, **kwargs): 
+        """
+        Method to convert j-files to edi files. Method calls CSAMT class object
+        and get from this class edi infos 
+        
+        :param jfn: collection of jfiles or path-like str  
+        :type list_of_files: str  
+
+        :rtype: str
+        :returns: edifiles from Jobjects
+        
+        :Example:
+            
+            >>> from pycsamt.ff.core.j import J_collection as JObjs
+            >>> path2j = 'data/j' 
+            >>> jObjs= JObjs().j2edi(path2j)
+            
+    
+        """
+        prospect =kwargs.pop('contractor_name', None)
+        #hardwareInfos = kwargs.pop('hardware_name', None)
+        fileby =kwargs.pop('fileby', 'jediSoftware')
+        acqby =kwargs.pop('acqby', 'jedi')
+        county =kwargs.pop('county', None)
+        project_name =kwargs.pop('project_name', None)
+        dipole_length =kwargs.pop('dipole_length', 100.)
+        rotation_angle =kwargs.pop ('rotation_angle', 0.)
+       
+        if jfn is not None:
+            self.jfiles_list = jfn
+
+        if self.jfiles_list is None : 
+            raise CSex.pyCSAMTError_J('No files found !'
+                                      ' Please provide A.G. J-files ')
+        # export to savepath 
+        if savepath is None : # create a folder in your current work directory
+            try :
+                savepath = os.path.join(os.getcwd(), '_outputJ2EDI_')
+                if not os.path.isdir(savepath):
+                    os.mkdir(savepath)#  mode =0o666)
+            except : 
+                warnings.warn("It seems the path already exists !")
+        
+        # call CSAMT obj 
+        csamt_jobj= cs_obj.CSAMT(data_fn=jfn)
+        
+        # create edi-obj and set attributes 
+        for ii, stn in enumerate (csamt_jobj.station):
+            # create an edi_obj and fill attributes 
+            edi_obj=Edi()
+            
+            # fill Head info 
+            edi_obj.Head.dataid= stn # ii mean for all the list 
+            edi_obj.Head.acqby = acqby 
+       
+            if csamt_jobj.jsites_infos is None  or\
+                csamt_jobj.jsites_infos==[None]: 
+                csamt_jobj.jsites_infos = datetime.datetime.fromtimestamp(
+                    os.stat(jfn).st_ctime) # return the creation date of file 
+                
+            edi_obj.Head.acqdate = csamt_jobj.jsites_infos 
+            edi_obj.Head.fileby = fileby 
+            edi_obj.Head.filedate = datetime.datetime.now(
+                ).strftime('%m-%d-%Y %H:%M:%S')
+            
+            # get the name of location
+            edi_obj.Head.loc = os.path.basename(csamt_jobj._fn)[:-4]
+
+            if prospect is None : prospect ='MTnet'
+            setattr(edi_obj, 'Head.prospect', prospect)
+    
+            if county is not None : county ='MT'
+            setattr(edi_obj,'Head.county', county)
+            
+    
+            edi_obj.Head.lat = csamt_jobj.lat[ii]
+            edi_obj.Head.long = csamt_jobj.lon[ii] 
+            edi_obj.Head.elev = round(csamt_jobj.elev[ii], 2)
+        
+            edi_obj.Head.maxsect =1000
+            
+            if project_name is None :
+                project_name= os.path.basename(csamt_jobj._fn) 
+
+            #=====>  set EDI OBJ INFOS
+            # edi_obj.Info.maxinfo = 999
+  
+            edi_obj.Info.Source.__setattr__('project', project_name)
+            edi_obj.Info.Source.__setattr__('survey',  edi_obj.Head.dataid)
+            edi_obj.Info.Source.__setattr__('sitename', edi_obj.Head.dataid)
+            edi_obj.Info.Processing.__setattr__('processedby', 'pyCSAMT' )
+            edi_obj.Info.Processing.ProcessingSoftware.__setattr__('name', edi_obj.Head.fileby )
+    
+           
+            #====> definemeas 
+            edi_obj.DefineMeasurement.maxchan =4
+            edi_obj.DefineMeasurement.maxrun = len(csamt_jobj.station)
+            edi_obj.DefineMeasurement.__setattr__('reftype' ,'CARTesien')
+            edi_obj.DefineMeasurement.__setattr__('reflat',edi_obj.Head.lat  ) 
+            edi_obj.DefineMeasurement.__setattr__('reflong', edi_obj.Head.long) 
+            edi_obj.DefineMeasurement.__setattr__('refelev',round(edi_obj.Head.elev,2))
+            
+            #creating xxmeas object 
+            codeID_dec = '{0}'.format((ii+1)/edi_obj.Head.maxsect)
+            # codeID=  '{0:04}{1}'.format(ii * 10 + 1 , codeID_dec[1:] )
+            edi_obj.DefineMeasurement.__setattr__('meas_ex', 
+                                                  Emeasurement(**{
+                                                      'id':'{0:04}{1}'.format(ii * 10 + 1 , 
+                                                       codeID_dec[1:] ), 
+                                                        'chtype':'EX', 
+                                                        'x': -(dipole_length/2), 
+                                                        'y': 0.,
+                                                        'x2':dipole_length/2 , 
+                                                        'y2':0, 
+                                                        }))
+
+            edi_obj.DefineMeasurement.__setattr__('meas_ey',
+                                                  Emeasurement(**{
+                                                      'id':'{0:04}{1}'.format(ii * 10 + 2 , 
+                                                         codeID_dec[1:]), 
+                                                        'chtype':'EY', 
+                                                        'x':0., 
+                                                        'y': -(dipole_length/2),
+                                                        'x2':0., 
+                                                        'y2':dipole_length/2 , 
+                                                            }))
+                                                                          
+
+            edi_obj.DefineMeasurement.__setattr__('meas_hx', 
+                                                  Hmeasurement(**{
+                                                      'id':'{0:04}{1}'.format(ii * 10 + 3 , 
+                                                       codeID_dec[1:] ), 
+                                                        'chtype':'HX', 
+                                                        'x':0., 
+                                                        'y': 0.,
+                                                        'x2':0., 
+                                                        'y2':0. , 
+                                                        }))
+
+            edi_obj.DefineMeasurement.__setattr__('meas_hy',
+                                                  Hmeasurement(**{
+                                                      'id':'{0:04}{1}'.format(ii * 10 + 4 ,
+                                                       codeID_dec[1:]), 
+                                                    'chtype':'HY', 
+                                                    'x':0., 
+                                                    'y': 0.,
+                                                    'x2':0., 
+                                                    'y2':0. , 
+                                                          }))
+     
+                     
+            #====> EMAPSECT
+            edi_obj.MTEMAP.sectid = stn 
+            edi_obj.MTEMAP.__setattr__('nfreq', len(csamt_jobj.freq))
+            edi_obj.MTEMAP.__setattr__('ex', '{0:04}{1}'.format(ii * 10 + 1 , codeID_dec[1:] ))
+            edi_obj.MTEMAP.__setattr__('ey', '{0:04}{1}'.format(ii * 10 + 2 , codeID_dec[1:] ))
+            edi_obj.MTEMAP.__setattr__('hx', '{0:04}{1}'.format(ii * 10 + 3 , codeID_dec[1:] ))
+            edi_obj.MTEMAP.__setattr__('hy', '{0:04}{1}'.format(ii * 10 + 4 , codeID_dec[1:] ))
+            
+            #Frequency blocks , impendance and resistivity blocs 
+            edi_obj.Z.freq = csamt_jobj.freq 
+            #add rotation angle 
+            edi_obj.Z.rotation_angle = rotation_angle
+    
+            
+            # set phase and resistitivity including error propagation 
+            # compute error propagation  
+            #-->  initialize ndarray(nfreq, 2, 2) 
+            res_array = np.zeros((edi_obj.Z.freq.size, 2,2 ), dtype = np.float)
+            res_array_err = np.zeros((edi_obj.Z.freq.size, 2,2 ), dtype = np.float)
+            phs_array = np.zeros((edi_obj.Z.freq.size, 2,2 ), dtype = np.float)
+            phs_array_err = np.zeros((edi_obj.Z.freq.size, 2,2 ), dtype = np.float)
+            
+            #dictionnary of components . we set only component into XY . 
+            res_array [:, 0 , 1 ] = csamt_jobj.resistivity[stn]  
+            res_array_err [:, 0 , 1] = csamt_jobj.resistivity[stn] 
+            phs_array[: , 0, 1] = csamt_jobj.phase[stn] 
+            phs_array_err  [:, 0, 1]  = csamt_jobj.phase_err[stn] 
+        
+            #---> Recomputing z with resistivities- phase by using propagrations errors 
+            edi_obj.Z.set_res_phase(res_array = res_array, phase_array=phs_array, 
+                                    freq=  edi_obj.Z.freq, 
+                                    res_err_array=res_array_err,
+                                    phase_err_array=phs_array_err)
+            
+            edi_obj.write_edifile(savepath = savepath)
+                
+        if len(csamt_jobj.station) > 1: 
+            print('-'*77)    
+            print('---> {0} wrote sucessfully from j-files.\n---> see path:<{1}> '.\
+                  format(len(csamt_jobj.station), savepath))
+            print('-'*77)
+                    
+    
         
     def collect_jfiles (self, list_of_jfiles=None, jpath = None):
         """
@@ -192,14 +389,18 @@ class J_collection :
         :type list_of_jfiles: list 
         """
         if list_of_jfiles is None and jpath is not None : 
-            self.jfiles_list = [os.path.join(jpath, jfile) for jfile in os.listdir (jpath) if os.path.isfile(jfile) ==True]
+            self.jfiles_list = [os.path.join(jpath, jfile) 
+                                for jfile in os.listdir (jpath)
+                                if os.path.isfile(jfile) ==True]
         
         if list_of_jfiles is not None : 
             if isinstance( list_of_jfiles, str) : #we assume to read only one  file 
                 self.jfiles_list = [list_of_jfiles] 
             self.jfiles_list = sorted(list_of_jfiles)
             
-        elif self.jfiles_list is None : raise CSex.pyCSAMTError_J ('Can not find a list of j files. Please check your path !')
+        elif self.jfiles_list is None : 
+            raise CSex.pyCSAMTError_J ('Can not find a list of j files.'
+                                       ' Please check your path !')
         
         if isinstance(self.jfiles_list, str): # we assume that only file is read than put on list  for looping.
             self.jfiles_list =[self.jfiles_list]
@@ -218,9 +419,15 @@ class J_collection :
                 self.J.read_j(j_fn =jfile)
                 #----> comments blocks 
                 if self.J.read_commentblock is True : 
-                    sinfo.append(self.J.jinfo.site_infos), exl.append(self.J.jinfo.ex_length), eyl.append(self.J.jinfo.ey_length)
-                    exaz.append(self.J.jinfo.ex_azimuth), eyaz.append(self.J.jinfo.ey_azimuth), cohmin.append(self.J.jinfo.coherence_min)
-                    cohmax.append(self.J.jinfo.coherence_max), maxt.append(self.J.jinfo.max_type), nty.append(self.J.jinfo.ntype)
+                    sinfo.append(self.J.jinfo.site_infos),
+                    exl.append(self.J.jinfo.ex_length)
+                    eyl.append(self.J.jinfo.ey_length)
+                    exaz.append(self.J.jinfo.ex_azimuth)
+                    eyaz.append(self.J.jinfo.ey_azimuth)
+                    cohmin.append(self.J.jinfo.coherence_min)
+                    cohmax.append(self.J.jinfo.coherence_max) 
+                    maxt.append(self.J.jinfo.max_type), 
+                    nty.append(self.J.jinfo.ntype)
                     weig.append(self.J.jinfo.weight)
                 
                 #--- > information blocks 
@@ -231,7 +438,8 @@ class J_collection :
                 rhomax.append(self.J.jrhomax),rhomin.append(self.J.jrhomin), 
                 phamax.append(self.J.jphamax),phamin.append(self.J.jphamin)
                 wrho.append(self.J.jwrho),wpha.append(self.J.jwpha)
-                real.append(self.J.jreal), imag.append(self.J.jimag),error.append(self.J.jerror), weight.append(self.J.jweight)
+                real.append(self.J.jreal), imag.append(self.J.jimag)
+                error.append(self.J.jerror), weight.append(self.J.jweight)
         
         
         self.stnames , self.elevation = jstations , elev
@@ -822,14 +1030,15 @@ class J:
         :param j_fn: path to jfile 
         :type j_fn: str
         """ 
- 
-        self._logging.info('Reading A.G.Jones J-format.%s'%self.jfn)
-        
+
         jdata=[]
         if j_fn is not None : self.jfn =j_fn 
         if self.jfn is None : 
             raise CSex.pyCSAMTError_J('Error file. Please Provide the right path!')
   
+        self._logging.info('Reading A.G.Jones J-format "%s"'%os.path.basename(
+            self.jfn))
+        
         if self.jfn is not None : 
 
             if SB.which_file(filename=self.jfn) =='j': 
@@ -970,17 +1179,12 @@ class J_infos (object):
             self.__setattr__(keys, kwargs[keys])
 
  
-    
-# if __name__== '__main__': 
-#     file_14 ='csi000.dat'
-
-#     path =  os.path.join(os.environ["pyCSAMT"], 
-#                           'pycsamt','data', file_14)
-
-    # print(jfile.jnperiod)
-    # print(jfile.jelev)
-    # print(jfile.jwpha)
-    # print(jfile.jperiod)
+ 
+if __name__=='__main__': 
+    jdata =r'./data/j/S00.dat'
+    J_collection().j2edi(jfn=jdata, 
+                         #rotation_angle=np.array([0.])
+                         )
     
     
     

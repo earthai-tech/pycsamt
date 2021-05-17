@@ -39,6 +39,8 @@ EDI_DATACOR_DIR = os.path.normpath(
     os.path.join(TEST_pyCSAMT_ROOT, 'data/correctedEDI'))
 AVG_DATA_DIR = os.path.normpath(
     os.path.join(TEST_pyCSAMT_ROOT, 'data/avg'))
+J_DATA_DIR = os.path.normpath(
+    os.path.join(TEST_pyCSAMT_ROOT, 'data/j'))
 DRILL_PARSER_DIR = os.path.normpath(
     os.path.join(TEST_pyCSAMT_ROOT, 'data/drill_example_files'))  
 OC2D_DIR = os.path.normpath(

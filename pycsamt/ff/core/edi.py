@@ -784,7 +784,6 @@ class Edi :
         # for consistency , may replace if exist nan number by np.nan
         
         
-        
         self.Z.z , self.Z.z_err  =np.nan_to_num(self.Z.z), np.nan_to_num (self.Z.z_err)
         self.Z.resistivity , self.Z.phase = np.nan_to_num(self.Z.resistivity), np.nan_to_num (self.Z.phase)
 

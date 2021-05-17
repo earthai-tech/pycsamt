@@ -422,7 +422,14 @@ class CSAMT(object):
         
         self.lon = j_obj.longitude
         self.lat = j_obj.latitude
+        self.elev=j_obj.elevation
         
+  
+        self.station= j_obj.stnames
+        
+        self.jsites_infos = j_obj.J.jinfo.site_infos
+        self.jprogvers= j_obj.J.jinfo.progvers 
+  
         self.Location.convert_location_2_utm(latitude =self.lat, longitude =self.lon)
         
         self.station =j_obj.id 

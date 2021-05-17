@@ -254,6 +254,9 @@ class OtherModelingTest(unittest.TestCase) :
             self.assertTrue(is_identical, "The output file is not the same with the baseline file.")
             
     
+def main():
+    ttt= OtherModelingTest()
+    ttt.test_write_xyz_modelfile()
             
             
             

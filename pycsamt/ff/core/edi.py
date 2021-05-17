@@ -782,10 +782,22 @@ class Edi :
             # write impedance rotation angle : >!****IMPEDANCE ROTATION ANGLES****!
             #if rotation angle is =0 , for consistency, fill  zeros value as Zrot 
             try : 
-                if self.Z.rotation_angle == 0. : 
-                    self.Z.rotation_angle = np.zeros_like (self.Z.freq,
-                                                           dtype =np.float)
-            except : pass 
+                if isinstance(self.Z.rotation_angle, float) or \
+                    len(self.Z.rotation_angle) ==1:
+                    self.Z.rotation_angle =np.full_like(self.Z.freq, 
+                                                        self.Z.rotation_angle, 
+                                                        dtype=np.float)
+                    # self.Z.rotation_angle = np.zeros_like (self.Z.freq,
+                    #                                        dtype =np.float)
+            except : 
+                self._logging.error('Error in "edi-file" while setting '
+                                    'rotation angle. ')
+            else :
+                warnings.warn('Rotation angle is set to {0}'.format(
+                    self.Z.rotation_angle[0]))
+                self._logging.info('Rotation angle is = {0}.'.format(
+                    self.Z.rotation_angle[0]))
+                
                 
             edi_zrot_infolines =[self.data_head_com.format(
                 'impedance rotation angles'.upper())]
@@ -798,9 +810,7 @@ class Edi :
             
         #--> Write impedance data and tipper 
         # for consistency , may replace if exist nan number by np.nan
-        
-        
-        
+
         self.Z.z =np.nan_to_num(self.Z.z)
         self.Z.z_err  = np.nan_to_num (self.Z.z_err)
         

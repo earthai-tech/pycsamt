@@ -212,8 +212,8 @@ class J_collection :
         county =kwargs.pop('county', None)
         project_name =kwargs.pop('project_name', None)
         dipole_length =kwargs.pop('dipole_length', 100.)
+        rotation_angle =kwargs.pop ('rotation_angle', 0.)
        
-            
         if jfn is not None:
             self.jfiles_list = jfn
 
@@ -347,6 +347,8 @@ class J_collection :
             
             #Frequency blocks , impendance and resistivity blocs 
             edi_obj.Z.freq = csamt_jobj.freq 
+            #add rotation angle 
+            edi_obj.Z.rotation_angle = rotation_angle
     
             
             # set phase and resistitivity including error propagation 
@@ -1178,6 +1180,13 @@ class J_infos (object):
 
  
  
+if __name__=='__main__': 
+    jdata =r'./data/j/S00.dat'
+    J_collection().j2edi(jfn=jdata, 
+                         #rotation_angle=np.array([0.])
+                         )
+    
+    
     
     
     

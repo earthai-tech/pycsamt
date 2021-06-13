@@ -53,6 +53,7 @@ import numpy as np
 
 import pycsamt.utils.exceptions as CSex
 from pycsamt.utils import func_utils as func
+from pycsamt.viewer.plot import geoplot2d
 
 from pycsamt.etc.infos import _sensitive as SB 
 from pycsamt.utils._csamtpylog import csamtpylog 
@@ -347,12 +348,15 @@ class Data(object):
         # get data from occam files 
         indextemp =[]
         for ii, dataparams in enumerate(occam_data_lines) : 
-            if dataparams.lower().find('format')>= 0 : self.data_format= dataparams.strip().split(':')[-1]
-            if dataparams.lower().find('title') >=0 : self.data_title =dataparams.strip().split(':')[-1]
+            if dataparams.lower().find('format')>= 0 :
+                self.data_format= dataparams.strip().split(':')[-1]
+            if dataparams.lower().find('title') >=0 : 
+                self.data_title =dataparams.strip().split(':')[-1]
             if dataparams.lower().find('site') >=0 :indextemp.append(ii)
             if dataparams.lower().find('offset') >=0 : indextemp.append(ii)
             if dataparams.lower().find('frequencies')>=0 : indextemp.append(ii)
-            if dataparams.lower().find('block')>=0 : self.data_nblocks= float(dataparams.strip().split(':')[-1])
+            if dataparams.lower().find('block')>=0 :
+                self.data_nblocks= float(dataparams.strip().split(':')[-1])
             if dataparams.lower().find('type') >=0 and dataparams.lower().find('error')>=0 : 
                 indextemp.append(ii)
                 
@@ -1064,7 +1068,8 @@ class Response (Data):
         
         self._logging =csamtpylog.get_csamtpy_logger(self.__class__.__name__)
  
-        for key in self.response_params : self.__setattr__('resp_'+key, None)
+        for key in self.response_params : 
+            self.__setattr__('resp_'+key, None)
         self.resp_data =None 
         
         for keys in list(kwargs.keys()): setattr(self, key, kwargs[keys])
@@ -1100,15 +1105,18 @@ class Response (Data):
             >>> tm_phase_err = occam_resp_obj.resp_tm_log10_forward_phase
             >>> tm_residual_phase_err = occam_resp_obj.resp_tm_log10_residual_phase_err
         """
-        if response_fn is not None : self.resp_fn =response_fn 
+        if response_fn is not None : 
+            self.resp_fn =response_fn 
         self._logging.info ('Read Occam 2D response file <%s>' % self.resp_fn)
         
         if SB.which_file(filename= self.resp_fn) =='resp': 
             with open (self.resp_fn , 'r', encoding ='utf8' ) as fresp : 
                 occam_response_lines = fresp.readlines()
-        
+    
         # for respitems in occam_response_lines : 
-        temp= [np.array([float(newitem) for newitem  in respitems.strip().split()]) for respitems in occam_response_lines] 
+        temp= [np.array([float(newitem) for newitem 
+                         in respitems.strip().split()]) 
+               for respitems in occam_response_lines] 
         self.resp_data = func.concat_array_from_list(list_of_array=temp)  
         
         # container of original data 
@@ -1218,6 +1226,9 @@ class Response (Data):
         raw_stike_angle =np.zeros((len(self.data_frequencies)-1) * len(self.data_sites),)
         raw_stike_angle_err =np.zeros((len(self.data_frequencies)-1) * len(self.data_sites),)
         
+        raw_observedData =np.zeros((len(self.data_frequencies)-1) * len(self.data_sites),)
+        raw_observedData =np.zeros((len(self.data_frequencies)-1) * len(self.data_sites),)
+        
         # get an corresponding value for each attributes (looping response file )
         step=0          # gap to find the phase value , if not find at the next reading then add one as step
         mm=0            # indice for value (data, forward , residual )
@@ -1229,17 +1240,28 @@ class Response (Data):
                     if jj%2 ==0 : # mean is rho value len of data type =2 then repeat if find the same value for next reading
                         #to_fill=  getattr(self, 'resp_' + keymode[jj]) # self.resp_tm_log10 |self.resp_tm_phase
                         getattr(self, 'resp_' + ikey)[mm]=rowline[4]
-                        raw_forward[mm], raw_residual[mm] , raw_stike_angle[mm]  =rowline[-2], rowline[-1], rowline[3]
+                        
+                        raw_forward[mm] = rowline[-2]
+                        raw_residual[mm]=rowline[-1] 
+                        raw_stike_angle[mm]=rowline[3] 
+                        raw_observedData[mm]= rowline[-3]
+                        
                         mm +=1  # incremente to get new index to fill data 
                         step +=1 # step to get the new
                         
                     if jj %2  != 0 : # if phase for mm # when is odd --> mean a phase, need to add step 
                         nn = nn + step 
-                        getattr(self, 'resp_' + ikey)[nn]=rowline[4] # self.resp_tm_phase
-
-                        raw_forward_phase[nn], raw_residual_phase_err[nn] , raw_stike_angle_err[nn]  = \
-                            rowline[-2], rowline[-1], rowline[3]
-                        step =0 # initialise  for next reading 
+                        try:
+                            getattr(self, 'resp_' + ikey)[nn]=rowline[4] # self.resp_tm_phase
+    
+                            raw_forward_phase[nn], raw_residual_phase_err[nn] , raw_stike_angle_err[nn]  = \
+                                rowline[-2], rowline[-1], rowline[3]
+                            raw_observedData[nn]= rowline[-3]
+                            step =0 # initialise  for next reading 
+                        except :
+                            self._logging.error(
+                                'Index Error ! out of bounds for axis 0.')
+                            pass
         
         # build a block data of forward residual with shape = number frequency , num_sites 
         # set response value
@@ -1256,6 +1278,18 @@ class Response (Data):
                     rr +=1
            
             rr=0 # 
+        # create matric for observed data : to get observedData: 
+            #use mode +observedData   ex: tm_obsData
+        rr=0
+        # for dd , dval in zip(['data', raw_observedData]) :
+        for ii in range(len(self.data_sites)): 
+            for kk in range(len(self.data_frequencies)-1):
+                for mode in self.occam_dtype: 
+                    getattr(self, 'resp_{0}_{1}'.format(mode,'data'))[kk, ii] = raw_observedData[rr] 
+                    # self.__setattr__('resp_{0}_{1}'.format(mode, dd), vv[])
+                rr +=1
+           
+            # rr=0 # 
        
         # set phase and phase error # do the dame for errors 
         rr=0   
@@ -1291,7 +1325,7 @@ class Response (Data):
                 # flip the mode attribute e.g : tm_log10
                 self.__setattr__('resp_{0}'.format(occ), 
                                      np.flipud(getattr(self, 'resp_{0}'.format(occ))))
-                for attr in ['forward', 'residual', 'strike_angle'] : # flip other attribute eg : tm_log10_forward
+                for attr in ['forward', 'residual', 'strike_angle','data'] : # flip other attribute eg : tm_log10_forward
                     self.__setattr__('resp_{0}_{1}'.format(occ, attr), 
                                      np.flipud(getattr(self, 'resp_{0}_{1}'.format(occ, attr))))
                 for attr in ['forward_phase', 'residual_phase_err', 'strike_angle_err']: #flip other attribute eg : tm_log10_forward_phase
@@ -1304,9 +1338,9 @@ class Response (Data):
                 print('** {0:<27} {1} {2}'.format(fwo+ ' shape:' + occ.split('_')[0].upper() + " "+ occ.split('_')[1],
                                                   '=', 
                                                   getattr(self, 'resp_{0}_{1}'.format(occ, fwo.lower())).shape))
-
-            
-            
+    
+    
+          
 class Mesh(object): 
     """
     Read Occam read mesh file 
@@ -1710,9 +1744,13 @@ class Iter2Dat (object):
       
         if filename is None : 
             if self.iter2dat_fn is not None : 
-                filename = os.path.basename(self.iter2dat_fn)[:-4].lower() + '.{0}'.format(datetime.datetime.now().month)
+                filename = os.path.basename(
+                    self.iter2dat_fn)[:-4].lower() +\
+                    '.{0}'.format(datetime.datetime.now().month)
             else : 
-                filename ='iter{0}.{1}{2}'.format(int(self.iter_num), self.iter_roughness, datetime.datetime.now().month)
+                filename ='iter{0}.{1}{2}'.format(
+                    int(self.iter_num), self.iter_roughness,
+                    datetime.datetime.now().month)
             
         #-
         if self.elevation is None : 
@@ -1724,14 +1762,17 @@ class Iter2Dat (object):
                 self.elevation  = np.repeat(0., len(self.station_location))
             
         else : 
-            if isinstance(self.elevation , (list, tuple)) : self.elevation  = np.array(self.elevation )
+            if isinstance(self.elevation , (list, tuple)) :
+                self.elevation  = np.array(self.elevation )
             assert len(self.elevation) == len(self.station_location) ,\
-                CSex.pyCSAMTError_occam2d('Elevation provided must be the same with offsets :'\
-                                          ' length|size ={0}.'.format(self.station_location.size))
+                CSex.pyCSAMTError_occam2d(
+                    'Elevation provided must be the same with offsets :'\
+                      ' length|size ={0}.'.format(self.station_location.size))
         
         
-        self._logging.info('Now write an associate file call *bln include :offset+elev+station name: \
-                           Can be used straiforwardly for Golden software plot.')
+        self._logging.info(
+            'Now write an associate file call *bln include :offset+elev+station name: \
+             Can be used straiforwardly for Golden software plot.')
            
         write_bln_lines =[]
         if scale is None :scale ='km'
@@ -1967,7 +2008,8 @@ class Iter2Dat (object):
             # Matrix is large enough , let get the part we need from investigation depth 
             #Note : from CSAMT : 1km is enough them we set 1km as a ddefault value .
             
-            self._logging.info('Get a corresponding range of matrix we need , offsets, depth and rho and populate attributes.')
+            self._logging.info('Get a corresponding range of matrix we need ,'
+                               ' offsets, depth and rho and populate attributes.')
             
             from pycsamt.utils.plot_utils import slice_csamt_matrix  , depth_of_investigation 
             
@@ -1980,7 +2022,8 @@ class Iter2Dat (object):
                 
                 warnings.warn(mess)
                 self._logging.debug(mess)
-                print('---> ! Input doi ={0} m was resetting to maxdepth ={1} m.'.format(doi,model_plot_z.max() ))
+                print('---> ! Input doi ={0} m was '
+                      'resetting to maxdepth ={1} m.'.format(doi,model_plot_z.max() ))
                 
                 doi = model_plot_z.max()
             # slice matrix and get range 
@@ -2019,7 +2062,9 @@ class Iter2Dat (object):
                 setattr(self,  name, value *dz)
     
             # build resistivitvity model
-            self._logging.info('Building Resisistivity model from file <%s>' % os.path.basename(self.iter2dat_fn))
+            self._logging.info('Building Resisistivity'
+                               ' model from file <%s>' % os.path.basename(
+                                   self.iter2dat_fn))
             
             self.model_res = np.zeros ((self.model_z_nodes.shape[0],
                                               self.model_x_nodes.shape[0])) # initialise model resistivity array 
@@ -2031,18 +2076,31 @@ class Iter2Dat (object):
                     
             print('{0:-^77}'.format('Iter2Dat *Data* info'))
             
-            print('**{0:<37} {1} {2}'.format(' Mininum Limit vertical nodes (m)','=' , self.model_z_nodes.min() +1 ))
-            print('**{0:<37} {1} {2}'.format(' Maximum limit vertical nodes (m)','=' , self.model_z_nodes.max() +1 ))
-            print('**{0:<37} {1} {2}'.format(' Minimum limit Horizontal nodes (m) ','=' , self.model_x_nodes.min()+1))
-            print('**{0:<37} {1} {2}'.format(' Maximum limit Horizontal nodes(m)','=' , self.model_x_nodes.max()+1))
-            print('**{0:<37} {1} {2}'.format(' Horizontal nodes get from file ','=' , self.model_res.shape[1] +1))
-            print('**{0:<37} {1} {2}'.format(' Vertical nodes get from file ','=' , self.model_res.shape[0] +1))
+            print('**{0:<37} {1} {2}'.format(
+                ' Mininum Limit vertical nodes (m)','=' ,
+                self.model_z_nodes.min() +1 ))
+            print('**{0:<37} {1} {2}'.format(
+                ' Maximum limit vertical nodes (m)','=' , 
+                self.model_z_nodes.max() +1 ))
+            print('**{0:<37} {1} {2}'.format(
+                ' Minimum limit Horizontal nodes (m) ',
+                '=' , self.model_x_nodes.min()+1))
+            print('**{0:<37} {1} {2}'.format(
+                ' Maximum limit Horizontal nodes(m)',
+                '=' , self.model_x_nodes.max()+1))
+            print('**{0:<37} {1} {2}'.format(
+                ' Horizontal nodes get from file ',
+                '=' , self.model_res.shape[1] +1))
+            print('**{0:<37} {1} {2}'.format(
+                ' Vertical nodes get from file ',
+                '=' , self.model_res.shape[0] +1))
     
             if bln_fn is not None :
                 self.bln_fn = bln_fn 
                 
             if self.bln_fn is None or os.path.isfile(self.bln_fn) is False : 
-                mess=''.join([' ! Site file is not provided. Need  a Bo Yang bln file read from Golden software',
+                mess=''.join([' ! Site file is not provided. Need  a Bo',
+                              ' Yang bln file read from Golden software',
                               ' to set station location , elevation and sites names.', 
                               'Please profile a file <*.bln>, if not, station location,',
                               ' elevation and sites names will set to None.'])
@@ -2070,7 +2128,9 @@ class Iter2Dat (object):
             print('{0:-^77}'.format('Iter2Dat *Station* info'))  
             try : 
                 for ffmt, fmtvalue in zip ([' Stations num.',' Minimum offset (m)',' Maximum offset (m)' ], 
-                                           [len(self.station_names),self.station_location.min(), self.station_location.max() ]):
+                                           [len(self.station_names),
+                                            self.station_location.min(),
+                                            self.station_location.max() ]):
                     print('**{0:<27} {1} {2}'.format(ffmt,'=' , fmtvalue))
             except : 
                 for ffmt in ([' Stations num.',' Minimum offset (m)',' Maximum offset (m)' ]):
@@ -2081,8 +2141,10 @@ class Iter2Dat (object):
             if np.all(self.elevation == 0.) or self.elevation is None: 
                 print('*** ! Elevation not provided.')
             else : 
-                print('**{0:<27} {1} {2}'.format(' Minimum elevation (m)','=' , self.elevation.min()))
-                print('**{0:<27} {1} {2}'.format(' Maximum elevation (m)','=' , self.elevation.max()))
+                print('**{0:<27} {1} {2}'.format(' Minimum elevation (m)',
+                                                 '=' , self.elevation.min()))
+                print('**{0:<27} {1} {2}'.format(' Maximum elevation (m)',
+                                                 '=' , self.elevation.max()))
                 
                 
 class occam2d_write(object):
@@ -2360,12 +2422,171 @@ class occam2d_write(object):
         
         print('-'*77)  
 
-        print('---> Building occamInputfiles  function successfully run. !')            
+        print('---> Building occamInputfiles  function successfully run. !')  
+ 
+         
+@geoplot2d(reason='misfit', cmap ='bwr', climits=(-2,2), show_grid=False)
+def getMisfit(**kwargs) : 
+    """
+    Calling *getMisfit* to plot misfit value using `geoplot2d` decorator 
+    see :ref:`pycsamt.viewer.plot.geoplot2d` to get the kwargs arguments. 
+    Most keywords arguments are the same used by :mod:`pycsamt.viewer.plot.Plot2d`
+    Please refer to `mod` documentation. 
+    For more details , refer to :class:pycsamt.viewer.plot.geoplot2d
+    
+    :warning:: when using decorator`geoplot2d`, set always *reason* 
+                argument to `misfit` or else.
+    
+    :param kwargs: use the main argument from getMisfit function
+    :type kwargs: dict 
+    
+    :return:* resp_misfit, 
+            * resp_sites_names,
+            * resp_sites_offsets,
+            * resp_freq, doi , 
+            * model_rms, 
+            * model_roughness
+
+    :Example:
+        >>> from pycsamt.modeling.occamd2d import getMisfit 
+        >>> occamPath ='data/occam2d
+        >>> response_file ='RESP27.resp'
+        >>> data_file = 'OccamDataFile.dat' 
+        >>> log_file = 'LogFile.logfile'
+        >>> getMisfit(response_fn = os.path.join(occamPath, response_file)
+        ...            data_fn = os.path.join(occamPath, data_file), 
+        ...            logfile =  os.path.join(occamPath, log_file))
+
+    """
+    
+    # call reponse Object 
+    mode =kwargs.pop('mode', None)
+    oclogfile =kwargs.pop('logfile', None)
+    
+    useResiValue= kwargs.pop('residual', False)
+
+    resp_obj  =Response(**kwargs)
+    
+    # get response values 
+    #------------------------STATEMENT RESPONSE OBJECT ----------------------
    
+    make_mode = resp_obj.occam_dtype + [str(mm)for mm in resp_obj.occam_mode]
+    resp_occam_dtype_obj = resp_obj.occam_dtype
+    
+    #---------------------------------MANAGE OCCAM PLOT MODE -------------------------
+    # if mode is not provided , then take the first occam mode 
+    if mode is None : 
+        mode = resp_occam_dtype_obj [0]
+    mode =str(mode).lower() 
+ 
+    # check the mode if provided 
+    if mode not in  make_mode  : 
+        mess =''.join(['Occam mode provided ={0} is wrong !. Occam2D data mode is ={1}'.\
+                       format(mode, make_mode ), 
+                              'Please select the right mode.'])
+        warnings.warn(mess)
+        _logger().error (mess)
+        
+    # check the mode provided , can be str 
+    for im , imode in enumerate(resp_obj.occam_mode) :
+        if imode ==mode : 
+            resp_occam_dtype_obj  =  resp_occam_dtype_obj [im]
+            
+    for im , imode  in enumerate( [str(mm) for mm in resp_obj.occam_mode]): 
+        if imode ==mode : 
+            resp_occam_dtype_obj  =  resp_occam_dtype_obj [im]  
+        
+
+    resp_forward = getattr(resp_obj, 'resp_{0}_forward'.format(mode))
+    occam_data = getattr(resp_obj, 'resp_data_value')
+    
+    occam_data =getattr(resp_obj, 'resp_{0}_data'.format(mode))
+    resp_freq = np.log10(getattr(resp_obj, 'data_frequencies'))
+
+    resp_sites_names = getattr(resp_obj, 'data_sites')
+    resp_sites_offsets = getattr(resp_obj, 'data_offsets')
+    
+
+    resp_misfit = .01 * np.sqrt((occam_data -resp_forward)**2/(occam_data**2) )
+    
+    # get rms and roughness value if occamLogfile is provided 
+    if oclogfile is not None : 
+        log_obj = occamLog(fn =oclogfile )
+        model_rms = log_obj.rms.min()
+        rms_index = np.where(log_obj.rms == model_rms)
+        index= rms_index[0]
+        if len(index)>1 : 
+            index =int(index[0])-1
+        else : index = int(index) -1 
+        model_rms = round(model_rms,2)
+        model_roughness= round(log_obj.roughness[index],3) 
+        
+    else : 
+        mess ='OccamLogfile is not given.'+\
+            'R.M.S & roughness =<?>'
+        _logger.info(mess)
+        print(mess)
+        model_rms ='?'
+        model_roughness ='?'
+        
+    if useResiValue is True : 
+        print('---|> Plot residual !')
+        _logger.info('Plot Occam2D residual data !')
+        
+        resp_misfit =getattr(resp_obj, 'resp_{0}_residual'.format(mode))
+    else : resp_misfit *= 100 # we plot in percentage 
+        
+    print('{0:=^77}'.format('Misfit Infos')) 
+    
+    print('** {0:<37} {1} {2} {3}'.format('Misfit max ','=',
+                                          resp_misfit.max(), '%' ))
+    print('** {0:<37} {1} {2} {3}'.format('Misfit min','=',
+                                          resp_misfit.min(), '%' ))
+    print('-'*77)
+    
+    return (resp_misfit, resp_sites_names,
+            resp_sites_offsets, resp_freq, model_rms, 
+            model_roughness)    
+
    
 if __name__=='__main__': 
     
     # print(list(Data.occam_dataType.keys()))
-    occam2d_write.buildingInputfiles(os.path.join(os.environ['pyCSAMT'], 'data', 'edi'), 
-                                savepath =os.path.join(os.environ['pyCSAMT'], 'data', 'tesocc2' ),
-                                geoelectric_strike=34.)
+    # occam2d_write.buildingInputfiles(os.path.join(os.environ['pyCSAMT'], 'data', 'edi'), 
+    #                             savepath =os.path.join(os.environ['pyCSAMT'], 'data', 'tesocc2' ),
+    #                             geoelectric_strike=34.)
+
+    path= r'F:\ThesisImp\occam2D\old\K8'
+    pathresp =os.path.join(path,'RESP12.resp' )
+    path_data =os.path.join(path,'OccamDataFile.dat' )
+    # resp_obj = Response(response_fn=pathresp, data_fn = path_data )
+    logpath =os.path.join(path, 'LogFile.logfile')
+    # # respDATA= resp_obj.resp_data 
+    # pathIter = os.path.join(path,'ITER10.iter' )
+    # iter_obj = Iter(iter_fn= pathIter)
+    # log_obj = occamLog(fn =os.path.join(path, 'LogFile.logfile') )
+    # print(iter_obj.iter_iteration)
+    # print(iter_obj.iter_roughness_value)
+    getMisfit(response_fn = pathresp , logfile=logpath, 
+              data_fn = path_data , residual =True )
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

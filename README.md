@@ -140,7 +140,7 @@ are misclassified or not. With few step of codes we can check the process :
 ...        )
 
 ```
-click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/geofit.png) for reference output. 
+click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/geofit.PNG) for reference output. 
 
 ## Credits
 

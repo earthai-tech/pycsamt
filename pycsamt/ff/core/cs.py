@@ -900,7 +900,9 @@ class Profile (object):
         elif self.profile_fn  is None and (easting is not None or 
                                            northing is None) and (lat is None
                                                                   or lon is None) : 
-            raise CSex.pyCSAMTError_profile('Provided at least easting or lon or Northing or lat value or profile stn file.')    
+            raise CSex.pyCSAMTError_profile(
+                'Provided at least easting or lon or Northing'
+                ' or lat value or profile stn file.')    
         
 
         if _pflag ==1:
@@ -922,7 +924,8 @@ class Profile (object):
                    
                     temp=[]             # rebuild a new data lines for safety
                     for hh , values  in enumerate(data_lines) : 
-                        if re.match(r'^>', values) is not None or re.match('r^!', values) is  not None \
+                        if re.match(r'^>', values) is not None or\
+                            re.match('r^!', values) is  not None \
                             or values.find('++++++++') >=0  : pass 
                         else :temp.append(values)
                     if 'len' in temp[0] and 'sta' in temp[0] and 'azim' in temp[0] : 
@@ -933,8 +936,9 @@ class Profile (object):
                         profile_lines= data_lines , spliting=split_type)
                     if decision <2:
                         raise CSex.pyCSAMTError_profile(
-                            'Please provide  for profile at least the Easting'
-                             ' and northing coordinates values or lat/lon values for parsing. ')
+                            'Please provide  at least the Easting'
+                             ' and northing coordinate values or '
+                             'lat/lon values for parsing. ')
             
                     else :
                         data_list_of_array= [np.array (line.strip().split(split_type)) 
@@ -942,7 +946,7 @@ class Profile (object):
 
                         data_array =func.concat_array_from_list(
                             list_of_array=data_list_of_array, concat_axis=0)
-                #  catch atributes and set attributes wherever the position it takes on the *.stn files.
+                #  catch attributes and set attributes wherever the position it takes on the *.stn files.
 
                 for lab, index in stn_headlines_id: 
                     if ref =='scalled': 
@@ -952,10 +956,10 @@ class Profile (object):
                                       "func.{Profile.reajust_coordinates_value}. ")
                         coords_array = data_array[1:, index]
                     else : 
-                        self._logging.info('Rescaling stations positions'
+                        self._logging.info('Rescaling station positions'
                                            ' from file <%s>'% os.path.basename(self.profile_fn))
-                        warnings.warn('Scaling stations positions : Usually Zonge'
-                            ' Hardware provides stations locations at'
+                        warnings.warn('Scaling station positions : Usually Zonge'
+                            ' Hardware provides station locations at'
                             '  each electrodes NOT in center of each dipoles. '
                               'Station locations and EM component orientations are taken'
                               ' at each electrodes point.So , we will rescale stations  '
@@ -965,7 +969,7 @@ class Profile (object):
                             coords_array =cfunc.dipole_center_position(
                                 dipole_position = data_array[1:,index])
                         except :pass 
-          
+ 
                     if lab == inFO.suit.easting[0] or lab.lower().find('east')>=0 : 
                         self.__setattr__('east', coords_array)
                     if lab == inFO.suit.northing[0]  or lab.lower().find('north')>=0:
@@ -976,12 +980,15 @@ class Profile (object):
                         self.__setattr__('lat', coords_array)
                     if lab .lower().find('lon')>=0: 
                         self.__setattr__('lon', coords_array)
+                    if lab .lower().find('dot')>=0: 
+                        self.__setattr__('stn_position', coords_array)
+
                     if ref =='pyCSAMT': 
                         if lab=='len' or lab.find('len') >=0 :
                             self.__setattr__('stn_position', coords_array)
                         if lab=='azim' or lab.find('azim')>=0 : 
                             self.__setattr__('azimuth', coords_array)
-                    elif ref =='none':
+                    if ref =='none':
                         if lab in inFO.suit.station :
                             self.__setattr__('stn_position', coords_array)
 
@@ -1476,10 +1483,10 @@ class Profile (object):
                                         x=0., y=0., station_pk=stn_pk, 
                                         rewrite=REW, elevation= elev, savepath =savepath)
             
-            self._logging.info ("Locations coordinates are reajusting to"
-                                " straighten out profile and we'll top elevation.")
+            self._logging.info ("Locations coordinates are reajusted and "
+                                " straightened out profile and we'll top elevation.")
             
-            print("---> Locations coordinates are reajusting to straightening out"
+            print("---> Locations coordinates are reajusted and straightened out"
                   " profile. Elevation is added.")
         
     def rewrite_station_profile (self, easting =None , 

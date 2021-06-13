@@ -42,6 +42,8 @@ import numpy as np
 import pandas as pd 
 import scipy as sp
 
+
+
 import  pycsamt.utils.exceptions as CSex
 from pycsamt.modeling import occam2d
 # from pycsamt.utils.avg_utils import ReadFile as rfi
@@ -49,6 +51,8 @@ from pycsamt.ff.core.cs import Profile
 
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
+from pycsamt.viewer.plot import geoplot2d
+
 from pycsamt.utils import Agso
 from pycsamt.geodrill.geoCore import structural as STRL
 from pycsamt.geodrill.geoDB.sql_recorder import GeoDataBase 
@@ -221,6 +225,7 @@ class Geodrill (object):
         self.doi =kwargs.pop('doi', '1km')
         
         self.elevation =kwargs.pop('elevation', None)
+        self.etacoeff = kwargs.pop('etaCoef', 5)
         self.step_descent =kwargs.pop('step_descent', None)
     
         
@@ -397,6 +402,10 @@ class Geodrill (object):
             self.station_names =data_obj.data_sites 
             self.station_location = data_obj.data_offsets
             
+            #get rms and roughness value
+            self.model_rms = model_obj.model_rms
+            self.model_roughness =model_obj.model_roughness
+ 
         # build for each site an array of three values framed into the main sites 
         #    get the the offset of the site 
         # build a dictionnary of geoname
@@ -807,7 +816,7 @@ class Geodrill (object):
         .. note:: list is not Exhaustive, use the data base script to populate 
                     most of goeological electrical properties.
         """
-
+        etaCoef = kwargs.pop('etaCoef', None)
         def get_conductive_zone (dep_array, rho_array, step_in_deep):
             
             """
@@ -916,10 +925,31 @@ class Geodrill (object):
             self.input_layers = ascertain_layers_with_its_resistivities(real_layer_names= input_layers, 
                                                                         real_layer_resistivities=self.input_resistivities) 
             
-          
+        
+        
+        # if self.etacoeff is not None : 
+            # self.step_descent = self.doi / int(self.etacoeff)
+        if etaCoef is not None : 
+            self.etacoeff = etaCoef 
 
-        if step_descent is not None : self.step_descent = step_descent
-        if self.step_descent is None : self.step_descent = .2 * self.doi 
+        if step_descent is not None : 
+            self.step_descent = step_descent
+
+        if self.step_descent is None : 
+            self.step_descent = self.doi / int(self.etacoeff)
+
+        if self.step_descent > self.doi : 
+            self._logging.info('Step descent is = {0} much larger than doi ={1}.'
+                               'Value is ressetting to 20% of DOI = {2}m.'
+                               .format(round(self.step_descent,3),
+                                       round(self.doi,3),
+                                       .2 * self.doi ))
+            
+            self.step_descent = .2 * self.doi 
+        # recompute a new block coefficient if step descent is given 
+        
+        if self.step_descent is not None : 
+            self.etacoeff = int(self.doi/ self.step_descent)
         
 
         # ---------------get the geodictionnary from from geodata average ---------------------
@@ -992,7 +1022,8 @@ class Geodrill (object):
         if self.qc ==1. : 
             print('---> {}.'.format(mess))
             
-        print('**{0:<37} {1} {2} {3}'.format(' QC flux rate','=' , 100. * self.qc, '%' ))
+        print('**{0:<37} {1} {2} {3}'.format(' QC flux rate','=' , 
+                                             100. * self.qc, '%' ))
         
         #------------------------rewrite info with real layers resistivities if provided and layers names ---
         # self.input_layers, _  , _= pycsamt.geodrill.get_geo_formation_properties(structures_resistivities= self.input_resistivities,)
@@ -1000,25 +1031,34 @@ class Geodrill (object):
         
         #-------------------Print Info -------------------------------------------------
         
-        print('**{0:<37} {1} {2}'.format(' Number of layers','=' , len(self.input_layers) ))
+        print('**{0:<37} {1} {2}'.format(' Number of layers','=' ,
+                                         len(self.input_layers) ))
+        print('**{0:<37} {1} {2} {3}'.format(' Step descent','=' ,
+                                         round(self.step_descent,3), 'm' ))
+        print('**{0:<37} {1} {2}'.format(' Block coefficient','=' ,
+                                         int(self.etacoeff)))
         
         print('-'*77)
         print('{0:<25}{1:<25} {2:<25}'.format('Structure', 'Rho mean value (Ω.m)', 
                                              'Rho range  (Ω.m)'))
         print('-'*77)
   
-    
-        for ij  , (ires, geos) in enumerate(zip (self.input_resistivities,self.input_layers )): 
+        for ij  , (ires, geos) in enumerate(zip (
+                self.input_resistivities,self.input_layers )): 
             if len(self.input_resistivities ) >1 :
                 if ij==0 : 
                     rho_rg = '{0}-{1}'.format(ires, self.input_resistivities [ij+1])
                     rho_mean = np.around((ires+ self.input_resistivities [ij+1])/2,2)
                 elif ires == self.input_resistivities[-1]: 
-                     rho_rg = '{0}-{1}'.format(self.input_resistivities[ij-1], self.input_resistivities[ij])
-                     rho_mean =np.around( (self.input_resistivities[ij-1]+ self.input_resistivities[ij])/2,2)
+                     rho_rg = '{0}-{1}'.format(self.input_resistivities[ij-1],
+                                               self.input_resistivities[ij])
+                     rho_mean =np.around( (self.input_resistivities[ij-1]+\
+                                           self.input_resistivities[ij])/2,2)
                 else : 
-                    rho_rg = '{0}-{1}'.format(self.input_resistivities[ij-1], self.input_resistivities[ij+1])
-                    rho_mean = np.around( (self.input_resistivities[ij-1]+ self.input_resistivities[ij+1])/2,2)
+                    rho_rg = '{0}-{1}'.format(self.input_resistivities[ij-1],
+                                              self.input_resistivities[ij+1])
+                    rho_mean = np.around( (self.input_resistivities[ij-1]+\
+                                           self.input_resistivities[ij+1])/2,2)
             if len(self.input_resistivities)==1:
                 rho_rg = '{0}'.format(ires)
                 rho_mean = ires
@@ -1082,12 +1122,19 @@ class Geodrill (object):
                 real_layer_names = ascertain_layers_with_its_resistivities(real_layer_names =real_layer_names,
                                                                        real_layer_resistivities= structures_resistivities)
             else : 
-                msg =''.join(["{constrained_electrical_properties_of_rocks} argument is set to <True> as default value ",
-                              "  unfortunately , you did not provide any layer's names with its resistivity values.", 
-                              " We can not set layer' resistivities and layer' names as reference data.",
-                              " We will ressetting {constrained_electrical_properties_of_rocks} to False. However", 
-                              " be sure that layer's provided automatically don't match exactly the underground informations.", 
-                              "To accurate informations, you need ABSOLUTELY to provided layer' resistivities as well as its names get on the field or any other firms."])
+                msg =''.join(["{constrained_electrical_properties_of_rocks} ",
+                              "argument is set to <True> as default value ",
+                              "  unfortunately , you did not provide any layer's",
+                              " names with its resistivity values.", 
+                              " We can not set layer' resistivities and layer'",
+                              " names as reference data.",
+                              " We will ressetting",
+                              " {constrained_electrical_properties_of_rocks} to False. However", 
+                              " be sure that layer's provided automatically",
+                              " don't match exactly the underground informations.", 
+                              "To accurate informations, you need ABSOLUTELY",
+                              " to provided layer' resistivities as well as ", 
+                              "its names get on the field or any other firms."])
                 
                 print('---> Important Note :!' )
                 text = punc.fmt_text(data_text=msg, fmt='+',return_to_line=90)
@@ -1100,8 +1147,9 @@ class Geodrill (object):
             if real_layer_names is None : 
                 real_layer_names = Geodrill.get_structure(structures_resistivities)
             elif real_layer_names is not None :  # enforce to use the layer's names provided by the user (constrained is True) 
-                real_layer_names = ascertain_layers_with_its_resistivities(real_layer_names =real_layer_names,
-                                                                       real_layer_resistivities= structures_resistivities) 
+                real_layer_names = ascertain_layers_with_its_resistivities(
+                    real_layer_names =real_layer_names,
+                     real_layer_resistivities= structures_resistivities) 
 
         #-------------------------------------CONNECT TO GEODATABASE -----------------------------
         # connect to geodataBase 
@@ -1123,12 +1171,14 @@ class Geodrill (object):
                         if geodatabase_obj.colorMPL != 'none':  
                             # rebuild the tuple of mpl colors blocked as string in database  
                             lnames_color = tuple([ float(ss) for ss in 
-                                                    geodatabase_obj.colorMPL.replace('(', '').replace(')', '').split(',')])
+                                                    geodatabase_obj.colorMPL.replace(
+                                                        '(', '').replace(')', '').split(',')])
                             
                             geo_color.append(lnames_color) # append rgb colors not include alpha 
                         
                         else : 
-                            mess = 'Sorry ! {0} matplotlib color is  not filled yet in our DataBase.'.format(lnames)
+                            mess = 'Sorry ! {0} matplotlib color is '\
+                                ' not filled yet in our DataBase.'.format(lnames)
                             warnings.warn(mess)
                             geo_color.append(unknow_layer_color) # then append default colors 
                             
@@ -1137,7 +1187,8 @@ class Geodrill (object):
                             pattern.append(geodatabase_obj.hatch.replace('(', '').replace(')', ''))
                         
                         else : 
-                            mess = 'Sorry ! {0} matplotlib pattern is not filled yet in our DataBase.'.format(lnames)
+                            mess = 'Sorry ! {0} matplotlib pattern'\
+                                ' is not filled yet in our DataBase.'.format(lnames)
                             warnings.warn(mess)
                             pattern.append(unknow_layer_pattern)
                         
@@ -1146,7 +1197,8 @@ class Geodrill (object):
                         __f_db=0
                         
                         mess =' Actually {0} does not exist in our dataBase,'\
-                            ' we alternatively use other ways to suitable respond to your request.'.format(lnames)
+                            ' we alternatively use other ways '\
+                                'to suitable respond to your request.'.format(lnames)
                         warnings.warn(mess)
                         _logger.debug(mess)
                         break
@@ -1256,12 +1308,14 @@ class Geodrill (object):
                                                 value or positive 
                                                 default is "negative".
         scale                  str              scale to export data .Must be
-                                                *m* or `km`. *default* is **m**       
+                                                *m* or `km`. *default* is **m** 
+        etaCoef                int              number of sperated model blocks
         ===================  ================  ================================
         
         """
         elevation = kwargs.pop('elevation', None)
         write_negative_depth=kwargs.pop('to_negative_depth', True)
+        etaCoef = kwargs.pop('etaCoef', None)
         scale =kwargs.pop('scale', 'm')
         if scale is None : scale= 'm'
         
@@ -1275,7 +1329,10 @@ class Geodrill (object):
         if input_layers is not None : self.input_layers = input_layers 
         if input_resistivities is not None : 
             self.input_resistivities  = input_resistivities 
+            
+        if etaCoef is not None : self.etacoeff = etaCoef     
         if step_descent is not None : self.step_descent= step_descent 
+        
         if elevation is not None : self.elevation = elevation 
         
         
@@ -1496,7 +1553,8 @@ class Geodrill (object):
                                             The type of comma delimited.
                                             *Defaut* is ','
         to_log10             bool           if True : will ouput all 
-                                            resistivities data to  log10 values         
+                                            resistivities data to  log10 values 
+        etaCoef             int             number to separate the model blocks 
         =================  ==============  ====================================
         
         """
@@ -1548,6 +1606,7 @@ class Geodrill (object):
         output_sprofile =kwargs.pop('output_s_XY', True)
         write_negative_depth=kwargs.pop('to_negative_depth', True)
         to_log10 = kwargs.pop('to_log10', True)
+        etaCoef = kwargs.pop('etaCoef', None)
         
         # write -externals files : Step descent , average rho 
 
@@ -1668,6 +1727,8 @@ class Geodrill (object):
         if write_external_files is True :
             if input_layers is not None : self.input_layers = input_layers
             if step_descent is not None : self.step_descent = step_descent 
+            if etaCoef is not None : self.etacoeff =etaCoef
+            
             if self.input_resistivities is None : 
                 mess = ''.join(['! No input resistivities provided! Could not write external geo-files.', 
                                 ' If you expect to write external GEO {step_descent  - roughness  and average_rho} files,', 
@@ -1680,7 +1741,8 @@ class Geodrill (object):
             if self.input_resistivities is not None : 
                 self.geo_build_strata_logs(input_resistivities= self.input_resistivities, 
                                            input_layers=self.input_layers,
-                                           step_descent=step_descent)
+                                           step_descent=self.step_descent,
+                                           etaCoef =self.etacoeff)
              
             # now build matrix of all external files 
             model_step_descent = create_model_matrix (station_names = self.station_names, 
@@ -1835,8 +1897,7 @@ class Geodrill (object):
                 
 
         print('-'*77)
-        
-          
+
 class Geosurface :
     """
     Read Multidata from oasis montaj output files  generated by `geodrill`
@@ -1873,8 +1934,13 @@ class Geosurface :
     """
     geo_surface_format=["csv",  "xlsx", "json","html","sql"] 
     
-    read_dico = {".csv":pd.read_csv,  ".xlsx":pd.read_excel,".json":pd.read_json,
-                 ".html":pd.read_json,".sql" : pd.read_sql}  
+    read_dico = {
+                ".csv":pd.read_csv, 
+                 ".xlsx":pd.read_excel,
+                 ".json":pd.read_json,
+                 ".html":pd.read_json,
+                 ".sql" : pd.read_sql
+                 }  
     
     
     def __init__(self , path=None, **kwargs):
@@ -3290,7 +3356,7 @@ def geo_length_checker(main_param, optional_param, force =False,
     main params, will filled it either with "None" if dtype param is string
     of 0.if dtype params is float or 0 if integer.if Force  is set True , 
     it will absolutely check if the main params and the optional params have
-    the same length. if not the case ,   will generate an error occurs.
+    the same length. if not the case ,   will generate an error .
   
     Parameters 
     ------------
@@ -3376,28 +3442,173 @@ def geo_length_checker(main_param, optional_param, force =False,
     
     return np.array(optional_param)
     
-                                                                                 
-
-
-# if __name__=="__main__" :
-
-#     path = r'F:/__main__csamt__\oasis data\OASISWORKS\all_data'
-#     geo_surface_obj = Geosurface( path =path )
+                                                                                    
+@geoplot2d(reason='model', cmap='jet', plot_style ='imshow')
+def geoModel( **kwargs ):
+    """
+    Get the type of geoData and plot the model . func will call the decorator 
+    `pycsamt.wiewer.plot.geoplot2d`. Decorator can be filled by using matplotlib
+    properties. To plot geomodel `misfit `, please 
+    change the `reason` argument to `misfit`. 
     
+    :see also:: see documentation of decorator `_geoplot2d.__doc__`
+    
+    :param kwargs: kwargs arguments of "Geodrill obj"  
+    :type model_fn: dict  
+    
+    :param etaCoef: cofficent to divide the model blocks
+    :type etaCoef: int 
+    
+    :param  input_resistivities: Truth values of resistivities 
+    :type input_resistivities: array_like or list 
+    
+    :param plot_misfit: plot misfit of geodata 
+    :type plot_misfit: bool
+
+    ==============  =========  ================================================
+    Params          Type       Description 
+    ==============  =========  ================================================
+    geodtype        str         Plot geodata type, can be `rr` for stratigraphy 
+                                log, `sd` for roughnness model 
+                                and `aver` for rho average model.
+                                *default*plot is `rr`.
+    iter_fn         str         full path to occam iteration file 
+    mesh_fn         str         full path to mesh_fn file 
+    data_fn         str         full path to occam_data file 
+    doi             str         depth of investigation might 
+                                be float or str like "1km" =1000
+    depth_scale     str         scale of imaging depth can be 
+                                "km" or "m". *Default* is"m"
+    step_descent    float       block size for roughning , if not 
+                                provided the step will be 20% of D0I
+    input_layers    list        true input_layers names : geological 
+                                informations of encountered layers             
+    ==============  =========  ================================================
+                            
+    :Example:
+        
+        >>> from pycsamt.geodrill.geoCore.geodrill import geoModel 
+        >>> path=r'F:\ThesisImp\occam2D\invers+files\inver_res\K1'
+        >>> inversion_files = {'model_fn':'Occam2DModel', 
+        ...                   'mesh_fn': 'Occam2DMesh',
+        ...                    "iter_fn":'ITER17.iter',
+        ...                   'data_fn':'OccamDataFile.dat'
+        ...                    }
+        >>> input_resistivity_values =[10, 66, 70, 180, 1000, 2000, 
+        ...                               3000, 7000, 15000 ] 
+        >>> input_layer_names =['river water', 'fracture zone', 'granite']
+        >>> inversion_files = {key:os.path.join(path, vv) for key,
+        ...                   vv in inversion_files.items()}
+        >>> geoModel(**inversion_files, 
+        ...            input_resistivities=input_resistivity_values, 
+        ...         input_layers=input_layer_names, geodtype ='rr',
+        ...            plot_misfit=True
+        ...         )
+    
+    """
+    depth_scale =kwargs.pop('scale', 'm')
+    geodtype=kwargs.pop('plot_data', 'rr')
+    plot_misfit = kwargs.pop('plot_misfit', False)
+
+    #create geodrill obj 
+    csamtpylog().get_csamtpy_logger().info(
+        'Plot Geodatatype = {}'.format(geodtype))
+    
+    geodrill_obj = Geodrill(**kwargs)
+    geodrill_obj.geo_build_strata_logs()
+
+ 
+    if depth_scale is None : depth_scale= 'm'
+
+    matrix_rhoaver ,matrix_rhorr, \
+        matrix_rho_stepdescent, raw_model =[[]for i in range(4)]
+    for site in geodrill_obj.station_names : 
+        if site ==geodrill_obj.station_names[0]:
+            # station id to read is the first index =0
+            index =0 
+        if site ==geodrill_obj.station_names [-1] :
+            index =2 # station id  to read is the 2index 
+        else : index =1  # read th middle array 
+
+        matrix_rhorr.append(geodrill_obj.geo_drr[site][:, index])
+        matrix_rhoaver.append(geodrill_obj.geo_daver[site][:, index])
+        matrix_rho_stepdescent.append(
+            geodrill_obj.geo_dstep_descent[site][:, index ])
+        raw_model.append(geodrill_obj.geo_d[site][:, index])
+        
+    # build a matrix of all data collected 
+    if geodtype =='sd':
+        geo_rho_data= func.concat_array_from_list( 
+            matrix_rho_stepdescent, concat_axis=1)
+    elif geodtype=='aver':
+        geo_rho_data= func.concat_array_from_list(
+            matrix_rhoaver, concat_axis=1)
+    else : 
+         geo_rho_data= func.concat_array_from_list(
+             matrix_rhorr, concat_axis=1)
+         
+    # convert data into log10 values
+    # compute model_misfit
+    if plot_misfit is True : 
+        
+        print('You are ploting geoDataType = {} misfit ! '.format(geodtype))
+        csamtpylog().get_csamtpy_logger().info(
+            'Plot {0} misfit is running !'.format(geodtype))
+        raw_model = func.concat_array_from_list(
+            raw_model, concat_axis=1)
+        
+        model_misfit = .01* np.sqrt (
+            (raw_model - geo_rho_data)**2 /raw_model**2 ) 
+        
+        print('{0:-^77}'.format('GeoMisfit info'))
+        print('** {0:<37} {1} {2} {3}'.format('Misfit max ','=',
+                                              model_misfit.max()*100., '%' ))
+        print('** {0:<37} {1} {2} {3}'.format('Misfit min','=',
+                                              model_misfit.min()*100., '%' ))
+        print('-'*77)
+        
+        geo_rho_data= model_misfit *100.
+
+    else : 
+        geo_rho_data = np.log10(geo_rho_data)
+
+    return (geo_rho_data, geodrill_obj.station_names,
+        geodrill_obj.station_location,
+        geodrill_obj.geo_depth, geodrill_obj.doi, depth_scale,
+        geodrill_obj.model_rms, geodrill_obj.model_roughness  ) 
+
+
+if __name__=="__main__" :
+    #     path = r'F:/__main__csamt__\oasis data\OASISWORKS\all_data'
+#     geo_surface_obj = Geosurface( path =path )
 #     geo_surface_obj.read_oasis_files()
     # print(geo_surface_obj.oasis_data)
     # DICO= geo_surface_obj.global_dico
-    
     # TEST0 = geo_surface_obj.K1_cor_oas
-    
 
     # from scipy.signal import argrelextrema as extrema 
     
     # maxi = extrema(geoDict['S07'][:, 1], np.greater )
     # mini = extrema(geoDict['S07'][:, 1], np.less )
     # print(geoDict2['S00'][:,0])
-    
 
+
+    path=r'F:\ThesisImp\occam2D\invers+files\inver_res\K4'
+    inversion_files = {'model_fn':'Occam2DModel', 
+                       'mesh_fn': 'Occam2DMesh',
+                        "iter_fn":'ITER27.iter',
+                       'data_fn':'OccamDataFile.dat'
+                        }
+    input_resistivity_values =[10, 66, 70, 180, 1000, 2000, 
+                                   3000, 7000, 15000 ] 
+    input_layer_names =['river water', 'fracture zone', 'granite']
+    inversion_files = {key:os.path.join(path, vv) for key,
+                       vv in inversion_files.items()}
+    geoModel(**inversion_files, 
+                input_resistivities=input_resistivity_values, 
+             input_layers=input_layer_names, geodtype ='rr',
+                plot_misfit=False
+            )
 
     
     

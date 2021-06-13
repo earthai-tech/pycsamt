@@ -37,6 +37,7 @@ Created on Mon Dec 28 14:28:06 2020
 """
 
 import os ,re, warnings
+import functools 
 import numpy as np 
 import matplotlib as mpl 
 import  matplotlib.pyplot  as plt
@@ -3223,7 +3224,9 @@ class Plot2d (object):
                       self.resp_sites_offsets.max())
         self.ylimits = (self.resp_freq.max(), self.resp_freq.min())
         
-        
+        # RESIclimits=(self.resp_residual.min(),
+        #              self.resp_residual.max())
+        RESIclimits =(-2,2)
         #---------------------------------------PLOT STATEMENT -------------------------------------------------
         
         # plotstyle is None take a default as pcolormesh
@@ -3259,9 +3262,9 @@ class Plot2d (object):
             
             axeRESI.pcolormesh (mesh_x , 
                                    mesh_y ,
-                                self.resp_residual,
-                                    vmin = self.resp_residual.min(),
-                                    vmax = self.resp_residual.max(),  
+                                   self.resp_residual,
+                                    vmin = RESIclimits[0],
+                                    vmax = RESIclimits[1],  
                                     shading= 'auto', 
                                     cmap =self.cmap, 
                                     alpha = None, 
@@ -3288,8 +3291,8 @@ class Plot2d (object):
 
                                     )
             axeRESI.imshow (self.resp_residual,
-                                vmax = self.resp_residual.max(), 
-                                vmin =self.resp_residual.min(), 
+                                vmax = RESIclimits[1], 
+                                vmin =RESIclimits[0] ,
                                 interpolation = self.imshow_interp, 
                                 cmap =self.cmap,
                                 aspect = self.fig_aspect,
@@ -3435,8 +3438,8 @@ class Plot2d (object):
 
             elif ii ==1 : 
                 #set new color bar limits ....
-                cmin = np.floor(self.resp_residual.min())
-                cmax = np.ceil (self.resp_residual.max())
+                cmin = np.floor(RESIclimits[0])
+                cmax = np.ceil (RESIclimits[1])
                 
                 cb = mplcb.ColorbarBase(cbx[0],
                                 cmap=self.cmap,
@@ -4230,8 +4233,491 @@ class Plot2d (object):
   
             if savefig is not None : plt.savefig(savefig , dpi = self.fig_dpi)
         
-        
+class geoplot2d(object): 
+    """
+    Decorator class to plot geodrill model and geodrill misfit . 
+    It call geoModel objects and plot the model or misfit according the *reason`
+    argument provided. see `pycsamt.geodrill.geoCore.gedrill.geoModel` to get
+    an implementation example. 
+    use also matplotlib properties to customize your plot
     
+    :param reason: type of plot , can be `misfit` or `model`
+                    if none , will plot `model`.
+    :type reason: str 
+    
+    :param kws: Matplotlib properties and model properties
+    :type kws: dict
+    
+    ======================  ===============================================
+    keywords                Description
+    ======================  ===============================================
+    cb_pad                  padding between axes edge and color bar 
+    cb_shrink               percentage to shrink the color bar
+    climits                 limits of the color scale for resistivity
+                            in log scale (min, max)
+    cmap                    name of color map for resistivity values
+    fig_aspect              aspect ratio between width and height of 
+                            resistivity image. 1 for equal axes
+    fig_dpi                 resolution of figure in dots-per-inch
+    fig_num                 number of figure instance
+    fig_size                size of figure in inches (width, height)
+    font_size               size of axes tick labels, axes labels is +2
+    grid                    [ 'both' | 'major' |'minor' | None ] string 
+                            to tell the program to make a grid on the 
+                            specified axes.
+    ms                      size of station marker 
+    plot_yn                 [ 'y' | 'n']
+                            'y' --> to plot on instantiation
+                            'n' --> to not plot on instantiation
+    station_color           color of station marker
+    station_font_color      color station label
+    station_font_pad        padding between station label and marker
+    station_font_rotation   angle of station label in degrees 0 is 
+                            horizontal
+    station_font_size       font size of station label
+    station_font_weight     font weight of station label
+    station_id              index to take station label from station name
+    station_marker          station marker.  if inputing a LaTex marker
+                            be sure to input as r"LaTexMarker" otherwise
+                            might not plot properly
+    title                   title of plot.  If None then the name of the
+                            iteration file and containing folder will be
+                            the title with RMS and Roughness.
+    xlimits                 limits of plot in x-direction in (km) 
+    xminorticks             increment of minor ticks in x direction
+    xpad                    padding in x-direction in km
+    ylimits                 depth limits of plot positive down (km)
+    yminorticks             increment of minor ticks in y-direction
+    ypad                    padding in negative y-direction (km)
+    yscale                  [ 'km' | 'm' ] scale of plot, if 'm' everything
+                            will be scaled accordingly.
+    ======================  ===============================================
+    
+    """
+    def __init__(self, reason =None , **kws): 
+        
+        self._logging= csamtpylog.get_csamtpy_logger(self.__class__.__name__)
+
+        self.reason =reason 
+        
+        self.fs =kws.pop('fs', 0.7)
+        self.fig_num = kws.pop('fig_num', 1)
+        self.fig_size = kws.pop('fig_size', [7,7])
+        self.fig_aspect = kws.pop('fig_aspect','auto')
+        self.fig_dpi =kws.pop('fig_dpi', 300)
+        self.font_size = kws.pop('font_size', 7)
+        self.aspect = kws.pop('aspect', 'auto')
+        self.font_style =kws.pop('font_style', 'italic')
+        self.orient=kws.pop('orientation', 'landscape')
+
+        self.cb_pad = kws.pop('cb_pad', .0375)
+        self.cb_orientation = kws.pop('cb_orientation', 'vertical')
+        self.cb_shrink = kws.pop('cb_shrink', .75)
+        self.cb_position = kws.pop('cb_position', None)
+        self.climits = kws.pop('climits', (0, 4))
+
+        self.station_label_rotation = kws.pop('station_label_rotation',45)
+        self.imshow_interp = kws.pop('imshow_interp', 'bicubic')
+        self.ms = kws.pop('ms', 2)
+        self.lw =kws.pop('lw', 2)
+  
+        self.fw =kws.pop('font_weight', 'bold')
+ 
+        self.station_font_color = kws.pop('station_font_color', 'k')
+        self.station_marker = kws.pop('station_marker',
+                                         r"$\blacktriangledown$")
+        self.station_color = kws.pop('station_color', 'k')
+
+        self.xpad = kws.pop('xpad', 1.0)
+        self.ypad = kws.pop('ypad', 1.0)
+
+        self.cmap = kws.pop('cmap', 'jet_r')
+    
+        self.depth_scale =kws.pop('depth_scale', None)
+        self.doi = kws.pop('doi', 1000)
+        
+        self.savefig =kws.pop('savefig', None)
+        self.change_station_id =kws.pop('new_station_names', None)
+
+   
+        self.model_rms =kws.pop('model_rms', None)
+        self.model_roughness =kws.pop('model_roughness', None)
+        self.plot_style =kws.pop( 'plot_style', 'pcolormesh') 
+        self.show_contour =kws.pop('show_contour', False)
+        self.contourlines =kws.pop('contour_lines_styles', '-')
+        self.contourcolors =kws.pop('contour_lines_colors', 'white')
+        self.delineate_resistivity_curve =kws.pop('delineate_rho', None)
+        self.grid_alpha =kws.pop('alpha', 0.5)
+        self.show_grid = kws.pop('show_grid',True)
+   
+
+        self.set_station_label=kws.pop('show_station_id', True)
+        
+        for keys in list(kws.keys()): 
+            setattr(self, keys, kws[keys])
+            
+    def additional_tools(self):
+        """
+        Method to add additionnal tools like `computing delineate
+        resistivity curve` . Will populate with other tools to 
+        customize plots.
+        
+        """
+        
+         #---> get delineate rho curve  : value of resistivities must be on
+         #MUST be on OHM- M not log10 resistivity . 
+         # check the resistivity value and  round to decimal 1
+        if self.delineate_resistivity_curve is not None : 
+            self.delineate_resistivity_curve = mplotus.controle_delineate_curve(
+                res_deline=self.delineate_resistivity_curve)
+            try : 
+                # for consistency , check whether value are on list 
+                if not isinstance (self.delineate_resistivity_curve, list ): 
+                    self.delineate_resistivity_curve=[self.delineate_resistivity_curve ]
+            except :
+                pass 
+        
+        return self.delineate_resistivity_curve 
+    
+        
+        
+  
+    def __call__(self, func):  
+        """
+        Model decorator to hold the input function with arguments 
+        :param func: function to be decorated 
+        :type func: object 
+            
+        """
+        
+        @functools.wraps(func)
+        def new_func (*args, **kwargs): 
+            """
+            new decorated function . Plot model data and misfit data 
+            
+            :args: arguments of  function  to be decorated 
+            :type args: list 
+        
+            :param kwargs: positional arguments of decorated function
+            :type kwargs: dict 
+            :return: function decorated after visualisation
+  
+            """
+            self._logging.info(' Plot decorated {0} chain'.format(func.__name__))
+    
+            _f=0 # flag to separated strata model misfit and occam model misfit
+                #   from occamResponse file 
+                
+            if self.depth_scale is not None :
+                self.depth_scale= str(self.depth_scale).lower() 
+            if self.depth_scale not in ["km", "m"]: 
+                self.depth_scale= "m"
+                mess ="--> ! Depth scale provided ={} is unrecognized."\
+                    " We reset to 'm'.".format(self.depth_scale)
+                warnings.warn(mess)
+                self._logging.debug (mess)
+            
+            if self.depth_scale == 'km':
+                dz  = 1000.
+            elif self.depth_scale == 'm': # for CSAMT , we use default as meter"m".
+                dz = 1.
+    
+            
+            if self.delineate_resistivity_curve is not None : 
+                self.delineate_resistivity_curve= self.additional_tools()
+                
+            # figure configuration 
+            
+            self.fig = plt.figure(self.fig_num, self.fig_size, dpi=self.fig_dpi)
+            self.fig_aspect ='auto'
+            axm = self.fig.add_subplot(1, 1, 1, aspect=self.fig_aspect)
+
+            # get geomodel data 
+            if self.reason is None or self.reason =='model': 
+                occam_model_resistiviy_obj, occam_data_station_names,\
+                    occam_data_station_offsets, occam_model_depth_offsets,\
+                    self.doi, self.depth_scale, self.model_rms, self.model_roughness  =\
+                        func(*args, **kwargs)
+                        
+                        
+                # --> check doi value provided , and convert to default unit {meters}  
+                self.doi =mplotus.depth_of_investigation(doi=self.doi)
+                
+                
+                # set boundaries of stations offsets and depth 
+                spec_f = -(self.doi/5)/dz  # assume that depth will  start by 
+                #0 then substract add value so 
+                # to get space for station names text
+                if self.climits is None : self.climits =(0,4)
+                if kwargs['plot_misfit'] is True : 
+                    _f=2
+                    
+                self.ylimits =(spec_f, self.doi/dz)    
+            elif self.reason =='misfit': 
+                occam_model_resistiviy_obj, occam_data_station_names,\
+                    occam_data_station_offsets, occam_model_depth_offsets,\
+                    self.model_rms, self.model_roughness = func(*args, **kwargs)
+                
+                # check if "plotmisfit refers to 'geoStrata model 'geodrill
+                # module then keep the doi and set `spec_f
+                if 'geodtype' in list(kwargs.keys()): 
+                    # means plot `misfit` from geostrata model
+                    spec_f = -(self.doi/5)/dz 
+                    self.ylimits =(spec_f, self.doi/dz) 
+                    
+                else :
+                    # frequency are in log10 new doi is set according to 
+                    #  value of frequency . specf _f =0 
+                    # occam misfit from response file 
+                    #= occam_model_depth_offsets= resp_frequencies in 
+                    # log10 resistivities 
+                    # resp_data = occam_model_resistiviy_obj,
+                    # occam_data_station_offsets = station location or positions 
+                    self.doi =occam_model_depth_offsets.max()
+                    #spec_f = (self.doi/5)/dz # o.8
+                    spec_f = - 0.
+                    _f=1 
+       
+                    self.ylimits = (self.doi, occam_model_depth_offsets.min())
+                    
+     
+
+            occam_data_station_offsets =np.array(occam_data_station_offsets)
+            # station separation and get xpad . ex dl=50 then xpad =25 
+            dl = occam_data_station_offsets.max()/ (len(occam_data_station_offsets)-1)
+            self.xpad = (dl/2)/dz 
+    
+        
+            if self.change_station_id is not None :  # call fonction to build a nu
+                occam_data_station_names , mess= mplotus.build_new_station_id(
+                    station_id =occam_data_station_names ,
+                    new_station_name =self.change_station_id )
+                self._logging.debug(mess)
+
+            # plot ---------------figure and properties  ---------------------                           
+
+            self.xlimits=(occam_data_station_offsets.min()/dz -self.xpad  , 
+                      occam_data_station_offsets.max()/dz + self.xpad )
+            
+            # configure climits 
+            if self.reason =='misfit':
+                if self.climits is None : 
+                        self.climits =(-3, 3)
+                        
+                elif 'min' in self.climits or 'max' in self.climits : 
+                            self.climits = (occam_model_resistiviy_obj.min(), 
+                                            occam_model_resistiviy_obj.max())
+
+             
+            if _f==2 : 
+                self.reason = 'misfit' 
+            self._logging.info ('Ready to plot {0}'
+                                ' with matplotlib "{1}" style.'.
+                                format(self.reason, self.plot_style))   
+                
+            if self.plot_style.lower() =='pcolormesh':
+                mesh_x  , mesh_z= np.meshgrid(occam_data_station_offsets,
+                                              occam_model_depth_offsets )
+     
+                vmin = self.climits[0]
+                vmax = self.climits[1] 
+
+                axm.pcolormesh (mesh_x/dz  , 
+                                mesh_z/dz ,
+                                  occam_model_resistiviy_obj,
+                                      vmin = vmin,
+                                      vmax = vmax,  
+                                      shading= 'auto', 
+                                      cmap =self.cmap, 
+                                      alpha = None, 
+                                     
+                                      )
+         
+                if self.show_contour is True :
+                    contps = axm.contour(mesh_x/dz  , mesh_z /dz ,
+                                          occam_model_resistiviy_obj,
+                                          colors =self.contourcolors,
+                                          linestyles=self.contourlines)
+                    if  self.delineate_resistivity_curve is not None : 
+                        axm.clabel(contps,  self.delineate_resistivity_curve ,
+                                        inline=True, fmt='%1.1f',
+                                        fontsize =self.font_size,
+                                          )
+   
+            if self.plot_style.lower() =='imshow': 
+    
+                mesh_x  , mesh_z= np.meshgrid(occam_data_station_offsets,
+                                              occam_model_depth_offsets  )
+    
+                axm.imshow (occam_model_resistiviy_obj,
+                                    vmax = self.climits[1], 
+                                    vmin =self.climits[0], 
+                                    interpolation = self.imshow_interp, 
+                                    cmap =self.cmap,
+                                    aspect = self.fig_aspect,
+                                    origin= 'upper', 
+                                    extent=( self.xlimits[0],
+                                            self.xlimits[1],
+                                            self.ylimits[1], 
+                                            self.ylimits[0] - spec_f),
+    
+                                        )
+
+                if self.delineate_resistivity_curve is not None :
+                    origin ='upper'
+                    contps = axm.contour(occam_model_resistiviy_obj,
+                                         colors =self.contourcolors, 
+                                          vmax=self.climits[0],
+                                          vmin = self.climits[1], 
+                                            linestyles=self.contourlines, 
+                                            extent =( self.xlimits[0],
+                                                      self.xlimits[1],
+                                                      self.ylimits[1], 
+                                                      self.ylimits[0]),
+                                            extend ='both',
+                                            origin= origin ,  
+                                            )
+                    axm.clabel(contps, self.delineate_resistivity_curve ,
+                                    inline=True, 
+                                    fmt='%1.1f',
+                                    fontsize =self.font_size,
+                                              )
+ 
+            # for making a color bar 
+            if type(self.cmap) == str:
+                self.cmap = cm.get_cmap(self.cmap)
+            
+            axm.set_xlim( [self.xlimits[0],  self.xlimits[1]])
+            axm.set_ylim ([self.ylimits[1], self.ylimits[0]]) 
+    
+    
+            # create twin axis to set ticks to the top station
+            axe2=axm.twiny()
+            axe2.xaxis.set_visible(False) # let keep only the axe lines 
+  
+            #set axis and set boundaries 
+            if self.reason =='model' or _f==2 : 
+                ydown_stiteslbls = self.ylimits[0]/5 
+                ydown_stationlbls = self.ylimits[0] -(self.ylimits[0]/3)
+                xhorizontal_lbs = (occam_data_station_offsets.max()/dz)/2
+                yb = 0.95
+
+            elif self.reason =='misfit': 
+                ydown_stiteslbls = self.ylimits[0] + 0.1 * self.ylimits[1]
+                ydown_stationlbls= self.ylimits[0] + self.ylimits[1]/self.ylimits[0]
+                xhorizontal_lbs = (occam_data_station_offsets.max()- 
+                                   occam_data_station_offsets.min())/2
+                yb=0.98
+                                                                                
+            
+            for offset , names in zip (occam_data_station_offsets,
+                                       occam_data_station_names):
+                # plot the station marker ' black triangle down ' 
+                # always plots at the surface.
+                axm.text(offset/dz  ,
+                        self.ylimits[0] - spec_f,  
+                        s= self.station_marker,
+                        horizontalalignment='center',
+                        verticalalignment='baseline',
+                        fontdict={'size': self.ms*5, 
+                                  'color': self.station_color},
+                        )
+                
+                if self.set_station_label is True :  # then plot label id 
+                    axm.text(offset/dz ,
+                            ydown_stiteslbls,  
+                            s= names,
+                            horizontalalignment='center',
+                            verticalalignment='baseline',
+                            fontdict={'size': self.ms*3, 
+                                      'color': self.station_color},
+                            rotation = self.station_label_rotation,
+                                )
+         
+               
+            if self.set_station_label is True : 
+                axm.text (xhorizontal_lbs, 
+                            ydown_stationlbls,  
+                            s= 'Stations',
+                            horizontalalignment='center',
+                            verticalalignment='baseline',
+                            fontdict={'size': self.ms*5, 
+                                      'color':'k', 
+                                      'style': self.font_style,
+                                      'weight': self.fw},
+                            )
+
+            # put a grid on if set to True 
+            if self.show_grid is True:
+                axm.minorticks_on()
+                axm.grid(color='k', ls=':', lw =0.5, 
+                          alpha=self.grid_alpha, which ='major')
+            
+    
+              #set color bar properties 
+            cbx = mplcb.make_axes(axm,  shrink=self.cb_shrink,
+                                  pad=self.cb_pad , location ='right' )
+            cb = mplcb.ColorbarBase(cbx[0],
+                            cmap=self.cmap,
+                            norm=mpl.colors.Normalize(vmin=self.climits[0],
+                                            vmax=self.climits[1]))
+            
+            cb.set_label('Resistivity ($\Omega \cdot$m)',
+                      fontdict={'size': self.font_size + 1, 
+                                'weight': 'bold'})
+            
+            if self.reason == 'model' : 
+                cb.set_ticks(np.arange(int(self.climits[0]), int(self.climits[1]) + 1))
+                cb.set_ticklabels(['10$^{0}$'.format('{' + str(nn) + '}') for nn in
+                                    np.arange(int(self.climits[0]),
+                                              int(self.climits[1]) + 1)])
+                
+            else : 
+                cb.set_ticks(np.linspace(self.climits[0], self.climits[1],5))
+                cb.set_ticklabels(['{0}'.format(str(round(nn,2))) for nn in
+                                    np.linspace(self.climits[0],
+                                              self.climits[1],5)])
+                cb.set_label('misfitvalue(%)',
+                      fontdict={'size': self.font_size + 1, 
+                                'weight': 'bold'})
+           
+            # set axes labels
+            axm.set_xlabel('Distance ({0})'.format(self.depth_scale),
+                          fontdict={'size': self.font_size + 2, 'weight': 'bold'})
+            
+            if self.reason =='misfit':
+                if _f ==2: ylabel = 'Depth ({0})'.format(self.depth_scale)
+                else : ylabel= 'Log10Frequency(Hz)'
+                mesT ='Plot Misfit'
+                
+            elif self.reason =='model':
+                ylabel = 'Depth ({0})'.format(self.depth_scale)
+                mesT = 'Plot strata model' 
+            
+            axm.set_ylabel(ylabel,fontdict={
+                'size': self.font_size + 2, 'weight': 'bold'})
+           
+           
+            self.fig.suptitle('{0}- DataType = {1} :RMS={2}, Roughness={3}'.\
+                              format(mesT, self.reason, self.model_rms, 
+                                    self.model_roughness),
+                      ha='center',
+              fontsize= 7* self.fs, 
+              verticalalignment='center', 
+              style =self.font_style,
+              bbox =dict(boxstyle='round',facecolor ='moccasin'), 
+              y=yb)
+            
+            if self.savefig is not None : 
+                plt.savefig(self.savefig, dpi = self.fig_dpi)
+            
+            plt.show()
+            
+            return func(*args, **kwargs)
+        
+        return new_func
+    
+
 # if __name__ == '__main__':
 #     path_to_profiles =os.path.join(os.environ['pyCSAMT'], 'data', 'stn_profiles')
 #     plot1d_obj = Plot1d( fig_size =[5,3])

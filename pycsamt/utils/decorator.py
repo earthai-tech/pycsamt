@@ -208,7 +208,9 @@ class redirect_cls_or_func(object) :
             
             return cls_or_func(*args, **kwargs)
         return self._new_func_or_cls
-        
+    
+    
+
 
             
 

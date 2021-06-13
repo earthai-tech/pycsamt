@@ -114,6 +114,34 @@ and after sucessfullly running, we will get the report below :
 * **Note** : Inversion input-files can be generated from _*.edi_ files using `pycsamt.modeling.occam2d.occam2d_write.buildingInputfiles` from `modeling.occam2d` module . 
             After applying the FDGC( Digital cartographic Standard for Geological Map Symbolization), click [here](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/interpretation.PNG)  to see your expected interpretation map.
 
+## Plot misfit and geofit  
+
+1. To plot the `misfit` from measured data and the calculated inversion data, bring the _occam response file_ (*.rep) and optional _Occamlogfile_ (*.logfile) and 
+run the script below: 
+```
+>>> from pycsamt.modeling.occam2d import getMisfit 
+>>> path_data ='data/occam2D'
+>>> getMisfit(response_fn = os.path.join(path_data,'RESP17.resp' ),
+...         logfile=os.path.join(path_data, 'LogFile.logfile'), 
+...          data_fn = path_data)
+
+```
+To see the output, click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/misfit.png).
+
+2. To evaluate the model errors `geofit` between the the new resistivity model  or strata model(NRMs) from Calculated Resistivity Model(CRMs), 
+set `plot_misfit` argument to `True` . `geofit` computation is best way to see the whether different layers provided with their corresponding resistivity values
+are misclassified or not. With few step of codes we can check the process :
+```
+>>> from pycsamt.geodrill.geoCore.geodrill import geoModel
+>>> geoModel(**inversion_files, 
+...                input_resistivities=INPUT_RESISTIVITIES, 
+...                 input_layers=INPUT_LAYERS,
+...                plot_misfit=True
+...        )
+
+```
+click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/geofit.png) for reference output. 
+
 ## Credits
 
 We use or link some third-party software (beside the usual tool stack: numpy, scipy, matplotlib) and are grateful for all the work made by the authors of these awesome open-source tools:

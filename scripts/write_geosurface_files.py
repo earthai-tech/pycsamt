@@ -18,14 +18,18 @@ from pycsamt.geodrill.geoCore.geodrill import Geosurface
 #Oasis output files are input files  to use geosurface module 
 path_to_oasisfiles = os.path.join(os.environ['pyCSAMT'], 'data',
                                     'InputOas')
+path_to_oasisfiles = r'F:\ThesisImp\occam2D\invers+files\inver_res\K1\oasismap\surface_rr'
 
 # path to save geosurfaces outputfiles 
 savepath =None                      # if None , will create a directory 
+savepath =r'F:\ThesisImp\occam2D\invers+files\inver_res\K1\oasismap\output_ss'
+
 # depth values in meters 
 values_for_imaging = [38, 100]      # mean surface at 38 m deep and 100 m deep 
+values_for_imaging =494.
 
 # file format is default output format : 
-output_format = 'csv'               # could be '`xlsx` or `csv
+output_format = 'xlsx'               # could be '`xlsx` or `csv
                                     # default is `csv`
                                 
 # call geosurface object 

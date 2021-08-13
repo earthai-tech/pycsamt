@@ -53,7 +53,7 @@ import numpy as np
 
 import pycsamt.utils.exceptions as CSex
 from pycsamt.utils import func_utils as func
-from pycsamt.viewer.plot import geoplot2d
+from pycsamt.viewer.plot import  geoplot2d
 
 from pycsamt.etc.infos import _sensitive as SB 
 from pycsamt.utils._csamtpylog import csamtpylog 

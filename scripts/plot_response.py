@@ -14,14 +14,16 @@ from pycsamt.viewer.plot import Plot2d
 # par=th to occam folder 
 
 path = os.path.join(os.environ ['pyCSAMT'],  'data', 'occam2D' )
+# path = r'F:\__main__csamt__\paper2_data_old\occam2d_inputfiles\Final_retained_test\k4_model\rho30phas20\K4'
 
 # path to Occam response file 
+path =r'F:\ThesisImp\occam2D\old\K1'
 resp= 'RESP17.resp'
 # path to occam data file 
 data='OccamDataFile.dat'
 
 # delineate _resistivity cure 
-delineate= 700.                 # value or resistivity to delineate is on ohm m not in log10 resistivity
+delineate=None # 700.                 # value or resistivity to delineate is on ohm m not in log10 resistivity
                                 # for multiple value of contour, use the list like , [500, 700] means 
                                 # contour500ohm and 7000 ohm meter 
 # path to save figure 
@@ -33,14 +35,16 @@ see_report =False               # if see report is True , then program will gene
                                 # an overview of drilling verification point . If your pupose is not a groundater exploration 
                                 # you can ignore it . 
 # plot style 
-plotStyle ='imshow'                 # if None , default is 'imshow' can be 'pcolormesh'.
+plotStyle ='pcolormesh'                 # if None , default is 'imshow' can be 'pcolormesh'.
 
 
 # create plot_object 
  
 plot2d_obj = Plot2d(fig_size = [6,6], 
                     font_size =6, 
-                    show_grid =True)       # can use lot of matplotlib properties to customize your plot 
+                    show_grid =False,
+                    cmap ='binary'#'twilight_shifted_r'
+                    )#'twilight_shifted')       # can use lot of matplotlib properties to customize your plot 
 
     
 plot2d_obj.plot_Response(data_fn =os.path.join(path, data) , 

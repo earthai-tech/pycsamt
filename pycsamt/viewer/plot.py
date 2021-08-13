@@ -247,13 +247,15 @@ class Plot1d :
 
         #----------set mpl properties ----------------- . 
         
-        kws = mplotus.share_props_for_each_plot(number_of_plot=3,lw=kwargs.pop('lw', 1.5), 
+        kws = mplotus.share_props_for_each_plot(
+            number_of_plot=3,lw=kwargs.pop('lw', 1.5), 
                     ls=kwargs.pop('ls', ['-', ':', '-.']), 
                     alpha=kwargs.pop('alpha', .2), 
                     color=kwargs.pop('c', 'k'),
                     marker= kwargs.pop('marker_style', 'o'),
                     markerfacecolor=kwargs.pop('markerfacecolor', 'k'),
-                    markeredgecolor= kwargs.pop('markeredgecolor', ['w','r', 'gray']),
+                    markeredgecolor= kwargs.pop('markeredgecolor',
+                                                ['w','r', 'gray']),
                     xtick_label_rotation=kwargs.pop('xtick_label_rotation',45.),
                     ytick_label_rotation=kwargs.pop('ytick_label_rotation',45.),
                     xtick_label_size= kwargs.pop('xtick_labelsize', 12), 
@@ -261,11 +263,13 @@ class Plot1d :
                                           )
         lw ,ls, color, alpha =kws['lw'],kws ['ls'], kws['color'], kws['alpha']
         
-        x_ticklabel_rotation, x_ticks_labelsize , y_ticks_labelsize = kws['xtick_label_rotation'], \
-                                                                      kws['xtick_label_size'],\
-                                                                      kws['ytick_label_size']
+        x_ticklabel_rotation, x_ticks_labelsize ,\
+            y_ticks_labelsize = kws['xtick_label_rotation'], \
+                                    kws['xtick_label_size'],\
+                                    kws['ytick_label_size']
             
-        marker_style, markerfacecolor, markeredgecolor = kws['marker'], kws['markerfacecolor'], kws['markeredgecolor']
+        marker_style, markerfacecolor, markeredgecolor =\
+            kws['marker'], kws['markerfacecolor'], kws['markeredgecolor']
 
         #--------------- end of setting mpl properties ------------------------------- 
         
@@ -274,8 +278,9 @@ class Plot1d :
         if profile_fn is not None : 
             profile_obj = Profile (profile_fn =profile_fn)
             
-            easting , northing ,elevation_array, station_pk  = profile_obj.east, profile_obj.north, \
-                                            profile_obj.elev, profile_obj.stn_position
+            easting , northing ,elevation_array,\
+                station_pk  = profile_obj.east, profile_obj.north, \
+                              profile_obj.elev, profile_obj.stn_position
 
             azimuth_array = profile_obj.azimuth
             stn_separation_array =profile_obj.stn_interval
@@ -290,15 +295,19 @@ class Plot1d :
             easting, northing, elevation_array , station_pk = csamt_obj.east , \
                 csamt_obj.north , csamt_obj.elev,csamt_obj.station_distance
             
-            azimuth_array = func.compute_azimuth(easting = easting, northing =northing, extrapolate=True) 
+            azimuth_array = func.compute_azimuth(
+                easting = easting, northing =northing, extrapolate=True) 
             stn_separation_array = csamt_obj.station_separation
             DipoleLength = csamt_obj.dipolelength
-            lineazimuth, pmess= geoD.geostrike.compute_profile_angle(easting= easting , 
-                                                                 northing =northing)
+            lineazimuth, pmess= geoD.geostrike.compute_profile_angle(
+                easting= easting , 
+                northing =northing)
             print('---> ' + pmess)        # display profile angle message
             
                 
-        elif profile_fn is None and fn is None  : raise CSex.pyCSAMTError_plot('None path is found. Please spceify you data path.')
+        elif profile_fn is None and fn is None  :
+            raise CSex.pyCSAMTError_plot(
+                'None path is found. Please spceify you data path.')
             
         
         #-----------------------------Build fonction --------------------------------------------
@@ -307,7 +316,8 @@ class Plot1d :
             plot topography 
             """
             topo_profile = axes.plot(station_pk, elevation_array, 
-                                     lw=lw[0], marker=marker_style[0],markersize=self.ms,
+                                     lw=lw[0], marker=marker_style[0],
+                                     markersize=self.ms,
                                      markerfacecolor=markerfacecolor[0], 
                                      markeredgecolor = markeredgecolor[0],
                                      c=color[0])
@@ -332,16 +342,17 @@ class Plot1d :
         def plot_stn_separation(axes =None, set_xlabel=True): 
             """
             plot station _separations  x_station / h- separtion(m)
-             dipole_length_curve show the line of overage value on de site between all stations  
+             dipole_length_curve show the line of 
+             overage value on de site between all stations  
             """
 
             stn_sep_profile = axes.plot(station_pk, stn_separation_array,
-                                                              markersize=self.ms, 
-                                                              lw= lw[1],marker=marker_style[1], 
-                                                              markerfacecolor=markerfacecolor[1], 
-                                                              markeredgecolor = markeredgecolor[1],
-                                                              ls=ls[1], 
-                                                              c=color[1])
+                                        markersize=self.ms, 
+                                        lw= lw[1],marker=marker_style[1], 
+                                        markerfacecolor=markerfacecolor[1], 
+                                        markeredgecolor = markeredgecolor[1],
+                                        ls=ls[1], 
+                                        c=color[1])
             
             if set_xlabel : 
                 axes.set_xlabel ('Stations',  color='black', fontsize = 12)
@@ -375,27 +386,31 @@ class Plot1d :
 
             azim_profile = axes.plot(station_pk, azimuth_array , 
                                      lw=lw[2],marker= marker_style[2],
-                                                 markersize=self.ms ,
-                                                 markeredgecolor=markeredgecolor[2], 
-                                                 markerfacecolor=markerfacecolor[2], 
-                                                  ls=ls[2] ,c=color[2],
-                                                  )
+                                    markersize=self.ms ,
+                                    markeredgecolor=markeredgecolor[2], 
+                                    markerfacecolor=markerfacecolor[2], 
+                                     ls=ls[2] ,c=color[2],
+                                     )
             
             
             if plot_type != '*':axes.set_title('Azimuth profile ')                                        
             if set_xlabel : 
-                axes.set_xlabel ('stations', color='black', fontsize = x_ticks_labelsize[2])
+                axes.set_xlabel ('stations', color='black',
+                                 fontsize = x_ticks_labelsize[2])
             axes.minorticks_on()    
-            axes.grid(color='k', ls=':', lw =0.25, alpha=0.7, which ='major') # customize specific grid
+            axes.grid(color='k', ls=':', lw =0.25, alpha=0.7,
+                      which ='major') # customize specific grid
             #add text on azimuth profile . 
             axes.text(2* station_pk.min(),
                       azimuth_array.min() , 
-                      '$Line Azimuth~:{0}°$'.format( np.around(lineazimuth,2)), #np.around(azimuth_array.mean(),2)), 
+                      '$Line Azimuth~:{0}°$'.format(
+                          np.around(lineazimuth,2)), #np.around(azimuth_array.mean(),2)), 
                       verticalalignment='bottom', 
                       c='k',
                       fontsize =12 )
             
-            axes.set_ylabel ('azimuth (°)', color='black', fontsize =  x_ticks_labelsize[2])
+            axes.set_ylabel ('azimuth (°)', color='black', 
+                             fontsize =  x_ticks_labelsize[2])
             axes.legend( azim_profile, ['$azimuth$'])
             
         # --------------- works on exception to let function less expensive :------------------------------- 
@@ -406,14 +421,15 @@ class Plot1d :
                     if suit.azimuth[0].find(plot_type.lower()) < 0 : 
                         if plot_type.lower() not in ['1','2','3','123','*']:
                             raise CSex.pyCSAMTError_plot(
-                                'Argument provided for  plot_type is not acceptable.'\
-                                    ' Please use  1,2,3 or the first '\
-                                     'two letter of "Topography, Separation|Station '\
-                                         'or Azimuth " or "*|123" to plot the 3 profiles.')
+                        'Argument provided for  plot_type is not acceptable.'
+                            ' Please use  1,2,3 or the first '
+                             'two letter of "Topography, Separation|Station '
+                                 'or Azimuth " or "*|123" to plot the 3 profiles.')
             
         elif isinstance(plot_type, int):
             if plot_type not in [1,2,3,123]: 
-                raise CSex.pyCSAMTError_plot('Only 1|2|3 is need to plot. Try again !')
+                raise CSex.pyCSAMTError_plot(
+                    'Only 1|2|3 is need to plot. Try again !')
             plot_type=str(plot_type)
 
         # --------------------------- plot only single figures Topo/sep/azim  ---------------------------------------
@@ -439,13 +455,16 @@ class Plot1d :
             if set_stnnames ==True : 
                 if add_stnnames  is not None : 
                     if len (add_stnnames) != station_pk.size :
-                        raise CSex.pyCSAMTError_station('Stations names provided must'\
-                              ' be the same length as survey points. Number of survey points are'\
+                        raise CSex.pyCSAMTError_station(
+                            'Stations names provided must'
+                              ' be the same length as survey points.'
+                              ' Number of survey points are'
                                ' : <{0}>'.format(station_pk.size))
                     xticklabel =add_stnnames 
     
                 elif add_stnnames  is  None : 
-                    xticklabel = ['S{0:02}'.format(ss) for ss in range(station_pk.size)]
+                    xticklabel = ['S{0:02}'.format(ss)
+                                  for ss in range(station_pk.size)]
                     
                 ax.set_xlim ([station_pk.min(), station_pk.max()] )   
                 ax.set_xticks(ticks= station_pk.tolist(),minor=False )
@@ -483,24 +502,29 @@ class Plot1d :
             if set_stnnames : 
                 if add_stnnames  is not None : 
                     if len (add_stnnames) != station_pk.size : 
-                        raise CSex.pyCSAMTError_station('Stations names provided must'
-                                ' be the same length as survey points. Number of survey points are'
+                        raise CSex.pyCSAMTError_station(
+                            'Stations names provided must'
+                                ' be the same length as survey points.'
+                                ' Number of survey points are'
                                   ' : <{0}>'.format(station_pk.size))
                     xticklabel =add_stnnames 
                 elif add_stnnames  is  None : 
-                    xticklabel = ['S{0:02}'.format(ss) for ss in range(station_pk.size)]
+                    xticklabel = ['S{0:02}'.format(ss) 
+                                  for ss in range(station_pk.size)]
                 
             for ii, axx in enumerate([axe1, axe2, axe3]):
                 
-                if set_stnnames:axx .set_xticks(ticks= station_pk.tolist(), minor=False ) 
+                if set_stnnames:axx .set_xticks(
+                        ticks= station_pk.tolist(), minor=False ) 
                 axx .set_xlim([station_pk.min(), station_pk.max()])
                 axx .grid(color='k', ls='--', lw =0.25, alpha=0.3)
                 if set_stnnames: axx .set_xticklabels(xticklabel , 
-                                                      rotation=x_ticklabel_rotation[ii]) # ,va='center')
+                                        rotation=x_ticklabel_rotation[ii]) # ,va='center')
                 
             axe3.set_xlabel('stations', )
             fig.tight_layout()
-            fig.suptitle('Topography-Stations separation-Station azimuth profiles',
+            fig.suptitle(
+                'Topography-Stations separation-Station azimuth profiles',
                      fontsize= 4 * self.font_size, 
                      verticalalignment='center', 
                      style ='italic',
@@ -509,24 +533,28 @@ class Plot1d :
             plt.show()
         
         
-    def plot_static_correction(self, data_fn, profile_fn =None , dipole_length =50., 
-                               frequency_id  =1 , ADD_FILTER ='tma' ,  **kwargs): 
+    def plot_static_correction(self, data_fn, profile_fn =None , 
+                               dipole_length =50., 
+                               frequency_id  =1 , ADD_FILTER ='tma' ,
+                               **kwargs): 
         """
         Plot corrected apparent resistivities at different stations to solve 
-        the problem of static shift by adding either Trimimg Moving average (TMA)
-        filter or fixed-length-moving-average(FLMA) filter or Adaptative 
+        the problem of static shift by adding either Trimimg Moving average 
+        (TMA)filter or fixed-length-moving-average(FLMA) filter or Adaptative 
         moving-average (AMA). Actually FLMA and TMA filter are available and 
-        default filTer is TMA. To plot all filter into one figure add the joker `*`
-        to arguments `ADD_FILER`.
+        default filTer is TMA. To plot all filter into one figure add the joker 
+        `*` to arguments `ADD_FILER`.
         
             
         :param data_fn: full path to file , can be [AVG|EDI|J] files
         :type data_fn: str 
         
-        :param profile_fn:  pathLike  full path to Zonge Engeneering *.station file .
+        :param profile_fn: 
+            pathLike  full path to Zonge Engeneering *.station file .
         :type profile_fn: str 
         
-        :param dipole_length: length of dipole in meters when user applied for FLMA 
+        :param dipole_length: 
+            length of dipole in meters when user applied for FLMA 
         :type dipole_length: float, int
         
         Holding others informations 
@@ -667,8 +695,9 @@ class Plot1d :
             #-------------------------------------------Build Plot ----------------
             #call reference frequency fonction 
             # ---> rho uncorrected data 
-            RES_UNCOR = Zcc.get_data_from_reference_frequency(array_loc=csamt_res_obj, 
-                                                              freq_array=csamt_freq_obj, 
+            RES_UNCOR = Zcc.get_data_from_reference_frequency(
+                                                array_loc=csamt_res_obj, 
+                                                 freq_array=csamt_freq_obj, 
                                                   reffreq_value=referfreq )
             
             mark,  = axe.semilogy (csamt_stn_num_obj,RES_UNCOR ,
@@ -763,8 +792,9 @@ class Plot1d :
                 elif ADD_FILTER=='flma': color =flma_color
                 elif ADD_FILTER=='ama': color =ama_color
             
-                RES_COR = Zcc.get_data_from_reference_frequency(array_loc=res_cor_obj,
-                                                                freq_array=csamt_freq_obj, 
+                RES_COR = Zcc.get_data_from_reference_frequency(
+                                                array_loc=res_cor_obj,
+                                                 freq_array=csamt_freq_obj, 
                                                       reffreq_value=referfreq )
             
            
@@ -776,7 +806,8 @@ class Plot1d :
                                      alpha =0.8)
                 
                 if ADD_FILTER=='ama':
-                    ffmt,sfmt= '{0}'.format(int(number_of_skin_depth)),'skin depth(s).' 
+                    ffmt,sfmt= '{0}'.format(int(number_of_skin_depth)),
+                    'skin depth(s).' 
                 elif ADD_FILTER=='flma':
                     ffmt,sfmt= '{0}'.format(int(FILTERpoints)),'dipoles'
                 else :
@@ -798,9 +829,10 @@ class Plot1d :
             axe.grid(color='k', ls=':', lw =0.25,
                      alpha=0.8, which ='minor') # customize specific grid
        
-            axe.set_xlabel('$Station\ distance(m)$' , fontdict={'color': 'k',
-                                                                'size': self.x_minorticks*14,
-                                                                'weight':self.fontweight})
+            axe.set_xlabel('$Station\ distance(m)$' ,
+                           fontdict={'color': 'k',
+                                    'size': self.x_minorticks*14,
+                                    'weight':self.fontweight})
             
             axe.set_ylabel ('$Resistivity(Ω.m)$', color='black',
                             fontsize =  self.y_minorticks*14, 
@@ -816,7 +848,8 @@ class Plot1d :
                       fontsize =12 )
             
             if ADD_FILTER !='*':
-                if fill_between : axe.fill_between(csamt_stn_num_obj, RES_UNCOR, RES_COR,
+                if fill_between : axe.fill_between(csamt_stn_num_obj, 
+                                                   RES_UNCOR, RES_COR,
                                                    facecolor='orange', 
                                                    color=fillbc, 
                                                    alpha =0.7)
@@ -896,7 +929,8 @@ class Plot1d :
                                          ' value before plotting.'
                                          'Please add your frequency data.')
         if csamt_obj.resistivity  is None :
-            raise CSex.pyCSAMTError_plot('Error plotting.Provide your resistivity values.')
+            raise CSex.pyCSAMTError_plot(
+                'Error plotting.Provide your resistivity values.')
         
         #--- assert stations length ------ 
         stations = sorted(list(csamt_obj.resistivity.keys()))
@@ -905,16 +939,21 @@ class Plot1d :
                 warnings.warn('Stations provided are the lenght = {0},'
                               ' The defalut stations length ={1}.'
                               ' Please provided new stations '
-                              'list with the same length.'.format(len(rename_stations), len(stations)))
-                raise CSex.pyCSAMTError_station('New stations provided '
-                                                'must have the same length with default stations. ')
+                              'list with the same length.'.format(
+                                  len(rename_stations), len(stations)))
+                raise CSex.pyCSAMTError_station(
+                    'New stations provided '
+                    'must have the same length with default stations. ')
             stations = rename_stations
             
         #-- call function to specifier the user demand ---     
-        stations_for_plot =mplotus.get_stationid(stations =stations, station_id=station_id)
+        stations_for_plot =mplotus.get_stationid(stations =stations,
+                                                 station_id=station_id)
         #--> set objets 
-        csamt_res_obj, csamt_freq_obj, csamt_phase_obj = csamt_obj.resistivity, csamt_obj.freq ,csamt_obj.phase 
-        csamt_res_err_obj , csamt_phs_err_obj = csamt_obj.resistivity_err , csamt_obj.phase_err 
+        csamt_res_obj, csamt_freq_obj, csamt_phase_obj =\
+            csamt_obj.resistivity, csamt_obj.freq ,csamt_obj.phase 
+        csamt_res_err_obj , csamt_phs_err_obj =\
+            csamt_obj.resistivity_err , csamt_obj.phase_err 
 
         #---> loop stations 
 
@@ -924,12 +963,16 @@ class Plot1d :
             fig =plt.figure()
             
             #---- > create axis for each plot 
-            axe1 =plt.subplot2grid(shape=(3,3), loc=(0,0), rowspan=2, colspan=3)
-            axe2 =plt.subplot2grid(shape=(3,3), loc=(2,0), colspan = 3)
+            axe1 =plt.subplot2grid(shape=(3,3), loc=(0,0),
+                                   rowspan=2, colspan=3)
+            axe2 =plt.subplot2grid(shape=(3,3), loc=(2,0), 
+                                   colspan = 3)
             
             if show_error_bar : 
-                axe1.errorbar(csamt_freq_obj ,csamt_res_obj[stn], yerr=csamt_res_err_obj[stn], 
-                               fmt='none', ecolor = 'r', lolims=True, uplims=True, 
+                axe1.errorbar(csamt_freq_obj ,csamt_res_obj[stn],
+                              yerr=csamt_res_err_obj[stn], 
+                               fmt='none', ecolor = 'r', lolims=True,
+                               uplims=True, 
                                xlolims =True, xuplims=True, 
                                lw=0.7, marker = '.', 
                                 color='r',)
@@ -1153,10 +1196,12 @@ class Plot1d :
             # mark, = axis.plot(csamt_stndis_obj, dep1D, marker ='*', markersize =self.ms*2fs , markeredgecolor='blue')
             # recover the interpolated frequency 
             if freqs not in  csamt_freq_obj: 
-                interpFreq =Zcc.find_reference_frequency(freq_array=csamt_freq_obj, 
-                                                         reffreq_value=freqs,sharp=True, etching=False)
+                interpFreq =Zcc.find_reference_frequency(
+                    freq_array=csamt_freq_obj, 
+                     reffreq_value=freqs,sharp=True, etching=False)
                 warnings.warn ('Frequency {0} not in frequency range. '\
-                               'It will be interpolated to find maximum closest  frequency.'.format(freqs))
+                               'It will be interpolated to find '
+                               'maximum closest  frequency.'.format(freqs))
                 print('--->Input frequency <{0}> Hz has been interpolated to'\
                       ' <{1}Hz>.'.format(freqs,  float(interpFreq)))
                 freqs = float(interpFreq)
@@ -1180,13 +1225,16 @@ class Plot1d :
                                       'size':self.y_minorticks *14, 
                                       'weight': 'bold'})
             
-            axis.set_xlim([csamt_stndis_obj.min(), csamt_stndis_obj.max()])
+            axis.set_xlim([csamt_stndis_obj.min(),
+                           csamt_stndis_obj.max()])
             # axis.minorticks_on()
             if plotgrid :
-                axis.grid(color ='k', ls=':', lw=0.25, alpha= .8 , which ='major')
+                axis.grid(color ='k', ls=':', lw=0.25, alpha= .8 ,
+                          which ='major')
             
             # legend 
-            hand_leg.append(penetration1d), leglabel.append('$f={0}Hz$'.format(int(freqs)))
+            hand_leg.append(penetration1d), leglabel.append(
+                '$f={0}Hz$'.format(int(freqs)))
             axis.legend( hand_leg, leglabel)
             #axis.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.) #place al legend smaller upper left 
             
@@ -1199,15 +1247,19 @@ class Plot1d :
         
         if len(freqSELECT) >1 :fmt ='frequencies'
         else :fmt='frequency'
-        print('---> On the set of {0} {1}, max depth reached ={2} km at freq ={3} Hz.'.format(len(freqSELECT),fmt, np.around(depmax*1e-3,2), int(freqmax)  ))
+        print('---> On the set of {0} {1}, max depth reached '
+              '={2} km at freq ={3} Hz.'.format(len(freqSELECT),
+                                                fmt, np.around(depmax*1e-3,2), 
+                                                int(freqmax)  ))
         # fig.suptitle(' Penetration depth plot at {0} {1} '.format(len(freqSELECT), fmt),
         #              fontsize= self.font_size, verticalalignment='center', 
         #              )
         plt.tight_layout()
-        fig.suptitle(' Penetration depth plot at {0} {1} '.format(len(freqSELECT), fmt), 
-                         fontsize= self.font_size*4,
-                         bbox =dict(boxstyle='round',facecolor ='whitesmoke'),
-                         fontstyle ='italic') 
+        fig.suptitle(
+            ' Penetration depth plot at {0} {1} '.format(len(freqSELECT), fmt), 
+                    fontsize= self.font_size*4,
+                    bbox =dict(boxstyle='round',facecolor ='whitesmoke'),
+                    fontstyle ='italic') 
         if savefig is not None :
             plt.savefig(savefig, dpi=self.fig_dpi, orientation =orient )
 
@@ -1292,29 +1344,36 @@ class Plot1d :
         #----> controlled the stations selected for plots --- 
         stnID = mplotus.get_stationid(stations=zonge_stn_obj, station_id=selected_stations)
         
-        handleg , lableg  =[{'res':[], 'phs':[], 'emag':[], 'hmag':[]} for ii in range(2)]                 #for legend manager
+        handleg , lableg  =[
+            {'res':[], 'phs':[], 'emag':[], 'hmag':[]} for ii in range(2)]                 #for legend manager
         
         for stn_id in stnID :
             #-----RESISTIVITY PLOT -----------------------
-            mark, =axe_res.loglog(zonge_freq_obj,zonge_res_obj [stn_id],  c='white', 
+            mark, =axe_res.loglog(zonge_freq_obj,
+                                  zonge_res_obj [stn_id],  c='white', 
                                 marker ='o', markersize =self.ms*self.fs ,
                                 markeredgecolor = self.markeredgecolor)
             rho,  = axe_res.loglog(zonge_freq_obj,zonge_res_obj [stn_id] , 
-                                   lw= self.lw, label = 'station {0}'.format(stn_id))
+                                   lw= self.lw,
+                                   label = 'station {0}'.format(stn_id))
                                         #marker ='*', markersize =self.ms*self.fs , ) 
-            axe_res.set_xlabel('Frequency (Hz)',  fontdict={'color': 'k',
-                                                            'size':self.x_minorticks *xylabelsize,
-                                                            'weight':self.fontweight,
-                                                            'style' :fontstyle})
+            axe_res.set_xlabel('Frequency (Hz)', 
+                               fontdict={'color': 'k',
+                                        'size':self.x_minorticks *xylabelsize,
+                                        'weight':self.fontweight,
+                                        'style' :fontstyle})
             axe_res.set_ylabel('Apparent resistivity(Ω.m)', 
                                fontdict={'color': 'k',
                                          'size':self.y_minorticks *xylabelsize,
-                                          'weight': self.fontweight, 'style':fontstyle})
+                                          'weight': self.fontweight, 
+                                          'style':fontstyle})
             
-            handleg['res'].append(rho), lableg['res'].append('$station\ {0}$'.format(stn_id))
+            handleg['res'].append(rho), lableg['res'].append(
+                '$station\ {0}$'.format(stn_id))
             
             if errBar is True : 
-                for xpos , ypos , err in  zip(zonge_freq_obj,zonge_res_obj[stn_id], 
+                for xpos , ypos , err in  zip(
+                                            zonge_freq_obj,zonge_res_obj[stn_id], 
                                               zonge_res_err_obj[stn_id]): 
                     axe_res.errorbar (xpos, ypos, err ,uplims=True, lolims=True, 
                                       ecolor ='r',lw= 0.7,
@@ -1326,27 +1385,36 @@ class Plot1d :
                                       )
             
             #---------PHASE PLOT --------------------------
-            markphs, =axe_phase.semilogx(zonge_freq_obj,zonge_phase_obj [stn_id],  c='white', 
+            markphs, =axe_phase.semilogx(
+                                zonge_freq_obj,zonge_phase_obj [stn_id],
+                                c='white', 
                                 marker ='o', 
                                 markersize =self.ms*self.fs/2 ,
                                 markeredgecolor=self.markeredgecolor)
-            phase,  = axe_phase .semilogx(zonge_freq_obj,zonge_phase_obj [stn_id] ,
-                                          lw= self.lw, label = 'station {0}'.format(stn_id))
+            phase,  = axe_phase .semilogx(zonge_freq_obj,
+                                          zonge_phase_obj [stn_id] ,
+                                          lw= self.lw, 
+                                          label = 'station {0}'.format(stn_id))
                                         #marker ='*', markersize =self.ms*self.fs , ) 
             axe_phase .set_xlabel('Frequency (Hz)', 
                                   fontdict={'color': 'k',
                                             'size':self.x_minorticks *xylabelsize,
-                                            'weight':self.fontweight, 'style' :fontstyle})
+                                            'weight':self.fontweight,
+                                            'style' :fontstyle})
             axe_phase .set_ylabel('Phase(°)',
                                   fontdict={'color': 'k', 
                                             'size':self.y_minorticks *xylabelsize,
-                                            'weight': self.fontweight, 'style':fontstyle})
+                                            'weight': self.fontweight,
+                                            'style':fontstyle})
             axe_phase.set_ylim([0, 90])
-            handleg['phs'].append(phase), lableg['phs'].append('$station\ {0}$'.format(stn_id))
+            handleg['phs'].append(phase), lableg['phs'].append(
+                '$station\ {0}$'.format(stn_id))
             if errBar is True : 
-                for xpos , ypos , err in  zip(zonge_freq_obj,zonge_phase_obj [stn_id],
+                for xpos , ypos , err in  zip(zonge_freq_obj,
+                                              zonge_phase_obj [stn_id],
                                               zonge_phase_err_obj[stn_id]): 
-                    axe_phase.errorbar (xpos, ypos, err ,uplims=True, lolims=True, 
+                    axe_phase.errorbar (xpos, ypos, err ,
+                                        uplims=True, lolims=True, 
                                       ecolor ='r',lw= 0.7,
                                       #capsize =4 ,
                                       marker = '.', 
@@ -1364,18 +1432,23 @@ class Plot1d :
             axe_emag.set_xlabel('Frequency (Hz)', 
                                 fontdict={'color': 'k',
                                           'size':self.x_minorticks *xylabelsize, 
-                                          'weight':self.fontweight, 'style' :fontstyle})
+                                          'weight':self.fontweight,
+                                          'style' :fontstyle})
             axe_emag.set_ylabel('E-magn.(microV/Km*A)',
                                 fontdict={'color': 'k',
                                           'size':self.y_minorticks *xylabelsize,
-                                          'weight': self.fontweight, 'style':fontstyle})
+                                          'weight': self.fontweight, 
+                                          'style':fontstyle})
             
-            handleg['emag'].append(emag), lableg['emag'].append('$station\ {0}$'.format(stn_id))  
+            handleg['emag'].append(emag), lableg['emag'].append(
+                '$station\ {0}$'.format(stn_id))  
             
             if errBar is True : 
                 for xpos , ypos , err in  zip(zonge_freq_obj,
-                                              zonge_emag_obj [stn_id], zonge_emag_err_obj[stn_id]): 
-                    axe_emag.errorbar (xpos, ypos, err ,uplims=True, lolims=True, 
+                                              zonge_emag_obj [stn_id],
+                                              zonge_emag_err_obj[stn_id]): 
+                    axe_emag.errorbar (xpos, ypos, err ,
+                                       uplims=True, lolims=True, 
                                       ecolor ='dimgray',lw= 0.7,
                                       #capsize =4 ,
                                       marker = '|', 
@@ -1384,9 +1457,12 @@ class Plot1d :
                                       color ='k')
             
             #-----------HMAG PLOT --------------------------------------------
-            markhmag, =axe_hmag.loglog(zonge_freq_obj, zonge_hmag_obj [stn_id],  c='white', 
-                                marker ='o', markersize =self.ms*self.fs ,alpha =0.8 )
-            hmag,  = axe_hmag.loglog(zonge_freq_obj,zonge_hmag_obj [stn_id] , lw= self.lw, label = 'station {0}'.format(stn_id))
+            markhmag, =axe_hmag.loglog(zonge_freq_obj, zonge_hmag_obj [stn_id],
+                                c='white', 
+                                marker ='o', markersize =self.ms*self.fs ,
+                                alpha =0.8 )
+            hmag,  = axe_hmag.loglog(zonge_freq_obj,zonge_hmag_obj [stn_id] ,
+                                     lw= self.lw, label = 'station {0}'.format(stn_id))
                                         #marker ='*', markersize =self.ms*self.fs , ) 
             axe_hmag.set_xlabel('Frequency (Hz)', 
                                 fontdict={'color': 'k', 
@@ -1395,13 +1471,17 @@ class Plot1d :
             axe_hmag.set_ylabel('H-magn.(picoT/A)', 
                                 fontdict={'color': 'k',
                                           'size':self.y_minorticks *xylabelsize, 
-                                          'weight': self.fontweight, 'style':fontstyle})
+                                          'weight': self.fontweight, 
+                                          'style':fontstyle})
             
-            handleg['hmag'].append(hmag), lableg['hmag'].append('$station\ {0}$'.format(stn_id))  
+            handleg['hmag'].append(hmag), lableg['hmag'].append(
+                '$station\ {0}$'.format(stn_id))  
             
             if errBar is True : 
-                for xpos , ypos , err in  zip(zonge_freq_obj,zonge_hmag_obj [stn_id], zonge_hmag_err_obj[stn_id]): 
-                    axe_hmag.errorbar (xpos, ypos, err ,uplims=True, lolims=True, 
+                for xpos , ypos , err in  zip(zonge_freq_obj,zonge_hmag_obj [stn_id],
+                                              zonge_hmag_err_obj[stn_id]): 
+                    axe_hmag.errorbar (xpos, ypos, err ,uplims=True,
+                                       lolims=True, 
                                       ecolor ='dimgray',lw= 0.7,
                                       #capsize =4 ,
                                       marker = '|', 
@@ -1409,7 +1489,8 @@ class Plot1d :
         
         # set all legend
         
-        for axe , comps in zip ([axe_res, axe_phase, axe_emag, axe_hmag], ['res', 'phs', 'emag', 'hmag']): 
+        for axe , comps in zip ([axe_res, axe_phase, axe_emag, axe_hmag],
+                                ['res', 'phs', 'emag', 'hmag']): 
             axe.legend(handleg[comps], lableg[comps])
         #-----------------append necesary infos -------------------------------
         proj_name =zonge_csamt_obj.Header.SurveyAnnotation.project_name
@@ -1526,15 +1607,17 @@ class Plot1d :
                         ' Can not plot "None" value.')
                 self._logging.warn(
                     'Error plotting R.M.S VS Iteration. Can not plot "None" value.')
-                raise CSex.pyCSAMTError_plot('Error Plot R.M.S . '
-                                             'Compulsory need R.M.S value and '
-                                                 'Iteration value. Please check your value. ')
+                raise CSex.pyCSAMTError_plot(
+                    'Error Plot R.M.S . '
+                    'Compulsory need R.M.S value and '
+                        'Iteration value. Please check your value. ')
                 
         # append None to roughness value for last iteration if not exists
         if csamt_roughness_obj is not None :
             if csamt_roughness_obj.size != csamt_iteration_obj.size :
                 addnum = csamt_iteration_obj.size - csamt_roughness_obj.size 
-                for kk in range (addnum): csamt_roughness_obj = np.append(csamt_roughness_obj, None)
+                for kk in range (addnum): csamt_roughness_obj = np.append(
+                        csamt_roughness_obj, None)
 
         #---------------------------------------------------------------------
         mpl.rcParams['figure.figsize']=[10,4]
@@ -1565,15 +1648,18 @@ class Plot1d :
 
         leghandles.append(RMS_axis), leglabels.append('$R.M.S$')
         dx= csamt_iteration_obj.min()/2
-        axrms.set_xlim(csamt_iteration_obj.min()- dx, csamt_iteration_obj.max()+dx)
+        axrms.set_xlim(csamt_iteration_obj.min()- dx,
+                       csamt_iteration_obj.max()+dx)
         #see only tick on yaxis 
         axrms.minorticks_on()
-        axrms.xaxis.set_tick_params(which='minor', bottom=False)
+        axrms.xaxis.set_tick_params(which='minor',
+                                    bottom=False)
 
         
 
         if show_grid :
-            axrms.grid(axis ='y', color ='k', ls=':', lw=0.25, alpha= .8 , which ='major')
+            axrms.grid(axis ='y', color ='k', ls=':', lw=0.25, alpha= .8 , 
+                       which ='major')
         
         #------plotROUGHNESS 
         if csamt_roughness_obj is not None : 
@@ -1632,7 +1718,8 @@ class Plot1d :
                                              orientation =orientation)
         
     def plot_station_profile (self, fn =None , straighten_type ='classic', 
-                              reajust_coordinates=(0,0), savefig =None, **kwargs ):
+                              reajust_coordinates=(0,0), savefig =None, 
+                              **kwargs ):
         """
         Method to plot original station profile and coordinate reajustment profiles. 
         Deal with Zonge AVG file .
@@ -1753,7 +1840,8 @@ class Plot1d :
         
         plt.tight_layout(h_pad =1.8, w_pad =1.08)
         
-        if savefig is not None : plt.savefig(savefig, dpi = self.fig_dpi, orientation =orientation)
+        if savefig is not None : 
+            plt.savefig(savefig, dpi = self.fig_dpi, orientation =orientation)
         
         plt.show()
         
@@ -2459,22 +2547,27 @@ class Plot2d (object):
                         except : 
                             raise CSex.pyCSAMTError_plot(
                                 'Value <{0}> to delineate <{1}> is unacceptable.'\
-                                 ' Please ckeck your value.'.format(xx_deline, fmt[ii]))
+                                 ' Please ckeck your value.'.format(
+                                     xx_deline, fmt[ii]))
                         else :
-                            if ii ==0 : return [np.ceil(np.log10(xx_deline))]
+                            if ii ==0 : return [np.ceil(
+                                    np.log10(xx_deline))]
                             if ii ==1 : return [np.ceil(xx_deline)]
       
                     if isinstance(xx_deline , (list, tuple, np.ndarray)):
                         xx_deline =list(xx_deline)
                         try :
                             if ii == 0 :
-                                xx_deline = [np.ceil(np.log10(float(xx))) for xx in xx_deline]
+                                xx_deline = [np.ceil(np.log10(float(xx)))
+                                             for xx in xx_deline]
                             elif  ii ==1 :
-                                xx_deline = [np.ceil(float(xx)) for xx in xx_deline]
+                                xx_deline = [np.ceil(float(xx))
+                                             for xx in xx_deline]
                                 
                         except : 
-                            raise CSex.pyCSAMTError_plot('Value to delineate <{0}> is unacceptable.'\
-                                                              ' Please ckeck your value.'.format(fmt[ii]))
+                            raise CSex.pyCSAMTError_plot(
+                                'Value to delineate <{0}> is unacceptable.'\
+                                 ' Please ckeck your value.'.format(fmt[ii]))
                         else : 
                             return xx_deline
         
@@ -2500,9 +2593,11 @@ class Plot2d (object):
         #--- create matrix of Res and Phase 
         csamt_RES_obj = func.concat_array_from_list(
             list_of_array= [resvalues for keys ,
-                             resvalues  in sorted(csamt_res_obj.items())], concat_axis=1)
+                             resvalues  in sorted(
+                                 csamt_res_obj.items())], concat_axis=1)
         csamt_PHS_obj = func.concat_array_from_list(
-            list_of_array = [phsvalues for key, phsvalues in csamt_phase_obj.items() ], 
+            list_of_array = [phsvalues for 
+                             key, phsvalues in csamt_phase_obj.items() ], 
                              concat_axis =1)
         
         
@@ -2515,9 +2610,11 @@ class Plot2d (object):
     
         if delineate_phase_curve is not None : 
             delineate_phase_curve  = [ss%90 for ss in \
-                                      controle_delineate_curve(phase_deline=delineate_phase_curve) ] 
+                                      controle_delineate_curve(
+                                          phase_deline=delineate_phase_curve) ] 
         if delineate_resistivity_curve is not None : 
-            delineate_resistivity_curve = controle_delineate_curve(res_deline=delineate_resistivity_curve)
+            delineate_resistivity_curve = controle_delineate_curve(
+                res_deline=delineate_resistivity_curve)
                                                       
         #-----------------------PLOT ---------------------------------------
         if plot_style is None : plot_style = 'pcolormesh'
@@ -2533,11 +2630,14 @@ class Plot2d (object):
  
 
         if plot_style.lower() =='pcolormesh': 
-            xres_matrix , yres_matrix =np.meshgrid(csamt_stnDis_obj, csamt_freq_obj) 
-            xphase_matrix , yphase_matrix = np.meshgrid(csamt_stnDis_obj, csamt_freq_obj)
+            xres_matrix , yres_matrix =np.meshgrid(
+                csamt_stnDis_obj, csamt_freq_obj) 
+            xphase_matrix , yphase_matrix = np.meshgrid(
+                csamt_stnDis_obj, csamt_freq_obj)
             
             #---res map 
-            app_rho_axe = axe_res.pcolormesh (xres_matrix, yres_matrix ,csamt_RES_obj,
+            app_rho_axe = axe_res.pcolormesh (xres_matrix,
+                                              yres_matrix ,csamt_RES_obj,
                                               vmax = csamt_RES_obj.max(), 
                                               vmin = csamt_RES_obj.min(), 
                                               shading= 'gouraud', 
@@ -2545,7 +2645,8 @@ class Plot2d (object):
                                               )
          
             #---phase map 
-            phase_axe = axe_phase.pcolormesh (xphase_matrix , yphase_matrix ,csamt_PHS_obj, 
+            phase_axe = axe_phase.pcolormesh (xphase_matrix ,
+                                              yphase_matrix ,csamt_PHS_obj, 
                                               vmax = csamt_PHS_obj .max(), 
                                               vmin = csamt_PHS_obj .min(), 
                                               shading= 'gouraud', 
@@ -2555,7 +2656,8 @@ class Plot2d (object):
             MAT = [[xres_matrix, yres_matrix ,csamt_RES_obj], 
                    [xphase_matrix , yphase_matrix ,csamt_PHS_obj]]
             for ii, (axe, deline)  in enumerate( zip ([axe_res, axe_phase], 
-                                      [delineate_resistivity_curve,delineate_phase_curve])) : # loop the dict and get value 
+                                      [delineate_resistivity_curve,
+                                       delineate_phase_curve])) : # loop the dict and get value 
                 if  deline is not None : 
                     contps = axe.contour(*MAT[ii], 
                                          colors =contourcolors, 
@@ -2571,17 +2673,23 @@ class Plot2d (object):
                         else : mesf ='phase'
                     
                         warnings.warn(
-                            'Values {0} given as {1} contours levels does not match !'
-                            'Contours levels are resseting to default levels !'.format(deline, mesf))
+                            'Values {0} given as {1} contours levels does not'
+                            ' match ! Contours levels are resseting '
+                            'to default levels !'.format(deline, mesf))
                         
-                        print('---> Values {0} given can not be set as  {1} contours levels.'
-                              ' Default levels are {2}.'.format(deline, mesf,  contps.levels))
+                        print('---> Values {0} given can not be set as'
+                              '  {1} contours levels.'
+                              ' Default levels are {2}.'.format(deline, mesf,
+                                                                contps.levels))
     
                         print('.--> ! {0} contours levels = {1} are resseting to '
-                              ' default levels!'.format(mesf.capitalize(), deline))
+                              ' default levels!'.format(mesf.capitalize(),
+                                                        deline))
                         
-                        self._logging.debug ('values {0} given as contours levels does not match ! '
-                              'availables contours levels are set to default values.')
+                        self._logging.debug (
+                            'values {0} given as contours levels does not match ! '
+                              'availables contours levels are set '
+                              'to default values.')
                         
                         axe.clabel(contps, 
                                     inline=True,
@@ -2590,8 +2698,10 @@ class Plot2d (object):
                                                   )
                     
         if plot_style.lower() =='imshow': 
-            xres_matrix , yres_matrix =np.meshgrid(csamt_stnDis_obj, csamt_freq_obj) 
-            xphase_matrix , yphase_matrix = np.meshgrid(csamt_stnDis_obj, csamt_freq_obj)
+            xres_matrix , yres_matrix =np.meshgrid(csamt_stnDis_obj,
+                                                   csamt_freq_obj) 
+            xphase_matrix , yphase_matrix = np.meshgrid(csamt_stnDis_obj,
+                                                        csamt_freq_obj)
             
             #---res map 
             app_rho_axe = axe_res.imshow (csamt_RES_obj,
@@ -2625,7 +2735,8 @@ class Plot2d (object):
    
             MAT = [csamt_RES_obj, csamt_PHS_obj]
             for ii, (axe, deline)  in enumerate( zip ([axe_res, axe_phase], 
-                                      [delineate_resistivity_curve,delineate_phase_curve])) : # loop the dict and get value 
+                                      [delineate_resistivity_curve,
+                                       delineate_phase_curve])) : # loop the dict and get value 
                 if  deline is not None :
                     if ii ==0 : origin ='upper'
                     else : origin ='lower'
@@ -2644,7 +2755,8 @@ class Plot2d (object):
                                     fmt='%1.1f',
                                     fontsize =self.font_size,
                                               )
-                    axe.set_ylim (csamt_freq_obj.min(), csamt_freq_obj.max())
+                    axe.set_ylim (csamt_freq_obj.min(), 
+                                  csamt_freq_obj.max())
             
         
         #for twin axes 
@@ -2655,9 +2767,9 @@ class Plot2d (object):
                  ax.set_xlabel('Distance(m)', 
                                fontdict ={
                                    #'style': self.font_style, 
-                                                  'size': 1.5* self.font_size ,
-                                                  'weight': self.fw}
-                                                                        )
+                                'size': 1.5* self.font_size ,
+                                'weight': self.fw}
+                                                      )
              #if plot_style =='pcolormesh': 
              ax.set_ylabel('log10(Frequency)[Hz]',
                           fontdict ={
@@ -2666,9 +2778,11 @@ class Plot2d (object):
                                            'weight': self.fw})
              if self.show_grid is True : 
                  axe_res.minorticks_on()
-                 axe_res.grid(color='k', ls=':', lw =0.25, alpha=0.7, which ='major')
+                 axe_res.grid(color='k', ls=':', lw =0.25, alpha=0.7, 
+                              which ='major')
                  axe_phase.minorticks_on()
-                 axe_phase.grid(color='k', ls=':', lw =0.25, alpha=0.7, which ='major')
+                 axe_phase.grid(color='k', ls=':', lw =0.25, alpha=0.7, 
+                                which ='major')
             # congigure color bar 
              if ii == 0 : 
   
@@ -2680,33 +2794,38 @@ class Plot2d (object):
              cb.ax.yaxis.tick_left()
              cb.ax.tick_params(axis='y', direction='in', pad=2.)
              
-             cb.set_label(labex,fontdict={'size': 1.5* self.font_size , 'style':self.font_style})
+             cb.set_label(labex,fontdict={'size': 1.5* self.font_size ,
+                                          'style':self.font_style})
                               
             #--> set second axis 
-             
-            
              axe2 = ax.twiny() 
-             axe2.set_xticks(ticks= csamt_stnDis_obj, minor=False )
-             axe2.set_xticklabels(csamt_stn_obj , rotation=self.station_label_rotation)
+             axe2.set_xticks(ticks= csamt_stnDis_obj,
+                             minor=False )
+             axe2.set_xticklabels(csamt_stn_obj , 
+                                  rotation=self.station_label_rotation)
              if ii==0:
-                 axe2.set_xlabel('Stations', fontdict ={'style': self.font_style, 
-                                                        'size': 1.5* self.font_size ,
-                                                        'weight': self.fw}, )
+                 axe2.set_xlabel('Stations', 
+                                 fontdict ={'style': self.font_style, 
+                                            'size': 1.5* self.font_size ,
+                                            'weight': self.fw}, )
              if ii != 0:
                  plt.setp(axe2.get_xticklabels(), visible=False)
                  plt.setp(axe2.get_xlabel(), visible=False)
 
         fig.tight_layout()
 
-        fig.suptitle('Plot PseudocrossResistivity and Phase', ha='left',
+        fig.suptitle('Plot PseudocrossResistivity and Phase',
+                     ha='left',
                      fontsize= 15* self.fs, 
                      verticalalignment='center', 
                              style =self.font_style,
-                             bbox =dict(boxstyle='round',facecolor ='moccasin'))
+                             bbox =dict(boxstyle='round',
+                                        facecolor ='moccasin'))
             
         plt.tight_layout(h_pad =1.8, w_pad =2*1.08)
                 
-        if savefig is not None : plt.savefig(savefig, dpi = self.fig_dpi, orientation =self.orient)
+        if savefig is not None : plt.savefig(savefig, dpi = self.fig_dpi,
+                                             orientation =self.orient)
         
         
         plt.show()
@@ -2773,7 +2892,8 @@ class Plot2d (object):
                                  ['iteration', 'mesh', 'data']): 
             if file is None : 
                 mess= 'No {0}-file found !Please input your {0} file.'.format(label)
-                warnings.warn('Iteration, mesh , data files are essential for plotting.'+ mess)
+                warnings.warn(
+                    'Iteration, mesh , data files are essential for plotting.'+ mess)
                 self._logging.error 
                 raise CSex.pyCSAMTError_occam2d_plot(mess) 
                 
@@ -2781,7 +2901,8 @@ class Plot2d (object):
         if depth_scale is not None : self.depth_scale= str(depth_scale).lower() 
         if depth_scale not in ["km", "m"]: 
             self.depth_scale= "m"
-            mess ="--> ! Depth scale provided ={} is unrecognized. We reset to 'm'.".format(self.depth_scale)
+            mess ="--> ! Depth scale provided ={} is '\
+                unrecognized. We reset to 'm'.".format(self.depth_scale)
             warnings.warn(mess)
             self._logging.debug (mess)
         
@@ -2791,9 +2912,6 @@ class Plot2d (object):
         elif self.depth_scale == 'm': # for CSAMT , we use default as meter"m".
             dz = 1.
 
-
-        
-        
         #---> get delineate rho curve --- 
         if delineate_resistivity_curve is not None : 
             delineate_resistivity_curve = mplotus.controle_delineate_curve(
@@ -2888,37 +3006,35 @@ class Plot2d (object):
         #---------------------PLOTS STATEMENTS -----------------------------------------
         
                 #fist option is "pcolormesh " 
-        self._logging.info ('Ready to plot Model with matplotlib "{0}" style.'.format(plot_style))     
+        self._logging.info (
+            'Ready to plot Model with matplotlib "{0}" style.'.format(plot_style))     
         if plot_style =='pcolormesh':
             
             # if you keep plot_x_axis and plot_z_axis in meter , be sure to divided py dz 
             # meshes respectively 
-            
-            mesh_x  , mesh_z= np.meshgrid(plot_x_axis  ,  plot_z_axis )
-            
+            mesh_x  , mesh_z= np.meshgrid(plot_x_axis,  plot_z_axis )
             rho_axm = axm.pcolormesh (mesh_x/dz  , 
-                                          mesh_z/dz ,
-                                          occam_model_resistiviy_obj,
-                                              vmin = self.climits[0],
-                                              vmax = self.climits[1],  
-                                              shading= 'auto', 
-                                              cmap =self.cmap, 
-                                              alpha = None, 
+                                    mesh_z/dz ,
+                                    occam_model_resistiviy_obj,
+                                        vmin = self.climits[0],
+                                        vmax = self.climits[1],  
+                                        shading= 'auto', 
+                                        cmap =self.cmap, 
+                                        alpha = None, 
                                               
                                               )
-         
 
             if show_contour is True :
-                contps = axm.contour(mesh_x/dz  , mesh_z /dz ,occam_model_resistiviy_obj,
-                                      colors =contourcolors, linestyles=contourlines)
+                contps = axm.contour(mesh_x/dz  , mesh_z /dz ,
+                                     occam_model_resistiviy_obj,
+                                      colors =contourcolors,
+                                      linestyles=contourlines)
                 if  delineate_resistivity_curve is not None : 
                     axm.clabel(contps,  delineate_resistivity_curve ,
                                     inline=True, fmt='%1.1f',
                                     fontsize =self.font_size,
                                       )
-            
-        
-        
+
         if plot_style.lower() =='imshow': 
 
             mesh_x  , mesh_z= np.meshgrid(plot_x_axis  , plot_z_axis )
@@ -2940,7 +3056,8 @@ class Plot2d (object):
  
             if delineate_resistivity_curve is not None :
                 origin ='upper'
-                contps = axm.contour(occam_model_resistiviy_obj, colors =contourcolors, 
+                contps = axm.contour(occam_model_resistiviy_obj,
+                                     colors =contourcolors, 
                                       vmax=self.climits[0],
                                       vmin = self.climits[1], 
                                         linestyles=contourlines, 
@@ -2948,8 +3065,6 @@ class Plot2d (object):
                                                   self.xlimits[1],
                                                   self.ylimits[1], 
                                                   self.ylimits[0]),
-                                                  #self.ylimits[0], 
-                                                  #self.ylimits[1]),
                                         extend ='both',
                                         origin= origin ,  
                                        )
@@ -2980,7 +3095,8 @@ class Plot2d (object):
 
         # show station maker points : 
             
-        for offset , names in zip (occam_data_station_offsets, occam_data_station_names):
+        for offset , names in zip (occam_data_station_offsets,
+                                   occam_data_station_names):
             # plot the station marker ' black triangle down ' 
             # always plots at the surface.
             axm.text(offset/dz  ,
@@ -3051,19 +3167,21 @@ class Plot2d (object):
             
             # povided model offsets  slce matrix to keep the model value that we need 
             occam_model_offsets = occam_model_obj.model_station_offsets
-            new_station_offsets,  new_depth_offsets, new_block_matrix= mplotus.slice_csamt_matrix(
-                                        block_matrix =occam_model_resistiviy_obj  ,
-                                       station_offsets = occam_model_offsets ,
-                                       depth_offsets =occam_model_obj.model_depth_offsets,
-                                       offset_MinMax=(occam_data_station_offsets[0], 
-                                                      occam_data_station_offsets[-1]),
-                                       doi='1km')
+            new_station_offsets,  new_depth_offsets,\
+                new_block_matrix= mplotus.slice_csamt_matrix(
+                             block_matrix =occam_model_resistiviy_obj  ,
+                            station_offsets = occam_model_offsets ,
+                            depth_offsets =occam_model_obj.model_depth_offsets,
+                            offset_MinMax=(occam_data_station_offsets[0], 
+                                           occam_data_station_offsets[-1]),
+                            doi='1km')
             
             # new_station_offsets,  new_depth_offsets, new_block_matrix
-            mplotus.get_conductive_and_resistive_zone (data = new_block_matrix,
-                                                       site_names =occam_data_station_names, 
-                                                        model_offsets =  new_station_offsets, 
-                                                        site_offsets = occam_data_station_offsets)
+            mplotus.get_conductive_and_resistive_zone (
+                data = new_block_matrix,
+                    site_names =occam_data_station_names, 
+                     model_offsets =  new_station_offsets, 
+                     site_offsets = occam_data_station_offsets)
 
         self.fig.suptitle('Plot Resistivity Model :RMS={0}, Roughness={1}'.\
                           format(occam_model_obj.model_rms, 
@@ -3141,9 +3259,10 @@ class Plot2d (object):
   
         # check the mode if provided 
         if mode not in  make_mode  : 
-            mess =''.join(['Occam mode provided ={0} is wrong !. Occam2D data mode is ={1}'.\
-                           format(mode, make_mode ), 
-                                  'Please select the right mode.'])
+            mess =''.join([
+                'Occam mode provided ={0} is wrong !. Occam2D data mode is ={1}'.\
+                format(mode, make_mode ), 
+                       'Please select the right mode.'])
             warnings.warn(mess)
             self._logging.error (mess)
             
@@ -3179,14 +3298,15 @@ class Plot2d (object):
         if delineate_resistivity_curve is not None : 
             print('---> Occam 2D contour delineate value = {}'.format(
                 tuple(delineate_resistivity_curve)))
-            
-        
-       
+ 
         #----------------------- CALL RESPONSE OCJECT USEFULL FOR PLOTTING------------------------------------
         # Now get attributes of forward and residual values 
-        self.resp_forward = getattr(resp_obj, 'resp_{0}_forward'.format(mode))
-        self.resp_residual =getattr(resp_obj, 'resp_{0}_residual'.format(mode))
-        self.resp_freq = np.log10(getattr(resp_obj, 'data_frequencies'))
+        self.resp_forward = getattr(resp_obj,
+                                    'resp_{0}_forward'.format(mode))
+        self.resp_residual =getattr(resp_obj, 
+                                    'resp_{0}_residual'.format(mode))
+        self.resp_freq = np.log10(getattr(resp_obj,
+                                          'data_frequencies'))
         #let elimitale - frequency the lowest one 
         # self.resp_freq = self.resp_freq [:-1]
         self.resp_sites_names = getattr(resp_obj, 'data_sites')
@@ -3198,23 +3318,20 @@ class Plot2d (object):
         
         # ------------------------DECLARE FIGURE AND PROPERTIES --------------------------------------------
 
-        
         # statement of figures 
-        self.fig = plt.figure(self.fig_num, self.fig_size, dpi=self.fig_dpi,) # constrained_layout=True)
+        self.fig = plt.figure(self.fig_num, self.fig_size, 
+                              dpi=self.fig_dpi,) # constrained_layout=True)
         # plt.clf()
         # add a subplot to the figure with the specified aspect ratio
         self.fig_aspect ='auto'
         gs=gspec.GridSpec(2, 1, figure =self.fig)
-        
         axeFW = self.fig.add_subplot(gs[0, :])
         # axeresd = self.fig.add_subplot(2, 1, 1, aspect=self.fig_aspect)
         axeRESI=self.fig.add_subplot(gs[1,:]  ,sharex = axeFW )
         #                               
         # axeRESI = self.fig.add_subplot(2, 1, 2, aspect=self.fig_aspect, 
         #                                sharex = axefw )
-        
         #-------- SET XY  LIMITS ---------
-
         # try to make stations separation the same distance between sites 
         self.resp_sites_offsets =np.linspace(self.resp_sites_offsets[0],
                                              self.resp_sites_offsets[-1], 
@@ -3237,9 +3354,11 @@ class Plot2d (object):
         
         if plot_style =='pcolormesh': 
             
-            self._logging.info ('Ready to plot Forward with matplotlib "pcolormesh"')
+            self._logging.info (
+                'Ready to plot Forward with matplotlib "pcolormesh"')
             #make mesh_grid 
-            mesh_x , mesh_y =np.meshgrid (self.resp_sites_offsets, self.resp_freq, 
+            mesh_x , mesh_y =np.meshgrid (self.resp_sites_offsets,
+                                          self.resp_freq, 
                                           )
             
             # if you keep plot_x_axis and plot_z_axis in meter , be sure to divided py dz 
@@ -3256,8 +3375,7 @@ class Plot2d (object):
                                 alpha = None, 
                                               
                                               )
-  
-                    
+
             #------plot residual -------------
             
             axeRESI.pcolormesh (mesh_x , 
@@ -3270,12 +3388,12 @@ class Plot2d (object):
                                     alpha = None, 
                                     
                                               )
-         
 
-            
         if plot_style.lower() =='imshow': 
-            self._logging.info ('Ready to plot forward  with matplotlib "imshow"')
-            mesh_x , mesh_y =np.meshgrid (self.resp_sites_offsets, self.resp_freq, 
+            self._logging.info (
+                'Ready to plot forward  with matplotlib "imshow"')
+            mesh_x , mesh_y =np.meshgrid (self.resp_sites_offsets,
+                                          self.resp_freq, 
                                           )
             axeFW.imshow (self.resp_forward,
                                 vmax = self.climits[1], 
@@ -3304,8 +3422,6 @@ class Plot2d (object):
 
                                     )
 
- 
-
         #-------SET AXIS LIMIT -------------------------
         axeFW.set_xlim( [self.xlimits[0],  self.xlimits[1]])
         axeFW.set_ylim ([self.ylimits[1], self.ylimits[0]]) 
@@ -3315,8 +3431,9 @@ class Plot2d (object):
         
         # set delineate cure 
         if  delineate_resistivity_curve is not None :
-            for ii, (axe, grid_response) in enumerate(zip([axeFW, axeRESI], [self.resp_forward, 
-                                                             self.resp_residual])): 
+            for ii, (axe, grid_response) in enumerate(zip(
+                    [axeFW, axeRESI], [self.resp_forward, 
+                                    self.resp_residual])): 
                 
                 if ii==0 : mesf = 'forward model'
                 else : mesf ='residual'
@@ -3356,9 +3473,11 @@ class Plot2d (object):
                         format(delineate_resistivity_curve, mesf))
                     
                     print('.--> ! {0} contours levels = {1} are resseting to '
-                          ' default levels!'.format(mesf.capitalize(), delineate_resistivity_curve))
+                          ' default levels!'.format(mesf.capitalize(),
+                                                    delineate_resistivity_curve))
 
-                    self._logging.debug ('values {0} given as contours levels does not match ! '
+                    self._logging.debug (
+                        'values {0} given as contours levels does not match ! '
                           'availables contours levels are set to default values.')
                     
                     axe.clabel(contps, 
@@ -3366,10 +3485,9 @@ class Plot2d (object):
                                 fmt='%1.1f',
                                 fontsize =self.font_size,
                                               )
-                    
-            
-            
-        for offs , names in zip (self.resp_sites_offsets, self.resp_sites_names):
+
+        for offs , names in zip (self.resp_sites_offsets,
+                                 self.resp_sites_names):
             # plot the station marker ' black triangle down ' 
             # always plots at the surface.
             axeFW.text(offs  ,
@@ -3392,7 +3510,8 @@ class Plot2d (object):
                         rotation = self.station_label_rotation,
                             )
         if set_station_label is True : 
-            axeFW.text ((self.resp_sites_offsets.max()- self.resp_sites_offsets.min())/2, #take the center point and add value to top 
+            axeFW.text ((self.resp_sites_offsets.max()-\
+                         self.resp_sites_offsets.min())/2, #take the center point and add value to top 
                        self.ylimits[0] + np.log10( self.ylimits[0]/1.25), 
                         s= 'Stations',
                         horizontalalignment='center',
@@ -3409,8 +3528,10 @@ class Plot2d (object):
             # axm.grid(alpha=.3, which='major', lw=.35)
             axeFW.minorticks_on()
             axeRESI.minorticks_on()
-            axeFW.grid(color='k', ls=':', lw =0.5, alpha=grid_alpha, which ='major')
-            axeRESI.grid(color='k', ls=':', lw =0.5, alpha=grid_alpha, which ='major')
+            axeFW.grid(color='k', ls=':', lw =0.5,
+                       alpha=grid_alpha, which ='major')
+            axeRESI.grid(color='k', ls=':', lw =0.5,
+                         alpha=grid_alpha, which ='major')
 
         #---> set color bar properties 
         if type(self.cmap) == str:
@@ -3471,8 +3592,9 @@ class Plot2d (object):
         plt.setp(axeFW.get_xticklabels(), visible=False)
 
         if show_report is True : 
-            mplotus.get_conductive_and_resistive_zone (data = self.resp_forward,
-                                                       site_names =self.resp_sites_names)
+            mplotus.get_conductive_and_resistive_zone (
+                data = self.resp_forward,
+                site_names =self.resp_sites_names)
 
         self.fig.suptitle('Occam 2D : Forward response & Residual',
                   ha='center',
@@ -3664,12 +3786,13 @@ class Plot2d (object):
                     if ss=='bln_fn': 
                          mess =''.join(
                              [' ! No station station locations file '
-                              'found like *bln file ! Can not plot pseudodrill and ', 
-                                'pseudostratigraphy log. Please provided a station'
-                                    ' location file. You can use Iter2Dat model ::', 
-                                'from pycsamt.modeling.occam2d import Iter2Dat:: '
-                                    'or Profile module ` from pycsamt.ff.core.cs import Profile` to', 
-                                'build a station location file.'])
+                        'found like *bln file ! Can not plot pseudodrill and ', 
+                          'pseudostratigraphy log. Please provided a station'
+                              ' location file. You can use Iter2Dat model ::', 
+                          'from pycsamt.modeling.occam2d import Iter2Dat:: '
+                              'or Profile module ` from pycsamt.ff.core.cs ',
+                              'import Profile` to', 
+                          'build a station location file.'])
                          warnings.warn(mess)
                          self._logging.error (mess)
  
@@ -4436,7 +4559,8 @@ class geoplot2d(object):
             if self.reason is None or self.reason =='model': 
                 occam_model_resistiviy_obj, occam_data_station_names,\
                     occam_data_station_offsets, occam_model_depth_offsets,\
-                    self.doi, self.depth_scale, self.model_rms, self.model_roughness  =\
+                    self.doi, self.depth_scale, self.model_rms, \
+                        self.model_roughness, plot_misfit  =\
                         func(*args, **kwargs)
                         
                         
@@ -4449,7 +4573,7 @@ class geoplot2d(object):
                 #0 then substract add value so 
                 # to get space for station names text
                 if self.climits is None : self.climits =(0,4)
-                if kwargs['plot_misfit'] is True : 
+                if plot_misfit is True : 
                     _f=2
                     
                 self.ylimits =(spec_f, self.doi/dz)    
@@ -4718,12 +4842,12 @@ class geoplot2d(object):
         return new_func
     
 
-# if __name__ == '__main__':
+if __name__ == '__main__':
 #     path_to_profiles =os.path.join(os.environ['pyCSAMT'], 'data', 'stn_profiles')
 #     plot1d_obj = Plot1d( fig_size =[5,3])
 #     plot1d_obj.plot_multiStations(path = path_to_profiles, 
 #                                     profile_lines =['K{0}.stn'.format(i+6) for i in range(4)], 
 #                                   scale ='km')
     
-
+    geoObj = geoplot2d()
     

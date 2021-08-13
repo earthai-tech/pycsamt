@@ -70,8 +70,8 @@ except Exception as error :
  
 sys.path.insert(0, os.path.abspath('.'))  
 sys.path.insert(0, os.path.abspath('..')) 
-sys.path.insert(0, os.path.abspath('../..'))  
-sys.path.insert(0, os.path.abspath('pycsamt/geodrill/geoDB/sql_utils/sql_DB'))  # for consistency  
+sys.path.insert(0, os.path.abspath('../..'))  # for consistency 
+sys.path.insert(0, os.path.abspath('pycsamt/geodrill/geoDB/sql_utils/sql_DB'))   
 
 # =============================================================================
 
@@ -81,38 +81,40 @@ class GeoDataBase (object):
     for each geostructures. DataBase is built is built following the   
        codef `code`,   `label`,`__description`,`pattern`, `pat_size`,`pat_density`,
        `pat_thickness`,`RGBA`, `electrical_props`, `hatch`, `colorMPL`, `FGDC` .
-       
-        
+
     Arguments
     -----------
         **geo_structure_name** : str 
                 Name of geological rocks , strata or layer.
                 
-    .. seealso:: FGDC-Digital cartographic Standard for Geological  Map Symbolisation. 
+    .. seealso:: FGDC-Digital cartographic Standard for Geological 
+                Map Symbolisation. 
     
     """
     #  FGDC is not set yet , we use the  matplotlib pattern symbol makers 
     make_pattern_symbol =["/", "\\", "|", '-', '+', 'x', 'o', 'O', '.', 
-                          '*', '\-', '\+', '\o', '\O', '\.', '\*'] #use '\\' rather than '\'.
+                          '*', '\-', '\+', '\o', '\O', '\.', '\*'] 
+    #use '\\' rather than '\'.
     # latter , i will be deprecated to FGDC geological map symbolisation . 
     
-    codef = ['code','label','__description','pattern', 'pat_size',	'pat_density','pat_thickness','rgb',
-                 'electrical_props', 'hatch', 'colorMPL', 'FGDC' ]
+    codef = ['code','label','__description','pattern', 'pat_size',	
+             'pat_density','pat_thickness','rgb','electrical_props', 
+                 'hatch', 'colorMPL', 'FGDC' ]
     # geoDataBase=os.path.join(os.environ['pyCSAMT'],'pycsamt',
-    #                'geodrill', 'geoDB','sql_utils', 'sql_DB', 'memory.sq3') # locate the geodataBase
-    geoDataBase = os.path.join(os.path.abspath('pycsamt/geodrill/geoDB/sql_utils/sql_DB'), 
-                               'memory.sq3')
-    
-    # :memory: is faster we chose this options :geoDataBase.sq3 in sql_DB contains drill holes and wells Tables 
-    # will develop in the future extensions 
+    #                'geodrill', 'geoDB','sql_utils', 'sql_DB', 'memory.sq3') 
+    # locate the geodataBase
+    geoDataBase = os.path.join(
+        os.path.abspath('pycsamt/geodrill/geoDB/sql_utils/sql_DB'),'memory.sq3')
  
-    
-    
+    # :memory: is faster we chose this options :geoDataBase.sq3 
+    #in sql_DB contains drill holes and wells Tables 
+    # will develop in the future extensions 
+
     def __init__(self, geo_structure_name=None) :
         self._logging =csamtpylog.get_csamtpy_logger(self.__class__.__name__)
         self.geo_structure_name = geo_structure_name
-        self.dateTime= datetime.datetime.now().utcnow()          # Get the date time now  
-        self.comment =None                                       # initialise comment  text
+        self.dateTime= datetime.datetime.now().utcnow()   # Get the date time now  
+        self.comment =None                                # initialise comment  text
         
   
         self._mplcolor =None 
@@ -122,10 +124,12 @@ class GeoDataBase (object):
 
         try : 
         # to connect geodataBse 
-            self.manage_geoDataBase =ManageDB(db_host=os.path.dirname(self.geoDataBase), 
+            self.manage_geoDataBase =ManageDB(
+                db_host=os.path.dirname(self.geoDataBase), 
                                       db_name ='memory.sq3')
         except : 
-            mess =''.join(['Connection to geoDataBase failed! Sorry we can not give a suitable reply for your request!', 
+            mess =''.join(['Connection to geoDataBase failed! Sorry we can ',
+                           'not give a suitable reply for your request!', 
                     'It would  be process with "geological structural class." !'])
             
             warnings.warn(mess)
@@ -135,16 +139,17 @@ class GeoDataBase (object):
 
     def _avoid_injection (self): 
         """
-        For secure , we do not firstly introduce directly the request. We will check 
-        whether the object `request`   exists effectively  in our
-        GeoDatabase . if not , request will be redirect to structural and strata class 
-        issue from  module `structural`
+        For secure , we do not firstly introduce directly the request. We will 
+        check whether the object `request`   exists effectively  in our
+        GeoDatabase . if not , request will be redirect to structural and 
+        strata class issue from  module `structural`
         
         """
         # self.manage_geoDataBase.executeReq(" select __description  from AGS0")
         
         self.geo_structure_name=self.geo_structure_name.lower() # for consistency 
-        manage = self.manage_geoDataBase.curs.execute(" select __description  from AGS0")
+        manage = self.manage_geoDataBase.curs.execute(
+            " select __description  from AGS0")
         __description = [ geoform[0] for geoform in  list(manage)]
 
 
@@ -152,18 +157,69 @@ class GeoDataBase (object):
             self.geo_structure_exists =True 
             
         else :
-            mess ='Structure <%s> does not exist  in our GeoDataBase yet.' % self.geo_structure_name
+            mess ='Structure <%s> does not exist  in'\
+                ' our GeoDataBase yet.' % self.geo_structure_name
             
             self.geo_structure_exists =False
             warnings.warn(mess)
             self._logging.debug ('Could not find a {0} in our geoDataBase.'\
-                                 ' It would be redirect to _strata and _structural classes for suitable processing.'.format(self.geo_structure_name))
+                                 ' It would be redirect to _strata and '
+                                 '_structural classes for suitable processing.'.
+                                 format(self.geo_structure_name))
             
             # self.manage_geoDataBase.closeDB() # close the database
             
         # if self.geo_structure_exists : 
         #     self._get_geo_structure()
-
+        
+    def _retreive_databasecolumns (self, columns): 
+        """ Retreive data from database columns
+        
+        :param columns: Columns name is `str`. To retreive data of many columns 
+                      please put the columns name on list.
+        :returns: 
+            list of data of each columns.
+        
+        :Exemple:
+            >>> from pycsamt.geodriil.geoDB.sql_recorder import GeoDataBase 
+            >>> dbObj = GeoDataBase()
+            >>>  values = dbObj.._retreive_databasecolumns(
+                    ['__description', 'electrical_props'])    
+        
+        """
+        
+        if isinstance(columns, str): 
+            columns =[columns]
+            
+        new_columns = []
+        for obj in columns : 
+            if obj not in self.codef : 
+                self._logging.debug(
+                    f'Object `{obj}` not found in {self.codef}!'
+                    'Please provide the right column name.')
+                warnings.warn(f'Object `{obj}` not found in {self.codef}!'
+                    'Please provide the right column name.')
+            else:
+                if obj =='name': obj = '__description'
+                new_columns.append(obj)
+            
+        if len(new_columns) ==0 : # Object not found in database 
+            self._logging.error('None object found in the database !')
+            return 
+        
+        _l=[]  
+        
+        for obj in new_columns : 
+            manage = self.manage_geoDataBase.curs.execute(
+                " select %s  from AGS0"% obj)
+            valuesdb = [ geoform[0] for geoform in  list(manage)]
+            if len(new_columns)==1: 
+                _l= valuesdb
+            else: _l.append(valuesdb)
+            
+        self.manage_geoDataBase.closeDB() # close the database
+        return _l
+            
         
     def _get_geo_structure(self, structure_name=None):
         """
@@ -174,31 +230,40 @@ class GeoDataBase (object):
         :type struture_name: str
         
         """
-        if structure_name is not None :self.geo_structure_name = structure_name.lower() 
+        if structure_name is not None :
+            self.geo_structure_name = structure_name.lower() 
         
         if self.geo_structure_name is None : 
             warnings.warn('No name is inputted as geological formation. Sorry ,'
                           ' your request is aborted !')
-            raise CSex.pyCSAMTError_SQL_manager('No name is inputted as geological formation. Sorry ,'\
-                          ' your request is aborted !')
-        if self.geo_structure_name is not None : # Then try to check whether strcuture name is write or Not
+            raise CSex.pyCSAMTError_SQL_manager(
+                'No name is inputted as geological formation. Sorry ,'\
+                 ' your request is aborted !')
+                
+        if self.geo_structure_name is not None :
             self._avoid_injection()
             
-        if self.geo_structure_exists : # Then execute the request 
-            __geonames = list(self.manage_geoDataBase.curs.execute("Select * from AGS0 where __description = '{0}'".\
-                                                 format(self.geo_structure_name.lower())))[0] # keep only the tuple values 
+        if self.geo_structure_exists : 
+            __geonames = list(self.manage_geoDataBase.curs.execute(
+                "Select * from AGS0 where __description = '{0}'".\
+                  format(self.geo_structure_name.lower())))[0]  
      
-            # once value is get then set attribute  for each column of geoDataBase
+            # once value is get then set attribute 
+            #for each column of geoDataBase
             for ii, codec in enumerate(self.codef) :
                 if self.codef [10] == codec : 
                     self.colorMPL= __geonames[ii]
-                    # if '#' in __geonames[ii] : # we assume that value colorMPL is hexadecimal value eg : #0000ff
-                    self.__setattr__(codec, self.colorMPL) # color MPL format to  string tuple  like '(1.0, 0.5, 0.23)'
-                    # else :                      # value in RGB color (0-1 --> 0 to 255 bits)
+                    # if '#' in __geonames[ii] : # we assume that value
+                    #colorMPL is hexadecimal value eg : #0000ff
+                    self.__setattr__(codec, self.colorMPL) # color MPL format
+                    # to  string tuple  like '(1.0, 0.5, 0.23)'
+                    # else :# value in RGB color (0-1 --> 0 to 255 bits)
 
-                elif self.codef [8]== codec : # set electrical properties (min,max) line (1e-5,5.2e0 )
+                elif self.codef [8]== codec : # set electrical properties
+                # (min,max) line (1e-5,5.2e0 )
                     self.electrical_props = __geonames[ii] 
-                    self.__setattr__(codec , self.electrical_props) # get color matplotlib from property attributes
+                    self.__setattr__(codec , self.electrical_props) # get 
+                    #color matplotlib from property attributes
 
                 else :  self.__setattr__(codec , __geonames[ii])
                 
@@ -214,14 +279,16 @@ class GeoDataBase (object):
         """
         mess ='--->"{}" Querry  successfully executed ! '  
         
-        if geo_structure_name is not None : self.geo_structure_name = geo_structure_name.lower() 
+        if geo_structure_name is not None :
+            self.geo_structure_name = geo_structure_name.lower() 
         
         if self.geoDataBase is not None : 
             self._avoid_injection() 
         if self.geo_structure_exists is True : 
-        
-            __geonames = list(self.manage_geoDataBase.curs.execute("Select * from AGS0 where __description = '{0}'".\
-                                                 format(self.geo_structure_name)))[0] # keep only the tuple values 
+                # keep only the tuple values 
+            __geonames = list(self.manage_geoDataBase.curs.execute(
+                "Select * from AGS0 where __description = '{0}'".\
+                          format(self.geo_structure_name)))[0] 
             
 
             print(mess.format(self.geo_structure_name))
@@ -250,58 +317,75 @@ class GeoDataBase (object):
         :Example:
             
             >>> from pycsamt.geodrill.geoDB.sql_recorder import GeoDataBase 
-            >>> GeoDataBase()._update_geo_structure(**{'__description':'basement rocks', 
-                                            'electrical_props':[1e99, 1e6 ]})
+            >>> GeoDataBase()._update_geo_structure(
+                **{'__description':'basement rocks', 
+                    'electrical_props':[1e99, 1e6 ]})
         """
-        fmt_mess = '---> {0} was successfully set to geoDataBase. Old value = {1} is updated to = {2}'
-        
-        if geo_formation_name is None : # find geological rocks name if is in keywords dict
+        fmt_mess = '---> {0} was successfully set to geoDataBase.'\
+            ' Old value = {1} is updated to = {2}'
+            
+        # find geological rocks name if is in keywords dict
+        if geo_formation_name is None : 
             if '__description' in list(kws.keys()) : 
                 geo_formation_name=str(kws['__description'])
             elif 'name' in list(kws.keys()) : 
                 geo_formation_name=str(kws['name'])
             else : 
-                raise CSex.pyCSAMTError_SQL_update_geoinformation(' ! Unable to find a new geological structure name.')
+                raise CSex.pyCSAMTError_SQL_update_geoinformation(
+                    ' ! Unable to find a new geological structure name.')
     
         if not isinstance(geo_formation_name, str) : 
-            raise CSex.pyCSAMTError_SQL_update_geoinformation('Unacceptable rock/layer name ={0}.'\
-                                                              ' Please provide a right rock/layer name.')
+            raise CSex.pyCSAMTError_SQL_update_geoinformation(
+                'Unacceptable rock/layer name ={0}.'\
+                    ' Please provide a right rock/layer name.')
         geo_formation_name=str(geo_formation_name) # for consistency 
         
-        if geo_formation_name is not None : self.geo_structure_name = geo_formation_name.lower() 
+        if geo_formation_name is not None :
+            self.geo_structure_name = geo_formation_name.lower() 
         
         # build new_dictionnary without the keyname and key value of dictionnay 
         tem_geodict ={geokey:geovalue for geokey , geovalue in kws.items() 
-                      if not (geokey =='__description' or geokey =='name') # we can alse use list excep the both name
-                      } # because the update need absoluteld to provided a name of the rocks 
+                      if not (geokey =='__description' or geokey =='name') 
+                      }
         
 
-        if self.geo_structure_name is not None : # chech on databas if structural name exists 
+        if self.geo_structure_name is not None :
             self._avoid_injection()
         if self.geo_structure_exists is False : 
-            mess ="".join([' Actually geological formation name =  <{0}> can not be updated because'.format(self.geo_structure_name), 
-                           ' it doesnt  exist in our DataBase. To set new geological formation with their corresponding values ', 
-                           ' see { _add_geo_structure } method .'])
+            mess ="".join([
+                ' Actually geological formation name =  <{0}> can '.format(
+                    self.geo_structure_name),
+                 'not be updated because', 
+                ' it doesnt  exist in our DataBase. To set new geological ',
+                'formation with their corresponding values ', 
+                ' see { _add_geo_structure } method .'])
             self._logging.warn(mess)
-            raise CSex.pyCSAMTError_SQL_update_geoinformation('Update name= {0}  failed ! it doesnt not exist in geoDataBase'.format(self.geo_structure_name))
+            raise CSex.pyCSAMTError_SQL_update_geoinformation(
+                'Update name= {0}  failed ! it doesnt not exist in '
+                'geoDataBase'.format(self.geo_structure_name))
                     
             
-        elif self.geo_structure_exists : # even the geostructure exists , let check wether the key provided 
+        elif self.geo_structure_exists : # even the geostructure exists ,
+        #let check wether the key provided 
             for geo_key in list (tem_geodict.keys()) : # is among the geocodes keys
-                if geo_key not in self.codef : # if key provided not in geodatable keys 
+                if geo_key not in self.codef : #if key provided not in geodatable keys 
                     
-                    mess =''.join(["Sorry the key = {0} is wrong! key doesnt exist in geoDataBase.".format(geo_key), 
-                                   " Please provide a right keys among = {0}". format(tuple(self.codef[2:]))])
+                    mess =''.join([
+                        "Sorry the key = {0} is wrong! key doesnt".format(geo_key),
+                        " exist in geoDataBase.Please provide a right ", 
+                        " keys among = {0}". format(tuple(self.codef[2:]))])
                     self._logging.error(mess)
                     raise CSex.pyCSAMTError_SQL_manager(mess)
         
                 elif geo_key in self.codef :
                     if geo_key.find('pat') >= 0 : 
-                        try : 
-                            update_geo_values = float(kws[geo_key]) # keep value to real
+                        try : # keep value to real
+                            update_geo_values = float(kws[geo_key]) 
                         except : 
-                            msg =''.join(['update failed ! Could not convert value = {0} to float.'.format(kws[geo_key]), 
-                                          'Please try again later.'])
+                            msg =''.join([
+                                'update failed ! Could not convert',
+                                ' value = {0} to float.'.format(kws[geo_key]), 
+                                'Please try again later.'])
                             self._logging.error(msg)
                             raise CSex.pyCSAMTError_SQL_update_geoinformation(msg)
                             
@@ -309,8 +393,8 @@ class GeoDataBase (object):
                     elif geo_key.find('colorMPL') >=0 : 
                         self.colorMPL = kws[geo_key] 
                         update_geo_values = self.colorMPL
-                                    
-                    elif geo_key.find('rgb')>=0 : # let fill automatically the "rgb" and the colorMPL 
+                    # let fill automatically the "rgb" and the colorMPL                
+                    elif geo_key.find('rgb')>=0 :  
                         # keep the rgb value g : R125G90B29 and compute the colorMPL
                         self.rgb = kws[geo_key]
                         update_geo_values = self.rgb
@@ -323,29 +407,46 @@ class GeoDataBase (object):
 
                     else : update_geo_values =str (kws[geo_key])
                     # now must be put on the data base
+                    # fill automaticall colorMPL when rgb is provided
+                    if geo_key.find('rgb') >= 0 :  
                     
-                    if geo_key.find('rgb') >= 0 : # fill automaticall colorMPL when rgb is provided 
-                    
-                        self.manage_geoDataBase.curs.execute("update AGS0 set rgb = '{0}'  where __description ='{1}'".\
-                                                 format( update_geo_values[0] , self.geo_structure_name))
-                        self.manage_geoDataBase.curs.execute("update AGS0 set colorMPL= '{0}'  where __description ='{1}'".\
-                                                 format(update_geo_values[1] , self.geo_structure_name))
+                        self.manage_geoDataBase.curs.execute(
+                            "update AGS0 set rgb = '{0}'  where __description ='{1}'".
+                              format( update_geo_values[0] , 
+                                     self.geo_structure_name))
+                        self.manage_geoDataBase.curs.execute(
+                            "update AGS0 set colorMPL= '{0}'  where __description ='{1}'".
+                              format(update_geo_values[1] , 
+                                     self.geo_structure_name))
                     
                     else :
-                        __oldvalues = list(self.manage_geoDataBase.curs.execute("Select * from AGS0 where __description ='{0}'".\
-                                                 format(self.geo_structure_name)))[0]
-                        self.manage_geoDataBase.curs.execute("update AGS0 set {0}= '{1}'  where __description ='{2}'".\
-                                                     format(geo_key, update_geo_values , self.geo_structure_name))
-                        __newvalues = list(self.manage_geoDataBase.curs.execute("Select * from AGS0 where __description ='{0}'".\
-                                                 format(self.geo_structure_name)))[0]
-                    self.manage_geoDataBase.commit()    # inout new info to database from cursor 
+                        __oldvalues = list(
+                            self.manage_geoDataBase.curs.execute(
+                                "Select * from AGS0 where __description ='{0}'".
+                                   format(self.geo_structure_name)))[0]
+                        self.manage_geoDataBase.curs.execute(
+                            "update AGS0 set {0}= '{1}'  where __description ='{2}'".
+                               format(geo_key, update_geo_values ,
+                                      self.geo_structure_name))
+                        __newvalues = list(
+                            self.manage_geoDataBase.curs.execute(
+                                "Select * from AGS0 where __description ='{0}'".\
+                                   format(self.geo_structure_name)))[0]
+                    # inpout new info to database from cursor         
+                    self.manage_geoDataBase.commit()    
                     
                     if geo_key.find('rgb') >=0 : 
-                        print('---> {0} colors was successfully set to rgb = {1} & matplotlib rgba = {2}.'.\
-                              format(self.geo_structure_name, update_geo_values[0], update_geo_values[1]))
+                        print('---> {0} colors was successfully set to '
+                              'rgb = {1} & matplotlib rgba = {2}.'.
+                              format(self.geo_structure_name,
+                                     update_geo_values[0],
+                                     update_geo_values[1]))
                     else : 
-                        fmt_mess = '---> {0} was successfully set to geoDataBase.\n ** Old value = {1} \n is **updated to \n New value = {2}'
-                        print(fmt_mess.format(self.geo_structure_name,__oldvalues, __newvalues ))
+                        fmt_mess = '---> {0} was successfully set to'\
+                            ' geoDataBase.\n ** Old value = {1} \n is '\
+                                '**updated to \n New value = {2}'
+                        print(fmt_mess.format(
+                            self.geo_structure_name,__oldvalues, __newvalues ))
                         
             self.manage_geoDataBase.closeDB() # close the database 
     @property 
@@ -360,7 +461,7 @@ class GeoDataBase (object):
         if   ')' in mpl_hatch: mpl_hatch =mpl_hatch.replace(')', '')
         
         # chech whether the value provided is right 
-        if mpl_hatch == 'none' : self._hatch =mpl_hatch  # keep the initialised value 
+        if mpl_hatch == 'none' : self._hatch =mpl_hatch 
         else :
             for mpstr  in mpl_hatch : 
                 if mpstr in self.make_pattern_symbol  : 
@@ -393,14 +494,14 @@ class GeoDataBase (object):
         .. note:: `__description` could be replaced by `name`.
                     `code` , `label` and `FGDC` dont need to be fill. 
                     Values are rejected if given.
-                    
-                
+    
         :param new_geological_rock_name: new name of geological formation to add 
         :type new_geological_rock_name: str 
         
-        :param informations: dict , must be on keyward keys  when keywords keys 
-                                are provided , program will check whether all keys are
-                                effectively the right keys. if not will aborted the process.
+        :param informations: 
+            dict , must be on keyward keys  when keywords keys 
+                are provided , program will check whether all keys are
+                effectively the right keys. if not will aborted the process.
         :type informations: dict
         
         :Example: 
@@ -473,19 +574,23 @@ class GeoDataBase (object):
 
             return code             # return new code that not exist in geocodes 
             
-        _logger.info ('Starting process  new geological information into GeoDatabase')
+        _logger.info (
+            'Starting process  new geological information into GeoDatabase')
         
-        if new_geological_rock_name is None : # find geological rocks name if is in keywords dict
+        # find geological rocks name if is in keywords dict
+        if new_geological_rock_name is None : 
             if '__description' in list(kws.keys()) : 
                 new_geological_rock_name=str(kws['__description'])
             elif 'name' in list(kws.keys()) : 
                 new_geological_rock_name=str(kws['name'])
             else : 
-                raise CSex.pyCSAMTError_SQL_update_geoinformation(' ! Unable to find a new geo_logical structure name.')
+                raise CSex.pyCSAMTError_SQL_update_geoinformation(
+                    ' ! Unable to find a new geo_logical structure name.')
     
         if not isinstance(new_geological_rock_name, str) : 
-            raise CSex.pyCSAMTError_SQL_update_geoinformation('Unacceptable rocks names ={0}.'\
-                                                              ' Please provide a right rock name.')
+            raise CSex.pyCSAMTError_SQL_update_geoinformation(
+                'Unacceptable rocks names ={0}.'
+                 ' Please provide a right rock name.')
         new_geological_rock_name=str(new_geological_rock_name) # 
         
         
@@ -493,7 +598,8 @@ class GeoDataBase (object):
         
         geoDataBase_obj =  GeoDataBase(new_geological_rock_name)
         
-        mmgeo={geokey : 'none' for geokey in geoDataBase_obj.codef } # initialise to 'none' value 
+        # initialise to 'none' value 
+        mmgeo={geokey : 'none' for geokey in geoDataBase_obj.codef } 
         
         if geoDataBase_obj.success ==1 :  geoDataBase_obj._avoid_injection()
         elif geoDataBase_obj.success  ==0:
@@ -505,22 +611,27 @@ class GeoDataBase (object):
        
         if geoDataBase_obj.geo_structure_exists : 
             mess ='! Name {0} already exists in our GeoDataBase. Could not add '\
-                'again as new geostructure. Use "_update_geo_geostructure method" to update infos if you need !'.format(geoDataBase_obj.geo_structure_name)
+                'again as new geostructure. Use "_update_geo_geostructure method"'\
+                    ' to update infos if you need !'.format(
+                        geoDataBase_obj.geo_structure_name)
             warnings.warn(mess)
             _logger.error(mess)
             raise CSex.pyCSAMTError_SQL_update_geoinformation(mess)
             
         if geoDataBase_obj.geo_structure_exists is False : 
   
-            # make an copy of codef useful in the case where  user provided "name" as key instead of "__description" 
+            # make an copy of codef useful in the case where 
+            # user provided "name" as key instead of "__description" 
             import copy 
             new_codef = copy.deepcopy(geoDataBase_obj.codef)
-            mmgeo ['__description'] = str(new_geological_rock_name) #  set the first value of keys to fill 
+            #  set the first value of keys to fill 
+            mmgeo ['__description'] = str(new_geological_rock_name) 
             if 'name' in list(kws.keys()) : 
                  new_codef[2]= 'name'
             
             # get the list of geo_code values in DataBase 
-            geoDataBase_obj.manage_geoDataBase.curs.execute('Select code  from AGS0 ')
+            geoDataBase_obj.manage_geoDataBase.curs.execute(
+                'Select code  from AGS0 ')
             
             __geocode =[codegeo[0] for codegeo in  
                         list(geoDataBase_obj.manage_geoDataBase.curs)]
@@ -529,36 +640,44 @@ class GeoDataBase (object):
             for key in list(kws.keys()) : 
 
                 if key not in new_codef  : 
-                    raise CSex.pyCSAMTError_SQL_update_geoinformation( 'Process aborted ! wrong <{0}> key!'\
-                                                              ' could not add new informations. Please check your key !'.format(key))
+                    raise CSex.pyCSAMTError_SQL_update_geoinformation(
+                        'Process aborted ! wrong <{0}> key!'
+                         ' could not add new informations. '
+                         'Please check your key !'.format(key))
+                #  set code and labels from geo_description name 
+                elif key  in new_codef:  
                 
-                elif key  in new_codef:  #  set code and labels from geo_description name 
-                
-                    try : # check if name is provided intead of  __description name (generaly code and label are the same)
-                        mmgeo['code'] = __generate_structure_code (new_geological_rock_name, __geocode)
-                        mmgeo['label']= __generate_structure_code (new_geological_rock_name,  __geocode)
+                    try : # check if name is provided intead of  __description 
+                    # name (generaly code and label are the same)
+                        mmgeo['code'] = __generate_structure_code (
+                            new_geological_rock_name, __geocode)
+                        mmgeo['label']= __generate_structure_code (
+                            new_geological_rock_name,  __geocode)
  
                     except : # user can provide name instead of __description 
-                        mmgeo['code'] = __generate_structure_code (new_geological_rock_name, __geocode)
-                        mmgeo['label']= __generate_structure_code (new_geological_rock_name, __geocode )
+                        mmgeo['code'] = __generate_structure_code (
+                            new_geological_rock_name, __geocode)
+                        mmgeo['label']= __generate_structure_code (
+                            new_geological_rock_name, __geocode )
  
                     
                     if key.find('pat')>= 0 :
                         geoDataBase_obj.pattern = kws[key]
                 
-                        for kvalue  in ['pattern', 'pat_size',	'pat_density','pat_thickness']: 
+                        for kvalue  in ['pattern', 'pat_size',
+                                        't_density','pat_thickness']: 
                             if key == kvalue : 
                                 mmgeo[kvalue]= kws[key]
                                 
                     # set RGB value and MPL colors eg : R128G128B --.(0.50, 0.5, 1.0)
                     if key =='rgb' :
                         geoDataBase_obj.rgb= kws[key]
-                        
-                        mmgeo['rgb']=  geoDataBase_obj.rgb[0] # set at the same time rgb value and color MPL 
+                        # set at the same time rgb value and color MPL 
+                        mmgeo['rgb']=  geoDataBase_obj.rgb[0] 
                         mmgeo['colorMPL']=  geoDataBase_obj.rgb[1]
                         
-                    # set Matplotlib color whether the rgb is not provided . if provided will skip 
-                    
+                    # set Matplotlib color whether the rgb is not provided .
+                    # if provided will skip 
                     if key=='colorMPL': 
                         if mmgeo['colorMPL'] =='none' : 
                             geoDataBase_obj.colorMPL= kws[key]
@@ -582,15 +701,18 @@ class GeoDataBase (object):
                 mm_sql.append(mmgeo[codk])
 
         
-            reqSQL = 'insert into AGS0 ({0}) values ({1})'.format(','.join(['{0}'.format(key) for key in geoDataBase_obj.codef ]),
-                                                    ','.join(['?' for ii in range(len(geoDataBase_obj.codef))]))
+            reqSQL = 'insert into AGS0 ({0}) values ({1})'.format(
+                ','.join(['{0}'.format(key) for key in geoDataBase_obj.codef ]),
+                ','.join(['?' for ii in range(len(geoDataBase_obj.codef))]))
  
             try : 
                 # geoDataBase_obj.manage_geoDataBase.curs.execute(reqSQL , mm_sql )
-                geoDataBase_obj.manage_geoDataBase.curs.execute( reqSQL , mm_sql )
+                geoDataBase_obj.manage_geoDataBase.curs.execute(
+                    reqSQL , mm_sql )
                 
             except : 
-                mess='Process to set {0} infos  failed !  Try again later ! '.format(new_geological_rock_name)
+                mess='Process to set {0} infos failed!  Try again '\
+                    'later! '.format(new_geological_rock_name)
                 warnings.warn (mess)
                 _logger.error(mess)
                 
@@ -599,7 +721,8 @@ class GeoDataBase (object):
             else :
    
                 geoDataBase_obj.manage_geoDataBase.commit()     
-                print('---> new data ={} was successfully set into GeoataBase ! '.format(new_geological_rock_name)) 
+                print('---> new data ={} was successfully set into'
+                      ' GeoataBase ! '.format(new_geological_rock_name)) 
             
         geoDataBase_obj.manage_geoDataBase.closeDB() # close the database 
         
@@ -615,7 +738,8 @@ class GeoDataBase (object):
         try : 
              float(pattern_value)
         except : 
-            mes =f'Process aborted ! Could not convert {pattern_value} to float number.'
+            mes ='Process aborted ! Could not convert'\
+                f' {pattern_value} to float number.'
             self._logging.warning(mes)
             raise CSex.pyCSAMTError_SQL_update_geoinformation(mes)
 
@@ -637,37 +761,46 @@ class GeoDataBase (object):
  
         if isinstance(mpl_color, str): # get value from database 
    
-            if mpl_color.find('(')>=0 and mpl_color.find(')')>=0 : 
-                self._mplcolor = tuple([ float(ss) for ss in # build the tuple of mpl colors 
-                                                   mpl_color.replace('(', '').replace(')', '').split(',')])
-
-            elif '#' in mpl_color : # we assume that value colorMPL is hexadecimal value eg : #0000ff
-                self._mplcolor =  str(mpl_color).lower()    # assume the colorMPL is in hexadecimal 
+            if mpl_color.find('(')>=0 and mpl_color.find(')')>=0 :
+                # build the tuple of mpl colors 
+                self._mplcolor = tuple([ float(ss) for ss in 
+                                         mpl_color.replace(
+                                             '(', '').replace(')',
+                                                              '').split(',')])
+            # we assume that value colorMPL is hexadecimal value eg : #0000ff
+            elif '#' in mpl_color : 
+                 # assume the colorMPL is in hexadecimal 
+                self._mplcolor =  str(mpl_color).lower() 
             elif 'none' in mpl_color : # initilisation  value 
-                self._mplcolor =  'none'            # keep the value on the dataBase 
+                self._mplcolor =  'none' # keep the value on the dataBase 
             else : 
                 import matplotlib as mpl 
                 try : # try to convert color to rgba
                 
                     self._mplcolor = mpl.colors.to_rgb(str ( mpl_color))
                 except : 
-                    raise  CSex.pyCSAMTError_SQL_manager(' Unsupported {0} color!'.format(mpl_color))  
-                else :  # keep only R, G, B and abandon alpha . Matplotlib give tuple of 4 values 
+                    raise  CSex.pyCSAMTError_SQL_manager(
+                        ' Unsupported {0} color!'.format(mpl_color))  
+                else :  # keep only R, G, B and abandon alpha . 
+                        #Matplotlib give tuple of 4 values 
                         # as (R, G, B, alpha)
                     self._mplcolor =self._mplcolor[:3] 
-            
-        elif  isinstance(mpl_color, (list, tuple, np.ndarray)):  # set value to database way 
+                    
+             # set value to database way 
+        elif  isinstance(mpl_color, (list, tuple, np.ndarray)): 
             if 3 <len(mpl_color) < 3 : 
-                msg =''.join(['update failed ! value = {0} must be a tuple of '.format(mpl_color),
-                             '3 values = (Red, Green, Blue) values.', 
-                             ' Please provided a right number again later.'])
+                msg =''.join(['update failed ! value = {0} '.format(mpl_color),
+                              'must be a tuple of 3 values= (Red, Green, Blue)',
+                             'values. Please provided a right number', 
+                             '  again later.'])
                 
                 self._logging.error(msg)
                 raise CSex.pyCSAMTError_SQL_update_geoinformation(msg)
-                
-            if len(mpl_color)==3 : # let check whether the value provided can be converted to float 
+            # let check whether the value provided can be converted to float    
+            if len(mpl_color)==3 :  
                 try : 
-                     self._mplcolor= tuple( [float(ss) for ss in list( mpl_color)])
+                     self._mplcolor= tuple( [float(ss) for
+                                             ss in list( mpl_color)])
                 except : 
                      msg =''.join(['update failed ! Could not convert value ',
                                    '= {0} to float.'.format(mpl_color), 
@@ -675,15 +808,18 @@ class GeoDataBase (object):
                      self._logging.error(msg)
                      raise CSex.pyCSAMTError_SQL_update_geoinformation(msg)
                 else : 
-                    # try to check if value is under 1. because clor is encoding to 1 to 255 bits 
+                    # try to check if value is under 1.
+                    # because clor is encoding to 1 to 255 bits 
                     for ival in  self._mplcolor: 
                         if 1 < ival <0  : 
                             if ival > 1 : fmt ='greater than 1' 
                             elif  ival <0 :
                                 fmt= 'less than 0'
-                            msg = ''.join(['update failed ! Value provided  =',
-                                           ' {0} is UNacceptable value !'.format(ival),
-                                           ' input value is {0}. It must be encoding on 1 to 255 bits as MPL colors.'.format(fmt)])
+                            msg = ''.join([
+                                'update failed ! Value provided  =',
+                                ' {0} is UNacceptable value !'.format(ival),
+                                f' input value is {fmt}. It must be encoding on ',
+                                '1 to 255 bits as MPL colors.'])
                             raise CSex.pyCSAMTError_SQL_update_geoinformation(msg)
                             
                 self._mplcolor=str( self._mplcolor) # put on str for consistency 
@@ -703,7 +839,8 @@ class GeoDataBase (object):
         """
         from pycsamt.geodrill.geoCore.structural import get_color_palette
 
-        self._rgb=(litteral_rgb, str(get_color_palette(RGB_color_palette=litteral_rgb)))
+        self._rgb=(litteral_rgb, str(
+            get_color_palette(RGB_color_palette=litteral_rgb)))
         
     @property 
     def electrical_props(self): 
@@ -715,44 +852,56 @@ class GeoDataBase (object):
         """
         configure electrical property
         
-        .. note:: Electrical_property of rocks must a tuple of resisvity , max and Min
-                bounds  eg : [2.36e-13, 2.36e-3]
+        .. note:: Electrical_property of rocks must a tuple of resisvity ,
+                 max and Min bounds  eg : [2.36e-13, 2.36e-3]
         """
-        if isinstance(range_of_rocks_resvalues , str) : # electrical props were initialse by float 0. 
+        # electrical props were initialse by float 0. 
+        if isinstance(range_of_rocks_resvalues , str) : 
             if '(' in range_of_rocks_resvalues  : 
-                self._electrical_props = tuple([ float(ss) for ss in # build the tuple of mpl colors 
-                                               range_of_rocks_resvalues .replace('(', '').replace(')', '').split(',')]) 
+                self._electrical_props = tuple([ 
+                    float(ss) for ss in # build the tuple of mpl colors 
+                    range_of_rocks_resvalues .replace('(',
+                                                '').replace(')',
+                                                            '').split(',')]) 
             elif 'none' in range_of_rocks_resvalues : 
                 self._electrical_props =.0
                 
         elif isinstance(range_of_rocks_resvalues,(list,tuple, np.ndarray)): 
             if len(range_of_rocks_resvalues) ==2  : 
                 try : 
-                    self._electrical_props =[float(res) for res in range_of_rocks_resvalues]
+                    self._electrical_props =[float(res) 
+                                       for res in range_of_rocks_resvalues]
                 except : 
-                    raise CSex.pyCSAMTError_SQL_update_geoinformation(' !Could not convert input values to float.')
-                else :
-                    self._electrical_props =sorted(self._electrical_props) # range the values to min to max 
+                    raise CSex.pyCSAMTError_SQL_update_geoinformation(
+                        ' !Could not convert input values to float.')
+                else :# range the values to min to max 
+                    self._electrical_props =sorted(self._electrical_props) 
                     self._electrical_props = str(tuple(self._electrical_props))
             else : 
-                self._electrical_props = .0         # force program to format value to 0. float 
+                # force program to format value to 0. float 
+                self._electrical_props = .0   
                     
-        elif not isinstance(range_of_rocks_resvalues,(list,tuple, np.ndarray)) or len(range_of_rocks_resvalues)!=2:
-            try : 
-                range_of_rocks_resvalues = float(range_of_rocks_resvalues) # 0 at initialization 
+        elif not isinstance(range_of_rocks_resvalues,
+                            (list,tuple, np.ndarray)) or len(
+                                range_of_rocks_resvalues)!=2:
+            try : # 0 at initialization
+                range_of_rocks_resvalues = float(range_of_rocks_resvalues)  
             except  : 
                 if len(range_of_rocks_resvalues) > 1: fmt ='are'
                 else :fmt ='is'
     
-                mess = ''.join(['Unable to set electrical property of rocks.', 
-                                        ' We need only minimum and maximum resistivities bounds. {0} {1} given'.\
-                                            format(len(range_of_rocks_resvalues), fmt)])
+                mess = ''.join([
+                    'Unable to set electrical property of rocks.', 
+                    ' We need only minimum and maximum resistivities',
+                    ' bounds. {0} {1} given'.format(
+                        len(range_of_rocks_resvalues), fmt)])
+                        
                 self._logging.error(mess)
                 warnings.warn(mess)
                 raise CSex.pyCSAMTError_SQL_update_geoinformation(mess)
             else : 
                 
-                self._electrical_props = .0          #mean value  initialised 
+                self._electrical_props = .0 #mean value  initialised 
                 
 
     @property
@@ -791,7 +940,8 @@ class GeoDataBase (object):
                        ]) 
         
         # create Request to insert value into table 
-        mes ='insert into AGS0 ('+ ','.join(['{}'.format(icode) for icode in self.codef])
+        mes ='insert into AGS0 ('+ ','.join(['{}'.format(icode)
+                                             for icode in self.codef])
         enter_req = mes+ ')'
         
 
@@ -800,25 +950,30 @@ class GeoDataBase (object):
         
         new_codef ,  new_codef[-1], new_codef[0]= self.codef [:8], 'color', 'codes'
         # get attribute from geoformation and #build new geo_formations _codes 
-        geo_form_codes =[ getattr(geo_formation_obj, codehead) for codehead in new_codef ]
-        geo_form_codes =func.concat_array_from_list(geo_form_codes, concat_axis=1)
+        geo_form_codes =[ getattr(geo_formation_obj, codehead) 
+                         for codehead in new_codef ]
+        geo_form_codes =func.concat_array_from_list(geo_form_codes,
+                                                    concat_axis=1)
         # generate other main columns of tables to fill laters 
-        geo_add_form_codes = func.concat_array_from_list(list_of_array = [ np.zeros((len(geo_formation_obj.codes),)), 
-                                                                     np.full((len(geo_formation_obj.codes),), 'none'), 
-                                                                     np.array([str (clsp) for clsp in geo_formation_obj.mpl_colorsp]),
-                                                                     np.full((len(geo_formation_obj.codes),),'none'),
+        geo_add_form_codes = func.concat_array_from_list(
+            list_of_array = [ np.zeros((len(geo_formation_obj.codes),)), 
+                            np.full((len(geo_formation_obj.codes),), 'none'), 
+                            np.array([str (clsp) 
+                                      for clsp in geo_formation_obj.mpl_colorsp]),
+                            np.full((len(geo_formation_obj.codes),),'none'),
                                                                       ],
                                                          concat_axis=1 )
         # create Table resquest 
         
-        req = req.format(*self.codef)                        # generate a request for table creation 
-        enter_req = enter_req.format(*self.codef)            # generate interrequest 
+        req = req.format(*self.codef)              # generate a request for table creation 
+        enter_req = enter_req.format(*self.codef)  # generate interrequest 
 
         GDB_DATA = np.concatenate((geo_form_codes,geo_add_form_codes), axis =1)
         
         # generate values Host string so to avoid injection 
         # print(req)
-        values_str = 'values (' + ','.join(['?' for itg in range( GDB_DATA.shape[1])]) +')'
+        values_str = 'values (' + ','.join(['?' 
+                                for itg in range( GDB_DATA.shape[1])]) +')'
         insert_request = ''.join([enter_req , values_str])
 
         # create Table
@@ -828,13 +983,15 @@ class GeoDataBase (object):
             
         except : 
             warnings.warn('Could not create {AGS0} Table !')
-            raise CSex.pyCSAMTError_SQL_geoDataBase('Table AGS0 already exists !')
+            raise CSex.pyCSAMTError_SQL_geoDataBase(
+                'Table AGS0 already exists !')
 
         if self.manage_geoDataBase.success ==1: 
             # enter the record 
             for ii, row_geoDataBase in enumerate(GDB_DATA ): 
                 row_geoDataBase =tuple(row_geoDataBase)
-                self.manage_geoDataBase.executeReq(query=insert_request , param =row_geoDataBase ) 
+                self.manage_geoDataBase.executeReq(
+                    query=insert_request , param =row_geoDataBase ) 
         
         self.manage_geoDataBase.commit()
         self.manage_geoDataBase.closeDB()
@@ -877,23 +1034,26 @@ class Recorder_sql(object):
         >>> realpath=os.path.dirname(os.path.realpath(__file__)) 
         >>> #where 'the file'sql_recorder is located'
         >>> print(realpath)
-        >>> path_to_files =os.path.normpath(os.path.join(realpath,'sql_utils','sql_DB'))
+        >>> path_to_files =os.path.normpath(os.path.join(realpath,'sql_utils',
+        ...                                                 'sql_DB'))
         >>> os.chdir(path_to_files)
         >>>  filename='nofacies_data_2.csv'
         >>> memory_DB='memory.sq3'
         >>> path_to_memory=os.path.dirname(os.path.realpath(memory_DB))
         >>> Rec=Recorder_sql(database=memory_DB,table=None)
-        >>> recordList1=Recorder_sql.recordData(data=filename,new_tablename='TEST2',
-        ...                                    sep=',')
+        >>> recordList1=Recorder_sql.recordData(
+            data=filename,new_tablename='TEST2',sep=',')
         >>> sdico_app=Recorder_sql.set_on_dict_app( datalist=recordList0)
-        >>>  sdico_app=Recorder_sql.arrangeData_for_dictapp( datalist=recordList0)
-        >>> trand_sql= Rec.transferdata_to_sqlDB( filename=filename,record_list= None,
-        ...                                         table_name='exam_zju_2',comments=None,
-        ...                                         visualize_table_creating_query=True,
-        ...                                         path_to_sqlDataBase=path_to_files,
-        ...                                         Drop_DB_Tables='none', fetchall=True, 
-        ...                                         ready_to_transfer='n',
-        ...                                         close_connexion =False)
+        >>>  sdico_app=Recorder_sql.arrangeData_for_dictapp( 
+            datalist=recordList0)
+        >>> trand_sql= Rec.transferdata_to_sqlDB( 
+            filename=filename,record_list= None,
+        ...                 table_name='exam_zju_2',comments=None,
+        ...                 visualize_table_creating_query=True,
+        ...                 path_to_sqlDataBase=path_to_files,
+        ...                 Drop_DB_Tables='none', fetchall=True, 
+        ...                 ready_to_transfer='n',
+        ...                 close_connexion =False)
     """
     
     def __init__(self, database , table=None,**kwargs):
@@ -905,10 +1065,12 @@ class Recorder_sql(object):
         # self.descriptif =Glob.dicoT[table]
         
         
-    def transferdata_to_sqlDB(self, record_list=None, filename=None, table_name=None, **kwargs):
+    def transferdata_to_sqlDB(self, record_list=None,
+                              filename=None, table_name=None, **kwargs):
         """
-        Function to transfer Data from Dict_app to SQL DataBase. Users can use this function by
-        including several arguments. The function will build the data , arrange  it and put it in 
+        Function to transfer Data from Dict_app to SQL DataBase. Users 
+        can use this function byincluding several arguments.
+        The function will build the data , arrange  it and put it in 
         the dataBase by commit the dataBase. Use only this func is benefit.
         It is better to revise arguments of that function.
         
@@ -935,10 +1097,12 @@ class Recorder_sql(object):
                    
             *  Drop_DB_Tables : str, 
                    way to drop table in SQL Database . set litteral arguments like 
-                  the name of database user want to drop or [ no "*" or all to drop all tables. 
+                  the name of database user want to drop or 
+                  [ no "*" or all to drop all tables. 
                                                              
             *  Ready_to_transfer : str 
-                   process to commit Database , the curso tranfered the dataBase to SQL connexion.
+                   process to commit Database , the curso tranfered
+                   the dataBase to SQL connexion.
                    set litteral 'no' or 'yes' to do.
               
             *  close_connexion : bool , 
@@ -961,9 +1125,11 @@ class Recorder_sql(object):
         close_connex=kwargs.pop('close_connexion',False)
         
         if record_list == None :
-            record_list=Recorder_sql.keepDataInfos(data=filename,new_tablename= table_name)
+            record_list=Recorder_sql.keepDataInfos(
+                data=filename,new_tablename= table_name)
             
-        sdico_app=Recorder_sql.arrangeData_for_dictapp( datalist=record_list, comments=comments)
+        sdico_app=Recorder_sql.arrangeData_for_dictapp(
+            datalist=record_list, comments=comments)
         
         for keys , values  in sdico_app.items():
             # or keys=[keys for keys in sdico_app]--> keys =keys[0]
@@ -982,7 +1148,8 @@ class Recorder_sql(object):
             self.table =table_name
             
         if self.table not in list(self.GlobDicoT.keys()):
-            raise  f'No such Table <{self.table}> in the dataBase{self.sqlmanager} ! '\
+            raise  f'No such Table <{self.table}> '\
+                'in the dataBase{self.sqlmanager} ! '\
                 'You may enter the right Table Name.'
             
         self.descriptif =self.GlobDicoT[self.table]
@@ -1006,21 +1173,24 @@ class Recorder_sql(object):
             manDB.print_query()
         
 
-        if drop_table ==False or drop_table.lower() in ['none',"no", 'not yet','wait','not ready']:
+        if drop_table ==False or drop_table.lower() in [
+                'none',"no", 'not yet','wait','not ready']:
             pass
-        elif drop_table ==True or drop_table.lower() in ['total', 'all', 'all tables','*']:
+        elif drop_table ==True or drop_table.lower() in [
+                'total', 'all', 'all tables','*']:
             
             manDB.drop_TableDB( dicTables=self.GlobDicoT,drop_all=True)
             
-        elif drop_table ==True and drop_table.lower() in list[self.GlobDicoT.keys()]:
+        elif drop_table ==True and drop_table.lower() in list[
+                self.GlobDicoT.keys()]:
             
-            manDB.drop_TableDB( dicTables=self.GlobDicoT,drop_table_name=drop_table )
+            manDB.drop_TableDB( dicTables=self.GlobDicoT,
+                               drop_table_name=drop_table )
         else :
             pass 
         
-        if ready_to_transfer ==True or ready_to_transfer.lower() in ['y','alright,'
-                                                                     'yes','ok',
-                                                                     'fine',"right"] :
+        if ready_to_transfer ==True or ready_to_transfer.lower() in [
+                'y','alright,''yes','ok','fine',"right"] :
             manDB.commit()
                      
         if close_connex is True :
@@ -1037,7 +1207,8 @@ class Recorder_sql(object):
         ----------
             * data : str, np.array, list, or pd.core.DataFrame object
                     Data ca, be on the format above or filename of data 
-                    if the argument "data" is a filename, we must be convert on ".csv" format.
+                    if the argument "data" is a filename, we must be convert 
+                    on ".csv" format.
                 
             * new_tablename : str, optional
                     Name of database. if name is not given , the 
@@ -1088,8 +1259,10 @@ class Recorder_sql(object):
                 #         type_of_value.append(type(item))
             type_of_value=[type(item) for  item in datavalues[0,:].tolist()] 
             index_item=[columns.index(item)+1 for item in columns]
-            num_of_val=[datavalues[:,ii].shape[0] for ii, item in enumerate(columns)]
-            tempkeylenvalue=(columns, type_of_value,index_item,num_of_val,temp)
+            num_of_val=[datavalues[:,ii].shape[0]
+                        for ii, item in enumerate(columns)]
+            tempkeylenvalue=(columns, type_of_value,
+                             index_item,num_of_val,temp)
             
             if new_tablename is not None : 
                 return {new_tablename:tempkeylenvalue}
@@ -1099,14 +1272,18 @@ class Recorder_sql(object):
         elif type(data) ==np.ndarray:
             
             if nump_columns is None :
-                raise Exception ('The primary keys is needed ! You may provide at least {0} fields to fill the database '\
-                                 'like  dictionnary values first key.'.format(data.shape[1]))
+                raise Exception (
+                    'The primary keys is needed ! You may provide at'
+                    ' least {0} fields to fill the database '
+                    'like  dictionnary values first key.'.format(
+                        data.shape[1]))
             if np.dim(data)==1 :
                 data=data.reshape((1,data.shape[0]))
             asize=data.shape[1]         # check the number of columns
             len_nump=len(nump_columns)
-            assert asize == len_nump ,'The shape at index 1 must be the same like the '\
-                'lenght << {0}>> of data you provide'.format(len(nump_columns))
+            assert asize == len_nump ,'The shape at index 1 must be the same'\
+                ' like the lenght << {0}>> of data you provide'.format(
+                    len(nump_columns))
             # if as_key_for_DB ==None : 
             #     as_key_for_DB=['_'.join([val[:-2]for val in nump_columns])] 
                 
@@ -1115,9 +1292,12 @@ class Recorder_sql(object):
                     temp.append(tuple(rowlines.tolist()))
                     
                 type_of_value=[type(item) for  item in data[0,:].tolist()] 
-                index_item=[nump_columns.index(item)+1 for item in nump_columns]
-                num_of_val=[datavalues[:,ii].shape[0] for ii, item in enumerate(nump_columns)]
-                tempkeylenvalue=(nump_columns, type_of_value,index_item,num_of_val,temp)
+                index_item=[nump_columns.index(item)+1 
+                            for item in nump_columns]
+                num_of_val=[datavalues[:,ii].shape[0] 
+                            for ii, item in enumerate(nump_columns)]
+                tempkeylenvalue=(nump_columns,
+                                 type_of_value,index_item,num_of_val,temp)
                 if new_tablename is not None : 
                     return {new_tablename:tempkeylenvalue}
     
@@ -1127,8 +1307,10 @@ class Recorder_sql(object):
                 # type_of_value=type(data.tolist()[0])
                 type_of_value=type(data.tolist())       
                 if new_tablename is not None : 
-                    return {new_tablename:(nump_columns[0],type_of_value,asize, data.tolist())}
-                return (nump_columns[0],type_of_value,asize, data.shape[1], data.shape[0],data.tolist())
+                    return {new_tablename:(nump_columns[0],
+                                           type_of_value,asize, data.tolist())}
+                return (nump_columns[0],type_of_value,asize,
+                        data.shape[1], data.shape[0],data.tolist())
             
             
     @staticmethod    
@@ -1190,7 +1372,8 @@ class Recorder_sql(object):
                     id_='{0:<10}'.format(id(main_f[ii]))
                     dtime='{0:} - {1:}'.format(datetime.now(),timezone.utc)
                     
-                    idkey='{0:<}'.format(key[:-2]+main_f[ii][:-2]+id_[0]+num_of_val[ii][0]+main_f[ii][-1])
+                    idkey='{0:<}'.format(key[:-2]+main_f[ii][:-2]+id_[0]+\
+                                         num_of_val[ii][0]+main_f[ii][-1])
                     if comments is None :
                         comments ='{0:}{1:<7}{2}'.format(key[:int(len(key)/2)],
                                                str(id(datalist))[-7:],main_f[ii])
@@ -1205,7 +1388,8 @@ class Recorder_sql(object):
                 
         return dicosqlDB 
     
-    @redirect_cls_or_func( keepDataInfos,'func"recordData" was redirected to func "keepDataInfos" on called it.')
+    @redirect_cls_or_func( keepDataInfos,'func"recordData" was redirected '
+                          'to func "keepDataInfos" on called it.')
     @staticmethod    
     def recordData (data, new_tablename=None , **kwargs ):
         """
@@ -1218,7 +1402,8 @@ class Recorder_sql(object):
         ----------
             * data : str, np.array, list,  pd.core.DataFrame object
                     Data ca, be on the format above or filename of data 
-                    if the argument "data" is a filename, we must be convert on ".csv" format.
+                    if the argument "data" is a filename, we must be 
+                    convert on ".csv" format.
                 
             * new_tablename : str, optional
                     Name of database. if name is not given , the 
@@ -1272,7 +1457,8 @@ class Recorder_sql(object):
             for ii, kkey in enumerate( columns) : 
                 # type_of_value=type(datavalues[:,ii].tolist()[0])
                 type_of_value=type(datavalues[:,ii].tolist())                
-                tempkeylenvalue.append((kkey,type_of_value,ii+1, datavalues[:,ii].shape[0],
+                tempkeylenvalue.append((kkey,type_of_value,ii+1, 
+                                        datavalues[:,ii].shape[0],
                                         datavalues[:,ii].tolist()))
             if new_tablename is not None : 
                 return {new_tablename:tempkeylenvalue}
@@ -1282,14 +1468,18 @@ class Recorder_sql(object):
         elif type(data) ==np.ndarray:
             
             if nump_columns is None :
-                raise Exception ('Th primary keys is needed ! You may provide at least {0} fields to fill the database '\
-                                 'like  dictionnary values first key.'.format(data.shape[1]))
+                raise Exception (
+                    'The primary keys is needed ! You may provide at least'
+                    ' {0} fields to fill the database '\
+                                 'like  dictionnary values first key.'.format(
+                                     data.shape[1]))
             if np.dim(data)==1 :
                 data=data.reshape((1,data.shape[0]))
             asize=data.shape[1]         # check the number of columns
             len_nump=len(nump_columns)
             assert asize == len_nump ,'The shape at index 1 must be the same like the '\
-                'lenght << {0}>> of data you provide'.format(len(nump_columns))
+                'lenght << {0}>> of data you provide'.format(
+                    len(nump_columns))
             # if as_key_for_DB ==None : 
             #     as_key_for_DB=['_'.join([val[:-2]for val in nump_columns])] 
                 
@@ -1298,7 +1488,8 @@ class Recorder_sql(object):
                     datatolist=datavalues[:,ii].tolist()
                     # type_of_value=type(datatolist[0])
                     type_of_value=type(datatolist)                    
-                    tempkeylenvalue.append((kkeys,type_of_value,ii+1,datavalues[:,ii].shape[0],
+                    tempkeylenvalue.append((kkeys,type_of_value,
+                                            ii+1,datavalues[:,ii].shape[0],
                                             datatolist))
                 
                 if new_tablename is not None : 
@@ -1310,11 +1501,15 @@ class Recorder_sql(object):
                 # type_of_value=type(data.tolist()[0])
                 type_of_value=type(data.tolist())       
                 if new_tablename is not None : 
-                    return {new_tablename:(nump_columns[0],type_of_value,asize, data.shape[1],
+                    return {new_tablename:(nump_columns[0],
+                                           type_of_value,asize, data.shape[1],
                                             data.tolist())}
-                return (nump_columns[0],type_of_value,asize, data.shape[1], data.tolist())
+                return (nump_columns[0],type_of_value,asize,
+                        data.shape[1], data.tolist())
     
-    @redirect_cls_or_func(arrangeData_for_dictapp,'set_on_dict will redirect to "arrangeData_for_dictapp once called." ')
+    @redirect_cls_or_func(arrangeData_for_dictapp,
+                          'set_on_dict will redirect to '
+                          '"arrangeData_for_dictapp once called." ')
     @staticmethod    
     def set_on_dict_app( datalist, **kwargs):
         """
@@ -1378,7 +1573,8 @@ class Recorder_sql(object):
                     id_='{0:<10}'.format(id(main_f))
                     dtime='{0:} - {1:}'.format(datetime.now(),timezone.utc)
                     
-                    idkey='{0:<}'.format(key[:-2]+main_f[:-2]+id_[0]+num_of_val[0]+main_f[-1])
+                    idkey='{0:<}'.format(key[:-2]+main_f[:-2]+\
+                                         id_[0]+num_of_val[0]+main_f[-1])
                     if comments is None :
                         comments ='{0:}{1:<7}{2}'.format(key[:int(len(key)/2)],
                                                str(id(datalist))[-7:],main_f)
@@ -1390,7 +1586,12 @@ class Recorder_sql(object):
                 
         return datalist     
 
-        
+if __name__=='__main__'   : 
+
+    dbObj = GeoDataBase()    
+    values = dbObj._retreive_column(['__description', 'electrical_props'])
+    print(values)
+    
 
 
             

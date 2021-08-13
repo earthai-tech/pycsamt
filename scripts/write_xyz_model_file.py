@@ -14,11 +14,13 @@ from pycsamt.modeling.occam2d import Iter2Dat as i2d
 
 
 # path to OCCAM 2D folder 
-path =os.path.join(os.environ ['pyCSAMT'], 'data', 'occam2D')
-
+#path =os.path.join(os.environ ['pyCSAMT'], 'data', 'occam2D')
+path =r'F:\ThesisImp\occam2D\invers+files\inver_res\K1'
 #savepath folder 
-savepath =None              # if None , will create a folder to hold differents output files
+#savepath =None              # if None , will create a folder to hold differents output files
 
+savepath =r'F:\ThesisImp\occam2D\invers+files\inver_res\K1\xyz'
+savepath =r'C:\Users\Administrator\OneDrive\paper2\__kouaoNEW__paper_1.run.head_2.cov.letter_3.bodytext_4.languagesummary\new_revision'
 # give an output file name 
 outputfilename =None        # if None , will create automatically 
 # scale the output data 
@@ -52,5 +54,6 @@ occam_iter2dat_obj =i2d(mesh_fn=os.path.join(path, path_to_occam_mesh),
 occam_iter2dat_obj.write_iter2dat_file(filename =outputfilename,
                                        scale=scale_output, 
                                        doi=doi, 
-                                       elevation =elevation)
+                                       elevation =elevation, 
+                                       savepath=savepath)
                 

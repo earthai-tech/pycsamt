@@ -34,25 +34,6 @@
 ## Licence 
 pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/pyCSAMT/blob/master/LICENSE.md).
 
-## Some Features 
-1. convert _*.avg_ , _*.j(.*dat)_ file  to SEG Electrical Data Interchange(EDI) file.
-2. analysis and correct CSAMT static shift effects 
-3. plot penetration depth 1D & 2D
-4. plot pseudo-cross-section of resistivity and phase
-4. plot resistivity model, plot forward response and residual model 
-5. plot "pseudostratigraphy log" with true resistivity values 
-6. generate true resistivity model from true resistivity values and true layer names 
-7. rescale profile coordinates using  `natural|distorded`, `classic` or `equidistant` keywords 
-8. read and write  EMAP or MT EDI data 
-9. plot RMS, topography, azimuth and station-separation 
-10. write corrected EDI,
-11. write occam2D inputfiles calling [MTpy](https://github.com/MTgeophysics/mtpy.git) software. 
-
-* **Available filters**
-1. *Trimming moving average* (TMA) mostly used by [Zonge International Engineering](http://zonge.com/) .
-2. *Fixed-length-dipole moving average* (FLMA) also used by [Zonge International Engineering](https://zonge.com.au/).
-3. *Adaptative moving-average* (AMA) based on idea of [Torres-Verdin](https://sci-hub.se/http://dx.doi.org/10.1190/1.1443273).
-4. *Removal distorsion* (`dist`)  and  *Static shift removal* (`ss`) usefull  filters to correct magnetotellurics (MT) data. 
 
 ## Units used    
 
@@ -69,7 +50,13 @@ pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/p
 * Step descent in m.
 * Input true resistivities in Ω.m 
 
-                                                                     
+## Available filters 
+
+1. *Trimming moving average* (TMA) mostly used by [Zonge International Engineering](http://zonge.com/) .
+2. *Fixed-length-dipole moving average* (FLMA) also used by [Zonge International Engineering](https://zonge.com.au/).
+3. *Adaptative moving-average* (AMA) based on idea of [Torres-Verdin](https://sci-hub.se/http://dx.doi.org/10.1190/1.1443273).
+4. *Removal distorsion* (`dist`)  and  *Static shift removal* (`ss`) usefull  filters to correct magnetotellurics (MT) data. 
+                                                               
 ## Plot inversion misfit and geo-strata misfit (misfit G)
 
 To plot the `misfit` from measured data and the calculated inversion data, bring the _occam response file_ (*.rep) and optional _Occamlogfile_ (*.logfile) and 

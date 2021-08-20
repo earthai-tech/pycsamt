@@ -66,7 +66,7 @@ run the script below:
 the static shift correction on raw data. 
 ```
 >>> from pysamt.modeling.occam2d import plotResponse 
->>> resPath =r'data/inversionPath'                  # path to inversion files for each lines
+>>> resPath =r'data/inversionPath'                  # path to inversion files for each line
 >>> plotResponse(data_fn =resPath,
 ...                 stations = ['S00', 'S04', 's08', 'S12']  # sites to visualize 
 ...                  rms =['1.013', '1.451', '1.00', '1.069'], # rms of each lines

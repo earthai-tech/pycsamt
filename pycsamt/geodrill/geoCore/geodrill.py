@@ -161,7 +161,8 @@ class Geodrill (object):
         ...                                             1000, 2000, 4000, 6000],
         ...                       input_layers =['alluvium', 
         ...                                      'amphibolite','altered rock',
-        ...                                                    'augen gneiss', 'granite'],
+        ...                                                    'augen gneiss',
+        ...                                                        'granite'],
         ...                       mesh_fn=os.path.join(path, 'Occam2DMesh')
         ...                       iter_fn = os.path.join(path, 'ITER17.iter'), 
         ...                       model_fn =os.path.join(path, 'Occam2DModel') , 
@@ -3831,7 +3832,7 @@ def geoModel( **kwargs ):
 class GeoStratigraphy(Geodrill):
     """
     Inherit the :class:`pycsamt.geodrill.geoCore.geodrill` to create new model 
-    NM using the model get from ocm 2D inversion results. 
+    NM using the model get from occam 2D inversion results. 
     
     The challenge of this class  is firstly to delineate with much 
     accuracy the existing layer boundary (top and bottom) and secondly,
@@ -3844,7 +3845,7 @@ class GeoStratigraphy(Geodrill):
     Arguments
     ----------
         **crm** : str,  
-                    full path to Occam model  file .                             
+                    full path to Occam model file.                             
         **eta** :  int,                
                 Value to  divide into the CRM blocks to improve 
                 the computation times. default is`5`                               
@@ -3856,7 +3857,7 @@ class GeoStratigraphy(Geodrill):
         **ptols**: float,   
                 Existing tolerance error between the `tres` values given and 
                 the calculated resistivity in `crm` 
-        **input_layers** : array_like,  
+        **input_layers** : list or array_like  
                 True input_layers names : geological 
                 informations of collected in the area.
                 
@@ -4022,7 +4023,7 @@ class GeoStratigraphy(Geodrill):
         :param crm: calculated resistivity model blocks 
         :param eta: number of block to build.
         :param ptol: Error tolerance parameters 
-    
+  
         """
         def s__auto_rocks (listOfauto_rocks): 
             """ Automatick rocks collected during the step 3
@@ -4670,60 +4671,29 @@ def display_infos(infos, **kws):
     print(inline * size )
     
 
-if __name__=="__main__" :
-    #     path = r'F:/__main__csamt__\oasis data\OASISWORKS\all_data'
-    #     geo_surface_obj = Geosurface( path =path )
-    #     geo_surface_obj.read_oasis_files()
-    # print(geo_surface_obj.oasis_data)
-    # DICO= geo_surface_obj.global_dico
-    # TEST0 = geo_surface_obj.K1_cor_oas
+# if __name__=="__main__" :
 
-    # from scipy.signal import argrelextrema as extrema 
-    
-    # maxi = extrema(geoDict['S07'][:, 1], np.greater )
-    # mini = extrema(geoDict['S07'][:, 1], np.less )
-    # print(geoDict2['S00'][:,0])
-
-
-    path=r'F:\ThesisImp\occam2D\invers+files\inver_res\K4'
-    inversion_files = {'model_fn':'Occam2DModel', 
-                       'mesh_fn': 'Occam2DMesh',
-                        "iter_fn":'ITER27.iter',
-                       'data_fn':'OccamDataFile.dat'
-                        }
-    input_resistivity_values =[10, 66, 70, 180, 1000, 2000, 
-                                   3000, 50, 7,
-                                   # 7000,
-                                   0.
-                                   ] 
-    inpt2=[np.log10(t) for t in input_resistivity_values]
-    # print(inpt2)
-    ipts= ['river water', 'fracture zone', 'granite', 'gravel',
-     'sedimentary rocks', 'massive sulphide', 'igneous rocks', 
-     'gravel', 'sedimentary rocks']
-    # input_resistivity_values =[10, 66, 70, 180, 1000, 2000, 
-    #                                3000, 7000, 15000 ] 
-    input_layer_names =['river water', 'fracture zone', 'granite']
-    inversion_files = {key:os.path.join(path, vv) for key,
-                        vv in inversion_files.items()}
-    # geoModel(**inversion_files, 
-    #             input_resistivities=input_resistivity_values, 
-    #          input_layers=input_layer_names, geodtype ='rr',
-    #             plot_misfit=False
-    #         )
-    # display_infos(infos=ipts, autores=input_resistivity_values)
-    # geoObj= Geodrill(**inversion_files)
-    # model_rs = geoObj.model_res 
-    # depthValue  = geoObj.geo_d
-    # depthobject = geoObj.geo_depth
-
-    # geosObj = GeoStratigraphy(**inversion_files, input_resistivities=input_resistivity_values, 
-    #                           input_layers=input_layer_names)
-    # geosObj._createNM(ptol =0.05)
-    
-    with np.errstate(divide='ignore'):
-        ss= np.array(inpt2) /np.array(input_resistivity_values )
-        print(ss )
+#     path=r'F:\ThesisImp\occam2D\invers+files\inver_res\K4'
+#     inversion_files = {'model_fn':'Occam2DModel', 
+#                        'mesh_fn': 'Occam2DMesh',
+#                         "iter_fn":'ITER27.iter',
+#                        'data_fn':'OccamDataFile.dat'
+#                         }
+#     input_resistivity_values =[10, 66, 70, 180, 1000, 2000, 3000] 
+                                   
+#     inpt2=[np.log10(t) for t in input_resistivity_values]
+#     ipts= ['river water', 'fracture zone', 'granite', 'gravel',
+#      'sedimentary rocks', 'massive sulphide', 'igneous rocks', 
+#      'gravel', 'sedimentary rocks']
+#     # input_resistivity_values =[10, 66, 70, 180, 1000, 2000, 
+#     #                                3000, 7000, 15000 ] 
+#     input_layer_names =['river water', 'fracture zone', 'granite']
+#     inversion_files = {key:os.path.join(path, vv) for key,
+#                         vv in inversion_files.items()}
+  
+#     with np.errstate(divide='ignore'):
+#         ss= np.array(inpt2) /np.array(input_resistivity_values )
+#         print(ss )
     
                     
                     

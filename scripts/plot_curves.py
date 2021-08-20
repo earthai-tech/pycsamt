@@ -28,7 +28,7 @@ savefigure = None #r'C:\Users\Administrator\Desktop\ThesisImp\plots\quick_analyi
 see_errobar = True              # set to False if you dont want to see errorbar on the plot 
 
 #station to plot : can reas station name liKE "S00".station number start by one . 
-station_id= [1,6,12 ]          # can be [S00, S01 , 18 ] etc.. for multiples stations plot , put stations on list
+station_id= [4 ]          # can be [S00, S01 , 18 ] etc.. for multiples stations plot , put stations on list
                           
 # create plot_obj 
 plot_1d_obj =Plot1d()

@@ -53,7 +53,10 @@ import numpy as np
 
 import pycsamt.utils.exceptions as CSex
 from pycsamt.utils import func_utils as func
+from pycsamt.utils import plot_utils as punc
+
 from pycsamt.viewer.plot import  geoplot2d
+from pycsamt.viewer.plot import geoplot1d 
 
 from pycsamt.etc.infos import _sensitive as SB 
 from pycsamt.utils._csamtpylog import csamtpylog 
@@ -324,6 +327,7 @@ class Data(object):
         if self.fn is not None : 
             self.read_occam2d_datafile ()
             
+            
     def read_occam2d_datafile (self, data_fn =None ): 
         """
         read_occam_data file. and populates attributes 
@@ -353,6 +357,7 @@ class Data(object):
         if SB.which_file(filename=self.fn)=='occamdat':
             with open(self.fn , 'r', encoding='utf8') as focd : 
                 occam_data_lines =focd.readlines()
+                
         # get data from occam files 
         indextemp =[]
         for ii, dataparams in enumerate(occam_data_lines) : 
@@ -360,11 +365,15 @@ class Data(object):
                 self.data_format= dataparams.strip().split(':')[-1]
             if dataparams.lower().find('title') >=0 : 
                 self.data_title =dataparams.strip().split(':')[-1]
-            if dataparams.lower().find('site') >=0 :indextemp.append(ii)
-            if dataparams.lower().find('offset') >=0 : indextemp.append(ii)
-            if dataparams.lower().find('frequencies')>=0 : indextemp.append(ii)
+            if dataparams.lower().find('site') >=0 :
+                indextemp.append(ii)
+            if dataparams.lower().find('offset') >=0 :
+                indextemp.append(ii)
+            if dataparams.lower().find('frequencies')>=0 :
+                indextemp.append(ii)
             if dataparams.lower().find('block')>=0 :
                 self.data_nblocks= float(dataparams.strip().split(':')[-1])
+    
             if dataparams.lower().find('type') >=0 and dataparams.lower(
                     ).find('error')>=0 : 
                 indextemp.append(ii)
@@ -393,8 +402,9 @@ class Data(object):
             
         self.data = func.concat_array_from_list(list_of_array=temp)
 
-        # set attributes tO DATAblocks class 
-
+        # set datablocks attributes  
+        self.parse_block_data()
+        
         # for ikey, key in enumerate(self.data_titles ) : 
         occam_data_dict ={key :self.data[:, ikey] 
                           for ikey, key in enumerate(
@@ -431,13 +441,110 @@ class Data(object):
         
         
         
-    def write_occam2d_data(self):
+    def parse_block_data(self, datablocks=None):
         """
-        .. Future plan:: We will call MTpy here for
-                    writing Occam2D data file.
-        """
-        pass 
+        From block data, retreive the value of each blocks 
+        each blocks is ndaray(nfrea, nstations)
+        Attributes are : 
+            - `self.appRho` for apparent resistivity blocks
+            - `self.phase` for phase  values 
+            - `self.error_appRho` for error in resistivity  (block )
+            - `self.error_phase` for error in phase 9blocks
+        
+        """    
+        # got frequency array  and site array which uniques values 
+        if datablocks is not None: 
+            self.data = datablocks 
+
+        # self.data.astype(np.float)  # for consistency 
+        self.data = np.asarray(self.data,
+                               dtype = np.float64, order= 'K')
+        sites, *_= np.unique(self.data[:, 0], 
+                             return_counts =True)
+        freq , *_=np.unique(self.data[:, 1], 
+                            return_counts= True)
+        datum , *_= np.unique(self.data[:, 2],
+                              return_counts= True)
+        sites.astype('int32')
+        freq.astype('int32')
     
+
+        # get mode and create model array 
+        k_=None 
+        m_= [int(s) for s in datum]
+    
+        self.occam_dtype_value = m_
+        for key, values in self.occam_modes.items(): 
+            if values ==m_: 
+                k_= key 
+                self.occam_dtype_ =k_
+                self.occam_dtype_value = values
+                break 
+            
+        cf =False 
+        if self.occam_dtype_ =='log_te_tm': 
+            self.te_appRho =np.zeros((len(freq), len(sites)))
+            self.te_phase = np.zeros((len(freq), len(sites)))
+            self.tm_appRho =np.zeros((len(freq), len(sites)))
+            self.tm_phase = np.zeros((len(freq), len(sites)))
+            self.te_error_appRho = np.zeros((len(freq), len(sites)))
+            self.te_error_phase = np.zeros((len(freq), len(sites))) 
+            self.tm_error_appRho = np.zeros((len(freq), len(sites)))
+            self.tm_error_phase = np.zeros((len(freq), len(sites))) 
+            cf =True
+        elif self.occam_dtype_=='log_te': 
+            self.te_appRho =np.zeros((len(freq), len(sites)))
+            self.te_phase = np.zeros((len(freq), len(sites)))
+            self.te_error_appRho = np.zeros((len(freq), len(sites)))
+            self.te_error_phase = np.zeros((len(freq), len(sites))) 
+            
+        elif self.occam_dtype_=='log_tm': 
+            self.tm_appRho =np.zeros((len(freq), len(sites)))
+            self.tm_phase = np.zeros((len(freq), len(sites)))
+            self.tm_error_appRho = np.zeros((len(freq), len(sites)))
+            self.tm_error_phase = np.zeros((len(freq), len(sites))) 
+       
+        # create for each mode id datablocks 
+  
+        for kk, rowlines in enumerate(self.data): 
+            index_site = np.where(sites ==rowlines[0])[0]
+            index_freq = np.where(freq ==rowlines[1])[0]
+            if int(rowlines[2]) ==1: 
+                self.te_appRho[int(index_freq),
+                           int(index_site)] = rowlines[3]
+                self.te_error_appRho[int(index_freq),
+                           int(index_site)] = rowlines[4]
+                
+            if int(rowlines[2]) ==2:
+                self.te_phase[int(index_freq),
+                           int(index_site)] = rowlines[3]
+                self.te_error_phase[int(index_freq),
+                           int(index_site)] = rowlines[4]
+            if int(rowlines[2]) ==5: 
+                self.tm_appRho[int(index_freq),
+                           int(index_site)] = rowlines[3]
+                self.tm_error_appRho[int(index_freq),
+                           int(index_site)] = rowlines[4]
+            if int(rowlines[2]) ==6: 
+                self.tm_phase[int(index_freq),
+                           int(index_site)] = rowlines[3]
+                self.tm_error_phase[int(index_freq),
+                           int(index_site)] = rowlines[4]
+                
+        # flip data so of frequency in decrease order   
+        if self.data_flip_freq is True : 
+            if cf is True or self.occam_dtype_=='log_te': 
+                self.te_appRho=self.te_appRho[::-1]
+                self.te_phase = self.te_phase[::-1]
+                self.te_error_appRho= self.te_error_appRho[::-1]
+                self.te_error_phase= self.te_error_phase[::-1]
+            if cf is True or self.occam_dtype_=='log_tm': 
+                self.tm_appRho=self.tm_appRho[::-1]
+                self.tm_phase = self.tm_phase[::-1]
+                self.tm_error_appRho=self.tm_error_appRho[::-1]
+                self.tm_error_phase=self.tm_error_phase[::-1]
+                    
+                    
 class DataBlock (object): 
     """
     Read OccamDataBlock aand set corresponding attributes 
@@ -479,7 +586,8 @@ class DataBlock (object):
     def __init__(self, **kwargs):
         self._logging =csamtpylog.get_csamtpy_logger(self.__class__.__name__)
 
-        for keyb in list(kwargs.keys()): setattr(self, keyb, kwargs[keyb])
+        for keyb in list(kwargs.keys()): 
+            setattr(self, keyb, kwargs[keyb])
         
         #cehck main attributes []
         if hasattr(self, 'type'): # find the occam2d mode provided 
@@ -501,7 +609,7 @@ class DataBlock (object):
   
         # check if all attribute are set from data  
         self._logging.info ('Ckeck dataBlocks and share corresponding'
-                            ' data params have been giveen properly.')
+                            ' data params.')
         
         _dbk= np.array([1 for attr in Data.data_blocks_header 
                         if getattr(self, attr) is not None ])
@@ -526,15 +634,15 @@ class DataBlock (object):
         if self.data_mode is not None : 
             # self.dict_mode ={str(key): [] for key in Data.occam_modes[self.data_mode]}
             self.dict_mode ={self.data_mode:[]}
-            
+
         for kmode, vmode in self.dict_mode.items() : 
             for itype , occamtype in enumerate(self.type)  : 
-                if str(occamtype) == kmode : 
+                if str(int(occamtype)) == kmode : 
+    
                     self.dict_mode[kmode].append(np.array([self.site[itype],
                                                      self.freq[itype], 
                                                      self.datum[itype], 
-                                                     self.error[itype]]))
-                    
+                                                     self.error[itype]]))       
         # put all value on array of [site, freq , datum , error] 
         for key, values in self.dict_mode.items (): 
             self.dict_mode [key] =func.concat_array_from_list(
@@ -1079,7 +1187,7 @@ class Response (Data):
                 full path to Occam 2D data file 
             
     .. note:: To get "response attributes" replace "**" by "resp_" and '***'
-                means 'reso_+occam_dtype'.An example below to help 
+                means 'resp_+occam_dtype'.An example below to help 
                 understanding how to get attributes from this class.
                 
     ====================  ===============  ====================================
@@ -1116,11 +1224,11 @@ class Response (Data):
         
         >>> from pycsamt.modeling.occam2d import Response
         >>> resp_obj =Response (data_fn =os.path.join(os.environ[pyCSAMT], 
-        ...                                              'pycsamt', data, occam2D,
-        ...                                              'OccamDataFile.dat'), 
-        ...                        response_fn =os.path.join(os.environ[pyCSAMT], 
-        ...                                              'pycsamt', data, occam2D,
-        ...                                              'RESP17.resp')
+        ...                                 'pycsamt', data, occam2D,
+        ...                                 'OccamDataFile.dat'), 
+        ...                    response_fn =os.path.join(os.environ[pyCSAMT], 
+        ...                                     'pycsamt', data, occam2D,
+        ...                                      'RESP17.resp')
         >>> occam_mode =resp_obj.resp_occam_mode 
         >>> occam_data_type =resp_obj.occam_dtype 
         >>> occam_mode_forward =resp_obj.resp_{occam_dtype}_forward
@@ -1172,8 +1280,8 @@ class Response (Data):
             >>> tm_residual = resp_obj.resp_tm_log10_forward
             >>> tm_forward = resp_obj.resp_tm_log10_residual
             >>> tm_phase_error = resp_obj.resp_tm_phase_err
-            >>> tm_phase_err = occam_resp_obj.resp_tm_log10_forward_phase
-            >>> tm_residual_phase_err = occam_resp_obj.resp_tm_log10_residual_phase_err
+            >>> tm_phase_err = resp_obj.resp_tm_log10_forward_phase
+            >>> tm_residual_phase_err = resp_obj.resp_tm_log10_residual_phase_err
         """
         if response_fn is not None : 
             self.resp_fn =response_fn 
@@ -2562,7 +2670,7 @@ class occam2d_write(object):
                                                     resistivity_start) ))
         
         print('**{0:<27} {1} +{2} degrees E of N'.format(' Geoelectric strike',
-                                                         '=' ,geoelectric_strike))
+                                                    '=' ,geoelectric_strike))
         
         print('-'*77)  
 
@@ -2570,7 +2678,7 @@ class occam2d_write(object):
  
          
 @geoplot2d(reason='misfit', cmap ='bwr', climits=(-2,2), show_grid=False)
-def getMisfit(**kwargs) : 
+def getMisfit(resp_fn =None, data_fn =None, kind='rho', **kwargs) : 
     """
     Calling *getMisfit* to plot misfit value using `geoplot2d` decorator 
     see :ref:`pycsamt.viewer.plot.geoplot2d` to get the kwargs arguments. 
@@ -2606,10 +2714,14 @@ def getMisfit(**kwargs) :
     # call reponse Object 
     mode =kwargs.pop('mode', None)
     oclogfile =kwargs.pop('logfile', None)
-    
-    useResiValue= kwargs.pop('residual', False)
 
-    resp_obj  =Response(**kwargs)
+    useResiValue= kwargs.pop('residual', False)
+    if kind.lower().find('rho')>=0 or kind==1: 
+        kind='rho'
+    elif kind.lower().find('ph')>=0 or kind==2: 
+        kind = 'phase'
+
+    resp_obj  =Response(response_fn =resp_fn , data_fn =data_fn)
     
     # get response values 
     #------------------------STATEMENT RESPONSE OBJECT ----------------------
@@ -2617,21 +2729,28 @@ def getMisfit(**kwargs) :
     make_mode = resp_obj.occam_dtype + [str(mm)for mm in resp_obj.occam_mode]
     resp_occam_dtype_obj = resp_obj.occam_dtype
     
-    #---------------------------------MANAGE OCCAM PLOT MODE -------------------------
+    #---------------------------------MANAGE OCCAM PLOT MODE -----------------
     # if mode is not provided , then take the first occam mode 
     if mode is None : 
         mode = resp_occam_dtype_obj [0]
-    mode =str(mode).lower() 
- 
-    # check the mode if provided 
-    if mode not in  make_mode  : 
-        mess =''.join([
-            'Occam mode provided ={0} is wrong !. Occam2D data mode is ={1}'.
-                       format(mode, make_mode ), 
-                              'Please select the right mode.'])
-        warnings.warn(mess)
-        _logger().error (mess)
-        
+        mode_phase = resp_occam_dtype_obj[1]
+
+    elif mode is not None: 
+        mode =str(mode).lower() 
+        # check the mode if provided 
+        if mode not in  make_mode  : 
+            mess =''.join([
+                'Occam mode provided ={0} is wrong !. Occam2D data mode is ={1}'.
+                           format(mode, make_mode ),
+                           'Please select the right mode.'])
+            warnings.warn(mess)
+            _logger().error (mess)                     
+            raise CSex.pyCSAMTError_occam2d(f' Mode `{mode}` is wrong!'
+                         'Do you mean {0}{1}?'.format(*resp_occam_dtype_obj))
+        elif mode not in resp_occam_dtype_obj: 
+            raise CSex.pyCSAMTError_occam2d(f' Mode `{mode}` is wrong!'
+                         'Do you mean {0}{1}?'.format(*resp_occam_dtype_obj))
+
     # check the mode provided , can be str 
     for im , imode in enumerate(resp_obj.occam_mode) :
         if imode ==mode : 
@@ -2652,8 +2771,6 @@ def getMisfit(**kwargs) :
     resp_sites_offsets = getattr(resp_obj, 'data_offsets')
     
 
-    resp_misfit = .01 * np.sqrt((occam_data -resp_forward)**2/(occam_data**2) )
-    
     # get rms and roughness value if occamLogfile is provided 
     if oclogfile is not None : 
         log_obj = occamLog(fn =oclogfile )
@@ -2674,15 +2791,31 @@ def getMisfit(**kwargs) :
         model_rms ='?'
         model_roughness ='?'
         
-    if useResiValue is True : 
-        print('---|> Plot residual !')
-        _logger.info('Plot Occam2D residual data !')
+    if kind=='rho': 
+        resp_misfit = .01 * np.sqrt(
+            (occam_data -resp_forward)**2/(occam_data**2) )
         
-        resp_misfit =getattr(resp_obj, 'resp_{0}_residual'.format(mode))
-    else : resp_misfit *= 100 # we plot in percentage 
+        if useResiValue is True : 
+            print('---|> Plot residual !')
+            _logger.info('Plot Occam2D residual data !')
+            
+            resp_misfit =getattr(resp_obj, 'resp_{0}_residual'.format(mode))
         
-    print('{0:=^77}'.format('Misfit Infos')) 
-    
+        else : resp_misfit *= 100 # we plot in percentage 
+        
+    elif kind =='phase': 
+ 
+        phase_resi= getattr(resp_obj, 'resp_{0}_residual'.format(mode_phase) )
+        if mode_phase.find('tm')>=0 : 
+            phase_data= resp_obj.tm_phase 
+        else : phase_data = resp_obj.te_phase  
+        
+        fw_phase = getattr(resp_obj, 'resp_{}_forward_phase'.format(mode))
+        # resp_misfit =phase_resi
+        resp_misfit = ((phase_data - fw_phase)/phase_resi)%90/100
+        
+    print('{0:=^77}'.format('Misfit Infos : Kind = {}'.format(kind.upper()))) 
+
     print('** {0:<37} {1} {2} {3}'.format('Misfit max ','=',
                                           resp_misfit.max(), '%' ))
     print('** {0:<37} {1} {2} {3}'.format('Misfit min','=',
@@ -2691,30 +2824,287 @@ def getMisfit(**kwargs) :
     
     return (resp_misfit, resp_sites_names,
             resp_sites_offsets, resp_freq, model_rms, 
-            model_roughness)    
+            model_roughness)  
+  
 
-   
-if __name__=='__main__': 
+@geoplot1d(reason = 'resp', color_mode='color', grid_kws= {'color':'k', 
+           'ls':'-', 'lw':.2, 'alpha':.5, 'which':'major'},         
+           linebbox_kws={'boxstyle':'sawtooth','facecolor':
+                         'whitesmoke', 'color':'white'})
+def plotResponse(data_fn =None, resp_fn =None, stations =None, **kws):
+    """ 
+    Find Responses properties and plot values and could read multiples 
+    lines provided that each line as its occam datafile and its response file.
     
-    # print(list(Data.occam_dataType.keys()))
-    # occam2d_write.buildingInputfiles(os.path.join(os.environ['pyCSAMT'], 'data', 'edi'), 
-    #                             savepath =os.path.join(os.environ['pyCSAMT'], 'data', 'tesocc2' ),
-    #                             geoelectric_strike=34.)
+    :class:`~modeling.occam2d.Response` inherits of `Data` class then 
+    easy to data attributes for plot purposes. Visualize all error from 
+    raw to inversion using `error_type` arguments. For instance:: 
+        
+        - `1` : visualize the misfit compute manually
+        - `2`:  visualize the raw error from raw occam data 
+        - `3`: visualzie the error data and phase  defined as 
+                * error = (input data - foward data)/ RESI 
+        - `4` or 'residual`': Visualize only  the residual data . 
+        
+        Default is `residual.`
 
-    path= r'F:\ThesisImp\occam2D\old\K1'
-    pathresp =os.path.join(path,'RESP17.resp' )
-    path_data =os.path.join(path,'OccamDataFile.dat' )
-    # resp_obj = Response(response_fn=pathresp, data_fn = path_data )
-    logpath =os.path.join(path, 'LogFile.logfile')
-    # # respDATA= resp_obj.resp_data 
-    # pathIter = os.path.join(path,'ITER10.iter' )
-    # iter_obj = Iter(iter_fn= pathIter)
-    # log_obj = occamLog(fn =os.path.join(path, 'LogFile.logfile') )
-    # print(iter_obj.iter_iteration)
-    # print(iter_obj.iter_roughness_value)
-    getMisfit(response_fn = pathresp , logfile=logpath, 
-              data_fn = path_data , residual =False )
+    :param data_fn: Occam data file. Can be a string or list of datafiles
+    :param resp_fn: Response file and can be string or list of response file. 
+    :param stations:  str or list of station to visualize. 
     
+    .. note:: To visualize multiple files. Can prodile only the path 
+    where occam (data and response) files are located. In that case, set
+    datafile and response file the name like:: 
+        
+        `data_fn` =['line01.dat' , 'line01.resp', 'line02.dat',
+                  'line02.resp' , ...]
+    
+    :returns: 
+        - resp_lines : coloection of survey lines id 
+        - resp_stations : Collection of station to visualize 
+        - resp_freq: collection of frequencies
+        - resp_appRHO: collection of te/tm data and
+                    forward data as a tuple(te|tm , fw'te|tm')
+        - resp_phase: collection of the te/tm phase data as tuple (data, fw)
+        - resp_appRho_err. collection of  misfit rho response 
+        - resp_phase_err: collection of the misfit phase  
+
+    :Example: 
+        
+        >>> from pysamt.modeling.occam2d import plotResponse 
+        >>> resPath =r'F:\ThesisImp\occam2D\old\K1'
+        >>> plotResponse(data_fn =resPath,
+        ...                 stations = ['S00', 'S04', 's08', 'S12']
+        ...                  rms =['1.013', '1.451', '1.00', '1.069'], 
+        ...                  error_type ='resi' )
+    """
+    
+    error_type = kws.pop('error_type', 'residual')
+    model_rms =kws.pop('rms', None)
+    
+    try : 
+        if isinstance(error_type, str): 
+            if error_type.lower().find('resi')>=0: 
+                error_type=4
+        error_type = int(error_type )
+    except :
+        error_type =1
+
+    # try automatically to find occam data file and response file 
+    # providin only the path 
+    try : 
+        if os.path.isdir(data_fn): 
+            resPath = data_fn
+        elif os.path.isdir(resp_fn): 
+            resPath = resp_fn 
+    except : pass
+
+    else : 
+        data_fn = [os.path.join(resPath, file) 
+                     for file in os.listdir(resPath) 
+                     if file.find('.dat')>=0]
+        resp_fn = [os.path.join(resPath, file)  
+                     for file in os.listdir(resPath) 
+                     if file.find('.resp')>=0]
+        
+    if data_fn is None: 
+        raise CSex.pyCSAMTError_AVG(
+            'No `Data` file detected. Please provide an occam data file.')
+    elif isinstance(data_fn, str): 
+        data_fn = [data_fn]
+        
+    if resp_fn is None: 
+        raise CSex.pyCSAMTError_occam2d(
+            'No OccamResponse file detected.'
+            ' Please provided an occcam Response file')
+        
+    elif isinstance(resp_fn, str): 
+        resp_fn = [resp_fn]
+    
+    if len(data_fn) != len(resp_fn):
+        a_, b_= len(data_fn) , len(resp_fn) 
+        raise CSex.pyCSAMTError_inputarguments('Number of Occam datafiles and'
+                        'responses files must be the same length.'
+                        f' `{a_}` and `{b_}` are given respectively.')
+    
+    if stations is None : 
+        _logger.debug ( 'None sation found can not be plotted.'
+                       'Should be considered the default value =`S00`.')
+        stations =['S00']
+           
+    # check the sation and duplicate until the max gridspec =4 
+    if isinstance(data_fn, list): 
+        if isinstance(stations, str): 
+            # duplicate the 
+            station_list =[stations for i in range(len(data_fn))]
+        elif isinstance(stations, list): 
+            if len(stations)< len(data_fn):# max grid spec = 4 
+                station_list = stations + ['S00' 
+                                          for i in range(4-len(stations))]
+            elif len(stations) > len(data_fn): 
+                station_list =stations[:4]
+            else : station_list= stations 
+            
+    
+    def read_singleDataResponse( stn_INDEX, dfn , respfn): 
+        """ Read single occam response file and datafile 
+        Collect attribute for plots. Note `Response` inherits 
+        of `Data` class.  
+            
+        :param stn_INDEX: station index for plotting 
+        :param dfn: Data file to get data properties 
+        :param resp_fn: Response file to retrieve main properties 
+        
+        :returns:
+            - line: line name 
+            - stn: station to plot 
+            - frequencies 
+            - raw tm/te data and phase te/tm  on tuple 
+            - forward te/tm data and phase te/tm data on tuple 
+            - error te/tm 
+            -error phase 
+        """
+         
+        # line name id from response file
+        ln_id = os.path.basename(os.path.splitext(respfn)[0])
+    
+        respObj = Response(response_fn = respfn , data_fn =dfn )
+        # get the name of site data
+        try : 
+            stnN = respObj.data_sites[stn_INDEX]
+        except: 
+            len_stnobj =len(respObj.data_sites) 
+            _logger.debug(
+            f" Too {'large' if stnN >len_stnobj else 'small'}."
+            "values. Default station should be `S00`.")
+            stnN  = 'S00'
+        
+        #--> Get occam mode and main response properties # tm_log10, tm_phase
+        oc_mode, oc_phs_mode = respObj.occam_dtype [0], respObj.occam_dtype[1]
+        # Get frequency in decrease order and remove the last freq 
+        freq = respObj.data_frequencies  # array 
+        if freq [0] > freq[-1]:  # frequeny ranged in decrease order
+            freq = freq [:-1]
+            # 
+        else : freq =freq [1:]
+        
+        #--- for resistivity tm data and forward 
+
+        # flag to read occamtype 'log_te_tm'
+        cflag=False
+    
+        if respObj.occam_dtype_ =='log_te_tm': 
+            cflag=True 
+            
+        if cflag is True or respObj.occam_dtype_ =='log_te': 
+            tm_data = respObj.te_appRho
+            te_error_appRho =respObj.te_error_appRho 
+            te_error_phase =respObj.te_error_phase 
+    
+        if cflag is True or respObj.occam_dtype_ =='log_tm': 
+            # Plot as default TM mode when `occam_dtype` is 'log_te_tm
+            tm_error_appRho =respObj.tm_error_appRho 
+            tm_error_phase =respObj.tm_error_phase 
+            tm_data =respObj.tm_appRho 
+        # errors from forward
+    
+        fw_data = getattr(respObj, 'resp_{}_forward'.format(oc_mode ))
+        
+        # --for phase data tm_phase and forward phase 
+        phase_data = getattr(respObj, 'resp_{}'.format(oc_phs_mode ))
+        fw_phase = getattr(respObj, 'resp_{}_forward_phase'.format(oc_mode ))
+        # 
+         # get residual errors  (input data - foward data)/ RESI 
+        fw_residual_rho = getattr(respObj,
+                                  'resp_{0}_residual'.format(oc_mode) )
+        c_= getattr(respObj, 'resp_{0}_residual'.format(oc_phs_mode) )
+        fw_phase_residual =c_
+        
+        # Raw error from occam data 
+        if error_type ==1 : 
+            misfit_rho = .01 * np.sqrt((tm_data -fw_data)**2/(tm_data**2) )
+            misfit_rho *= 100 # we plot in percentage 
+            misfit_phase = .01 * np.sqrt(
+                (phase_data -fw_phase)**2/(phase_data**2) )
+            misfit_phase = (misfit_phase*100)%90 # we plot in percentage 
+        elif error_type ==2: 
+            if cflag is True or respObj.occam_dtype_ =='log_tm': 
+                misfit_rho = tm_error_appRho
+                misfit_phase = tm_error_phase
+                
+            elif respObj.occam_dtype_ =='log_te': 
+                misfit_rho = te_error_appRho
+                misfit_phase = te_error_phase
+
+        elif error_type ==3: 
+            misfit_rho = (tm_data - fw_data)/fw_residual_rho
+            misfit_phase = np.abs((phase_data - fw_phase)/fw_phase_residual)%90
+            
+        elif error_type ==4: # plot only residual 
+        
+            misfit_rho = fw_residual_rho
+            misfit_phase=fw_phase_residual 
+            
+        # replace all nan value by 0 if exists. 
+        misfit_rho[np.isnan(misfit_rho)]=0.
+        misfit_phase[np.isnan(misfit_phase)]=0.
+        # put frequency on ohm.m not in log 10 
+        tm_data = np.power(10, tm_data)
+        fw_data = np.power(10, fw_data)
+        
+        return (ln_id, stnN, freq , (tm_data[:,stn_INDEX ], 
+                                     fw_data[:, stn_INDEX]),
+            (phase_data[:, stn_INDEX],fw_phase[:, stn_INDEX] ),\
+                misfit_rho[:, stn_INDEX], misfit_phase[:, stn_INDEX])
+
+    # Initialise list # read the data and collect data 
+    resp_lines, resp_stations, resp_freq, resp_appRHO, resp_phase,\
+        resp_appRho_err, resp_phase_err=[[]for i in range(7)]
+        
+    # Get the index from stations list 
+    # return tuple of index stations 
+    stnIndex_lst = punc.station_id(station_list) 
+    
+    for ii , iline in enumerate(stnIndex_lst): 
+        r_l, r_sta, r_freq, r_appRHO, r_phase,\
+        r_appRho_err, r_phase_err = read_singleDataResponse(
+            stn_INDEX=iline, 
+            dfn = data_fn[ii], 
+            respfn = resp_fn[ii], 
+            )
+        resp_lines.append(r_l)
+        resp_stations.append(r_sta)
+        resp_freq.append(r_freq)
+        resp_appRHO.append(r_appRHO)                # tuple (data , fw)
+        resp_phase.append(r_phase)                  # tuple(data, fw)
+        resp_appRho_err.append(r_appRho_err)        # misfit rho
+        resp_phase_err.append(r_phase_err)          # misfit phase
+            
+    return (resp_lines, resp_stations, resp_freq, resp_appRHO, resp_phase,\
+        resp_appRho_err, resp_phase_err, model_rms)
+        
+# if __name__=='__main__': 
+
+#     path= r'F:\ThesisImp\occam2D\old\K1'
+#     resPath='F:\ThesisImp\occam2D\invers+files\inver_res\data_and_resp'
+#     pathresp =os.path.join(resPath,'K8.resp' )
+#     path_data =os.path.join(resPath,'K8.dat' )
+#     resp_misfit, resp_sites_names, resp_sites_offsets, resp_freq, model_rms,\
+#             model_roughness= getMisfit(data_fn = path_data, resp_fn = pathresp, 
+#                                        kind='phase')
+    # odatapath = [os.path.join(resPath, file) 
+    #              for file in os.listdir(resPath) if file.find('.dat')>=0]
+    # resp_path = [os.path.join(resPath, file)  
+    #              for file in os.listdir(resPath) if file.find('.resp')>=0]
+
+    # # resp_obj = Response(response_fn=pathresp, data_fn = path_data )
+    # resp_lines, resp_stations, resp_freq, resp_appRHO, resp_phase,\
+    #     resp_appRho_err, resp_phase_err, model_rms=\
+    #         plotResponse(data_fn =resPath, 
+    #                      stations = ['S00', 'S04', 's08', 'S12'], #odatapath, resp_fn=resp_path, 
+    #                       rms =['1.013', '1.451', '1.00', '1.069'], 
+    #                       error_type ='resi' )
+
 
 
 

@@ -7,30 +7,26 @@
 
 * **Definition**
 
-CSAMT is geophysical method well-established  as resistivity exploration 
-tool in deep geological structure detection. The method is broadly applied in  diverse of exploration problems such as mineral , hydrocarbon,  groundwater resources, 
-as well as mapping the fault-zones etc. 
+    CSAMT is geophysical method well-established  as resistivity exploration 
+    tool in deep geological structure detection. The method is broadly applied in  diverse of exploration problems such as mineral , hydrocarbon,  groundwater resources, 
+    as well as mapping the fault-zones etc. 
 
 * **Purpose**
 
-The software, unified open source software, contains bacics steps and improve CSAMT standard data processing as well as the modeling using [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html).
-The software also contains its inner database composed of geological structures and electrical properties of rocks, to generate  a pseudo-stratigraphy 2D map to enhance geophysical interpretation especially in more geological complex area ( with various tectonic accidents). 
-
-* **Targets**
-
-We hope this toolbox will help  the scientific geophysics community and those who work and grounwater exploration. In addition,  the toolbox aims  to the community of 
-developers and users of that software.
+    The software contains bacics steps and improve CSAMT standard data processing and deals with [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) for modeling part.
+    It also contains its inner database composed of geological structures and electrical properties of rocks,
+    based on representative chart of  Palacky (1988) and the rock and mineral property classification of Slichter and Telkes (1942)
+    to generate  a pseudo-stratigraphy log for drilling operations.
 
  * **Note**
  
-Actually pyCSAMT only works  in far field. Furhermore , it uses [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) open source sofware as modeling software. Nevertheless,
-several  outputs are provided for other external modeling softwares like [MTpy](https://github.com/MTgeophysics/mtpy), [OasisMontaj](http://updates.geosoft.com/downloads/files/how-to-guides/Oasis_montaj_Gridding.pdf)
-and [GoldenSoftware](https://www.goldensoftware.com/products/surfer).
+    Actually pyCSAMT only works  in far field and several  outputs are provided for other external modeling softwares such as  [MTpy](https://github.com/MTgeophysics/mtpy), [OasisMontaj](http://updates.geosoft.com/downloads/files/how-to-guides/Oasis_montaj_Gridding.pdf)
+    and [GoldenSoftware](https://www.goldensoftware.com/products/surfer).
 
 ## Documentation 
 * API Documentation  : https://pycsamt.readthedocs.io/en/latest/
 * Home Page : https://github.com/WEgeophysics/pyCSAMT/wiki
-* Some Codes Implementation: https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F
+* Some examples: https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F
 * Installation Guide : https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux
 * User Guide : https://github.com/WEgeophysics/pyCSAMT/blob/develop/docs/pyCSAMT%20User%20Guide.pdf
 
@@ -73,80 +69,61 @@ pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/p
 * Step descent in m.
 * Input true resistivities in Ω.m 
 
-## A sample test using AMA and TMA  filters to correct raw *.edi files
+                                                                     
+## Plot inversion misfit and geo-strata misfit (misfit G)
 
-AMA  and TMA filters can be used  to estimate average apparent resistivities at a single static-correction-reference frequency.
-The following line of codes is an example to get new _*.edi_ corrected files from both filters application at each station,
-refering to the EDI directory `data/edi/`.
-
-![](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/wiki-images_quick_works/codes/demo_filter_ama_tma.PNG) 
-
-
-The script below can be used to compare pseudo-cross-section of resistivity and phase of _corrected_edi outputs_ after `ama` & `tma` application  with 
-_uncorrected edi_ . 
-
-![](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/wiki-images_quick_works/codes/demo_edi_corrected.PNG) 
-
-
-click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/filterstests.png) to see the output.
-
-## Geophysical interpretation enhancement
-
-If additional informations of survey area are available such as _true resistivity values_ as well as the _true layer names_, 
-It's possible to used them to enhance your geophysical interpretation. There is feasibility to plot stratigraphy log 
-under each station using `pycsamt.viewer.plot.Plot2d.plot_Pseudolog` or to write new resistivity model of entire survey line
-using `pycsamt.geodrill.geoCore.geodrill.to_golden_software ` or `pycsamt.geodrill.geoCore.geodrill.to_asis_montaj` members from `Geodrill` module.
-For instance :
+To plot the `misfit` from measured data and the calculated inversion data, bring the _occam response file_ (*.rep) and optional _Occamlogfile_ (*.logfile) and 
+run the script below:
  
-* to plot stratigraphy log under each station,  we need to implement the command line below : 
- 
-![](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/codes/demo_plot-pseulog.PNG)
+1. Plot some fitting curves of resistivity and phase inversion after applying on 
+the static shift correction on raw data. 
+```
+>>> from pysamt.modeling.occam2d import plotResponse 
+>>> resPath =r'data/inversionPath'                  # path to inversion files for each lines
+>>> plotResponse(data_fn =resPath,
+...                 stations = ['S00', 'S04', 's08', 'S12']  # sites to visualize 
+...                  rms =['1.013', '1.451', '1.00', '1.069'], # rms of each lines
+...                  error_type ='resi' )
+``` 
+Click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/examplefitcurves.png) to see the reference output 
 
-* to write new model of resistivity of survey line (here area is named  `some-where-place`), we merely need to import `.Geodrill` module  as:
-
-![](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/codes/demo_geodrill.PNG) 
-
-and after sucessfullly running, we will get the report below :
-
-![](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/codes/demo_reports_geodrill.PNG)
-
-                                                                      
-* **Note** : Inversion input-files can be generated from _*.edi_ files using `pycsamt.modeling.occam2d.occam2d_write.buildingInputfiles` from `modeling.occam2d` module . 
-            After applying the FDGC( Digital cartographic Standard for Geological Map Symbolization), click [here](https://github.com/WEgeophysics/pyCSAMT/blob/master/quick_examples/wiki-images_quick_works/interpretation.PNG)  to see your expected interpretation map.
-
-## Plot misfit and geofit  
-
-1. To plot the `misfit` from measured data and the calculated inversion data, bring the _occam response file_ (*.rep) and optional _Occamlogfile_ (*.logfile) and 
-run the script below: 
+2. To plot the `misfit`of the model responses of the FE algorithms used: 
 ```
 >>> from pycsamt.modeling.occam2d import getMisfit 
 >>> path_data ='data/occam2D'
 >>> getMisfit(response_fn = os.path.join(path_data,'RESP17.resp' ),
 ...         logfile=os.path.join(path_data, 'LogFile.logfile'), 
 ...          data_fn = path_data)
-
 ```
 To see the output, click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/misfit.png).
 
-2. To evaluate the model errors `geofit` between the the new resistivity model  or strata model(NRMs) from Calculated Resistivity Model(CRMs), 
-set `plot_misfit` argument to `True` . `geofit` computation is best way to see the whether different layers provided with their corresponding resistivity values
+2. To evaluate the model errors `misfit G` between the the new resistivity model  or strata model(NMs) from inversion models(CRMs), 
+set `plot_misfit` argument to `True` . `Misfit G` computation is the best way to see the whether different layers provided with their corresponding resistivity values
 are misclassified or not. With few step of codes we can check the process :
 ```
->>> from pycsamt.geodrill.geoCore.geodrill import geoModel
->>> geoModel(**inversion_files, 
-...                input_resistivities=INPUT_RESISTIVITIES, 
-...                 input_layers=INPUT_LAYERS,
-...                plot_misfit=True
-...        )
-
+>>> from pycsamt.geodrill.geoCore.geodrill impot Geostratigraphy model
+>>> inversion_files = {'model_fn':'data/Occam2DModel', 
+                       'mesh_fn': 'data/Occam2DMesh',
+                        "iter_fn":'data/ITER27.iter',
+                       'data_fn':'data/OccamDataFile.dat'}
+>>> input_resistivity_values =[10,  70, 180, 1000,  3000] 
+>>> input_layer_names =['river water','sedimentary rocks', 'fracture zone',  'gravel','igneous rocks']
+>>> geosObj = GeoStratigraphy(**inversion_files,
+...                      input_resistivities=input_resistivity_values, 
+...                      input_layers=input_layer_names)
+>>> geosObj.strataModel(kind='nm', plot_misfit =True)           # 'nm':New Model
 ```
 click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/geofit.png) for reference output. 
+
+
+* **Note** : 
+    For CSAMT data processing and some codes implementation,
+    please refer to our [wiki pages](https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F).
 
 ## Credits
 
 We use or link some third-party software (beside the usual tool stack: numpy, scipy, matplotlib) and are grateful for all the work made by the authors of these awesome open-source tools:
 * mtpy : https://github.com/MTgeophysics/mtpy.git
-* pyplusplus: https://pypi.org/project/pyplusplus/
 * occam2d : https://marineemlab.ucsd.edu/Projects/Occam/index.html
 
 
@@ -161,12 +138,10 @@ We use or link some third-party software (beside the usual tool stack: numpy, sc
 
 3. Laboratoire de Géophysique Appliquée, UFR des Sciences de la Terre et des Ressources Minières, Université Félix Houphouët-Boigny, Cote d'Ivoire
 
-* Developer's name:  [_Kouadio K. Laurent_](kkouao@zju.edu.cn), _etanoyau@gmail.com_: [1](http://www.zju.edu.cn/english/), [3](https://www.univ-fhb.edu.ci/index.php/ufr-strm/)
-* Contibutors' names:
-    *  [_Rong LIU_](liurongkaoyang@126.com) : [2](http://en.csu.edu.cn/)
-    *  [_Binbin MI_](mibinbin@zju.edu.cn) : [1](http://www.zju.edu.cn/english/)
-    *  [_Chun-ming LIU_](lifuming001@163.com): [2](http://en.csu.edu.cn/)
-    *  [_Albert O. MALORY_](amalory@zju.edu.cn) :[1](http://www.zju.edu.cn/english/)
-    
-Any suggestion to improve the software is welcome ...
+* Developer:  [_Kouadio K. Laurent_](kkouao@zju.edu.cn), _etanoyau@gmail.com_: [1](http://www.zju.edu.cn/english/), [3](https://www.univ-fhb.edu.ci/index.php/ufr-strm/)
+* Contibutors:
+    *  [2](http://en.csu.edu.cn/) [_Rong LIU_](liurongkaoyang@126.com) 
+    *  [1](http://www.zju.edu.cn/english/) [_Albert O. MALORY_](amalory@zju.edu.cn)   
+    *  [2](http://en.csu.edu.cn/) [_Chun-ming LIU_](lifuming001@163.com) 
+
 

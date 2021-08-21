@@ -22,8 +22,8 @@
  
 .. _module-Occam2D :: `pycsamt.modeling.occam2d`
     :synopsis:: The Occam 2D MT inversion code (v3.0) presented here is an
-                implementation of the general Occam procedure of  Constable, et al. (1987)
-                extended to  2D by deGroot-Hedlin and Constable (1990).
+                implementation of the general Occam procedure of  Constable, 
+                et al. (1987)extended to  2D by deGroot-Hedlin and Constable (1990).
                 The 2D MT forward  calculations are carried out with codeprovided
                  by Wannamaker, et al (1987)  using reciprocity to calculate the
                 Jacobian (de Lugao and Wannamaker, 1996).
@@ -55,8 +55,7 @@ import pycsamt.utils.exceptions as CSex
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
 
-from pycsamt.viewer.plot import  geoplot2d
-from pycsamt.viewer.plot import geoplot1d 
+from pycsamt.viewer import  mpldecorator  as mdeco
 
 from pycsamt.etc.infos import _sensitive as SB 
 from pycsamt.utils._csamtpylog import csamtpylog 
@@ -2677,7 +2676,7 @@ class occam2d_write(object):
         print('---> Building occamInputfiles  function successfully run. !')  
  
          
-@geoplot2d(reason='misfit', cmap ='bwr', climits=(-2,2), show_grid=False)
+@mdeco.geoplot2d(reason='misfit', cmap ='bwr', climits=(-2,2), show_grid=False)
 def getMisfit(resp_fn =None, data_fn =None, kind='rho', **kwargs) : 
     """
     Calling *getMisfit* to plot misfit value using `geoplot2d` decorator 
@@ -2827,7 +2826,7 @@ def getMisfit(resp_fn =None, data_fn =None, kind='rho', **kwargs) :
             model_roughness)  
   
 
-@geoplot1d(reason = 'resp', color_mode='color', grid_kws= {'color':'k', 
+@mdeco.geoplot1d(reason = 'resp', color_mode='color', grid_kws= {'color':'k', 
            'ls':'-', 'lw':.2, 'alpha':.5, 'which':'major'},         
            linebbox_kws={'boxstyle':'sawtooth','facecolor':
                          'whitesmoke', 'color':'white'})

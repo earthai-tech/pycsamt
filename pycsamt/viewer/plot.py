@@ -36,8 +36,7 @@ Created on Mon Dec 28 14:28:06 2020
 @author: KLaurent alias @Daniel03
 """
 
-import os ,re, warnings
-import functools 
+import os ,re, warnings 
 import numpy as np 
 
 from pycsamt.viewer import mpldecorator  as mdeco
@@ -901,40 +900,81 @@ class Plot1d :
                 plt.savefig(savefig,
                             dpi=self.fig_dpi,
                             orientation =orient)
-        
-    def plotStaticCorrection(self,  data_fn, profile_fn =None , 
+                
+    @mdeco.geoplot1d(reason = 'staticshift', mtmm='s', ctmm=(.8, 0.2, .9),
+                      color_mode='color', ms_r=1.,lw_r=.7, 
+                      )                   
+    def plot_multiple_corrections(self,  data_fn, profile_fn =None , 
                                dipole_length =50., filter_type ='ama',
                                siteOrfreq='S00', refreq=None, 
                                **kws): 
         """
-        Plot static correction for each line or at a single station 
+        Plot multiples static correction for a line using two options like:: 
+            - plot rho|phase VS frequency `kind`= linear 
+            - plot rho|phase VS station `kind`= site 
+            default is ``line` 
         
+        :param data_fn: full path to file , can be [AVG|EDI|J] files
+        :type data_fn: str 
+        
+        :param siteOrfreq: 
+            list of station or list of frequency number to visualize.
+             Mx list tolorate is 4.  can be:: 
+      
+                    -`siteOrfreq`=['S00', 'S04', 'S08', 'S12']
+                    -`siteOrfreq`=[1, 82, 1024, 8192]  in Hz
+        :param kind: Type of plot. can be::
+            - kind =1 or 'line'
+            - kind =2 or 'site'
+                    
+        :param profile_fn: 
+            pathLike  full path to Zonge Engeneering *.station file .If *.edi 
+            file or jfile is given, dont need  to provide `profile_fn`
+        :type profile_fn: str 
+        
+        :param dipole_length: length of dipole in meters
+        :type dipole_length: float, int
+        
+        :Example:
+            >>> from pycsamt.viewer.plot import Plot1d 
+            >>> data='data/avg/K1.AVG'
+            >>> viewfreq=[80, 1024,2000,  8192] # set `kind` to ``1``.
+            >>> viewsite= ['S00', 's04', 's08', 'S12'] # set `kind` to ``2``
+            >>> plotObj = Plot1d()
+            >>> plotObj. plot_multiple_corrections(data_fn= data, kind=2, 
+                                      filter_type ='ama',
+                                       siteOrfreq=viewfreq
+                                      )
         """
+        nskinDepth = kws.pop('skin_depth', 1)
+        npoints =kws.pop('npoints', 5)
+        kindPlot =kws.pop('kind', 'line') # or site
+        
         if siteOrfreq is None : 
             _logger.debug ( 'None sation found can not be plotted.'
                            'Should be considered the default value =`S00`.')
             stations =['S00']
             kindPlot =1
-           
+         
         # check the sation and duplicate until the max gridspec =4 
 
-        if isinstance(siteOrfreq, str): 
+        if isinstance(siteOrfreq, (str, float, int)): 
             # duplicate the 
-            siteOrfreq_lst =[siteOrfreq for i in range(4)]
+            siteOrfreq_lst =[siteOrfreq]
         elif isinstance(siteOrfreq, list): 
-            if len(stations)< 4:# max grid spec = 4 
-                siteOrfreq_lst = siteOrfreq  + ['S00' 
-                                          for i in range(4-len(siteOrfreq))]
-            elif len(siteOrfreq) > 4: 
+            if len(siteOrfreq) > 4: 
                 siteOrfreq_lst =siteOrfreq[:4]
             else : siteOrfreq_lst= siteOrfreq
             
         try : 
             if os.path.isfile(data_fn): 
-                line= os.path.splitext(data_fn)[0]
+                line= os.path.basename(os.path.splitext(data_fn)[0])
         except: 
             line = os.path.basename(data_fn)
-            
+         # generate lines number multiply by number of stnOrFreq to visualize    
+        lines =  [line  for j in range(len(siteOrfreq_lst))]
+          
+    
         def wf_(w_, lenfreq): 
             """ Build weight factor matrix"""
         
@@ -942,18 +982,12 @@ class Plot1d :
             for ii,  rowlines in enumerate(w): 
                 w[ii, :] =w_
             return w
-        
-            
-        nskinDepth = kws.pop('skin_depth', None)
-        npoints =kws.pop('npoints', 5)
-        kindPlot =kws.pop('kind', 'line') # or site
-        
+
         dict_filter ={
             1:['ama', 'adaptative moving-average', 'torres verdin'],
             2: ['flma', 'fixed dipole moving-average', 'fixed dipole'],
             3: ['tma', 'trimming moving-average', 'trimming']
                       }
-        
         try : 
             kindPlot = int(kindPlot)
         except: 
@@ -962,9 +996,12 @@ class Plot1d :
             elif kindPlot.lower().find('site')>=0 or\
                 kindPlot.lower().find('sta')>=0: 
                 kindPlot =2 
+    
         else: 
             if not kindPlot in [1, 2]: 
                 kindPlot =1 
+
+                
         #  manage filter 
         try : 
             filter_type = int(filter_type)
@@ -981,10 +1018,12 @@ class Plot1d :
 
             if f_flag is False:
                 filter_type =1 # set default fiter
+       
         else: 
              if not filter_type [1, 2, 3]: 
                  filter_type =1 
-
+        # get the first name of dict_filter value         
+        ff = dict_filter[filter_type ][0] 
 
         # Read original data 
         sshiftObj = Scor(data_fn=data_fn , profile_fn=profile_fn,
@@ -1018,18 +1057,33 @@ class Plot1d :
             corrected_rho =corrected_rho[::-1]
    
         def retreive_single_siteOrFreqdata(stnOrFreq):
-            """ Get the plot data for one site or survey lines 
+            """ 
+            Get the plot data for one site or survey line after applying the 
+            static shift correction. Retrieve essential data for `kind` plot.
+            
+            :param stnOrFreq: Can be a site name or frequency value 
+            
+            :returns: 
+                - `stn`: station name or frequencu value 
+                - `measured_rho`: value of observed rho data in ohm.m  
+                - `measured_phase`: value of observed phase in degrees 
+                - `corrected_rho`: rho corrected after staticsfit correction 
+                - `corrected_phase`:phase corrected after apply 
+                                    staticshift cor.
+                - `wff`: weight factor 
             """
             
-            if kindPlot ==1: # line then focused on frequency 
+            if kindPlot ==1: # line mean plot rho|phase vs stations
                 try: 
                     stnOrFreq=float(stnOrFreq)
                 except: 
-                    warnings.warn(f' Coud not found {stnOrFreq} in '
+                    warnings.warn(f'The kind of plot is = `{kindPlot}`.'
+                        f' Coud not found `{stnOrFreq}` in '
                                   f'frequency range ={freq_array}.')
                     self._logging.debug(
                         f'{stnOrFreq} not found in frequency range.')
-                    raise CSex.pyCSAMTError_frequency('frequency must be a float '
+                    raise CSex.pyCSAMTError_frequency(
+                        'frequency must be a float '
                         'number not `{}`.'.format(type(stnOrFreq)))
                 else: 
                     index_freq , freq_value = mplotus.getcloser_frequency(
@@ -1039,17 +1093,17 @@ class Plot1d :
                 measured_phase_r = measured_phase[index_freq, :]
                 corrected_phase_r = corrected_phase[index_freq, :]
                 corrected_rho_r = corrected_rho[index_freq, :]
-                # list of frequency
-                station_lst=['{} Hz'.format(round(stnOrFreq, 1))] 
+                # collected list of frequency
+                stn='{} Hz'.format(round(freq_value, 1)) 
                 
                 wff = W_[index_freq, :]
                 
-            elif kindPlot ==2: #plot site 
+            elif kindPlot ==2: #plot rho|phase vs frequency 
                 
-                station_lst = mplotus.get_stationid(stations=sites,
-                                                    station_id= stnOrFreq)
+                stn = mplotus.get_stationid(stations=sites,
+                                            station_id= stnOrFreq)[0]
                 
-                stn_index = sites.index(station_lst[0])
+                stn_index = sites.index(stn)
                 # disce_site =station_distance [stn_index] 
                 
                 measured_rho_r = measured_rho[:, stn_index ]
@@ -1058,31 +1112,33 @@ class Plot1d :
                 corrected_rho_r = corrected_rho[:, stn_index ]
                 wff = W_[:, stn_index ]
                 
-            return (station_lst[0], (measured_rho_r, corrected_rho_r),\
+            return (stn, (measured_rho_r, corrected_rho_r),\
                     (measured_phase_r, corrected_phase_r ), wff , wff) 
         
-        # generate lines number 
-        lines =  [line  for j in range(len(siteOrfreq_lst))]
-        
+  
         # read the data and collect data 
         stations, appRHO, phase,\
             appRho_w, phase_w=[[]for i in range(5)]
        
-        if kindPlot==1: # use station as axis plot 
-            freq =[station_distance for j in range(len(siteOrfreq_lst))] 
+        if kindPlot==1: # use station as axis plot and start by 0
+        
+            freq =[station_distance - station_distance.min()
+                   for j in range(len(siteOrfreq_lst))] 
         else: freq =[freq_array for j in range(len(siteOrfreq_lst))] 
             
-            
-        for ii, lines in enumerate(siteOrfreq_lst) : 
+        ssinfos =(kindPlot, ff) 
+         
+        for ii, lin_ in enumerate(siteOrfreq_lst) : 
             stn_, rho_, phase_ , rho_err_ , phase_err_ =\
-                retreive_single_siteOrFreqdata(lines)
+                retreive_single_siteOrFreqdata(lin_)
             stations.append(stn_)
             appRHO.append(rho_)
             phase.append(phase_)
             appRho_w.append(rho_err_)
             phase_w.append(phase_err_)
             
-        return (lines, stations, freq,  appRHO, phase, appRho_w, phase_w)  
+        return (ssinfos, lines, stations, freq, 
+                appRHO, phase, appRho_w, phase_w)  
                
   
         
@@ -1198,8 +1254,8 @@ class Plot1d :
                         label = 'App. resistivity curve')# ,marker ='D', 
                          #alpha = 1)   
 
-            axe1.minorticks_on()    
-            axe1.grid(color='k', ls=':', lw =0.25, alpha=0.8, which ='major') # customize specific grid
+            axe1.minorticks_on()    # customize specific grid
+            axe1.grid(color='k', ls=':', lw =0.25, alpha=0.8, which ='major') 
        
             axe1.set_xlabel('Frequency (Hz)' ,
                             fontdict={'color': 'k',
@@ -1451,7 +1507,8 @@ class Plot1d :
                 depmax,  freqmax = depth1D(freqs).max(),freqs
             
             #axis.set_title(' Penetraton depth plot : max depth = {0}
-            #km max depth'.format(np.around(depmax*1e-3,2)),  fontsize= self.font_size)
+            #km max depth'.format(np.around(depmax*1e-3,2)),  
+            #fontsize= self.font_size)
                     # #---set the second axis ---------
         
         
@@ -1545,7 +1602,7 @@ class Plot1d :
         mpl.rcParams['figure.figsize']=[12,7]
         fig =plt.figure()
         
-        #---- > create axis for each plot from subplot2grid-------------------------------------- 
+        #---- > create axis for each plot from subplot2grid-------------
         
         axe_res =plt.subplot2grid(shape=(3,5), loc=(0,0), rowspan=2, colspan=3)
         axe_phase =plt.subplot2grid(shape=(3,5), loc=(2,0),  colspan=3)
@@ -1567,7 +1624,6 @@ class Plot1d :
             rho,  = axe_res.loglog(zonge_freq_obj,zonge_res_obj [stn_id] , 
                                    lw= self.lw,
                                    label = 'station {0}'.format(stn_id))
-                                        #marker ='*', markersize =self.ms*self.fs , ) 
             axe_res.set_xlabel('Frequency (Hz)', 
                                fontdict={'color': 'k',
                                         'size':self.x_minorticks *xylabelsize,
@@ -1606,7 +1662,6 @@ class Plot1d :
                                           zonge_phase_obj [stn_id] ,
                                           lw= self.lw, 
                                           label = 'station {0}'.format(stn_id))
-                                        #marker ='*', markersize =self.ms*self.fs , ) 
             axe_phase .set_xlabel('Frequency (Hz)', 
                                   fontdict={'color': 'k',
                                             'size':self.x_minorticks *xylabelsize,
@@ -1635,10 +1690,13 @@ class Plot1d :
             
             #---------EMAG PLOT -----------------------------
             
-            markemag, =axe_emag.loglog(zonge_freq_obj,zonge_emag_obj [stn_id],  c='white', 
+            markemag, =axe_emag.loglog(zonge_freq_obj,
+                                       zonge_emag_obj [stn_id], 
+                                       c='white', 
                                 marker ='o', markersize =self.ms*self.fs ,)
             emag,  = axe_emag.loglog(zonge_freq_obj,zonge_emag_obj [stn_id] ,
-                                     lw= self.lw, label = 'station {0}'.format(stn_id))
+                                     lw= self.lw, 
+                                     label = 'station {0}'.format(stn_id))
                                         #marker ='*', markersize =self.ms*self.fs , ) 
             axe_emag.set_xlabel('Frequency (Hz)', 
                                 fontdict={'color': 'k',
@@ -1673,12 +1731,14 @@ class Plot1d :
                                 marker ='o', markersize =self.ms*self.fs ,
                                 alpha =0.8 )
             hmag,  = axe_hmag.loglog(zonge_freq_obj,zonge_hmag_obj [stn_id] ,
-                                     lw= self.lw, label = 'station {0}'.format(stn_id))
+                                     lw= self.lw,
+                                     label = 'station {0}'.format(stn_id))
                                         #marker ='*', markersize =self.ms*self.fs , ) 
             axe_hmag.set_xlabel('Frequency (Hz)', 
                                 fontdict={'color': 'k', 
                                           'size':self.x_minorticks *xylabelsize,
-                                          'weight':self.fontweight, 'style' :fontstyle})
+                                          'weight':self.fontweight, 
+                                          'style' :fontstyle})
             axe_hmag.set_ylabel('H-magn.(picoT/A)', 
                                 fontdict={'color': 'k',
                                           'size':self.y_minorticks *xylabelsize, 
@@ -1846,11 +1906,12 @@ class Plot1d :
                     markeredgecolor='k',
                     markerfacecolor='red',)
         
-        axrms.set_xlabel ('Iteration number', fontdict ={'size': 4*self.font_size,
-                                                  'c': 'k',
-                                                  'weight':self.fontweight, 
-                                                  'style':'italic', 
-                                                  })
+        axrms.set_xlabel ('Iteration number', 
+                          fontdict ={'size': 4*self.font_size,
+                                        'c': 'k',
+                                        'weight':self.fontweight, 
+                                        'style':'italic', 
+                                        })
         axrms.set_ylabel ('R.M.S', fontdict ={'size': 4* self.font_size,
                                                   'c': 'k',
                                                   'weight':self.fontweight, 
@@ -1932,8 +1993,8 @@ class Plot1d :
                               reajust_coordinates=(0,0), savefig =None, 
                               **kwargs ):
         """
-        Method to plot original station profile and coordinate reajustment profiles. 
-        Deal with Zonge AVG file .
+        Method to plot original station profile and coordinate reajustment
+         profiles. Deal with Zonge AVG file .
         
         Parameters
         -----------
@@ -1982,7 +2043,8 @@ class Plot1d :
         new_prof_north_obj = profile_obj.north 
 
         #get profile name though Site_obj
-        profile_obj.Site.set_site_info(data_fn =fn)#easting =new_prof_east_obj , northing =new_prof_north_obj)
+        #easting =new_prof_east_obj , northing =new_prof_north_obj)
+        profile_obj.Site.set_site_info(data_fn =fn)
 
         profile_station_names =profile_obj.Site.stn_name
         
@@ -2099,7 +2161,7 @@ class Plot1d :
         else :
             dz =1.
         
-        for attr in ['X', 'Y'] : self.__setattr__(attr, None ) # let initalise attr 
+        for attr in ['X', 'Y'] : self.__setattr__(attr, None ) 
         
         if X is not None : self.X = X 
         if Y is not None : self.Y =Y
@@ -2162,8 +2224,9 @@ class Plot1d :
                     profile_obj.straighten_profileline() #straighen out profile 
                     
                 profile_obj.get_profile_angle()
-                # gstks, pangs, _= geostrike.compute_geoelectric_strike(easting =profile_obj.east,
-                #                                       northing = profile_obj.north)
+                # gstks, pangs, _=
+                #geostrike.compute_geoelectric_strike(easting =profile_obj.east,
+                #              northing = profile_obj.north)
                 # now get value reajusted : 
                 eastings.append(profile_obj.east)
                 northings.append(profile_obj.north)
@@ -2274,12 +2337,13 @@ class Plot1d :
             #annotate station
             
             if show_station_labels  is True: 
-                dx = np.sqrt(profile_obj.dipole_length)*2 # get label closet to the point 
+                dx = np.sqrt(profile_obj.dipole_length)*2 
                 # dx = profile_obj.dipole_length*2
     
                 for jj , stn in enumerate(snames[ii]) : 
                     axeProfiles.annotate(stn,  
-                                 xy=((self.X[ii][jj]+dx)/dz, (self.Y[ii][jj]+dx)/dz), 
+                                 xy=((self.X[ii][jj]+dx)/dz,
+                                     (self.Y[ii][jj]+dx)/dz), 
                                  #xycoords='figure points'
                                  fontsize = 1.*self.font_size, 
                                  
@@ -2329,7 +2393,8 @@ class Plot1d :
                             )
 
         
-        profile_lines = ['${0}$'.format(''.join([name , ':Azim ={0} °'.format(angle)])) 
+        profile_lines = ['${0}$'.format(''.join([name , 
+                                                 ':Azim ={0} °'.format(angle)])) 
                          for name, angle in zip(profile_lines, profile_angles)]
                       
         axeProfiles.legend(leghandles, profile_lines,
@@ -2556,7 +2621,7 @@ class Plot2d (object):
         csamt_dep1D_obj = csamt_obj.skindepth 
         csamt_freq_obj =csamt_obj.freq 
         csamt_stnDis_obj =csamt_obj.station_distance
-        csamt_stn_obj = sorted(list(csamt_obj.skindepth .keys()))       # get station id name :
+        csamt_stn_obj = sorted(list(csamt_obj.skindepth .keys()))      
 
             
         if stnnames is not None : 
@@ -2568,7 +2633,8 @@ class Plot2d (object):
 
         def depth2D (dep_loc,  freq_obj, doi ): 
             """
-            Build matrix freq at n-station from 1D skin depth and return use station 
+            Build matrix freq at n-station from 1D skin depth and return 
+            use station. 
             
             :param dep_loc: obj to get create matrix  from all station 
             :type dep_loc: dict 
@@ -2868,7 +2934,7 @@ class Plot2d (object):
                    [xphase_matrix , yphase_matrix ,csamt_PHS_obj]]
             for ii, (axe, deline)  in enumerate( zip ([axe_res, axe_phase], 
                                       [delineate_resistivity_curve,
-                                       delineate_phase_curve])) : # loop the dict and get value 
+                                       delineate_phase_curve])) : 
                 if  deline is not None : 
                     contps = axe.contour(*MAT[ii], 
                                          colors =contourcolors, 
@@ -2947,7 +3013,7 @@ class Plot2d (object):
             MAT = [csamt_RES_obj, csamt_PHS_obj]
             for ii, (axe, deline)  in enumerate( zip ([axe_res, axe_phase], 
                                       [delineate_resistivity_curve,
-                                       delineate_phase_curve])) : # loop the dict and get value 
+                                       delineate_phase_curve])) :
                 if  deline is not None :
                     if ii ==0 : origin ='upper'
                     else : origin ='lower'
@@ -3077,7 +3143,8 @@ class Plot2d (object):
             ...                            model_fn =os.path.join(
             ...                                os.path.dirname(path), model) , 
             ...                            data_fn =os.path.join(
-            ...                                os.path.dirname(path), data ), doi='1km')
+            ...                                os.path.dirname(path), data ),
+            ...                             doi='1km')
         """
         self._logging.info('Plot occamModel 2D')
         depth_scale =kwargs.pop('depth_scale', 'm')
@@ -3128,7 +3195,8 @@ class Plot2d (object):
             delineate_resistivity_curve = mplotus.controle_delineate_curve(
                 res_deline=delineate_resistivity_curve)
             #assert value to put on float rounded to 1 
-            # note that value of resistivity for delineate MUST be on OHM- M not log10 resistivity 
+            # note that value of resistivity for delineate MUST be
+            #on OHM- M not log10 resistivity 
             try : 
                 # for consistency 
                 if not isinstance (delineate_resistivity_curve, list ): 
@@ -3149,7 +3217,8 @@ class Plot2d (object):
         # get station names and station offsetS objs 
         
         occam_data_station_offsets =np.array(occam_data_obj.data_offsets)
-        # generally data from occam_station offset are normalized then get the dipole length to normalize 
+        # generally data from occam_station offset are 
+        #normalized then get the dipole length to normalize 
         # xpad 
         dl = occam_data_station_offsets.max()/ (len(occam_data_station_offsets)-1)
         self.xpad = (dl/2)/dz 
@@ -3170,9 +3239,9 @@ class Plot2d (object):
         plot_z_axis  =  occam_model_obj.model_depth_offsets
         occam_model_resistiviy_obj = occam_model_obj.model_resistivity
         
-        #--------------------END Objects statements ----------------------------
+        #------END Objects statements ------------
         
-        #-----handles depth of investigation or depth of imaging {doi}:--------- 
+        #-----handles depth of investigation or depth of imaging {doi}:-----
             
         # --> check doi value provided , and convert to default unit {meters}  
         doi =mplotus.depth_of_investigation(doi=doi)
@@ -3180,8 +3249,8 @@ class Plot2d (object):
    
                 
         # set boundaries of stations offsets and depth 
-        spec_f = -(doi/5)/dz  # assume that depth will  start by 0 then substract add value so 
-                                        # to get space for station names text
+        spec_f = -(doi/5)/dz  
+                              
 
         #-25 +0 : 1300 +25 (xpad = 25 )                              
         self.xlimits=(occam_data_station_offsets.min()/dz -self.xpad  , 
@@ -3214,15 +3283,15 @@ class Plot2d (object):
         axm = self.fig.add_subplot(1, 1, 1, aspect=self.fig_aspect)
         
         
-        #---------------------PLOTS STATEMENTS -----------------------------------------
+        #-----PLOTS STATEMENTS -----------------------------
         
                 #fist option is "pcolormesh " 
         self._logging.info (
             'Ready to plot Model with matplotlib "{0}" style.'.format(plot_style))     
         if plot_style =='pcolormesh':
             
-            # if you keep plot_x_axis and plot_z_axis in meter , be sure to divided py dz 
-            # meshes respectively 
+            # if you keep plot_x_axis and plot_z_axis in meter ,
+            #  be sure to divided py dz meshes respectively 
             mesh_x  , mesh_z= np.meshgrid(plot_x_axis,  plot_z_axis )
             rho_axm = axm.pcolormesh (mesh_x/dz  , 
                                     mesh_z/dz ,
@@ -3249,7 +3318,7 @@ class Plot2d (object):
         if plot_style.lower() =='imshow': 
 
             mesh_x  , mesh_z= np.meshgrid(plot_x_axis  , plot_z_axis )
-
+            # to get the origine =0 of the plot
             axm.imshow (occam_model_resistiviy_obj,
                                 vmax = self.climits[1], 
                                 vmin =self.climits[0], 
@@ -3260,7 +3329,7 @@ class Plot2d (object):
                                 extent=( self.xlimits[0],
                                         self.xlimits[1],
                                         self.ylimits[1], 
-                                        self.ylimits[0] - spec_f), # to get the origine =0 of the plot 
+                                        self.ylimits[0] - spec_f),  
 
                                     )
 
@@ -3286,7 +3355,7 @@ class Plot2d (object):
                                           )
         
         
-        #-----------------------END PLOTS STATEMENTS--------------------------------------
+        #-----------------------END PLOTS STATEMENTS---------------
             #set xlimits and y limits for model axes 
         # for making a color bar 
         if type(self.cmap) == str:
@@ -3297,7 +3366,7 @@ class Plot2d (object):
         
        
         
-        #--------------SET TWIN axes for station ticks and labels -------------------------
+        #-----SET TWIN axes for station ticks and labels ---------
         
         # create twin axis to set ticks to tehe top station
         axe2=axm.twiny()
@@ -3431,11 +3500,14 @@ class Plot2d (object):
             
             >>> from viewer.plot import Plot2d
             >>> pathresp =os.path.join(os.environ ['pyCSAMT'],
-            ...                           'pycsamt', 'data', 'occam2D','RESP17.resp')
+            ...                           'pycsamt', 'data', 
+            ...         'occam2D','RESP17.resp')
             >>> path_data =os.path.join(os.environ ['pyCSAMT'],
-            ...                            'pycsamt', 'data', 'occam2D','OccamDataFile.dat' )
+            ...                            'pycsamt', 'data', 
+            ...     'occam2D','OccamDataFile.dat' )
             >>> plot2d_obj = plot2d()
-            ... plot2d_obj.plot_Response(data_fn =path_data , response_fn=  pathresp )
+            ... plot2d_obj.plot_Response(data_fn =path_data ,
+            ...                             response_fn=  pathresp )
             
         """
         self._logging.info('Plot occam pseudosection of forward , residual value ')
@@ -3451,7 +3523,7 @@ class Plot2d (object):
         savefig =kws.pop('savefig', None)
         set_station_label=kws.pop('show_station_id', True)
 
-        #------------------------STATEMENT RESPONSE OBJECT ----------------------
+        #-----------STATEMENT RESPONSE OBJECT ----------------------
         resp_obj = occam2d.Response (data_fn =data_fn , response_fn=response_fn)
         # get occam data type  and build large list of possible mode 
         
@@ -3460,7 +3532,7 @@ class Plot2d (object):
         resp_occam_dtype_obj = resp_obj.occam_dtype
         
         
-        #---------------------------------MANAGE OCCAM PLOT MODE -------------------------
+        #---------MANAGE OCCAM PLOT MODE -------------------------
         # if mode is not provided , then take the first occam mode 
 
         if mode is None : mode = resp_occam_dtype_obj [0]
@@ -3486,13 +3558,14 @@ class Plot2d (object):
             if imode ==mode : 
                 resp_occam_dtype_obj  =  resp_occam_dtype_obj [im]  
             
-        #-------------------------MANAGE COUNTOUR PLOT -----------------------------------------
+        #----MANAGE COUNTOUR PLOT ------------------------
          #---> get delineate rho curve --- 
         if delineate_resistivity_curve is not None : 
             delineate_resistivity_curve = mplotus.controle_delineate_curve(
                 res_deline=delineate_resistivity_curve)
             #assert value to put on float rounded to 1 
-            # note that value of resistivity for delineate MUST be on OHM- M not log10 resistivity 
+            # note that value of resistivity for delineate MUST 
+            #be on OHM- M not log10 resistivity 
             try : 
                 # for consistency 
                 if not isinstance (delineate_resistivity_curve, list ): 
@@ -3502,7 +3575,7 @@ class Plot2d (object):
                 
                 delineate_resistivity_curve=delineate_resistivity_curve
                 pass 
-        #--------------------------------MANAGE PRINT INFO ------------------------------------------------
+        #----MANAGE PRINT INFO -----------------------------
         print('{0:=^77}'.format('Occam Response plot infos'))
         print('---> Occam 2D plot Mode  = {}'.format(
             mode.split('_')[0].upper() +' ' + mode.split('_')[1]))
@@ -3510,7 +3583,7 @@ class Plot2d (object):
             print('---> Occam 2D contour delineate value = {}'.format(
                 tuple(delineate_resistivity_curve)))
  
-        #----------------------- CALL RESPONSE OCJECT USEFULL FOR PLOTTING------------------------------------
+        #--- CALL RESPONSE OCJECT USEFULL FOR PLOTTING----
         # Now get attributes of forward and residual values 
         self.resp_forward = getattr(resp_obj,
                                     'resp_{0}_forward'.format(mode))
@@ -3527,7 +3600,7 @@ class Plot2d (object):
             print('---> Occam 2D contour delineate value = {}'.format(
                 tuple(delineate_resistivity_curve)))
         
-        # ------------------------DECLARE FIGURE AND PROPERTIES --------------------------------------------
+        # --DECLARE FIGURE AND PROPERTIES --------------------
 
         # statement of figures 
         self.fig = plt.figure(self.fig_num, self.fig_size, 
@@ -3555,7 +3628,7 @@ class Plot2d (object):
         # RESIclimits=(self.resp_residual.min(),
         #              self.resp_residual.max())
         RESIclimits =(-2,2)
-        #---------------------------------------PLOT STATEMENT -------------------------------------------------
+        #---PLOT STATEMENT --------------------------
         
         # plotstyle is None take a default as pcolormesh
         if plot_style is not None : plot_style =plot_style.lower()
@@ -3572,8 +3645,8 @@ class Plot2d (object):
                                           self.resp_freq, 
                                           )
             
-            # if you keep plot_x_axis and plot_z_axis in meter , be sure to divided py dz 
-            # meshes respectively 
+            # if you keep plot_x_axis and plot_z_axis in meter ,
+            # be sure to divided py dz  meshes respectively 
             
             #------plot forward response -------
             axeFW.pcolormesh (mesh_x , 
@@ -3616,7 +3689,7 @@ class Plot2d (object):
                                 extent=( self.xlimits[0],
                                         self.xlimits[1],
                                         self.ylimits[1], 
-                                        self.ylimits[0] ), # to get the origine =0 of the plot 
+                                        self.ylimits[0] ), 
 
                                     )
             axeRESI.imshow (self.resp_residual,
@@ -3629,7 +3702,7 @@ class Plot2d (object):
                                 extent=( self.xlimits[0],
                                         self.xlimits[1],
                                         self.ylimits[1], 
-                                        self.ylimits[0] ), # to get the origine =0 of the plot 
+                                        self.ylimits[0] ), 
 
                                     )
 
@@ -3712,7 +3785,7 @@ class Plot2d (object):
             
             if set_station_label is True :  # then plot label id 
                 axeFW.text(offs,
-                        self.ylimits[0] + np.log10( self.ylimits[0]/2.5),  # get station name closest to station text.  
+                        self.ylimits[0] + np.log10( self.ylimits[0]/2.5),   
                         s= names,
                         horizontalalignment='center',
                         verticalalignment='baseline',
@@ -3722,7 +3795,7 @@ class Plot2d (object):
                             )
         if set_station_label is True : 
             axeFW.text ((self.resp_sites_offsets.max()-\
-                         self.resp_sites_offsets.min())/2, #take the center point and add value to top 
+                         self.resp_sites_offsets.min())/2, 
                        self.ylimits[0] + np.log10( self.ylimits[0]/1.25), 
                         s= 'Stations',
                         horizontalalignment='center',
@@ -3761,10 +3834,11 @@ class Plot2d (object):
                       fontdict={'size': self.font_size , 
                                 'weight': 'bold'})
             
-                cb.set_ticks(np.arange(int(self.climits[0]), int(self.climits[1]) + 1))
+                cb.set_ticks(np.arange(int(self.climits[0]), 
+                                       int(self.climits[1]) + 1))
                 # cb.ax.tick_params(axis='y', direction='in', pad=2.)
-                cb.set_ticklabels(['10$^{0}$'.format('{' + str(nn) + '}') for nn in
-                                    np.arange(int(self.climits[0]),
+                cb.set_ticklabels(['10$^{0}$'.format('{' + str(nn) + '}') 
+                                    for nn in np.arange(int(self.climits[0]),
                                               int(self.climits[1]) + 1)])
                 
 
@@ -3959,9 +4033,11 @@ class Plot2d (object):
         for key in list(kwargs.keys()):
             setattr(self, key, kwargs[key]) 
             
-        # ----------------- Ascertainment of differents files --------------------------
-        f,p=0,0                 # indicator with file provided for reading , program withcheck the corresponding files 
-                                # even mayfiles is provied , default is read Occam 2D files 
+        # --- Ascertainment of differents files --------------------------
+        # indicator with file provided for reading , program withcheck
+        f,p=0,0      #the corresponding files # even mayfiles is provied ,
+                        # default is read Occam 2D files 
+                                
                                 
         imf, imp =[[]for i in range(2)]
         
@@ -4026,15 +4102,16 @@ class Plot2d (object):
                 self._logging.error(mess)
         
             raise CSex.pyCSAMTError_plot_geoinputargument(mess)
-        
-        elif p==2 or f==4 :                 #----Finish ascertainement then build object and read ----------------------
+        #----Finish ascertainement then build object and read ----
+        elif p==2 or f==4 :    
             if f==4 :                       # priority to Occam2D data files 
                 print('**{0:<37} {1} {2}'.format(
-                    ' Occam Input files ','=' , tuple([os.path.basename(file) for
-                                                       file in [self.model_fn , 
-                                                                self.mesh_fn , 
-                                                                 self.data_fn, 
-                                                                 self.iter_fn]]))) # show message to user
+                    ' Occam Input files ','=' ,
+                    tuple([os.path.basename(file) for
+                        file in [self.model_fn , 
+                                 self.mesh_fn , 
+                                  self.data_fn, 
+                                  self.iter_fn]]))) # show message to user
                 
                 geo_obj =geoD.Geodrill(model_fn= self.model_fn , 
                               data_fn =self.data_fn , 
@@ -4048,19 +4125,19 @@ class Plot2d (object):
                 
             elif p==2 : 
                 print('**{0:<37} {1} {2}'.format(
-                    ' Iter Input files ','=' , tuple([ os.path.basename(file) for 
-                                                      file in [self.iter2dat_fn , 
-                                                       self.bln_fn ]]))) 
+                    ' Iter Input files ','=' ,
+                    tuple([ os.path.basename(file) for 
+                                    file in [self.iter2dat_fn , 
+                                     self.bln_fn ]]))) 
                 
                 geo_obj =geoD.Geodrill(iter2dat_fn =self.iter2dat_fn, 
-                                       bln_fn =self.bln_fn , 
-                                       input_layers =input_layers , 
-                                       input_resistivities =input_resistivities, 
-                                       doi =doi )
-                #------------------ if input resistivities is None , let get input fron specail station ID -----------------
-                
+                                    bln_fn =self.bln_fn , 
+                                    input_layers =input_layers , 
+                                    input_resistivities =input_resistivities, 
+                                    doi =doi )
+                #------------------ if input resistivities is None ,
+                # let get input fron specail station ID -----------------
 
-                
         # ----------> Get all other attributes from geo_obj -------------------
         # Note data extract here are all in ohm meter not in log10 resistivities 
         # let get geo_d == dictionnaries of sation and resistivities framed 
@@ -4073,36 +4150,38 @@ class Plot2d (object):
         
         self.step_descent = step_descent
         
-        #-------------------------Get the corresponding stationid  to Plot --------- ------------------
-        # user have possibility for multiples plot by puting station id into a list 
-        
+        #--Get the corresponding stationid  to Plot user have possibility for
+        #  multiples plot by puting station id into a list 
+        # get station names on list 
         self.station_id = mplotus.get_stationid(stations=self.station_names,
-                                                station_id=station_id) # get station names on list 
+                                                station_id=station_id) 
         
-            # build em dict from station to get a special  input resistivities layers -------
+            # build em dict from station to get
+            #a special  input resistivities layers -------
         
         #for stn , res_values in self.geo_stations_dict.items(): 
         if input_resistivities is None : 
             self.input_resistivities ={stn :
-                                       mplotus.get_station_id_input_resistivities(
-                                           station_rho_value=res_values) 
-                                           for stn , res_values in self.geo_stations_dict.items()}
+                mplotus.get_station_id_input_resistivities(
+                    station_rho_value=res_values) 
+                    for stn , res_values in self.geo_stations_dict.items()}
         
-        #---------------------Figure statements and properties -------------------------
-        
-        self.fig = plt.figure(self.fig_num, self.fig_size, dpi=self.fig_dpi )#, constrained_layout=True)
+        #---Figure statements and properties -------------------------
+
+        self.fig = plt.figure(self.fig_num, self.fig_size, dpi=self.fig_dpi )
   
-        self.fig_aspect ='auto'                     # blocked to automatic , can not change 
-        
-        gs=gspec.GridSpec(nrows =7, ncols= 7, figure =self.fig)  # grid spect into three grid 
+        self.fig_aspect ='auto'   # blocked to automatic , can not change 
+
+        gs=gspec.GridSpec(nrows =7, ncols= 7, figure =self.fig) 
         
         axe_Titles = self.fig.add_subplot(gs[0, :6])
-        axe_Titles.set_visible(False)                           # make title axes invisible  
+        axe_Titles.set_visible(False)   # make title axes invisible  
         
         
         axePseudodrill = self.fig.add_subplot(gs[1:6, 0])
         axeLogRho= self.fig.add_subplot(gs[1:6,1:3], sharey= axePseudodrill)
-        axePseudosequences = self.fig.add_subplot(gs[1:6,3:], sharey=  axePseudodrill)
+        axePseudosequences = self.fig.add_subplot(gs[1:6,3:], 
+                                                  sharey=  axePseudodrill)
   
   
         axe_Legends_rho_sequences = self.fig.add_subplot(gs[6, :4])
@@ -4114,7 +4193,8 @@ class Plot2d (object):
         
         # ----> Manage XY limits --------------------------------------
         
-        # build  the distance separation by  rounding value using function round dipole length 
+        # build  the distance separation by 
+        # rounding value using function round dipole length 
         
         df = func.round_dipole_length(int(self.station_location.max()
                                           /(len(self.station_location)-1)))
@@ -4122,25 +4202,29 @@ class Plot2d (object):
         dy=30           # ypad =dy      to locate station
         
         
-        # --->          build a smallsites offsets set x pseudodrill limits  of hree stations 
+        # ---> build a smallsites offsets set x 
+        #pseudodrill limits  of three stations 
         
         plot_sites_offsets = np.arange(df, 4*df , df)
-        for ids in self.station_id : # take the indice and find two next statiion and build corresponding stationnames 
+        # take the indice and find two next statiion and build 
+        #corresponding stationnames 
+        for ids in self.station_id : 
             ids=int(ids.replace('S', ''))
-            if ids ==0 :                                            # the first station 
-                plot_sites_names =['S{0:02}'.format(ii) for ii in range(3)]  # if station is the first station names 
-                
-            elif ids == len(self.station_names)-1 :                    # that means the last stations 
+            if ids ==0 :             # the first station 
+                # if station is the first station names 
+                plot_sites_names =['S{0:02}'.format(ii) for ii in range(3)]  
+            # that means the last stations     
+            elif ids == len(self.station_names)-1 :                    
                 plot_sites_names= ['S{0:02}'.format(ii) for
                                    ii in range(len(self.station_names)-3, 
                                                 len(self.station_names)) ]
-            else : 
-                plot_sites_names= ['S{0:02}'.format(ii) for ii in range(ids-1,  # let framed the main station id 
+            else : # let framed the main station id 
+                plot_sites_names= ['S{0:02}'.format(ii) for ii in range(ids-1,  
                                                              ids+2) ]
       
        
         
-        #-----------------------------------let get default plot and set scale --------------------------------------------------- 
+        #----let get default plot and set scale ----- 
         if pseudo_plot_style==None  :
             pseudo_plot_style = 'imshow'
             
@@ -4150,18 +4234,18 @@ class Plot2d (object):
             dz= 1.
         elif depth_scale.lower() =='km': 
             dz=1000.
-        else :                          # in the case a wrong value is provided
+        else :               # in the case a wrong value is provided
             dz=1.
             
-            
+         # let graduate to eg [-10 +160] -->if df=50 as step     
         self.xlimits=((plot_sites_offsets[0]-dx)/dz,
-                      (plot_sites_offsets[-1]+dx)/dz)            # let graduate to eg [-10 +160] -->if df=50 as step 
+                      (plot_sites_offsets[-1]+dx)/dz)           
         self.ylimits = (self.geo_depth.min()/dz,
-                        self.geo_depth.max()/dz )         # reversed axis order     
+                        self.geo_depth.max()/dz )    # reversed axis order     
             
             
         for stn in self.station_id : 
-            #--------------------------------READ OBJECT AND PUT THE SPECIAL INPUT RESISTIVITIES -------------
+            #----READ OBJECT AND PUT THE SPECIAL INPUT RESISTIVITIES -------
             if input_resistivities is None : 
                 input_resistivities = self.input_resistivities[stn]
             
@@ -4177,14 +4261,16 @@ class Plot2d (object):
             minlog = np.log10(self.geo_stations_dict[stn]).min()
             self.xloglimits= (minlog, maxlog) 
             
-                    #--------------------------------BUILD PSEUDO DRILL ------------------------------------
+                    #--------------------------------BUILD PSEUDO DRILL -----
             self._logging.info('Build Pseudo drill from Occam 2D models.')
             
             if pseudo_plot_style.lower() == 'pcolormesh': 
                 
-                self._logging.info ('Ready to plot Pseudodrill  with matplotlib "pcolormesh"')
+                self._logging.info (
+                    'Ready to plot Pseudodrill  with matplotlib "pcolormesh"')
                 
-                mesh_x , mesh_y = np.meshgrid(plot_sites_offsets/dz, self.geo_depth/dz)
+                mesh_x , mesh_y = np.meshgrid(
+                    plot_sites_offsets/dz, self.geo_depth/dz)
 
                 axePseudodrill.pcolormesh (mesh_x , 
                                            mesh_y ,
@@ -4198,7 +4284,8 @@ class Plot2d (object):
             
             if pseudo_plot_style.lower() =='imshow': 
                 
-                self._logging.info ('Ready to plot  Pseudodrill with matplotlib "imshow"')
+                self._logging.info (
+                    'Ready to plot  Pseudodrill with matplotlib "imshow"')
                 
                 axePseudodrill.imshow (np.log10(self.geo_stations_dict[stn]),
                                     vmax = self.climits[1], 
@@ -4268,14 +4355,14 @@ class Plot2d (object):
             
             for jj , istn in enumerate(plot_sites_names) : 
                 if istn ==stn :
-                    new_names = plot_sites_names # make a copy of plot names an doffsets 
+                    new_names = plot_sites_names
                     new_offs = plot_sites_offsets/dz
                     del(new_names[jj])
                     new_offs= new_offs.tolist()
                     del(new_offs[jj])
     
-                    tempax.set_xticks(ticks= new_offs, minor=False ) # plot only sites except the main station id 
-                    tempax.set_xticklabels( new_names,               # beacause it already names above 
+                    tempax.set_xticks(ticks= new_offs, minor=False ) 
+                    tempax.set_xticklabels( new_names,               
                                rotation=self.station_label_rotation,
                                fontdict={'size': self.ms*3}
                               )
@@ -4295,27 +4382,30 @@ class Plot2d (object):
                           fontdict={'size': self.font_size , 
                                     'weight': self.fw, 
                                     'style':self.font_style})
-            
-            tempax.set_xlim([self.xlimits[0], self.xlimits[-1]]) # set the x twins limits the same as the x of pseudodrill 
+            # set the x twins limits the same as the x of pseudodrill 
+            tempax.set_xlim([self.xlimits[0], self.xlimits[-1]]) 
 
 
-             #------------------------------plot LOGRHO----------------------------------------------
+             #------------------------------plot LOGRHO--------------------
             self._logging.info('Build  Plot1D resistivities sounding curves.')
             
             # Create twin axe to host log 10 rho values and xlables  
             axisLogcurve=axeLogRho.twiny()
             if self.show_grid is True: 
-                axeLogRho.grid(axis ='y', color='gray', ls=':', lw =0.3, alpha=0.8, which ='both')
-            #Xloglimits = np.arange(int(minlog)-1, int(maxlog)+2, 1) # No need , let do it automatically
+                axeLogRho.grid(axis ='y', color='gray', ls=':',
+                               lw =0.3, alpha=0.8, which ='both')
+            #Xloglimits = np.arange(int(minlog)-1, int(maxlog)+2, 1) 
+            # No need , let do it automatically
       
             
             # get the index of station id to plot 
             mms =int(stn.replace('S',''))
             if mms ==0 : 
                 indexplot =0 
-            elif mms == len(self.station_names)-1 :     # mean we are at the last station 
+                # mean we are at the last station 
+            elif mms == len(self.station_names)-1 :     
                 indexplot = -1
-            else : indexplot =1                         # plot the framed station 
+            else : indexplot =1  # plot the framed station 
             
 
             # get the array value at the main station id framed into Two 
@@ -4323,11 +4413,11 @@ class Plot2d (object):
             # plot the replace rho using the same index stn  
             AverageLogcurve, =  axisLogcurve.semilogx(
                 self.stations_replaced_rho[stn][:, indexplot],
-                            self.geo_depth/dz, 
-                            lw= self.lw*2 , 
-                            ls=self.ls,
-                            c= cdict_average_detailsC[0], 
-                            label ='Average logcurve (Ω.m)/station {0}'.format(stn)
+                        self.geo_depth/dz, 
+                        lw= self.lw*2 , 
+                        ls=self.ls,
+                        c= cdict_average_detailsC[0], 
+                        label ='Average logcurve (Ω.m)/station {0}'.format(stn)
                            
                             )
             # plot the details log curves using the step descent 
@@ -4338,7 +4428,8 @@ class Plot2d (object):
                             ls=self.ls,
                             c= cdict_average_detailsC[1], 
                             alpha=0.5,
-                            label='Detailsequence logcurve(Ω.m) :step_decsent ={0}{1}.'.\
+                            label='Detailsequence logcurve(Ω.m) :'\
+                                'step_decsent ={0}{1}.'.\
                                 format(self.step_descent/dz, depth_scale), 
                             
                             )
@@ -4389,13 +4480,11 @@ class Plot2d (object):
                                
             #                    )
             # ----set LEGEND vers 
-            axe_Legends_rho_sequences.legend([ ResLogcurve, 
-                                              AverageLogcurve,
-                                              DetailLogcurve], 
-                         ['Resistivity soundingcurve (Ω.m)/Station = {0}'.format(stn),
-                          'Average resistivity logcurve (Ω.m) based on resistivity calculation',
-                         ' Pseudo details-sequences logcurve',
-                        
+            axe_Legends_rho_sequences.legend(
+                [ ResLogcurve, AverageLogcurve,DetailLogcurve],
+                ['Resistivity soundingcurve (Ω.m)/Station = {0}'.format(stn),
+                 'Average resistivity logcurve (Ω.m) based on resistivity calculation',
+                ' Pseudo details-sequences logcurve',
                           ], 
                          # ncol= 3,
                          prop={'size':self.ms*3, 
@@ -4407,36 +4496,39 @@ class Plot2d (object):
             
            
             
-            #----------------------------PLOT PSEUDSEDQUENCES  --------------------------------
+            #----------------------------PLOT PSEUDSEDQUENCES  --------------
             self._logging.info(
                 'Build Pseudo sequences with delais logs'\
                     ' sequences curve and average curves..')
             # call the speudosecquence object from geo_obj 
 
             self.geo_dpseudo_sequence_thickness =geo_obj.geo_dpseudo_sequence 
-            self.geo_dpseudo_sequence_rho = geo_obj.geo_dpseudo_sequence_rho # resistivities at every layer thickess 
-            # resseting layer names , color, and pattern according to their resitivities 
+            # resistivities at every layer thickess 
+            self.geo_dpseudo_sequence_rho = geo_obj.geo_dpseudo_sequence_rho 
+            # resseting layer names , color,
+            #and pattern according to their resitivities 
 
             self.input_layers , self.layer_color , self.layer_pattern = \
                 geo_obj.get_geo_formation_properties(
                     structures_resistivities = \
                      self.geo_dpseudo_sequence_rho[stn], 
                      real_layer_names = input_layers, 
-                      constrained_electrical_properties_of_rocks=constrained_electrical_properties_of_rocks, 
+                      constrained_electrical_properties_of_rocks=\
+                          constrained_electrical_properties_of_rocks, 
                        default_layer_color =default_unknow_lcolor  , 
                        default_layer_pattern = default_unknow_lpattern,
                                                      )
                     
-            
-            axePS = axePseudosequences.twiny()          # create twniny so to get station at the top 
+             # create twniny so to get station at the top 
+            axePS = axePseudosequences.twiny()         
             
             # prepare a list of cumulative sum for bar plot setting everytimes ,
             # the bottom as the top of the next bar 
             # loop value of pseudo_sequences  and create bar plot 
             
             for ii, pseuds in enumerate(self.geo_dpseudo_sequence_thickness[stn]):
-    
-                next_bottom_bar = self.geo_dpseudo_sequence_thickness[stn][:ii].sum() # sum all the previous bars sequences
+                # sum all the previous bars sequences
+                next_bottom_bar = self.geo_dpseudo_sequence_thickness[stn][:ii].sum() 
      
                 axePS.bar(plot_sites_offsets[0]/(dz*2), 
                           pseuds, 
@@ -4450,18 +4542,21 @@ class Plot2d (object):
             
                           )
 
-            # prepare a cumul sum  for annotation starting to 0 and terminate at the depth minums 1 
+            # prepare a cumul sum  for annotation starting to
+            # 0 and terminate at the depth minums 1 
             annotate_cumsum = self.geo_dpseudo_sequence_thickness[stn].cumsum()
-            annotate_cumsum = np.concatenate((np.array([0]),annotate_cumsum[:-1]))
+            annotate_cumsum = np.concatenate(
+                (np.array([0]),annotate_cumsum[:-1]))
               
-            _, annotate_lnames = mplotus.annotate_tip(layer_thickness= \
-                                                                  annotate_cumsum ,
-                                                                  layer_names =self.input_layers )
+            _, annotate_lnames = mplotus.annotate_tip(
+                layer_thickness= annotate_cumsum ,
+                                 layer_names =self.input_layers )
+                                                                 
 
  
-            
+            # get station name closest to station text.  
             axePS.text(plot_sites_offsets[0]/(dz *2),
-                      self.ylimits[0] - 2*dy/dz,  # get station name closest to station text.  
+                      self.ylimits[0] - 2*dy/dz,  
                       s= stn,
                       horizontalalignment='center',
                       verticalalignment='baseline',
@@ -4532,7 +4627,7 @@ class Plot2d (object):
                                 np.arange(int(self.climits[0]),
                                           int(self.climits[1]) + 1)])
                 
-            #-------SETUP  ALL AXIS LIMIT SALL (3 plots)  ------------------------------------
+            #----SETUP  ALL AXIS LIMIT SALL (3 plots)  -----------------------
             
             axePseudodrill.set_xlim( [self.xlimits[0],  self.xlimits[1]])
             axePseudodrill.set_ylim ([self.ylimits[1], self.ylimits[0]]) 
@@ -4557,7 +4652,8 @@ class Plot2d (object):
 
             # axePseudodrill.set_xticks([])  
     
-            self.fig.suptitle('Pseudo-stratigraphy log construction: Station : {0}'.format(stn),
+            self.fig.suptitle(
+                'Pseudo-stratigraphy log construction: Station : {0}'.format(stn),
                          fontsize=  self.font_size *1.2, 
                          verticalalignment='center', 
                          style ='italic',
@@ -4699,25 +4795,24 @@ def plot_dataAndFits(data_fn =None, stations =None, **kws):
                                                           
             
         
-if __name__ == '__main__':
-    data = '/data/avg/K1.AVG'
-    data2= r'C:\Users\Administrator\OneDrive\Python\pyCSAMT\data\avg\K1.AVG'
-    data3=r'F:\ThesisImp\avg\K9.AVG'
-    path =r'F:\ThesisImp\avg'
-    pathData = [os.path.join(path, file) 
-                for file in ['K1.AVG',
-                              'K4.AVG', 'K6.AVG', 'K8.AVG'
-                              ]]
+# if __name__ == '__main__':
+#     data = '/data/avg/K1.AVG'
+#     data =r'F:\repositories\pyCSAMT\data\avg\K1.AVG'
+#     data2= r'C:\Users\Administrator\OneDrive\Python\pyCSAMT\data\avg\K1.AVG'
+#     data3=r'F:\ThesisImp\avg\K9.AVG'
+#     path =r'F:\ThesisImp\avg'
+#     pathData = [os.path.join(path, file) 
+#                 for file in ['K1.AVG',
+#                               'K4.AVG', 'K6.AVG', 'K8.AVG'
+#                               ]]
     
-    z_lines, z_stations, z_freq,  z_appRHO, z_phase,z_appRho_err,\
-            z_phase_err=plot_dataAndFits(data_fn = pathData, 
-                                          stations=['S00', 'S04', 's08', 'S12']
-                                          # , 'S04', 's06', 's10']
-                                          )
+#     z_lines, z_stations, z_freq,  z_appRHO, z_phase,z_appRho_err,\
+#             z_phase_err=plot_dataAndFits(data_fn = pathData, 
+#                                           stations=['S00', 'S04', 's08', 'S12']
+#                                           # , 'S04', 's06', 's10']
+#                                           )
 
-    
-    
-    
+
     
     
     

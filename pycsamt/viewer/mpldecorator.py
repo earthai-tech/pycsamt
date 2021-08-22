@@ -213,6 +213,7 @@ class geoplot1d :
         """ Call function to plot """
         self._func = func 
         
+        @functools.wraps(func)
         def fwrap_1d(*args, **kwargs):
             """ Function to be decorated. """
 
@@ -257,6 +258,7 @@ class geoplot1d :
 
             
              # make conditions ----------------------------------------
+            station_axis =False 
             if self.reason.lower().find('resp')>=0 : 
                 
                 lines_id, station, freq, appRho, phase, appRho_err,\
@@ -285,12 +287,28 @@ class geoplot1d :
                     
                 self.reason ='zonge'
                 fmsup ='Measured'
-     
+            elif self.reason.lower().find('stat') >=0 : 
+        
+                kind_p , lines_id, station, freq, appRho, phase, appRho_err,\
+                    phase_err= func(*args, **kwargs)
+                    
+                self.reason ='sshift'
+                fmsup = 'Static correction'
+                # if station axis, then plot the semilog axis rho
+                if kind_p[0] ==1: station_axis =True  
+                ffilter= kind_p[1] # ama/flma or tma
+                
+                self._logging.info(
+                    'Plot static correction of line {0} using {1} filter.'.
+                    format(lines_id[0],ffilter.capitalize() ))
                 
             n_stn = len(lines_id) 
-            self._logging.info(f"Plot `{n_stn}` "
-                f"{'Occam Response' if self.reason =='resp' else 'zonge avg'}"
-                " file{'s' if n_stn>1}.")
+    
+            if self.reason in ['resp', 'zonge']:
+                self._logging.info(f"Plot `{n_stn}` "
+                    f"{'Occam Response' if self.reason =='resp' else 'zonge avg'}"
+                    " file{'s' if n_stn>1}.")
+            
             
             if isinstance(station, str): 
                     station =[station]
@@ -313,6 +331,11 @@ class geoplot1d :
                     format(fmsup, fmt).format(*station)
                 if self.reason =='resp':
                     stitle = stitle.replace('data', 'of Rho and Phase')
+                if station_axis is True: 
+                    stitle=stitle.replace('stations', 
+                        f"{'frequencies' if n_stn>1  else 'frequency'}")
+                if self.reason =='sshift':
+                    stitle=stitle.replace('data', '')
                 
             fig.suptitle(stitle, verticalalignment='center', 
                                   style =self.font_style,
@@ -347,16 +370,17 @@ class geoplot1d :
                 
                 
                 if self.freqOrperiod_limits is None: 
-    
-                    self.freqOrperiod_limits = (10 ** (np.floor(np.log10(
-                                              freqOrperiod_list[0]))
-                                              ) * 1.01,
-                      10 ** (np.ceil(np.log10(freqOrperiod_list[-1]))) * .99)
+   
+                        self.freqOrperiod_limits = (10 ** (np.floor(np.log10(
+                                                  freqOrperiod_list[0]))
+                                                  ) * 1.01,
+                          10 ** (np.ceil(np.log10(freqOrperiod_list[-1]))) * .99)
             else: 
                 
                 freqOrperiod_list = freq[0]
                 freqOrPeriod = freq 
                 xlabel_name ='Frequency (Hz)'
+            
                  
                 if self.freqOrperiod_limits is None: 
         
@@ -364,25 +388,43 @@ class geoplot1d :
                                               freqOrperiod_list[0]))
                                               ) * 1.01,
                       10 ** (np.floor(np.log10(freqOrperiod_list[-1]))) * .99)
-            
+                    
+            if self.reason =='sshift' and station_axis is True: 
+                xlabel_name ='Distance (m)'
+  
+                self.freqOrperiod_limits=(freq[0].min(), freq[0].max())
+                        
+     
             # plot error in percentage 
             if self.reason =='zonge': 
                 coef = 100. 
                 x_line_coef, y_line_coef =1.01 , 1.5
                 y_pad =.5 
-            else : 
+            elif self.reason =='resp': 
                 coef =1.
                 x_line_coef, y_line_coef =1.01 , 1.01
                 y_pad =.3 
-            
+            elif self.reason =='sshift': 
+                coef =1.
+                x_line_coef, y_line_coef =50. , 1.1
+                
+                if station_axis is True: 
+                    x_line_coef *=10 
+                    y_line_coef *=3.5
+                    
+                y_pad =.5 
+                
             if len(lines_id)>=1:
-                # 
+                if station_axis is True: 
+                    x_scale =None 
+                else: x_scale = 'log'
+                
                 ax__appRho1 = fig.add_subplot(gs[0, 0],
-                                              xscale='log',
+                                              xscale=x_scale ,
                                               yscale='log',
                                               xlim=self.freqOrperiod_limits)
                 
-                ax__Phase1= fig.add_subplot(gs[1, 0],xscale ='log', 
+                ax__Phase1= fig.add_subplot(gs[1, 0],xscale =x_scale , 
                                             sharex=ax__appRho1) 
                 
                 #col1
@@ -406,10 +448,10 @@ class geoplot1d :
 
             if len(lines_id)>=2:
                 ax__appRho2 = fig.add_subplot(gs[0, 1],
-                                              xscale='log',
+                                              xscale=x_scale ,
                                               yscale='log', 
                                               sharey = ax__appRho1)
-                ax__Phase2= fig.add_subplot(gs[1, 1], xscale ='log',
+                ax__Phase2= fig.add_subplot(gs[1, 1], xscale =x_scale ,
                                             sharex=ax__appRho2, 
                                             sharey=ax__Phase1) 
                 #col2 
@@ -432,10 +474,10 @@ class geoplot1d :
                 
             if len(lines_id)>=3:
                 ax__appRho3 = fig.add_subplot(gs[0, 2],
-                                              xscale='log',
+                                              xscale=x_scale ,
                                               yscale='log',
                                               sharey = ax__appRho1)
-                ax__Phase3= fig.add_subplot(gs[1, 2], xscale ='log',
+                ax__Phase3= fig.add_subplot(gs[1, 2], xscale =x_scale ,
                                             sharex=ax__appRho3, 
                                             sharey=ax__Phase1) 
                 #col3 
@@ -458,10 +500,10 @@ class geoplot1d :
             if len(lines_id)==4: 
                 
                 ax__appRho4 = fig.add_subplot(gs[0, 3], 
-                                              xscale='log',
+                                              xscale=x_scale ,
                                               yscale='log',
                                               sharey = ax__appRho1)
-                ax__Phase4= fig.add_subplot(gs[1, 3], xscale ='log',
+                ax__Phase4= fig.add_subplot(gs[1, 3], xscale =x_scale ,
                                             sharex=ax__appRho4, 
                                             sharey=ax__Phase1) 
                 
@@ -482,98 +524,112 @@ class geoplot1d :
                 phase_axis_col.append(ax__Phase4)
                 legend_ax_list.append((err_rho, err_phase))
             
-                # plor response 
-                if self.reason =='resp': 
-                    
-                    for ii, (axis_rho, axis_phase) in enumerate(
-                            zip(rho_axis_col, phase_axis_col )):
-    
-                        erro_rho_resp= mplotus.plot_errorbar(axis_rho,
-                                                freqOrPeriod[0],
-                                                appRho[ii][1],
-                                                None,
-                                                **kw_yp)
-                        mplotus.plot_errorbar(axis_phase, 
-                                                freqOrPeriod[0], 
-                                                phase[ii][1] , 
-                                                None, 
-                                                **kw_yp)
-                        resp_rho_col.append(erro_rho_resp)
-                
-                
-                # rename line if lines not in name : 
-                lines_id =['Line {0}'.format(name) for  name in lines_id 
-                           if name.find('line') <0]
-                lines_id =[name.replace('K','0') for name in lines_id]
-                lines_id =[name +' - Site {0}'.format(station[ii])
+            # plor response 
+            if self.reason =='resp' or self.reason=='sshift': 
+   
+                for ii, (axis_rho, axis_phase) in enumerate(
+                        zip(rho_axis_col, phase_axis_col )):
+
+                    erro_rho_resp= mplotus.plot_errorbar(axis_rho,
+                                            freqOrPeriod[0],
+                                            appRho[ii][1],
+                                            None,
+                                            **kw_yp)
+                    mplotus.plot_errorbar(axis_phase, 
+                                            freqOrPeriod[0], 
+                                            phase[ii][1] , 
+                                            None, 
+                                            **kw_yp)
+                    resp_rho_col.append(erro_rho_resp)
+            
+            
+            # rename line if lines not in name : 
+            lines_id =['Line {0}'.format(name) for  name in lines_id 
+                       if name.find('line') <0]
+            lines_id =[name.replace('K','0') for name in lines_id]
+            if self.reason =='sshift': 
+                if kind_p[0] ==1: 
+                    lines_id =[' Freq:{0}'.format(station[ii])
                             for ii, name in enumerate(lines_id)]
-                # --> Take the maximum in heigth y for the appRho plot 
-                max_y=-999
-                for ii , ap in enumerate(appRho): 
-                    t_y = np.log10(ap[0]).max()
-                    if t_y > max_y: 
-                        max_y = t_y
-                            
-                for ii, (ax_rho , ax_phase) in enumerate(
-                        zip(rho_axis_col, phase_axis_col)): 
-   
-                    if self.show_grid is True:
-                        ax_rho.minorticks_on()
-                        ax_rho.grid(**self.kw_grid)
-
-                        ax_phase.minorticks_on()
-                        ax_phase.grid(**self.kw_grid)
-
-                    
-                    if self.reason =='zonge': 
+            else: lines_id =[name +' - Site {0}'.format(station[ii])
+                        for ii, name in enumerate(lines_id)]
+            # --> Take the maximum in heigth y for the appRho plot 
+            max_y=-999
+            for ii , ap in enumerate(appRho): 
+                t_y = np.log10(ap[0]).max()
+                if t_y > max_y: 
+                    max_y = t_y
                         
-                        ax_rho.legend(legend_ax_list[ii][0] ,  ['App.res(Ω.m)'],
-                                      **kw_legend_props 
-                                           )
-                        ax_phase.legend(legend_ax_list[ii][1] , 
-                                    ['phase(degrees)'],
-                                    **kw_legend_props 
-                                   )
-                    
-                    if self.reason =='resp': 
-                        ax_rho.legend([legend_ax_list[ii][0], resp_rho_col[ii]],
-                                     ['App.res(Ω.m)', 'Rho rms={}'.format(
-                                         model_RMS[ii])], **kw_legend_props )
-                        
+            for ii, (ax_rho , ax_phase) in enumerate(
+                    zip(rho_axis_col, phase_axis_col)): 
    
-                    ax_phase.set_xlabel(xlabel_name,  
-                              fontdict= fontdict
-                              )
-                    ax_rho.set_xlim(self.freqOrperiod_limits)
+                if self.show_grid is True:
+                    ax_rho.minorticks_on()
+                    ax_rho.grid(**self.kw_grid)
+
+                    ax_phase.minorticks_on()
+                    ax_phase.grid(**self.kw_grid)
+
+                
+                if self.reason =='zonge': 
                     
-                    if ii ==0 :  
-                        if self.reason =='resp': 
-                            ylabel_name = 'Resistivity (Ω.m)'
-                        else: 
-                            ylabel_name = 'Apparent resistivity (Ω.m)'
-                        ax_rho.set_ylabel(ylabel_name, 
-                                  fontdict=fontdict)
-                        ax_phase.set_ylabel('Phase (degrees)', 
-                                              fontdict=fontdict)
-                     
+                    ax_rho.legend(legend_ax_list[ii][0] ,  ['App.res(Ω.m)'],
+                                  **kw_legend_props 
+                                       )
+                    ax_phase.legend(legend_ax_list[ii][1] , 
+                                ['phase(degrees)'],
+                                **kw_legend_props 
+                               )
+                
+                elif self.reason =='resp' : 
+        
+                    ax_rho.legend([legend_ax_list[ii][0], resp_rho_col[ii]],
+                                 ['App.res(Ω.m)', 'Rho rms={}'.format(
+                                     model_RMS[ii])], **kw_legend_props )
+                elif self.reason =='sshift': 
+                    ax_rho.legend([legend_ax_list[ii][0], resp_rho_col[ii]],
+                                     ['App.res(Ω.m)', 'Rho, filter= {}'.format(
+                                         ffilter)], **kw_legend_props ) 
+   
+                ax_phase.set_xlabel(xlabel_name,  
+                          fontdict= fontdict
+                          )
+                ax_rho.set_xlim(self.freqOrperiod_limits)
+                
+                if ii ==0 :  
+                    if self.reason =='resp' or self.reason =='sshift': 
+                        ylabel_name = 'Resistivity (Ω.m)'
+                    elif self.reason =='zonge': 
+                        ylabel_name = 'Apparent resistivity (Ω.m)'
+                        
+                    ax_rho.set_ylabel(ylabel_name, 
+                              fontdict=fontdict)
+                    ax_phase.set_ylabel('Phase (degrees)', 
+                                          fontdict=fontdict)
+                 
+               
+                if station_axis is True : 
+                    # take the mean value of stations x station-axis 
+                    x_text = freq[0].mean()
+                else: 
                     # display the text : survey line (.5, 1.18)
-                    # taxe the max 7 
+                    # taxe the max 7
                     x_text = (10 ** np.floor(np.log10(
-                        self.freqOrperiod_limits).mean())) *x_line_coef 
-                    y_text = (10 ** (max_y + y_pad ))* y_line_coef
-                                     
-                              
-                    ax_rho.text(x_text,
-                            y_text,  
-                            s= lines_id[ii],
-                            horizontalalignment='center',
-                            verticalalignment='baseline',
-                            fontdict={'size': 2* self.font_size, 
-                                      'color': 'k', 
-                                      'style':self.font_style},
-                            bbox =self.kw_linebbox
-                            # rotation = self.station_label_rotation,
-                                )
+                        self.freqOrperiod_limits).mean())) *x_line_coef
+                
+                y_text = (10 ** (max_y + y_pad ))* y_line_coef
+                                 
+                ax_rho.text(x_text,
+                        y_text,  
+                        s= lines_id[ii],
+                        horizontalalignment='center',
+                        verticalalignment='baseline',
+                        fontdict={'size': 2* self.font_size, 
+                                  'color': 'k', 
+                                  'style':self.font_style},
+                        bbox =self.kw_linebbox
+                        # rotation = self.station_label_rotation,
+                            )
                     
             # savefigure
             if self.savefig is not None : 

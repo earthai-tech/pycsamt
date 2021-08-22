@@ -830,8 +830,8 @@ class shifting(object):
         :param number_of_skin_depths: skin depth for filter length 
         :type number_of_skin_depths : int, float, default is 5.
         
-        :param reference_freq: reference frequency at clean data , if not provided
-                    reference will be compute automaticcally 
+        :param reference_freq: reference frequency at clean data , 
+                    if not provided reference will be compute automaticcally 
         :type reference_freq: int, float 
         
         1. compute fixed length dipole moving average FLMA 
@@ -869,7 +869,6 @@ class shifting(object):
         number_of_skin_depth=kwargs.pop('number_of_skin_depth',3.)
 
         #------------ check the reading file ------------------------------
-    
         # set flag to controle the path values provided  and flip to control the 
         # check the frequency range : Default is Highest to lowest  
         # set attribute to keep copy of res-array dict
@@ -888,13 +887,12 @@ class shifting(object):
             if freq_array is not None : 
                 self.frequency =freq_array 
             if res_array is None or phase_array is None or freq_array is None :
-                raise CSex.pyCSAMTError_processing(
-                    'NoneType can be computed. Please provide either path to data file ' 
+                raise CSex.pyCSAMTError_processing('NoneType can be computed.'
+                    ' Please provide either path to data file ' 
                     ' or provided resistivity , phase and frequeny arrays!')
         
         # be sure that if data_fn is provided , data should be read  
         # as priority 
-        
         if self.data_fn is not None : 
             csamt_obj= CSAMT(data_fn =self.data_fn, 
                              profile_fn= self.profile_fn)
@@ -906,12 +904,13 @@ class shifting(object):
             flag=1
             
             if (self.data_fn.endswith('avg') is True  or \
-                self.data_fn.endswith('avg'.upper())) is True  : # reading avg file 
+                self.data_fn.endswith('avg'.upper())) is True  :
                 avg_data_section = csamt_obj._data_section
-                                                    # Try to get real reference frequency
+                               
                 try : 
                     self.referencefreq= Zcc.perforce_reference_freq(
-                        dataset=avg_data_section, frequency_array=self.frequency)
+                        dataset=avg_data_section, 
+                        frequency_array=self.frequency)
                 except : self.referencefreq= self.frequency.max() 
    
         # check flip frequency 
@@ -964,9 +963,10 @@ class shifting(object):
         self.phase= phase_obj[int(np.where(
             self.frequency==self.referencefreq)[0]),:]
         # Apparent resistivity and impedance phase are converted 
-        #to impedance values, Zj, for each station # compute Z_absolute an average Z
+        #to impedance values, Zj, for each station 
+        # compute Z_absolute an average Z
         
-        #------------------------------computation filter part -----------------------
+        #------------computation filter part -----------------------
          # compute omega n
         mu0 = 4* np.pi * 1e-7 
         omega_reffreq  = 2* np.pi *  self.referencefreq  
@@ -974,8 +974,8 @@ class shifting(object):
         zj = np.sqrt(self.app_rho * omega_reffreq * mu0 ) * (
             np.cos(self.phase)+  1j * np.sin(self.phase) ) 
         # compute FLMA 
-        #Filter weights are adjusted for finite-length dipoles by integrating a segment
-        #of the Hanning window over one dipole length at each station.
+        #Filter weights are adjusted for finite-length dipoles by integrating 
+        #a segmentof the Hanning window over one dipole length at each station.
         
         z_target_j = filterfunc(reference_freq = self.referencefreq, 
                                      phase =self.phase,
@@ -983,13 +983,14 @@ class shifting(object):
                                       dipole_length= dipole_length, 
                                       number_of_skin_depth =number_of_skin_depth, 
                                       z_array=zj)
-        #Recover static-corrected apparent resistivity at reference frequency from Zj.
-        # recover_Zj  = np.abs(zj)**2/ (omega_reffreq * mu0)
+        #Recover static-corrected apparent resistivity at reference frequency
+        #  from Zj.recover_Zj  = np.abs(zj)**2/ (omega_reffreq * mu0)
         
-        #------------------------ computation of rj static factor -------------------
+        #----computation of rj static factor ---
         
         rho_static_targetj  = np.abs(z_target_j)**2 / (omega_reffreq * mu0)
-        #Shift sounding curves at all frequencies by multiplying by factor rstaticj/rj.
+        #Shift sounding curves at all frequencies 
+        #by multiplying by factor rstaticj/rj.
         # and  compute the rstatic factor rj : 
         self._rj =  rho_static_targetj/self.app_rho  
         # build rj static matrix  to  shift all sounding curves 
@@ -1051,7 +1052,7 @@ class shifting(object):
                                             weigthed point to 1.
         dipole_length           float       length of dipole. *Default* is 50.m
         reduce_res_factor_x     float       static shift factor to be applied to x
-                                            components (ie z[:, 0, :]).  This is
+                                            components (ie z[:, 0, :]).This is
                                             assumed to be in resistivity scale
         reduce_res_factor_y     float       static shift factor to be applied to y
                                             components (ie z[:, 1, :]).  This is
@@ -1074,7 +1075,8 @@ class shifting(object):
             >>>  edifile =os.path.join(os.environ['pyCSAMT'], 'data', 
             ...                           'edi', 'new_csa000.edi' )
             >>> corr_obj= shifting()
-            >>> corr_obj.write_corrected_edi(data_fn = edifile, number_of_points =1., 
+            >>> corr_obj.write_corrected_edi(data_fn = edifile,
+            ...                                 number_of_points =1., 
             ...                             dipole_length =50., FILTER='ss')
             
         
@@ -1123,20 +1125,23 @@ class shifting(object):
                          'we will set filter to `tma`')
            print('--> Filter is resetting to TMA')
            
-           raise CSex.pyCSAMTError_processing('Filter provided is Unrecognizable!')
+           raise CSex.pyCSAMTError_processing(
+               'Filter provided is Unrecognizable!')
            
         self._logging.info('Rewrite edifiles by applying filters')
         
 
-        # controle the range of frequencies : Default range is Highest frequency to lowest 
+        # controle the range of frequencies :
+            # Default range is Highest frequency to lowest 
         flip_freq =False 
         
         if data_fn is not None : self.data_fn = data_fn # call data path  
         
-        #--> call multi edi 
-        edi_objs = CSAMTedi.Edi_collection(edipath =self.data_fn ) # create multi ediobj
+        #--> call multi edi # create multi ediobj
+        edi_objs = CSAMTedi.Edi_collection(edipath =self.data_fn ) 
         
-        # collect all edi_objects  and get the pertinents attributes like sites names 
+        # collect all edi_objects  and get 
+        #the pertinents attributes like sites names 
         ediObjs= edi_objs.edi_obj_list
         edi_objs_id = edi_objs.id 
         
@@ -1144,7 +1149,7 @@ class shifting(object):
         
         if datatype is None : 
             if 'ndipole' in ''.join(['{0}'. format(ii) 
-                                     for ii in ediObjs[0].MTEMAP.mtemapsectinfo]):
+                              for ii in ediObjs[0].MTEMAP.mtemapsectinfo]):
                 datatype ='emap'
             else :
                 datatype = 'mt' # data contain  MT section  infos 
@@ -1155,9 +1160,10 @@ class shifting(object):
 
         if _filter in ['tma', 'ama', 'flma'] and datatype =='mt':
             
-            mess ='---> EDI file provided is MT data. Filter {0} should be applied'+\
-                ' and Impedance tensor should be computed and corrected along'+\
-                ' the default  components`xy` as EMAP data with unknown strike direction.'
+            mess ='---> EDI file provided is MT data. Filter {0} '\
+                ' should be appliedand Impedance tensor should be '\
+                 'computed and corrected along the default  components'\
+                ' `xy` as EMAP data with unknown strike direction.'
         
             warnings.warn('!'+ mess.format(_filter, datatype) )
                         
@@ -1177,14 +1183,15 @@ class shifting(object):
                            profile_fn =self.profile_fn )
         
         if _filter =='tma': # apply filter tma 
-            res_corrected =  corr_obj.TMA( number_of_TMA_points= number_of_points,
-                                     reference_freq = reference_frequency)
+            res_corrected =  corr_obj.TMA( 
+                number_of_TMA_points= number_of_points,
+                        reference_freq = reference_frequency)
             
             phase_corrected = corr_obj.phase_corrected # get phase corrected 
-  
+            # flip frequency if not sorted Highest to lowest 
             if corr_obj.frequency [0] < corr_obj.frequency[-1]:
                 frequency_array =corr_obj.frequency[::-1]
-                flip_freq =True  # flip frequency if not sorted Highest to lowest 
+                flip_freq =True  
                 
             else : frequency_array =corr_obj.frequency
         
@@ -1204,9 +1211,10 @@ class shifting(object):
             else :frequency_array =corr_obj.frequency
             
         elif _filter =='ama':
-            res_corrected =  corr_obj.AMA(number_of_skin_depth= number_of_skin_depth, 
-                                    reference_freq = reference_frequency,
-                                    dipole_length = dipole_length
+            res_corrected =  corr_obj.AMA(
+                number_of_skin_depth= number_of_skin_depth, 
+                reference_freq = reference_frequency,
+                dipole_length = dipole_length
                                     )
        
             phase_corrected = corr_obj.phase_corrected
@@ -1218,28 +1226,33 @@ class shifting(object):
                frequency_array =corr_obj.frequency[::-1]
             else :frequency_array =corr_obj.frequency
         
-        
-        if reference_frequency is None :    # collect the value of reference frequency to display
+         # collect the value of reference frequency to display
+        if reference_frequency is None :   
             reference_frequency = corr_obj.referencefreq 
             
         #-----> loop all edi objects from collections edifiles 
         # print(res_corrected)
         for stn, edi_obj  in zip (edi_objs_id , ediObjs): 
             
-            # create for each edi obj  temporary corrector object for resetting z impedance Tensor 
+            # create for each edi obj  temporary corrector
+            #object for resetting z impedance Tensor 
             csamt_z_obj = CSAMTz.Z()
             
-            # Initialize  resistivity arrays and phase arrays to hold corrected values 
+            # Initialize  resistivity arrays and phase
+            #arrays to hold corrected values 
             #  not include errors propagations 
-            
-            if _filter in ['ss', 'dist']: # seek the frequency array for each edi 
+            # seek the frequency array for each edi 
+            if _filter in ['ss', 'dist']: 
                 frequency_array = edi_obj.Z.freq    
                 
-            res_array = np.zeros((frequency_array.size, 2,2 ), dtype = np.float)
-            phs_array = np.zeros((frequency_array.size, 2,2 ), dtype = np.float)
+            res_array = np.zeros((frequency_array.size, 2,2 ),
+                                 dtype = np.float)
+            phs_array = np.zeros((frequency_array.size, 2,2 ), 
+                                 dtype = np.float)
             
             if _filter in [ 'tma', 'flma', 'ama']:
-                if flip_freq is True :     # flip array if frequency is sorted lowest to Highest
+                if flip_freq is True :     
+                    # flip array if frequency is sorted lowest to Highest
                     res_corrected[stn] = res_corrected[stn][::-1]
                     phase_corrected[stn] =phase_corrected[stn] [::-1]
                     
@@ -1252,16 +1265,18 @@ class shifting(object):
                             phase_array=phs_array,
                             freq=  frequency_array) 
                
-                
-            if  datatype =='mt' or _filter in ['ss', 'dist']:        # use filters `ss` and `dist` for MT data 
+             # use filters `ss` and `dist` for MT data     
+            if  datatype =='mt' or _filter in ['ss', 'dist']:       
                 if _filter =='ss':
                     static_shift, z_corrected = \
-                        edi_obj.Z.remove_ss(reduce_res_factor_x=reduce_res_factor_x, 
-                                            reduce_res_factor_y=reduce_res_factor_y)
+                        edi_obj.Z.remove_ss(
+                            reduce_res_factor_x=reduce_res_factor_x, 
+                            reduce_res_factor_y=reduce_res_factor_y)
     
-                    csamt_z_obj.compute_resistivity_phase(z_array=z_corrected,
-                                                          z_err_array= edi_obj.Z.z_err, 
-                                                          freq=edi_obj.Z.freq)
+                    csamt_z_obj.compute_resistivity_phase(
+                        z_array=z_corrected,
+                        z_err_array= edi_obj.Z.z_err, 
+                        freq=edi_obj.Z.freq)
                 # set z_erray error 
                     z_err_array = edi_obj.Z.z_err 
                     
@@ -1270,16 +1285,17 @@ class shifting(object):
                 if _filter =='dist': # remove only distorsion 
                     if distortion_tensor is None : 
                         warnings.warn(
-                            'Could not remove distorsion .Provided real distortion '
-                            'tensor as a 2x2 matrices.')
-                        print('---> Remove distorsion Error ! Provided distortion '
-                              'Tensor as 2x2 matrices. ')
+                            'Could not remove distorsion .Provided real '
+                            'distortion tensor as a 2x2 matrices.')
+                        print('---> Remove distorsion Error ! Provided '
+                              'distortion Tensor as 2x2 matrices. ')
                         CSex.pyCSAMTError_processing(
-                            'Could not remove distorsion.Please provided real distortion'
-                            ' 2x2 matrixes')
+                            'Could not remove distorsion.Please provided real '
+                            ' distortion 2x2 matrixes')
                     _, z_corrected, z_corrected_err = \
-                        edi_obj.Z.remove_distortion(distortion_tensor =distortion_tensor,
-                                                    distortion_err_tensor=distortion_err_tensor)
+                        edi_obj.Z.remove_distortion(
+                            distortion_tensor =distortion_tensor,
+                            distortion_err_tensor=distortion_err_tensor)
                         
                     print('--> ! Remove  distortion is done !')
                     
@@ -1289,7 +1305,8 @@ class shifting(object):
                                                   z_err_array= z_err_array,
                                                   freq=edi_obj.Z.freq)
                                     
-            # Resset all components  to let edi containers to hold news corrected values 
+            # Resset all components  to let edi 
+            #containers to hold news corrected values 
 
             edi_obj.Z._z = csamt_z_obj.z
 
@@ -1448,16 +1465,6 @@ def buildBlock_freqRhoOrPhase (dictRhoOrPhase):
 if __name__=='__main__':
     
     edipath = 'data/edi'#, 'new_csa000.edi' )
-    print(os.path.basename(edipath ))
-    # corr_obj= shifting(data_fn = edipath)
-    # corr_obj.FLMA()
-    # w= corr_obj._rj
-    # # w= w.reshape((w.shape[0], 1))
-    # ar = np.repeat(w, [17], axis =0)
-    # ar = np.zeros((17, 47))
-    # for ii,  rowlines in enumerate(ar): 
-    #     ar[ii, :] =w
-
     # corr_obj.write_corrected_edi(data_fn = edipath, number_of_points =1., 
     #                               dipole_length =50., FILTER='ss')
     # avg_path = os.path.join(os.environ['pyCSAMT'], 'data', 'avg')
@@ -1466,38 +1473,7 @@ if __name__=='__main__':
     # corr_obj= shifting(data_fn =os.path.join(avg_path, 'K2.AVG'),
     #                       #profile_fn=os.path.join(avg_path, 'K2.stn'), 
     #                       reference_freq =8192.)
-    # phase = corr_obj.phase_
-    # rho =corr_obj.app_res_
-    # tma_phase = corr_obj.phase_cor
-    # tma_rho = corr_obj.app_res_cor
-    
-    # lst = np.array([1, 25, 1258, 18])
-    # import  pycsamt.utils.plot_utils as punc  
-    
-    # index = np.where(lst==4)[0] 
-    # teslist = ['S{0:02}'.format(ii) for ii in range(23)]
-    # print(punc.getcloser_frequency(freq_array= lst, frequency_id='26'))
-    # print(punc.get_stationid(stations=teslist, station_id='s00'))
-    
 
-    # df_, data_block = buildBlock_freqRhoOrPhase(corr_obj.phase_obj)
-        #corr_obj.res_app_obj)
-    
-    
-    # ss=corr_obj.compute_fixed_and_adaptative_moving_average(filterfunc=Zcc.compute_AMA,  
-    #                          reference_freq=8192., number_of_skin_depth=1.)
-    # stma =corr_obj.TMA( data_fn =edipath, 
-    #                      number_of_TMA_points=7.)
-    # rjt= corr_obj._rj
-    # sflma =corr_obj.FLMA(data_fn =edipath,  reference_freq =8192., 
-    #                      number_of_TMA_points=7.)
-    # rjf= corr_obj._rj
-    # sama =corr_obj.AMA(data_fn =edipath,  reference_freq =8192., 
-    #                  number_of_TMA_points=7.)
-    # rja= corr_obj._rj
-    # print(rjf)
-    # print(rja)
-    # print(rjt)
   
     
     

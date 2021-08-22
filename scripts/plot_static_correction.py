@@ -17,6 +17,7 @@ Created on Tue Jan 19 16:57:08 2021
 
 """
 import os 
+# from pycsamt.viewer import plot 
 from pycsamt.viewer.plot import Plot1d 
 
 #--- > path to your file 

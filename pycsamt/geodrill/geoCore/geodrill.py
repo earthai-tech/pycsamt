@@ -51,7 +51,7 @@ from pycsamt.ff.core.cs import Profile
 
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
-from pycsamt.viewer.plot  import geoplot2d
+from pycsamt.viewer.mpldecorator  import geoplot2d
 
 from pycsamt.utils import Agso
 from pycsamt.geodrill.geoCore import structural as STRL

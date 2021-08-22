@@ -207,7 +207,7 @@ def station_id (id_):
            
 def get_stationid (stations ,  station_id) :  
     """
-    Tip to get station id from user by input either integer of station name .
+    Tip to get station id from user by input either integer or station name .
     
     :param stations:  list of stations known
     :type stations: list
@@ -232,7 +232,7 @@ def get_stationid (stations ,  station_id) :
     for iid in station_id : 
         if isinstance (iid, str):
            for ss , stn in enumerate(stations ): 
-               if iid  ==stn : sid.append(stn)
+               if iid.lower()  ==stn.lower() : sid.append(stn)
         if isinstance(iid, (int, float)): 
             if int(iid) > len(stations): 
                 raise CSex.pyCSAMTError_plot_tip(
@@ -259,7 +259,8 @@ def get_frequency_id (freq_array , frequency_id ):
     :rtype: float|list
     """
     freqID =[] 
-    if isinstance(freq_array, list) : freq_array=np.array(freq_array)
+    if isinstance(freq_array, list) : 
+        freq_array=np.array(freq_array)
     if isinstance(frequency_id, (str, float, int)):
         frequency_id =[frequency_id]
     
@@ -282,6 +283,27 @@ def get_frequency_id (freq_array , frequency_id ):
         
     return freqID
 
+def getcloser_frequency(freq_array, frequency_id): 
+    """ chek whether the frequency value given is in frequency range 
+    if not found the closest value"""
+    try : 
+        frequency_id= float(frequency_id)
+    except: 
+        raise CSex.pyCSAMTError_frequency(
+            f'Frequency must be a float value not {frequency_id}.')
+    else: 
+        indexf = np.where(freq_array == frequency_id )[0]     
+        if len(indexf)>1:
+            indexf = indexf[0] # take the fist values 
+        elif len(indexf) ==0: 
+            sustract_freq = np.abs(freq_array - frequency_id)
+            indexf = np.where(sustract_freq==sustract_freq.min())[0]
+            frequency_id = freq_array[indexf]
+           
+    return int(indexf), float(frequency_id)
+                
+        
+    
 def slice_matrix (base_matrix , freq_array, doi=2000):
     """
     Function get a matrix and give new matrice slice from limit value  

@@ -60,8 +60,9 @@ from pycsamt.utils import exceptions as CSex
 
 class shifting(object):
     """ 
-    processing class : shifting processing workflow 
-     coorection  class deal with  AVG Zonge station file "*.stn" or SEG-EDI file. 
+    processing class : shifting processing workflow correction  class
+     deal with  AVG Zonge station file "*.stn" or SEG-EDI file. 
+     
      
     Arguments
     ----------
@@ -231,18 +232,23 @@ class shifting(object):
         res_array = kwargs.pop('res_dict_arrays', None)
         phase_array =kwargs.pop('phase_dict_arrays', None)
  
-        self._logging.info('Load attributes for processing')
+        self._logging.info('Load attributes for data processing.')
         
-        if data_fn is not None : self.data_fn =data_fn 
-        if profile_fn is not None : self.profile_fn = profile_fn 
-        if freq_array  is not None : self.frequency = freq_array
+        if data_fn is not None : 
+            self.data_fn =data_fn 
+        if profile_fn is not None : 
+            self.profile_fn = profile_fn 
+        if freq_array  is not None : 
+            self.frequency = freq_array
         
-        if res_array is not None : self.res_app_obj = res_array 
-        if phase_array is not None: self.phase_obj = phase_array
+        if res_array is not None : 
+            self.res_app_obj = res_array 
+        if phase_array is not None:
+            self.phase_obj = phase_array
         
         flag = 0            # flag to figure out edifiles to to use avg  file
                             # without it profile stn could be possible 
-                            
+  
         if self.data_fn is None :
             if self.frequency is None or self.res_app_obj is None or \
                 self.phase_obj is None :
@@ -294,8 +300,7 @@ class shifting(object):
                               
         if self.data_fn is not None :
             
-            if (self.data_fn.endswith('avg') is True  or \
-                self.data_fn.endswith('avg'.upper())) is True  :
+            if self.data_fn.lower().endswith('avg') is True :
                 flag=1
                 
             try :
@@ -312,9 +317,9 @@ class shifting(object):
                 try :
                     self.dipolelength =csamt_obj.dipolelength 
                 except:
-                    mess='No station profile is detected '\
-                        '! could not compute dipole length' \
-                        'Value provided is approximated. should be set to 50.m '
+                    mess='No station profile is detected ! Could not compute'\
+                        ' dipole length Value provided is approximated.' \
+                        ' should be set to 50.m '
                     self._logging.debug(mess)
                     warnings.warn(mess)
                     print('---> !'+ mess)

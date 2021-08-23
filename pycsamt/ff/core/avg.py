@@ -145,8 +145,9 @@ class Avg (object):
         if data_fn is not None : 
             self.data_fn =data_fn 
         if self.data_fn is None  :
-            raise CSex.pyCSAMTError_avg_file('No AVG file found.Please check '\
-                                             'your pathfile :<{0}>'.format(os.getcwd()))
+            raise CSex.pyCSAMTError_avg_file(
+                'No AVG file found.Please check '
+                'your pathfile :<{0}>'.format(os.getcwd()))
         # print(self.data_fn)       
         if self.data_fn is not None : 
             if os.path.isfile(self.data_fn) is False :
@@ -154,10 +155,14 @@ class Avg (object):
                 
         self._logging.info('reading and checking the AVG file %s', self.data_fn)         
         #-------------------------------------------------------------
-        
-        if  (self.data_fn.endswith('avg') or self.data_fn.endswith('avg'.upper())) == False :#self.data_fn[-4:].lower() != '.avg'or self.data_fn.endswith('avg'.upper())==False or
-            warnings.warn('<Get more infos about AVG> :{0}'.format(infOS.notion.AVG))
-            raise CSex.pyCSAMTError_AVG('file provided is not an AVGfile.Please check your file!')
+        #self.data_fn[-4:].lower() != '.avg'or
+        # self.data_fn.endswith('avg'.upper())==False or
+        if  (self.data_fn.endswith('avg') or \
+             self.data_fn.endswith('avg'.upper())) == False :
+            warnings.warn(
+                '<Get more infos about AVG> :{0}'.format(infOS.notion.AVG))
+            raise CSex.pyCSAMTError_AVG(
+                'file provided is not an AVGfile.Please check your file!')
             
             
         elif self.data_fn.endswith('avg') or self.data_fn.endswith('.AVG'):
@@ -166,9 +171,9 @@ class Avg (object):
             
         # ----now chech the avg file --
         avg_file_type_num = cfunc._validate_avg_file(avg_dataLines =avg_data_file)
-        #------------------------------------
-                
-        if avg_file_type_num == 1: #-------------  main AVG file :F1 and keep data infos --------------
+        #-----------------------------------
+        #-------------  main AVG file :F1 and keep data infos --------------
+        if avg_file_type_num == 1: 
 
             # --> run the headlines thin to find the word 'skp'
             for idx , infos in enumerate (avg_data_file): 
@@ -176,17 +181,21 @@ class Avg (object):
                     avg_data_file_infos = avg_data_file[:idx]
                     break
 
-            self.Header.HardwareInfos.set_harware_infos([line.strip() for line  in \
-                                                        avg_data_file_infos if line.startswith('\\')] )
+            self.Header.HardwareInfos.set_harware_infos(
+                [line.strip() for line  in avg_data_file_infos
+                  if line.startswith('\\')] )
             
-            self.Header.Tx.set_transmitter_properties (Tx_data =[line.strip() for line  in \
-                                                        avg_data_file_infos if line.startswith('$')])
-            self.Header.Rx.set_receiver_properties (Rx_data =[line.strip() for line  in \
-                                                        avg_data_file_infos if line.startswith('$')])
+            self.Header.Tx.set_transmitter_properties (
+                Tx_data =[line.strip() for line  in avg_data_file_infos 
+                if line.startswith('$')])
+            self.Header.Rx.set_receiver_properties (
+                Rx_data =[line.strip() for line  in avg_data_file_infos
+                                 if line.startswith('$')])
             
             data_to_array =avg_data_file [5:]
             # --- put data on list and array : 
-            data_to_array = np.array([ datum.strip().split() for datum in data_to_array ])
+            data_to_array = np.array([ datum.strip().split() 
+                                      for datum in data_to_array ])
             
             # self.skip.skp_flag==data_to_array[0,0] # fill the skip flag 
             self.Skip_flag.setandget_skip_flag(skip_flag=data_to_array[0,0])
@@ -194,31 +203,41 @@ class Avg (object):
             
             data_to_array =np.delete(data_to_array, np.array([0,3]), axis =1 )
 
-            self.Data_section._avg_set_components_from_data(data_array = data_to_array,
-                                               data_type =avg_file_type_num) 
+            self.Data_section._avg_set_components_from_data(
+                data_array = data_to_array,data_type =avg_file_type_num) 
+                                               
             # Skp_flag(skip_flag='2')
-            
-        elif  avg_file_type_num ==2 : #-------------Read ASTATIC file : F2 and keep data infos --------------
+        #-------------Read ASTATIC file : F2 and keep data infos --------------
+        elif  avg_file_type_num ==2 : 
             
             # set zonge Hardwares infos:
-            zonge_hardw_infos =[line.strip() for line  in avg_data_file if line.startswith('\\')]
-            self.Header.HardwareInfos.set_harware_infos(zonge_hardw_infos=zonge_hardw_infos)
+            zonge_hardw_infos =[line.strip() 
+                                for line  in avg_data_file 
+                                if line.startswith('\\')]
+            self.Header.HardwareInfos.set_harware_infos(
+                zonge_hardw_infos=zonge_hardw_infos)
             
-            self.Header.Tx.set_transmitter_properties(Tx_data=[line.strip()for \
-                                                                      line in avg_data_file  if line.startswith('$Tx')])
+            self.Header.Tx.set_transmitter_properties(
+                Tx_data=[line.strip()for line in avg_data_file
+                                   if line.startswith('$Tx')])
             
             for ss, line_avg in enumerate (avg_data_file): 
                 if line_avg.startswith('$Rx'):
-                    temp_data =avg_data_file[ss:] # keep the remains data + Rx-properties
-                    for_surv_configAnnot=avg_data_file[:ss] # truncate the data an keep the infos above thin $Rx
+                    # keep the remains data + Rx-properties
+                    temp_data =avg_data_file[ss:] 
+                    # truncate the data an keep the infos above thin $Rx
+                    for_surv_configAnnot=avg_data_file[:ss] 
                     break 
                 
-            self.Header.SurveyAnnotation.set_survey_annotations_infos (survey_annotations_data =for_surv_configAnnot)
-            self.Header.SurveyConfiguration.set_survey_configuration_infos (survey_config_data=for_surv_configAnnot)
+            self.Header.SurveyAnnotation.set_survey_annotations_infos (
+                survey_annotations_data =for_surv_configAnnot)
+            self.Header.SurveyConfiguration.set_survey_configuration_infos (
+                survey_config_data=for_surv_configAnnot)
             
             tem_d, rx_infos, comp_receiv_info=[],[],[]
             for jj, item in enumerate(temp_data): 
-               #---> seek the data without the mark of the receiver of component list 
+               #---> seek the data without the mark 
+               #of the receiver of component list 
                if item.find('Z.mag')<0 and item.find('$Rx') < 0 :
                    ss__temp=item.strip().split(',')
                    for kk, value in enumerate ( ss__temp ) : 
@@ -236,7 +255,8 @@ class Avg (object):
                if '$Rx.GdpStn' in item :
                    item = item.strip().split('=')[-1]
                    rx_infos.append(item)
-               if item.find('ARes.mag')> 0 and item.find('SRes')> 0 : #- keep the head component infos
+               if item.find('ARes.mag')> 0 and item.find('SRes')> 0 :
+                   #- keep the head component infos
                     comp_sect=item.strip().split(',')
             
             #-set receivers infos 
@@ -246,8 +266,9 @@ class Avg (object):
             for sk , itemm in enumerate(tem_d): 
                 if itemm==['']: tem_d.pop(sk)
             data=np.array(tem_d)
-            data_to_array, other_comps = cfunc.straighten_cac2CSfile (data_array=data,
-                                                   component_column_section = comp_sect)
+            data_to_array, other_comps = cfunc.straighten_cac2CSfile (
+                data_array=data,component_column_section = comp_sect)
+                                                   
             
             freq_counts,array_of_repeat_frequency=np.unique(data_to_array[:,1],
                                                     return_counts=True)
@@ -258,30 +279,39 @@ class Avg (object):
             station_array_for_data.sort()
             station_array_for_data=np.array(station_array_for_data)
             if station_array_for_data.shape[0] !=data_to_array.shape[0]: 
-                _logger.error('Trouble occured when reading Astatic file. It seems the frequency are not the '\
+                _logger.error('Trouble occured when reading Astatic file. '
+                              'It seems the frequency are not the '
                               'same length along all stations.' )
-                warnings.warn_explicit('it seems something wrong while reading Astatic file.', category=DeprecationWarning,
-                                       filename= func.__name__,  lineno=1)
-                raise CSex.pyCSAMTError_avg_file('File might be corrupted. number of frequency must'\
-                                                 ' be the same along along all stations.  ')
+                
+                warnings.warn_explicit(
+                    'It seems something wrong while reading'
+                    ' Astatic file.', category=DeprecationWarning,
+                    filename= func.__name__,  lineno=1)
+                raise CSex.pyCSAMTError_avg_file(
+                    'File might be corrupted. number of frequency must'
+                    ' be the same along along all stations.  ')
                     
             
             data_to_array =np.delete(data_to_array, 0, axis =1 )
             # print(data_to_array.shape)
             # print( station_array_for_data.shape)
             
-            data_to_array =np.concatenate((station_array_for_data.reshape(station_array_for_data.shape[0],1), 
-                                              data_to_array), axis=1) 
-            # data_to_array=np.insert(data_to_array, 1, station_array_for_data, axis=1 )
+            data_to_array =np.concatenate((station_array_for_data.reshape(
+                station_array_for_data.shape[0],1), 
+                   data_to_array), axis=1) 
+            # data_to_array=np.insert(data_to_array, 1,
+            # station_array_for_data, axis=1 )
 
-            self.Data_section._avg_set_components_from_data(data_array = data_to_array,
-                                               data_type =avg_file_type_num, 
-                                               add_astatic_data= other_comps)
+            self.Data_section._avg_set_components_from_data(
+                data_array = data_to_array,
+                        data_type =avg_file_type_num, 
+                        add_astatic_data= other_comps)
             # -- we assume that if not problem occured thin now ,
             #  we set skip flag to '2' as good quality data 
             self.Skip_flag.setandget_skip_flag(skip_flag='2' ) 
         else : 
-            raise CSex.pyCSAMTError_avg_file('The number provided doesnt not match Avgfile.')
+            raise CSex.pyCSAMTError_avg_file(
+                'The number provided doesnt not match Avgfile.')
             
             
             
@@ -299,12 +329,14 @@ class Avg (object):
         """
         if data_fn is not None : self.data_fn =data_fn 
         if self.data_fn is None : 
-            raise CSex.pyCSAMTError_avg_file('No file detected. check your right path .')
+            raise CSex.pyCSAMTError_avg_file(
+                'No file detected. check your right path .')
         
         if self.data_fn is not None :
             if os.path.isfile (self.data_fn) is not True :
-                raise CSex.pyCSAMTError_avg_file('No file detected.'\
-                                                 'please check your right path. ')
+                raise CSex.pyCSAMTError_avg_file(
+                    'No file detected. Please check your right path. ')
+                                                
             #-- check whether the file is astatic file :
                 
             if self.data_fn.endswith('avg') or self.data_fn.endswith('.AVG'):
@@ -312,12 +344,15 @@ class Avg (object):
                     avg_data_file=fid.readlines()  
                 self.checker = cfunc._validate_avg_file(avg_data_file)
                 
-                if self.checker == 1 : raise CSex.pyCSAMTError_avg_file(
+                if self.checker == 1 :
+                    raise CSex.pyCSAMTError_avg_file(
                         'Input Avgfile < {0}> is not Zonge ASTATIC file. '
-                            'Please put the right file !'.format(os.path.basename(self.data_fn)))
+                        'Please put the right file !'.format(
+                            os.path.basename(self.data_fn)))
                     
             else :
-                raise CSex.pyCSAMTError_AVG('No avg file detected ! Please check your file !')
+                raise CSex.pyCSAMTError_AVG(
+                    'No avg file detected ! Please check your file !')
             
         write_lines =['\\']
         
@@ -338,8 +373,11 @@ class Avg (object):
                                     '=','{0:>7}'.format( self.Header.Rx.rxLength),
                                     self.Header.Rx.unit])+'\n')
         write_lines.append("".join([self._zmark,'{0:<7}'.format(' XMTR'),
-                                    '=', '{0:>7}'.format(self.Header.Tx.txGdpStn)])+'\n')
-        # write_lines.append(''.join(["{0:^9}".format(idx) for idx in self._f1_labels])+'\n')
+                                    '=', '{0:>7}'.format(
+                                        self.Header.Tx.txGdpStn)])+'\n')
+        
+        # write_lines.append(''.join(["{0:^9}".format(idx)
+        # for idx in self._f1_labels])+'\n')
         
         #------write the interligne labels and markers ---------
 
@@ -361,21 +399,23 @@ class Avg (object):
             .. note:: user can change the disposal of avg_labels.
     
             """
-            for ss, item in enumerate(format_len):value_to_format[ss]=item.format(value_to_format[ss])
+            for ss, item in enumerate(format_len):
+                value_to_format[ss]=item.format(value_to_format[ss])
             
             return ''.join([new_carf for new_carf in value_to_format])
         
         write_lines.append(draw_fc()+'\n')
         write_lines.append('\\')
-        write_lines.append('++'.join([int(ss) * '-' for ss in ['1','5','5','5','4','10',
-                                                               '6','10','7','10','7','5',
-                                                               '5','5','5','5','5'] ])+'+\n')
+        write_lines.append('++'.join([int(ss) * '-' 
+                                      for ss in ['1','5','5','5','4','10',
+                                                '6','10','7','10','7','5',
+                                                '5','5','5','5','5'] ])+'+\n')
 
         #------------start write block data -------------------
         stnNames =self.Data_section.Station.names
 
-        
-        def nan_to_zstar(nan_array, swaper='*' ): # not usefull , we replace nan at the bottom .
+        # not usefull , we replace nan at the bottom .
+        def nan_to_zstar(nan_array, swaper='*' ): 
             """
             Swapp np.nan number on the data .
             """
@@ -383,21 +423,51 @@ class Avg (object):
             return np.where(nan_array==-999, swaper, nan_array)
         
             #--bring back all data ----
-        stn=np.concatenate(([self.Data_section.Station.loc[name] for  name in  stnNames]), axis=0)
-        freq=np.concatenate(([self.Data_section.Frequency.loc[name] for  name in  stnNames]), axis=0)
-        amps=np.concatenate(([self.Data_section.Amps.loc[name] for name in stnNames]), axis=0)
-        emag=np.concatenate(([self.Data_section.Emag.loc[name] for  name in  stnNames]), axis=0)
-        ephz=np.concatenate(([self.Data_section.Ephz.loc[name] for  name in  stnNames]), axis=0)
-        bmag=np.concatenate(([self.Data_section.Hmag.loc[name] for name in  stnNames]), axis=0)
-        bphz=np.concatenate(([self.Data_section.Hphz.loc[name] for  name in  stnNames]), axis=0)
-        rho=np.concatenate(([self.Data_section.Resistivity.loc[name] for  name in  stnNames]), axis=0)
-        phase=np.concatenate(([self.Data_section.Phase.loc[name] for name in  stnNames]), axis=0)
-        pcemag=np.concatenate(([self.Data_section.pcEmag.loc[name] for name in stnNames]), axis=0)
-        sephz=np.concatenate(([self.Data_section.sEphz.loc[name] for name in  stnNames]), axis=0)
-        pchmag=np.concatenate(([self.Data_section.pcHmag.loc[name] for  name in  stnNames]), axis=0)
-        shphz=np.concatenate(([self.Data_section.sHphz.loc[name] for name in stnNames]), axis=0)
-        pcrho=np.concatenate(([self.Data_section.pcRho.loc[name] for  name in stnNames]), axis=0)
-        sphase=np.concatenate(([self.Data_section.sPhz.loc[name] for name in  stnNames]), axis=0)
+        stn=np.concatenate(
+            ([self.Data_section.Station.loc[name] 
+              for  name in  stnNames]), axis=0)
+        freq=np.concatenate(
+            ([self.Data_section.Frequency.loc[name] 
+              for  name in  stnNames]), axis=0)
+        amps=np.concatenate(
+            ([self.Data_section.Amps.loc[name] 
+              for name in stnNames]), axis=0)
+        emag=np.concatenate(
+            ([self.Data_section.Emag.loc[name] 
+              for  name in  stnNames]), axis=0)
+        ephz=np.concatenate(
+            ([self.Data_section.Ephz.loc[name] 
+              for  name in  stnNames]), axis=0)
+        bmag=np.concatenate(
+            ([self.Data_section.Hmag.loc[name] 
+              for name in  stnNames]), axis=0)
+        bphz=np.concatenate(
+            ([self.Data_section.Hphz.loc[name] 
+              for  name in  stnNames]), axis=0)
+        rho=np.concatenate(
+            ([self.Data_section.Resistivity.loc[name] 
+              for  name in  stnNames]), axis=0)
+        phase=np.concatenate(
+            ([self.Data_section.Phase.loc[name] 
+              for name in  stnNames]), axis=0)
+        pcemag=np.concatenate(
+            ([self.Data_section.pcEmag.loc[name] 
+              for name in stnNames]), axis=0)
+        sephz=np.concatenate(
+            ([self.Data_section.sEphz.loc[name] 
+              for name in  stnNames]), axis=0)
+        pchmag=np.concatenate(
+            ([self.Data_section.pcHmag.loc[name] 
+              for  name in  stnNames]), axis=0)
+        shphz=np.concatenate(
+            ([self.Data_section.sHphz.loc[name]
+              for name in stnNames]), axis=0)
+        pcrho=np.concatenate(
+            ([self.Data_section.pcRho.loc[name] 
+              for  name in stnNames]), axis=0)
+        sphase=np.concatenate(
+            ([self.Data_section.sPhz.loc[name] 
+              for name in  stnNames]), axis=0)
 
         # build skp_flag  and fill measure component type ...
         skpf =np.full((stn.shape[0],), self.Skip_flag.skip_flag)
@@ -407,22 +477,22 @@ class Avg (object):
         #----> write data line by line ------
         for ii in range (skpf.shape[0]):
             write_lines.append(''.join(['{0:^3}'.format(skpf[ii]),
-                                                        '{0:^7}'.format((stn[ii])),
-                                                        '{0:>7}'.format(freq[ii]), 
-                                                        '{0:^7}'.format(comps[ii]),
-                                                        '{0:<6}'.format(amps[ii]),
-                                                        '{:12.4e}'.format(emag[ii]),
-                                                        '{:>8}'.format(ephz[ii]),
-                                                        '{:12.4e}'.format(bmag[ii]),
-                                                        '{:>9}'.format(bphz[ii]),
-                                                        '{:12.4e}'.format(rho[ii]),
-                                                        '{:>9}'.format(phase[ii]),
-                                                        '{:>7}'.format(pcemag[ii]),
-                                                        '{:>7}'.format(sephz[ii]),
-                                                        '{:>7}'.format(pchmag[ii]),
-                                                        '{:>7}'.format(shphz[ii]),
-                                                        '{:>7}'.format(pcrho[ii]),
-                                                        '{:>7}'.format(sphase[ii])]))
+                                                '{0:^7}'.format((stn[ii])),
+                                                '{0:>7}'.format(freq[ii]), 
+                                                '{0:^7}'.format(comps[ii]),
+                                                '{0:<6}'.format(amps[ii]),
+                                                '{:12.4e}'.format(emag[ii]),
+                                                '{:>8}'.format(ephz[ii]),
+                                                '{:12.4e}'.format(bmag[ii]),
+                                                '{:>9}'.format(bphz[ii]),
+                                                '{:12.4e}'.format(rho[ii]),
+                                                '{:>9}'.format(phase[ii]),
+                                                '{:>7}'.format(pcemag[ii]),
+                                                '{:>7}'.format(sephz[ii]),
+                                                '{:>7}'.format(pchmag[ii]),
+                                                '{:>7}'.format(shphz[ii]),
+                                                '{:>7}'.format(pcrho[ii]),
+                                                '{:>7}'.format(sphase[ii])]))
             write_lines.append('\n')
             
         #---- replace np.nan number by zonge star who mean no value ----
@@ -435,17 +505,19 @@ class Avg (object):
             fw.writelines (write_lines)
         #---move to your savepath---
         if savepath is not None : 
-            shutil.move(''.join([os.path.basename(self.data_fn)[:-4],'_2_to_1.avg']),
+            shutil.move(''.join([os.path.basename(
+                self.data_fn)[:-4],'_2_to_1.avg']),
                         savepath)
         print('--->  Your <{0}> is rewritten to <{1}> successfully. <-----'.\
               format(os.path.basename(self.data_fn), 
-                   ''.join([os.path.basename(self.data_fn)[:-4],'_2_to_1.avg'])))
+                   ''.join([os.path.basename(
+                       self.data_fn)[:-4],'_2_to_1.avg'])))
                 
-    def avg_to_jfile (self, avg_data_fn=None , profile_fn =None, j_extension='dat', 
-                      utm_zone='49N',**kws):
+    def avg_to_jfile (self, avg_data_fn=None , profile_fn =None,  
+                      j_extension='dat', utm_zone='49N',**kws):
         """
-        Method to write avg file to Jfile, convert both files , Astatic or plainty
-         avg file to A.G. Jones format.
+        Method to write avg file to Jfile, convert both files , 
+         Astatic or plainty avg file to A.G. Jones format.
         
         Parameters 
         -----------
@@ -472,27 +544,31 @@ class Avg (object):
         survey_name =kws.pop('survey_name', None)
         
         
-        if j_extension is not None and '.' not in j_extension: j_extension ='.'+j_extension
+        if j_extension is not None and '.' not in j_extension:
+            j_extension ='.'+j_extension
         
         
         self._logging.info('write Jformat file')
         
         if avg_data_fn is not None : self.data_fn = avg_data_fn 
         if self.data_fn is None :
-            raise CSex.pyCSAMTError_avg_file("Could not find any path to read ."
-                                              "Please provide your right AVG file.")
+            raise CSex.pyCSAMTError_avg_file(
+                "Could not find any path to read ."
+                 "Please provide your right AVG file.")
         
         if profile_fn is not None : self.profile_fn = profile_fn 
         
         if self.profile_fn is  None :
             raise CSex.pyCSAMTError_station(
-                'Need  absolutely station file. please provide your ".STN" file.')
+                'Need  absolutely station file.'
+                ' please provide your ".STN" file.')
         
         #---> read the avg file 
         self._read_avg_file(data_fn=self.data_fn)
         
         #---> read profile_obj from site 
-        site_obj = Site(data_fn=self.profile_fn, utm_zone=utm_zone)#.set_site_info(data_fn=, utm_zone = utm_zone)
+        #.set_site_info(data_fn=, utm_zone = utm_zone)
+        site_obj = Site(data_fn=self.profile_fn, utm_zone=utm_zone)
 
         #---> get the list of stations 
         station_list = sorted(self.Data_section.Station.names)
@@ -511,41 +587,56 @@ class Avg (object):
                 jcomp = j_obj.J.jMode(polarization_type = compvalue) 
         #---> number of periods 
         jnperiod = self.Data_section.Frequency.numfreq
-        jperiod = 1/self.Data_section.Frequency.value # frequency value 
+        # frequency value 
+        jperiod = 1/self.Data_section.Frequency.value 
+        
         # call data section 
         app_rho_obj = self.Data_section.Resistivity.loc 
         phase_obj = self.Data_section.Phase.loc
-        emag_obj ,hmag_obj =self.Data_section.Emag.loc, self.Data_section.Hmag.loc  
-        c_var_emag_obj , c_var_hmag_obj = self.Data_section.pcEmag.loc , self.Data_section.pcHmag.loc
-        c_var_app_rho_obj , std_phase_obj =self.Data_section.pcRho.loc, self.Data_section.sPhz.loc
-        
+        emag_obj =self.Data_section.Emag.loc
+        hmag_obj =self.Data_section.Hmag.loc  
+        c_var_emag_obj = self.Data_section.pcEmag.loc 
+        c_var_hmag_obj = self.Data_section.pcHmag.loc
+        c_var_app_rho_obj =self.Data_section.pcRho.loc
+        std_phase_obj = self.Data_section.sPhz.loc
         #---> compute rhomax and rhomin 
-        japp_rho_max, japp_rho_min , jphase_max, jphase_min,jwapp_rho =[{} for ii in range(5)] # create 4 empy  dicts
+        japp_rho_max, japp_rho_min , jphase_max, jphase_min,jwapp_rho = \
+            [{} for ii in range(5)] # create 4 empy  dicts
+            
         for key, value in self.Data_section.Resistivity.loc.items(): 
-            japp_rho_max[key]= app_rho_obj[key] + 1* Zcc.compute_sigmas_e_h_and_sigma_rho(pc_emag= c_var_emag_obj[key],
-                                                                  pc_hmag= c_var_hmag_obj[key] ,
-                                                                  pc_app_rho=c_var_app_rho_obj[key],
-                                                                  app_rho= app_rho_obj[key], 
-                                                                  emag= emag_obj[key],
-                                                                  hmag=hmag_obj[key])[-1]
-            japp_rho_min[key]= app_rho_obj[key] - 1 * Zcc.compute_sigmas_e_h_and_sigma_rho(pc_emag= c_var_emag_obj[key],
-                                                                  pc_hmag= c_var_hmag_obj[key] ,
-                                                                  pc_app_rho=c_var_app_rho_obj[key],
-                                                                  app_rho= app_rho_obj[key], 
-                                                                  emag= emag_obj[key],
-                                                                  hmag=hmag_obj[key])[-1]
+            japp_rho_max[key]= app_rho_obj[key] + 1* \
+                Zcc.compute_sigmas_e_h_and_sigma_rho(
+                        pc_emag= c_var_emag_obj[key],
+                        pc_hmag= c_var_hmag_obj[key] ,
+                        pc_app_rho=c_var_app_rho_obj[key],
+                        app_rho= app_rho_obj[key], 
+                        emag= emag_obj[key],
+                        hmag=hmag_obj[key])[-1]
+            japp_rho_min[key]= app_rho_obj[key] - 1 *\
+                Zcc.compute_sigmas_e_h_and_sigma_rho(
+                        pc_emag= c_var_emag_obj[key],
+                        pc_hmag= c_var_hmag_obj[key] ,
+                        pc_app_rho=c_var_app_rho_obj[key],
+                        app_rho= app_rho_obj[key], 
+                        emag= emag_obj[key],
+                        hmag=hmag_obj[key])[-1]
+            
         for key, value in self.Data_section.Phase.loc.items(): 
-            jphase_max [key]= 180 * (phase_obj[key] + 1 * std_phase_obj[key]/100)/np.pi
-            jphase_min [key] = 180 * (phase_obj[key] - 1 * std_phase_obj[key]/100)/np.pi
+            jphase_max [key]= 180 * (
+                phase_obj[key] + 1 * std_phase_obj[key]/100)/np.pi
+            jphase_min [key] = 180 * (
+                phase_obj[key] - 1 * std_phase_obj[key]/100)/np.pi
         
         #convert phase millirad value in degree : 
-        phase_obj ={key: 180 * phase * 1e-3/np.pi for key, phase in phase_obj.items()}
+        phase_obj ={key: 180 * phase * 1e-3/np.pi
+                    for key, phase in phase_obj.items()}
         # compute jwro and jwpha 
         #we assume to take weight to 1.
         jwapp_rho ={ key:value for key ,
                     value in zip(station_list, 
                      [np.ones((self.Data_section.Frequency.numfreq,), 
-                               dtype='float64') for ii in range(len(station_list))])}
+                               dtype='float64') 
+                      for ii in range(len(station_list))])}
         
         import copy  # use deep copy to copy the same weight and re  
         jwpha = copy.deepcopy(jwapp_rho)
@@ -567,9 +658,11 @@ class Avg (object):
         
         for ii , stn in enumerate(station_list) : 
             #-- > write Head j 
-            write_jlines.append(''.join([j_obj.J._comment_mark,'{0:} :'.format(j_obj.J.jinfo.progvers) , 
-                                        code_name.format(ii, station_list[ii]), codespace, 
-                                        datetime.now().strftime(j_obj.J.jfmtime), codespace, 'RECS'])+'\n')
+            write_jlines.append(''.join(
+                [j_obj.J._comment_mark,'{0:} :'.format(j_obj.J.jinfo.progvers) , 
+                        code_name.format(ii, station_list[ii]), codespace, 
+                        datetime.now().strftime(j_obj.J.jfmtime), 
+                        codespace, 'RECS'])+'\n')
             #--> write info : 
             if write_info : 
                 try :
@@ -581,15 +674,22 @@ class Avg (object):
                                       self.Header.SurveyConfiguration.sconfig_dict,
                                       self.Header.Tx.sconfig_dict,
                                       self.Header.Rx.sconfig_dict]:
+                        
                         lineinfo.append(j_obj.J._comment_mark)
                         for keyinfo, valueinfo in zongeinfo.items():
-                            if isinstance(valueinfo, list): valueinfo = ''.join([ss for ss in valueinfo if ss !=None])
-                            if 'None' in valueinfo: valueinfo=valueinfo.replace('None','*')
+                            if isinstance(valueinfo, list):
+                                valueinfo = ''.join(
+                                    [ss for ss in valueinfo if ss !=None])
+                            if 'None' in valueinfo:
+                                valueinfo=valueinfo.replace('None','*')
                             if valueinfo is not None : 
-                                lineinfo.append("{0}{1:^2}{2}".format(keyinfo,':',valueinfo))
+                                lineinfo.append(
+                                    "{0}{1:^2}{2}".format(keyinfo,':',valueinfo))
                                 lineinfo.append('{0:3^}'.format(','))
                                 counter_break +=1 
-                                if counter_break==7 :#--> go to line  to let visible info on jfile more visible.
+                                #--> go to line  to let visible info on
+                                #jfile more visible.
+                                if counter_break==7 :
                                     lineinfo.append('\n#')
                                     counter_break=0
                         counter_break=0           
@@ -600,41 +700,49 @@ class Avg (object):
      
             #--- > write jlabels 
             write_jlines.append(''.join(['{0:<13}'.format(j_obj.J._jlabels[0]),
-                                         '=', "{0:>13.1f}".format(site_obj.azim[stn]), '\n'] ))
+                                         '=', "{0:>13.1f}".format(
+                                             site_obj.azim[stn]), '\n'] ))
             write_jlines.append(''.join(['{0:<13}'.format(j_obj.J._jlabels[1]),
-                                         '=', "{0:>13.5f}".format(site_obj.lat[stn]), '\n'] ))
+                                         '=', "{0:>13.5f}".format(
+                                             site_obj.lat[stn]), '\n'] ))
             write_jlines.append(''.join(['{0:<13}'.format(j_obj.J._jlabels[2]),
-                                         '=', "{0:>13.5f}".format(site_obj.lon[stn]), '\n'] ))
+                                         '=', "{0:>13.5f}".format(
+                                             site_obj.lon[stn]), '\n'] ))
             write_jlines.append(''.join(['{0:<13}'.format(j_obj.J._jlabels[3]),
-                                         '=', "{0:>13.1f}".format(site_obj.elev[stn]), '\n'] ))
+                                         '=', "{0:>13.1f}".format(
+                                             site_obj.elev[stn]), '\n'] ))
             #---> write jnames , components  and nperiods 
             write_jlines.append(''.join(['{0}'.format(jstnnames[ii]), 
-                                         '{0:>7.1f}'.format(site_obj.azim[stn]),'\n']))
+                                         '{0:>7.1f}'.format(
+                                             site_obj.azim[stn]),'\n']))
             write_jlines.append('{0}'.format(jcomp)+'\n')
             write_jlines.append(' {0}'.format(jnperiod)+'\n')
             # now  write value :
                 
             for jj in range(jnperiod):
 
-                write_jlines.append (''.join( ['{0:<12.3e}'.format(jperiod[jj]), 
-                                               '{0:^12.3e}'.format(app_rho_obj [stn][jj]), 
-                                               '{0:^12.2e}'.format(phase_obj[stn][jj]), 
-                                               '{:^12.3e}'.format(japp_rho_max[stn][jj]), 
-                                               '{:^12.3e}'.format(japp_rho_min[stn][jj]), 
-                                               '{:^12.2e}'.format(jphase_max[stn][jj]), 
-                                               '{:^12.2e}'.format(jphase_min[stn][jj]),
-                                               '{:^7.2f}'.format(jwapp_rho[stn][jj]), 
-                                               '{:^7.2f}'.format(jwpha[stn][jj]),
-                                                                 ]))
+                write_jlines.append (''.join( [
+                    '{0:<12.3e}'.format(jperiod[jj]), 
+                    '{0:^12.3e}'.format(app_rho_obj [stn][jj]), 
+                    '{0:^12.2e}'.format(phase_obj[stn][jj]), 
+                    '{:^12.3e}'.format(japp_rho_max[stn][jj]), 
+                    '{:^12.3e}'.format(japp_rho_min[stn][jj]), 
+                    '{:^12.2e}'.format(jphase_max[stn][jj]), 
+                    '{:^12.2e}'.format(jphase_min[stn][jj]),
+                    '{:^7.2f}'.format(jwapp_rho[stn][jj]), 
+                    '{:^7.2f}'.format(jwpha[stn][jj]),
+                                      ]))
 
                 write_jlines.append('\n')
                 
-            with open('{0}{1}'.format(station_list[ii],j_extension), 'w', encoding='utf8') as fj:
+            with open('{0}{1}'.format(station_list[ii],j_extension), 
+                      'w', encoding='utf8') as fj:
                 fj.writelines(write_jlines)  
             
                 
             if savepath is not None : 
-                shutil.move ('{0}{1}'.format(station_list[ii],j_extension), savepath)
+                shutil.move ('{0}{1}'.format(
+                    station_list[ii],j_extension), savepath)
                                                            
             write_jlines=[]  
             
@@ -651,9 +759,9 @@ class Avg (object):
                         reference_frequency =None, number_of_points=7.,
                         dipole_length=50.,number_of_skin_depth=3., **kwargs):
         """
-        Method to write avg file to SEG-EDIfile.Convert both files.Astatic or plainty avg file .
-        if ASTATIC file is provided , will add the filter and filter values .
-        if avg file is not astatic file , user an apply
+        Method to write avg file to SEG-EDIfile.Convert both files.Astatic 
+        or plainty avg file .if ASTATIC file is provided , will add the filter 
+        and filter values .if avg file is not astatic file , user an apply
         filter by setting filter to "tma, ama, or flma".Once apply ,
         edifiles will exported by computing resistivities filtered
         
@@ -714,8 +822,9 @@ class Avg (object):
         
         if data_fn is not None : self.data_fn = data_fn 
         if self.data_fn is None : 
-            raise CSex.pyCSAMTError_avg_file("Could not find any path to read ."\
-                                            "Please provide your right AVG file.")
+            raise CSex.pyCSAMTError_avg_file(
+                "Could not find any path to read ."
+                "Please provide your right AVG file.")
         
         
         # export to savepath 
@@ -751,52 +860,66 @@ class Avg (object):
         nfreq = self.Data_section.Frequency.value.size
         
         
-        #------------------------------------------------------------------------------------
+        #-------------------------------------------------------------------
         #---> compute error propagation , phase and resistivity 
         app_rho_obj = self.Data_section.Resistivity.loc 
 
         phase_obj = self.Data_section.Phase.loc
-        emag_obj ,hmag_obj =self.Data_section.Emag.loc, self.Data_section.Hmag.loc  
-        c_var_emag_obj , c_var_hmag_obj = self.Data_section.pcEmag.loc , self.Data_section.pcHmag.loc
-        c_var_app_rho_obj , std_phase_obj =self.Data_section.pcRho.loc, self.Data_section.sPhz.loc
+        emag_obj =self.Data_section.Emag.loc
+        hmag_obj =self.Data_section.Hmag.loc 
+        c_var_emag_obj = self.Data_section.pcEmag.loc 
+        c_var_hmag_obj = self.Data_section.pcHmag.loc
+        c_var_app_rho_obj =self.Data_section.pcRho.loc
+        std_phase_obj =self.Data_section.sPhz.loc
+        
         #self.Header.HardwareInfos.astatic_version
-        AS_flag =0          # maker to check whether is plainty avg file or Astatic file 
+         # maker to check whether is plainty avg file or Astatic file 
+        AS_flag =0         
         if self.Header.HardwareInfos.numfilterfreq is not None :
             # self.Header.HardwareInfos.numfilterfreq is not None :
             print('---> Reading Zonge `ASTATIC` file !')
             AS_rho =self.Data_section.Resistivity.loc_Sres
             AS_flag =1
-        
-        error_propag_rho, error_propag_phs =[{} for ii in range(2)] # create 2empty  dicts
+            
+        # create 2empty  dicts
+        error_propag_rho, error_propag_phs =[{} for ii in range(2)] 
         for key, value in self.Data_section.Resistivity.loc.items(): 
-            error_propag_rho[key]= app_rho_obj[key] + 1* Zcc.compute_sigmas_e_h_and_sigma_rho(
-                                                                pc_emag= c_var_emag_obj[key],
-                                                                  pc_hmag= c_var_hmag_obj[key] ,
-                                                                  pc_app_rho=c_var_app_rho_obj[key],
-                                                                  app_rho= app_rho_obj[key], 
-                                                                  emag= emag_obj[key],
-                                                                  hmag=hmag_obj[key])[-1]
+            error_propag_rho[key]= app_rho_obj[key] + 1* \
+                Zcc.compute_sigmas_e_h_and_sigma_rho(
+                            pc_emag= c_var_emag_obj[key],
+                              pc_hmag= c_var_hmag_obj[key] ,
+                              pc_app_rho=c_var_app_rho_obj[key],
+                              app_rho= app_rho_obj[key], 
+                              emag= emag_obj[key],
+                              hmag=hmag_obj[key])[-1]
+                
         for key, value in self.Data_section.Phase.loc.items(): 
-            error_propag_phs [key]= 180 *( (std_phase_obj[key]/100)/1000)/np.pi #  std = sPhz / 100 #converted in radians
+            #  std = sPhz / 100 #converted in radians
+            error_propag_phs [key]= 180 *( 
+                (std_phase_obj[key]/100)/1000)/np.pi 
   
         
         #convert phase millirad value in degree : 
-        phase_obj ={key: 180 * phase * 1e-3/np.pi for key, phase in phase_obj.items()}
+        phase_obj ={key: 180 * phase * 1e-3/np.pi 
+                    for key, phase in phase_obj.items()}
     
-        #-----------------------------------------------------------------------------------------
+        #---------------------------------------------------------------
         if apply_filter is not None :
             try :
                 apply_filter= apply_filter.lower()
             except:
                 print("---> ErrorType: Filters' names must a str of"
-                              " `tma` `flma` or `ama`. not {0}".format(type(apply_filter)))
+                              " `tma` `flma` or `ama`. not {0}".format(
+                                  type(apply_filter)))
                 
                 warnings.warn("TypeError ,Filters' names must be a str of"
-                              " `tma` ,`flma` or  `ama`. not {0}".format(type(apply_filter)))
+                              " `tma` ,`flma` or  `ama`. not {0}".format(
+                                  type(apply_filter)))
                 apply_filter=None
             else :
                 print('{0:-^77}'.format('Filter Infos'))
-                print('** {0:<27} {1} {2}'.format('Filter applied', '=', apply_filter.upper()))
+                print('** {0:<27} {1} {2}'.format(
+                    'Filter applied', '=', apply_filter.upper()))
                 
         if apply_filter in ['ama', 'tma', 'flma']:
             # create processing_obj , unique obj for all filters  
@@ -903,7 +1026,8 @@ class Avg (object):
             import copy 
             #head_edi_lon = np.full((len(head_dataid_list),), 0., dtype=np.float)
             head_edi_lon = {stn: value for stn , value in zip (
-                head_dataid_list, np.zeros_like(len(head_dataid_list), dtype=np.float))}
+                head_dataid_list,
+                np.zeros_like(len(head_dataid_list), dtype=np.float))}
             head_edi_lat = copy.deepcopy(head_edi_lon)
             head_edi_elev = copy.deepcopy(head_edi_lon)
             
@@ -912,12 +1036,12 @@ class Avg (object):
              head_edi_lat = site_obj.lat 
              head_edi_elev = site_obj.elev 
         
-        #------------------------START SETTING EDI ATTRIBUTE -----------------------------
+        #------------------------START SETTING EDI ATTRIBUTE ----------------
         # import module Hmeasurement and Emeasurement
         from pycsamt.ff.core.edi import Hmeasurement, Emeasurement
         # from pycsamt.utils import gis_tools as gis 
-        
-        for ii, stn in enumerate(head_dataid_list): #   for stn in head_dataid_list : #loop for all station or dataid 
+        #   for stn in head_dataid_list : #loop for all station or dataid 
+        for ii, stn in enumerate(head_dataid_list): 
             #create Ediobj for eac datalist 
             edi_obj =Edi()
             
@@ -925,9 +1049,11 @@ class Avg (object):
             edi_obj.Head.dataid= head_dataid_list[ii] # ii mean for all the list 
             edi_obj.Head.acqby = 'Zonge Engineering'
             edi_obj.Head.acqdate = self.Header.HardwareInfos.dated 
-            edi_obj.Head.fileby = "AMTAVG_v.{0}".format(self.Header.HardwareInfos.version) 
+            edi_obj.Head.fileby = "AMTAVG_v.{0}".format(
+                self.Header.HardwareInfos.version) 
             if self.Header.SurveyAnnotation.project_name is None :
-                 self.Header.SurveyAnnotation.__setattr__('project_name ',os.path.basename(self.data_fn)) 
+                 self.Header.SurveyAnnotation.__setattr__(
+                     'project_name ',os.path.basename(self.data_fn)) 
     
             edi_obj.Head.loc = os.path.basename(self.data_fn)[:-4]
             edi_obj.Head.filedate = self.Header.HardwareInfos.processed
@@ -946,11 +1072,13 @@ class Avg (object):
             edi_obj.Info.filter =self.Header.HardwareInfos.freq_filter
             
                
-            edi_obj.Info.Source.__setattr__('project', self.Header.SurveyAnnotation.project_name)
+            edi_obj.Info.Source.__setattr__(
+                'project', self.Header.SurveyAnnotation.project_name)
             edi_obj.Info.Source.__setattr__('survey',  head_dataid_list[ii])
             edi_obj.Info.Source.__setattr__('sitename', head_dataid_list[ii])
             edi_obj.Info.Processing.__setattr__('processedby', 'pyCSAMT' )
-            edi_obj.Info.Processing.ProcessingSoftware.__setattr__('name', edi_obj.Head.fileby )
+            edi_obj.Info.Processing.ProcessingSoftware.__setattr__(
+                'name', edi_obj.Head.fileby )
             
     
             #====> definemeas 
@@ -964,47 +1092,51 @@ class Avg (object):
             # creating xxmeas object 
             codeID_dec = '{0}'.format((ii+1)/edi_obj.Head.maxsect)
             # codeID=  '{0:04}{1}'.format(ii * 10 + 1 , codeID_dec[1:] )
-            edi_obj.DefineMeasurement.__setattr__('meas_ex', 
-                                                  Emeasurement(**{'id':'{0:04}{1}'.format(ii * 10 + 1 , 
-                                                                                          codeID_dec[1:] ), 
-                                                                          'chtype':'EX', 
-                                                                          'x': -(dipole_length/2), 
-                                                                          'y': 0.,
-                                                                          'x2':dipole_length/2 , 
-                                                                          'y2':0, 
-                                                                          'acqchan': '0.00', 
-                                                                          'filter':avgfilter, 
-                                                                          }))
+            edi_obj.DefineMeasurement.__setattr__(
+                'meas_ex', 
+                Emeasurement(**{'id':'{0:04}{1}'.format(ii * 10 + 1 , 
+                                                        codeID_dec[1:] ), 
+                                        'chtype':'EX', 
+                                        'x': -(dipole_length/2), 
+                                        'y': 0.,
+                                        'x2':dipole_length/2 , 
+                                        'y2':0, 
+                                        'acqchan': '0.00', 
+                                        'filter':avgfilter, 
+                                        }))
 
-            edi_obj.DefineMeasurement.__setattr__('meas_ey',
-                                                  Emeasurement(**{'id':'{0:04}{1}'.format(ii * 10 + 2 , 
-                                                                                          codeID_dec[1:]), 
-                                                                          'chtype':'EY', 
-                                                                          'x':0., 
-                                                                          'y': -(dipole_length/2),
-                                                                          'x2':0., 
-                                                                          'y2':dipole_length/2 , 'acqchan': '0.00', 
-                                                                          'filter':avgfilter}))
+            edi_obj.DefineMeasurement.__setattr__(
+                'meas_ey',
+                Emeasurement(**{'id':'{0:04}{1}'.format(ii * 10 + 2 , 
+                                                        codeID_dec[1:]), 
+                                        'chtype':'EY', 
+                                        'x':0., 
+                                        'y': -(dipole_length/2),
+                                        'x2':0., 
+                                        'y2':dipole_length/2 , 'acqchan': '0.00', 
+                                        'filter':avgfilter}))
 
-            edi_obj.DefineMeasurement.__setattr__('meas_hx', 
-                                                  Hmeasurement(**{'id':'{0:04}{1}'.format(ii * 10 + 3 , 
-                                                                                          codeID_dec[1:] ), 
-                                                                              'chtype':'HX', 
-                                                                              'x':0., 
-                                                                              'y': 0.,
-                                                                              'x2':0., 
-                                                                              'y2':0. , 'acqchan': '0.00', 
-                                                                          'filter':avgfilter}))
+            edi_obj.DefineMeasurement.__setattr__(
+                'meas_hx', 
+                Hmeasurement(**{'id':'{0:04}{1}'.format(ii * 10 + 3 , 
+                                                        codeID_dec[1:] ), 
+                                            'chtype':'HX', 
+                                            'x':0., 
+                                            'y': 0.,
+                                            'x2':0., 
+                                            'y2':0. , 'acqchan': '0.00', 
+                                        'filter':avgfilter}))
 
-            edi_obj.DefineMeasurement.__setattr__('meas_hy',
-                                                  Hmeasurement(**{'id':'{0:04}{1}'.format(ii * 10 + 4 ,
-                                                                                          codeID_dec[1:]), 
-                                                                      'chtype':'HY', 
-                                                                      'x':0., 
-                                                                      'y': 0.,
-                                                                      'x2':0., 
-                                                                      'y2':0. , 'acqchan': '0.00', 
-                                                                  'filter':avgfilter}))
+            edi_obj.DefineMeasurement.__setattr__(
+                'meas_hy',
+                Hmeasurement(**{'id':'{0:04}{1}'.format(ii * 10 + 4 ,
+                                                        codeID_dec[1:]), 
+                                    'chtype':'HY', 
+                                    'x':0., 
+                                    'y': 0.,
+                                    'x2':0., 
+                                    'y2':0. , 'acqchan': '0.00', 
+                                'filter':avgfilter}))
                 
                         
             #====> EMAPSECT
@@ -1014,8 +1146,10 @@ class Avg (object):
             edi_obj.MTEMAP.__setattr__('maxblks', 64)
             edi_obj.MTEMAP.ndipole=  len(head_dataid_list) - 1 
             edi_obj.MTEMAP.type = descritipfilter
-            edi_obj.MTEMAP.__setattr__('hx', '{0:04}{1}'.format(ii * 10 + 3 , codeID_dec[1:] ))
-            edi_obj.MTEMAP.__setattr__('hy', '{0:04}{1}'.format(ii * 10 + 4 , codeID_dec[1:] ))
+            edi_obj.MTEMAP.__setattr__('hx', '{0:04}{1}'.format(
+                ii * 10 + 3 , codeID_dec[1:] ))
+            edi_obj.MTEMAP.__setattr__('hy', '{0:04}{1}'.format(
+                ii * 10 + 4 , codeID_dec[1:] ))
             edi_obj.MTEMAP.__setattr__('chksum', 64 * nfreq)
             
             # Frequency blocks , impendance and resistivity blocs 
@@ -1124,8 +1258,8 @@ class Header (object):
 
     def write_header_log(self, data_fn=None , savepath=None ): 
         """ 
-        Method to write your head log. In fact just to see whether your Zonge Infos 
-        was set correctly.
+        Method to write your head log. In fact just to see whether your 
+        Zonge Infos was set correctly.
         
         Parameters 
         ----------
@@ -1194,7 +1328,8 @@ class Header (object):
             fd.writelines(rmlines)
             
         if savepath is not None :
-            shutil.move (''.join([os.path.basename(self.data_fn),'_pyCS',".log"]),savepath)
+            shutil.move (''.join([
+                os.path.basename(self.data_fn),'_pyCS',".log"]),savepath)
         
         print('---> Your Hlog file <{0}> has been written successfully !<---'.\
               format(''.join([os.path.basename(self.data_fn),'_pyCS',".log"])))
@@ -1270,31 +1405,40 @@ class SurveyAnnotation (object) :
             self.zon_serv_annotations = survey_annotations_data
             
         if self.zon_serv_annotations is None : 
-            CSex.pyCSAMTError_inputarguments('No survey_annotations informations found!')
+            CSex.pyCSAMTError_inputarguments(
+                'No survey_annotations informations found!')
             
             
         if type(self.zon_serv_annotations ) is not list: 
             try :
                 if os.path.isfile(self.zon_serv_annotations ) is True :
-                    with open (self.zon_serv_annotations , 'r', encoding ='utf8') as fid :
+                    with open (self.zon_serv_annotations , 'r',
+                               encoding ='utf8') as fid :
                         self.zon_serv_annotations =fid.readlines()
-            except : raise CSex.pyCSAMTError_Header("Please check your annotation data ! "\
-                                                    "Must be be a list or file ") 
+            except : raise CSex.pyCSAMTError_Header(
+                    "Please check your annotation data ! "
+                      "Must be be a list or file ") 
             
         for zonsurva in self.zon_serv_annotations :
 
             zonsurva =zonsurva.strip().split('=')
             if 'job.name' in zonsurva[0].lower(): 
-                if zonsurva[1]  !='': self.project_name=zonsurva[1]
-            if 'job.area' in zonsurva[0].lower() :self.project_area =zonsurva[1]
+                if zonsurva[1]  !='': 
+                    self.project_name=zonsurva[1]
+            if 'job.area' in zonsurva[0].lower() :
+                self.project_area =zonsurva[1]
             if 'job.for' in zonsurva[0].lower() :
-                if zonsurva[1]  !='' :self.custumer_name = zonsurva[1]
+                if zonsurva[1]  !='' :
+                    self.custumer_name = zonsurva[1]
             if 'job.by'in zonsurva[0].lower() :
-                if zonsurva[1]  !='' :self.contractor_name =  zonsurva[1]
+                if zonsurva[1]  !='' :
+                    self.contractor_name =  zonsurva[1]
             if 'job.number'in zonsurva[0].lower() :
-                if zonsurva[1]  !='' :self.project_label=  zonsurva[1] 
+                if zonsurva[1]  !='' :
+                    self.project_label=  zonsurva[1] 
             if 'job.date'in zonsurva[0].lower() :
-                if zonsurva[1]  !='' : self.acqdate =  zonsurva[1] 
+                if zonsurva[1]  !='' : 
+                    self.acqdate =  zonsurva[1] 
                    
         self.sconfig_dict={'Job.Name':self.project_name , 
                   'Job.Area':self.project_area , 
@@ -1387,7 +1531,8 @@ class SurveyConfiguration(object) :
                                     }
         
         for keys in list(kwargs.keys()):
-            # lista=[key for key in Test.__dict__.keys() if not (key.startswith('__') and key.endswith('__'))]
+            # lista=[key for key in Test.__dict__.keys() if not 
+            #(key.startswith('__') and key.endswith('__'))]
             if keys not in SurveyConfiguration.__dict__.keys():
                 self.__setattr__(keys, kwargs[keys])
                 self.sconfig_dict.__setitem__(keys, kwargs[keys])
@@ -1422,28 +1567,43 @@ class SurveyConfiguration(object) :
             configInfos=configInfos.strip().split('=')
 
             if 'survey.type' in configInfos[0].lower():
-                if configInfos[1] != '': self.surveyType=configInfos[1]
+                if configInfos[1] != '': 
+                    self.surveyType=configInfos[1]
             if 'survey.array' in configInfos[0].lower():
-                if configInfos[1] != '': self.surveyArray=configInfos[1]
+                if configInfos[1] != '': 
+                    self.surveyArray=configInfos[1]
             if 'line.name' in configInfos[0].lower():
-                if configInfos[1] != '': self.lineName=configInfos[1] 
+                if configInfos[1] != '': 
+                    self.lineName=configInfos[1] 
             if 'line.number' in configInfos[0].lower():
-                if configInfos[1] != '': self.lineNumber=configInfos[1] 
+                if configInfos[1] != '': 
+                    self.lineNumber=configInfos[1] 
             if 'line.azimuth' in configInfos[0].lower():
-                if configInfos[1] != '': self.azimuth=configInfos[1] 
-            if 'stn.gdpbeg' in configInfos[0].lower():self.stnGdpBeg=configInfos[1] 
-            if 'stn.gdpinc' in configInfos[0].lower():self.stnGdpInc=configInfos[1] 
-            if 'stn.beg' in configInfos[0].lower(): self.stnBeg=configInfos[1] 
-            if 'stn.inc' in configInfos[0].lower(): self.stnInc=configInfos[1] 
-            if 'stn.left' in configInfos[0].lower():self.stnLeft=configInfos[1] 
-            if 'stn.right' in configInfos[0].lower(): self.stnRight=configInfos[1]
-            if 'stn.length' in configInfos[0].lower(): self.unitLength=configInfos[1] 
+                if configInfos[1] != '': 
+                    self.azimuth=configInfos[1] 
+            if 'stn.gdpbeg' in configInfos[0].lower():
+                self.stnGdpBeg=configInfos[1] 
+            if 'stn.gdpinc' in configInfos[0].lower():
+                self.stnGdpInc=configInfos[1] 
+            if 'stn.beg' in configInfos[0].lower(): 
+                self.stnBeg=configInfos[1] 
+            if 'stn.inc' in configInfos[0].lower(): 
+                self.stnInc=configInfos[1] 
+            if 'stn.left' in configInfos[0].lower():
+                self.stnLeft=configInfos[1] 
+            if 'stn.right' in configInfos[0].lower(): 
+                self.stnRight=configInfos[1]
+            if 'stn.length' in configInfos[0].lower():
+                self.unitLength=configInfos[1] 
             if 'unit.e' in configInfos[0].lower():
-                if configInfos[1] != '': self.unitEmag=configInfos[1] 
+                if configInfos[1] != '':
+                    self.unitEmag=configInfos[1] 
             if 'unit.b' in configInfos[0].lower():
-                if configInfos[1] != '': self.unitHfield=configInfos[1] 
+                if configInfos[1] != '': 
+                    self.unitHfield=configInfos[1] 
             if 'unit.phase' in configInfos[0].lower():
-                if configInfos[1] != '': self.unitPhase=configInfos[1] 
+                if configInfos[1] != '': 
+                    self.unitPhase=configInfos[1] 
 
         self.sconfig_dict= {'Survey.Type':self.surveyType,
                                     'Survey.Array':self.surveyArray , 
@@ -1548,10 +1708,12 @@ class TransmitterProperties(object):
                     self.txStn =np.float(tx_infos.strip().split('=')[-1])
                 if 'Tx.Type' in tx_infos :
                     self.txType= tx_infos.strip().split('=')[-1]
-                if 'Tx.HPR' in tx_infos :self.txHPR=[float(ss) for ss in \
-                                                     tx_infos.strip().split('=')[-1].split(',')]
-                if 'Tx.Length'in tx_infos : self.txLength=float(
-                                                     tx_infos.strip().split('=')[-1].split()[-2])
+                if 'Tx.HPR' in tx_infos :
+                    self.txHPR=[float(ss) for ss in 
+                      tx_infos.strip().split('=')[-1].split(',')]
+                if 'Tx.Length'in tx_infos : 
+                    self.txLength=float(tx_infos.strip().split('=')[-1].split()[-2])
+                                                     
                 
          # --> set configuration -dictionnary               
         self.sconfig_dict={'Tx.Type':self.txType, 
@@ -1650,29 +1812,36 @@ class ReceiverProperties(object):
                 if os.path.isfile(self.rx_data) ==True : 
                     with open(self.rx_data, 'r', encoding='utf-8') as frx:
                         self.rx_data =frx.readlines()
-            except : raise CSex.pyCSAMTError_Header('Argument provided for rx_data are wrong !'\
-                                                    ' Must be a list of file.')
+            except : raise CSex.pyCSAMTError_Header(
+                    'Argument provided for rx_data are wrong !'
+                                  ' Must be a list of file.')
                         
 
         for rx_infos in self.rx_data : 
             
-            if '$Rx.Stn' in rx_infos : self.rxStn =np.float(rx_infos.strip().split('=')[-1])
+            if '$Rx.Stn' in rx_infos :
+                self.rxStn =np.float(rx_infos.strip().split('=')[-1])
                 
-            if 'Rx.Cmp' in rx_infos :self.rxComps= rx_infos.strip().split('=')[-1]
+            if 'Rx.Cmp' in rx_infos :
+                self.rxComps= rx_infos.strip().split('=')[-1]
                 
-            if 'Rx.HPR' in rx_infos :self.rxHPR=[float(ss) for ss in \
-                                                 rx_infos.strip().split('=')[-1].split(',')]
+            if 'Rx.HPR' in rx_infos :
+                self.rxHPR=[float(ss) for ss in 
+                 rx_infos.strip().split('=')[-1].split(',')]
             if ('$ ASPACE' in rx_infos) or  ('Rx.Length'in rx_infos) : 
-                    #-- it seems sometimes file got the unit at the end either 'm' or ft'
-                    # should remove it before converting on float
+                    #-- it seems sometimes file got the unit at the end either 
+                    # 'm' or ft'should remove it before converting on float
                 tx = rx_infos.strip().split('=')[-1]
                 if not 46 < ord(rx_infos.strip().split('=')[-1][-1]) < 58 :  
-                    tx =func._remove_str_word(char=tx,word_to_remove=rx_infos.strip().split('=')[-1][-1],
-                                              deep_remove=False)
-                    self.rxLength ,self.unit =np.float(tx), rx_infos.strip().split('=')[-1][-1]
+                    tx =func._remove_str_word(
+                        char=tx,word_to_remove=rx_infos.strip().split('=')[-1][-1],
+                              deep_remove=False)
+                    self.rxLength =np.float(tx)
+                    self.unit = rx_infos.strip().split('=')[-1][-1]
                 else :self.rxLength=np.float(tx)
  
-            if '$Rx.GdpStn' in rx_infos : self.rxGdpStn =np.float(rx_infos.strip().split('=')[-1])
+            if '$Rx.GdpStn' in rx_infos : 
+                self.rxGdpStn =np.float(rx_infos.strip().split('=')[-1])
                 
         self.sconfig_dict={'Rx.GdpStn':self.rxGdpStn, 
                           'Rx.Stn':self.rxStn, 
@@ -1736,8 +1905,9 @@ class Skip_flag (object) :
         
         if skip_flag is not None : 
             if skip_flag not in list(self.skip_flag_dict.keys()):
-                raise CSex.pyCSAMTError_config_file('Wrong Input ! skip flag must be'
-                                                    ' among : {0}'.format(list(self.skip_flag_dict.keys())))
+                raise CSex.pyCSAMTError_config_file(
+                    'Wrong Input ! skip flag must be'
+                     ' among : {0}'.format(list(self.skip_flag_dict.keys())))
             self.skip_flag = str(skip_flag)
 
         for keys , values  in self.skip_flag_dict.items(): 
@@ -1796,7 +1966,8 @@ class ZongeHardware(object):
                            'Dated':self.dated,
                            'Processed':self.processed, 
                            'ASTATIC':[self.astatic_version, self.update_data ],
-                           "":'{0} TMA Filter at {1} hertz'.format(self.numfilterfreq,self.freq_filter )}
+                           "":'{0} TMA Filter at {1} hertz'.format(
+                               self.numfilterfreq,self.freq_filter )}
         self._writer_copyleft ='@by_pyCSAMT'
             
         for key in list (kwargs.keys()):
@@ -1816,13 +1987,17 @@ class ZongeHardware(object):
         
         if zonge_hardw_infos is not None : 
             self.zonge_hardw_infos=zonge_hardw_infos 
-        if self.zonge_hardw_infos is None : raise CSex.pyCSAMTError_Header('No informations from hardware found !')
+        if self.zonge_hardw_infos is None : 
+            raise CSex.pyCSAMTError_Header(
+                'No informations from hardware found !')
         
         if type (self.zonge_hardw_infos) is not list : 
             try : 
                 with open(self.zonge_hardw_infos, 'r', encoding='utf8') as fzh : 
                     self.zonge_hardw_infos= fzh.readlines()
-            except : raise CSex.pyCSAMTError_Header("Harware - infos must be either a list or  file !")
+            except :
+                raise CSex.pyCSAMTError_Header(
+                    "Harware - infos must be either a list or  file !")
 
         for  infos in self.zonge_hardw_infos : 
             if 'AMTAVG' in infos  : 
@@ -1983,18 +2158,23 @@ class Data (object):
             raise CSex.pyCSAMTError_AvgData(' May check your avg Datafile.')
 
         
-        number_of_freq_array , rep =np.unique(self._data_array[:,1], return_counts=True)
-        number_of_station_array , rep =np.unique(self._data_array[:,0], return_counts=True)
+        number_of_freq_array , rep = \
+            np.unique(self._data_array[:,1], return_counts=True)
+        number_of_station_array , rep = \
+            np.unique(self._data_array[:,0], return_counts=True)
 
-        self._number_of_frequencies, self._number_of_stations = number_of_freq_array.size, number_of_station_array.size
+        self._number_of_frequencies= number_of_freq_array.size
+        self._number_of_stations = number_of_station_array.size
         # print(self.numfreq, self.numstation)
 
         if add_astatic_data is not None :
             added_astatic_data=add_astatic_data
             pdf_Z= added_astatic_data.drop('SRes', axis=1)
             pdf_Z.reset_index(drop=True, inplace =True )
-            self.Z._read_zAS_data(z_abs_array =pdf_Z , number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations )
+            self.Z._read_zAS_data(
+                z_abs_array =pdf_Z ,
+                 number_of_frequencies= self._number_of_frequencies, 
+                number_of_stations=self._number_of_stations )
             
             #--> set asticatic
             self.added_astatic_data=added_astatic_data['SRes'].to_numpy()
@@ -2028,89 +2208,114 @@ class Data (object):
         # try to change the dtype of data if dtype of the dataset is not float 
 
         if self._data_array.dtype not in ['float', 'int']:
-            data_transitory =[zstar_array_to_nan(zstar_array=rowline) for dd, rowline in enumerate(self._data_array)]
-            self._data_array=func.concat_array_from_list(list_of_array=data_transitory)
+            data_transitory =[zstar_array_to_nan(zstar_array=rowline) 
+                              for dd, rowline in enumerate(self._data_array)]
+            self._data_array=func.concat_array_from_list(
+                list_of_array=data_transitory)
   
         # populate classes .  
         #cut of special freq_array and stations
-        # for more certaintly , any value will come must be check whether its possible to convert , if not value 
+        # for more certaintly , any value will come must be check whether its
+        # possible to convert , if not value 
         #       will set to np.nan 
 
-        self.Station._set_station_(station_data_array=zstar_array_to_nan (zstar_array=self._data_array[:,0]), 
-                                   normalized_station_value=self.normalized_station_value )
-        self.Frequency._set_frequency(freq_array=zstar_array_to_nan (zstar_array=self._data_array[:,1]))
-        self.Amps._read_amps_data(amps_array=zstar_array_to_nan (zstar_array=self._data_array[:,2]), 
-                                 number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations)
+        self.Station._set_station_(station_data_array=zstar_array_to_nan (
+            zstar_array=self._data_array[:,0]), 
+            normalized_station_value=self.normalized_station_value )
+        self.Frequency._set_frequency(freq_array=zstar_array_to_nan (
+            zstar_array=self._data_array[:,1]))
+        self.Amps._read_amps_data(amps_array=zstar_array_to_nan (
+            zstar_array=self._data_array[:,2]), 
+                    number_of_frequencies=self._number_of_frequencies, 
+                    number_of_stations=self._number_of_stations)
         # Amps(amps_array=self._data_array[:,2])
-        self.Emag._read_emag_data(e_mag_array=zstar_array_to_nan (zstar_array=self._data_array[:,3]),
-                                 number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations )
+        self.Emag._read_emag_data(e_mag_array=zstar_array_to_nan (
+            zstar_array=self._data_array[:,3]),
+                number_of_frequencies=self._number_of_frequencies, 
+                number_of_stations=self._number_of_stations )
         # Emag(e_mag_array =self._data_array[:,3])
-        self.Ephz._read_ephz_data(e_phz_array=zstar_array_to_nan (zstar_array=self._data_array[:, 4]),
-                                 number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations, to_degree =self.set_to_degree  )
+        self.Ephz._read_ephz_data(e_phz_array=zstar_array_to_nan (
+            zstar_array=self._data_array[:, 4]),
+                number_of_frequencies=self._number_of_frequencies, 
+                number_of_stations=self._number_of_stations,
+                to_degree =self.set_to_degree  )
         # Ephz(e_phz_array=self._data_array[:, 4])
-        self.Hmag._read_hmag_data(h_mag_array=zstar_array_to_nan (zstar_array=self._data_array[:,5]),
-                                 number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations )
+        self.Hmag._read_hmag_data(h_mag_array=zstar_array_to_nan (
+            zstar_array=self._data_array[:,5]),
+                    number_of_frequencies=self._number_of_frequencies, 
+                    number_of_stations=self._number_of_stations )
         # Hmag (h_mag_array =self._data_array[:,5])
-        self.Hphz._read_hphz_data(h_phz_array=zstar_array_to_nan (zstar_array=self._data_array[:, 6]),
-                                 number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations, to_degree =self.set_to_degree  )
+        self.Hphz._read_hphz_data(h_phz_array=zstar_array_to_nan (
+            zstar_array=self._data_array[:, 6]),
+                number_of_frequencies=self._number_of_frequencies, 
+                number_of_stations=self._number_of_stations,
+                to_degree =self.set_to_degree  )
         # Hphz(h_phz_array=self._data_array[:,6])
         
         if self._f==1 : 
         #     Resistivity(res_array=self._data[:,7])
-            self.Resistivity._read_res_data(res_array =zstar_array_to_nan (zstar_array=self._data_array[:,7]),
-                                            number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations)
+            self.Resistivity._read_res_data(res_array =zstar_array_to_nan (
+                zstar_array=self._data_array[:,7]),
+                        number_of_frequencies=self._number_of_frequencies, 
+                        number_of_stations=self._number_of_stations)
         #     Phase (phase_array=self._data[:8])
-            self.Phase._read_phase_data(phase_array=zstar_array_to_nan (zstar_array=self._data_array[:,8]),
-                                            number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations )
+            self.Phase._read_phase_data(phase_array=zstar_array_to_nan (
+                zstar_array=self._data_array[:,8]),
+                     number_of_frequencies=self._number_of_frequencies, 
+                    number_of_stations=self._number_of_stations )
         #     sPhz(s_phz_data=self._data_array[:-1])
-            self.sPhz._read_sPhz_data(sPhase_array=zstar_array_to_nan (zstar_array=self._data_array[:,-1]), 
-                                      number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations)
+            self.sPhz._read_sPhz_data(sPhase_array=zstar_array_to_nan (
+                zstar_array=self._data_array[:,-1]), 
+                          number_of_frequencies=self._number_of_frequencies, 
+                          number_of_stations=self._number_of_stations)
         #     pcRho(pc_rho_data=self._data[:,-2])
-            self.pcRho._read_pcRes_data(pcRes_array =zstar_array_to_nan (zstar_array=self._data_array[:,-2]),
-                                        number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations)
+            self.pcRho._read_pcRes_data(pcRes_array =zstar_array_to_nan (
+                zstar_array=self._data_array[:,-2]),
+                            number_of_frequencies=self._number_of_frequencies, 
+                            number_of_stations=self._number_of_stations)
         if self._f==2 : 
         #     Resistivity(res_array=self._data[:,8])
-            self.Resistivity._read_res_data(res_array =zstar_array_to_nan (zstar_array=self._data_array[:,8]),
-                                            number_of_frequencies=self._number_of_frequencies, 
-                     number_of_stations=self._number_of_stations, Sres=self.added_astatic_data)
+            self.Resistivity._read_res_data(res_array =zstar_array_to_nan (
+                zstar_array=self._data_array[:,8]),
+                   number_of_frequencies=self._number_of_frequencies, 
+                     number_of_stations=self._number_of_stations,
+                     Sres=self.added_astatic_data)
         #     Phase (phase_array=self._data[:7])
-            self.Phase._read_phase_data(phase_array=zstar_array_to_nan (zstar_array=self._data_array[:,7]),
-                                        number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations )
+            self.Phase._read_phase_data(phase_array=zstar_array_to_nan (
+                zstar_array=self._data_array[:,7]),
+                           number_of_frequencies=self._number_of_frequencies, 
+                           number_of_stations=self._number_of_stations )
         #     sPhz(s_phz_data=self._data_array[:-2])
-            self.sPhz._read_sPhz_data(sPhase_array=zstar_array_to_nan (zstar_array=self._data_array[:,-2]),
-                                      number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations)
+            self.sPhz._read_sPhz_data(sPhase_array=zstar_array_to_nan (
+                zstar_array=self._data_array[:,-2]),
+                         number_of_frequencies=self._number_of_frequencies, 
+                          number_of_stations=self._number_of_stations)
         #     pcRho(pc_rho_data=self._data[:,-1])
-            self.pcRho._read_pcRes_data(pcRes_array =zstar_array_to_nan (zstar_array=self._data_array[:,-1]), 
-                                        number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations)
+            self.pcRho._read_pcRes_data(pcRes_array =zstar_array_to_nan (
+                zstar_array=self._data_array[:,-1]), 
+                       number_of_frequencies=self._number_of_frequencies, 
+                        number_of_stations=self._number_of_stations)
             
         # pcEmag(pc_emag_data=self._data[:,-6])
-        self.pcEmag._read_pcEmag_data(pc_e_mag_array=zstar_array_to_nan (zstar_array=self._data_array[:,-6]), 
-                                      number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations)
+        self.pcEmag._read_pcEmag_data(pc_e_mag_array=zstar_array_to_nan (
+            zstar_array=self._data_array[:,-6]), 
+                     number_of_frequencies=self._number_of_frequencies, 
+                      number_of_stations=self._number_of_stations)
         # sEphz(s_phz_data=self._data[:,-5])
-        self.sEphz._read_sEphz_data (sEphz_array=zstar_array_to_nan (zstar_array=self._data_array[:,-5]),
-                                     number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations )
+        self.sEphz._read_sEphz_data (sEphz_array=zstar_array_to_nan (
+            zstar_array=self._data_array[:,-5]),
+                      number_of_frequencies=self._number_of_frequencies, 
+                      number_of_stations=self._number_of_stations )
         # pcHmag(pc_hmag_data =self._data[:, -4])
-        self.pcHmag._read_pcHmag_data(pc_h_mag_array=zstar_array_to_nan (zstar_array=self._data_array[:,-4]),
-                                      number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations)
+        self.pcHmag._read_pcHmag_data(pc_h_mag_array=zstar_array_to_nan (
+            zstar_array=self._data_array[:,-4]),
+                      number_of_frequencies=self._number_of_frequencies, 
+                      number_of_stations=self._number_of_stations)
         # sHphz(s_hphz_data=self._data[:,-3])
-        self.sHphz._read_sHphz_data (sHphz_array=zstar_array_to_nan (zstar_array=self._data_array[:,-3]),
-                                     number_of_frequencies=self._number_of_frequencies, 
-                                 number_of_stations=self._number_of_stations )   
+        self.sHphz._read_sHphz_data (sHphz_array=zstar_array_to_nan (
+            zstar_array=self._data_array[:,-3]),
+                         number_of_frequencies=self._number_of_frequencies, 
+                         number_of_stations=self._number_of_stations )   
     
        
 
@@ -2174,8 +2379,8 @@ class  Station(object):
     def _set_station_(self,station_data_array =None, rename_station =None , 
                       normalized_station_value=False )  : 
         """
-        Method to set station on dictionnary of each distance. in fact to easily export for 
-        plotting each station . 
+        Method to set station on dictionnary of each distance. In fact
+         to easily export for plotting each station . 
 
         Parameters
         ----------
@@ -2191,40 +2396,54 @@ class  Station(object):
         """
         
         if station_data_array  is not None : 
-            self.station_data_array=np.array([np.float(kk) for kk in station_data_array ])
+            self.station_data_array=np.array(
+                [np.float(kk) for kk in station_data_array ])
   
         if self.station_data_array is None : 
             raise CSex.pyCSAMTError_station('No stations data to read .')
     
 
-        num_station_counts , repsta = np.unique (self.station_data_array, return_counts=True)
+        num_station_counts , repsta = np.unique (self.station_data_array,
+                                                 return_counts=True)
  
         #---> check if stations_data provided are each the same length. 
         if np.all(repsta, axis=0) != True : 
-            raise CSex.pyCSAMTError_station('Stations provided must be the same length of reccurency.')
-        if repsta[0] ==1 : self.value = self.station_data_array 
-        elif  repsta[0] !=1  : self.value =num_station_counts
+            raise CSex.pyCSAMTError_station(
+                'Stations provided must be the same length of reccurency.')
+        if repsta[0] ==1 : 
+            self.value = self.station_data_array 
+        elif  repsta[0] !=1  : 
+            self.value =num_station_counts
             
         self.value =np.array([np.float(ss) for ss in self.value])
         #--- convert station  unit -- Default is 'm'---
-        if self.unit =='km': self.value, self.station_data_array = self.value /1e3, self.station_data_array/1e3
-        if self.unit == 'ft': self.value, self.station_data_array=self.value /3.280839895, self.station_data_array/3.280839895
+        if self.unit =='km': 
+            self.value, self.station_data_array =\
+                self.value /1e3, self.station_data_array/1e3
+        if self.unit == 'ft': 
+            self.value, self.station_data_array= \
+                self.value /3.280839895, self.station_data_array/3.280839895
         if self.unit not in ['km', 'ft', 'm']:
             
-            self._logging.warn('Station units provided is incorect.Try  "km" or "ft." Default is "m."')
-            raise CSex.pyCSAMTError_station('Unit provided <{0}> doesnt not match correct units.'\
-                                      'acceptable units are : "m", "km" or "ft"'.format(self.unit))
+            self._logging.warn(
+                'Station units provided is incorect.Try  "km" or "ft." Default is "m."')
+            raise CSex.pyCSAMTError_station(
+                'Unit provided <{0}> doesnt not match correct units.'
+                 'acceptable units are : "m", "km" or "ft"'.format(self.unit))
                     
             
-        self.min, self.max, self.num_of_station =self.value.min(), self.value.max(), self.value.size
+        self.min, self.max, self.num_of_station = \
+            self.value.min(), self.value.max(), self.value.size
         self.length=np.abs(self.max-self.min)
         
         if normalized_station_value is not None :
             self.normalized_station_value=normalized_station_value 
         
         if self.normalized_station_value  : 
-            self.value =np.apply_along_axis(lambda x : np.abs(x)-self.min, 0 , self.value)
-            self.station_data_array=np.apply_along_axis(lambda x : np.abs(x)-self.min, 0, self.station_data_array)
+            self.value =np.apply_along_axis(
+                lambda x : np.abs(x)-self.min, 0 ,self.value)
+            self.station_data_array=np.apply_along_axis(
+                lambda x : np.abs(x)-self.min, 0, self.station_data_array)
             
         # the case where the user provide its own name
         if rename_station is not None :
@@ -2234,9 +2453,11 @@ class  Station(object):
             if type (self.rename_station) is list : 
                 self.rename_station=np.array(self.rename_station)
             if self.value.size != self.rename_station.size : 
-                raise CSex.pyCSAMTError_station('Stations rename array must have the same length as'\
-                                                ' the aray_data provided. lenght or stations_data is :<{0}>'
-                                                ' '.format(self.value.size))
+                raise CSex.pyCSAMTError_station(
+                    'Stations rename array must have the same length as'
+                    ' the aray_data provided. lenght or stations_data is :<{0}>'
+                    ' '.format(self.value.size))
+                
             self.names =self.rename_station
         elif rename_station is None : 
             self.names =['S{:02}'.format(ii) for ii in range (self.value.size)]
@@ -2248,15 +2469,17 @@ class  Station(object):
             # self.names =self.names * repsta [0]
             self.names.sort()
             # print(self.station_data_array)
-            # self.station_data_array=self.station_data_array.reshape ((self.station_data_array.shape[0],1))
+            # self.station_data_array=self.station_data_array.reshape
+            #((self.station_data_array.shape[0],1))
             
             # print(self.station_data_array)
             #--- build a commun array station-value and truncated on dict.
             # data_to_truncate =np.concatenate((tem_names, self.station_data_array), axis =1 )
-            station_list_truncated =cfunc.truncated_data(data=self.station_data_array, 
-                                                         number_of_reccurence= repsta [0])
-                
-            self.loc= {keys:values for keys, values in zip(self.names, station_list_truncated)}
+            station_list_truncated =cfunc.truncated_data(
+                data=self.station_data_array, number_of_reccurence= repsta [0])
+
+            self.loc= {keys:values for keys, values in zip(
+                self.names, station_list_truncated)}
             
             
 
@@ -2350,13 +2573,15 @@ class Frequency (object):
         self._freq_array =np.array([np.float(kk) for kk in self._freq_array])  
         
         #--> read frequency from AVG data file : 
-        vacount_freq, freq_repeat =np.unique(self._freq_array, return_counts=True)
+        vacount_freq, freq_repeat =np.unique(self._freq_array, 
+                                             return_counts=True)
 
         
         self.numfreq = vacount_freq.size
         if np.all(freq_repeat, axis =0) != True : 
-            raise CSex.pyCSAMTError_frequency('Problem occured when reading frequency data.'\
-                                              'All frequency on Avgfile Must be the same length. ')
+            raise CSex.pyCSAMTError_frequency(
+                'Problem occured when reading frequency data.'
+                 'All frequency on Avgfile Must be the same length. ')
         # self.value =vacount_freq
         
         # if normalize_freq_betw is not None : 
@@ -2367,8 +2592,9 @@ class Frequency (object):
         truncated_freq =cfunc.truncated_data( data =self._freq_array , 
                                        number_of_reccurence=self.numfreq )
         
-        name, polyname = cfunc._numbering_station(number_of_station=freq_repeat[0], 
-                               number_of_freq =self.numfreq)
+        name, polyname = cfunc._numbering_station(
+            number_of_station=freq_repeat[0], 
+            number_of_freq =self.numfreq)
         
  
         self.loc ={ key:value for key, value in zip(name, truncated_freq )}
@@ -2391,7 +2617,8 @@ class Frequency (object):
         Raises
         ------
             CSex
-                raise Error if input arguments for frequency interpolating is wrong.
+                raise Error if input arguments for frequency 
+                interpolating is wrong.
 
         Returns
         -------
@@ -2406,19 +2633,24 @@ class Frequency (object):
             if type(self.normalize_freq_betw) ==tuple :
                 self.normalize_freq_betw =list(self.normalize_freq_betw)
                 try :
-                    self.normalize_freq_betw =[int(ss) for ss in self.normalize_freq_betw]
+                    self.normalize_freq_betw =[int(ss) 
+                                               for ss in self.normalize_freq_betw]
                 except :
-                    self._logging.warn ("Input interpolated arguments are wrong! arguments type must"\
-                                        " a list of integers. ")
-                    raise CSex.pyCSAMTError_inputarguments("Input value of frequency is wrong. Must be"\
-                                                  " a list of integers.")
-            lengh_interp =np.linspace(self.normalize_freq_betw[0],self.normalize_freq_betw[1],
+                    self._logging.warn (
+                        "Input interpolated arguments are wrong! arguments "
+                        "type must a list of integers. ")
+                    raise CSex.pyCSAMTError_inputarguments(
+                        "Input value of frequency is wrong. Must be"
+                         " a list of integers.")
+            lengh_interp =np.linspace(self.normalize_freq_betw[0],
+                                      self.normalize_freq_betw[1],
                                       self.normalize_freq_betw[2])
         freq_new=np.power(10, lengh_interp)
         # range value provide if value not in order .  
         freq_new.sort()
-        # freq_new=func.interpol_scipy(x_value=np.array([ii for ii in range (self.numfreq)]),
-        #                              y_value =self.vacount_freq, x_new=)
+        # freq_new=func.interpol_scipy(x_value=np.array(
+        #   [ii for ii in range (self.numfreq)]),
+        #                        y_value =self.vacount_freq, x_new=)
         return freq_new
         
 
@@ -2472,13 +2704,16 @@ class Comp (object):
                     self.name =self.new_comp
                 else : 
                     self._logging.warn ('Component provided is wrong !')
-                    CSex.pyCSAMTError_inputarguments("Component provide as new component is wrong"\
-                                             "list of components:{0}".format(self.component_type))
+                    CSex.pyCSAMTError_inputarguments(
+                        "Component provide as new component is wrong"
+                        "list of components:{0}".format(self.component_type))
             else : 
-                warnings.warn("Components must be a string : a list of arguments below:"\
-                              "{0}".format(self.component_type))
-                CSex.pyCSAMTError_inputarguments("Component type is wrong. must a string."\
-                                             "list of components:{0}".format(self.component_type))
+                warnings.warn(
+                    "Components must be a string : a list of arguments below:"
+                     "{0}".format(self.component_type))
+                CSex.pyCSAMTError_inputarguments(
+                    "Component type is wrong. must a string."
+                    "list of components:{0}".format(self.component_type))
                     
 
 class Amps (object): 
@@ -2519,7 +2754,8 @@ class Amps (object):
         >>> print(amp_obj)
     """
 
-    def __init__(self, amps_array= None, number_of_frequencies=None , number_of_stations=None , **kwargs):
+    def __init__(self, amps_array= None, number_of_frequencies=None , 
+                 number_of_stations=None , **kwargs):
 
         
         self._amps_array =amps_array
@@ -2560,19 +2796,28 @@ class Amps (object):
         if self._amps_array is None : 
             raise CSex.pyCSAMTError_inputarguments('No Ampers data !')
             
-        if number_of_frequencies is not None : self.nfreq =number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments("Please specify the number of frequency !")
-        if number_of_stations is not None : self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments('Please specify the number of stations')
+        if number_of_frequencies is not None : 
+            self.nfreq =number_of_frequencies 
+        else :
+            raise CSex.pyCSAMTError_inputarguments(
+                "Please specify the number of frequency !")
+        if number_of_stations is not None : 
+            self.number_of_stations =number_of_stations 
+        else : raise CSex.pyCSAMTError_inputarguments(
+            'Please specify the number of stations')
             
         try : 
-            self.nfreq , self.number_of_stations =np.int(self.nfreq), np.int(self.number_of_stations)
+            self.nfreq=np.int(self.nfreq)
+            self.number_of_stations =np.int(self.number_of_stations)
             self._amps_array=np.array([np.float(cc) for cc in self._amps_array])
 
-        except : raise CSex.pyCSAMTError_value("Values provided for the amp are wrong."\
-                                          " must be float or integer .")
+        except : 
+            raise CSex.pyCSAMTError_value(
+                "Values provided for the amp are wrong."
+                " must be float or integer .")
             
-        vcounts_amps, repeat_amp =np.unique (self._amps_array, return_counts=True)
+        vcounts_amps, repeat_amp =np.unique (
+            self._amps_array, return_counts=True)
         self.value =vcounts_amps
         
         self.max, self.min =vcounts_amps.max(), vcounts_amps.min()
@@ -2580,8 +2825,9 @@ class Amps (object):
         
         truncated_amps=cfunc.truncated_data( data =self._amps_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(number_of_station=self.number_of_stations, 
-                               number_of_freq =self.nfreq)
+        name, polyname = cfunc._numbering_station(
+            number_of_station=self.number_of_stations, 
+            number_of_freq =self.nfreq)
         self.loc ={ key:value for key, value in zip(name, truncated_amps )}
         
         
@@ -2617,7 +2863,8 @@ class Emag (object):
         >>> emag_obj =avg_obj.Data_section.Emag.loc['S02']
         ... print(emag_obj)
     """
-    def __init__(self, e_mag_array=None, number_of_frequencies=None , number_of_stations=None , **kwargs):
+    def __init__(self, e_mag_array=None, number_of_frequencies=None ,
+                 number_of_stations=None , **kwargs):
         
         self.e_mag_array =e_mag_array
         
@@ -2657,19 +2904,29 @@ class Emag (object):
         if self.e_mag_array is None : 
             raise CSex.pyCSAMTError_inputarguments('No E-Field  data found  !')
             
-        if number_of_frequencies is not None : self.nfreq =number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments("Please specify the number of frequency !")
-        if number_of_stations is not None : self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments('Please specify the number of stations')
+        if number_of_frequencies is not None : 
+            self.nfreq =number_of_frequencies 
+        else :
+            raise CSex.pyCSAMTError_inputarguments(
+                "Please specify the number of frequency !")
+        if number_of_stations is not None :
+            self.number_of_stations =number_of_stations 
+        else :
+            raise CSex.pyCSAMTError_inputarguments(
+                'Please specify the number of stations')
             
         try : 
-            self.nfreq , self.number_of_stations =np.int(self.nfreq), np.int(self.number_of_stations)
+            self.nfreq=np.int(self.nfreq)
+            self.number_of_stations =np.int(self.number_of_stations)
             self.e_mag_array=np.array([np.float(cc) for cc in self.e_mag_array])
 
-        except : raise CSex.pyCSAMTError_value("Values provided for the amp are wrong."\
-                                          " must be float or integer .")
+        except : 
+            raise CSex.pyCSAMTError_value(
+                "Values provided for the amp are wrong."
+                 " must be float or integer .")
             
-        vcounts_e_mag, repeat_amp =np.unique (self.e_mag_array, return_counts=True)
+        vcounts_e_mag, repeat_amp =np.unique (self.e_mag_array, 
+                                              return_counts=True)
         self.value =vcounts_e_mag
         
         self.max, self.min =vcounts_e_mag.max(), vcounts_e_mag.min()
@@ -2677,8 +2934,9 @@ class Emag (object):
         
         truncated_e_mag=cfunc.truncated_data( data =self.e_mag_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(number_of_station=self.number_of_stations, 
-                               number_of_freq =self.nfreq)
+        name, polyname = cfunc._numbering_station(
+            number_of_station=self.number_of_stations, 
+            number_of_freq =self.nfreq)
         
         self.loc ={ key:value for key, value in zip(name, truncated_e_mag )}
         
@@ -2762,24 +3020,35 @@ class Ephz (object):
         if e_phz_array is not None : 
             self.e_phz_array =e_phz_array
         if self.e_phz_array is None : 
-            raise CSex.pyCSAMTError_inputarguments('No E-phase data found  !')
+            raise CSex.pyCSAMTError_inputarguments(
+                'No E-phase data found  !')
 
-        if number_of_frequencies is not None : self.nfreq =number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments("Please specify the number of frequency !")
-        if number_of_stations is not None : self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments('Please specify the number of stations')
+        if number_of_frequencies is not None : 
+            self.nfreq =number_of_frequencies 
+        else :raise CSex.pyCSAMTError_inputarguments(
+            "Please specify the number of frequency !")
+        if number_of_stations is not None : 
+            self.number_of_stations =number_of_stations 
+        else : 
+            raise CSex.pyCSAMTError_inputarguments(
+                'Please specify the number of stations')
             
         try : 
-            self.nfreq , self.number_of_stations =np.int(self.nfreq), np.int(self.number_of_stations)
+            self.nfreq=np.int(self.nfreq)
+            self.number_of_stations =np.int(self.number_of_stations)
             self.e_phz_array=np.array([np.float(cc) for cc in self.e_phz_array])
 
-        except : raise CSex.pyCSAMTError_value("Values provided for the E-phase are wrong."\
-                                          " must be float or integer .")
+        except : 
+            raise CSex.pyCSAMTError_value(
+                "Values provided for the E-phase are wrong."
+                 " must be float or integer .")
         if self.to_degree : #---> set angle to degree .
-            self.e_phz_array =np.apply_along_axis (lambda ephz: ephz * 180/np.pi, 0,self.e_phz_array)        
+            self.e_phz_array =np.apply_along_axis (
+                lambda ephz: ephz * 180/np.pi, 0,self.e_phz_array)        
         
             
-        vcounts_e_phz, repeat_ephz=np.unique (self.e_phz_array, return_counts=True)
+        vcounts_e_phz, repeat_ephz=np.unique (self.e_phz_array, 
+                                              return_counts=True)
         self.value =vcounts_e_phz
         
         self.max, self.min =vcounts_e_phz.max(), vcounts_e_phz.min()
@@ -2787,8 +3056,9 @@ class Ephz (object):
         
         truncated_e_phz=cfunc.truncated_data( data =self.e_phz_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(number_of_station=self.number_of_stations, 
-                               number_of_freq =self.nfreq)
+        name, polyname = cfunc._numbering_station(
+            number_of_station=self.number_of_stations, 
+               number_of_freq =self.nfreq)
         
         self.loc ={ key:value for key, value in zip(name, truncated_e_phz )}
         
@@ -2826,7 +3096,8 @@ class Hmag (object):
         ... print(hmag_obj)
     """
     
-    def __init__(self, h_mag_array=None, number_of_frequencies=None , number_of_stations=None , **kwargs):
+    def __init__(self, h_mag_array=None, number_of_frequencies=None ,
+                 number_of_stations=None , **kwargs):
         
         self.h_mag_array =h_mag_array
         
@@ -2868,19 +3139,29 @@ class Hmag (object):
         if self.h_mag_array is None : 
             raise CSex.pyCSAMTError_inputarguments('No B-Field  data found  !')
             
-        if number_of_frequencies is not None : self.nfreq =number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments("Please specify the number of frequency !")
-        if number_of_stations is not None : self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments('Please specify the number of stations')
+        if number_of_frequencies is not None : 
+            self.nfreq =number_of_frequencies 
+        else :
+            raise CSex.pyCSAMTError_inputarguments(
+                "Please specify the number of frequency !")
+        if number_of_stations is not None :
+            self.number_of_stations =number_of_stations 
+        else : 
+            raise CSex.pyCSAMTError_inputarguments(
+                'Please specify the number of stations')
             
         try : 
-            self.nfreq , self.number_of_stations =np.int(self.nfreq), np.int(self.number_of_stations)
+            self.nfreq=np.int(self.nfreq)
+            self.number_of_stations =np.int(self.number_of_stations)
             self.h_mag_array=np.array([np.float(cc) for cc in self.h_mag_array])
 
-        except : raise CSex.pyCSAMTError_value("Values provided for the B-Field are wrong."\
-                                          " must be float or integer .")
+        except : 
+            raise CSex.pyCSAMTError_value(
+                "Values provided for the B-Field are wrong."
+                " must be float or integer .")
             
-        vcounts_h_mag, repeat_amp =np.unique (self.h_mag_array, return_counts=True)
+        vcounts_h_mag, repeat_amp =np.unique (self.h_mag_array,
+                                              return_counts=True)
         self.value =vcounts_h_mag
         
         self.max, self.min =vcounts_h_mag.max(), vcounts_h_mag.min()
@@ -2888,7 +3169,8 @@ class Hmag (object):
         
         truncated_h_mag=cfunc.truncated_data( data =self.h_mag_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(number_of_station=self.number_of_stations, 
+        name, polyname = cfunc._numbering_station(
+            number_of_station=self.number_of_stations, 
                                number_of_freq =self.nfreq)
         
         self.loc ={ key:value for key, value in zip(name, truncated_h_mag )}
@@ -2973,25 +3255,38 @@ class Hphz (object):
         if self.h_phz_array is None : 
             raise CSex.pyCSAMTError_inputarguments('No E-phase data found  !')
 
-        if number_of_frequencies is not None : self.nfreq =number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments("Please specify the number of frequency !")
-        if number_of_stations is not None : self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments('Please specify the number of stations')
+        if number_of_frequencies is not None :
+            self.nfreq =number_of_frequencies 
+        else :
+            raise CSex.pyCSAMTError_inputarguments(
+                "Please specify the number of frequency !")
+        if number_of_stations is not None :
+            self.number_of_stations =number_of_stations 
+        else : 
+            raise CSex.pyCSAMTError_inputarguments(
+                'Please specify the number of stations')
             
         try : 
-            self.nfreq , self.number_of_stations =np.int(self.nfreq), np.int(self.number_of_stations)
+            self.nfreq=np.int(self.nfreq)
+            self.number_of_stations =np.int(self.number_of_stations)
             self.h_phz_array=np.array([np.float(cc) for cc in self.h_phz_array])
 
-        except : raise CSex.pyCSAMTError_value("Values provided for the E-phase are wrong."\
-                                          " must be float or integer .")
+        except : 
+            raise CSex.pyCSAMTError_value(
+                "Values provided for the E-phase are wrong."
+                 " must be float or integer .")
         if self.to_degree : #---> set angle to degree .
-            self.h_phz_array =np.apply_along_axis (lambda hphz: hphz * 180/np.pi, 0,self.h_phz_array)        
+            self.h_phz_array =np.apply_along_axis (
+                lambda hphz: hphz * 180/np.pi, 0,self.h_phz_array)        
         
             
-        vcounts_h_phz, repeat_hphz=np.unique (self.h_phz_array, return_counts=True)
+        vcounts_h_phz, repeat_hphz=np.unique (
+            self.h_phz_array, return_counts=True)
         
-        if not np.all(repeat_hphz): CSex.pyCSAMTError_value('Values of B-phases provided must have the same length'\
-                                                            ' for each stations. ')
+        if not np.all(repeat_hphz):
+            raise CSex.pyCSAMTError_value(
+                'Values of B-phases provided must have the same length'
+                 ' for each stations. ')
         self.value =vcounts_h_phz
         
         self.max, self.min =vcounts_h_phz.max(), vcounts_h_phz.min()
@@ -2999,8 +3294,9 @@ class Hphz (object):
         
         truncated_h_phz=cfunc.truncated_data( data =self.h_phz_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(number_of_station=self.number_of_stations, 
-                               number_of_freq =self.nfreq)
+        name, polyname = cfunc._numbering_station(
+            number_of_station=self.number_of_stations, 
+               number_of_freq =self.nfreq)
         
         self.loc ={ key:value for key, value in zip(name, truncated_h_phz )}
         
@@ -3093,44 +3389,61 @@ class Resistivity (object):
         if self.res_array is None : 
             raise CSex.pyCSAMTError_inputarguments('No Resistivity data found !')
 
-        if number_of_frequencies is not None : self.nfreq =number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments("Please specify the number of frequency !")
-        if number_of_stations is not None : self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments('Please specify the number of stations')
+        if number_of_frequencies is not None : 
+            self.nfreq =number_of_frequencies 
+        else :
+            raise CSex.pyCSAMTError_inputarguments(
+                "Please specify the number of frequency !")
+        if number_of_stations is not None : 
+            self.number_of_stations =number_of_stations 
+        else : 
+            raise CSex.pyCSAMTError_inputarguments(
+                'Please specify the number of stations')
         
         if Sres is not None :
 
             self.Sres = np.array([np.float(res) for res in Sres])
-            if self.res_array.shape[0] != self.Sres.size : raise CSex.pyCSAMTError_rho('Resistivity calculated & '\
-                                                                                 'Astatic_array must get the same length!.')
+            if self.res_array.shape[0] != self.Sres.size : 
+                raise CSex.pyCSAMTError_rho(
+                    'Resistivity calculated & '
+                     'Astatic_array must get the same length!.')
         try : 
-            self.nfreq , self.number_of_stations =np.int(self.nfreq), np.int(self.number_of_stations)
+            self.nfreq=np.int(self.nfreq)
+            self.number_of_stations =np.int(self.number_of_stations)
             self.res_array =np.array([np.float(cc) for cc in self.res_array])
 
-        except : raise CSex.pyCSAMTError_value("Values provided for the Resistivities are wrong."\
-                                          " must be float or integer .")
+        except :
+            raise CSex.pyCSAMTError_value(
+                "Values provided for the Resistivities are wrong."
+                 " must be float or integer .")
         
-        vcounts_res, repeat_hphz=np.unique (self.res_array, return_counts=True)
-        if not np.all(repeat_hphz): CSex.pyCSAMTError_value('Values of Rho provided must have the same length'\
-                                                           ' for each stations. ')
+        vcounts_res, repeat_hphz=np.unique (self.res_array,
+                                            return_counts=True)
+        if not np.all(repeat_hphz): 
+            raise CSex.pyCSAMTError_value(
+                'Values of Rho provided must have the same length'\
+                 ' for each stations.')
         self.value =vcounts_res
         self.max, self.min =vcounts_res.max(), vcounts_res.min()
         self.mean=self.res_array.mean()
         truncated_res=cfunc.truncated_data( data =self.res_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(number_of_station=self.number_of_stations, 
-                               number_of_freq =self.nfreq)
+        name, polyname = cfunc._numbering_station(
+            number_of_station=self.number_of_stations, 
+              number_of_freq =self.nfreq)
         
         self.loc ={ key:value for key, value in zip(name, truncated_res )}
         
         if self.Sres is not None : 
             vcounts_sres, repeat_hphz=np.unique (self.Sres, return_counts=True)
             self.vSres , self.mean_Sres = vcounts_sres, self.Sres.mean()
-            self.max, self.min =(vcounts_res.max(),vcounts_sres.max()), (vcounts_res.min(),vcounts_sres.min())
+            self.max, self.min =(vcounts_res.max(),vcounts_sres.max()),
+            (vcounts_res.min(),vcounts_sres.min())
             self.mean =(self.mean, self.mean_Sres)
             truncated_sres=cfunc.truncated_data( data =self.Sres, 
                                        number_of_reccurence=self.nfreq)
-            self.loc_Sres ={ key:value for key, value in zip(name, truncated_sres )}
+            self.loc_Sres ={ key:value for key, value in zip(name, 
+                                                             truncated_sres )}
 
        
 class Phase (object): 
@@ -3222,23 +3535,35 @@ class Phase (object):
         if self._phase_array is None : 
             raise CSex.pyCSAMTError_inputarguments('No Phase data found  !')
 
-        if number_of_frequencies is not None : self.nfreq =number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments("Please specify the number of frequency !")
-        if number_of_stations is not None : self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments('Please specify the number of stations')
+        if number_of_frequencies is not None : 
+            self.nfreq =number_of_frequencies 
+        else :
+            raise CSex.pyCSAMTError_inputarguments(
+                "Please specify the number of frequency !")
+        if number_of_stations is not None :
+            self.number_of_stations =number_of_stations 
+        else : 
+            raise CSex.pyCSAMTError_inputarguments(
+                'Please specify the number of stations')
 
             
         try : 
-            self.nfreq , self.number_of_stations =np.int(self.nfreq), np.int(self.number_of_stations)
-            self._phase_array=np.array([np.float(cc) for cc in self._phase_array])
+            self.nfreq=np.int(self.nfreq)
+            self.number_of_stations =np.int(self.number_of_stations)
+            self._phase_array=np.array([np.float(cc) 
+                                        for cc in self._phase_array])
 
-        except : raise CSex.pyCSAMTError_value("Values provided for the Phase are wrong."\
-                                          " must be float or integer .")
+        except : 
+            raise CSex.pyCSAMTError_value(
+                "Values provided for the Phase are wrong."\
+                 " must be float or integer .")
         if self.to_degree : #---> set angle to degree .
-            self._phase_array =np.apply_along_axis (lambda phz: phz * 180/np.pi, 0,self._phase_array)        
+            self._phase_array =np.apply_along_axis (
+                lambda phz: phz * 180/np.pi, 0,self._phase_array)        
         
             
-        vcounts_phz, repeat_phz=np.unique (self._phase_array, return_counts=True)
+        vcounts_phz, repeat_phz=np.unique (
+            self._phase_array, return_counts=True)
         self.value =vcounts_phz
         
         self.max, self.min =vcounts_phz.max(), vcounts_phz.min()
@@ -3246,8 +3571,9 @@ class Phase (object):
         
         truncated_phz=cfunc.truncated_data( data =self._phase_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(number_of_station=self.number_of_stations, 
-                               number_of_freq =self.nfreq)
+        name, polyname = cfunc._numbering_station(
+            number_of_station=self.number_of_stations, 
+                number_of_freq =self.nfreq)
         
         self.loc ={ key:value for key, value in zip(name, truncated_phz )}
             
@@ -3257,9 +3583,10 @@ class Z_Tensor(object):
     Impedance Tensor Z Calculation :  
        class can recompute the apparent resistity rho base on impedance Tensor Z.
        
-    .. seealso:: Zonge, K.L. and Hughes, L.J., 1991, Controlled source audio-frequency 
-                magnetotellurics,in Electromagnetic Methods in Applied Geophysics, ed.
-                Nabighian, M.N., Vol. 2,Society of Exploration Geophysicists, pp. 713-809.
+    .. seealso:: 
+        Zonge, K.L. and Hughes, L.J., 1991, Controlled source audio-frequency 
+        magnetotellurics,in Electromagnetic Methods in Applied Geophysics, ed.
+        Nabighian, M.N., Vol. 2,Society of Exploration Geophysicists, pp. 713-809.
             
     Arguments 
     ----------
@@ -3332,8 +3659,10 @@ class Z_Tensor(object):
         if freq_array.dtype not in ['float', 'int']:
             try : 
                 self._freq =np.array([np.float(ff) for ff in freq_array])
-            except :raise CSex.pyCSAMTError_frequency('wrong Input frequencies'\
-                                                      ' values.must be a float number. ')
+            except :
+                raise CSex.pyCSAMTError_frequency(
+                    'wrong Input frequencies values.must be a float number. ')
+                                            
             
     @property 
     def phase (self):
@@ -3342,7 +3671,9 @@ class Z_Tensor(object):
     def phase(self, phz_array):
         if phz_array.dtype not in ['float', 'int']:
             try :self._phase =np.array([float(phz) for phz in phz_array])
-            except : CSex.pyCSAMTError_Phase('Arguments phase values must be int, or float .')
+            except :
+                raise CSex.pyCSAMTError_Phase(
+                    'Arguments phase values must be int, or float .')
             
     @property 
     def z_error (self):
@@ -3352,7 +3683,9 @@ class Z_Tensor(object):
         if z_error_.dtype not in ['float', 'int']:
             try : 
                 self._z_err =np.array([float(zz) for zz in z_error_])
-            except : CSex.pyCSAMTError_Z("Error z input values are incorrects.")
+            except :
+                raise CSex.pyCSAMTError_Z(
+                    "Error z input values are incorrects.")
     
     @property 
     def z  (self): 
@@ -3363,8 +3696,11 @@ class Z_Tensor(object):
         if zz_array.dtype == 'str':
             try : 
                 zz_array= np.array([np.float(zz) for zz in zz_array])
-            except : CSex.pyCSAMTError_Z('z_impedance value must be a complex_number.')
-        if zz_array.dtype in ['float', 'int']: #---> provide freq value and phase . 
+            except : 
+                raise CSex.pyCSAMTError_Z(
+                    'z_impedance value must be a complex_number.')
+        #---> provide freq value and phase .         
+        if zz_array.dtype in ['float', 'int']: 
             self._z = Zcc.rhophi2z(phase =self._phase , freq =self._freq , 
                                    z_array=zz_array)[-1]
         else : self._z= zz_array
@@ -3399,9 +3735,11 @@ class Z_Tensor(object):
         if freq is not None : self.freq=freq
         
         if self.z is None or self.freq is None : 
-            raise CSex.pyCSAMTError_Z('None values can not be computed. Check values !')
+            raise CSex.pyCSAMTError_Z(
+                'None values can not be computed. Check values !')
             
-        self.rho =np.apply_along_axis(lambda valz : np.abs(valz)**2 * (0.2 / self.freq), 0, self.z)
+        self.rho =np.apply_along_axis(
+            lambda valz : np.abs(valz)**2 * (0.2 / self.freq), 0, self.z)
         
         #-- z is complex number , can be compute using np.angle
 
@@ -3418,15 +3756,18 @@ class Z_Tensor(object):
     def rho(self, res_array):
         if res_array.dtype not in ['float', 'int']:
             try : self._rho = np.array([float(res) for res in res_array]) 
-            except : raise CSex.pyCSAMTError_rho('Resistivities values must be float '\
-                                                 'or integer , not a None type !')
+            except : 
+                raise CSex.pyCSAMTError_rho(
+                    'Resistivities values must be float '
+                     'or integer , not a None type !')
                 
     
         
     def rhophi2rhoph_errors (self, res_array=None , phase_array = None,
                              z_error =None , freq=None ): 
         """
-        compute the phase and resistivities error via res_array , phase_array and _z error.
+        Compute the phase and resistivities error via res_array , 
+        phase_array and _z error.
         
         Parameters
         ----------
@@ -3452,15 +3793,19 @@ class Z_Tensor(object):
         if phase_array is not None : self.phase =phase_array 
         if freq is not None : self.freq = freq 
         if self.rho is None  or self.phase is None or self.freq is None : 
-            self._logging.warn('NoneType can not be computed. please check your data arrays.')
-            raise CSex.pyCSAMTError_Z('could note compute a Nonetype number. please check numbers.')
+            self._logging.warn(
+                'NoneType can not be computed. please check your data arrays.')
+            raise CSex.pyCSAMTError_Z(
+                'could note compute a Nonetype number. please check numbers.')
         
         # compute imag part and real part of Z 
              
         if self.rho.size != self.freq.size : 
-            raise CSex.pyCSAMTError_Z('Resistivity , freq and phase_array must be the same size. ')
+            raise CSex.pyCSAMTError_Z(
+                'Resistivity , freq and phase_array must be the same size. ')
         
-        # zz_= np.array([np.sqrt(0.2 * self._freq[ii] * self._rho[ii]) for ii in range (self._freq.size)])
+        # zz_= np.array([np.sqrt(0.2 * self._freq[ii] * 
+        #self._rho[ii]) for ii in range (self._freq.size)])
         zz_comp = Zcc.rhophi2z(phase=self.phase/1e3, freq=self.freq, 
                                resistivity=self.rho)
         self.z =zz_comp[-1]
@@ -3504,13 +3849,19 @@ class Z_Tensor(object):
         if z_abs_array is not None : 
             self.zAS = z_abs_array 
         if self.zAS is None : 
-            raise CSex.pyCSAMTError_inputarguments('No zonge Astatic  data found  !')            
+            raise CSex.pyCSAMTError_inputarguments(
+                'No zonge Astatic  data found  !')            
             
-        if number_of_frequencies is not None : self.nfreq = number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments("Please specify the number of frequency !")
+        if number_of_frequencies is not None :
+            self.nfreq = number_of_frequencies 
+        else :raise CSex.pyCSAMTError_inputarguments(
+            "Please specify the number of frequency !")
         
-        if number_of_stations is not None : self.number_of_stations= number_of_stations
-        else : raise CSex.pyCSAMTError_inputarguments('Please specify the number of stations')
+        if number_of_stations is not None : 
+            self.number_of_stations= number_of_stations
+        else : 
+            raise CSex.pyCSAMTError_inputarguments(
+                                    'Please specify the number of stations')
 
         
         if type(self.zAS) == pd.core.frame.DataFrame : 
@@ -3525,18 +3876,22 @@ class Z_Tensor(object):
                 
                 
         try : 
-            self.nfreq , self.number_of_stations =np.int(self.nfreq), np.int(self.number_of_stations)
+            self.nfreq , self.number_of_stations =np.int(self.nfreq),\
+                np.int(self.number_of_stations)
             zabs_array=np.array([np.float(cc) for cc in zabs_array])
-        except : raise CSex.pyCSAMTError_value("Values provided for Z-astatic are wrong."\
-                                          " check your Zonge AVG file .")        
+        except :
+            raise CSex.pyCSAMTError_value(
+                "Values provided for Z-astatic are wrong."
+                " check your Zonge AVG file .")        
         
   
         self.max, self.min =zabs_array.max(), zabs_array.min()
         
         truncated_zz=cfunc.truncated_data( data =zabs_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(number_of_station=self.number_of_stations, 
-                               number_of_freq =self.nfreq)
+        name, polyname = cfunc._numbering_station(
+            number_of_station=self.number_of_stations, 
+             number_of_freq =self.nfreq)
         
         self.loc ={ key:value for key, value in zip(name, truncated_zz )}
         
@@ -3578,7 +3933,8 @@ class pcEmag (object):
         >>> print(pcemag_obj)
     """
     def __init__(self, pc_e_mag_array=None, 
-                 number_of_frequencies=None , number_of_stations=None , **kwargs):
+                 number_of_frequencies=None , number_of_stations=None , 
+                 **kwargs):
         
         self._pcEmag =pc_e_mag_array
         
@@ -3599,8 +3955,8 @@ class pcEmag (object):
     def _read_pcEmag_data (self,pc_e_mag_array=None, number_of_frequencies=None , 
                          number_of_stations=None ):
         """
-        Method to read and arange data according each station /Statistical variation of 
-            E-Field magnitude values .
+        Method to read and arange data according each station /Statistical 
+           variation of  E-Field magnitude values .
         
         Parameters
         ----------
@@ -3616,19 +3972,27 @@ class pcEmag (object):
         if pc_e_mag_array is not None : 
             self._pcEmag =pc_e_mag_array 
         if self._pcEmag is None : 
-            raise CSex.pyCSAMTError_inputarguments('No E-mag statistical variation  data found  !')
+            raise CSex.pyCSAMTError_inputarguments(
+                'No E-mag statistical variation  data found  !')
             
-        if number_of_frequencies is not None : self.nfreq =number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments("Please specify the number of frequency !")
-        if number_of_stations is not None : self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments('Please specify the number of stations')
+        if number_of_frequencies is not None : 
+            self.nfreq =number_of_frequencies 
+        else :
+            raise CSex.pyCSAMTError_inputarguments(
+                "Please specify the number of frequency !")
+        if number_of_stations is not None : 
+            self.number_of_stations =number_of_stations 
+        else : raise CSex.pyCSAMTError_inputarguments(
+            'Please specify the number of stations')
             
         try : 
-            self.nfreq , self.number_of_stations =np.int(self.nfreq), np.int(self.number_of_stations)
+            self.nfreq , self.number_of_stations =np.int(self.nfreq),\
+                np.int(self.number_of_stations)
             self._pcEmag=np.array([np.float(cc) for cc in self._pcEmag])
 
-        except : raise CSex.pyCSAMTError_value("Values provided for the E-mag stat.variation  are wrong."\
-                                          " must be float or integer .")
+        except : raise CSex.pyCSAMTError_value(
+                "Values provided for the E-mag stat.variation  are wrong."
+                " must be float or integer .")
             
         vcounts_Emag, repeat_Emag =np.unique (self._pcEmag, return_counts=True)
         self.value =vcounts_Emag
@@ -3638,8 +4002,9 @@ class pcEmag (object):
         
         truncated_pcEmag=cfunc.truncated_data( data =self._pcEmag, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(number_of_station=self.number_of_stations, 
-                               number_of_freq =self.nfreq)
+        name, polyname = cfunc._numbering_station(
+            number_of_station=self.number_of_stations, 
+            number_of_freq =self.nfreq)
         
         self.loc ={ key:value for key, value in zip(name, truncated_pcEmag)}
         
@@ -3702,8 +4067,8 @@ class sEphz(object) :
     def _read_sEphz_data (self, sEphz_array=None, number_of_frequencies=None , 
                          number_of_stations=None, **kwargs  ):
         """
-        Method to read and arange data according each station /Statistical variation 
-        of E-Field angles values 
+        Method to read and arange data according each station /Statistical 
+        variation of E-Field angles values 
  
         Parameters
         ----------
@@ -3723,13 +4088,22 @@ class sEphz(object) :
             self.to_degree = to_degree
         
         if sEphz_array is not None : self._sEphz =sEphz_array
-        if self._sEphz is None :  raise CSex.pyCSAMTError_inputarguments('No stat.variation'\
-                                                                         ' B-field-phase data found  !')
-        if number_of_frequencies is not None : self.nfreq = number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments("Please specify the number of frequency !")
-        if number_of_stations is not None : self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments('Please specify the number of stations')
-        self.nfreq , self.number_of_stations =np.int(self.nfreq), np.int(self.number_of_stations)    
+        if self._sEphz is None :  
+            raise CSex.pyCSAMTError_inputarguments(
+                'No stat.variation  B-field-phase data found  !')
+                                                   
+        if number_of_frequencies is not None : 
+            self.nfreq = number_of_frequencies 
+        else :
+            raise CSex.pyCSAMTError_inputarguments(
+                "Please specify the number of frequency !")
+        if number_of_stations is not None : 
+            self.number_of_stations =number_of_stations 
+        else : 
+            raise CSex.pyCSAMTError_inputarguments(
+                'Please specify the number of stations')
+        self.nfreq , self.number_of_stations =np.int(self.nfreq),\
+            np.int(self.number_of_stations)    
             
            
         def _inspect_input (input_obj , to_degree=False):
@@ -3739,27 +4113,33 @@ class sEphz(object) :
             """            
             try : 
                 input_obj =np.array([float(ss) for ss in input_obj])
-            except : raise  CSex.pyCSAMTError_value("Values provided for computing are wrong."\
-                                          " must be float or integer .")
+            except : 
+                raise  CSex.pyCSAMTError_value(
+                    "Values provided for computing are wrong."
+                    " must be float or integer .")
             
-            if to_degree : input_obj =np.apply_along_axis (lambda x: x * 180/np.pi, 0, input_obj)
+            if to_degree : input_obj =np.apply_along_axis (
+                    lambda x: x * 180/np.pi, 0, input_obj)
             
             return input_obj 
 
         self._sEphz= _inspect_input(self._sEphz)
 
         if self.to_degree : #---> set angle to degree .
-            self._sEphz =_inspect_input(input_obj =self._sEphz, to_degree =True)        
+            self._sEphz =_inspect_input(input_obj =self._sEphz,
+                                        to_degree =True)        
         
         # --> check the maximum angle value and minimum angle value.
-        vcounts_sEphz, repeat_hphz=np.unique (self._sEphz, return_counts=True)
+        vcounts_sEphz, repeat_hphz=np.unique (self._sEphz, 
+                                              return_counts=True)
         self.value =vcounts_sEphz
         self.max, self.min =vcounts_sEphz.max(), vcounts_sEphz.min()
         
         #---> tuncated AVG sHphz value on  dictionnary for easy acces . 
         truncated_sEphz=cfunc.truncated_data( data =self._sEphz, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(number_of_station=self.number_of_stations, 
+        name, polyname = cfunc._numbering_station(
+            number_of_station=self.number_of_stations, 
                                number_of_freq =self.nfreq)
         
         self.loc ={ key:value for key, value in zip(name, truncated_sEphz)}
@@ -3822,8 +4202,8 @@ class pcHmag (object):
     def _read_pcHmag_data (self,pc_h_mag_array=None, number_of_frequencies=None , 
                          number_of_stations=None ):
         """
-        Method to read and arange data according each station /Statistical variation of 
-            B-Field magnitude values .
+        Method to read and arange data according each station /Statistical 
+           variation of  B-Field magnitude values .
         
         Parameters
         ----------
@@ -3839,19 +4219,29 @@ class pcHmag (object):
         if pc_h_mag_array is not None : 
             self._pcHmag =pc_h_mag_array 
         if self._pcHmag is None : 
-            raise CSex.pyCSAMTError_inputarguments('No B-mag statistical variation  data found  !')
+            raise CSex.pyCSAMTError_inputarguments(
+                'No B-mag statistical variation  data found  !')
             
-        if number_of_frequencies is not None : self.nfreq =number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments("Please specify the number of frequency !")
-        if number_of_stations is not None : self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments('Please specify the number of stations')
+        if number_of_frequencies is not None : 
+            self.nfreq =number_of_frequencies 
+        else :
+            raise CSex.pyCSAMTError_inputarguments(
+                "Please specify the number of frequency !")
+        if number_of_stations is not None : 
+            self.number_of_stations =number_of_stations 
+        else : 
+            raise CSex.pyCSAMTError_inputarguments(
+                'Please specify the number of stations')
             
         try : 
-            self.nfreq , self.number_of_stations =np.int(self.nfreq), np.int(self.number_of_stations)
+            self.nfreq , self.number_of_stations =np.int(self.nfreq), \
+                np.int(self.number_of_stations)
             self._pcHmag=np.array([np.float(cc) for cc in self._pcHmag])
 
-        except : raise CSex.pyCSAMTError_value("Values provided for the B-mag stat.variation  are wrong."\
-                                          " must be float or integer .")
+        except : 
+            raise CSex.pyCSAMTError_value(
+                "Values provided for the B-mag stat.variation  are wrong."
+                 " must be float or integer .")
             
         vcounts_Hmag, repeat_Hmag =np.unique (self._pcHmag, return_counts=True)
         self.value =vcounts_Hmag
@@ -3861,8 +4251,9 @@ class pcHmag (object):
         
         truncated_pcHmag=cfunc.truncated_data( data =self._pcHmag, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(number_of_station=self.number_of_stations, 
-                               number_of_freq =self.nfreq)
+        name, polyname = cfunc._numbering_station(
+            number_of_station=self.number_of_stations, 
+            number_of_freq =self.nfreq)
         
         self.loc ={ key:value for key, value in zip(name, truncated_pcHmag)} 
 
@@ -3948,13 +4339,22 @@ class sHphz(object) :
             self.to_degree = to_degree
         
         if sHphz_array is not None : self._sHphz =sHphz_array
-        if self._sHphz is None :  raise CSex.pyCSAMTError_inputarguments('No stat.variation'\
-                                                                         ' B-field-phase data found  !')
-        if number_of_frequencies is not None : self.nfreq = number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments("Please specify the number of frequency !")
-        if number_of_stations is not None : self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments('Please specify the number of stations')
-        self.nfreq , self.number_of_stations =np.int(self.nfreq), np.int(self.number_of_stations)    
+        if self._sHphz is None :  
+            raise CSex.pyCSAMTError_inputarguments(
+                'No stat.variation B-field-phase data found  !')
+                                                    
+        if number_of_frequencies is not None :
+            self.nfreq = number_of_frequencies 
+        else :
+            raise CSex.pyCSAMTError_inputarguments(
+                "Please specify the number of frequency !")
+        if number_of_stations is not None : 
+            self.number_of_stations =number_of_stations 
+        else : 
+            raise CSex.pyCSAMTError_inputarguments(
+                'Please specify the number of stations')
+        self.nfreq , self.number_of_stations =np.int(self.nfreq),\
+            np.int(self.number_of_stations)    
             
            
         def _inspect_input (input_obj , to_degree=False):
@@ -3964,11 +4364,14 @@ class sHphz(object) :
             """            
             try : 
                 input_obj =np.array([float(ss) for ss in input_obj])
-            except : raise  CSex.pyCSAMTError_value("Values provided for computing are wrong."\
-                                          " must be float or integer .")
+            except : 
+                raise  CSex.pyCSAMTError_value(
+                    "Values provided for computing are wrong."\
+                    " must be float or integer .")
             
             if to_degree : 
-                input_obj = np.apply_along_axis (lambda x: x * 180/np.pi, 0, input_obj)
+                input_obj = np.apply_along_axis (
+                    lambda x: x * 180/np.pi, 0, input_obj)
             
             return input_obj 
 
@@ -3986,7 +4389,8 @@ class sHphz(object) :
         #---> tuncated AVG sHphz value on  dictionnary for easy acces . 
         truncated_shphz=cfunc.truncated_data( data =self._sHphz, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(number_of_station=self.number_of_stations, 
+        name, polyname = cfunc._numbering_station(
+            number_of_station=self.number_of_stations, 
                                number_of_freq =self.nfreq)
         
         self.loc ={ key:value for key, value in zip(name, truncated_shphz)}
@@ -4075,28 +4479,40 @@ class pcRho (object):
         if self._pcRes is None : 
             raise CSex.pyCSAMTError_inputarguments('No Resistivity data found !')
 
-        if number_of_frequencies is not None : self.nfreq =number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments("Please specify the number of frequency !")
-        if number_of_stations is not None : self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments('Please specify the number of stations')
+        if number_of_frequencies is not None : 
+            self.nfreq =number_of_frequencies 
+        else :
+            raise CSex.pyCSAMTError_inputarguments(
+                "Please specify the number of frequency !")
+        if number_of_stations is not None :
+            self.number_of_stations =number_of_stations 
+        else : 
+            raise CSex.pyCSAMTError_inputarguments(
+                'Please specify the number of stations')
         
         try : 
-            self.nfreq , self.number_of_stations =np.int(self.nfreq), np.int(self.number_of_stations)
+            self.nfreq , self.number_of_stations =np.int(self.nfreq),\
+                np.int(self.number_of_stations)
             self._pcRes =np.array([np.float(cc) for cc in self._pcRes])
 
-        except : raise CSex.pyCSAMTError_value("Values provided for the Resistivities are wrong."\
-                                          " must be float or integer .")
+        except :
+            raise CSex.pyCSAMTError_value(
+                "Values provided for the Resistivities are wrong."
+                 " must be float or integer .")
         
         vcounts_pcres, repeat_hphz=np.unique (self._pcRes, return_counts=True)
-        if not np.all(repeat_hphz): CSex.pyCSAMTError_value('Values of Rho provided must have the same length'\
-                                                           ' for each stations. ')
+        if not np.all(repeat_hphz): 
+            raise CSex.pyCSAMTError_value(
+                'Values of Rho provided must have the same length'
+                 ' for each stations. ')
         self.value =vcounts_pcres
         self.max, self.min =vcounts_pcres.max(), vcounts_pcres.min()
         self.mean=self._pcRes.mean()
         truncated_pcres=cfunc.truncated_data( data =self._pcRes, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(number_of_station=self.number_of_stations, 
-                               number_of_freq =self.nfreq)
+        name, polyname = cfunc._numbering_station(
+            number_of_station=self.number_of_stations, 
+            number_of_freq =self.nfreq)
         
         self.loc ={ key:value for key, value in zip(name, truncated_pcres )}
         
@@ -4161,8 +4577,8 @@ class sPhz(object) :
     def _read_sPhz_data (self, sPhase_array=None, number_of_frequencies=None , 
                          number_of_stations=None, **kwargs  ):
         """
-        Method to read and arange data according each station /Statistical variation 
-        of zPhase -Field angles. 
+        Method to read and arange data according each station /Statistical 
+        variation of zPhase -Field angles. 
 
         Parameters
         ------------
@@ -4183,13 +4599,22 @@ class sPhz(object) :
             
         
         if sPhase_array is not None : self._sPhs =sPhase_array
-        if self._sPhs is None :  raise CSex.pyCSAMTError_inputarguments('No stat.variation'\
-                                                                         ' Impedance Z -phase data found  !')
-        if number_of_frequencies is not None : self.nfreq = number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments("Please specify the number of frequency !")
-        if number_of_stations is not None : self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments('Please specify the number of stations')
-        self.nfreq , self.number_of_stations =np.int(self.nfreq), np.int(self.number_of_stations)    
+        if self._sPhs is None : 
+            raise CSex.pyCSAMTError_inputarguments(
+                'No stat.variation  Impedance Z -phase data found  !')
+                
+        if number_of_frequencies is not None :
+            self.nfreq = number_of_frequencies 
+        else :
+            raise CSex.pyCSAMTError_inputarguments(
+                "Please specify the number of frequency !")
+        if number_of_stations is not None : 
+            self.number_of_stations =number_of_stations 
+        else : 
+            raise CSex.pyCSAMTError_inputarguments(
+                'Please specify the number of stations')
+        self.nfreq , self.number_of_stations =np.int(self.nfreq),\
+            np.int(self.number_of_stations)    
             
            
         def _inspect_input (input_obj , to_degree=False):
@@ -4199,10 +4624,14 @@ class sPhz(object) :
             """            
             try : 
                 input_obj =np.array([float(ss) for ss in input_obj])
-            except : raise  CSex.pyCSAMTError_value("Values provided for computing are wrong."\
-                                          " must be float or integer .")
+            except : 
+                raise  CSex.pyCSAMTError_value(
+                    "Values provided for computing are wrong."\
+                    " must be float or integer .")
             
-            if to_degree : input_obj =np.apply_along_axis (lambda x: x * 180/np.pi, 0,input_obj)
+            if to_degree : 
+                input_obj =np.apply_along_axis (
+                    lambda x: x * 180/np.pi, 0,input_obj)
             
             return input_obj 
 
@@ -4220,7 +4649,8 @@ class sPhz(object) :
         #---> tuncated AVG sHphz value on  dictionnary for easy acces . 
         truncated_sphz=cfunc.truncated_data( data =self._sPhs, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(number_of_station=self.number_of_stations, 
+        name, polyname = cfunc._numbering_station(
+            number_of_station=self.number_of_stations, 
                                number_of_freq =self.nfreq)
         
         self.loc ={ key:value for key, value in zip(name, truncated_sphz)}

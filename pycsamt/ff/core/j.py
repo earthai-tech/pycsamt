@@ -176,14 +176,20 @@ class J_collection :
     @stnames.setter 
     def stnames(self, jstnames):
         if isinstance(jstnames, np.ndarray): jstnames=jstnames.tolist()
-        elif isinstance(jstnames,list) : self._station_names = J.jname(number_of_sites=len(jstnames), 
-                                                                survey_name=self.survey_name)
-        elif isinstance(jstnames, int) :self._station_names = J.jname(number_of_sites=jstnames, 
-                                                              survey_name=self.survey_name)
+        elif isinstance(jstnames,list) : 
+            self._station_names = J.jname(number_of_sites=len(jstnames), 
+                                        survey_name=self.survey_name)
+        elif isinstance(jstnames, int) :
+            self._station_names = J.jname(number_of_sites=jstnames, 
+                                        survey_name=self.survey_name)
         else : 
-            try : self._station_names = J.jname(number_of_sites= int(jstnames), 
+            try : 
+                self._station_names = J.jname(number_of_sites= int(jstnames), 
                                           survey_name=self.survey_name)
-            except : raise CSex.pyCSAMTError_J('Stations names must be on list or the number of stations not <{0}>.'.format(type(jstnames)))
+            except :
+                raise CSex.pyCSAMTError_J(
+                    'Stations names must be on list or the number'
+                    ' of stations not <{0}>.'.format(type(jstnames)))
     
 
     def j2edi(self, jfn=None, savepath =None, **kwargs): 
@@ -277,7 +283,8 @@ class J_collection :
             edi_obj.Info.Source.__setattr__('survey',  edi_obj.Head.dataid)
             edi_obj.Info.Source.__setattr__('sitename', edi_obj.Head.dataid)
             edi_obj.Info.Processing.__setattr__('processedby', 'pyCSAMT' )
-            edi_obj.Info.Processing.ProcessingSoftware.__setattr__('name', edi_obj.Head.fileby )
+            edi_obj.Info.Processing.ProcessingSoftware.__setattr__(
+                'name', edi_obj.Head.fileby )
     
            
             #====> definemeas 
@@ -340,10 +347,14 @@ class J_collection :
             #====> EMAPSECT
             edi_obj.MTEMAP.sectid = stn 
             edi_obj.MTEMAP.__setattr__('nfreq', len(csamt_jobj.freq))
-            edi_obj.MTEMAP.__setattr__('ex', '{0:04}{1}'.format(ii * 10 + 1 , codeID_dec[1:] ))
-            edi_obj.MTEMAP.__setattr__('ey', '{0:04}{1}'.format(ii * 10 + 2 , codeID_dec[1:] ))
-            edi_obj.MTEMAP.__setattr__('hx', '{0:04}{1}'.format(ii * 10 + 3 , codeID_dec[1:] ))
-            edi_obj.MTEMAP.__setattr__('hy', '{0:04}{1}'.format(ii * 10 + 4 , codeID_dec[1:] ))
+            edi_obj.MTEMAP.__setattr__(
+                'ex', '{0:04}{1}'.format(ii * 10 + 1 , codeID_dec[1:] ))
+            edi_obj.MTEMAP.__setattr__(
+                'ey', '{0:04}{1}'.format(ii * 10 + 2 , codeID_dec[1:] ))
+            edi_obj.MTEMAP.__setattr__(
+                'hx', '{0:04}{1}'.format(ii * 10 + 3 , codeID_dec[1:] ))
+            edi_obj.MTEMAP.__setattr__(
+                'hy', '{0:04}{1}'.format(ii * 10 + 4 , codeID_dec[1:] ))
             
             #Frequency blocks , impendance and resistivity blocs 
             edi_obj.Z.freq = csamt_jobj.freq 
@@ -401,18 +412,22 @@ class J_collection :
         elif self.jfiles_list is None : 
             raise CSex.pyCSAMTError_J ('Can not find a list of j files.'
                                        ' Please check your path !')
-        
-        if isinstance(self.jfiles_list, str): # we assume that only file is read than put on list  for looping.
+            
+        # we assume that only file is read than put on list  for looping.
+        if isinstance(self.jfiles_list, str): 
             self.jfiles_list =[self.jfiles_list]
         
-        self._logging.info('Number of J_files collected is %s', len(self.jfiles_list))
+        self._logging.info(
+            'Number of J_files collected is %s', len(self.jfiles_list))
         
         if self.jfiles_list is not None : 
             jstations , lon,lat, azim, app_rho, pha, rhomax, rhomin, elev, period, \
-            phamax, phamin , wrho, wpha, real , imag , error, weight = [[] for ii in range(18)]
+            phamax, phamin , wrho, wpha, real , imag , error, weight = \
+                [[] for ii in range(18)]
             
             # _set info_dic 
-            sinfo, exl, eyl, exaz , eyaz , hxaz , cohmin,cohmax, maxt, nty, weig =[[] for ii in range (11)] 
+            sinfo, exl, eyl, exaz , eyaz , hxaz ,\
+                cohmin,cohmax, maxt, nty, weig =[[] for ii in range (11)] 
  
             for jfile in self.jfiles_list : 
 
@@ -432,14 +447,23 @@ class J_collection :
                 
                 #--- > information blocks 
                 jstations.append(self.J._jnames)
-                elev.append(self.J.jelev), period.append(self.J.jperiod)
-                lon.append(self.J.jlon), lat.append(self.J.jlat), azim.append(self.J.jazim)
-                app_rho.append(self.J.japp_rho),pha.append(self.J.jpha)
-                rhomax.append(self.J.jrhomax),rhomin.append(self.J.jrhomin), 
-                phamax.append(self.J.jphamax),phamin.append(self.J.jphamin)
-                wrho.append(self.J.jwrho),wpha.append(self.J.jwpha)
-                real.append(self.J.jreal), imag.append(self.J.jimag)
-                error.append(self.J.jerror), weight.append(self.J.jweight)
+                elev.append(self.J.jelev),
+                period.append(self.J.jperiod)
+                lon.append(self.J.jlon) 
+                lat.append(self.J.jlat)
+                azim.append(self.J.jazim)
+                app_rho.append(self.J.japp_rho)
+                pha.append(self.J.jpha)
+                rhomax.append(self.J.jrhomax)
+                rhomin.append(self.J.jrhomin), 
+                phamax.append(self.J.jphamax)
+                phamin.append(self.J.jphamin)
+                wrho.append(self.J.jwrho)
+                wpha.append(self.J.jwpha)
+                real.append(self.J.jreal)
+                imag.append(self.J.jimag)
+                error.append(self.J.jerror)
+                weight.append(self.J.jweight)
         
         
         self.stnames , self.elevation = jstations , elev
@@ -448,7 +472,8 @@ class J_collection :
         self.app_rho, self.rhomax, self.rhomin =  app_rho ,rhomax, rhomin 
         self.phase , self.phamax , self.phamin = pha , phamax , phamin 
         self.wrho , self.wpha =wrho , wpha
-        self.weight , self.real , self.imag , self.error = weight , real, imag , error
+        self.weight , self.real , self.imag , \
+            self.error = weight , real, imag , error
         
         #-----> set the code name of the site by calling site 
         if self.stnames is not None : 
@@ -458,23 +483,27 @@ class J_collection :
         # set_info
         if self.J.read_commentblock: 
             
-            self.J.jinfo.site_infos, self.J.jinfo.ex_length , self.J.jinfo.ey_length = sinfo , exl, eyl
-            self.J.jinfo.ex_azimuth, self.J.jinfo.ey_azimuth , self.J.jinfo.hx_azimuth = exaz, eyaz, hxaz 
-            self.J.jinfo.coherence_max, self.J.jinfo.coherence_min , self.J.jinfo.max_type = cohmax, cohmin, maxt
+            self.J.jinfo.site_infos, self.J.jinfo.ex_length ,\
+                self.J.jinfo.ey_length = sinfo , exl, eyl
+            self.J.jinfo.ex_azimuth, self.J.jinfo.ey_azimuth , \
+                self.J.jinfo.hx_azimuth = exaz, eyaz, hxaz 
+            self.J.jinfo.coherence_max, self.J.jinfo.coherence_min ,\
+                self.J.jinfo.max_type = cohmax, cohmin, maxt
             self.J.jinfo.ntype, self.J.jinfo.weight = nty, weig
                 
-            self.J.jinfo.jconfig ={'Site info': self.J.jinfo.site_infos, 
-                                       'Ex length': self.J.jinfo.ex_length, 
-                                       'Ey length':self.J.jinfo.ey_length, 
-                                       'Ex azimuth': self.J.jinfo.ex_azimuth, 
-                                       'Ey azimuth': self.J.jinfo.ey_azimuth, 
-                                       'Hx azimuth':self.J.jinfo.hx_azimuth, 
-                                                   'Coherence minimum':self.J.jinfo.coherence_min, 
-                                                   'Coherence maximum': self.J.jinfo.coherence_max, 
-                                                   'Maxtype':self.J.jinfo.max_type, 
-                                                   'Ntype':self.J.jinfo.ntype , 
-                                                   'Weight':self.J.jinfo.weight,
-                                                   }
+            self.J.jinfo.jconfig ={
+                'Site info': self.J.jinfo.site_infos, 
+                'Ex length': self.J.jinfo.ex_length, 
+                'Ey length':self.J.jinfo.ey_length, 
+                'Ex azimuth': self.J.jinfo.ex_azimuth, 
+                'Ey azimuth': self.J.jinfo.ey_azimuth, 
+                'Hx azimuth':self.J.jinfo.hx_azimuth, 
+                            'Coherence minimum':self.J.jinfo.coherence_min, 
+                            'Coherence maximum': self.J.jinfo.coherence_max, 
+                            'Maxtype':self.J.jinfo.max_type, 
+                            'Ntype':self.J.jinfo.ntype , 
+                            'Weight':self.J.jinfo.weight,
+                            }
         
     def plot_Topo_Stn_Azim (self, list_of_jfiles =None, plot ='*',
                             show_stations =False , compute_azimuth =True , 
@@ -514,11 +543,13 @@ class J_collection :
         #--> create Plot1d Obj 
         plot_obj= Plot1d()
         #--> get easting northing arrays after converting from lat, lon
-        jeasting , jnorthing = self.Location.get_eastnorth_array_from_latlon(arr_lat=self.latitude, 
-                                                                             arr_lon = self.longitude)
+        jeasting , jnorthing = self.Location.get_eastnorth_array_from_latlon(
+            arr_lat=self.latitude,  arr_lon = self.longitude)
+                                                                           
 
         # ----> compute station separation using Profile obj 
-        jstn_separation = cs_obj.Profile().stn_separation(easting =jeasting , northing =jnorthing)[0]
+        jstn_separation = cs_obj.Profile().stn_separation(
+            easting =jeasting , northing =jnorthing)[0]
        
         #---- > interpolate Jstn_separation  so to get the same size as stations.
         from   scipy.interpolate import interp1d 
@@ -531,15 +562,17 @@ class J_collection :
         
         if compute_azimuth is True :
 
-            self.azimuth =func.compute_azimuth(easting =jeasting, northing=jnorthing , 
-                                               extrapolate =True) 
+            self.azimuth =func.compute_azimuth(
+                easting =jeasting, northing=jnorthing , extrapolate =True)
+                                                
             # self.Location.azimuth = np.concatenate((jeasting, jnorthing), axis=1)
             # self.azimuth = self.Location.azimuth 
 
         #---> copmute dipole length if not given 
         dipole_length =jstn_separation.mean()
 
-        station_pk = np.apply_along_axis(lambda xx: xx * dipole_length, 0, np.arange(len(self.stnames)))
+        station_pk = np.apply_along_axis(
+            lambda xx: xx * dipole_length, 0, np.arange(len(self.stnames)))
 
         #---> call plot func from plot1D
         plot_obj.plot_topo_sep_azim(plot=plot,
@@ -552,8 +585,8 @@ class J_collection :
                                     savepath =savefig )
                    
 
-    def rewrite_jfiles (self, list_of_jfiles=None , savepath =None, survey_name =None , 
-                        j_extension='.dat' ):
+    def rewrite_jfiles (self, list_of_jfiles=None , savepath =None, 
+                       survey_name =None ,  j_extension='.dat' ):
         """
         Method to rewrite A.G. johnson file (J-Format file).
         
@@ -577,23 +610,28 @@ class J_collection :
         if list_of_jfiles is not None : self.jfiles_list =list_of_jfiles 
         if survey_name is not None : self.survey_name =survey_name 
         if self.jfiles_list is  None : 
-            raise CSex.pyCSAMTError_J('No files found to read . '
-                                      'Please check your path <%s>'% os.getcwd())  
+            raise CSex.pyCSAMTError_J(
+                'No files found to read . '
+                 'Please check your path <%s>'% os.getcwd())  
         elif self.jfiles_list is not None : 
             self.collect_jfiles(list_of_jfiles =self.jfiles_list )
          
             
         #--- > start writing 
         write_jlines =[]
-        if self.survey_name is None : code_name = 'ks{0:02}-{1}'
-        elif self.survey_name is not None : code_name = self.survey_name[:-3]+'{0:02}-{1}'
+        if self.survey_name is None :
+            code_name = 'ks{0:02}-{1}'
+        elif self.survey_name is not None :
+            code_name = self.survey_name[:-3]+'{0:02}-{1}'
         codespace= 5*' '
         
         for ii in range (len(self.id)) : 
             #-- > write Head j 
-            write_jlines.append(''.join([self.J._comment_mark,'{0:} :'.format(self.J.jinfo.progvers) , 
-                                        code_name.format(ii, self.id[ii]), codespace, 
-                                        datetime.datetime.now().strftime(self.J.jfmtime), codespace, 'RECS'])+'\n')
+            write_jlines.append(''.join(
+                [self.J._comment_mark,'{0:} :'.format(self.J.jinfo.progvers) , 
+                code_name.format(ii, self.id[ii]), codespace, 
+                datetime.datetime.now().strftime(self.J.jfmtime), 
+                codespace, 'RECS'])+'\n')
             
             #---> write comments line if original file provided it.
             try : 
@@ -644,55 +682,69 @@ class J_collection :
             
             #--- > write jlabels 
             write_jlines.append(''.join(['{0:<13}'.format(
-                self.J._jlabels[0]),'=', "{0:>13.1f}".format(self.azimuth[ii]), '\n'] ))
+                self.J._jlabels[0]),'=', "{0:>13.1f}".format(
+                    self.azimuth[ii]), '\n'] ))
             write_jlines.append(''.join(['{0:<13}'.format(
-                self.J._jlabels[1]),'=', "{0:>13.5f}".format(self.latitude[ii]), '\n'] ))
+                self.J._jlabels[1]),'=', "{0:>13.5f}".format(
+                    self.latitude[ii]), '\n'] ))
             write_jlines.append(''.join(['{0:<13}'.format(
-                self.J._jlabels[2]),'=', "{0:>13.5f}".format(self.longitude[ii]), '\n'] ))
+                self.J._jlabels[2]),'=', "{0:>13.5f}".format(
+                    self.longitude[ii]), '\n'] ))
             write_jlines.append(''.join(['{0:<13}'.format(
-                self.J._jlabels[3]),'=', "{0:>13.1f}".format(self.elevation[ii]), '\n'] ))
+                self.J._jlabels[3]),'=', "{0:>13.1f}".format(
+                    self.elevation[ii]), '\n'] ))
             #---> write jnames , components  and nperiods 
             write_jlines.append(''.join(['{0}'.format(
-                self.stnames[ii]), '{0:>7.1f}'.format(self.azimuth[ii]),'\n']))
-            write_jlines.append('{0}'.format(self.J.jmode)+'\n')
-            write_jlines.append(' {0}'.format(self.J.jperiod.size)+'\n')
+                self.stnames[ii]), '{0:>7.1f}'.format(
+                    self.azimuth[ii]),'\n']))
+            write_jlines.append('{0}'.format(
+                self.J.jmode)+'\n')
+            write_jlines.append(' {0}'.format(
+                self.J.jperiod.size)+'\n')
             # now  write value :
 
             for jj in range(self.J.jperiod.size): 
-                if re.match(r'^Z+', self.J.jmode) is None or re.match(r'^T+', self.J.jmode) is None:
-                    write_jlines.append (''.join( ['{0:<12.3e}'.format(self.period[ii][jj]), 
-                                                   '{0:^12.3e}'.format(self.app_rho [ii][jj]), 
-                                                   '{0:^12.2e}'.format(self.phase [ii][jj]), 
-                                                   '{:^12.3e}'.format(self.rhomax[ii][jj]), 
-                                                   '{:^12.3e}'.format(self.rhomin [ii][jj]), 
-                                                   '{:^12.2e}'.format(self.phamax[ii][jj]), 
-                                                   '{:^12.2e}'.format(self.phamin[ii][jj]),
-                                                   '{:^7.2f}'.format(self.wrho[ii][jj]), 
-                                                   '{:^7.2f}'.format(self.wpha[ii][jj]),
-                                                                     ]))
-                elif  re.match(r'^Z+', self.J.jmode) is not None or re.match(r'^T+', self.J.jmode) is not None:
+                if re.match(r'^Z+', self.J.jmode) is None or \
+                    re.match(r'^T+', self.J.jmode) is None:
+                    write_jlines.append (''.join( [
+                        '{0:<12.3e}'.format(self.period[ii][jj]), 
+                        '{0:^12.3e}'.format(self.app_rho [ii][jj]), 
+                        '{0:^12.2e}'.format(self.phase [ii][jj]), 
+                        '{:^12.3e}'.format(self.rhomax[ii][jj]), 
+                        '{:^12.3e}'.format(self.rhomin [ii][jj]), 
+                        '{:^12.2e}'.format(self.phamax[ii][jj]), 
+                        '{:^12.2e}'.format(self.phamin[ii][jj]),
+                        '{:^7.2f}'.format(self.wrho[ii][jj]), 
+                        '{:^7.2f}'.format(self.wpha[ii][jj]),
+                                                  ]))
+                elif  re.match(r'^Z+', self.J.jmode) is not None or\
+                    re.match(r'^T+', self.J.jmode) is not None:
                 
-                    write_jlines.append (''.join( ['{0:<12.4e}'.format(self.period[ii][jj]), 
-                                                   '{0:^12.4e}'.format(self.real [ii][jj]), 
-                                                   '{0:^12.4e}'.format(self.imag [ii][jj]), 
-                                                   '{:^12.3e}'.format(self.error[ii][jj]), 
-                                                   '{:^12.2f}'.format(self.weight [ii][jj]), 
-                                                                     ]))
+                    write_jlines.append (''.join( [
+                        '{0:<12.4e}'.format(self.period[ii][jj]), 
+                        '{0:^12.4e}'.format(self.real [ii][jj]), 
+                        '{0:^12.4e}'.format(self.imag [ii][jj]), 
+                        '{:^12.3e}'.format(self.error[ii][jj]), 
+                        '{:^12.2f}'.format(self.weight [ii][jj]), 
+                                          ]))
                 
                 write_jlines.append('\n')
                 
-            with open('{0}{1}'.format(self.id[ii],j_extension), 'w', encoding='utf8') as fj:
+            with open('{0}{1}'.format(self.id[ii],j_extension), 'w', 
+                      encoding='utf8') as fj:
                 fj.writelines(write_jlines)
             
                 
             if savepath is not None : 
-                shutil.move ('{0}{1}'.format(self.id[ii],j_extension), savepath)
+                shutil.move ('{0}{1}'.format(
+                    self.id[ii],j_extension), savepath)
                                                            
             write_jlines=[]  
             
         print('-'*77) 
         if savepath is None :savepath =os.getcwd()
-        print('---> {0} J-files have been rewritten to <{1}> <----'.format(len(self.id), savepath))
+        print('---> {0} J-files have been rewritten to <{1}>'
+              ' <----'.format(len(self.id), savepath))
         print('-'*77)
                                                             
 
@@ -824,9 +876,13 @@ class J:
     @jperiod.setter 
     def jperiod(self, jperds): 
         for ii, item in enumerate(jperds): 
-            if item in ['','*'] or item == str(self._jnan): jperds[ii]=np.nan
-        try : self._jperiod=np.array([float(ii) for ii in jperds])
-        except : raise CSex.pyCSAMTError_J('Can not convert "str"jperiod value to float.')
+            if item in ['','*'] or item == str(self._jnan): 
+                jperds[ii]=np.nan
+        try :
+            self._jperiod=np.array([float(ii) for ii in jperds])
+        except : 
+            raise CSex.pyCSAMTError_J(
+                'Can not convert "str"jperiod value to float.')
     
     @property 
     def japp_rho (self): 
@@ -834,9 +890,13 @@ class J:
     @japp_rho.setter 
     def japp_rho (self, japp_rho): 
         for ii, item in enumerate(japp_rho): 
-            if item in ['','*'] or item == str(self._jnan): japp_rho[ii]=np.nan
-        try : self._app_rho=np.array([float(ii) for ii in japp_rho])
-        except : raise CSex.pyCSAMTError_J('Can not convert "str" apparent resistivity value to float.')
+            if item in ['','*'] or item == str(self._jnan): 
+                japp_rho[ii]=np.nan
+        try : 
+            self._app_rho=np.array([float(ii) for ii in japp_rho])
+        except :
+            raise CSex.pyCSAMTError_J(
+                'Can not convert "str" apparent resistivity value to float.')
     
     @property 
     def jpha(self): 
@@ -844,9 +904,13 @@ class J:
     @jpha.setter 
     def jpha (self, jphase): 
         for ii, item in enumerate(jphase): 
-            if item in ['','*'] or item == str(self._jnan): jphase[ii]=np.nan
-        try : self._jpha=np.array([float(ii) for ii in jphase])
-        except : raise CSex.pyCSAMTError_J('Could not convert "str" phase value to float.')
+            if item in ['','*'] or item == str(self._jnan):
+                jphase[ii]=np.nan
+        try : 
+            self._jpha=np.array([float(ii) for ii in jphase])
+        except : 
+            raise CSex.pyCSAMTError_J(
+                'Could not convert "str" phase value to float.')
         
     @property 
     def jrhomax(self): 
@@ -854,9 +918,13 @@ class J:
     @jrhomax.setter 
     def jrhomax (self, jrhomax): 
         for ii, item in enumerate(jrhomax): 
-            if item in ['','*']or item == str(self._jnan): jrhomax[ii]=np.nan
-        try : self._jrhomax=np.array([float(ii) for ii in jrhomax])
-        except : raise CSex.pyCSAMTError_J('Could not convert "str"jrhomax value to float.')
+            if item in ['','*']or item == str(self._jnan): 
+                jrhomax[ii]=np.nan
+        try : 
+            self._jrhomax=np.array([float(ii) for ii in jrhomax])
+        except : 
+            raise CSex.pyCSAMTError_J(
+                'Could not convert "str"jrhomax value to float.')
         
     @property 
     def jphamax(self): 
@@ -864,9 +932,13 @@ class J:
     @jphamax.setter 
     def jphamax (self, jphamax): 
         for ii, item in enumerate(jphamax): 
-            if item in  ['','*'] or item == str(self._jnan): jphamax[ii]=np.nan
-        try : self._jphamax=np.array([float(ii) for ii in jphamax])
-        except : raise CSex.pyCSAMTError_J('Could not convert "str"jphamax value to float.')
+            if item in  ['','*'] or item == str(self._jnan): 
+                jphamax[ii]=np.nan
+        try : 
+            self._jphamax=np.array([float(ii) for ii in jphamax])
+        except :
+            raise CSex.pyCSAMTError_J(
+                'Could not convert "str"jphamax value to float.')
         
     @property 
     def jrhomin(self): 
@@ -874,9 +946,13 @@ class J:
     @jrhomin.setter 
     def jrhomin (self, jrhomin): 
         for ii, item in enumerate(jrhomin): 
-            if item in ['','*']or item == str(self._jnan): jrhomin[ii]=np.nan
-        try : self._jrhomin=np.array([float(ii) for ii in jrhomin])
-        except : raise CSex.pyCSAMTError_J('Could not convert "str"jrhomin value to float.')
+            if item in ['','*']or item == str(self._jnan):
+                jrhomin[ii]=np.nan
+        try : 
+            self._jrhomin=np.array([float(ii) for ii in jrhomin])
+        except : 
+            raise CSex.pyCSAMTError_J(
+                'Could not convert "str"jrhomin value to float.')
         
     @property 
     def jphamin(self): 
@@ -884,9 +960,13 @@ class J:
     @jphamin.setter 
     def jphamin (self, jphamin): 
         for ii, item in enumerate(jphamin): 
-            if item in ['','*'] or item == str(self._jnan): jphamin[ii]=np.nan
-        try : self._jphamin=np.array([float(ii) for ii in jphamin])
-        except : raise CSex.pyCSAMTError_J('Could not convert "str" jphamin value to float.')
+            if item in ['','*'] or item == str(self._jnan):
+                jphamin[ii]=np.nan
+        try :
+            self._jphamin=np.array([float(ii) for ii in jphamin])
+        except : 
+            raise CSex.pyCSAMTError_J(
+                'Could not convert "str" jphamin value to float.')
         
     @property 
     def jwrho(self): 
@@ -894,9 +974,14 @@ class J:
     @jwrho.setter 
     def jwrho (self, jwrho): 
         for ii, item in enumerate(jwrho): 
-            if item in  ['','*'] or item == str(self._jnan): jwrho[ii]=np.nan
-        try : self._jwrho=np.array([float(ii) for ii in jwrho])
-        except : raise CSex.pyCSAMTError_J('Could not convert "str" jwrho value to float.')
+            if item in  ['','*'] or item == str(self._jnan): 
+                jwrho[ii]=np.nan
+        try : 
+            self._jwrho=np.array(
+                [float(ii) for ii in jwrho])
+        except : 
+            raise CSex.pyCSAMTError_J(
+                'Could not convert "str" jwrho value to float.')
     
     @property 
     def jwpha(self): 
@@ -904,9 +989,13 @@ class J:
     @jwpha.setter 
     def jwpha (self, jwpha): 
         for ii, item in enumerate(jwpha): 
-            if item in ['','*'] or item == str(self._jnan): jwpha[ii]=np.nan
-        try : self._jwpha=np.array([float(ii) for ii in jwpha])
-        except : raise CSex.pyCSAMTError_J('Could not convert "str" jwphase value to float.')
+            if item in ['','*'] or item == str(self._jnan): 
+                jwpha[ii]=np.nan
+        try : 
+            self._jwpha=np.array([float(ii) for ii in jwpha])
+        except : 
+            raise CSex.pyCSAMTError_J(
+                'Could not convert "str" jwphase value to float.')
     
     @property 
     def jreal(self): 
@@ -914,9 +1003,13 @@ class J:
     @jreal.setter 
     def jreal (self, jreal): 
         for ii, item in enumerate(jreal): 
-            if item in ['','*'] or item == str(self._jnan): jreal[ii]=np.nan
-        try : self._jreal=np.array([float(ii) for ii in jreal])
-        except : raise CSex.pyCSAMTError_J('Could not convert "str" jreal value to float.')   
+            if item in ['','*'] or item == str(self._jnan): 
+                jreal[ii]=np.nan
+        try : 
+            self._jreal=np.array([float(ii) for ii in jreal])
+        except : 
+            raise CSex.pyCSAMTError_J(
+                'Could not convert "str" jreal value to float.')   
 
 
     @property 
@@ -925,9 +1018,13 @@ class J:
     @jimag.setter 
     def jimag (self, jimag): 
         for ii, item in enumerate(jimag): 
-            if item in ['','*'] or item == str(self._jnan): jimag[ii]=np.nan
-        try : self._jimag=np.array([float(ii) for ii in jimag])
-        except : raise CSex.pyCSAMTError_J('Could not convert "str" jimag value to float.')   
+            if item in ['','*'] or item == str(self._jnan):
+                jimag[ii]=np.nan
+        try : 
+            self._jimag=np.array([float(ii) for ii in jimag])
+        except :
+            raise CSex.pyCSAMTError_J(
+                'Could not convert "str" jimag value to float.')   
 
     @property 
     def jerror(self): 
@@ -935,9 +1032,13 @@ class J:
     @jerror.setter 
     def jerror (self, jerror): 
         for ii, item in enumerate(jerror): 
-            if item in ['','*'] or item == str(self._jnan): jerror[ii]=np.nan
-        try : self._jerror=np.array([float(ii) for ii in jerror])
-        except : raise CSex.pyCSAMTError_J('Could not convert "str" jerror value to float.')  
+            if item in ['','*'] or item == str(self._jnan):
+                jerror[ii]=np.nan
+        try : 
+            self._jerror=np.array([float(ii) for ii in jerror])
+        except :
+            raise CSex.pyCSAMTError_J(
+                'Could not convert "str" jerror value to float.')  
 
     @property 
     def jweight(self): 
@@ -946,9 +1047,13 @@ class J:
     def jweight (self, jweight):
         if jweight is None : self._jweight = np.full((self.japp_rho.size,),1.)
         for ii, item in enumerate(jweight): 
-            if item in ['','*'] or item == str(self._jnan): jweight[ii]=np.nan
-        try : self._jweight=np.array([float(ii) for ii in jweight])
-        except : raise CSex.pyCSAMTError_J('Could not convert "str" jweight value to float.')  
+            if item in ['','*'] or item == str(self._jnan): 
+                jweight[ii]=np.nan
+        try : 
+            self._jweight=np.array([float(ii) for ii in jweight])
+        except : 
+            raise CSex.pyCSAMTError_J(
+                'Could not convert "str" jweight value to float.')  
 
 
     @property 
@@ -957,7 +1062,9 @@ class J:
     
     @jmode.setter 
     def jmode(self, jpolar):
-        if not isinstance(jpolar, str):raise CSex.pyCSAMTError_J('jMode polarization must be on str not <{}>'.format(type(jpolar)))
+        if not isinstance(jpolar, str):
+            raise CSex.pyCSAMTError_J(
+                'jMode polarization must be on str not <{}>'.format(type(jpolar)))
         self._jmode =self.jMode(polarization_type=jpolar)
         
 
@@ -980,15 +1087,20 @@ class J:
         alpha, cunm ='abcdefghijklmnopqrstuvwxyz', []
         if not isinstance(number_of_sites, int): 
             try :number_of_sites = int(number_of_sites)
-            except : raise CSex.pyCSAMTError_J('Number of sites must be int not <{0}>.'.\
-                                               format(type(number_of_sites)))
+            except : 
+                raise CSex.pyCSAMTError_J(
+                    'Number of sites must be int not <{0}>.'.
+                     format(type(number_of_sites)))
         for ss in range(number_of_sites):
-            if survey_name is not None :symb=survey_name[:2].lower() 
+            if survey_name is not None :
+                symb=survey_name[:2].lower() 
             else:  symb='cs'
-            if ss == 0 :cunm.append('{0}{1}000'.format(symb, alpha[0])) 
+            if ss == 0 :
+                cunm.append('{0}{1}000'.format(symb, alpha[0])) 
             elif (ss % 10  == 0): 
                 cunm.append('{0}{1}{2}'.format(symb, alpha[ss//10], "000"))
-            else :cunm.append('{0}{1}{2:03}'.format(symb, alpha[ss//10], ss%10))
+            else :
+                cunm.append('{0}{1}{2:03}'.format(symb, alpha[ss//10], ss%10))
         
         return cunm
     
@@ -1004,22 +1116,26 @@ class J:
                 the E-polarization (TE) mode, and for RYX
                 to represent the B-polarization mode.
         """
-        comb =[ ('{0}{1}'.format(jakeys, jbkeys), '{0}/{1}'.format(javalues, jbvalues))\
-               for jakeys, javalues  in self.jdalpha.items() for jbkeys, jbvalues in self.jdbeta.items()]
+        comb =[ ('{0}{1}'.format(jakeys, jbkeys), '{0}/{1}'.format(
+            javalues, jbvalues)) for jakeys, javalues  in self.jdalpha.items() 
+               for jbkeys, jbvalues in self.jdbeta.items()]
             
         jmodeDICT = {jkeym:jvaluem for jkeym, jvaluem in zip \
                      ([pol for pol, info in comb],[info for pol, info in comb] )}
 
         if polarization_type not in list(jmodeDICT.keys()) :
-            warnings.warn('Polarization Type  provided <{0}> for JMode is unacceptable.'
-                          'Please consults the Dictionnary of jPolarisation mode above.')           
+            warnings.warn(
+                'Polarization Type  provided <{0}> for JMode is unacceptable.'
+                'Please consults the Dictionnary of jPolarisation mode above.')
+            
             [print('{0:<5}:{1:<55}'.format(keys,values)) for keys,
              values in zip(list(jmodeDICT.keys()), list(jmodeDICT.values()))]
                          
             print(notion.j)
             
-            raise CSex.pyCSAMTError_J('Value provided is not in polarization mode '
-                                      '.Please consult the dict above.') 
+            raise CSex.pyCSAMTError_J(
+                'Value provided is not in polarization mode '
+                 '.Please consult the dict above.') 
         
         return polarization_type
     
@@ -1034,7 +1150,8 @@ class J:
         jdata=[]
         if j_fn is not None : self.jfn =j_fn 
         if self.jfn is None : 
-            raise CSex.pyCSAMTError_J('Error file. Please Provide the right path!')
+            raise CSex.pyCSAMTError_J(
+                'Error file. Please Provide the right path!')
   
         self._logging.info('Reading A.G.Jones J-format "%s"'%os.path.basename(
             self.jfn))
@@ -1047,8 +1164,10 @@ class J:
             else :
                 self._logging.warn("File <%s>is not J-format file." %self.jfn)
                 warnings.warn('File <%s> is not J-Format File.'% self.jfn)
-                raise CSex.pyCSAMTError_J('File provided doesn no match the J-format. Please consult :"http://mtnet.info/docs/jformat.txt" {0}'.\
-                                                  format(webbrowser.open('http://mtnet.info/docs/jformat.txt')))
+                raise CSex.pyCSAMTError_J(
+                    'File provided doesn no match the J-format.'
+                    ' Please consult :"http://mtnet.info/docs/jformat.txt" {0}'.\
+                     format(webbrowser.open('http://mtnet.info/docs/jformat.txt')))
             
             #set attribute when loop in the file . 
             for ss , jitems in enumerate(j_data_lines):
@@ -1115,23 +1234,29 @@ class J:
                 
             JDAT= func.concat_array_from_list(list_of_array= jdata, concat_axis=0)
 
-            if (re.match(r'^Z', self.jmode) is None) or (re.match(r'^T', self.jmode)  is None) :
+            if (re.match(r'^Z', self.jmode) is None) or \
+                (re.match(r'^T', self.jmode)  is None) :
                 if JDAT.shape[1] == 9: 
-                    jDATA = [np.reshape(jitem,( jitem.shape[0],)) for jitem in np.hsplit(JDAT,9) ]
+                    jDATA = [np.reshape(jitem,( jitem.shape[0],))\
+                             for jitem in np.hsplit(JDAT,9) ]
 
                     self.jperiod, self.japp_rho, self.jpha, self.jrhomax , self.jrhomin , \
                         self.jphamax, self.jphamin , self.jwrho , self.jwpha = jDATA
                         
                 else :
-                    warnings.warn ('J-FORMAT expects to get "9" records'
-                                   ' values like <{0}>'.format(*list(notion.j_recordR.keys())))
+                    warnings.warn (
+                        'J-FORMAT expects to get "9" records'
+                         ' values like <{0}>'.format(*list(notion.j_recordR.keys())))
                     raise CSex.pyCSAMTError_J(
                         'For data type=R?? Only  9 Range values are not '
                         'acceptable. You provided <{0}>'.format(JDAT.shape[1]))
-            elif (re.match(r'^Z', self.jmode) is True) or (re.match(r'^T', self.jmode)  is True):
+            elif (re.match(r'^Z', self.jmode) is True) or \
+                (re.match(r'^T', self.jmode)  is True):
                 if JDAT.shape[1] == 5 : 
-                    jDATA = [np.reshape(ii,( ii.shape[0],)) for ii in np.hsplit(JDAT,5) ]
-                    self.jperiod , self.jreal , self.jimag , self.jerror, self.jweight = jDATA
+                    jDATA = [np.reshape(ii,( ii.shape[0],)) \
+                             for ii in np.hsplit(JDAT,5) ]
+                    self.jperiod , self.jreal , self.jimag ,\
+                        self.jerror, self.jweight = jDATA
                 else :
                     warnings.warn('JFORMAT for GSC responses expects'
                                   ' to get "5" records values like<{0}>'.\

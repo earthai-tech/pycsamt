@@ -22,8 +22,9 @@ from pycsamt.viewer.plot import Plot1d
 
 #--- > path to your file 
 
-path_to_file = os.path.join(os.environ['pyCSAMT'],'data','avg','K1.AVG')
-path_to_file= r'F:\ThesisImp\edis\K1_edi'
+# path_to_file = r'data/avg/K1.AVG'
+path_to_file = r'data/j'
+# path_to_file= r'F:\ThesisImp\edis\K1_edi'
 
 #path_to_file = r'C:\Users\Administrator\Desktop\ThesisImp\edis\K9_edi' 
 #path_to_file =os.path.join(os.environ['pyCSAMT'],'data', 'edi' )
@@ -32,7 +33,7 @@ path_to_file= r'F:\ThesisImp\edis\K1_edi'
 savefigure = r'C:\Users\Administrator\Desktop\ThesisImp\plots\correction\K9.png'
 savefigure=None 
 # stn station profile file 
-#profile_stn = os.path.join(os.environ['pyCSAMT'],'data','avg','K1.stn')
+profile_stn = os.path.join(os.environ['pyCSAMT'],'data','avg','K1.stn')
 profile_stn =None  #  
 
 FILTER='ama'                   # Can be `tma` or `flma`

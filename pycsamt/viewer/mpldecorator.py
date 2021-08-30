@@ -219,7 +219,7 @@ class geoplot1d :
 
             # --> set default font size
             # plt.rcParams['font.size'] = self.font_size
-            fontdict = {'size': self.font_size + 2, 'weight': 'bold'}
+            fontdict = {'size': self.font_size, 'weight': 'bold'}
             
             # set all legend properties on dictionnary 
             kw_legend_props ={'loc':self.legend_loc , 
@@ -784,7 +784,8 @@ class geoplot2d(object):
             try : 
                 # for consistency , check whether value are on list 
                 if not isinstance (self.delineate_resistivity_curve, list ): 
-                    self.delineate_resistivity_curve=[self.delineate_resistivity_curve ]
+                    self.delineate_resistivity_curve=[
+                        self.delineate_resistivity_curve ]
             except :
                 pass 
         
@@ -811,7 +812,8 @@ class geoplot2d(object):
             :return: function decorated after visualisation
   
             """
-            self._logging.info(' Plot decorated {0} chain'.format(func.__name__))
+            self._logging.info(
+                ' Plot decorated {0} chain'.format(func.__name__))
     
             _f=0 # flag to separated strata model misfit and occam model misfit
                 #   from occamResponse file 
@@ -894,7 +896,8 @@ class geoplot2d(object):
 
             occam_data_station_offsets =np.array(occam_data_station_offsets)
             # station separation and get xpad . ex dl=50 then xpad =25 
-            dl = occam_data_station_offsets.max()/ (len(occam_data_station_offsets)-1)
+            dl = occam_data_station_offsets.max()/ (len(
+                occam_data_station_offsets)-1)
             self.xpad = (dl/2)/dz 
     
         
@@ -1014,7 +1017,8 @@ class geoplot2d(object):
 
             elif self.reason =='misfit': 
                 ydown_stiteslbls = self.ylimits[0] + 0.1 * self.ylimits[1]
-                ydown_stationlbls= self.ylimits[0] + self.ylimits[1]/self.ylimits[0]
+                ydown_stationlbls= self.ylimits[0] +\
+                    self.ylimits[1]/self.ylimits[0]
                 xhorizontal_lbs = (occam_data_station_offsets.max()- 
                                    occam_data_station_offsets.min())/2
                 yb=0.98

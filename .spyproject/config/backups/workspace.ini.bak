@@ -6,5 +6,5 @@ save_non_project_files = False
 
 [main]
 version = 0.2.0
-recent_files = ['..\\..\\..\\.spyder-py3\\temp.py', 'scripts\\plot_static_correction.py', 'scripts\\straighten_profile.py', 'pycsamt\\geodrill\\geoCore\\geodrill.py', 'pycsamt\\modeling\\occam2d.py', 'pycsamt\\viewer\\plot.py', 'pycsamt\\geodrill\\geoDB\\ann.py', 'untitled0.py', 'pycsamt\\geodrill\\geoDB\\sql_recorder.py']
+recent_files = ['pycsamt\\geodrill\\geoCore\\geodrill.py', 'pycsamt\\modeling\\occam2d.py', 'pycsamt\\viewer\\plot.py', 'pycsamt\\geodrill\\geoDB\\ann.py', 'pycsamt\\geodrill\\geoDB\\sql_recorder.py', 'pycsamt\\ff\\core\\cs.py', 'pycsamt\\utils\\plot_utils.py', 'scripts\\plot_curves.py', 'pycsamt\\utils\\func_utils.py', 'pycsamt\\viewer\\mpldecorator.py']
 

@@ -2826,8 +2826,9 @@ def getMisfit(resp_fn =None, data_fn =None, kind='rho', **kwargs) :
             model_roughness)  
   
 
-@mdeco.geoplot1d(reason = 'resp', color_mode='color', grid_kws= {'color':'k', 
-           'ls':'-', 'lw':.2, 'alpha':.5, 'which':'major'},         
+@mdeco.geoplot1d(reason = 'resp', color_mode='color', font_size=3.,
+           grid_kws= {'color':'k', 'ls':'-', 'lw':.2, 'alpha':.5, 
+                      'which':'major'},
            linebbox_kws={'boxstyle':'sawtooth','facecolor':
                          'whitesmoke', 'color':'white'})
 def plotResponse(data_fn =None, resp_fn =None, stations =None, **kws):
@@ -3085,7 +3086,7 @@ def plotResponse(data_fn =None, resp_fn =None, stations =None, **kws):
 # if __name__=='__main__': 
 
 #     path= r'F:\ThesisImp\occam2D\old\K1'
-#     resPath='F:\ThesisImp\occam2D\invers+files\inver_res\data_and_resp'
+    # resPath='F:\ThesisImp\occam2D\invers+files\inver_res\data_and_resp'
 #     pathresp =os.path.join(resPath,'K8.resp' )
 #     path_data =os.path.join(resPath,'K8.dat' )
 #     resp_misfit, resp_sites_names, resp_sites_offsets, resp_freq, model_rms,\
@@ -3094,13 +3095,13 @@ def plotResponse(data_fn =None, resp_fn =None, stations =None, **kws):
     # odatapath = [os.path.join(resPath, file) 
     #              for file in os.listdir(resPath) if file.find('.dat')>=0]
     # resp_path = [os.path.join(resPath, file)  
-    #              for file in os.listdir(resPath) if file.find('.resp')>=0]
+    #               for file in os.listdir(resPath) if file.find('.resp')>=0]
 
-    # # resp_obj = Response(response_fn=pathresp, data_fn = path_data )
+    # resp_obj = Response(response_fn=pathresp, data_fn = path_data )
     # resp_lines, resp_stations, resp_freq, resp_appRHO, resp_phase,\
     #     resp_appRho_err, resp_phase_err, model_rms=\
     #         plotResponse(data_fn =resPath, 
-    #                      stations = ['S00', 'S04', 's08', 'S12'], #odatapath, resp_fn=resp_path, 
+    #                       stations = ['S00', 'S04', 's08', 'S12'], #odatapath, resp_fn=resp_path, 
     #                       rms =['1.013', '1.451', '1.00', '1.069'], 
     #                       error_type ='resi' )
 

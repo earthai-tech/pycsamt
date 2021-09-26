@@ -105,14 +105,14 @@ click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples
 
 * **Note** : 
     For CSAMT data processing and some codes implementation,
-    please refer to our [wiki pages](https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F).
+    please refer to our [wiki page](https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F).
 
 ## Credits
 
 We use or link some third-party software (beside the usual tool stack: numpy, scipy, matplotlib) and are grateful for all the work made by the authors of these awesome open-source tools:
-* mtpy: https://github.com/MTgeophysics/mtpy.git
-* occam2d: https://marineemlab.ucsd.edu/Projects/Occam/index.html
-* zonge softwares:
+* MTpy: https://github.com/MTgeophysics/mtpy.git
+* Occam2D: https://marineemlab.ucsd.edu/Projects/Occam/index.html
+* Zonge Engineering softwares:
     - AMTAVG: http://www.zonge.com/legacy/DatPro.html/
     - ASTATIC: http://www.zonge.com/legacy/PDF_DatPro/Astatic.pdf
 
@@ -121,13 +121,13 @@ We use or link some third-party software (beside the usual tool stack: numpy, sc
 
 ## Contributors
   
-1. Key Laboratory of Geoscience Big Data and Deep Resource of Zhejiang Province , School of Earth Sciences, Zhejiang University, China, http://www.zju.edu.cn/english/
+1. Key Laboratory of Geoscience Big Data and Deep Resource of Zhejiang Province, School of Earth Sciences, [Zhejiang University](http://www.zju.edu.cn/english/), China.
 
-2. Department of Geophysics, School of Geosciences and Info-physics, Central South University, China,(http://www.zju.edu.cn/english/)
+2. Department of Geophysics, School of Geosciences and Info-physics, [Central South University](http://www.zju.edu.cn/english/), China.
 
-3. Equipe de Recherche Géophysique Appliquée, Laboratoire de Geologie Ressources Minerales et Energetiques, UFR des Sciences de la Terre et des Ressources Minières, Université Félix Houphouët-Boigny, Cote d'Ivoire.(https://www.univ-fhb.edu.ci/index.php/ufr-strm/)
+3. Equipe de Recherche Géophysique Appliquée, Laboratoire de Geologie Ressources Minerales et Energetiques, UFR des Sciences de la Terre et des Ressources Minières, [Université Félix Houphouët-Boigny]( https://www.univ-fhb.edu.ci/index.php/ufr-strm/), Cote d'Ivoire.
 
-* Developer: 1-3 [_Kouadio K. Laurent ~@Daniel03_](kkouao@zju.edu.cn), <_etanoyau@gmail.com_>
+* Developer'name: 1, 3- [_Kouadio K. Laurent](kkouao@zju.edu.cn), <_etanoyau@gmail.com_>
 * Contibutors:
     *  2- [_Rong LIU_](liurongkaoyang@126.com) 
     *  1- [_Albert O. MALORY_](amalory@zju.edu.cn)   

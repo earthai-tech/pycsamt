@@ -127,10 +127,10 @@ We use or link some third-party software (beside the usual tool stack: numpy, sc
 
 3. Equipe de Recherche Géophysique Appliquée, Laboratoire de Geologie Ressources Minerales et Energetiques, UFR des Sciences de la Terre et des Ressources Minières, [Université Félix Houphouët-Boigny]( https://www.univ-fhb.edu.ci/index.php/ufr-strm/), Cote d'Ivoire.
 
-* Developer'name: 1, 3- [Kouadio K. Laurent](kkouao@zju.edu.cn), <_etanoyau@gmail.com_>
+* Developer'name: 1, 3- Kouadio K. Laurent <kkouao@zju.edu.cn, etanoyau@gmail.com_>
 * Contributors:
-    *  2- [Rong LIU](liurongkaoyang@126.com) 
-    *  1- [Albert O. MALORY](amalory@zju.edu.cn)   
-    *  1- [Chun-ming LIU](lifuming001@163.com) 
+    *  2- Rong LIU <liurongkaoyang@126.com>
+    *  1- Albert O. MALORY <amalory@zju.edu.cn>   
+    *  1- Chun-ming LIU <lifuming001@163.com> 
 
 

@@ -43,38 +43,38 @@ pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/p
 * E-field magnitude : [E]=  microvolt/meter (muv/m)
 * H-field magnitude : [H] =  gamma /amp 
 * Impedance Tensor [Z] in 2*2 matrices : [Z] = [E]/[H]:  km/s
-* Angles : Theta in degrees clockwise 
+* Angle : Theta in degrees clockwise 
 * Location coordinates ( X =N-S , Y = E-W) in m. 
-* Coordinates scaled in (UTM- Easting, Northing ) m. 
+* Coordinates in (UTM- Easting, Northing ) m. 
 * Geomagnetic North : 0 degree azimuth 
 * Step descent in m.
 * Input true resistivities in Ω.m 
 
 ## Available filters 
 
-1. *Trimming moving average* (TMA) mostly used by [Zonge International Engineering](http://zonge.com/) .
-2. *Fixed-length-dipole moving average* (FLMA) also used by [Zonge International Engineering](https://zonge.com.au/).
-3. *Adaptative moving-average* (AMA) based on idea of [Torres-Verdin](https://sci-hub.se/http://dx.doi.org/10.1190/1.1443273).
-4. *Removal distorsion* (`dist`)  and  *Static shift removal* (`ss`) usefull  filters to correct magnetotellurics (MT) data. 
+1. Trimming moving average (TMA) mostly used by [Zonge International Engineering](http://zonge.com/) .
+2. Fixed-length-dipole moving average (FLMA) also used by [Zonge International Engineering](https://zonge.com.au/).
+3. Adaptative moving-average (AMA) based on idea of [Torres-Verdin](https://sci-hub.se/http://dx.doi.org/10.1190/1.1443273).
+4. MT Removal distorsion (`dist`)  and  static shift removal (`ss`) filters basically used to correct magnetotellurics (MT) data. 
                                                                
-## Plot inversion misfit and geo-strata misfit (misfit G)
+## Plot inversion misfit and geo-stratigraphy misfit (misfit G)
 
-To plot the `misfit` from measured data and the calculated inversion data, bring the _occam response file_ (*.rep) and optional _Occamlogfile_ (*.logfile) and 
+To plot the `misfit` from measured data and the calculated inversion data, bring the _occam response file_ (_*.rep_) and  _Occamlogfile_ (optional _*.logfile_) then 
 run the script below:
  
-1. Plot some fitting curves of resistivity and phase inversion after applying on 
-the static shift correction on raw data. 
+1. Plot some fitting curves of resistivity and phase inversion after applying on observed data
+the static shift correction. 
 ```
 >>> from pysamt.modeling.occam2d import plotResponse 
 >>> resPath =r'data/inversionPath'                  # path to inversion files for each line
 >>> plotResponse(data_fn =resPath,
 ...                 stations = ['S00', 'S04', 's08', 'S12']  # sites to visualize 
-...                  rms =['1.013', '1.451', '1.00', '1.069'], # rms of each lines
+...                  rms =['1.013', '1.451', '1.00', '1.069'], # rms of each line
 ...                  error_type ='resi' )
 ``` 
-Click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/examplefitcurves.png) to see the reference output 
+Click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/examplefitcurves.png) to see the reference output. 
 
-2. To plot the `misfit`of the model responses of the FE algorithms used: 
+2. To plot the `misfit`of the model response from the FE algorithms: 
 ```
 >>> from pycsamt.modeling.occam2d import getMisfit 
 >>> path_data ='data/occam2D'
@@ -84,20 +84,20 @@ Click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples
 ```
 To see the output, click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/misfit.png).
 
-2. To evaluate the model errors `misfit G` between the the new resistivity model  or strata model(NMs) from inversion models(CRMs), 
-set `plot_misfit` argument to `True` . `Misfit G` computation is the best way to see the whether different layers provided with their corresponding resistivity values
-are misclassified or not. With few step of codes we can check the process :
+2. To evaluate the model errors `misfit G` between the the new resistivity model or stratigraphy models(NMs) from inversion models(CRMs), 
+set `plot_misfit` argument to `True` . `Misfit G` computation is the best way to see whether different layers with their corresponding resistivity values
+are misclassified or not. With few step of codes we can check the process:
 ```
->>> from pycsamt.geodrill.geoCore.geodrill impot Geostratigraphy model
+>>> from pycsamt.geodrill.geoCore.geodrill import Geostratigraphy
 >>> inversion_files = {'model_fn':'data/Occam2DModel', 
                        'mesh_fn': 'data/Occam2DMesh',
                         "iter_fn":'data/ITER27.iter',
                        'data_fn':'data/OccamDataFile.dat'}
->>> input_resistivity_values =[10,  70, 180, 1000,  3000] 
->>> input_layer_names =['river water','sedimentary rocks', 'fracture zone',  'gravel','igneous rocks']
+>>> resistivity_values =[10,  70, 180, 1000,  3000]   # resistivity values of layers to map
+>>> layer_names =['river water','sedimentary rocks', 'fracture zone',  'gravel','igneous rocks']
 >>> geosObj = GeoStratigraphy(**inversion_files,
-...                      input_resistivities=input_resistivity_values, 
-...                      input_layers=input_layer_names)
+...                      input_resistivities=resistivity_values, 
+...                      input_layers=layer_names)
 >>> geosObj.strataModel(kind='nm', plot_misfit =True)           # 'nm':New Model
 ```
 click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/geofit.png) for reference output. 
@@ -110,25 +110,27 @@ click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples
 ## Credits
 
 We use or link some third-party software (beside the usual tool stack: numpy, scipy, matplotlib) and are grateful for all the work made by the authors of these awesome open-source tools:
-* mtpy : https://github.com/MTgeophysics/mtpy.git
-* occam2d : https://marineemlab.ucsd.edu/Projects/Occam/index.html
-
+* mtpy: https://github.com/MTgeophysics/mtpy.git
+* occam2d: https://marineemlab.ucsd.edu/Projects/Occam/index.html
+* zonge softwares:
+    - AMTAVG: http://www.zonge.com/legacy/DatPro.html/
+    - ASTATIC: http://www.zonge.com/legacy/PDF_DatPro/Astatic.pdf
 
 ## System requirements 
 * Python 3.6+ 
 
 ## Contributors
   
-1. Key Laboratory of Geoscience Big Data and Deep Resource of Zhejiang Province , School of Earth Sciences, Zhejiang University, China
+1. Key Laboratory of Geoscience Big Data and Deep Resource of Zhejiang Province , School of Earth Sciences, Zhejiang University, China, http://www.zju.edu.cn/english/
 
-2. Department of Geophysics, School of Geosciences and Info-physics, Central South University, China
+2. Department of Geophysics, School of Geosciences and Info-physics, Central South University, China,(http://www.zju.edu.cn/english/)
 
-3. Laboratoire de Géophysique Appliquée, UFR des Sciences de la Terre et des Ressources Minières, Université Félix Houphouët-Boigny, Cote d'Ivoire
+3. Equipe de Recherche Géophysique Appliquée, Laboratoire de Geologie Ressources Minerales et Energetiques, UFR des Sciences de la Terre et des Ressources Minières, Université Félix Houphouët-Boigny, Cote d'Ivoire.(https://www.univ-fhb.edu.ci/index.php/ufr-strm/)
 
-* Developer:  [_Kouadio K. Laurent_](kkouao@zju.edu.cn), _etanoyau@gmail.com_: [1](http://www.zju.edu.cn/english/), [3](https://www.univ-fhb.edu.ci/index.php/ufr-strm/)
+* Developer: 1-3 [_Kouadio K. Laurent ~@Daniel03_](kkouao@zju.edu.cn), <_etanoyau@gmail.com_>
 * Contibutors:
-    *  [2](http://en.csu.edu.cn/) [_Rong LIU_](liurongkaoyang@126.com) 
-    *  [1](http://www.zju.edu.cn/english/) [_Albert O. MALORY_](amalory@zju.edu.cn)   
-    *  [2](http://en.csu.edu.cn/) [_Chun-ming LIU_](lifuming001@163.com) 
+    *  2- [_Rong LIU_](liurongkaoyang@126.com) 
+    *  1- [_Albert O. MALORY_](amalory@zju.edu.cn)   
+    *  1- [_Chun-ming LIU_](lifuming001@163.com) 
 
 

@@ -85,20 +85,20 @@ Click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples
 To see the output, click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/misfit.png).
 
 2. To evaluate the model errors `misfit G` between the the new resistivity model or stratigraphy models(NMs) from inversion models(CRMs), 
-set `plot_misfit` argument to `True` . `Misfit G` computation is the best way to see whether different layers with their corresponding resistivity values
+set `misfit_G` argument to `True` . `Misfit G` computation is the best way to see whether different layers with their corresponding resistivity values
 are misclassified or not. With few step of codes we can check the process:
 ```
->>> from pycsamt.geodrill.geoCore.geodrill import Geostratigraphy
+>>> from pycsamt.geodrill.geoCore.geodrill import geoModel
 >>> inversion_files = {'model_fn':'data/Occam2DModel', 
                        'mesh_fn': 'data/Occam2DMesh',
                         "iter_fn":'data/ITER27.iter',
                        'data_fn':'data/OccamDataFile.dat'}
 >>> resistivity_values =[10,  70, 180, 1000,  3000]   # resistivity values of layers to map
 >>> layer_names =['river water','sedimentary rocks', 'fracture zone',  'gravel','igneous rocks']
->>> geosObj = GeoStratigraphy(**inversion_files,
+>>> geosObj = geo(**inversion_files,
 ...                      input_resistivities=resistivity_values, 
 ...                      input_layers=layer_names)
->>> geosObj.strataModel(kind='nm', plot_misfit =True)           # 'nm':New Model
+>>> geosObj.stratigraphyModel(kind='nm', misfit_G =True)           # 'nm':New Model
 ```
 click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/geofit.png) for reference output. 
 

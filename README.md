@@ -88,14 +88,14 @@ To see the output, click [here](https://github.com/WEgeophysics/pyCSAMT/blob/dev
 set `misfit_G` argument to `True` . `Misfit G` computation is the best way to see whether different layers with their corresponding resistivity values
 are misclassified or not. With few step of codes we can check the process:
 ```
->>> from pycsamt.geodrill.geoCore.geodrill import geoModel
+>>> from pycsamt.geodrill.geoCore.geodrill import GeoStratigraphy
 >>> inversion_files = {'model_fn':'data/Occam2DModel', 
                        'mesh_fn': 'data/Occam2DMesh',
                         "iter_fn":'data/ITER27.iter',
                        'data_fn':'data/OccamDataFile.dat'}
->>> resistivity_values =[10,  70, 180, 1000,  3000]   # resistivity values of layers to map
->>> layer_names =['river water','sedimentary rocks', 'fracture zone',  'gravel','igneous rocks']
->>> geosObj = geo(**inversion_files,
+>>> resistivity_values =[10, 60, 70, 180, 1000,  3000, 7000]   # resistivity values of layers to map
+>>> layer_names =['river water','sedimentary rocks', 'fracture zone',  'gravel', granite', 'igneous rocks','basement rocks' ]
+>>> geosObj = GeoStratigraphy(**inversion_files,
 ...                      input_resistivities=resistivity_values, 
 ...                      input_layers=layer_names)
 >>> geosObj.stratigraphyModel(kind='nm', misfit_G =True)           # 'nm':New Model

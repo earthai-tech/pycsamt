@@ -42,17 +42,14 @@ import numpy as np
 import pandas as pd 
 import scipy as sp
 
-
-
 import  pycsamt.utils.exceptions as CSex
 from pycsamt.modeling import occam2d
 # from pycsamt.utils.avg_utils import ReadFile as rfi
 from pycsamt.ff.core.cs import Profile
-
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
 from pycsamt.viewer.mpldecorator  import geoplot2d
-
+from pycsamt.utils.decorator import deprecated
 from pycsamt.utils import Agso
 from pycsamt.geodrill.geoCore import structural as STRL
 from pycsamt.geodrill.geoDB.sql_recorder import GeoDataBase 
@@ -3758,7 +3755,7 @@ def geoModel( **kwargs ):
     
     """
     depth_scale =kwargs.pop('scale', 'm')
-    geodtype=kwargs.pop('plot_data', 'rr')
+    geodtype=kwargs.pop('kind', 'rr')
     plot_misfit = kwargs.pop('plot_misfit', False)
 
     #create geodrill obj 
@@ -3822,6 +3819,7 @@ def geoModel( **kwargs ):
 
     else : 
         geo_rho_data = np.log10(geo_rho_data)
+
 
     return (geo_rho_data, geodrill_obj.station_names,
         geodrill_obj.station_location,
@@ -4520,7 +4518,9 @@ class GeoStratigraphy(Geodrill):
                                                _gammaVal[indexEprops]))
                 
         return _gammaVal 
-        
+       
+    @deprecated(reason= 'Expensive method, should deprecated soon to hard-code'
+                ' and generate a bug when dimensions need to be  resized.!')
     @geoplot2d(reason='model',cmap='jet_r', plot_style ='pcolormesh',
                show_grid=False )
     def strataModel(self, kind ='nmStrata', **kwargs): 
@@ -4539,7 +4539,7 @@ class GeoStratigraphy(Geodrill):
         
         :Example: 
             
-        >>> from pycsamt.geodrill.geoCore.geodrill impot Geostraigraphy model
+        >>> from pycsamt.geodrill.geoCore.geodrill import Geostratigraphy 
         >>> geosObj = GeoStratigraphy(**inversion_files,
                               input_resistivities=input_resistivity_values, 
                               input_layers=input_layer_names)
@@ -4557,10 +4557,12 @@ class GeoStratigraphy(Geodrill):
         
             
         depth_scale = kwargs.pop('scale', 'm')
-        plot_misfit =kwargs.pop('plot_misfit', False)
+        plot_misfit =kwargs.pop('misfit_G', False)
         misfit_percentage = kwargs.pop('in_percent', True)
         
-        if kind.lower().find('nm')>=0: 
+        if kind.lower().find('nm')>=0 or kind.lower().find('strata')>=0:
+            if self.nmSites is None: 
+                self._createNM()
             data = self.nmSites 
         elif kind.lower().find('crm'): 
             data = self.crmSites
@@ -4580,12 +4582,34 @@ class GeoStratigraphy(Geodrill):
                 'Misfit min','=',data.min()*100., '%' ))                          
             print('-'*77)
             
+        data = np.resize (data, (len(self.geo_depth), 
+                                 len(self.station_location)))
+        self.doi = self.geo_depth.max()
+        
         return (data, self.station_names, self.station_location,
             self.geo_depth, self.doi, depth_scale,self.model_rms, 
             self.model_roughness, plot_misfit ) 
     
-    
-    
+    def stratigraphyModel (self, kind ='nm', misfit_G= False, **kwargs): 
+        """ Make stratigraphy model 
+        
+        :param kind: 
+            - `nms` mean new model plots after inputs the `tres`
+            - `crm` means calculated resistivity from occam model blocks 
+        :param misfit_G: bool, 
+            compute error between CRM and NM if set to `True` 
+        """
+        # get attribute from Geostratigraph object `
+        for file in ['model_fn', 'iter_fn', 'data_fn', 'mesh_fn',
+                     'input_resistivities', 'input_layers']: 
+            if hasattr(self, file):
+                kwargs[file]= getattr(self, file)
+                  
+        geoModel( kind =kind,
+                plot_misfit=misfit_G,
+              **kwargs)  
+        
+        
 def makeBlockSites(station_location, x_nodes, block_model): 
     """ Build block that contains only the station locations values
     
@@ -4671,35 +4695,31 @@ def display_infos(infos, **kws):
     print(inline * size )
     
 
-# if __name__=="__main__" :
+if __name__=="__main__" :
 
-#     path=r'F:\ThesisImp\occam2D\invers+files\inver_res\K4'
-#     inversion_files = {'model_fn':'Occam2DModel', 
-#                        'mesh_fn': 'Occam2DMesh',
-#                         "iter_fn":'ITER27.iter',
-#                        'data_fn':'OccamDataFile.dat'
-#                         }
-#     input_resistivity_values =[10, 66, 70, 180, 1000, 2000, 3000] 
-                                   
-#     inpt2=[np.log10(t) for t in input_resistivity_values]
-#     ipts= ['river water', 'fracture zone', 'granite', 'gravel',
-#      'sedimentary rocks', 'massive sulphide', 'igneous rocks', 
-#      'gravel', 'sedimentary rocks']
-#     # input_resistivity_values =[10, 66, 70, 180, 1000, 2000, 
-#     #                                3000, 7000, 15000 ] 
-#     input_layer_names =['river water', 'fracture zone', 'granite']
-#     inversion_files = {key:os.path.join(path, vv) for key,
-#                         vv in inversion_files.items()}
+    path=r'F:\ThesisImp\occam2D\invers+files\inver_res\K1'
+    inversion_files = {'model_fn':'Occam2DModel', 
+                        'mesh_fn': 'Occam2DMesh',
+                        "iter_fn":'ITER17.iter',
+                        'data_fn':'OccamDataFile.dat'
+                        }
+    input_resistivity_values =[10, 66, 70, 100, 1000, 2000, 
+                                    3000, 7000, 15000 ] 
+    input_layer_names =['river water', 'fracture zone', 'granite']
+    inversion_files = {key:os.path.join(path, vv) for key,
+                        vv in inversion_files.items()}
   
 #     with np.errstate(divide='ignore'):
 #         ss= np.array(inpt2) /np.array(input_resistivity_values )
-#         print(ss )
+# #         print(ss )
+    geosObj = GeoStratigraphy(**inversion_files,
+                      input_resistivities=input_resistivity_values, 
+                      input_layers=input_layer_names)
+    geosObj.stratigraphyModel(kind ='nm',misfit_G=False)
     
-                    
-                    
-                    
-                    
-                    
+
+                
+    
                     
                     
                     

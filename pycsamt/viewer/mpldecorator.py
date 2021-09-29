@@ -219,7 +219,7 @@ class geoplot1d :
 
             # --> set default font size
             # plt.rcParams['font.size'] = self.font_size
-            fontdict = {'size': self.font_size + 2, 'weight': 'bold'}
+            fontdict = {'size': self.font_size, 'weight': 'bold'}
             
             # set all legend properties on dictionnary 
             kw_legend_props ={'loc':self.legend_loc , 
@@ -784,7 +784,8 @@ class geoplot2d(object):
             try : 
                 # for consistency , check whether value are on list 
                 if not isinstance (self.delineate_resistivity_curve, list ): 
-                    self.delineate_resistivity_curve=[self.delineate_resistivity_curve ]
+                    self.delineate_resistivity_curve=[
+                        self.delineate_resistivity_curve ]
             except :
                 pass 
         
@@ -811,7 +812,8 @@ class geoplot2d(object):
             :return: function decorated after visualisation
   
             """
-            self._logging.info(' Plot decorated {0} chain'.format(func.__name__))
+            self._logging.info(
+                ' Plot decorated {0} chain'.format(func.__name__))
     
             _f=0 # flag to separated strata model misfit and occam model misfit
                 #   from occamResponse file 
@@ -849,20 +851,29 @@ class geoplot2d(object):
                         self.model_roughness, plot_misfit  =\
                         func(*args, **kwargs)
                         
-                        
-                # --> check doi value provided , and convert to default unit {meters}  
+                #      # check_dimensionality 
+                # if occam_model_resistiviy_obj.shape !=(len(occam_model_depth_offsets), 
+                #                                         len(occam_data_station_offsets)): 
+                #     occam_model_resistiviy_obj,occam_model_depth_offsets,\
+                #         occam_data_station_offsets =  self._check_dimensionality (
+                #             occam_model_resistiviy_obj,occam_model_depth_offsets,
+                #                                 occam_data_station_offsets)
+                    
+                self.doi = occam_model_depth_offsets.max()
+                #     self.doi = occam_model_depth_offsets.max()
+                # --> check doi value provided, and convert to default unit {meters}  
                 self.doi =mplotus.depth_of_investigation(doi=self.doi)
-                
                 
                 # set boundaries of stations offsets and depth 
                 spec_f = -(self.doi/5)/dz  # assume that depth will  start by 
                 #0 then substract add value so 
                 # to get space for station names text
-                if self.climits is None : self.climits =(0,4)
+                if self.climits is None :
+                    self.climits =(0,4)
                 if plot_misfit is True : 
                     _f=2
-                    
                 self.ylimits =(spec_f, self.doi/dz)    
+                
             elif self.reason =='misfit': 
                 occam_model_resistiviy_obj, occam_data_station_names,\
                     occam_data_station_offsets, occam_model_depth_offsets,\
@@ -890,11 +901,11 @@ class geoplot2d(object):
        
                     self.ylimits = (self.doi, occam_model_depth_offsets.min())
                     
-     
-
+           
             occam_data_station_offsets =np.array(occam_data_station_offsets)
             # station separation and get xpad . ex dl=50 then xpad =25 
-            dl = occam_data_station_offsets.max()/ (len(occam_data_station_offsets)-1)
+            dl = occam_data_station_offsets.max()/ (len(
+                occam_data_station_offsets)-1)
             self.xpad = (dl/2)/dz 
     
         
@@ -924,7 +935,7 @@ class geoplot2d(object):
             self._logging.info ('Ready to plot {0}'
                                 ' with matplotlib "{1}" style.'.
                                 format(self.reason, self.plot_style))   
-                
+
             if self.plot_style.lower() =='pcolormesh':
                 mesh_x  , mesh_z= np.meshgrid(occam_data_station_offsets,
                                               occam_model_depth_offsets )
@@ -1014,7 +1025,8 @@ class geoplot2d(object):
 
             elif self.reason =='misfit': 
                 ydown_stiteslbls = self.ylimits[0] + 0.1 * self.ylimits[1]
-                ydown_stationlbls= self.ylimits[0] + self.ylimits[1]/self.ylimits[0]
+                ydown_stationlbls= self.ylimits[0] +\
+                    self.ylimits[1]/self.ylimits[0]
                 xhorizontal_lbs = (occam_data_station_offsets.max()- 
                                    occam_data_station_offsets.min())/2
                 yb=0.98
@@ -1129,3 +1141,72 @@ class geoplot2d(object):
             return func(*args, **kwargs)
         
         return new_func
+    
+    def _check_dimensionality(self, data, z, x):
+        """ Check dimensionality of data and fix it"""
+
+        def reduce_shape(Xshape, x, axis_name =None): 
+            """ Reduce shape to keep the same shape"""
+            mess ="`{0}` shape({1}) {2} than the data shape `{0}` = ({3})."
+            ox = len(x) 
+            dsh = Xshape 
+            if len(x) > Xshape : 
+                x = x[: int (Xshape)]
+                self._logging.debug(''.join([
+                    f"Resize {axis_name!r}={ox!r} to {Xshape!r}.", 
+                    mess.format(axis_name, len(x),'more',Xshape)])) 
+                                        
+            elif len(x) < Xshape: 
+                Xshape = len(x)
+                self._logging.debug(''.join([
+                    f"Resize {axis_name!r}={dsh!r} to {Xshape!r}.",
+                    mess.format(axis_name, len(x),'less', Xshape)]))
+                
+            return int(Xshape), x 
+        
+        sz0, z = reduce_shape(data.shape[0],
+                              x=z, axis_name ='Z')
+        sx0, x =reduce_shape (data.shape[1], 
+                              x=x, axis_name ='X')
+        # resize theshape 
+        # data  = np.resize(data, (sz0, sx0))
+        data = data [:sz0, :sx0]
+        
+        return data , z, x 
+                
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        

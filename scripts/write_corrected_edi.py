@@ -19,14 +19,14 @@ from pycsamt.ff.processing.corr import shifting
 # from pycsamt.ff.processing.corr import shifting 
 
 # profile edipath : full path to edifiles or single edifile 
-edipath =os.path.join(os.environ['pyCSAMT'], 'data','_outputEDIFiltered_AMA') #'edi')#, 'new_csa000.edi' )
-#edipath = r'C:\Users\Administrator\Desktop\ThesisImp\edis\_special_K6_edi\K6_edi_rew'
+# edipath =os.path.join(os.environ['pyCSAMT'], 'data','_outputEDIFiltered_AMA') #'edi')#, 'new_csa000.edi' )
+edipath = 'data/K1_edi'
 
 # path to hold edi outputs files 
 savepath =None  # r'C:\Users\Administrator\Desktop\ThesisImp\edis\_special_K6_edi\k6_TMA'
 
 # new edi output filenames 
-new_edifilename = 'k6'                  #'ybro_survey' 
+new_edifilename = 'K1_c'#None #'k6'                  #'ybro_survey' 
  
 # Applied filter 
 FILTER = 'ama'                          # availables filters [`tma`, `flma`,`ama`, `ss`, `dist`]
@@ -35,7 +35,7 @@ FILTER = 'ama'                          # availables filters [`tma`, `flma`,`ama
 # number of points : to computed the window width  
 number_of_filter_points = 7.            # default is 7. set to 01. when use si ngle edifiles 
 # number of skin depth : specially provided to compute rho ith AMA filter 
-number_of_skin_depth =7.                # default is 3. can be 1 to 10 skin depths 
+number_of_skin_depth =3.                # default is 3. can be 1 to 10 skin depths 
 
 # reference frequency 
 reference_frequency = 8192.             # frequency at clean data , usefull when data is EMAP data 

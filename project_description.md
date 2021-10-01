@@ -10,16 +10,19 @@ _For far-field CSAMT standard data processing, modeling and geophysical interpre
 
 * [Definition](#https://ui.adsabs.harvard.edu/abs/2018EGUGA..2013744L/abstract)
 
-CSAMT is an enhanced frequency domain EM program using synchronous stacking and averaging, and Fourier integral methods to 
+CSAMT is an enhanced frequency domain of EM program using synchronous stacking and averaging, and Fourier integral methods to 
 improve the signal to noise ratio. Later, CSAMT is well appreciated in geophysical commumity and
-consequently was used as a suitable exploration method well-established in deep geological structure detection.
+was used as a suitable exploration method well-established in deep geological structure detection.
 Today the method is broadly applied in  diverse of exploration problems such as mineral , hydrocarbon,  groundwater resources, 
 as well as mapping the fault-zones etc. 
 
 * [Purpose](#Purpose)
 
- `pycsamt` contains basic steps and improves CSAMT standard data processing and uses  [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) modeling software for the fisrt release.
-It deals with more than 150  geological structures and electrical properties of rocks to generate a pseudo-stratigraphy 2D map to enhance geophysical interpretation especially in more geological complex area ( with various tectonic accidents). 
+ `pycsamt` contains basic steps and filters for  CSAMT standard data processing and deals 
+ with  [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) modeling software.
+ The package also includes  a database geological structures and electrical properties of rocks,
+ based on representative chart of  Palacky (1988) and the rock and mineral property classification of Slichter and Telkes (1942)
+to generate  a pseudo-stratigraphy log for drilling operations.
 
 
  * [Note](#https://iopscience.iop.org/article/10.1088/1742-6596/1127/1/012021)
@@ -30,9 +33,9 @@ and [GoldenSoftware](https://www.goldensoftware.com/products/surfer).
 
 ## Installation 
 
-Distributed on [PyPI](https://pypi.org/project/pycsamt/1.0.3/) and can be installed with `pip`:
+Distributed on [PyPI](https://pypi.org/project/pycsamt/1.0.7/) and can be installed with `pip`:
 `$ pip install pycsamt` or `$ pip install user pycsamt`. For more details, please refer to the [installation guide](https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux) on our [wiki page](https://github.com/WEgeophysics/pyCSAMT/wiki). 
 
 ## Contributing
 
-If you would like to help modify or enhance the project, you'are welcome and you'll find more information on [issue template](https://github.com/WEgeophysics/pyCSAMT/blob/master/ISSUE_TEMPLATE.md) file located in [git repository](https://github.com/WEgeophysics/pycsamt).
+If you would like to help modify or enhance the project, you are welcome and you'll find more information on [issue template](https://github.com/WEgeophysics/pyCSAMT/blob/master/ISSUE_TEMPLATE.md) file located in [git repository](https://github.com/WEgeophysics/pycsamt).

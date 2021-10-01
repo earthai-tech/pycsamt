@@ -89,7 +89,7 @@ setup_kwargs['install_requires'] = ['numpy>=1.8.1',
                                      'pyproj',
                                      'configparser']
                                      
-setup_kwargs['python_requires'] ='>=3.6'
+setup_kwargs['python_requires'] ='>=3.7'
 
 authors =["Kouadio K. Laurent, ", 'Rong Liu, ', 
           'Binbin Mi, ','Chum-ning Liu, ', 'Albert O. Malory.']

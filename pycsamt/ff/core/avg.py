@@ -36,21 +36,16 @@ import os, re
 import warnings,shutil
 import numpy as np
 import pandas as pd
+
 from pycsamt.etc import infos as infOS
 from  datetime import datetime, timezone
-
-from pycsamt.ff.core.cs import Site 
-
 from pycsamt.ff.core.j import J_collection 
 from pycsamt.ff.core.edi import Edi
-
-from pycsamt.ff.processing import corr 
 from pycsamt.ff.processing import callffunc as cfunc
 from pycsamt.ff.processing import zcalculator as Zcc
 from pycsamt.utils._csamtpylog import csamtpylog
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import exceptions as CSex
-
 
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
@@ -539,11 +534,12 @@ class Avg (object):
             * survey_name:   bool, 
                         survey_area  
         """
+        from pycsamt.ff.core.cs import Site 
+        
         savepath =kws.pop('savepath', None)
         write_info =kws.pop('writeInfos', False)
         survey_name =kws.pop('survey_name', None)
-        
-        
+    
         if j_extension is not None and '.' not in j_extension:
             j_extension ='.'+j_extension
         
@@ -816,6 +812,8 @@ class Avg (object):
             ...           savepath =save_edipath, 
             ...           apply_filter=None ) 
         """
+        from pycsamt.ff.core.cs import Site 
+        from pycsamt.ff.processing import corr 
         
         utm_zone = kwargs.pop('utm_zone', None)
         

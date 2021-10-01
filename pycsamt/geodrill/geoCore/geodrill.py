@@ -40,7 +40,6 @@ import warnings
 import datetime
 import numpy as np 
 import pandas as pd 
-import scipy as sp
 
 import  pycsamt.utils.exceptions as CSex
 from pycsamt.modeling import occam2d
@@ -59,7 +58,9 @@ try :
     _logger=csamtpylog.get_csamtpy_logger(__name__)
 except :
     pass
+
 try : 
+      import scipy as sp
       import scipy.stats as spSTAT
       scipy_version = [int(vers) for vers in sp.__version__.split('.')] 
       if scipy_version [0] == 1 : 

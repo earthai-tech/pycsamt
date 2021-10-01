@@ -47,6 +47,7 @@ from pycsamt.utils import gis_tools as gis
 from pycsamt.utils import func_utils  as func
 from pycsamt.utils._csamtpylog import csamtpylog
 
+
 from pycsamt.ff.processing import callffunc as cfunc 
 import pycsamt.ff.processing.zcalculator as Zcc
 
@@ -58,9 +59,10 @@ try :
     scipy_version = [int(vers) for vers in sp.__version__.split('.')] #[1,4,1]
     if scipy_version [0] == 1 : 
         if scipy_version [1] < 4 :
-            warnings.warn('Note: need scipy version 1.4.0 or more . It may probably  get a '
-                          'trouble when import "stats" attribute'
-                          'under such version.It may probably move from ', ImportWarning)
+            warnings.warn('Note: need scipy version 1.4.0 or more . It may '
+                          'probably  get a trouble when import "stats" attribute'
+                          'under such version.It may probably move from ',
+                          ImportWarning)
             _logger.warning('Note: need scipy version 0.14.0 or higher or for'
                             ' stats.linearegress. Under such version'
                             'it might not work.')
@@ -81,11 +83,12 @@ except :
 
 class CSAMT(object): 
     """
-      CSAMT class is super class container of all the information of the other classes,
-     J, Avg and Edi. In fact, the CS object collect all the information of the other classes,
-     once questioned for specific uses. The purpose of the construction
-     of this object to avoid the repetition of scripts throughout the project.
-     Objet CSAMT can recognize the typycal input obj of file and set attributes for use . 
+      CSAMT class is super class container of all the information of the 
+      other classes,J, Avg and Edi. In fact, the CS object collect all 
+     the information of the other classes, once questioned for specific uses.
+     The purpose of the construction of this object to avoid the repetition
+     of scripts throughout the project.Objet CSAMT can recognize the typycal
+      input obj of file and set attributes for use . 
      
     Arguments 
     ---------
@@ -243,7 +246,7 @@ class CSAMT(object):
     @property 
     def fpath (self): 
         """
-        assert path and redirect to file either single file  ,edifiles or Jfiles. 
+        assert path and redirect to file either single file,edifiles or Jfiles. 
         find the specific path [EDI|J] path.
         """
         return CSAMT.find_path(path = self._fn )
@@ -264,21 +267,25 @@ class CSAMT(object):
                     full path to AG.Jones files , j directory
         """
         self._logging.info("Reading <%s> file from <%s> " % (self._fn ,
-                                                             self._read_csamt_objs.__name__))
+                               self._read_csamt_objs.__name__))
         
         if fn is not None : self._fn = fn 
      
         # if path is not None : self._path =path 
-        
+
         if  self.fpath =='isfile' : 
-            if inFO._sensitive.which_file(filename= self._fn, deep =False) =='avg':
+            if inFO._sensitive.which_file(filename= self._fn,
+                                          deep =False) =='avg':
                     self._read_avg_obj(avgfile = self._fn)
-            elif inFO._sensitive.which_file(filename= self._fn, deep =False) =='edi':
+            elif inFO._sensitive.which_file(filename= self._fn, 
+                                            deep =False) =='edi':
                     self._read_edi_obj(edi_fn = self._fn )
-            elif inFO._sensitive.which_file(filename= self._fn, deep =False) =='j':  
+            elif inFO._sensitive.which_file(filename= self._fn,
+                                            deep =False) =='j':  
                     self._read_j_obj(j_fn= self._fn  )
             else : 
-                warnings.warn('Currently  pyCSAMT work with "edi", "j" and "avg" file. '\
+                warnings.warn(
+                    'Currently  pyCSAMT work with "edi", "j" and "avg" file. '
                               'Please provided one amomg them.')
                 self._logging.warn(
                     'It seems file provided <%s> does not match '\
@@ -337,17 +344,19 @@ class CSAMT(object):
         if self.fpath  =='edipath': #---> set the path then collect all jfiles .
         
             edifiles =[os.path.join(self._fn, eddfile) for
-                       eddfile in os.listdir(self._fn) if eddfile.endswith('.edi')]
+                       eddfile in os.listdir(self._fn) 
+                       if eddfile.endswith('.edi')]
         
         # if edifile is not None : self._fn =edifile 
-        
-        elif self.fpath  == 'isfile' : #-- > once only edifile is provided then put on list ...
+        #-- > once only edifile is provided then put on list ...
+        elif self.fpath  == 'isfile' : 
             edifiles =[self._fn]
 
         edi_obj = CSAMTedi.Edi_collection(list_of_edifiles =edifiles)
 
-        self._logging.info ('Compute Z impedance Tensor  and '\
-                            'set attributes. _ Func <%s>'%self._read_edi_obj.__name__)
+        self._logging.info ('Compute Z impedance Tensor  and '
+                            'set attributes. _ Func '
+                            '<%s>'%self._read_edi_obj.__name__)
         
         self._res = edi_obj.res_xy 
         self._res_err = edi_obj.res_err_xy
@@ -366,7 +375,8 @@ class CSAMT(object):
         self.lat =edi_obj.latitude
         self.lon= edi_obj.longitude
     
-        self.Location.convert_location_2_utm(latitude =self.lat, longitude =self.lon)
+        self.Location.convert_location_2_utm(latitude =self.lat, 
+                                             longitude =self.lon)
         self.east = self.Location.easting 
         self.north =self.Location.northing
         self.elev =edi_obj.elevation 
@@ -410,11 +420,13 @@ class CSAMT(object):
         if j_fn is not None : self._fn =j_fn 
         
         # if self._fn is not None : 
-        if self.fpath =='jpath':        #---> set the path then collect all jfiles .
-            jfiles =[os.path.join(self._fn, jjfile) for jjfile in os.listdir(self._fn)]
+        if self.fpath =='jpath':   #---> set the path then collect all jfiles 
+            jfiles =[os.path.join(self._fn, jjfile) 
+                     for jjfile in os.listdir(self._fn)]
 
                 # if jfile is not None : self._fn = jfile 
-        elif self.fpath =='isfile' :  #-- > once only jfile is provided then put on list ...
+                #-- > once only jfile is provided then put on list ...
+        elif self.fpath =='isfile' :  
                 jfiles =[self._fn]
                 
 
@@ -430,7 +442,8 @@ class CSAMT(object):
         self.jsites_infos = j_obj.J.jinfo.site_infos
         self.jprogvers= j_obj.J.jinfo.progvers 
   
-        self.Location.convert_location_2_utm(latitude =self.lat, longitude =self.lon)
+        self.Location.convert_location_2_utm(latitude =self.lat,
+                                             longitude =self.lon)
         
         self.station =j_obj.id 
         # self.azim =np.stack ((self.east, self.north), axis= 1)
@@ -460,7 +473,9 @@ class CSAMT(object):
         
         #--> build Z_obj
         
-        self._logging.info ('Compute Z impedance Tensor and set attributes. _ Func <%s>'%self._read_j_obj.__name__)
+        self._logging.info (
+            'Compute Z impedance Tensor ''and set attributes.'
+            ' _ Func <%s>'%self._read_j_obj.__name__)
         
         self._z_err_xy,  self._z_xy,   self._z_yx = [{} for ii in range(3)]
         csamt_z_obj =CSAMTz.Z()
@@ -474,11 +489,14 @@ class CSAMT(object):
                                                   dtype =np.float), np.zeros (
                                                       (self._freq.size, 2, 2),
                                                       dtype=np.float)
-            phs_array[:, 0, 1]  , phs_err_array [:, 0, 1] = self._phs[stn] , self._phs_err[stn]
-            res_array [:, 0, 1] , res_err_array [:, 0, 1]  = values , self._res_err[stn]
+            phs_array[:, 0, 1]  , phs_err_array [:, 0, 1] =\
+                self._phs[stn] , self._phs_err[stn]
+            res_array [:, 0, 1] , res_err_array [:, 0, 1]  =\
+                values , self._res_err[stn]
   
             
-            csamt_z_obj.set_res_phase( res_array =res_array ,phase_array = phs_array,  
+            csamt_z_obj.set_res_phase( res_array =res_array ,
+                                      phase_array = phs_array,  
                                       freq=self._freq, 
                                       res_err_array= res_err_array, 
                                       phase_err_array= phs_err_array)
@@ -510,7 +528,7 @@ class CSAMT(object):
         profile_fn = kwargs.pop('profile_fn', None)
         
         if profile_fn is not None :self._pfn = profile_fn 
-            
+        if avgfile is not None : self._fn =avgfile   
         
         northing = kwargs.pop('easting', None)
         easting =kwargs.pop('northing', None)
@@ -538,32 +556,40 @@ class CSAMT(object):
         #                             latitude =latitude , 
         #                             longitude =longitude )
         
-        avg_obj = CSAMTavg.Avg(data_fn=avgfile)
+        avg_obj = CSAMTavg.Avg(data_fn=self._fn)
         
         self._logging.info ('Compute Z impedance Tensor,Rho and phase '\
-                            ' and set attributes. _ Func <%s>'%self._read_avg_obj.__name__)
+                            ' and set attributes. _ '
+                            'Func <%s>'%self._read_avg_obj.__name__)
         #--- set attribute --- 
         self._res =avg_obj.Data_section.Resistivity.loc
         self.station = avg_obj.Data_section.Station.names
         self._data_section = avg_obj.Data_section._data_array
         
-        emag_obj ,hmag_obj =avg_obj.Data_section.Emag.loc, avg_obj.Data_section.Hmag.loc  
-        c_var_emag_obj , c_var_hmag_obj = avg_obj.Data_section.pcEmag.loc , avg_obj.Data_section.pcHmag.loc
-        c_var_app_rho_obj , std_phase_obj =avg_obj.Data_section.pcRho.loc, avg_obj.Data_section.sPhz.loc
+        emag_obj ,hmag_obj =avg_obj.Data_section.Emag.loc,\
+            avg_obj.Data_section.Hmag.loc  
+        c_var_emag_obj , c_var_hmag_obj = avg_obj.Data_section.pcEmag.loc ,\
+            avg_obj.Data_section.pcHmag.loc
+        c_var_app_rho_obj , std_phase_obj =avg_obj.Data_section.pcRho.loc,\
+            avg_obj.Data_section.sPhz.loc
 
+        self._res_err = {key : Zcc.compute_sigmas_e_h_and_sigma_rho(
+            pc_emag= c_var_emag_obj[key],
+            pc_hmag= c_var_hmag_obj[key] ,
+            pc_app_rho=c_var_app_rho_obj[key],
+            app_rho= self._res[key], 
+            emag= emag_obj[key],
+            hmag=hmag_obj[key])[-1] for key , value in self._res.items()}
         
-        self._res_err = {key : Zcc.compute_sigmas_e_h_and_sigma_rho(pc_emag= c_var_emag_obj[key],
-                                                                      pc_hmag= c_var_hmag_obj[key] ,
-                                                                      pc_app_rho=c_var_app_rho_obj[key],
-                                                                      app_rho= self._res[key], 
-                                                                      emag= emag_obj[key],
-                                                                      hmag=hmag_obj[key])[-1] for key , value in self._res.items()}
-        # phase value in Zonge AVG is on milirad , may convert into rad before to degree. 
-        self._phs = { stn: 180 * phase_value *1e-3 / np.pi for stn, phase_value in avg_obj.Data_section.Phase.loc.items()}
+        # phase value in Zonge AVG is on milirad , 
+        #may convert into rad before to degree. 
+        self._phs = { stn: 180 * phase_value *1e-3 / np.pi 
+                     for stn, phase_value
+                     in avg_obj.Data_section.Phase.loc.items()}
         
         # self._freq = avg_obj.Data_section.Frequency.loc 
         self._freq=avg_obj.Data_section.Frequency.value 
-        self._phs_err = {stn : 180 * sphz_value /100 * 1e-3/ np.pi 
+        self._phs_err = {stn : (180 * sphz_value) /100 * (1e-3/ np.pi) 
                          for stn , sphz_value  in  std_phase_obj.items()}
         
         #--> build Z_obj 
@@ -579,11 +605,14 @@ class CSAMT(object):
                                                   dtype =np.float), np.zeros (
                                                       (self._freq.size, 2, 2),
                                                       dtype=np.float)
-            phs_array[:, 0, 1]  , phs_err_array [:, 0, 1] = self._phs[stn] , self._phs_err[stn]
-            res_array [:, 0, 1] , res_err_array [:, 0, 1]  = values , self._res_err[stn]
+            phs_array[:, 0, 1]  , phs_err_array [:, 0, 1] = \
+                self._phs[stn] , self._phs_err[stn]
+            res_array [:, 0, 1] , res_err_array [:, 0, 1]  =\
+                values , self._res_err[stn]
   
             
-            csamt_z_obj.set_res_phase( res_array =res_array ,phase_array = phs_array,  
+            csamt_z_obj.set_res_phase( res_array =res_array ,
+                                      phase_array = phs_array,  
                                       freq=self._freq, 
                                       res_err_array= res_err_array, 
                                       phase_err_array= phs_err_array)
@@ -593,23 +622,23 @@ class CSAMT(object):
             self._z_yx [stn] = csamt_z_obj.z[:, 1, 0]
         
         #---> set coordinates attributes 
-        
+        if self._pfn  is not None: 
         # self.north= profile_obj.north
-        self.north = self.Profile.north
-        # self.east =profile_obj.east 
-        self.east = self.Profile.east 
-        self.azim =np.stack ((self.east, self.north), axis= 1)
-
-        if self.lat is None: 
-            
-            self.Location.convert_location_2_latlon(utm_zone=utm_zone )
-
-        self.lat = self.Location.latitude  
-        self.lon= self.Location.longitude
-        # self.azim =profile_obj.azimuth
-        # self.elev =profile_obj.elev
-       
-        self.elev = self.Profile.elev
+            self.north = self.Profile.north
+            # self.east =profile_obj.east 
+            self.east = self.Profile.east 
+            self.azim =np.stack ((self.east, self.north), axis= 1)
+    
+            if self.lat is None: 
+                
+                self.Location.convert_location_2_latlon(utm_zone=utm_zone )
+    
+            self.lat = self.Location.latitude  
+            self.lon= self.Location.longitude
+            # self.azim =profile_obj.azimuth
+            # self.elev =profile_obj.elev
+           
+            self.elev = self.Profile.elev
  
     #-----------------------------------------------------
     # reseetting specific attributes 
@@ -648,20 +677,23 @@ class CSAMT(object):
     
     @property 
     def dipolelength (self): 
-        return self.Profile.compute_dipolelength_from_coords(easting =self.east, 
-                                                             northing =self.north)[0]
+        return self.Profile.compute_dipolelength_from_coords(
+            easting =self.east, 
+            northing =self.north)[0]
     @property 
     def skindepth (self): 
         return {stn: 503 * np.sqrt( self.resistivity [stn]/ self.freq) 
                 for stn in self.resistivity}
     @property 
     def doi (self): 
-        return {stn :  2 ** 0.5 * self.skindepth[stn]  for stn in self.skindepth }
+        return {stn :  2 ** 0.5 * self.skindepth[stn] 
+                for stn in self.skindepth }
     
     @property 
     def station_distance (self): 
-        return self.Profile.compute_dipolelength_from_coords(easting =self.east, 
-                                                         northing =self.north)[1]
+        return self.Profile.compute_dipolelength_from_coords(
+            easting =self.east, 
+            northing =self.north)[1]
     @property 
     def station_separation(self): 
         return self.Profile.stn_separation(easting=self.north, 
@@ -703,12 +735,14 @@ class CSAMT(object):
                         m=[]
                         try : m= [file for file in os.listdir(path) 
                                   if inFO._sensitive.which_file(
-                                          filename = os.path.join(path, file)) =='j' ]
+                                          filename = os.path.join(path,
+                                                        file)) =='j' ]
                         except : pass 
                         if len(m)/len(os.listdir(path)) >= ptol :return 'jpath'
                             
                     return 
     
+
 #=================================================================================
 # PROFILE CLASS 
 #=================================================================================
@@ -898,9 +932,11 @@ class Profile (object):
         elif easting is not None and northing is not None : _pflag = 2
         elif lat is not None and lon is not None : _pflag = 3
         elif self.profile_fn  is None and (easting is not None or 
-                                           northing is None) and (lat is None
-                                                                  or lon is None) : 
-            raise CSex.pyCSAMTError_profile('Provided at least easting or lon or Northing or lat value or profile stn file.')    
+                                           northing is None) and \
+            (lat is None or lon is None) : 
+            raise CSex.pyCSAMTError_profile(
+                'Provided at least easting or lon or Northing'
+                ' or lat value or profile stn file.')    
         
 
         if _pflag ==1:
@@ -913,19 +949,23 @@ class Profile (object):
    
                 with open(self.profile_fn, 'r', encoding='utf8') as fn :
                     data_lines =fn.readlines ()
-                    # if user doesnt provide the split type : program will search automatically 
+                    # if user doesnt provide the split type :
+                        # program will search automatically 
                     if split_type is None : 
-                        split_type = func.stn_check_split_type(data_lines=data_lines)
+                        split_type = func.stn_check_split_type(
+                            data_lines=data_lines)
                     
-                    # in the case where user provide the file written by that software ,
-                    #ignore the  #healines start by '> or '!
+                    # in the case where user provide the file written by 
+                    #that software ,ignore the  #healines start by '> or '!
                    
                     temp=[]             # rebuild a new data lines for safety
                     for hh , values  in enumerate(data_lines) : 
-                        if re.match(r'^>', values) is not None or re.match('r^!', values) is  not None \
+                        if re.match(r'^>', values) is not None or\
+                            re.match('r^!', values) is  not None \
                             or values.find('++++++++') >=0  : pass 
                         else :temp.append(values)
-                    if 'len' in temp[0] and 'sta' in temp[0] and 'azim' in temp[0] : 
+                    if 'len' in temp[0] and 'sta' in temp[0] and 'azim' \
+                        in temp[0] : 
                         ref ='pyCSAMT'    
                     data_lines=temp
                     
@@ -933,55 +973,65 @@ class Profile (object):
                         profile_lines= data_lines , spliting=split_type)
                     if decision <2:
                         raise CSex.pyCSAMTError_profile(
-                            'Please provide  for profile at least the Easting'
-                             ' and northing coordinates values or lat/lon values for parsing. ')
+                            'Please provide  at least the Easting'
+                             ' and northing coordinate values or '
+                             'lat/lon values for parsing. ')
             
                     else :
-                        data_list_of_array= [np.array (line.strip().split(split_type)) 
-                                             for ii,  line in enumerate(data_lines)]
+                        data_list_of_array= [np.array (
+                            line.strip().split(split_type)) 
+                               for ii,  line in enumerate(data_lines)]
 
                         data_array =func.concat_array_from_list(
                             list_of_array=data_list_of_array, concat_axis=0)
-                #  catch atributes and set attributes wherever the position it takes on the *.stn files.
 
                 for lab, index in stn_headlines_id: 
                     if ref =='scalled': 
                         warnings.warn("It seems the data <{0}> is already"
-                                      "scaled. We don't need to rescale. "
-                                      "To force scaling , please use "
-                                      "func.{Profile.reajust_coordinates_value}. ")
+                                "scaled. We don't need to rescale. "
+                                "To force scaling , please use "
+                                "func.{Profile.reajust_coordinates_value}.")
                         coords_array = data_array[1:, index]
                     else : 
-                        self._logging.info('Rescaling stations positions'
-                                           ' from file <%s>'% os.path.basename(self.profile_fn))
-                        warnings.warn('Scaling stations positions : Usually Zonge'
-                            ' Hardware provides stations locations at'
-                            '  each electrodes NOT in center of each dipoles. '
-                              'Station locations and EM component orientations are taken'
-                              ' at each electrodes point.So , we will rescale stations  '
-                              ' to dipolecenter position.Distance will stay the same along'
-                              '  profile but the number of points will be minus 1.')
+                        self._logging.info(
+                            'Rescaling station positions'
+                        ' from file <%s>'% os.path.basename(self.profile_fn))
+                        warnings.warn(
+                        'Scaling station positions : Usually Zonge'
+                        ' Hardware provides station locations at each'
+                        ' electrodes NOT in center of each dipoles. Station'
+                        ' locations and EM component orientations are taken'
+                        ' at each electrodes point.So, we will rescale stations '
+                        ' to dipolecenter position.Distance will stay the same'
+                        '  along with profile but the number of points'
+                        ' will be minus 1.')
                         try :
                             coords_array =cfunc.dipole_center_position(
                                 dipole_position = data_array[1:,index])
                         except :pass 
-          
-                    if lab == inFO.suit.easting[0] or lab.lower().find('east')>=0 : 
+ 
+                    if lab == inFO.suit.easting[0] or\
+                        lab.lower().find('east')>=0 : 
                         self.__setattr__('east', coords_array)
-                    if lab == inFO.suit.northing[0]  or lab.lower().find('north')>=0:
+                    if lab == inFO.suit.northing[0]  or\
+                        lab.lower().find('north')>=0:
                         self.__setattr__('north', coords_array)
-                    if lab == inFO.suit.elevation[0] or lab.lower().find('elev')>=0 : 
+                    if lab == inFO.suit.elevation[0] or \
+                        lab.lower().find('elev')>=0 : 
                         self.__setattr__('elev', coords_array)
                     if lab.lower().find('lat')>=0 :
                         self.__setattr__('lat', coords_array)
                     if lab .lower().find('lon')>=0: 
                         self.__setattr__('lon', coords_array)
+                    if lab .lower().find('dot')>=0: 
+                        self.__setattr__('stn_position', coords_array)
+
                     if ref =='pyCSAMT': 
                         if lab=='len' or lab.find('len') >=0 :
                             self.__setattr__('stn_position', coords_array)
                         if lab=='azim' or lab.find('azim')>=0 : 
                             self.__setattr__('azimuth', coords_array)
-                    elif ref =='none':
+                    if ref =='none':
                         if lab in inFO.suit.station :
                             self.__setattr__('stn_position', coords_array)
 
@@ -997,10 +1047,13 @@ class Profile (object):
                                                       northing =self.north,
                                                       interpolate=True)[0]
                 
-                self.dipole_length = round_dipole_length(self.stn_interval.mean())
+                self.dipole_length = round_dipole_length(
+                    self.stn_interval.mean())
                 
                 try : 
-                    self.Location.convert_location_2_latlon(utm_zone=self.utm_zone)
+                    self.Location.convert_location_2_latlon(
+                        utm_zone=self.utm_zone)
+                    
                 except : 
                     self._logging.debug(
                         'Could not convert easting/northing to lat/lon'
@@ -1010,24 +1063,29 @@ class Profile (object):
             elif (self.lon is not None ) and (self.lat is not None): 
                 
                 #convert lat lon to utm and get the attribute easting and northing 
-                self.Location.convert_location_2_utm(longitude=self.lon,
-                                                     latitude=self.lat)
-                self.azimuth =func.compute_azimuth(easting=self.east,
-                                                   northing=self.north, extrapolate=True)
-                self.stn_interval=self.stn_separation(easting= self.Location.easting, 
-                                                      northing =self.Location.northing, 
-                                                      interpolate=True )
+                self.Location.convert_location_2_utm(
+                    longitude=self.lon,latitude=self.lat)
+                                                     
+                self.azimuth =func.compute_azimuth(
+                    easting=self.east,northing=self.north, extrapolate=True)
+                                                   
+                self.stn_interval=self.stn_separation(
+                    easting= self.Location.easting, 
+                    northing =self.Location.northing, 
+                    interpolate=True )
                 
-                self.dipole_length = round_dipole_length(self.stn_interval.mean())
+                self.dipole_length = round_dipole_length(
+                    self.stn_interval.mean())
                 
     
         
         elif _pflag ==2 or _pflag ==3 : 
             if _pflag == 2 : 
                 assert easting.size == northing.size ,\
-                    CSex.pyCSAMTError_profile('Easting and Northing must have the same size.'
-                                 ' easting|northing size are currentlysize is <{0}|{1}>.'.\
-                                     format(easting.size, northing.size))
+                    CSex.pyCSAMTError_profile(
+                        'Easting and Northing must have the same size.'
+                    ' easting|northing size are currentlysize is <{0}|{1}>.'.
+                        format(easting.size, northing.size))
                 self.east =easting 
                 self.north =northing
                 
@@ -1040,8 +1098,10 @@ class Profile (object):
                 
             elif _pflag ==3 :
                 assert lat.size == lon.size ,\
-                    CSex.pyCSAMTError_profile('Easting and Northing must have the same size.'
-                          ' lat|lon size are currentlysize is <{0}|{1}>.'.format(lat.size, lon.size))
+                    CSex.pyCSAMTError_profile(
+                        'Easting and Northing must have the same size.'
+                          ' lat|lon size are currentlysize is <{0}|{1}>.'.
+                          format(lat.size, lon.size))
                 self.Location.convert_location_2_utm(latitude=lat ,
                                                      longitude= lon )
                 self.easting =self.Location.easting  
@@ -1057,7 +1117,7 @@ class Profile (object):
             self.stn_interval=self.stn_separation(easting= self.east, 
                                                       northing =self.north,
                                                       interpolate=True )
-            if elevation is None : self.elev= np.full((self.east.size,), .0 ) # set elevation to 0
+            if elevation is None : self.elev= np.full((self.east.size,), .0 ) 
             else : self.elev = elevation 
 
                                                         
@@ -1075,14 +1135,17 @@ class Profile (object):
         :returns: profile angle in degrees. 
         :rtype: float
         """
-        self._logging.info ('Computing _ profile angle of geoelectric strike.')
+        self._logging.info (
+            'Computing _ profile angle of geoelectric strike.')
         
         if easting is not None : self.east = easting 
         if self.east is None :
-            raise CSex.pyCSAMTError_location('Easting coordinates must be provided . ')
+            raise CSex.pyCSAMTError_location(
+                'Easting coordinates must be provided . ')
         if northing is not None : self.north=northing 
         if self.north is None : 
-            raise CSex.pyCSAMTError_location('Northing coordinate must be provided.')
+            raise CSex.pyCSAMTError_location(
+                'Northing coordinate must be provided.')
         
         if self.east is not None and self.north is not None :
             try : 
@@ -1090,7 +1153,8 @@ class Profile (object):
               self.east =self.east.astype('float')
               self.north = self.north.astype('float')
             except : 
-                raise CSex.pyCSAMTError_float('Could not convert easting/northing to float.')
+                raise CSex.pyCSAMTError_float(
+                    'Could not convert easting/northing to float.')
                    
         # use the one with the lower standard deviation
         if stats_import is True : 
@@ -1098,29 +1162,36 @@ class Profile (object):
    
             profile2 =spSTATS.linregress(self.north, self.east)
         else :
-            warnings.warn('Could not find scipy.stats, cannot use method linearRegression '
+            warnings.warn(
+                'Could not find scipy.stats, cannot use method linearRegression '
                   'check installation you can get scipy from scipy.org.')
-            self._logging.warning('Could not find scipy.stats, cannot use method lineaRegress '
+            self._logging.warning(
+                'Could not find scipy.stats, cannot use method lineaRegress '
                     'check installation you can get scipy from scipy.org.')
-            raise ImportError('Could not find scipy.stats, cannot use method lineaRegress '
+            raise ImportError(
+                'Could not find scipy.stats, cannot use method lineaRegress '
                     'check installation you can get scipy from scipy.org.')
             
         
         profile_line = profile1[:2]
-        # if the profile is rather E=E(N), the parameters have to converted  into N=N(E) form:
+        # if the profile is rather E=E(N),
+        # the parameters have to converted  into N=N(E) form:
         
         if profile2[4] < profile1[4]:
             profile_line = (1. / profile2[0], -profile2[1] / profile2[0])
 
         # if self.profile_angle is None:
-        self.profile_angle = (90 - (np.arctan(profile_line[0]) * 180 / np.pi)) % 180
+        self.profile_angle = (90 - (np.arctan(profile_line[0]) * 180 / np.pi)
+                              ) % 180
 
-        # otherwise: # have 90 degree ambiguity in strike determination# choose strike which offers larger angle with profile
+        # otherwise: # have 90 degree ambiguity in strike determination
+        # choose strike which offers larger angle with profile
         # if profile azimuth is in [0,90].
     
         self.profile_angle=np.around(self.profile_angle,2)
         
-        print('----> profile angle = {} degrees N.E'.format(self.profile_angle))
+        print('----> profile angle = {} degrees N.E'.
+              format(self.profile_angle))
 
         # compute pseudo_elect
         # if self.geoelectric_strike is None :
@@ -1138,7 +1209,8 @@ class Profile (object):
 
         self.geoelectric_strike =np.floor(self.geoelectric_strike)
         
-        print('----> geoelectrike  strike = {} degrees N.E'.format(self.geoelectric_strike))
+        print('----> geoelectrike  strike = {} degrees N.E'.format(
+            self.geoelectric_strike))
         
         return self.profile_angle, self.geoelectric_strike
     
@@ -1201,8 +1273,9 @@ class Profile (object):
         if isinstance(x, str) or isinstance(y,str) : 
             try : float(x), float(y)
             except :
-                raise CSex.pyCSAMTError_profile('Readjustment not possible with str number.'\
-                                                ' Please provide the right values of x and y .')
+                raise CSex.pyCSAMTError_profile(
+                    'Readjustment not possible with str number.'
+                    ' Please provide the right values of x and y .')
         if x is None : 
             warnings.warn('In principle, readjustment is not possible with '
                           'NoneType number . However , we gonna set X to 0.')
@@ -1214,27 +1287,33 @@ class Profile (object):
                 
         if stn_fn is None :
             if east is None and north is None : 
-                warnings.warn ('Not possible to reajust coordinates.'
-                               ' Provide at least easting and northing values. ')
+                warnings.warn (
+                    'Not possible to reajust coordinates.'
+                    ' Provide at least easting and northing values.')
                 
-                raise CSex.pyCSAMTError_station('Could not find station file '
-                                                'to read. Can not readjust profile coordinates.')
+                raise CSex.pyCSAMTError_station(
+                    'Could not find station file '
+                    'to read. Can not readjust profile coordinates.')
             
             if elev is None : elev= 0. 
             if dot is None : dot =0. 
         
         if stn_fn is not None :
-            if inFO._sensitive().which_file(filename=stn_fn , deep=False )=='stn':
+            if inFO._sensitive().which_file(filename=stn_fn ,
+                                            deep=False )=='stn':
                 if inFO._sensitive.which_file(filename=stn_fn ) !='stn': 
-                    raise CSex.pyCSAMTError_profile('File provided <{0}>is unacceptable. '
-                                                    'Please provide your right stn file.'.\
-                                                        format(stn_fn))
+                    raise CSex.pyCSAMTError_profile(
+                        'File provided <{0}>is unacceptable. '
+                        'Please provide your right stn file.'.
+                            format(stn_fn))
             
             with open(stn_fn, 'r', encoding='utf8') as fn :
                 fstn= fn.readlines()
-            #substract the info line generate by pyCSAMT when create a new STN file 
+            #substract the info line generate
+            #by pyCSAMT when create a new STN file 
             for ss , infolines in enumerate(fstn): 
-                if re.match(r'^>', infolines) is  None or re.match(r'^!', infolines) is  None : 
+                if re.match(r'^>', infolines) is  None or\
+                    re.match(r'^!', infolines) is  None : 
                     fstn =fstn[ss:] # that mean no info is on the file
                     break
                 
@@ -1242,23 +1321,30 @@ class Profile (object):
             if spT is None :spT=' '
             headc = fstn[0].strip().split(spT)
             
-            eastindex,dotindex ,northindex,  elevindex = [0 for ii in range (4)]   # initialise index values
-            for ii ,item in enumerate(headc): # get index . sometimes stn files are littel messy 
+            eastindex,dotindex ,northindex, \
+                elevindex = [0 for ii in range (4)]   
+            for ii ,item in enumerate(headc): 
                 
-                if item.find('"e')>=0 or item.lower().find('eas') >=0: eastindex= ii
-                elif item.find('"dot') >=0 or item.lower().find('sta')>=0:dotindex =ii 
-                elif item.find('"n') >= 0 or item.lower().find('nor')>=0:northindex = ii 
-                elif item.find('"h') >= 0  or item.lower().find('elev')>=0: elevindex = ii
+                if item.find('"e')>=0 or item.lower().find('eas') >=0: 
+                    eastindex= ii
+                elif item.find('"dot') >=0 or item.lower().find('sta')>=0:
+                    dotindex =ii 
+                elif item.find('"n') >= 0 or item.lower().find('nor')>=0:
+                    northindex = ii 
+                elif item.find('"h') >= 0  or item.lower().find('elev')>=0: 
+                    elevindex = ii
                 else :
-                    warnings.warn('Prior to provide the right station'
-                                  ' profile file. The station file must have as '
-                                  'headlines , at least :'
-                                  ' ["dot|sta, "e|easting, "n|northing, "h|elev].'
-                                  ' Only this head can be parsed.')
+                    warnings.warn(
+                        'Prior to provide the right station'
+                        ' profile file. The station file must have as '
+                        'headlines , at least :'
+                        ' ["dot|sta, "e|easting, "n|northing, "h|elev].'
+                        ' Only this head can be parsed.')
                     
-                    raise CSex.pyCSAMTError_profile('Your station file profided is wrong. '
-                                                    'Only <"dot|sta, "e|easting, '
-                                                    '"n|northing, "h|elevation> can be parsed. ')
+                    raise CSex.pyCSAMTError_profile(
+                        'Your station file profided is wrong. '
+                        'Only <"dot|sta, "e|easting, '
+                        '"n|northing, "h|elevation> can be parsed. ')
 
                 
             dot, east, north , elev =[[] for jj in range(4)]
@@ -1292,17 +1378,19 @@ class Profile (object):
             else :run_fstn = len(fstn)-1
                 
             stn_write_lines =[]
-            stn_write_lines.append(''.join(['{0:<10}{1}'.format('"""dot"""',spT), 
-                                            '{0:>10}{1}'.format('"""e"""', spT), 
-                                            '{0:>10}{1}'.format('"""n"""',spT), 
-                                            '{0:>10}'.format('"""h"""')]))
+            stn_write_lines.append(''.join(
+                ['{0:<10}{1}'.format('"""dot"""',spT), 
+                '{0:>10}{1}'.format('"""e"""', spT), 
+                '{0:>10}{1}'.format('"""n"""',spT), 
+                '{0:>10}'.format('"""h"""')]))
             stn_write_lines.append('\n')
 
             for ii in range (run_fstn ):  # skip the headline.
-                stn_write_lines.append(''.join(['{0:<7}{1}'.format(station_pk[ii], spT), 
-                                                '{:>12.3f}{}'.format(easting[ii], spT), 
-                                                 '{:>12.3f}{}'.format(northing[ii], spT), 
-                                                 '{:>8}'.format(elevation[ii])
+                stn_write_lines.append(''.join(
+                    ['{0:<7}{1}'.format(station_pk[ii], spT), 
+                    '{:>12.3f}{}'.format(easting[ii], spT), 
+                     '{:>12.3f}{}'.format(northing[ii], spT), 
+                     '{:>8}'.format(elevation[ii])
                                                 ]))
                 stn_write_lines.append('\n')
             if stn_fn is None : fnew_='STN{0}_reaj'.format(time.timezone)    
@@ -1313,7 +1401,8 @@ class Profile (object):
                 fid.writelines(stn_write_lines)
                 
             if savepath is not None :
-                shutil.move( os.path.join(os.getcwd(),''.join([fnew_, '.stn'])),
+                shutil.move( os.path.join(os.getcwd(),
+                                          ''.join([fnew_, '.stn'])),
                                           savepath )
             elif savepath is None : savepath =os.getcwd()
     
@@ -1366,7 +1455,7 @@ class Profile (object):
         :type reajust: tuple
         """
         self._logging.info ('Profile coordinate X<{0}>, y<{1}> '\
-                            'are readjusting. Method to reajust is <{2}>'.\
+                            'are readjusting. Method to reajust is <{2}>'.
                                 format(X, Y, straight_type))
         
         savepath =kwargs.pop('savepath', None)
@@ -1376,7 +1465,7 @@ class Profile (object):
         if X is not None : self.east = X 
         if Y is not None : self.north = Y
         if self.east is None or self.north is None :
-            raise CSex.pyCSAMTError_profile('No possible way to straighten up '\
+            raise CSex.pyCSAMTError_profile('No possible way to straighten up '
                 'the profile line . Please provide the right coordinates. ')
         
         if self.east.size != self.north.size : 
@@ -1394,16 +1483,20 @@ class Profile (object):
                     "Only x =reajust[0] and y=reajust[1] can be accepted. ")
                 
             if self.dipole_length is None: 
-                print('--> Dipolelength  is computing to straighten out  profile.')
-                self._logging.info ('We are computing dipolelength  to straight  profile. ')
+                print('--> Dipolelength  is computing '
+                      'to straighten out  profile.')
+                self._logging.info (
+                    'We are computing dipolelength  to straight  profile.')
                 
                 dipolLeng , stn_pk = self.compute_dipolelength_from_coords(
                     easting=self.east, northing =self.northing)
-                warnings.warn('We are computing dipole length and we assume '
-                              'the stations coordinates are in the center of each dipole.'
-                              ' Dipole Length is = {0} m and the total '
-                              'length is = {1} m.'.format(dipolLeng, (self.east.size -1) *\
-                                                          dipolLeng ))
+                warnings.warn(
+                    'We are computing dipole length and we assume '
+                    'the stations coordinates are in the center of each dipole.'
+                    ' Dipole Length is = {0} m and the total '
+                    'length is = {1} m.'.format(dipolLeng, 
+                                                (self.east.size -1) *\
+                                                dipolLeng ))
                 
             else : 
                 stn_pk = np.arange(int(self.dipole_length/2), 
@@ -1411,23 +1504,26 @@ class Profile (object):
                                     self.dipole_length)
                 warnings.warn('Dipole length is = {0} m. Stations are assumed '
                               'to be in center of each dipole.'
-                              ' Total length is = {1} m'.\
-                                  format(self.dipole_length,
-                                      (self.east.size - 1) * self.dipole_length ))
+                              ' Total length is = {1} m'.
+                                format(self.dipole_length,
+                                    (self.east.size - 1) * self.dipole_length ))
         
             if self.elev is not None : elev =np.around(self.elev,2) 
             else : elev = np.repeat(0., self.east.size)
             # if output is True : REW =False # firtly ,
             #adjust coordinates without output file  set REW to False 
             _, self.east, self.north ,*_= self.reajust_coordinates_values(
-                                        easting= self.east, northing =self.north , 
-                                        x=reajust[0], y=reajust[1], station_pk=stn_pk, 
+                                        easting= self.east,
+                                        northing =self.north , 
+                                        x=reajust[0], y=reajust[1],
+                                        station_pk=stn_pk, 
                                         rewrite=REW, elevation= elev)
             
-            print("---> Locations coordinates are reajusting to straightening out"
-                  " profile. Elevation is added.")
-            self._logging.info ("Locations coordinates are reajusting to"
-                                " straighten out profile and we'll top elevation.")
+            print("---> Locations coordinates are reajusting to straightening "
+                  " out profile. Elevation is added.")
+            self._logging.info (
+                "Locations coordinates are reajusting to"
+                " straighten out profile and we'll top elevation.")
             REW =True 
         
         #then reascaled 
@@ -1439,28 +1535,35 @@ class Profile (object):
             # rj_factor = (self.east [-1] -self.east[0]) /(self.east.size -1) 
             # r_east =np.ones_like(self.east)* np.arange(self.east.size)
             self.east = np.apply_along_axis(lambda rr: rr * (
-                (self.east [-1] -self.east[0]) /(self.east.size -1)) + self.east[0], 
-                                            0, np.ones_like(self.east)* np.arange(self.east.size))
+                (self.east [-1] -self.east[0]) /(
+                    self.east.size -1)) + self.east[0], 
+                      0, np.ones_like(self.east)* np.arange(self.east.size))
             
             self.north = np.apply_along_axis(lambda rr: rr * (
-                (self.north [-1] -self.north[0]) /(self.north.size -1 )) + self.north[0],
-                                             0, np.ones_like(self.north)* np.arange(self.north.size))
+                (self.north [-1] -self.north[0]) /(
+                    self.north.size -1 )) + self.north[0],
+                      0, np.ones_like(self.north)* np.arange(self.north.size))
             
         if re.match(r'^eq+', straight_type) is not None : 
-            self.east =np.linspace(self.east[0], self.east[-1], self.east.size )
-            self.north =np.linspace(self.north[0], self.east[-1], self.north.size )
+            self.east =np.linspace(self.east[0], self.east[-1],
+                                   self.east.size )
+            self.north =np.linspace(self.north[0], self.east[-1],
+                                    self.north.size )
         elif (re.match(r'^nat+', straight_type) is not None) or (
                 re.match(r'^dis+', straight_type) is not None) :
             
-            #a kind of straighthen with equisdistant value between station but not straight ,
-            #king or natural aspect on the site . 
-            rf_X = np.array([value - self.east[ii+1] for ii , value in enumerate(self.east) \
+            #a kind of straighthen with equisdistant value between 
+            #station but not straight ,king or natural aspect on the site . 
+            rf_X = np.array([value - self.east[ii+1]
+                             for ii , value in enumerate(self.east) 
                               if ii <= self.east.size - 2 ]).mean()
 
-            rf_Y = np.array([value - self.north[ii+1] for ii , value in enumerate(self.north) \
+            rf_Y = np.array([value - self.north[ii+1] 
+                             for ii , value in enumerate(self.north) 
                               if ii <= self.north.size - 2 ]).mean()
             
-            temp_ee , temp_nn = np.zeros_like(self.east), np.zeros_like(self.north) 
+            temp_ee , temp_nn = np.zeros_like(self.east), 
+            np.zeros_like(self.north) 
             temp_ee [0], temp_nn[0] = self.east[0] , self.north[0]
             for  jj , value in enumerate(temp_ee): 
                 if  jj > 0 : temp_ee [jj]=self.east[jj-1]- rf_X
@@ -1472,14 +1575,18 @@ class Profile (object):
         if output is True : # export the file without scaling , set X, Y to 0. 
         # and keep the new easting and Northing coordinates 
             _,self.east, self.north,*_= self.reajust_coordinates_values(
-                                        easting= self.east, northing =self.north ,
+                                        easting= self.east,
+                                        northing =self.north ,
                                         x=0., y=0., station_pk=stn_pk, 
-                                        rewrite=REW, elevation= elev, savepath =savepath)
+                                        rewrite=REW, elevation= elev, 
+                                        savepath =savepath)
             
-            self._logging.info ("Locations coordinates are reajusting to"
-                                " straighten out profile and we'll top elevation.")
+            self._logging.info (
+                "Locations coordinates are reajusted and "
+                " straightened out profile and we'll top elevation.")
             
-            print("---> Locations coordinates are reajusting to straightening out"
+            print("---> Locations coordinates are"
+                  " reajusted and straightened out"
                   " profile. Elevation is added.")
         
     def rewrite_station_profile (self, easting =None , 
@@ -1491,8 +1598,9 @@ class Profile (object):
                                  **kwargs): 
         """
         Mthod to rewrite station_profile or output new profile 
-        by straightening profile throught reajusting location coordinates values.
-         User can use this method to create zonge *stn* file if coordinates are known.
+        by straightening profile throught reajusting location 
+        coordinates values.User can use this method to create zonge
+         *stn* file if coordinates are known.
          
         :param easting:  easting coordinates (m)
         :type easting: array_like 
@@ -1530,17 +1638,21 @@ class Profile (object):
         if self.east is None or self.north is None : 
             self._logging.warn("It seems you didnt provide any easting"
                                " values nor northing value.")
-            raise CSex.pyCSAMTError_profile("You may provide value before"
-                                            " rewriten station profile file.!")
+            raise CSex.pyCSAMTError_profile(
+                "You may provide value before"
+                " rewriten station profile file.!")
         
         write_profile_lines.append(''.join(['{0:<17}'.format(
             '>LOCATION'),':'," {0:<55}".format(area_name) ])+'\n')
         write_profile_lines.append(''.join(['{0:<17}'.format(
             '>USERNAME'),':'," {0:<55}".format(username) ])+'\n')
-        write_profile_lines.append(''.join(['{0:<17}'.format('>DATE'),':'," {0:<70}".\
-                                            format(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())) ])+'\n')
+        write_profile_lines.append(
+            ''.join(['{0:<17}'.format('>DATE'),':'," {0:<70}".\
+                format(time.strftime('%Y-%m-%d %H:%M:%S', 
+                                     time.gmtime())) ])+'\n')
         write_profile_lines.append(''.join(['{0:<17}'.format(
-            '>UTM_ZONE'),':'," {0:<5}-{1:<7}".format('WGS84',self.utm_zone) ])+'\n')    
+            '>UTM_ZONE'),':'," {0:<5}-{1:<7}".format('WGS84',
+                                                     self.utm_zone) ])+'\n')    
         write_profile_lines.append(''.join(['{0:<17}'.format(
             '>SOFTWARE'),':'," {0:55}".format('pyCSAMT') ])+'\n')
         
@@ -1548,7 +1660,8 @@ class Profile (object):
             self.Location.convert_location_2_latlon(utm_zone=self.utm_zone)
         
         if self.east is None or self.north is None : 
-            self.Location.convert_location_2_utm(latitude=self.lat, longitude=self.lon)
+            self.Location.convert_location_2_utm(latitude=self.lat,
+                                                 longitude=self.lon)
         if add_azimuth is True :
             
             if self.azimuth is not None : azim = self.azimuth
@@ -1559,29 +1672,37 @@ class Profile (object):
                 if azim.size != self.east.size or azim.size != self.north.size:
                     # recompute azimuth using extrapolation 
                     azim = func.compute_azimuth(easting=self.east,
-                                            northing=self.north, extrapolate=True)
+                                            northing=self.north,
+                                            extrapolate=True)
                     
         if dipole_length is None :
             self._logging.info('Automatic dipole length calculation and '
                                'stations position  values are set with.')
             
-            self.dipole_length, self.stn_position = self.compute_dipolelength_from_coords(
+            self.dipole_length, self.stn_position = \
+                self.compute_dipolelength_from_coords(
                 easting =self.east, northing = self.north)
-            warnings.warn("Dipole length is computing automatically and set"
-                          " station position with by default. Dipole length is ={0} m"
-                          "and length along the line is ={1} m .".\
-                              format(self.dipole_length,
-                                     (self.east.size -1)* self.dipole_length))
+            warnings.warn(
+                "Dipole length is computing automatically and set"
+                " station position with by default. Dipole length is ={0} m"
+                "and length along the line is ={1} m .".\
+                    format(self.dipole_length,
+                           (self.east.size -1)* self.dipole_length))
             
         elif dipole_length is not None : 
             self.dipole_length =dipole_length 
 
-            self._logging.infos('We will set compute station position '
-                                'considering your dipole_length value provided. ')
-            warnings.warn('We will compute station position using your default dipole length .'\
-                          'We will the new station step to <{0}>.'.format(self.dipole_length))
+            self._logging.infos(
+                'We will set compute station position '
+                'considering your dipole_length value provided. ')
+            warnings.warn(
+                'We will compute station position '
+                'using your default dipole length .'
+                'We will the new station step to <{0}>.'.
+                format(self.dipole_length))
             
-            stn_position =np.arange(0,self.east.size * self.dipole_length, self.dipole_length )
+            stn_position =np.arange(0,self.east.size * self.dipole_length, 
+                                    self.dipole_length )
 
             self.stn_position= stn_position
             
@@ -1609,14 +1730,15 @@ class Profile (object):
         
         for ii  in range(self.east.size): 
             
-            write_profile_lines.append(''.join(['{:<5}'.format(stnNames[ii]), 
-                                                   '{:<7}'.format(normalize_distance[ii]),
-                                                   '{:<11.2f}'.format(self.east[ii]),
-                                                   '{:<13.2f}'.format(self.north[ii]), 
-                                                   '{:<15.10f}'.format(self.lat[ii]), 
-                                                   '{:<17.10f}'.format(self.lon[ii]), 
-                                                   '{:<10.2f}'.format(self.elev[ii])
-                                               ]))
+            write_profile_lines.append(''.join(
+                ['{:<5}'.format(stnNames[ii]), 
+                '{:<7}'.format(normalize_distance[ii]),
+                '{:<11.2f}'.format(self.east[ii]),
+                '{:<13.2f}'.format(self.north[ii]), 
+                '{:<15.10f}'.format(self.lat[ii]), 
+                '{:<17.10f}'.format(self.lon[ii]), 
+                '{:<10.2f}'.format(self.elev[ii])
+            ]))
             if add_azimuth is True : 
                 write_profile_lines.append('{0:<7.3f}'.format(azim[ii]))
             write_profile_lines.append('\n')
@@ -1629,7 +1751,8 @@ class Profile (object):
                                      ''.join([output_name,'.stn'])),
                          savepath)
             
-    def stn_separation(self, easting  =None , northing =None ,interpolate =False): 
+    def stn_separation(self, easting  =None , northing =None ,
+                       interpolate =False): 
         """
         Compute the station separation 
         Distance between every two stations 
@@ -1641,7 +1764,8 @@ class Profile (object):
             * northing : array_like (ndarray,1) 
                         northing coordinates 
             * interpolate : bool 
-                        if interpolate is True  will extend to N+1 number to much
+                        if interpolate is True  will extend to N+1 
+                        number to much
                         excatly the number  of electrode. If false ,
                         it match the number of dipole N.
                         *Default* is False.
@@ -1657,17 +1781,19 @@ class Profile (object):
             try :
                 easting = np.array([float(ss) for ss in easting])
                 northing =np.array([float(ss) for ss in northing])
-            except : raise CSex.pyCSAMTError_profile("NoneType can not be computed."\
-                                                    "Please provide the right coordinates!.")
+            except : raise CSex.pyCSAMTError_profile(
+                    "NoneType can not be computed."
+                    "Please provide the right coordinates!.")
         
         if easting.size != northing.size :raise CSex.pyCSAMTError_profile(
-                "Both coordinates array must have the same size."
-                 "The first argument size is <{0}>, while the second is <{1}>.".\
-                     format(easting.size, northing.size))
-        
+            "Both coordinates array must have the same size."
+             "The first argument size is <{0}>, while the second is <{1}>.".
+                 format(easting.size, northing.size))
+    
         # for kk in range(self.east.size): 
         #     if kk <=self.east.size -2 : 
-        #         np.sqrt((self.east[kk+1]-self.east[kk-1])**2 + (self.north[kk+1]-self.north[kk-1])**2)
+        #         np.sqrt((self.east[kk+1]-self.east[kk-1])**2 +
+        # (self.north[kk+1]-self.north[kk-1])**2)
         stn_sep =np.array([np.sqrt((easting[kk+1]-easting[kk])**2 + (
             northing[kk+1]-northing[kk])**2) for 
                            kk in range (northing.size) if
@@ -1677,9 +1803,7 @@ class Profile (object):
             xx , xx_new = np.arange(stn_sep.size),np.arange(stn_sep.size +1) 
             ff = sp.interpolate.interp1d(xx, stn_sep, fill_value='extrapolate')
             stn_sep= ff(xx_new)
-  
 
-            
         return stn_sep , stn_sep.mean()
     
     @staticmethod
@@ -1730,10 +1854,11 @@ class Profile (object):
 
         elif latitude is not None and longitude is not None : 
             assert latitude.size == longitude.size , \
-                CSex.pyCSAMTError_profile('Latitude and longitude must have the same size.'
-                                           ' Easting|northing size are currentlysize'
-                                               ' is <{0}|{1}>.'.format(easting.size, 
-                                                                       northing.size))
+                CSex.pyCSAMTError_profile(
+                    'Latitude and longitude must have the same size.'
+                    ' Easting|northing size are currentlysize'
+                        ' is <{0}|{1}>.'.format(easting.size, 
+                                                northing.size))
             
             #-- convert lat lon to easting northing 
             utm_zone , easting, northing = gis.ll_to_utm(reference_ellipsoid,
@@ -1741,7 +1866,7 @@ class Profile (object):
         else : 
             raise CSex.pyCSAMTError_profile('May input at least easting and '
                                             'northing coordinates values or'
-                                                ' latitude and longitude values.')
+                                            ' latitude and longitude values.')
             
             
         distance_east = np.array([easting[kk+1]-easting[kk] 
@@ -1749,22 +1874,23 @@ class Profile (object):
         distance_north = np.array([northing[kk+1]-northing[kk] 
                                    for kk in range (northing.size -1)])
         
-        distance = np.array([np.sqrt(distance_east[kk]**2 + distance_north[kk]**2)
-                             for kk in range(distance_east.size) ])
+        distance = np.array([np.sqrt(
+            distance_east[kk]**2 + distance_north[kk]**2)
+               for kk in range(distance_east.size) ])
         dipole_length =round_dipole_length(distance.mean()) 
         
         #build stn_pk_position : 
             
-        stn_pk = np.array([ ii* np.full((easting.size), dipole_length)[ii]
-                           for ii in range(np.full((easting.size), dipole_length).size)])
+        stn_pk = np.array([ ii* np.full((easting.size),
+                                        dipole_length)[ii]
+                           for ii in range(np.full((easting.size),
+                                                   dipole_length).size)])
 
-        
-        
         return dipole_length , stn_pk    
 
-#=================================================================================
+#==============================================================================
 # LOCATION CLASS 
-#=================================================================================
+#==============================================================================
                 
 class Location (object): 
     
@@ -1838,8 +1964,10 @@ class Location (object):
     @property
     def azimuth(self): 
         if self.east is not None and self.north is not None : 
-                return func.compute_azimuth(easting=np.array([float(eas) for eas in self.easting]),
-                                            northing=np.array([float(nor) for nor in self.northing]))
+                return func.compute_azimuth(easting=np.array(
+                    [float(eas) for eas in self.easting]),
+                                            northing=np.array(
+                     [float(nor) for nor in self.northing]))
         else : return self._azimuth 
     
     #-----------setting ---- 
@@ -1847,8 +1975,9 @@ class Location (object):
     def utm_zone (self, utm_zone): 
         if isinstance(utm_zone,(float,int)):
             warnings.warn('Wrong UTM zone input. Must be a str number.')
-            raise CSex.pyCSAMTError_location('UTM Zone must be string, '
-                                             'not <{0}>type.'.flroat(type(utm_zone)))
+            raise CSex.pyCSAMTError_location(
+                'UTM Zone must be string, '
+                 'not <{0}>type.'.format(type(utm_zone)))
         else : 
             try :
                 float(utm_zone[:-2])
@@ -1856,18 +1985,21 @@ class Location (object):
                     'Error UTM Zone designator. Both first letters'
                     ' provided are not acceotable !')
             else : 
-                if utm_zone[-1] not in list(inFO.notion.utm_zone_dict_designator.keys()): 
+                if utm_zone[-1] not in list(
+                        inFO.notion.utm_zone_dict_designator.keys()): 
                     raise CSex.pyCSAMTError_location(
-                        'Wrong UTM Zone letter designator. Letter must be among <{0}>'.\
-                                format('|'.join(list(
-                                    inFO.notion.utm_zone_dict_designator.keys()))))
+                        'Wrong UTM Zone letter designator.'
+                        ' Letter must be among <{0}>'.
+                            format('|'.join(list(
+                          inFO.notion.utm_zone_dict_designator.keys()))))
             self._utm_zone =utm_zone
     
     @latitude.setter 
     def latitude (self, latitude): 
         if isinstance(latitude, (float,int,str)):
             self._latitude= gis.assert_lat_value(latitude)
-        else: self._latitude = np.array([gis.assert_lat_value(lat) for lat in latitude ])
+        else: self._latitude = np.array([gis.assert_lat_value(lat)
+                                         for lat in latitude ])
         
     @longitude.setter 
     def longitude(self, longitude) : 
@@ -1890,7 +2022,8 @@ class Location (object):
         if isinstance(easting, (float,int,str)): 
             self._easting= np.array(easting, dtype=float)
         else : 
-            try : self._easting = np.array([ float(east) for east in easting])
+            try : self._easting = np.array([ float(east)
+                                            for east in easting])
             except :raise CSex.pyCSAMTError_float(
                     'Easting must be float or an array of float number.')
             
@@ -1899,7 +2032,8 @@ class Location (object):
         if isinstance(northing, (float,int,str)): 
             self._northing= np.array(northing, dtype=float)
         else : 
-            try : self._northing = np.array([float(north) for north in northing])
+            try : self._northing = np.array([float(north) 
+                                             for north in northing])
         
             except : raise CSex.pyCSAMTError_float(
                     'northing must be float or an array of float number. ')
@@ -1908,20 +2042,21 @@ class Location (object):
     def stn_pos (self, stn_pk): 
         try : self._stn_pos =np.array([float(stn) 
                                        for stn in stn_pk])
-        except:raise CSex.pyCSAMTError_station('Station pka must be float number.! ')
+        except:raise CSex.pyCSAMTError_station(
+            'Station pka must be float number.! ')
 
 
     @azimuth.setter 
     def azimuth (self, easting_northing):
         print(easting_northing)
         if easting_northing.shape[1] !=2 : 
-            raise CSex.pyCSAMTError_azimuth('Azimuth expected to get two array_like(ndarray,2)')                                                                                                    
+            raise CSex.pyCSAMTError_azimuth(
+                'Azimuth expected to get two array_like(ndarray,2)')                                                                                                    
         elif easting_northing.shape[1] ==2 : 
             easting , northing =np.hsplit(easting_northing, 2)
-            self._azimuth =func.compute_azimuth(easting=np.array([float(eas)
-                                                                  for eas in easting]),
-                                           northing=np.array([float(nor) 
-                                                              for nor in northing]))
+            self._azimuth =func.compute_azimuth(easting=np.array(
+                [float(eas)for eas in easting]), northing=np.array([float(nor) 
+                                              for nor in northing]))
 
     def convert_location_2_utm (self, latitude =None  , 
                                 longitude=None ): 
@@ -1941,17 +2076,20 @@ class Location (object):
         
         if isinstance(self.latitude, np.ndarray):
             if self.latitude.size >= 1 or self.longitude >=1: # 
-                assert  self.latitude.size ==self.longitude.size, CSex.pyCSAMTError_location(
+                assert  self.latitude.size ==self.longitude.size,\
+                    CSex.pyCSAMTError_location(
                     'latitude and longitude must be the same size.') 
     
-                self.easting = np.array([ gis.ll_to_utm(reference_ellipsoid=23,
-                                              lat=self.latitude[ii],
-                                              lon=self.longitude[ii]) [1]
-                                         for ii in range(self.latitude.size)])
-                self.northing =np.array( [ gis.ll_to_utm(reference_ellipsoid=23,
-                                              lat=self.latitude[ii],
-                                              lon=self.longitude[ii]) [2] 
-                                          for ii in range(self.latitude.size)])
+                self.easting = np.array([ 
+                    gis.ll_to_utm(reference_ellipsoid=23,
+                        lat=self.latitude[ii],
+                        lon=self.longitude[ii]) [1]
+                                for ii in range(self.latitude.size)])
+                self.northing =np.array( [ 
+                    gis.ll_to_utm(reference_ellipsoid=23,
+                                lat=self.latitude[ii],
+                                lon=self.longitude[ii]) [2] 
+                            for ii in range(self.latitude.size)])
             
         else : 
             _data_info_utm =gis.ll_to_utm(reference_ellipsoid=23,
@@ -2074,17 +2212,21 @@ class Site(object):
         if isinstance(latitude, list) :latitude =np.array(latitude)
         if self.stn_name is None : 
             self.stn_name = latitude.size
-            warnings.warn('You are not provided stations_names : We will defined stations names'
-                          ' automatically starting by S-XX [{0},..,{1}]so '
-                          'to zip data with latitude. If you dont want this station nomenclature '
-                          'please provide station names.'.format(
-                              self.stn_name[0], self.stn_name[-1]))
+            warnings.warn(
+                'You are not provided stations_names : '
+                'We will defined stations names'
+                 ' automatically starting by S-XX [{0},..,{1}]so '
+                 'to zip data with latitude. If you dont want this'
+                 ' station nomenclatureplease provide station names.'.format(
+                             self.stn_name[0], self.stn_name[-1]))
             
         elif self.stn_name is not None : 
-            assert len(self.stn_name)== latitude.size,  CSex.pyCSAMTError_site(
+            assert len(self.stn_name)== latitude.size, \
+                CSex.pyCSAMTError_site(
                 'Stations_names provided '
-                 'must have the same size with latitude data. latitude size is <{0}>'.\
-                                      format(latitude.size))
+                 'must have the same size with latitude data.'
+                 ' latitude size is <{0}>'.format(latitude.size))
+
         self._lat ={stn:lat for stn, lat in zip (self.stn_name, latitude)}
     
     @property 
@@ -2095,9 +2237,10 @@ class Site(object):
         if self.stn_name is None : self.stn_name = longitude.size
         if not isinstance(longitude,np.ndarray): longitude =np.array(longitude)
         if len(self.stn_name) != longitude.size :
-            raise CSex.pyCSAMTError_site('Station_names|longitude must'
-                                         ' have the same size.Longitude size is <{0}>'.\
-                                             format(longitude.size))
+            raise CSex.pyCSAMTError_site(
+                'Station_names|longitude must'
+                 ' have the same size.Longitude size is <{0}>'.
+                          format(longitude.size))
         self._lon ={stn:lon for stn, lon in zip (self.stn_name, longitude)}
         
     @property 
@@ -2108,9 +2251,10 @@ class Site(object):
         if self.stn_name is None : self.stn_name = elevation.size
         if not isinstance(elevation,np.ndarray):
             elevation =np.array(elevation)
-        if len(self.stn_name) != elevation.size :raise CSex.pyCSAMTError_site(
-                'Station_names|Elevation must'
-                 ' have the same size.Elevation size is <{0}>'.format(elevation.size))
+        if len(self.stn_name) != elevation.size :
+            raise CSex.pyCSAMTError_site('Station_names|Elevation must'
+                 ' have the same size.Elevation size is'
+                 ' <{0}>'.format(elevation.size))
         self._elev ={stn:elev for stn, elev in zip (self.stn_name, elevation)} 
         
     @property 
@@ -2121,9 +2265,10 @@ class Site(object):
         if self.stn_name is None : self.stn_name = azimuth.size
         if not isinstance(azimuth,np.ndarray): azimuth =np.array(azimuth)
         if len(self.stn_name) != azimuth.size :
-            raise CSex.pyCSAMTError_site('Station_names|Azimuth must'
-                                            ' have the same size.Azimuth size is <{0}>'.\
-                                                format(azimuth.size))
+            raise CSex.pyCSAMTError_site(
+                'Station_names|Azimuth must'
+                ' have the same size.Azimuth size is <{0}>'.\
+                          format(azimuth.size))
         self._azim ={stn:azim for stn, azim in zip (self.stn_name, azimuth)}   
         
     @property 
@@ -2133,16 +2278,19 @@ class Site(object):
     def north(self, northing): 
         if self.stn_name is None :
             self.stn_name = northing.size
-            warnings.warn('You are not provided stations_names : We will defenied stations names'
-                  ' automatically starting by S-XX [{0},..,{1}]so to zip data with latitude. '
-                  'If you dont want this station nomenclature '
-                  'please provide station names.'.format(self.stn_name[0], self.stn_name[-1]))
+            warnings.warn(
+                'You are not provided stations_names : We will defenied '
+                'stations names automatically starting by S-XX [{0}'
+                  ',..,{1}]so to zip data with latitude. If you dont want'
+                  ' this station nomenclature please provide station'
+                  ' names.'.format(self.stn_name[0], self.stn_name[-1]))
                 
         if not isinstance(northing,np.ndarray): northing =np.array(northing)
         if len(self.stn_name) != northing.size :
-            raise CSex.pyCSAMTError_site('Station_names|Northing must'
-                                            ' have the same size.Northing size is <{0}>'.\
-                                                format(northing.size))
+            raise CSex.pyCSAMTError_site(
+                'Station_names|Northing must'
+                 ' have the same size.Northing size is <{0}>'.
+                   format(northing.size))
         self._north={stn:north for stn, north in zip (self.stn_name, northing)}  
         
     @property 
@@ -2154,17 +2302,18 @@ class Site(object):
             self.stn_name = easting.size 
         if not isinstance(easting,np.ndarray): easting =np.array(easting)
         if len(self.stn_name) != easting.size :
-            raise CSex.pyCSAMTError_site('Station_names|Easting must'
-                                            ' have the same size.Easting size is <{0}>'.\
-                                                format(easting.size))
+            raise CSex.pyCSAMTError_site(
+                'Station_names|Easting must'
+                 ' have the same size.Easting size is <{0}>'.\
+                        format(easting.size))
         self._east ={stn:east for stn, east in zip (self.stn_name, easting)} 
         
 
     def set_site_info(self, data_fn = None, easting =None ,
                       northing =None , utm_zone=None ):
         """
-        Set-info from site file, can read zonge *stn* profile fine or set easting 
-        and northing coordinates.
+        Set-info from site file, can read zonge *stn* profile fine or s
+        et easting and northing coordinates.
  
         :param data_fn:  path to site data file . 
                        may Use Stn  or other file of
@@ -2184,27 +2333,32 @@ class Site(object):
             if os.path.isfile (self.sitedata) : 
                 profile_obj =Profile(profile_fn=self.sitedata)
             
-            else : raise CSex.pyCSAMTError_profile('Unable to read  a file.'
-                                                   ' Please provide the right file.')
+            else : raise CSex.pyCSAMTError_profile(
+                'Unable to read  a file. Please provide the right file.')
+                                                   
             
         elif easting is not None and northing is not None : 
-            profile_obj =Profile().read_stnprofile(easting =easting, northing =northing)
+            profile_obj =Profile().read_stnprofile(easting =easting, 
+                                                   northing =northing)
         
-        #call profile object and populate the missing coordinate lat/lon, or east/north 
+        #call profile object and populate the missing coordinate lat/lon, 
+        #or east/north 
         
         if profile_obj.lat is None : 
             self.Location.easting=profile_obj.east 
             self.Location.northing =profile_obj.north 
             self.Location.convert_location_2_latlon(utm_zone=self.utm_zone )
-            self.lon , self.lat = self.Location.longitude, self.Location.latitude 
+            self.lon , self.lat = self.Location.longitude,
+            self.Location.latitude 
         else : 
             self.lat, self.lon=profile_obj.lat, profile_obj.lon 
 
         if (profile_obj.east is None) or (profile_obj.north is None): 
             self.Location.latitude =profile_obj.lat 
             self.Location.longitude =profile_obj.lon 
-            self.Location.convert_location_2_utm(latitude=self.Location.latitude, 
-                                                 longitude=self.Location.longitude) 
+            self.Location.convert_location_2_utm(
+                latitude=self.Location.latitude, 
+                longitude=self.Location.longitude) 
     
             self.east, self.north =self.Location.easting, self.Location.northing 
             
@@ -2246,7 +2400,8 @@ def _validate_stnprofile(profile_lines, spliting=None):
         if ss in profile_lines [0]:
             ok +=1 
 
-    head_index =[ (lab, jj) for jj , val in enumerate(profile_lines[0].strip().split(spliting)) \
+    head_index =[ (lab, jj) for jj , val in enumerate(
+        profile_lines[0].strip().split(spliting)) \
                   for lab in stn_label if lab in val]
     return  ok, head_index   
 
@@ -2263,27 +2418,21 @@ def round_dipole_length(value):
     
 
 
-if __name__== '__main__': 
+# if __name__== '__main__': 
     
-    file_1='K1.AVG'
-    file_2='LCS01.avg'
-    file_3='LCS01_2_to_1.avg'
+#     file_1='K1.AVG'
+#     file_2='LCS01.avg'
+#     file_3='LCS01_2_to_1.avg'
     
-    testj= 'csi000.dat'
-    testedi='testemap3.edi'
-    testavg ='K1.AVG'
- 
-    file_stn='K1.stn'
-    for ii in ['csi000.dat', 'testemap3.edi', 'K1.AVG']:
-        path =  os.path.join(os.environ["pyCSAMT"], 
-                              'pycsamt','data', ii)
+#     testj= 'csi000.dat'
+#     testedi='testemap3.edi'
+#     testavg ='K1.AVG'
     
-        csamt_obj = CSAMT(data_fn=path, profile_fn= os.path.join(os.path.dirname(path), file_stn))
-        # print(CSAMT.find_path(path =path))
+#     data = '/data/avg/K1.AVG'
+#     data2= r'C:\Users\Administrator\OneDrive\Python\pyCSAMT\data\avg\K1.AVG'
+#     csamt_obj = CSAMT(data_fn=data2)
+#     print(csamt_obj.resistivity['S00'])
 
-        print(csamt_obj.resistivity['S00'])
-        print(csamt_obj.phase['S00'])
-        print(csamt_obj.phase_err['S00'])
         
     
     

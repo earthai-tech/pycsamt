@@ -69,7 +69,7 @@ def main():
                                 iteration_to_run= number_of_iteration_to_run, 
                                 resistivity_start = starting_res_model_value, 
                                 res_tm_err= TM_res_error, 
-                                phase_tm_err= TM_phase_error , 
+                                phase_tm_err= TM_phase_error,
                                 occam_mode= occam_mode, 
                                 n_layers = number_of_model_layers , 
                                 cell_width = model_cell_width , 

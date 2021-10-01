@@ -102,7 +102,7 @@ setup(
     author_email='kkouao@zju.edu.cn',
     maintainer="Kouadio K. Laurent",
     maintainer_email='etanoyau@gmail.com',
-	description="A Python open-source toolkit for standard CSAMT data processing enhancement",
+	description="A Python open-source toolkit for Controlled Source Audio-frequency Magnetotelluric ",
 	long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",
     url="https://github.com/WEgeophysics/pyCSAMT",

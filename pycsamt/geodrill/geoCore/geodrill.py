@@ -50,7 +50,7 @@ from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
 from pycsamt.viewer.mpldecorator  import geoplot2d
 from pycsamt.utils.decorator import deprecated
-from pycsamt.utils import Agso
+from pycsamt.utils.agso import Agso
 from pycsamt.geodrill.geoCore import structural as STRL
 from pycsamt.geodrill.geoDB.sql_recorder import GeoDataBase 
 
@@ -3868,7 +3868,7 @@ class GeoStratigraphy(Geodrill):
                                 model to replace the value in `crm` . Can be 
                                 'linear' or 'polynomial'. if `polynomial` is 
                                 set, specify the `degree. Default is 'linear'. 
-    alpha           float       Learing rate for graident descent computing.  
+    alpha           float       Learning rate for gradient descent computing.  
                                 *Default* is ``1e+4`` for linear. If `kind` is 
                                 set to `polynomial` the default value should 
                                 be `1e-8`. 

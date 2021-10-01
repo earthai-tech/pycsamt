@@ -6,5 +6,5 @@ save_non_project_files = False
 
 [main]
 version = 0.2.0
-recent_files = ['pycsamt\\utils\\plot_utils.py', 'pycsamt\\geodrill\\geoCore\\geodrill.py', 'scripts\\plot_geostratigraphy_model.py', 'pycsamt\\viewer\\mpldecorator.py', 'scripts\\write_corrected_edi.py']
+recent_files = ['pycsamt\\utils\\plot_utils.py', 'pycsamt\\geodrill\\geoCore\\geodrill.py', 'scripts\\plot_geostratigraphy_model.py', 'project_description.md', 'README.md', 'pycsamt\\__init__.py', 'setup.py']
 

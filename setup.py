@@ -93,8 +93,8 @@ setup_kwargs['python_requires'] ='>=3.6'
 
 authors =["Kouadio K. Laurent, ", 'Rong Liu, ', 
           'Binbin Mi, ','Chum-ning Liu, ', 'Albert O. Malory.']
-authors_emails =['etanoyau@gmail.com', 'liurongkaoyang@126.com',
-                'mibinbin@zju.edu.cn', 'lifuming001@163.com','amalory@zju.edu.cn']
+authors_emails =['etanoyau@gmail.com,', 'liurongkaoyang@126.com,',
+                'mibinbin@zju.edu.cn,', 'lifuming001@163.com,','amalory@zju.edu.cn']
 setup(
 	name="pycsamt",
 	version=pycsamt.__version__,

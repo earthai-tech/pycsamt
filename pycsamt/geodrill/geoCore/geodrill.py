@@ -60,9 +60,9 @@ except :
     pass
 
 try : 
-      import scipy as sp
+      import scipy 
       import scipy.stats as spSTAT
-      scipy_version = [int(vers) for vers in sp.__version__.split('.')] 
+      scipy_version = [int(vers) for vers in scipy.__version__.split('.')] 
       if scipy_version [0] == 1 : 
           if scipy_version [1] < 4 :
               warnings.warn('Note: need scipy version 1.4.0 or more . '

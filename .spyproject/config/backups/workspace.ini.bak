@@ -6,5 +6,5 @@ save_non_project_files = False
 
 [main]
 version = 0.2.0
-recent_files = ['pycsamt\\utils\\plot_utils.py', 'scripts\\occam2d_buildinputfiles.py', 'pycsamt\\__init__.py', 'pycsamt\\geodrill\\geoCore\\geodrill.py', 'setup.py', 'pycsamt\\ff\\core\\cs.py', 'pycsamt\\ff\\core\\avg.py']
+recent_files = ['scripts\\occam2d_buildinputfiles.py', 'pycsamt\\__init__.py', 'pycsamt\\geodrill\\geoCore\\geodrill.py', 'setup.py', 'pycsamt\\ff\\core\\cs.py', 'pycsamt\\ff\\core\\avg.py', 'scripts\\avg_F2_to_F1.py', 'scripts\\cs_write_avg_to_edi.py']
 

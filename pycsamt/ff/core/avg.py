@@ -3435,8 +3435,8 @@ class Resistivity (object):
         if self.Sres is not None : 
             vcounts_sres, repeat_hphz=np.unique (self.Sres, return_counts=True)
             self.vSres , self.mean_Sres = vcounts_sres, self.Sres.mean()
-            self.max, self.min =(vcounts_res.max(),vcounts_sres.max()),
-            (vcounts_res.min(),vcounts_sres.min())
+            self.max=(vcounts_res.max(),vcounts_sres.max())
+            self.min = (vcounts_res.min(),vcounts_sres.min())
             self.mean =(self.mean, self.mean_Sres)
             truncated_sres=cfunc.truncated_data( data =self.Sres, 
                                        number_of_reccurence=self.nfreq)

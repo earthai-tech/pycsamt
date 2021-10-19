@@ -25,7 +25,7 @@ from pycsamt.ff.core import avg
 path_to_avgfile= r'C:\Users\Administrator\Desktop\ThesisImp\avg'
 #--savepath :
 #save_edipath =  None         #r'C:\Users\Administrator\Desktop\test\edi_from_avg'
-save_edipath =r'C:\Users\Administrator\Desktop\ThesisImp\edis\K9_edi'
+save_edipath =None#r'C:\Users\Administrator\Desktop\ThesisImp\edis\K9_edi'
 #path to Zonge AVG file
 
 avgfile = 'K9.AVG'

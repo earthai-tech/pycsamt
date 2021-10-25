@@ -13,21 +13,21 @@ import os
 from pycsamt.ff.core.avg import Avg 
 
 #---> path to your avg file 
-path = r'C:\Users\Administrator\Desktop\test\avg_toj'
+path = 'data/avg'
 #---> savepath 
-savepath = r'C:\Users\Administrator\Desktop\test\avg_toj\jfilenew'
+savepath =None # r'C:\Users\Administrator\Desktop\test\avg_toj\jfilenew'
 
 #--> Zonge avgfile name 
-avgfile ='LCS01.AVG'
+avgfile ='K2.AVG'
 #--> station profile name 
-station_file = 'K1.stn'
+station_file = 'K2.stn'
 #--> j_extension _name 
 j_extension ='.dat'
 
 #---> survey_name 
 surveyName =None
 #---> add your avg info in your jformat output file 
-write_avg_file_infos = False
+write_avg_file_infos = True
 
 #---> see documentation : set to True 
 see_doc =False

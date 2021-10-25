@@ -34,9 +34,7 @@ import os , re, warnings, shutil
 import time  
  
 import numpy as np
-import scipy as sp
 from pycsamt.etc import infos as inFO
-
 import pycsamt.ff.core.avg as CSAMTavg 
 import pycsamt.ff.core.edi as CSAMTedi 
 import pycsamt.ff.core.j as CSAMTj 

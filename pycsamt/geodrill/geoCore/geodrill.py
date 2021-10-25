@@ -40,7 +40,6 @@ import warnings
 import datetime
 import numpy as np 
 import pandas as pd 
-import scipy as sp
 
 import  pycsamt.utils.exceptions as CSex
 from pycsamt.modeling import occam2d
@@ -50,7 +49,7 @@ from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
 from pycsamt.viewer.mpldecorator  import geoplot2d
 from pycsamt.utils.decorator import deprecated
-from pycsamt.utils import Agso
+from pycsamt.utils.agso import Agso
 from pycsamt.geodrill.geoCore import structural as STRL
 from pycsamt.geodrill.geoDB.sql_recorder import GeoDataBase 
 
@@ -59,9 +58,11 @@ try :
     _logger=csamtpylog.get_csamtpy_logger(__name__)
 except :
     pass
+
 try : 
+      import scipy 
       import scipy.stats as spSTAT
-      scipy_version = [int(vers) for vers in sp.__version__.split('.')] 
+      scipy_version = [int(vers) for vers in scipy.__version__.split('.')] 
       if scipy_version [0] == 1 : 
           if scipy_version [1] < 4 :
               warnings.warn('Note: need scipy version 1.4.0 or more . '
@@ -3868,7 +3869,7 @@ class GeoStratigraphy(Geodrill):
                                 model to replace the value in `crm` . Can be 
                                 'linear' or 'polynomial'. if `polynomial` is 
                                 set, specify the `degree. Default is 'linear'. 
-    alpha           float       Learing rate for graident descent computing.  
+    alpha           float       Learning rate for gradient descent computing.  
                                 *Default* is ``1e+4`` for linear. If `kind` is 
                                 set to `polynomial` the default value should 
                                 be `1e-8`. 

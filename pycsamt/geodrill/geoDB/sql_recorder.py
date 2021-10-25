@@ -45,13 +45,10 @@ import datetime
 
 from pycsamt.geodrill.geoCore.structural import Geo_formation 
 import  pycsamt.utils.exceptions as CSex 
-
 from pycsamt.geodrill.geoDB.dict_app import Glob
 from pycsamt.geodrill.geoDB.interfaceDB import ManageDB
-
 from  pycsamt.utils.decorator import redirect_cls_or_func
 from pycsamt.utils._csamtpylog import csamtpylog 
-
 #set LogInfos
 try :
     _logger=csamtpylog.get_csamtpy_logger(__name__)

@@ -100,7 +100,7 @@ are misclassified or not. With few step of codes we can check the process:
 ...                      input_layers=layer_names)
 >>> geosObj.stratigraphyModel(kind='nm', misfit_G =True)           # 'nm':New Model
 ```
-click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/geofit.png) for reference output. 
+click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/geofit.PNG) for reference output. 
 
 
 * **Note** : 

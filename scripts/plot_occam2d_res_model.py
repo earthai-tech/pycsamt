@@ -15,7 +15,9 @@ from pycsamt.viewer.plot import Plot2d
 
 
 # path to OCCAM 2D folder 
-path =os.path.join(os.environ ['pyCSAMT'],  'data', 'occam2D')
+#path =os.path.join(os.environ ['pyCSAMT'],  'data', 'occam2D')
+path =r'F:\ThesisImp\occam2D\invers+files\inver_res\K1'
+
 #savefigure 
 
 savefigure = None                   

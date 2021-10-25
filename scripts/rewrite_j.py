@@ -11,7 +11,7 @@ import os
 from pycsamt.ff.core.j import J_collection as J 
 
 #--- > set jfiles path 
-path =r'C:\Users\Administrator\Desktop\pyCS_datasets\testj'
+path ='data/j'
 
 #---> add your path to save files , if None , savepath is your current work directory 
 savepath = None

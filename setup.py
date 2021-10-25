@@ -89,12 +89,12 @@ setup_kwargs['install_requires'] = ['numpy>=1.8.1',
                                      'pyproj',
                                      'configparser']
                                      
-setup_kwargs['python_requires'] ='>=3.6'
+setup_kwargs['python_requires'] ='>=3.7'
 
 authors =["Kouadio K. Laurent, ", 'Rong Liu, ', 
           'Binbin Mi, ','Chum-ning Liu, ', 'Albert O. Malory.']
-authors_emails =['etanoyau@gmail.com', 'liurongkaoyang@126.com',
-                'mibinbin@zju.edu.cn', 'lifuming001@163.com','amalory@zju.edu.cn']
+authors_emails =['etanoyau@gmail.com,', 'liurongkaoyang@126.com,',
+                'mibinbin@zju.edu.cn,', 'lifuming001@163.com,','amalory@zju.edu.cn']
 setup(
 	name="pycsamt",
 	version=pycsamt.__version__,
@@ -102,7 +102,7 @@ setup(
     author_email='kkouao@zju.edu.cn',
     maintainer="Kouadio K. Laurent",
     maintainer_email='etanoyau@gmail.com',
-	description="A Python open-source toolkit for standard CSAMT data processing enhancement",
+	description="A Python open-source toolkit for Controlled Source Audio-frequency Magnetotelluric ",
 	long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",
     url="https://github.com/WEgeophysics/pyCSAMT",

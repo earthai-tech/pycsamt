@@ -22,10 +22,12 @@ from pycsamt.geodrill.geoCore.geodrill import Geodrill
 # path to OCCAM 2D folder 
 path =os.path.join(os.environ ['pyCSAMT'],  'data', 'occam2D')
 path2 =os.path.join(os.environ ['pyCSAMT'],  'data', '_iter2dat_2')
-profile_path =os.path.join(os.environ['pyCSAMT'], 'data', 'avg')
-                                                                
+#profile_path =os.path.join(os.environ['pyCSAMT'], 'data', 'avg')
+profile_path = r'F:\ThesisImp\K_reaj'
+ 
+path =r'F:\ThesisImp\occam2D\invers+files\inver_res\K8'                                                               
 # station coordinates profile files 
-profile_fn = 'K1.stn'
+profile_fn = 'K8_reaj.stn'
 
 # name of outputfile 
 filename = 'ybkro'
@@ -33,14 +35,14 @@ filename = 'ybkro'
 #save path# path to save output files 
 
 savepath  = None                #os.path.join(os.environ ['pyCSAMT'], 'data','_output2Oasis_2')     
-
+savepath = r'F:\ThesisImp\occam2D\invers+files\inver_res\K1\oasismap'
 #  Maximum depth investigation  for CSAMT , if not provided , will set to 1km 
 DOI = '1km'                 #  can be float like 1000 = 1km 
 
 # output resistivity to log10 
 log10rho =True
 # write file to negative depth : set to True if you want to keep your depth as positive value 
-to_negative =True   
+to_negative =False  
 # ouput scalled file 
 out_put_scalled_file =True             #  if set to False , scalled profile file will not generate .
 
@@ -54,7 +56,7 @@ path_to_occam_mesh = 'Occam2DMesh'
 # path to occam Model file 
 path_to_occam_model = 'Occam2DModel'
 # path to Occam Iteration file 
-path_to_occam_iter='ITER17.iter'
+path_to_occam_iter='ITER12.iter'
 
 #========================================= optional params =========================================
 # easting 
@@ -71,15 +73,17 @@ elevation =None
 step_descent = 200.         # float value. Step to cut out data and to  force resistivites calcualted 
                             # to match the reference data as input resistivities 
                             # if not provided the step will be 20% of D0I
-# Truth resistivities values otained on the sites or from other companies
+# Truth resistivity values obtained on the sites or from other companies
 #optional parameters 
-input_resistivity_values = [312, 525, 1235., 2202., 4000, 7000.]   # list of resistivites values : order is insensitives 
+#input_resistivity_values = [312, 525, 1235., 2202., 4000, 7000.]   # list of resistivites values : order is insensitives 
 
+input_resistivity_values =[66, 70, 180, 1000, 3000]
 # Truth layer names if given must match the input resistivities 
 # if nname of layers not provided, program will seek in dataBase to find
 # the closet resistivity to the layers.
 # optional parameters 
-input_layer_names = ['alluvium', 'amphibolite','altered rock','augen gneiss', 'granite'] 
+#input_layer_names = ['alluvium', 'amphibolite','altered rock','augen gneiss', 'granite'] 
+input_layer_names =[ 'river water', 'fracture zone', 'granite']
 
 # ---------------Read with Iter2DAT FILE ------------------
 

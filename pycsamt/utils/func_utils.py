@@ -2278,7 +2278,12 @@ def round_dipole_length(value, round_value =5.):
     elif mm >= 3 and mm < 7 :return np.around(value -mm +round_value) 
     else:return np.around(value - mm +10.)
     
-
+def keepmin(array): 
+    """ Keep the minimum in array and array value"""
+    os= np.where(array==array.min())[0]
+    if len(os)>1 :
+        os= os[0]
+    return int(os), array[int(os)]
 
 # if __name__=="__main__" :
 

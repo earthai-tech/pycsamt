@@ -17,28 +17,32 @@ Created on Tue Jan 19 16:57:08 2021
 
 """
 import os 
+# from pycsamt.viewer import plot 
 from pycsamt.viewer.plot import Plot1d 
 
 #--- > path to your file 
 
-path_to_file = os.path.join(os.environ['pyCSAMT'],'data','avg','K1.AVG')
+# path_to_file = r'data/avg/K1.AVG'
+path_to_file = r'data/j'
+# path_to_file= r'F:\ThesisImp\edis\K1_edi'
 
 #path_to_file = r'C:\Users\Administrator\Desktop\ThesisImp\edis\K9_edi' 
 #path_to_file =os.path.join(os.environ['pyCSAMT'],'data', 'edi' )
                            
 #save figure 
 savefigure = r'C:\Users\Administrator\Desktop\ThesisImp\plots\correction\K9.png'
+savefigure=None 
 # stn station profile file 
-#profile_stn = os.path.join(os.environ['pyCSAMT'],'data','avg','K1.stn')
+profile_stn = os.path.join(os.environ['pyCSAMT'],'data','avg','K1.stn')
 profile_stn =None  #  
 
-FILTER='*'                   # Can be `tma` or `flma`
+FILTER='ama'                   # Can be `tma` or `flma`
 
 #fipole length in meter if `flma filter is provided 
 dipole_length =50.
 
 # When plot AMA filter add number of filter : default is 1 , can be 1 to 10
-number_of_skinDepth=7.
+number_of_skinDepth=3.
 
 #---> Filter points 
 FILERpoints = 7.

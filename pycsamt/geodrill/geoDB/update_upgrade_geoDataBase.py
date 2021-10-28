@@ -49,17 +49,17 @@ from pycsamt.geodrill.geoDB.sql_recorder import GeoDataBase
 GET_INFO =False                                 # see the information already set in DataBase 
                                                 # before nany update and upgrade , it is better to set this to true to see 
                                                 # if the structure exist and what are the corresponding values in database .
-UPDATE = False                                  # if update provide the geostructure name and the columns to modify 
+UPDATE =  False                                 # if update provide the geostructure name and the columns to modify 
 UPGRADE =False                                  # if upgrade provide all  informations 
 
-name_geo ='amethise '                           # name of stucture 
+name_geo =  'granite'                           # name of stucture 
 pattern_geo = 258.                              # In fact pattern are linked with hatch . the size of elements 
 pat_size_geo = 1.5                              # size of hatch symbol (float) 
 pat_density_geo =.23                            # density of hatch symbol (float)
 pat_thickness = 2.                              # thick ness of hatch symbol (float)
 rgb_geo ='R128G52B26'                           # RGB colors : eg RG28 or hexadecima #000ff  or 'blue'. program will convert to "RGB" except alpha
 hatch_geo ='+.//.Oo'                            # matplotlib pattern build with symbolisation map ["/", "\\", "|", '-', '+', 'x', 'o', 'O', '.', '*'] 
-electrical_props = [1e5 ,  1e3]                 # range of electrical property of rocks (maximum and minium)
+electrical_props = [2e3 ,  15e3]                 # range of electrical property of rocks (maximum and minium)
 colorMPL = (1.0, 0.25, 0.)                      # if rgb is provided , this key will set automatically , dont need to add 
 FGDC ='none'                                    # Dont need to fill this part , Digital cartographic 
                                                 # Standard for Geological  Map Symbolisation, will be fill later  at least you 

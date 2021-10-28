@@ -93,6 +93,27 @@ except ImportError:  # pragma: no cover
 
 ###################### end import module ################################### 
 
+def smart_format(iter_obj): 
+    """ Smart format iterable obj 
+    :param iter_obj: iterable obj 
+    
+    :Example: 
+        >>> from pycsamt.utils.func_utils import smart_format
+        >>> smart_format(['model', 'iter', 'mesh', 'data'])
+        ... 'model','iter','mesh'and 'data'
+    """
+    try: 
+        iter(iter_obj) 
+    except:  return f"{iter_obj}"
+    
+    iter_obj = [str(obj) for obj in iter_obj]
+    if len(iter_obj) ==1: 
+        str_litteral= ','.join([f"{i!r}" for i in iter_obj ])
+    elif len(iter_obj)>1: 
+        str_litteral = ','.join([f"{i!r}" for i in iter_obj[:-1]])
+        str_litteral += f"and {iter_obj[-1]!r}"
+    return str_litteral
+
 
 def averageData(np_array, filter_order=0, 
                 axis_average=0, astype="float32"): #array_of_average_array=0

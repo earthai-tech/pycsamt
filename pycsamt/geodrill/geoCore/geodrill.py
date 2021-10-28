@@ -42,8 +42,8 @@ import numpy as np
 import pandas as pd 
 
 import  pycsamt.utils.exceptions as CSex
+import pycsamt.utils.geo_utils as GU
 from pycsamt.modeling import occam2d
-# from pycsamt.utils.avg_utils import ReadFile as rfi
 from pycsamt.ff.core.cs import Profile
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
@@ -3845,7 +3845,7 @@ class GeoStratigraphy(Geodrill):
     ----------
         **crm** : str,  
                     full path to Occam model file.                             
-        **eta** :  int,                
+        **beta** :  int,                
                 Value to  divide into the CRM blocks to improve 
                 the computation times. default is`5`                               
         **n_epochs** :  int,  
@@ -3907,17 +3907,16 @@ class GeoStratigraphy(Geodrill):
         >>> geosObj.nm 
 
     """
-    def __init__(self, crm=None, eta=5, ptol=0.1 , n_epochs=100, **kwargs):
+    def __init__(self, crm=None, beta=5, ptol=0.1 , n_epochs=100, **kwargs):
         Geodrill.__init__(self, **kwargs)
 
         self.crm =crm 
-
-        self._eta =eta 
+        self._beta =beta 
         self._ptol =ptol 
         self._n_epochs = n_epochs
         
         self._tres = kwargs.pop('tres', None)
-        self._alpha = kwargs.pop('alpha_', 1e-4)
+        self._eta = kwargs.pop('eta', 1e-4)
         self._kind =kwargs.pop('kind', 'linear')
         self._degree = kwargs.pop('degree', 1)
         
@@ -3962,23 +3961,23 @@ class GeoStratigraphy(Geodrill):
                 self._n_epochs = 100 
                 
     @property 
-    def eta (self): 
+    def beta (self): 
         """ Block constructor param"""
-        return self._eta 
-    @eta.setter 
-    def eta(self, eta0 ):
+        return self._beta 
+    @beta.setter 
+    def beta(self, beta0 ):
         """ Block constructor must be interger value."""
         try : 
-            self._eta = int(eta0)
+            self._beta = int(beta0)
         except Exception: 
             raise TypeError
         else: 
-            if self._eta <=0 :
+            if self._beta <=0 :
                 self._logging.debug(
-                    f'{self._eta} is unaceptable. Could resset to 5.')
+                    f'{self._beta} is unaceptable. Could resset to 5.')
                 warnings.warn(
-                    f'`{self._eta}` is unaceptable. Could resset to 5.')
-                self._eta= 5
+                    f'`{self._beta}` is unaceptable. Could resset to 5.')
+                self._beta= 5
     @property 
     def ptol(self) :
         """ Tolerance parameter """
@@ -4013,14 +4012,16 @@ class GeoStratigraphy(Geodrill):
             raise ValueError('Unable to convert TRES values') 
         
         
-    def _createNM(self, crm =None, eta =5 , ptol= 0.1, **kws): 
+    def _createNM(self, crm =None, beta =5 , ptol= 0.1, **kws): 
         """ Create NM through the differents steps of NM creatings. 
         
         - step 1 : sof minimal computing 
         - step2 : model function computing 
-        
+        - step 3: add automatic layers
+        - step 4: use ANN to find likehood layers
+     
         :param crm: calculated resistivity model blocks 
-        :param eta: number of block to build.
+        :param beta: number of block to build.
         :param ptol: Error tolerance parameters 
   
         """
@@ -4052,31 +4053,36 @@ class GeoStratigraphy(Geodrill):
         subblocks =kws.pop('subblocks', None)
         disp= kws.pop('display_infos', True)
         hinfos =kws.pop('headerinfos', ' Layers [auto=automatic]')
-        if subblocks is not None: self.subblocks = self.subblocks
+        if subblocks is not None: 
+            self.subblocks = subblocks
         
-        if iln is not None: self.input_layers = iln 
-        if tres is not None: self.tres = tres 
+        if iln is not None: 
+            self.input_layers = iln 
+        if tres is not None: 
+            self.tres = tres 
         
-        if crm is not None: self.crm = crm 
-        if eta is not None: self.eta = eta 
-        if ptol is not None: self.ptol = ptol 
+        if crm is not None:
+            self.crm = crm 
+        if beta is not None: 
+            self.beta = beta 
+        if ptol is not None:
+            self.ptol = ptol 
         
         self.s0 , errors=[], []
         #step1 : SOFMINERROR 
         for ii in range(len(self.subblocks)):
-            s1, error = self._softminError(subblocks= self.subblocks[ii])
+            s1, error = self._softMinError(subblocks= self.subblocks[ii])
             self.s0.append(s1)
-            
             errors.append(error)
-            
+
         #step2 : MODELFUNCTION USING DESCENT GRADIENT 
         for ii in range(len(self.s0)):
             if 0 in self.s0[ii][:, :]: 
-                s2, error = self._modelFunc(subblocks =self.subblocks[ii], 
+                s2, error = self._hardMinError(subblocks =self.subblocks[ii], 
                                             s0= self.s0[ii])
-            self.s0[ii]=s2
-            errors[ii]= error 
-        
+                self.s0[ii]=s2
+                errors[ii]= error 
+
         arp_=[]
         #Step 3: USING DATABASE 
         for ii in range(len(self.s0)):
@@ -4084,8 +4090,7 @@ class GeoStratigraphy(Geodrill):
                 s3, autorock_properties= self._createAutoLayer(
                     subblocks=self.subblocks[ii], s0=self.s0[ii]  )
                 arp_.append(autorock_properties)
-                self.s0[ii]=s3 
-                
+                self.s0[ii]=s3       
         # Assembly the blocks 
         self.nm = np.concatenate((self.s0))
         self.z=self.nm[:, 0]
@@ -4106,10 +4111,12 @@ class GeoStratigraphy(Geodrill):
             print_layers = self.input_layers  + [ ' {0} (auto)'.format(l) 
                                                  for l in gammaL ]
             self.input_layers = self.input_layers + gammaL
-
-        self.tres = self._tres  + list (np.power(10, 
+        # keep the auto_layer found     
+        self.auto_layers =gammaL
+        self.tres = list(np.power(10,self._tres))  + list (np.power(10, 
                   np.array([float(rv) for rv in gammarho])))
         # display infos 
+        
         if disp:
             display_infos(infos=print_layers,
                           header= hinfos)
@@ -4117,7 +4124,7 @@ class GeoStratigraphy(Geodrill):
         #layer: No need to plot the NM 
         return self.nm
     
-    def _softminError(self, subblocks=None, **kws ): 
+    def _softMinError(self, subblocks=None, **kws ): 
         """
         Replace the calculated resistivity by the true resistivity 
         using the soft minimal error (ξ)
@@ -4126,10 +4133,7 @@ class GeoStratigraphy(Geodrill):
         inversion results 
         
         """
-        buffer =self.ptol +1  #bufferr error 
-
-        s0 = np.zeros_like(subblocks.T)
-        s0[:, 0] = subblocks.T[:, 0] 
+        buffer =self.ptol +1  #bufferr error  
         _z = subblocks[:, 0]
         subblocks = subblocks[:, 1:]
         # Hold the columns of depth values 
@@ -4152,7 +4156,7 @@ class GeoStratigraphy(Geodrill):
         return s0, error 
 
 
-    def _modelFunc(self, tres=None, subblocks=None, s0=None, ptol = None,
+    def _hardMinError(self, tres=None, subblocks=None, s0=None, ptol = None,
                          kind='linear', **kwargs ): 
         """The second step introduces the model function F=W∙Z  where W
         contains the weights of parameters number and Z is V×2 matrix 
@@ -4171,15 +4175,15 @@ class GeoStratigraphy(Geodrill):
             
             >>> geosObj = GeoStratigraphy(**inversion_files, 
                               input_resistivities=input_resistivity_values) 
-            >>> ss0, error = geosObj._modelFunc(subblocks=geosObj.subblocks[0],
+            >>> ss0, error = geosObj._hardMinError(subblocks=geosObj.subblocks[0],
                                      s0=geosObj.s0[0])
         """
         
         if tres is not None: self.tres = tres 
         if ptol is not None: self.ptol = ptol 
         
-        alpha = kwargs.pop('alpha', None)
-        if alpha is not None: self._alpha = alpha 
+        eta = kwargs.pop('eta', None)
+        if eta is not None: self._eta = eta 
         n_epochs =kwargs.pop('n_epochs', None)
         if n_epochs is not None: self.n_epochs = n_epochs 
         kind = kwargs.pop('kind', None)
@@ -4195,21 +4199,22 @@ class GeoStratigraphy(Geodrill):
         error =[]
         for ii in range(s0.shape[0]): # hnodes N
             F, *_= self.gradient_descent(z=_z,s=subblocks[ii,:],
-                                         alpha_= self._alpha,
+                                         alpha= self._eta,
                                          n_epochs= self.n_epochs, 
                                          kind= self._kind)
             for jj in range(s0.shape[1]): # znodes V
                  if s0[ii, jj] ==0. : 
                     rp =F[jj]
                     for k in range(len(self.tres)) :
-                       sfme_k = (rp -self.tres[k])**2\
-                           /rp**2
-                       _ermin = abs(rp-subblocks[ii, jj])
-                       error.append(sfme_k)
-                       if sfme_k <= self.ptol and _ermin<= self.ptol: 
-                            if sfme_k  < buffer : # keep the best minimum 
-                               buffer = sfme_k  
-                               s0[ii, jj]= self.tres[k]
+                        with np.errstate(all='ignore'): 
+                            sfme_k = (rp -self.tres[k])**2\
+                                 /rp**2
+                            _ermin = abs(rp-subblocks[ii, jj])
+                        error.append(sfme_k)
+                        if sfme_k <= self.ptol and _ermin<= self.ptol: 
+                             if sfme_k  < buffer : # keep the best minimum 
+                                buffer = sfme_k  
+                                s0[ii, jj]= self.tres[k]
                                
                     buffer = self.ptol +1      # initilize buffer 
                     
@@ -4217,12 +4222,12 @@ class GeoStratigraphy(Geodrill):
         return s0, error 
         
     @staticmethod    
-    def gradient_descent(z, s, alpha_, n_epochs, **kws): 
+    def gradient_descent(z, s, alpha, n_epochs, **kws): 
         """ Gradient descent algorithm to  fit the best model parameter. 
         
         :param z: vertical nodes containing the values of depth V
         :param s: vertical vector containin the resistivity values 
-        :param alpha_: step descent parameter or learning rate. 
+        :param alpha: step descent parameter or learning rate. 
                     *Default* is ``0.01`
         :param n_epochs: number of iterations. *Default* is ``100``
                         Can be changed to other values
@@ -4240,7 +4245,7 @@ class GeoStratigraphy(Geodrill):
                   5.01096,5.0536,5.0655,5.06767])
             >>> fz, weights, cost_history = gradient_descent(z=z, s=res,
                                                  n_epochs=10,
-                                                 alpha_=1e-8,
+                                                 alpha=1e-8,
                                                  degree=2)
             >>> import matplotlib.pyplot as plt 
             >>> plt.scatter (z, res)
@@ -4316,8 +4321,10 @@ class GeoStratigraphy(Geodrill):
         s=s.reshape((s.shape[0], 1))
         
         for ii in range(n_epochs): 
-            W= W - (Z.T.dot(Z.dot(W)-s)/ Z.shape[0]) * alpha_ 
-            cost_history[ii]= (1/ 2* Z.shape[0]) * np.sum((Z.dot(W) -s)**2)
+            with np.errstate(all='ignore'): # rather than divide='warn'
+                #https://numpy.org/devdocs/reference/generated/numpy.errstate.html
+                W= W - (Z.T.dot(Z.dot(W)-s)/ Z.shape[0]) * alpha 
+                cost_history[ii]= (1/ 2* Z.shape[0]) * np.sum((Z.dot(W) -s)**2)
             
         F= model(Z=Z, W=W)     # generate the new model with the best weights 
                  
@@ -4325,15 +4332,15 @@ class GeoStratigraphy(Geodrill):
         
 
     def _makeBlock (self): 
-        """ Construct the differnt block  base on `eta` param. Separate blocks 
-        from number of vertical nodes generated by the first `eta` value applied 
+        """ Construct the differnt block  based on `beta` param. Separate blocks 
+        from number of vertical nodes generated by the first `beta` value applied 
         to the `crm`."""
 
         self.zmodel = np.concatenate((self.geo_depth.reshape(
             self.geo_depth.shape[0], 1),  self.model_res), axis =1) 
                                     
         
-        vv = self.zmodel[-1, 0] / self.eta 
+        vv = self.zmodel[-1, 0] / self.beta 
         for ii, nodev in enumerate(self.zmodel[:, 0]): 
             if nodev >= vv: 
                 npts = ii       # collect number of points got.
@@ -4356,10 +4363,10 @@ class GeoStratigraphy(Geodrill):
                     break 
                 
         return self._subblocks 
-    
+ 
     @property 
     def subblocks(self): 
-        """ Model subblocks divised by `eta`"""
+        """ Model subblocks divised by `beta`"""
         return self._subblocks 
     
     @subblocks.setter 
@@ -4389,6 +4396,7 @@ class GeoStratigraphy(Geodrill):
         hinfos = kws.pop('header', 'Automatic layers')
         
         if tres is not None :self.tres = tres 
+        if ptol is not None: self.ptol = ptol 
         
         def _findGeostructures(_res): 
             """ Find the layer from database and keep the ceiled value of 
@@ -4443,10 +4451,6 @@ class GeoStratigraphy(Geodrill):
             finalln = np.vstack((np.array(autolayers), hvalues))
             return  finalln, finalres 
             
-            
-        if tres is not None: self.tres = tres 
-        if ptol is not None: self.ptol = ptol 
-
         _z= s0[:, 0]
         s0 = s0[:, 1:].T
         _temptres , _templn =[], []
@@ -4481,12 +4485,15 @@ class GeoStratigraphy(Geodrill):
         
         return  s0, auto_rocks_names_res
         
-        
     @staticmethod
-    def _getProperties(properties =['electrical_props', '__description']): 
+    def _getProperties(properties =['electrical_props', '__description'], 
+                       sproperty ='electrical_props'): 
         """ Connect database and retrieve the 'Eprops'columns and 'LayerNames'
         
         :param properties: DataBase columns.
+        :param sproperty : property to sanitize. Mainly used for the properties
+            in database composed of double parenthesis. Property value 
+            should be removed and converted to tuple of float values.
         :returns:
             - `_gammaVal`: the `properties` values put on list. 
                 The order of the retrieved values is function of 
@@ -4497,7 +4504,7 @@ class GeoStratigraphy(Geodrill):
             :param v: value 
             :Example:
                 
-                >>> sanitize('(416.9, 100000.0)'))
+                >>> _fs('(416.9, 100000.0)'))
                 ...[416.9, 100000.0]
             """
             try : 
@@ -4513,11 +4520,14 @@ class GeoStratigraphy(Geodrill):
             _logger.debug('Connection to database failed!')
         else:
             _gammaVal = _dbObj._retreive_databasecolumns(properties)
-            if 'electrical_props' in properties: 
-                indexEprops = properties.index('electrical_props')
-                _gammaVal [indexEprops] = list(map(lambda x:_fs(x),
-                                               _gammaVal[indexEprops]))
-                
+            if sproperty in properties: 
+                indexEprops = properties.index(sproperty )
+                try:
+                    _gammaVal [indexEprops] = list(map(lambda x:_fs(x),
+                                                   _gammaVal[indexEprops]))
+                except TypeError:
+                    _gammaVal= list(map(lambda x:_fs(x),
+                                         _gammaVal))
         return _gammaVal 
        
     @deprecated(reason= 'Expensive method, should deprecated soon to hard-code'
@@ -4540,12 +4550,11 @@ class GeoStratigraphy(Geodrill):
         
         :Example: 
             
-        >>> from pycsamt.geodrill.geoCore.geodrill import Geostratigraphy 
-        >>> geosObj = GeoStratigraphy(**inversion_files,
-                              input_resistivities=input_resistivity_values, 
-                              input_layers=input_layer_names)
-        >>> geosObj.strataModel(kind='nm', plot_misfit =False)
-    
+            >>> from pycsamt.geodrill.geoCore.geodrill import Geostratigraphy 
+            >>> geosObj = GeoStratigraphy(**inversion_files,
+                                  input_resistivities=input_resistivity_values, 
+                                  input_layers=input_layer_names)
+            >>> geosObj.strataModel(kind='nm', plot_misfit =False)
         """
         
         def compute_misfit(rawb, newb, percent=True): 
@@ -4608,8 +4617,98 @@ class GeoStratigraphy(Geodrill):
                   
         geoModel( kind =kind,
                 plot_misfit=misfit_G,
-              **kwargs)  
+              **kwargs) 
+     
+    def _strataPropertiesOfSite(self, station =None, display_s=True): 
+        """ Build all properties of strata under each station.  
         
+        Parameters
+        ----------
+            station: str or int
+                Use normal count to identify the number of site to plot or use 
+                the name of station preceed of letter `S`. For instance site 
+                1 matches the station `S00` litterally
+            display_s:bool
+                Display the log layer infos as well as layers thicknesses
+        
+        Examples
+        --------
+            >>> from pycsamt.geodrill.geoCore.geodrill import GeoStratigraphy 
+            >>> import pycsamt.utils.geo_utils as GU 
+            >>> geosObj = GeoStratigraphy( input_resistivities=GU.TRES, 
+            ...              input_layers=GU.LNS,**GU.INVERS_KWS)
+            >>> geosObj._createNM()
+            >>> geosObj._strataPropertiesOfSite(station= 'S05')
+        """
+        
+        def stamping_ignored_rocks(fittedrocks, lns): 
+            """ Stamping the pseudo rocks and ignored them during plot."""
+            ir= set(fittedrocks).difference(set(lns))
+            for k in range( len(fittedrocks)): 
+                if fittedrocks[k] in ir : 
+                    fittedrocks[k] ='$(i)$'
+            return fittedrocks
+        
+        # assert the station, get it appropriate index and take the tres 
+        # at that index 
+        if station is None: 
+            stns = ["S{:02}".format(i) for i in range(self.nmSites.shape[1])]
+            self._logging.error('None station is found. Please select one station'
+                                f' between {func.smart_format(stns)}')
+            warnings.warn("NoneType can not be read as station name."
+                            " Please provide your station name. list of sites" 
+                             f" are {func.smart_format(stns)}")
+            raise ValueError("NoneType can not be read as station name."
+                             " Please provide your station name.")
+        try : 
+            id0= int(station.lower().replace('s', ''))
+        except : 
+            id_ =GU.assert_station(id= station, nm = self.nmSites)
+            station_ = 'S{0:02}'.format(id_)
+        else : 
+            id_ =GU.assert_station(id= id0 + 1, nm = self.nmSites)
+            station_ = 'S{0:02}'.format(id0)
+        self.logS = self.nmSites[:, id_] 
+     
+        # assert the input  given layers and tres 
+        is_the_same_length, msg  = GU.assert_len_lns_tres(
+            self.input_layers , self.tres)
+        
+        if is_the_same_length :
+            # then finf 
+            pslns = self.input_layers
+            pstres= self.tres 
+            ps_lnstres   = [(a, b) for a , b 
+                            in zip(self.input_layers, self.tres)] 
+        if not is_the_same_length:
+            # find the pseudoTRES and LNS for unknowrocks or layers
+            msg +=  "Unknow layers should be ignored."   
+            _logger.debug(msg)
+            warnings.warn(msg)
+            
+            pslns, pstres, ps_lnstres = GU.fit_tres(
+                                            self.input_layers , self.tres, 
+                                            self.auto_layers)
+        # now build the fitting rocks 
+        fitted_rocks =GU.fit_rocks(logS_array= self.nmSites[:,id_],
+                                   lns_=pslns , tres_=pstres)
+        # set the raws fitted rocks 
+        import copy
+        setattr(self, 'fitted_rocks_r', copy.deepcopy(fitted_rocks) )
+        # change the pseudo-rocks  located in fitted rocks par ignored $i$
+        # and get  the stamped rocks 
+        setattr(self, 'fitted_rocks',stamping_ignored_rocks(
+            fitted_rocks, self.input_layers ) )
+        
+        # fit stratum property 
+        sg, _, zg, _= GU.fit_stratum_property (self.fitted_rocks,
+                                self.z, self.logS)
+        self.log_thicknesses, self.log_layers,\
+            self.coverall = GU.get_s_thicknesses( 
+            zg, sg,display_s= display_s, station = station_ )
+ 
+        return self
+                        
         
 def makeBlockSites(station_location, x_nodes, block_model): 
     """ Build block that contains only the station locations values
@@ -4696,9 +4795,11 @@ def display_infos(infos, **kws):
     print(inline * size )
     
 
+                            
 if __name__=="__main__" :
 
     path=r'F:\ThesisImp\occam2D\invers+files\inver_res\K1'
+    path ='data/occam2D'
     inversion_files = {'model_fn':'Occam2DModel', 
                         'mesh_fn': 'Occam2DMesh',
                         "iter_fn":'ITER17.iter',
@@ -4716,7 +4817,12 @@ if __name__=="__main__" :
     geosObj = GeoStratigraphy(**inversion_files,
                       input_resistivities=input_resistivity_values, 
                       input_layers=input_layer_names)
-    geosObj.stratigraphyModel(kind ='nm',misfit_G=False)
+    # geosObj._createNM()
+    geosObj._strataPropertiesOfSite(site ='S03')
+    # crm = geosObj.crmSites
+    # nrm = geosObj.nmSites 
+    
+    # geosObj.stratigraphyModel(kind ='nm',misfit_G=False)
     
 
                 

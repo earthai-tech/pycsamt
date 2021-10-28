@@ -167,7 +167,7 @@ def station_id (id_):
     From id get the station  name as input  and return index `id`. 
     Index starts at 0.
     
-    :param id_: name of the station or index . Be sure to hve the station name 
+    :param id_: name of the station or index . Be sure to have the station name 
         containing the letter `S` which mean `site`. 
     :return: station index. If the list `id_` is given 
             will return the tuple.
@@ -1531,7 +1531,7 @@ def build_resistivity_barplot(depth_values , res_values):
     
     Parameters
     ----------
-        * depth_values : aray_like 
+        * depth_values : array_like 
                 model investigation depth 
                 
         * res_values : array_like 

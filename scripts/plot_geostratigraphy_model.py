@@ -30,6 +30,7 @@ inversion_files = {'model_fn':'Occam2DModel',
 inversion_files = {key:os.path.join(occamPath , vv) for key,
                     vv in inversion_files.items()}
 # input_True_resistivities (TRES)
+
 TRES=[10, 66,  70, 100, 1000, 3000]# 7000] #[10,  70, 100, 1000,  3000]
 #[10, 66, 70, 100, 1000, 2000, 3000, 7000, 15000 ]
                                     
@@ -42,3 +43,4 @@ geosObj = GeoStratigraphy(**inversion_files,
 
 geosObj.stratigraphyModel(kind=kindOfPlot , 
                     misfit_G =plotMisfitG)
+print(inversion_files )

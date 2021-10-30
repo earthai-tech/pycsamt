@@ -1,20 +1,17 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Oct 25 15:05:40 2021
-
-@author: @Daniel03
-"""
+# Copyright (c) 2021 Kouadio K. Laurent, on Mon Oct 25 15:05:40 2021
+#       This module is a part of pycsamt utils packages
+#       released under a LGL- licence.
+#       @author: K.KL alias Daniel03<etanoyau@gamil.com>
 import os
 import warnings 
-import copy
 import numpy as np
 import pandas as pd 
+import matplotlib.pyplot as plt
 
 import pycsamt.utils.func_utils as FU
 import pycsamt.utils.plot_utils as PU
-from pycsamt.geodrill.geoCore.geodrill import GeoStratigraphy
 from pycsamt.utils._csamtpylog import csamtpylog
-
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
 PATH = 'data/occam2D'
@@ -35,29 +32,6 @@ TRES=[10, 66,  70, 100, 1000, 3000]# 7000] #[10,  70, 100, 1000,  3000]
 LNS =['river water','fracture zone', 'MWG', 'LWG', 
       'granite', 'igneous rocks', 'basement rocks']
 
-def quick_read_geos(lns=LNS, tres=TRES):
-    """Quick read and build the geostratigraphy model (NM) 
-    
-    :param lns: list of input layers 
-    :param tres: list of input true resistivity values 
-    
-    :Example: 
-        >>> import pycsamt.utils.geo_utils as GU 
-        >>> obj= GU.quick_read_geos()
-        >>> GU.fit_tres(obj.input_layers, obj.tres, obj.auto_layer_names)
-    """
-    if len(INVERS_KWS) ==0: 
-        _logger.error("NoneType can not be read! Need the basics Occam2D"
-                         f" inversion {FU.smart_format(k_)} files.")
-
-        raise ValueError("NoneType can not be read! Need the basics Occam2D"
-                         f" inversion {FU.smart_format(k_)} files.")
-        
-    geosObj = GeoStratigraphy( input_resistivities=tres, 
-                      input_layers=lns,**INVERS_KWS)
-    geosObj._createNM()
-    
-    return geosObj 
 
 def lns_and_tres_split(ix,  lns, tres):
     """ Indeed lns and tres from `GeoStratigraphy` model are updated. 
@@ -77,126 +51,7 @@ def lns_and_tres_split(ix,  lns, tres):
     if ix ==0: return  lns, tres,[], []
     return  lns[:-ix], tres[:-ix], lns[-ix:], tres[-ix:]   
    
-def fit_tres(lns, tres, autorocks, force=False, **kws): 
-    """ Read and get the resistivity values from tres that match the 
-     the given layers.
-     
-    Find the layers and  their corresponding resistivity values from the 
-    database especially when values in the TRES and LN are not the same
-    length. It's therefore not possible to match each value to its
-    correspinding layer name. Therefore the best approach is to read the
-    TRES and find the layer name in the database based on the closest value.
 
-    :param lns: list of input layers 
-    :param tres: list of input true resistivity values 
-    :param autorocks: list of the autorocks found when building the new model.
-    :param force: bool, force fitting resistivity value with the rocks in 
-            the database whenever the size of rocks match perfectly 
-            the number of the rocks. Don't do that if your are sure that the 
-            TRES provided fit the  layers in LNS.
-    :param kws: is database column property. Default is
-        `['electrical_props', '__description']`
-        
-    :returns: new pseudolist contains the values of rocks retrived from 
-        database as well as it closest value in TRES.
-    """
-
-    def flip_back_to_tuple(value , substitute_value, index=1): 
-        """convert to tuple to list before assign values and 
-          reconvert to tuple  after assignment for consistency. 
-          `flip_back_to_tuple` in line in this code is the the same like :
-                newTRES[ii] = list(newTRES[ii])
-                newTRES[ii][1] = val
-                newTRES[ii] = tuple (newTRES[ii]) 
-          """ 
-        value = list(value)
-        if index is not None: 
-            value[index] = substitute_value
-        else : value = substitute_value
-        return tuple (value) 
-
-     
-    ix = len(autorocks)
-    lns0, tres0, rlns, rtres= lns_and_tres_split(ix,  lns, tres)
-    if len(lns0) > len(tres0): 
-        msg= ''.join(['Number of given layers `{0}` should not be greater ',
-                      ' than the number of given resistivity values` {1}`.'])
-        msg= msg.format(len(lns0), len(tres0))
-        
-        n_rock2drop = len(tres0)-len(lns0) 
-        msg += f" Layer{'s' if abs(n_rock2drop)>1 else ''} "\
-            f"{FU.smart_format(lns0[n_rock2drop:])} should be ignored."
-    
-        lns0 = lns0[: n_rock2drop]
-        warnings.warn(msg)
-        _logger.debug(msg)
-       
-    if sorted([n.lower() for n in lns0]
-              ) == sorted([n.lower() for n in lns]): 
-        if not force: 
-            return lns0, tres0, [(a, b) for a , b in zip(lns0, tres0)]
-        
-    r0 =copy.deepcopy(tres0)
-    # for consistency, lowercase the layer name
-    # get the properties [name and electrical properties]  
-    # from geoDataBase try to build new list with none values 
-    # loop for all layer and find their index then 
-    # their elctrical values 
-    #           if name exist in database then:
-    #           loop DB layers names 
-    #           if layer is found then get it index 
-    lns0 =[ln.lower().replace('_', ' ') for ln in lns0 ]
-    _gammaRES, _gammaLN = GeoStratigraphy._getProperties(**kws)
-
-    newTRES =[None for i in tres0]
-    temp=list()
-    for ii, name in enumerate(lns0) : 
-        if name in _gammaLN: 
-            ix = _gammaLN.index (name) 
-            temp.append((name,_gammaRES[ix])) 
-            
-    # keep the lns0 rocks that exists in the database 
-    # and replace the database value by the one given 
-    #in tres0 and remove the tres value with 
-    # unknow layer by its corresponding value.
-    if len(temp)!=0: 
-        for name, value in temp: 
-            ix, val = get_closest_gap (value= value, iter_obj=tres0)
-            newTRES[ix]= (name, val) 
-            tres0.pop(ix) 
-    # try to set the values of res of layer found in 
-    # the database is not set = 0 by their corresponding
-    # auto -layers. if value is in TRES. We consider 
-    #that the rocks does not exist and set to None
-    for ii, nvalue in enumerate(newTRES):
-        try: 
-            iter(nvalue[1])
-        except:
-            if nvalue is not None and nvalue[1]==0. :
-                newTRES[ii]= None 
-            continue 
-        else: 
-            # if iterable get the index and value of layers
-            # remove this values in the tres 
-            ix, val = get_closest_gap (value=nvalue[1], iter_obj=tres0)
-            newTRES[ii] = flip_back_to_tuple (newTRES[ii], val, 1) 
-            tres0.pop(ix) 
-            
-    for ii, nvalue in enumerate(tres0):
-        ix,_val=  get_closest_gap (value=nvalue,status ='isoff', 
-                                   iter_obj=_gammaRES, 
-                          condition_status =True, skip_value =0 )
-        # get the index of this values in tres
-        index = r0.index (_val) 
-        newTRES[index] = (_gammaLN[ix], nvalue)
-        
-    # create for each tres its pseudorock name 
-    # and pseudorock value
-    pseudo_lns = [a [0] for a in newTRES] + rlns 
-    pseudo_tres = [b[1] for b in newTRES] + rtres 
-    newTRES += [(a, b) for a , b in zip(rlns, rtres)]
-    
-    return pseudo_lns , pseudo_tres , newTRES 
 
 def get_closest_gap (value, iter_obj, status ='isin', 
                           condition_status =False, skip_value =0 ):
@@ -464,7 +319,6 @@ def fit_stratum_property (fittedrocks , z , site_tres):
     
     return strata_grouped, site_tres_grouped, z_grouped , zcumsum_grouped
 
-
 def get_s_thicknesses(grouped_z, grouped_s, display_s =True, station=None):
     """ Compute the thickness of each stratum from the grouped strata from 
     the top to the bottom.
@@ -561,51 +415,6 @@ def assert_len_lns_tres(lns, tres):
     is_the_same = len(tres) == len(lns)
     return is_the_same , msg.format(len(tres), len(lns))   
 
-
-def fit_default_layer_properties(layers, dbproperties_= ['hatch', 'colorMPL']): 
-    """ Get the default layers properties  implemented in database. 
-     
-    For instance get the hatches and colors from given layers implemented in 
-    the database by given the database `dbproperties_`.
-    
-    :param layers: str or list of layers to retrieve it properties
-        If specific property is missing , ``'none'`` will be return 
-    :param db_properties_: str, list or database properties 
-    :return: property items sanitized
-    
-    :Example: 
-        
-        >>> import pycsamt.utils.geo_utils as GU
-        >>> GU.fit_default_layer_properties(
-        ...    ['tuff', 'granite', 'evaporite', 'saprock']))
-        ... (['none', 'none', 'none', 'none'],
-        ...     [(1.0, 1.0, 0.0), (1.0, 0.0, 1.0), (0.0, 0.0, 1.0),
-        ...     (1.0, 0.807843137254902, 1.0)])
-    """
-    # for consistency check again and keep the DB properties untouchable.
-    dbproperties_= ['colorMPL' if g.lower().find('mpl') >=0 else 
-                    'FGDC' if g.lower()=='fgdc'else g.lower() 
-                    for g in dbproperties_]
-    if isinstance(layers , str): layers =[layers]
-    assert_gl = ['yes' if isinstance(ll, str) else 'no' for ll in layers]
-    if not len(set(assert_gl)) ==1: 
-        raise TypeError("Wrong given layers. Names should be a string!")
-    if 'name' or'__description' not in  dbproperties_: 
-        dbproperties_.insert(0, 'name')
-    
-    __gammaProps = GeoStratigraphy._getProperties(dbproperties_)
-    
-    r_props =[['none' for i in layers] for j in range(len(__gammaProps)-1)]
-    for k  , l in enumerate(layers): 
-        if l  in __gammaProps[0] :
-            ix= __gammaProps[0].index(l)
-            for kk, gg in enumerate(r_props) : 
-                gg[k]= __gammaProps[1:][kk][ix]
-                
-    r_props = [_sanitize_db_items(r_props[k], force=True )
-               for k in range(len (r_props))]
-    return tuple(r_props)
-
  
 def _sanitize_db_items (value, force =True ): 
     """ Sanitize Database properties by removing the parenthesis and 
@@ -648,6 +457,356 @@ def _sanitize_db_items (value, force =True ):
         return v
 
     return list(map(lambda x:sf_(x), value))
+
+
+def base_log( ax, thick, layers, hatch=None, color=None )  : 
+    """ Plot pseudo-stratigraphy basemap and return ax 
+    
+    :param ax: obj, Matplotlib axis 
+    :param thick: list of the thicknesses of the layers 
+    :param layers: list of the name of layers
+    :param hatch: list of the layer patterns
+    :param color: list of the layer colors
+    
+    :return: ax: matplotlib axis properties 
+    """
+
+    th_data = [np.array([i]) for i in thick ]
+    # doi = sum(thick)
+    for ii, data in enumerate(th_data ): 
+        next_bottom = sum(th_data [:ii])
+        ax.bar(1,
+               data,
+               bottom =next_bottom, 
+               hatch = hatch[ii], 
+               color = color[ii],
+               width = .3)
+    # inverse axes 
+    plt.gca().invert_yaxis()
+
+    ax.set_ylabel('Depth(m)', fontsize = 16 , fontweight='bold')
+
+    pg = [0.]+ list(np.cumsum([thick]))
+    ax.set_yticks(pg)
+    ax.set_yticklabels([f'${int(i)}$' for i in  pg] )
+    ax.tick_params(axis='y', 
+                   labelsize= 12., 
+                        )
+
+    return ax 
+
+def annotate_log (ax, thick, layers, colors=None, set_nul='*unknow',
+                    bbox_kws=None, set_nul_bbox_kws=None, **an_kws): 
+    """ Draw annotate stratigraphic map. 
+    
+    :param ax: obj, Matplotlib axis 
+    :param thick: list of the thicknesses of the layers 
+    :param layers: list of the name of layers
+    :param set_nul: str 
+        `set the Name of the unknow layers. Default is `*unknow`. Can be 
+        changed with any other layer name. 
+    :param bbox_kws:dict,  Additional keywords arguments of Fancy boxstyle 
+        arguments
+    :param set_nul_bbox_kws: dict, customize the boxstyle of the `set_nul` 
+        param. If you want the bbox to be the same like `bbox_kws`, we need 
+        just to write ``idem`` or `same`` or ``origin``.
+        
+    :return: ax: matplotlib axis properties 
+    """
+
+    xinf , xsup =-1, +1
+    xpad =  .1* abs(xinf)/2
+    ax.set_xlim([xinf, xsup])
+    ax.set_ylim([0, int(np.cumsum(thick).max())])
+    # inverse axes 
+    plt.gca().invert_yaxis()
+    # add 0. to thick to set the origin  
+    pg = np.cumsum([0] + thick)
+    # take values except the last y from 0 to 799 
+    v_arrow_bases = [(xinf + xpad, y) for y in  pg ]
+    v_xy = v_arrow_bases[:-1]
+    v_xytext = v_arrow_bases[1:]
+    # build the pseudo _thickness distance between axes 
+    for k, (x, y) in enumerate(v_xy):
+        ax.annotate('', xy=(x, y), xytext =v_xytext[k],
+                    xycoords ='data',
+                    # textcoords ='offset points',
+                    arrowprops=dict(arrowstyle = "<|-|>", 
+                                  ),  
+                horizontalalignment='center',
+                verticalalignment='top',                         
+                )
+    # ------------make horizontal arraow_[properties]
+    # build the mid point where staring annotations 
+    mid_loc = np.array(thick)/2 
+    center_positions =  pg[:-1] + mid_loc
+    h_xy = [ (xinf + xpad, cp) for cp in center_positions]
+    h_xytext = [(0, mk ) for mk in center_positions ]
+    
+    # control the color 
+    if colors is not None: 
+        if isinstance(colors, (tuple, list, np.ndarray)):
+            if len(colors) != len(thick): colors =None 
+        else : colors =None 
+    # build the pseudo _thickness distance between axes 
+    if bbox_kws is None:  
+         bbox0=  dict(boxstyle ="round", fc ="0.8", ec='k')
+    if set_nul_bbox_kws in ['idem', 'same', 'origin']: 
+        bbox_i = bbox0
+        
+    if not isinstance (set_nul_bbox_kws, dict): 
+         set_nul_bbox =  None     
+    if set_nul_bbox is None:
+        bbox_i= dict (boxstyle='round', 
+                     fc=(.9, 0, .8), ec=(1, 0.5, 1, 0.5))
+
+    layers=[f"${set_nul}$" 
+            if s.find("(i)")>=0 else s for s in layers ]
+    
+    for k, (x, y) in enumerate(h_xy):
+        if layers[k] ==f"${set_nul}$" : 
+            bbox = bbox_i
+        else: bbox = bbox0
+        if colors is not None:
+            bbox ['fc']= colors[k]
+        ax.annotate( f"{layers[k]}",  
+                    xy= (x, y) ,
+                    xytext = h_xytext[k],
+                    xycoords='data', 
+                    arrowprops= dict(arrowstyle='-|>', lw = 2.), 
+                    va='center',
+                    ha='center',
+                    bbox = bbox, **an_kws
+                 )
+
+    return ax 
+
+
+def pseudostratigraphic_log (thick, layers, station, *,
+                    hatch=None, color=None, **annot_kws) : 
+    """ Make the pseudostratigraphic log with annotate figure.
+    
+    :param thick: list of the thicknesses of the layers 
+    :param layers: list of the name of layers
+    :param hatch: list of the layer patterns
+    :param color: list of the layer colors
+    
+    :Example: 
+        >>> from pycsamt.utils.geo_utils as GU   
+        >>> layers= ['$(i)$', 'granite', '$(i)$', 'granite']
+        >>> thicknesses= [59.0, 150.0, 590.0, 200.0]
+        >>> hatch =['//.', '.--', '+++.', 'oo+.']
+        >>> color =[(0.5019607843137255, 0.0, 1.0), 'b', (0.8, 0.6, 1.), 'lime']
+        >>> GU.pseudostratigraphic_log (thicknesses, layers, hatch =hatch ,
+        ...                   color =color, station='S00')
+    """
+    import matplotlib.gridspec as GridSpec
+    
+    is_the_same, typea_status, typeb_status= _assert_list_len_and_item_type(
+        thick, layers,typea =(int, float, np.ndarray),typeb =str)
+    if not is_the_same: 
+        raise TypeError("Layers' thicknesses and layer names lists must have "
+                        "the same. But {len(thick)} and {len(layers)} were given.")
+    if not typea_status: # try to convert to float
+        try : 
+            thick =[float(f) for f in thick ]
+        except :raise ValueError("Could not convert to float."
+                                 " Please check your thickness values.")
+    if not  typeb_status: layers =[str(s) for s in layers] 
+    
+    # get the dfault layers properties hatch and colors 
+    # change the `none` values if exists to the default values
+    #for hatch and colors
+    # print(color)
+    hatch , color = set_default_hatch_color_values(hatch, color)
+    fig = plt.figure( f"PseudoLog of Station ={station}",
+                     figsize = (10,14), 
+                      # dpi =300 
+                     )
+    plt.clf()
+    gs = GridSpec.GridSpec(1,2,
+                       wspace=0.05,
+                       left=.08,
+                       top=.85,
+                       bottom=0.1,
+                       right=.98,
+                       hspace=.0,
+                       ) 
+    doi = sum(thick) 
+    axis_base = fig.add_subplot(gs[0, 0],
+                           ylim = [0, int(doi)]
+                           )
+                
+    axis_annot= fig.add_subplot(gs[0, 1],
+                                sharey=axis_base) 
+    axis_base = base_log(ax = axis_base, 
+                         thick=thick, 
+                         layers=layers,
+                         hatch=hatch,
+                         color=color)
+    
+    axis_annot = annotate_log(ax= axis_annot,
+                             thick=thick,
+                             layers=layers,
+                             colors =color,
+                             **annot_kws)
+    
+    for axis in (axis_base, axis_annot):
+        for ax_ in ['top','bottom','left','right']:
+            if ax_ =='left': 
+                axis.spines[ax_].set_bounds(0, doi)
+                axis.spines[ax_].set_linewidth(3)
+            else : axis.spines[ax_ ].set_visible(False)
+  
+        axis.set_xticks([]) 
+        
+    fig.suptitle( f"PseudoStratigraphic log of Station ={station}",
+                ha='center',
+        fontsize= 7* 2., 
+        verticalalignment='center', 
+        style ='italic',
+        bbox =dict(boxstyle='round',facecolor ='moccasin'), 
+        y=0.90)
+    
+    plt.show()
+
+def _assert_list_len_and_item_type(lista, listb, typea=None, typeb=None):
+    """ Assert two lists and items type composed the lists 
+    
+    :param lista: List A to check the length and the items type
+    :param listb: list B to check the length and the items type
+    :param typea: The type which all items in `lista` might be
+    :param typeb: The type which all items in `listb` might be
+    
+    :returns: 
+        - the status of the length of the two list ``True`` or ``False``
+        - the status of the type of `lista` ``True`` if all items are the 
+            same type otherwise ``False``
+        - idem of `listb` 
+    :Example: 
+        >>> thicknesses= [59.0, 150.0, 590.0, 200.0]
+        >>> hatch =['//.', '.--', '+++.', 'oo+.']
+        >>> _assert_list_len_and_item_type(thicknesses, hatch,
+        ...                                   typea =(int, float, np.ndarray),
+        ...                                    typeb =str))
+        ... (True, True, True)
+    """
+    try: import __builtin__ as b
+    except ImportError: import builtins as b
+    
+    def control_global_type(typ):
+        """ Check the given type """
+        import pandas as pd 
+        builtin_types= [t for t in b.__dict__.values()
+                     if isinstance(t, type)] 
+        conv_type = builtin_types+ [np.ndarray, pd.Series,pd.DataFrame]
+        if not isinstance( typ, (tuple, list)):
+            typ =[typ]
+        # Now loop the type and check wether one given type is true
+        for ityp in typ:
+            if ityp not in conv_type: 
+                raise TypeError(f"The given type= {ityp} is unacceptable!"
+                                " Need a least the following types "
+                                f" {FU.smart_format([str(i) for i in conv_type])}"
+                                " for checking.")
+        return True
+    
+    is_the_same_length  = len(lista) ==len (listb)
+    lista_items_are_the_same, listb_items_are_the_same =False, False
+    def check_items_type(list0, type0): 
+        """ Verify whether all items  in the list are the same type"""
+        all_items_type = False
+        is_true = control_global_type(type0)
+        if is_true:
+             s0= [True if isinstance(i0, type0) else False for i0 in list0 ]
+             if len(set(s0)) ==1: 
+                 all_items_type = s0[0]
+        return  all_items_type
+        
+    if typea is not None :
+        lista_items_are_the_same = check_items_type (lista, typea)
+    if typeb is not None :
+        listb_items_are_the_same = check_items_type (listb, typeb)
+        
+    return (is_the_same_length , lista_items_are_the_same,
+            listb_items_are_the_same )
+    
+
+def set_default_hatch_color_values(hatch, color, dhatch='.--', 
+                                   dcolor=(0.5019607843137255, 0.0, 1.0),
+                                   force =False): 
+    """ Set the none hatch or color to the default value. 
+    :param hatch: str or list of layer patterns 
+    :param color: str or list of layers colors
+    :param dhatch: default hatch 
+    :param dcolor: default color 
+    :param force: Return only single tuple values otherwise put the RGB tuple
+        values  in the list. For instance::
+            -if ``False`` color =[(0.5019607843137255, 0.0, 1.0)]
+            - if ``True`` color = (0.5019607843137255, 0.0, 1.0)
+    :Example: 
+        >>> from pycsamt.utils.geo_utils as  GU.
+        >>> hatch =['//.', 'none', '+++.', None]
+        >>> color =[(0.5019607843137255, 0.0, 1.0), None, (0.8, 0.6, 1.),  'lime']
+        >>> set_default_hatch_color_values(hatch, color))
+    """
+    fs=0 # flag to reconvert the single RGB color in tuple 
+    def set_up_(hc, dhc):
+        if isinstance(hc, (list, tuple, set, np.ndarray)): 
+            hc =[dhc if h in (None, 'none') else h for h in hc ]
+        return hc 
+    
+    if isinstance(hatch, str): hatch=[hatch]
+    if isinstance(color, str): color=[color]
+    elif len(color)==3 : 
+        try:iter(color[0]) # check iterable value in tuple
+        except : 
+            try : color =[float(c) for c in color]
+            except : raise ValueError("wrong color values.")
+            else: fs=1
+    hatch = set_up_(hatch, dhatch)
+    color = set_up_(color, dcolor) 
+    if force:
+        if len(color) ==1: color = color[0]
+    if len(hatch) ==1 : hatch = hatch[0]
+    if fs==1: color = tuple(color)
+    return hatch, color 
+
+
+def __build_ps__token(obj):
+    """ Build a special token for each GeoStratigraphic model. Please don't 
+    edit anything here. Force editing is your own risk."""
+    import random 
+    random.seed(42)
+    __c =''.join([ i for i in  [''.join([str(c) for c in obj.crmSites.shape]), 
+     ''.join([str(n) for n in obj.nmSites.shape]),
+    ''.join([l for l in obj.input_layers]) + str(len(obj.input_layers)), 
+    str(len(obj.tres))] + [''.join(
+        [str(i) for i in [obj._eta, obj.beta, obj.doi,obj.n_epochs,
+                          obj.ptol, str(obj.z.max())]])]])
+    __c = ''.join(random.sample(__c, len(__c))).replace(' ', '')                                               
+    n= ''.join([str(getattr(obj, f'{l}'+'_fn'))
+                         for l in ['model', 'iter', 'mesh', 'data']])
+    n = ''.join([s.lower() 
+                 for s in random.sample(n, len(n))]
+                ).replace('/', '').replace('\\', '')
+    
+    return '.'.join([n, __c])
+
+
+def print_running_line_prop(obj, inversion_software='Occam2D') :
+    """ print the file  in stdout which is currently used
+    " for pseudostratigraphic  plot when extracting station for the plot. """
+    
+    print('{:~^108}'.format(
+        f' Survey Line: {inversion_software} files properties '))
+    print('|' + ''.join([ "{0:<5} = {1:<17}|".format(
+        i, os.path.basename( str(getattr(obj, f'{i}_fn'))))  
+     for i in ['model', 'iter', 'mesh', 'data']]) )
+    print('~'*108)
+
+
+
 
 
 

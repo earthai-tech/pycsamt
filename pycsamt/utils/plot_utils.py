@@ -1652,7 +1652,8 @@ def annotate_tip(layer_thickness , layer_names):
                 if layer_names[ii].lower() != layer_names[ii-1].lower() :  
                     mean =top + (layer_thickness[ii-1]-top)/2
                     v.append(mean)
-                    mean = layer_thickness[ii-1] + (thickvalues- layer_thickness[ii-1])/2  
+                    mean = layer_thickness[ii-1] + (
+                        thickvalues- layer_thickness[ii-1])/2  
                     v.append(mean)
                     ni.append(layer_names[ii])                
             

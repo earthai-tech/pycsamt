@@ -31,16 +31,17 @@ inversion_files = {key:os.path.join(occamPath , vv) for key,
                     vv in inversion_files.items()}
 # input_True_resistivities (TRES)
 
-TRES=[10, 66,  70, 100, 1000, 3000]# 7000] #[10,  70, 100, 1000,  3000]
+TRES= [10, 60, 70, 180, 1000,  3000, 7000] #[10, 66,  70, 100, 1000, 3000]# 7000] #[10,  70, 100, 1000,  3000]
 #[10, 66, 70, 100, 1000, 2000, 3000, 7000, 15000 ]
                                     
 # Input layers names (LN) 
-LN =['river water','fracture zone', 'MWG', 'LWG', 'granite', 'igneous_rock']#] 'basement rock']
+LN =['river water','sedimentary rocks', 'fracture zone',  'gravel', 'granite',
+     'igneous rocks','basement rocks' ]
+#['river water','fracture zone', 'MWG', 'LWG', 'granite', 'igneous rock']#] 'basement rock']
 
 geosObj = GeoStratigraphy(**inversion_files,
                       input_resistivities=TRES, 
                       input_layers=LN)
 
-geosObj.stratigraphyModel(kind=kindOfPlot , 
+geosObj.strataModel(kind=kindOfPlot , 
                     misfit_G =plotMisfitG)
-print(inversion_files )

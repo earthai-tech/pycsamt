@@ -57,7 +57,7 @@ pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/p
 3. Adaptative moving-average (AMA) based on idea of [Torres-Verdin](https://sci-hub.se/http://dx.doi.org/10.1190/1.1443273).
 4. MT Removal distorsion (`dist`)  and  static shift removal (`ss`) filters basically used to correct magnetotellurics (MT) data. 
                                                                
-## Plot inversion misfit and geo-stratigraphy misfit (misfit G)
+## Plot inversion misfit and geostratigraphy misfit (misfit G)
 
 To plot the `misfit` from measured data and the calculated inversion data, bring the _occam response file_ (_*.rep_) and  _Occamlogfile_ (optional _*.logfile_) then 
 run the script below:
@@ -106,6 +106,36 @@ click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples
 * **Note** : 
     For CSAMT data processing and some codes implementation,
     please refer to our [wiki page](https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F).
+
+## Plot the pseudostratigraphic log 
+
+ Once the geostratigraphic model is built, we just need to call the model and extract at each station 
+ it corresponding  pseudostratigraphic log using the script below: 
+```
+>>> from pycsamt.geodrill.geoCore.geodrill import GeoStratigraphy
+>>> station ='S00'      # station to visualize 
+>>> GeoStratigraphy.plotPseudostratigraphic(station =station)
+... 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~[ PseudoStratigraphic Details: Station = S00 ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------------------------------------------------------------------------------
+|      Rank |            Stratum             |         Thick-range(m)         |     Thickness(m)     |
+------------------------------------------------------------------------------------------------------
+|        1. |         fracture zone          |         0.0 ----- 6.0          |         6.0          |
+|        2. |             gravel             |         6.0 ----- 13.0         |         7.0          |
+|        3. |            granite             |        13.0 ----- 29.0         |         16.0         |
+|        4. |         igneous rocks          |        29.0 ----- 49.0         |         20.0         |
+|        5. |         basement rocks         |        49.0 ----- 249.0        |        200.0         |
+|        6. |         igneous rocks          |       249.0 ----- 289.0        |         40.0         |
+|        7. |            granite             |       289.0 ----- 529.0        |        240.0         |
+|        8. |         igneous rocks          |       529.0 ----- 699.0        |        170.0         |
+|        9. |         basement rocks         |       699.0 ----- 999.0        |        300.0         |
+------------------------------------------------------------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Survey Line: Occam2D files properties ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+|model = Occam2DModel     |iter  = ITER17.iter      |mesh  = Occam2DMesh      |data  = OccamDataFile.dat|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``` 
+click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/pseudostratigraphic_log.PNG) for reference output. 
+ 
 
 ## Credits
 

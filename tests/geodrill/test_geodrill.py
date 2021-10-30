@@ -95,7 +95,6 @@ class TestGEODRILL(unittest.TestCase):
             print('--> outdir not exist , set to None !')
             csamtpylog().get_csamtpy_logger().error('Outdir does not exist !')
             
-            
     def create_geo_obj(self, **kws): 
         """
         kws dict can be either `oc2d_inversion_kwargs` parameters or

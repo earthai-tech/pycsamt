@@ -4585,8 +4585,6 @@ class Plot2d (object):
                          edgecolor ='white', 
                          )
   
-            
-           
             # position of site and marker 
             # create a temporary axe t ohost x labels 
             axePS.set_xticks(ticks=[plot_sites_offsets[0]/(dz *2)], minor=False )
@@ -4595,8 +4593,6 @@ class Plot2d (object):
                                   color ='white',
                                   )
 
-            
-            
             axePS.set_xlabel('Pseudo-sequences',
                           fontdict={'size': self.font_size , 'weight': 'bold', 
                                     'style':self.font_style})

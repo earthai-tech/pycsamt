@@ -167,7 +167,7 @@ def station_id (id_):
     From id get the station  name as input  and return index `id`. 
     Index starts at 0.
     
-    :param id_: name of the station or index . Be sure to hve the station name 
+    :param id_: name of the station or index . Be sure to have the station name 
         containing the letter `S` which mean `site`. 
     :return: station index. If the list `id_` is given 
             will return the tuple.
@@ -1531,7 +1531,7 @@ def build_resistivity_barplot(depth_values , res_values):
     
     Parameters
     ----------
-        * depth_values : aray_like 
+        * depth_values : array_like 
                 model investigation depth 
                 
         * res_values : array_like 
@@ -1652,7 +1652,8 @@ def annotate_tip(layer_thickness , layer_names):
                 if layer_names[ii].lower() != layer_names[ii-1].lower() :  
                     mean =top + (layer_thickness[ii-1]-top)/2
                     v.append(mean)
-                    mean = layer_thickness[ii-1] + (thickvalues- layer_thickness[ii-1])/2  
+                    mean = layer_thickness[ii-1] + (
+                        thickvalues- layer_thickness[ii-1])/2  
                     v.append(mean)
                     ni.append(layer_names[ii])                
             

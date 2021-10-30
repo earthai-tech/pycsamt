@@ -180,7 +180,7 @@ class GeoDataBase (object):
         :Exemple:
             >>> from pycsamt.geodriil.geoDB.sql_recorder import GeoDataBase 
             >>> dbObj = GeoDataBase()
-            >>>  values = dbObj.._retreive_databasecolumns(
+            >>>  values = dbObj._retreive_databasecolumns(
                     ['__description', 'electrical_props'])    
         
         """
@@ -190,14 +190,15 @@ class GeoDataBase (object):
             
         new_columns = []
         for obj in columns : 
-            if obj not in self.codef : 
+            if obj =='name'or obj.find('name')>=0: 
+                obj = '__description'
+            if obj not in self.codef :
                 self._logging.debug(
                     f'Object `{obj}` not found in {self.codef}!'
                     'Please provide the right column name.')
                 warnings.warn(f'Object `{obj}` not found in {self.codef}!'
                     'Please provide the right column name.')
             else:
-                if obj =='name': obj = '__description'
                 new_columns.append(obj)
             
         if len(new_columns) ==0 : # Object not found in database 
@@ -234,7 +235,7 @@ class GeoDataBase (object):
             warnings.warn('No name is inputted as geological formation. Sorry ,'
                           ' your request is aborted !')
             raise CSex.pyCSAMTError_SQL_manager(
-                'No name is inputted as geological formation. Sorry ,'\
+                'No name is given as geological formation. Sorry ,'\
                  ' your request is aborted !')
                 
         if self.geo_structure_name is not None :
@@ -268,7 +269,7 @@ class GeoDataBase (object):
         """
         To have reminder of geological formation into the geodatabase ,
         this method allow to output information 
-        if the structure doesnt not exist, An error will occurs. 
+        if the structure does not exist, An error will occurs. 
         
         :param geo_structure_name: name of geological formation 
         :type geo_structure_name: str 
@@ -318,9 +319,7 @@ class GeoDataBase (object):
                 **{'__description':'basement rocks', 
                     'electrical_props':[1e99, 1e6 ]})
         """
-        fmt_mess = '---> {0} was successfully set to geoDataBase.'\
-            ' Old value = {1} is updated to = {2}'
-            
+
         # find geological rocks name if is in keywords dict
         if geo_formation_name is None : 
             if '__description' in list(kws.keys()) : 
@@ -345,7 +344,6 @@ class GeoDataBase (object):
                       if not (geokey =='__description' or geokey =='name') 
                       }
         
-
         if self.geo_structure_name is not None :
             self._avoid_injection()
         if self.geo_structure_exists is False : 
@@ -445,7 +443,8 @@ class GeoDataBase (object):
                         print(fmt_mess.format(
                             self.geo_structure_name,__oldvalues, __newvalues ))
                         
-            self.manage_geoDataBase.closeDB() # close the database 
+            self.manage_geoDataBase.closeDB() # close the database
+            
     @property 
     def hatch (self):
         return self._hatch 
@@ -806,7 +805,7 @@ class GeoDataBase (object):
                      raise CSex.pyCSAMTError_SQL_update_geoinformation(msg)
                 else : 
                     # try to check if value is under 1.
-                    # because clor is encoding to 1 to 255 bits 
+                    # because color is encoding to 1 to 255 bits 
                     for ival in  self._mplcolor: 
                         if 1 < ival <0  : 
                             if ival > 1 : fmt ='greater than 1' 
@@ -814,8 +813,8 @@ class GeoDataBase (object):
                                 fmt= 'less than 0'
                             msg = ''.join([
                                 'update failed ! Value provided  =',
-                                ' {0} is UNacceptable value !'.format(ival),
-                                f' input value is {fmt}. It must be encoding on ',
+                                f' `{ival}` is UNacceptable value ! Input ',
+                                f' value is {fmt}. It must be encoding from ',
                                 '1 to 255 bits as MPL colors.'])
                             raise CSex.pyCSAMTError_SQL_update_geoinformation(msg)
                             
@@ -850,9 +849,9 @@ class GeoDataBase (object):
         configure electrical property
         
         .. note:: Electrical_property of rocks must a tuple of resisvity ,
-                 max and Min bounds  eg : [2.36e-13, 2.36e-3]
+                 max and min bounds  eg : [2.36e-13, 2.36e-3]
         """
-        # electrical props were initialse by float 0. 
+        # electrical props were initialised by float 0. 
         if isinstance(range_of_rocks_resvalues , str) : 
             if '(' in range_of_rocks_resvalues  : 
                 self._electrical_props = tuple([ 
@@ -1513,7 +1512,7 @@ class Recorder_sql(object):
         function to arrange value according to dict_app  arangement 
         The func can call python datatype to SQLdatatype . function include 
         the datetime , and the id of each data to fullfill dictionnary.
-        NB : func is redirected because it's corollary of RecordData whom it also
+        NB : func is redirected because it's linked to RecordData whom it also
         redirected . if you use this function , it will redirect you to 
         "arrangeData_for_dict_app".
 
@@ -1586,7 +1585,7 @@ class Recorder_sql(object):
 if __name__=='__main__'   : 
 
     dbObj = GeoDataBase()    
-    values = dbObj._retreive_column(['__description', 'electrical_props'])
+    values = dbObj._retreive_databasecolumns (['__description', 'electrical_props'])
     print(values)
     
 

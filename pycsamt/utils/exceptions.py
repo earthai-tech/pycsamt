@@ -118,7 +118,8 @@ class pyCSAMTError_structural(Exception):
 
 class pyCSAMTError_strata(Exception): 
     pass
-
+class pyCSAMTError_memory(Exception): 
+    pass
 class pyCSAMTError_plot_geoinputargument(Exception): 
     pass
 class pyCSAMTError_geodrill_inputarguments(Exception): 

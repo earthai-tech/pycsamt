@@ -232,7 +232,7 @@ class J_collection :
                 csamt_jobj.jsites_infos = datetime.datetime.fromtimestamp(
                     os.stat(jfn).st_ctime) # return the creation date of file 
                 
-            edi_obj.Head.acqdate = csamt_jobj.jsites_infos[ii]
+            edi_obj.Head.acqdate = csamt_jobj.jsites_infos
             edi_obj.Head.fileby = fileby 
             edi_obj.Head.filedate = datetime.datetime.now(
                 ).strftime('%m-%d-%Y %H:%M:%S')

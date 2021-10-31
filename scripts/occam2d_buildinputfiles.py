@@ -21,10 +21,10 @@ Edited  on Mon Feb 15 16:27:49 2021
 by: @Daniel03
 
 """
-
+import os
 from  pycsamt.modeling.occam2d import occam2d_write
 
-import os
+
 
 #path where edi files are located
 edipath = os.path.join(os.environ['pyCSAMT'], 'data', 'edi') # specify the path where edi is located 

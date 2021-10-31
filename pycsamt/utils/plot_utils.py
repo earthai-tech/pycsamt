@@ -1,40 +1,23 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2021 
+#       Created on Tue Dec 29 19:18:44 2020
+#       This module is a part of pycsamt utils packages
+#       released under a LGL- licence.
+#       @author: Daniel03<etanoyau@gmail.com>
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================
-
 .. _module-Plot_Utils:: `pycsamt.utils.plot_utils` 
     :synopsis: helpers functions for visualization 
-    
-Created on Tue Dec 29 19:18:44 2020
-
-@author: @Daniel03
 """
-import re , os, warnings
+# import re
+import os
+import warnings
 import numpy as np
-from pycsamt.etc.infos import _sensitive as SB
-import matplotlib as mpl 
-import matplotlib.cm as cm 
-import matplotlib.pyplot as plt
+# import matplotlib as mpl 
+# import matplotlib.cm as cm 
+# import matplotlib.pyplot as plt
+from pycsamt.utils._p import _sensitive as SB
 from pycsamt.utils import exceptions as CSex 
-from pycsamt.utils.decorator import deprecated, redirect_cls_or_func
+from pycsamt.utils.decorator import (deprecated, redirect_cls_or_func)
 
 
 def share_props_for_each_plot(number_of_plot = 3 ,  **kwargs):

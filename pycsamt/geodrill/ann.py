@@ -8,7 +8,7 @@ from random import random
 from csv import reader
 from math import exp
 
-from pycsamt.geodrill.geoDB.sql_recorder import GeoDataBase 
+from pycsamt.geodrill.geodatabase import GeoDataBase 
 from pycsamt.utils._csamtpylog import csamtpylog 
 _logger =csamtpylog().get_csamtpy_logger(__name__)
 

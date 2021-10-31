@@ -1,20 +1,26 @@
 # -*- coding: utf-8 -*-
 """
     . Script  to straighten profile .
-    The purpose of this script is to straighten out the coordinates taken during the data collection.
-    Due to the aleas of the terrain being in mountainous or in forest regions, the land harvesting
-    is not an exact distance. This script offers several possibilities for recovery: 
+    The purpose of this script is to straighten out the coordinates taken 
+    during the data collection. Due to the aleas of the terrain being
+    in mountainous or in forest regions, the land harvesting
+    is not an exact distance. This script offers several possibilities 
+    for recovery: 
         
-    1- Classical reajustment {"classic"} in linear regim. Here all the coordinates are straightened in the form
+    1- Classical reajustment {"classic"} in linear regim. Here all the 
+    coordinates are straightened in the form
         of a function y = f (dl) : dl = dipole length . 
-    2. Natural or distorted recovery {"natural|distored"}. In this type of reajustment the staion, seperation respects 
+    2. Natural or distorted recovery {"natural|distored"}. In this type 
+    of reajustment the staion, seperation respects 
         the distance  of the dipole, but the poinst do not form a line regime.
         f (dl) = a dl^m+ b dl^s+...+z^0 
        
-    3. Equidistant recovery {"equidistant"}. It doesnt based on the computation of dipole length, just use derived 
-        from distanciation of coordinates, compute the mean between each station and and reajusted cordinates. 
+    3. Equidistant recovery {"equidistant"}. It doesnt based on the computation
+    of dipole length, just use derived from distanciation of coordinates, compute 
+        the mean between each station and and reajusted cordinates. 
         **Default** is 'classic'
-        User can also take advantage at the same time to correct easting and northing coordinates using reajust
+        User can also take advantage at the same time to correct easting
+        and northing coordinates using reajust
         arguments (x, y) ; index  
         
 Created on Fri Jan 29 18:57:32 2021
@@ -27,9 +33,7 @@ from pycsamt.viewer.plot import Plot1d
 from pycsamt.ff.core.cs import Profile
 
 # full path to your profile file : stn 
-path =  os.path.join(os.environ["pyCSAMT"],# 'STN-28800_reaj.stn')
-                      'data', 'avg', 'K1.stn')            # change your path 
-path =r'C:\Users\Administrator\Desktop\ThesisImp\raw_stn_file\K6.stn'
+path ='data/avg/K1.stn'            # change your path 
 #saveyour figure path 
 savepath = None                 #r'C:\Users\Administrator\Desktop\ThesisImp\K_reaj'
 

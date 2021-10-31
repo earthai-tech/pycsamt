@@ -12,7 +12,7 @@ Created on Sat Oct 30 21:38:24 2021
 
 """
 
-from pycsamt.geodrill.geoCore.geodrill import GeoStratigraphy
+from pycsamt.geodrill.geocore import GeoStratigraphy
 
 station ='S00'
 annotate_kws = {'fontsize':12}

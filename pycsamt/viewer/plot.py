@@ -1,73 +1,48 @@
 # -*- coding: utf-8 -*-
+#       Author: Kouadio K.Laurent<etanoyau@gmail.con>
+#       Licence: LGPL
+#       Created on Mon Dec 28 14:28:06 2020
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================
-
 .. _module-Visualization:`pycsamt.viewer.plot`
  
-     :synopsis:From `viewer` subpackage. `plot` module is the visualization module of
-        pyCSAMT software. All analyses , processings , corrections  are vusualized  
-        thoughoutthis module. We decided this option so to avoid importing several time 
-        matplotlib and its properties into differents subpackages . Import Matplotlib 
-        packages into a special module allow a good visibility of scripts  and let 
-        the editor to easy customize the plots without knowning deeply the module 
-        itself. Special plot 1d, 2d and 3D.
+.. synopsis:From `viewer` subpackage. `plot` module is the visualization module of
+   pyCSAMT software. All analyses , processings , corrections  are vusualized  
+   thoughoutthis module. We decided this option so to avoid importing several time 
+   matplotlib and its properties into differents subpackages . Import Matplotlib 
+   packages into a special module allow a good visibility of scripts  and let 
+   the editor to easy customize the plots without knowning deeply the module 
+   itself. Special plot 1d, 2d and 3D.
         ... 
-    
-Created on Mon Dec 28 14:28:06 2020
-
 @author: KLaurent alias @Daniel03
 """
 
-import os ,re, warnings 
-import numpy as np 
-
-from pycsamt.viewer import mpldecorator  as mdeco
-
+import os 
+import re
+import  warnings 
+import numpy as np
+ 
 import matplotlib as mpl 
 import  matplotlib.pyplot  as plt
-
 import matplotlib.cm as cm 
 import matplotlib.colorbar as mplcb
-
 import matplotlib.gridspec as gspec
 
+import pycsamt.utils.exceptions as CSex
+import pycsamt.utils.func_utils as func
+import pycsamt.utils.plot_utils as mplotus  
+import pycsamt.utils.zcalculator  as Zcc
 from pycsamt.ff.core import avg as CSMATavg 
 from pycsamt.ff.core.cs import CSAMT
-from pycsamt.ff.core.cs import Profile
+from pycsamt.ff.site import Profile
 from pycsamt.modeling import occam2d
-
-from pycsamt.geodrill.geoCore import geodrill  as geoD
- 
-
-from pycsamt.etc.infos import suit 
-
-from pycsamt.utils import exceptions as CSex
-from pycsamt.utils import func_utils as func
-from pycsamt.utils import plot_utils as mplotus  
+from pycsamt.geodrill import geocore  as geoD
+import pycsamt.viewer.mpldecorator  as mdeco
+from pycsamt.utils._p import suit 
 from pycsamt.utils._csamtpylog import csamtpylog 
-
 from pycsamt.ff.processing.corr import shifting as Scor
-from pycsamt.ff.processing import zcalculator  as Zcc
 
 _logger=csamtpylog.get_csamtpy_logger(__name__)
+
 
 
 ###############################################################################

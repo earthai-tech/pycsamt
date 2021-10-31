@@ -1,39 +1,18 @@
 # -*- coding: utf-8 -*-
+#       Author: Kouadio K.Laurent<etanoyau@gmail.con>
+#       Licence: LGPL
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================  
-
 Created on Tue Aug  4 16:03:30 2020
     module will be deprecated soon !
 
 -------
-Classes :
-    
-    ReadFile : Extract informations of files with index 
-
-    
+Classes :ReadFile : Extract informations of files with index 
         methods :
         ---------
             * read_file : Readile file for extractiong data 
                 
-            * assert_index_value : assert index for sclinf infrmations on file 
+            * assert_index_value : assert index for sclinf
+            informations on file 
 
 Function utils : 
     
@@ -46,21 +25,259 @@ Function utils :
     : ll_to_utm2 : 
         return utm_zone, utm_easting, utm_northing
     :convert_rotate_phase : 
-        return exactitude float (phase value ) according to geometry principal phase value
+        return exactitude float (phase value ) according to 
+    geometry principal phase value
     : convert_phase_from_pdSeries : 
         return  a specified pd.Series :df[columns]
 """
 #==============================================================================
 import os 
-
-from pycsamt.utils import gis_tools as gis 
 import numpy as np 
 import pandas as pd 
 
+from pycsamt.utils import gis_tools as gis 
+from pycsamt.utils import exceptions as CSex
+from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt.utils import func_utils as func
 from scipy.interpolate import interp1d
-
+_logger=csamtpylog.get_csamtpy_logger(__name__)
 #==============================================================================
+#--------------- special functions -----------------
 
+def _validate_stnprofile(profile_lines, spliting=None): 
+    """ 
+    Validate station profile, cross ccheck the *stn* file. 
+    The Number verification value is set to 2. 
+    
+    Parameters
+    ----------
+        * profile_lines: list 
+            reading lines 
+        * spliting: str 
+            type t0 split the stn line . 
+    Returns
+    -------
+        int 
+            number of info provided 
+        list 
+            head_stn infos and the index occupied in the file . 
+    """
+    
+    stn_label =['dot', 'e', 'n', 'h', 'easting',
+                'northing', 'elevation', 'elev', 'station', 
+                'Northing', 'Easting', 'Elevation','sta' , 
+                'east_°', 'north_°', 'east_DMS', 'north_DMS',
+                'UTM_zone', 'east_utm', 'north_utm',   'azim_m',  
+                'elev_m', 'east', 'lon', 'lat', 'long', 'lon','len' ]
+    ok=0
+    for ss in stn_label : 
+        if ss in profile_lines [0]:
+            ok +=1 
+
+    head_index =[ (lab, jj) for jj , val in enumerate(
+        profile_lines[0].strip().split(spliting)) \
+                  for lab in stn_label if lab in val]
+    return  ok, head_index   
+
+
+def round_dipole_length(value): 
+    """ 
+    small function to graduate dipole length 5 to 5.
+    Goes to be reality and simple computation 
+    """ 
+    mm = value % 5 
+    if mm < 3 :return np.around(value - mm)
+    elif mm >= 3 and mm < 7 :return np.around(value -mm +5) 
+    else:return np.around(value - mm +10.)
+    
+def _validate_avg_file(avg_dataLines):
+    
+    """
+    Function to validate and readZonge Avg FILE :Plainty file _F1 and the Astatic file 
+    _F2. Both files can be read and separatedd by the program. if Avg file doesnt match 
+    any of them , the programm will generate errors . 
+    
+    Parameters 
+    -----------
+        * avag_dataLines: list 
+                    list of avgData for all lines. 
+    Returns 
+    --------
+        int , 
+            type of AVG Zonge file , _F1 & _F2: 
+  
+                
+    """
+        
+    remark =['\\ AMTAVG','$ ASPACE', '$ XMTR '] 
+    count=0
+    
+    import inspect 
+
+    func_name = inspect.getframeinfo(inspect.currentframe())[2]
+    _logger.info ('Check the Avg_Datalinesfile %s',func_name )
+      
+    if avg_dataLines is not ['']:
+        filehead="".join([ss for ss in avg_dataLines[:3]])
+        #------------------checker section ------------------------
+        #--->  check if astatic file is on the head_section 
+        if filehead.find('astatic'.upper())>1: 
+            _FT=2
+        elif 'astatic'.upper() not in filehead: 
+            for ss in remark :
+                if filehead.find(ss) > 0 :count +=1
+            #---> that mean all the remak elemt are on the head_section 
+            if count >=2 :
+                _FT=1
+        else:
+            _logger.error('Wrong Avg file. Must respect the typical zonge file.')
+            raise CSex.pyCSAMTError_avg_file(
+                'Type of AVg file provide is Wrong. No match'
+                 'the typical Zonge engeneering file.')       
+    else : 
+        _logger.error('No Zonge Engeneering files exists.'
+                      ' No data found on that curent AVG file.'
+                      'Check the better path to Avgfiles right file.')
+        raise CSex.pyCSAMTError_avg_file('Check the The type of Avg file.')
+            #-------------------end checker -----------------------------
+    return  _FT
+        
+
+def straighten_cac2CSfile (data_array, component_column_section = None):
+    """
+    Sometimes head_sections of file _F2(CAC2CSAMT) provided is little 
+    different colunms section name  according to different version . 
+    it 's better to filter  and to check before returning the 
+    correct informations we need.
+    
+    Parameters  
+    ------------
+        * data_array : ndarray 
+                data from AVG astatic file 
+       
+        * component_column_section : list 
+                astactic file column comps provided 
+         
+    Returns
+    --------
+        array_we_need :ndarray
+                 same infos present in the plainty /1 Avg file 
+        array_other_comp : pd.Core.DataFrame 
+                 infos include through Astatic softwares 
+                 very usefull therefore we keep it .
+        
+             
+    """
+    _comp_not_in_F1=['Z.mwgt','Z.pwgt','Z.mag',
+                    'SRes','E.wght',
+                    'H.wght','Z.%err',
+                    'Z.perr','Gdp.Blk',
+                    'Gdp.Chn', 'Gdp.Time']
+    _comp_we_need=['skp','Freq',
+                'Tx.Amp', 'E.mag',
+                'B.mag','B.phz',
+                'Z.phz','ARes.mag',
+                'E.%err','E.perr','B.%err',
+                'B.perr','Z.perr',
+                'ARes.%err','E.phz']           
+                                            
+    
+    if component_column_section is None : 
+        raise CSex.pyCSAMTError_inputarguments(
+            'head-section must be on list of string items.')
+        
+    tem_del, other_del=[],[]
+    #strip comps _column to check....
+    component_column_section=func._strip_item(
+        item_to_clean=component_column_section)
+    
+    #---> put on dataFrame the component wee_need 
+    df=pd.DataFrame(data=data_array, columns= component_column_section)
+    for ss in component_column_section : 
+        if ss not in _comp_we_need: 
+            tem_del.append(ss)
+        if ss in _comp_we_need :
+            other_del.append(ss)
+    df_we_need=df.drop(tem_del, axis=1)
+    df_we_need.reset_index(drop=True, inplace=True)
+    array_we_need= df_we_need.to_numpy()
+    #--->> _keep on other dataframe the component we dont need.
+    # other_comp_list =func._cross_eraser(
+    #data=component_column_section, to_del=tem_del,deep_cleaner=False)
+    df_other_comp=df.drop(other_del, axis=1)
+    df_other_comp.reset_index(drop=True, inplace=True) 
+
+    
+    #--> add skpi value if not in component section :
+        # to spare a manner 'Skp' is written.
+    if 'skp'  not in [ii.lower() for ii in component_column_section]: 
+        skp_value =2   #  give a certitude value that data were good quality : 
+        skp_array=np.full((array_we_need.shape[0],1),skp_value)
+        array_we_need=np.concatenate((skp_array,array_we_need), axis=1)
+
+    
+    return array_we_need , df_other_comp
+
+def zstar_array_to_nan (zstar_array, nan_value=np.nan, keep_str =False): 
+    """
+    Parameters
+    ----------
+        * zstar_array : ndarray
+                array contain unfloat converter value. the unconverter 
+                value can be a '*'
+                
+        * nan_value : float or np.nan type
+                the nan_value could be any value either int, float or str. 
+                The *default* is np.nan.
+                
+        * keep_str : bool, optional
+                keep the str item on your array. f keep_str is set to 
+                false and the type nan_value is str , the program will force 
+                'keep_str_'  to True 
+                to allow converter .
+                The *default* is False.
+
+    Returns
+    -------
+         ndarray 
+            zstrar_array converted .
+
+    """
+    
+    for kk , value in enumerate(zstar_array): 
+        try : zstar_array[kk] =float(value)
+        except :zstar_array[kk]=nan_value
+    if type(nan_value) is str : keep_str=True
+    if keep_str : return zstar_array 
+    return np.array([float(kk) for kk in zstar_array])
+
+def dipole_center_position (dipole_position=None):
+    """
+    Generaly positions are taken at each electrode of dipole to that 
+    to easy correct data  for ploting and for noise correction ,
+    we adjust coordinate by taking the center position that means ,
+    the number of points will be substract to one.
+    
+    :param dipole_position: postion array at each electrodes. 
+    :type dipole_position: array_like 
+    
+    :returns: centered position value  array 
+    :rtype: array_like 
+    
+    """
+    if dipole_position is None : 
+        raise CSex.pyCSAMTError_inputarguments(
+            'NoneType can not be compute. Please provide the right values.')
+    try : dipole_position= np.array([float(pp) for pp in dipole_position])
+    except : raise CSex.pyCSAMTError_float(
+            'Cannot convert position values. Position must be a'
+            ' number not str.Please check your data!.')
+    # temp_pospp =[(dipole_position[pp]+dipole_position[pp-1])/2 for \
+    #              pp, pos in enumerate( dipole_position) if (
+    # pp>0 and pp <= dipole_position.size) ] 
+    return np.array([(dipole_position[pp]+dipole_position[pp-1])/2 for 
+                 pp, pos in enumerate( dipole_position) 
+                 if ( pp>0 and pp <= dipole_position.size) ])
 
 def ll2DMS(position_val): 
     """Conversion function : Convert degree decimals (long and lat) 
@@ -79,7 +296,8 @@ def ll2DMS(position_val):
     if position_val in [None, 'None']:
         return None
     if type(position_val) is str:
-        raise ValueError("{0} not correct format, should be {{Degree decimals}}".format(position_val))
+        raise ValueError("{0} not correct format,"
+                         "should be {{Degree decimals}}".format(position_val))
         return 
     else : 
         deg=int(position_val)
@@ -435,16 +653,19 @@ class ReadFile:
         """
         
         # if self.file ==None :
-        #     raise FileExistsError("No file in this directory: {}".format(os.getcwd()))
+        #     raise FileExistsError("No file in this
+        # directory: {}".format(os.getcwd()))
         if self.indexl== None :
-            raise IndexError("No index for extraction! Index must be int, float , or tuple")
+            raise IndexError("No index for extraction!"
+                             " Index must be int, float , or tuple")
         
         try:
             with open (self.file,'r') as f :
                 listfiles=f.readlines()
         
         except :
-            FileNotFoundError('No such file in this directory: {0}.'.format(os.getcwd()))
+            FileNotFoundError('No such file in this'
+                              ' directory: {0}.'.format(os.getcwd()))
         
         if self.headline:
             listfiles=listfiles[self.range_head:]
@@ -459,8 +680,9 @@ class ReadFile:
             elif self._start != None and self._end != None \
                 and type(self.slicing) != list :
                     assert np.array(self._start).min() < \
-                np.array(self._end).max()<= len(listfiles)-1," Index {0} is out of the range."\
-                    " Maximum index is {1}".format(np.array(self._end).max(),len(listfiles)-1)
+                np.array(self._end).max()<= len(listfiles)-1," Index {0} is out"\
+                    " of the range. Maximum index is {1}".format(
+                        np.array(self._end).max(),len(listfiles)-1)
 
                     listfiles=listfiles[self._start:self._end]
                     
@@ -478,8 +700,9 @@ class ReadFile:
                 max_temp_end.append(ii)
             
             assert np.array(max_temp_start).min() < \
-                np.array(max_temp_end).max()<= len(listfiles)-1," Index {0} is out of the range."\
-                    " Maximum index is {1}".format(np.array(max_temp_end).max(),len(listfiles)-1)
+                np.array(max_temp_end).max()<= len(listfiles)-1," Index {0} is "\
+                    " out of the range. Maximum index is {1}".format(
+                        np.array(max_temp_end).max(),len(listfiles)-1)
                
             tempfiles=listfiles[self._start[0]:self._end[0]]  
             for ii,val in enumerate(self._end) :
@@ -535,8 +758,9 @@ class ReadFile:
             # extract single value from  index               
             if self._flag==0:
                 if self.indexl<0 :
-                    assert 0> self.indexl >= -len(head),"Index {0:^4} out of the range."\
-                        " Minimum index egal to {1:^3}.".format(self.data_index,-len(head))
+                    assert 0> self.indexl >= -len(head),"Index {0:^4} out "\
+                        " of the range. Minimum index egal to {1:^3}.".format(
+                            self.data_index,-len(head))
                         
                     reverse=head[self.indexl]
                     if self._comp==0:
@@ -545,8 +769,9 @@ class ReadFile:
                         if reverse in key :
                             dico[key].append(line[self.indexl])
                 if self.indexl>=0:
-                    assert 0<= self.indexl < len(head),"Index {0:^4} out of the range."\
-                        " Maximum index egal to {1:^3}.".format(self.data_index,len(head)-1)
+                    assert 0<= self.indexl < len(head),"Index {0:^4} out of the"\
+                        "  range. Maximum index egal to {1:^3}.".format(
+                            self.data_index,len(head)-1)
     
                     for idx, car in enumerate( line) :
                         if idx==self.indexl:
@@ -626,7 +851,8 @@ class ReadFile:
         -------
         *select_file * : str or basestring
             Path is None:
-                search the list of the file present in the current work directory.
+                search the list of the file present in the current 
+                work directory.
             file is None :
                 input the matching file :
                 users must choose the data file he want to extract. 
@@ -682,7 +908,130 @@ def interpol_Scipy (x_value, y_value,x_new, kind="linear",
     y_new=f(x_new)
     
     return y_new
-                
+ 
+               
+class Topo: 
+    """
+    Build numpy array  to add elevation profile and elevation model. 
+    
+    Attributes :
+    ===========
+        * add_elevation_profile : np:ndarray (2, num_elev_points)
+            x=relative coordinates (offest ) , y= elevation   
+        * add_elevation_model : np.nadarry (3,num_elev_points) 
+            x=easting (UTM), northing(UTM) , elevation 
+        * path_elev : is the path where the profiles files is located .
+            ex: os.chdir(os.path.dirname())
+                os.path.join(os.path.dirname(), K1_exp.bln)
+    
+        * step_betw_station : is offset between two stations .
+        * self.prof_loc_east : Easting value (longitude(1,))
+        * self.prof_loc_north : Nothing value (latitude (1,))
+        * self.elev_value     : Elevation  value (Elevation(1,))
+    
+    Methods : 
+    =========
+    add_topo : return num_elev_points,  np.ndarray(2, num_elev_points) 
+                row1 : relative coordinates 
+                row2 : elevation points 
+    add_topo_model : return elevation_model , np.ndarray(3, elevation_model)
+                row1 : easting coordinates 
+                row2 : northing coordinates 
+                row3 : elevation points 
+    """
+    encodage='utf-8'
+    
+    def __init__(self, path_elev="K1_exp.bln", step_betw_station=50, ): 
+        self.path_elev=path_elev 
+        self.step_sta=step_betw_station
+        
+        self.prof_loc_east=None
+        self.prof_loc_north=None
+        self.elev_value=None
+        
+    
+    def add_topo(self) : 
+        """
+        fonction  to add elevation from topography 
+        x is the realtive offset 0  to n*step_betw_station 
+        """
+    
+        file_elev=os.path.basename(self.path_elev)
+        
+        try: 
+            
+            ofi=open(file_elev,'r', encoding=self.encodage)
+            
+        except: 
+            print("*** No such file in the directory***")
+            return 
+        exten_file=file_elev[-3:].upper()
+        if file_elev[-3:] != exten_file: 
+            print("** {} is a wrong format , should be *.bln or .BLN **".format(file_elev))
 
+        head=ofi.readline() # read of headfile , not necessary.
+        repere="east_DMS north_DMS UTM_zone   east_utm"\
+            "      north_utm   azim_m  elev_m "
+        if repere not in head:
+            print(" * Please select the appropriate *.bln-file *")
+            return
+        
+        prof_loc_list_east, prof_loc_list_north, elev_value_list=[],[],[]
+        
+        while 1 : 
+            ligne=ofi.readline()
+            ligne=ligne[:-1] # or ligne = ligne.strip()
+            if ligne=='' or ligne == '\n': 
+                break
+            ligne=ligne[:-1] 
+            list_line=ligne.split()
+            prof_loc_list_east.append(float(list_line[6]))
+            prof_loc_list_north.append(float(list_line[7]))
+            elev_value_list.append(float(list_line[9]))
+        ofi.close()
+        
+        # building numpy array (2, num_elev_points)
+        rela_coord_list=[ii for ii in range(0,self.step_sta*len(elev_value_list),self.step_sta)] 
+        
+        prof_loc_east=np.asarray(prof_loc_list_east)
+        prof_loc_north=np.asarray(prof_loc_list_north)
+        elev_value=np.asarray(elev_value_list)
+        rela_coord=np.asarray(rela_coord_list)
+        
+        rela_coord=rela_coord.reshape((1,rela_coord.shape[0]))
+        
+        self.prof_loc_east= prof_loc_east.reshape((1, prof_loc_east.shape[0]))
+
+        self.prof_loc_north= prof_loc_north.reshape((1, prof_loc_north.shape[0]))
+
+        self.elev_value=elev_value.reshape((1,elev_value.shape[0]))
+        
+        num_elev_points=np.concatenate((rela_coord,self.elev_value), axis=0)
+        
+        min_,max_=min(elev_value_list), max(elev_value_list)
+        indmin, indmax=elev_value_list.index(min_),elev_value_list.index(max_)
+        
+        #Affichage 
+        print("="*55)
+        print("Line{0:^55}".format(file_elev[:-8]).upper())
+        print("="*55)
+        print("Nombre de stations: {:>5}".format(len(prof_loc_list_east)))
+        print("Elevation mininale: station {0:>4} ={1:>6} {2:>2}".format("S"+str(indmin),min_,"m." ))
+        print("Elevation maximale: station {0:>4} ={1:>6} {2:>2}".format("S"+str(indmin) ,max_,'m.'))
+        print("{:^55}".format('------'))
+        return num_elev_points
+        
+    def add_topo_model(self): 
+        """
+        generate a elevation model ndarray(3, num_elev_points)
+        easting , northing , and elevation """
+        
+        list_models=[self.prof_loc_east, self.prof_loc_north, self.elev_value]
+        elevationModel=list_models[0]
+        for array in list_models[1:]: 
+            elevationModel=np.concatenate((elevationModel,array), axis=0)
+            
+        return elevationModel
+    
 
  

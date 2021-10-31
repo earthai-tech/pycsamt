@@ -1,35 +1,20 @@
 # -*- coding: utf-8 -*-
+#        Copyright © 2021  Kouadio K.Laurent
+#       Created on Tue Feb 16 11:37:47 2021
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================  
-
-    .Script to UPDATE and UPGRADE GeoDataBase. GeoDataBase is the Core of geodrill module.
-     More than 150 rocks as well as their properties have already set. User can
-     add more informations to  increase the chance to plot a truth  pseudostratigraphy log
-     with their right pattern , colors and resistivity values.  In addition , provide 
-     the right resistivity value of  differents geological rocks,  may increase the accuracy
-     to find the closest layer when only input resistivity values  are set (_see_module `Geodrill`)
-    . pyCSAMT geoDataBase is flexible , can be edited at least you  are aware of what you are doing.
+    .Script to UPDATE and UPGRADE GeoDataBase. GeoDataBase is the Core 
+        of geodrill module.More than 150 rocks as well as their properties
+      have already set. User canadd more informations to  increase the chance
+      to plot a truth  pseudostratigraphy logwith their right pattern, colors
+      and resistivity values. In addition, provide the right resistivity value 
+      of  differents geological rocks,  may increase the accuracy to find the
+      closest layer when only input resistivity values  are set 
+      (_see_module `Geodrill`). pyCSAMT geoDataBase is flexible, can be
+      edited at least you  are aware of what you are doing.
    
-     GeoDatabse deals with all geological informations and  The electrical properties of rocks
-     their pattern and the Digital Cartography map symbolization. 
+     GeoDatabse deals with all geological informations and  
+     The electrical properties of rocks their pattern and the Digital
+     Cartography map symbolization. 
      The database code colums 
           ::: ('code','label','__description','pattern', 'pat_size',	'pat_density',
             'pat_thickness','rgb', 'electrical_props', 'hatch', 'colorMPL', 'FGDC') ::: 
@@ -42,7 +27,7 @@ Created on Tue Feb 16 11:37:47 2021
 @author: @Daniel03
 """
 
-from pycsamt.geodrill.geoDB.sql_recorder import GeoDataBase 
+from pycsamt.geodrill.geodatabase import GeoDataBase 
 
 
 # code and Label are automatically , dont need to add info . if provided , it will be rejected 

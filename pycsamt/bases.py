@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#       Author: Kouadio K.Laurent<etanoyau@gmail.con>
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Create:on Fri Oct 29 12:31:01 2021
 #       Licence: LGPL
 import os
@@ -137,7 +137,8 @@ def load_serialized_data (filename:str, verbose:int =0):
         raise FileExistsError(f"File {filename!r} does not exist.")
 
     _filename = os.path.basename(filename)
-    _logger.info(f"Loading data from `{_filename}`!")
+    _logger.info(
+        f"Loading data from {'memory' if _filename.find('memo')>=0 else _filename}.")
    
     data =None 
     try : 

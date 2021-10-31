@@ -22,14 +22,14 @@ from pycsamt.viewer.plot import Plot1d
 
 # path to station profiles files 
 
-path_to_profiles = os.path.join(os.environ['pyCSAMT'], 'data', 'stn_profiles')
+path_to_profiles = 'data/stn_profiles'
 #path_to_profiles = r'C:\Users\Administrator\Desktop\ThesisImp\K_reaj'
 # profile_lines : specify the different lines , you want to plot 
 profile_lines = ['K9.stn', 'K8.stn']           # if Will plot all survey lines 
                                                 # located on path_to_profiles 
                                                 #directory 
 # path to save figure 
-savefig = r'C:\Users\Administrator\Desktop\ThesisImp\plots\stations\ZHS.png'
+savefig =None
 
                                                 
 # profile_lines =[

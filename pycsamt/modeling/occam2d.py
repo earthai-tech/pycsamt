@@ -1,25 +1,8 @@
 # -*- coding: utf-8 -*-
+#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
+#       @author: KouaoLaurent alias @Daniel03 <etanoyau@gmail.con>
+#       Created on Fri Jan 22 20:31:14 2021
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-=============================================================================== 
- 
 .. _module-Occam2D :: `pycsamt.modeling.occam2d`
     :synopsis:: The Occam 2D MT inversion code (v3.0) presented here is an
                 implementation of the general Occam procedure of  Constable, 
@@ -28,7 +11,7 @@
                  by Wannamaker, et al (1987)  using reciprocity to calculate the
                 Jacobian (de Lugao and Wannamaker, 1996).
                 ...
-                
+
 .. seealso::
         - http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html 
         - https://marineemlab.ucsd.edu/~kkey/Software.php
@@ -39,25 +22,19 @@
         ...
         
 .. _MTpy::`MTpy<https://github.com/MTgeophysics/mtpy.git>`      
-        
-@author: KouaoLaurent alias @Daniel03
-Created on Fri Jan 22 20:31:14 2021
+
 """
-
-from pycsamt.modeling.__init__ import  SUCCESS_IMPORT_MTPY
-
-import os, warnings
+import os
+import warnings
 import datetime
 import numpy as np 
 
-
 import pycsamt.utils.exceptions as CSex
+from pycsamt.modeling.__init__ import  SUCCESS_IMPORT_MTPY
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
-
 from pycsamt.viewer import  mpldecorator  as mdeco
-
-from pycsamt.etc.infos import _sensitive as SB 
+from pycsamt.utils._p import _sensitive as SB 
 from pycsamt.utils._csamtpylog import csamtpylog 
 
 _logger =csamtpylog.get_csamtpy_logger(__name__)
@@ -71,8 +48,10 @@ if  SUCCESS_IMPORT_MTPY :
         
         SUCCESS_IMPORT_MTPY =True 
     except :
-        _logger.info('loading  `occam2d` module from `MTpy`packages  failed')
-        warnings.warn('Loading occam2d module from "MTpy" package failed ! Please try again')
+        _logger.info('loading  `occam2d` module from '
+                     '`MTpy`packages  failed')
+        warnings.warn('Loading occam2d module from "MTpy" '
+                      'package failed ! Please try again')
         
         SUCCESS_IMPORT_MTPY  =False 
     
@@ -2945,7 +2924,22 @@ def plotResponse(data_fn =None, resp_fn =None, stations =None, **kws):
                 station_list =stations[:4]
             else : station_list= stations 
             
-    
+    if len(data_fn) != len(station_list):
+        if len(data_fn)< len(station_list): 
+            _logger.debug(
+                f"Number of stations ={len(station_list)} are larger."
+                " Note that each station must fit a given line. "
+                f"{'A single' if len(data_fn) ==1 else len(data_fn)}"
+                f" line{'s are' if len(data_fn)>1 else' is'} detected. Only "
+                f"{len(data_fn)} can be plotted. Data are shrunked to match"
+                f" the number of line ={len(data_fn)}.")
+            station_list =station_list [:len(data_fn)]
+        else:
+            raise CSex.pyCSAMTError_value(
+                "Data and stations to visualize must have the same "
+                f"length. But {len(data_fn)} and {len(station_list)} "
+                "were given respectively.")
+            
     def read_singleDataResponse( stn_INDEX, dfn , respfn): 
         """ Read single occam response file and datafile 
         Collect attribute for plots. Note `Response` inherits 
@@ -3064,7 +3058,7 @@ def plotResponse(data_fn =None, resp_fn =None, stations =None, **kws):
     # Get the index from stations list 
     # return tuple of index stations 
     stnIndex_lst = punc.station_id(station_list) 
-    
+
     for ii , iline in enumerate(stnIndex_lst): 
         r_l, r_sta, r_freq, r_appRHO, r_phase,\
         r_appRho_err, r_phase_err = read_singleDataResponse(

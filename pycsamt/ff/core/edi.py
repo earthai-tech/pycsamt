@@ -1,47 +1,29 @@
 # -*- coding: utf-8 -*-
+#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
+#       Author: KouaoLaurent <etanoyau@gmail.con>
+#       Created on Mon Jan 11 11:37:51 2021
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================
-
 .. _module-edi:: `pycsamt.ff.core.edi`
-
    :synopsis: EDI module can read and write an .edi file as the 'standard '
              formatof magnetotellurics. Each sectionof the .edi file is given 
              its own class, so the elements of each section are attributes for 
              easy access.Edi file will write following the SEG document
              instructions of  EMAP (Electromagnetic  Array Profiling)
              ...
-             
-Created on Mon Jan 11 11:37:51 2021
-
-@author: KouaoLaurent alias @Daniel03
 """
-import os , re, warnings
-import datetime, shutil, time
+import os
+import re
+import warnings
+import datetime
+import shutil
+import time
 
 import numpy as np 
 import pycsamt.utils.func_utils as func
 import pycsamt.ff.core.cs  as CSobj
 import pycsamt.ff.core.z as MTz
-from pycsamt.etc. infos import suit 
-from pycsamt.etc.infos import _sensitive as SB 
+from pycsamt.utils. _p import suit 
+from pycsamt.utils. _p import _sensitive as SB 
 from pycsamt.utils import gis_tools as gis 
 from pycsamt.utils import exceptions as CSex
 from pycsamt.utils._csamtpylog import csamtpylog

@@ -4,7 +4,7 @@
 from pycsamt.modeling.occam2d import plotResponse 
 
 # path to your Occam inversion inversion files  composed of 
-resPath='data/inversionFiles'
+resPath='data/occam2D'
 plotResponse(data_fn =resPath,
                 stations = ['S00', 'S04'],# 's08', 'S12'],  # sites to visualize 
                  rms =['1.013', '1.451'],# '1.00', '1.069'], # rms of each line

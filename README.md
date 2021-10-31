@@ -65,10 +65,10 @@ run the script below:
 1. Plot some fitting curves of resistivity and phase inversion after applying on observed data
 the static shift correction. 
 ```
->>> from pysamt.modeling.occam2d import plotResponse 
->>> resPath =r'data/inversionPath'                  # path to inversion files for each line
->>> plotResponse(data_fn =resPath,
-...                 stations = ['S00', 'S04', 's08', 'S12']  # sites to visualize 
+>>> from pycsamt.modeling.occam2d import plotResponse 
+>>> resPath =r'data/inversionFiles'                  # path to inversion files for each line
+>>> _=plotResponse(data_fn =resPath,
+...                 stations = ['S00', 'S04', 's08', 'S12'],  # sites to visualize 
 ...                  rms =['1.013', '1.451', '1.00', '1.069'], # rms of each line
 ...                  error_type ='resi' )
 ``` 
@@ -76,9 +76,10 @@ Click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples
 
 2. To plot the `misfit`of the model response from the FE algorithms: 
 ```
+>>> import os
 >>> from pycsamt.modeling.occam2d import getMisfit 
 >>> path_data ='data/occam2D'
->>> getMisfit(response_fn = os.path.join(path_data,'RESP17.resp' ),
+>>> _=getMisfit(response_fn = os.path.join(path_data,'RESP17.resp'),
 ...         logfile=os.path.join(path_data, 'LogFile.logfile'), 
 ...          data_fn = path_data)
 ```
@@ -88,17 +89,17 @@ To see the output, click [here](https://github.com/WEgeophysics/pyCSAMT/blob/dev
 set `misfit_G` argument to `True` . `Misfit G` computation is the best way to see whether different layers with their corresponding resistivity values
 are misclassified or not. With few step of codes we can check the process:
 ```
->>> from pycsamt.geodrill.geoCore.geodrill import GeoStratigraphy
->>> inversion_files = {'model_fn':'data/Occam2DModel', 
-                       'mesh_fn': 'data/Occam2DMesh',
-                        "iter_fn":'data/ITER27.iter',
-                       'data_fn':'data/OccamDataFile.dat'}
+>>> from pycsamt.geodrill.geocore import GeoStratigraphy
+>>> inversion_files = {'model_fn':'data/occam2D/Occam2DModel', 
+                       'mesh_fn': 'data/occam2D/Occam2DMesh',
+                        "iter_fn":'data/occam2D/ITER17.iter',
+                       'data_fn':'data/occam2D/OccamDataFile.dat'}
 >>> resistivity_values =[10, 60, 70, 180, 1000,  3000, 7000]   # resistivity values of layers to map
->>> layer_names =['river water','sedimentary rocks', 'fracture zone',  'gravel', granite', 'igneous rocks','basement rocks' ]
+>>> layer_names =['river water','sedimentary rocks', 'fracture zone',  'gravel', 'granite', 'igneous rocks','basement rocks' ]
 >>> geosObj = GeoStratigraphy(**inversion_files,
 ...                      input_resistivities=resistivity_values, 
 ...                      input_layers=layer_names)
->>> geosObj.stratigraphyModel(kind='nm', misfit_G =True)           # 'nm':New Model
+>>> geosObj.stratigraphyModel(kind='nm', misfit_G =False)           # 'nm':New Model
 ```
 click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/geofit.PNG) for reference output. 
 
@@ -112,7 +113,7 @@ click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples
  Once the geostratigraphic model is built, we just need to call the model and extract at each station 
  it corresponding  pseudostratigraphic log using the script below: 
 ```
->>> from pycsamt.geodrill.geoCore.geodrill import GeoStratigraphy
+>>> from pycsamt.geodrill.geocore import GeoStratigraphy
 >>> station ='S00'      # station to visualize 
 >>> GeoStratigraphy.plotPseudostratigraphic(station =station)
 ... 

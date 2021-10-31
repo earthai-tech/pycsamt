@@ -20,13 +20,27 @@ Package Utils
 =====================
 .. automodule:: pycsamt.utils.func_utils
     :members:
+	
+	
+**Module AVG-utils**
+=====================
+.. automodule:: pycsamt.utils.avg_utils
+    :members:
+
+
+**Module Geo-utils**
+=====================
+.. automodule:: pycsamt.utils.geo_utils
+    :members:
+
 
 **Module Gis-tools**
 =====================
 .. automodule::pycsamt.utils.gis_tools
     :members:
 
-**Module Infos**
+
+**Module Property**
 =====================
 .. automodule:: pycsamt.etc.infos
     :members:
@@ -38,3 +52,8 @@ Package Utils
 .. automodule:: pycsamt.utils.plot_utils
     :members:
 
+
+**Module Z-Calculator**
+========================
+.. automodule:: pycsamt.utils.zcalculator
+    :members:

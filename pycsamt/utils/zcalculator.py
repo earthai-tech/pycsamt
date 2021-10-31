@@ -1,38 +1,21 @@
 # -*- coding: utf-8 -*-
+#        Copyright © 2021  Kouadio K.Laurent
+#       Author:  @Daniel03 <etanoyau@gmail.con>
+#       Licence: LGPL
+#       Created on Thu Dec  3 16:44:29 2020
+
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================
-
-.. _module-ZCalculator::`pycsamt.ff.processing.zcalculator`
+.. _module-ZCalculator::`pycsamt.utils.zcalculator`
     :synopsis:  helper functions special calculator 
-
-Created on Thu Dec  3 16:44:29 2020
-
-@author: @Daniel03
 """
-import os,warnings 
+# import os
+import warnings 
 import numpy as np 
-from pycsamt.etc import infos
+
+import pycsamt.utils._p as infos
 from pycsamt.utils import exceptions as CSex
 from pycsamt.utils import func_utils as func
-from pycsamt.utils.decorator import deprecated, redirect_cls_or_func
+from pycsamt.utils.decorator import (deprecated, redirect_cls_or_func)
 from pycsamt.utils._csamtpylog import csamtpylog 
 
 _logger =csamtpylog.get_csamtpy_logger(__name__)
@@ -87,8 +70,9 @@ def mag_avg (mag_array , A_spacing, Txcur):
     try : 
         mag_avg =np.array([float(ii) for ii in mag_array])
     except : 
-        raise CSex.pyCSAMTError_inputarguments("Input first arguments is wrong. must"\
-                                               "be a list of ndarray of numbers.")
+        raise CSex.pyCSAMTError_inputarguments(
+            "Input first arguments is wrong. must"
+             "be a list of ndarray of numbers.")
         
     mag_avg =mag_array.mean()
     En =mag_avg /(A_spacing *  Txcur)
@@ -113,9 +97,11 @@ def phz_avg (phz_array, to_degree):
     try : 
         phz_array =[float(kk) for kk in phz_array ]
     except : 
-        raise CSex.pyCSAMTError_inputarguments("input argument must be a number in array or list.")
+        raise CSex.pyCSAMTError_inputarguments(
+            "input argument must be a number in array or list.")
     
-    if to_degree : return (phz_array.mean()/1e3) *180/np.pi, (phz_array/1000) *180/np.pi
+    if to_degree :
+        return (phz_array.mean()/1e3) *180/np.pi, (phz_array/1000) *180/np.pi
     
     return phz_array.mean()
     
@@ -130,8 +116,8 @@ def param_rho (rho_array):
     try : 
         phz_array =np.array([float(kk) for kk in rho_array ])
     except : 
-        raise CSex.pyCSAMTError_inputarguments('Error inputs arguments . must be list or'\
-                                               'ndarray of numbers.')
+        raise CSex.pyCSAMTError_inputarguments(
+            'Error inputs arguments . must be list or ndarray of numbers.')
     return  phz_array.mean()
 
 def param_phz (pphz_array, to_degree =False): 
@@ -148,9 +134,10 @@ def param_phz (pphz_array, to_degree =False):
     try : 
         pphz_array =np.array([float(kk) for kk in pphz_array ])
     except : 
-        raise CSex.pyCSAMTError_inputarguments('Error inputs arguments. must be list or'\
-                                               'ndarray of numbers.')
-    if to_degree : return (pphz_array.mean()/1000) *180/np.pi, (pphz_array/1000) *180/np.pi
+        raise CSex.pyCSAMTError_inputarguments(
+            'Error inputs arguments. must be list or ndarray of numbers.')
+    if to_degree : 
+        return (pphz_array.mean()/1000) *180/np.pi, (pphz_array/1000) *180/np.pi
     
     return  pphz_array.mean()
 
@@ -185,11 +172,13 @@ def comp_rho (mag_E_field, mag_H_field, freq_array, A_spacing, Txcurr ):
             try :
                 a_args =np.array([ float(ss) for ss in a_args ])
             except : 
-                raise CSex.pyCSAMTError_inputarguments("Elemts composed of each array must be a number.")
+                raise CSex.pyCSAMTError_inputarguments(
+                    "Elemts composed of each array must be a number.")
         
     # if comp_rho.__code__.co_argcount ==5 : 
     #     if mag_E_field.ndim !=1 or  mag_H_field.ndim !=1 or freq_array.ndim !=1 : 
-    #         raise CSex.pyCSAMTError_inputarguments ("dimension of Input arguments must me equal to 1.")
+    #         raise CSex.pyCSAMTError_inputarguments 
+    #       ("dimension of Input arguments must me equal to 1.")
     
     Emag =mag_E_field /(A_spacing * Txcurr)
     Hmag =mag_H_field /Txcurr 
@@ -223,16 +212,18 @@ def comp_phz (comphz_array, units ='deg'):
     if type(comphz_array) is list : comphz_array=np.array(comphz_array)
     
     if comphz_array.dtype not in ["float", "int"] : 
-        raise CSex.pyCSAMTError_inputarguments("Type provided is wrong ! number must be float")  
+        raise CSex.pyCSAMTError_inputarguments(
+            "Type provided is wrong ! number must be float")  
 
     try : 
         comphz_array=np.array([float(kk) for kk in comphz_array ])
     except : 
-        raise CSex.pyCSAMTError_inputarguments('Error inputs arguments. must be list or'\
-                                               'ndarray of numbers.')
+        raise CSex.pyCSAMTError_inputarguments(
+            'Error inputs arguments. must be list or ndarray of numbers.')
     
             
-    if units =='deg' : return comphz_array.mean() *180/np.pi, comphz_array *180/np.pi
+    if units =='deg' : 
+        return comphz_array.mean() *180/np.pi, comphz_array *180/np.pi
     
     return  comphz_array.mean()
 
@@ -241,7 +232,8 @@ def compute_components_Z_Phz(magn_E_field , magn_H_field, phz_E_field,
                phz_H_field, freq_value, **kwargs):
     """
     Function to compute all components  derived from Impedance Z. 
-    user can  enter specifik units in kwargs arguments . program will compute and converts value 
+    user can  enter specifik units in kwargs arguments . 
+    program will compute and converts value 
     automatically.
     
     Parameters
@@ -334,14 +326,16 @@ def compute_components_Z_Phz(magn_E_field , magn_H_field, phz_E_field,
             if keys.lower() in values.keys():
                 magn_E_field = magn_E_field * values[keys.lower()]
             else : 
-                raise CSex.pyCSAMTError_Emag("Input units is not valid. try : {0}"\
-                                                     " ".format(list(values.keys())))
+                raise CSex.pyCSAMTError_Emag(
+                    "Input units is not valid. try : {0}".format(
+                        list(values.keys())))
         if keys.lower() ==units_H_field.lower() : 
             if keys.lower() in values.keys():
                 magn_H_field= magn_H_field* values[keys.lower()]
             else : 
-                raise CSex.pyCSAMTError_Emag("Input units is not valid. try : {0}"\
-                                                 .format(list(values.keys()))) 
+                raise CSex.pyCSAMTError_Emag(
+                    "Input units is not valid. try : {0}".format(
+                        list(values.keys()))) 
                     
         if keys.lower() ==unit_phz.lower(): 
             if keys.lower() in values.keys():
@@ -349,14 +343,16 @@ def compute_components_Z_Phz(magn_E_field , magn_H_field, phz_E_field,
                 phz_E_field = phz_E_field* values[keys.lower()]
                 phz_H_field = phz_H_field  * values[keys.lower()]
             else : 
-                raise CSex.pyCSAMTError_Emag("Input units is not valid. try : {0}"\
-                                                 .format(list(values.keys()))) 
+                raise CSex.pyCSAMTError_Emag(
+                    "Input units is not valid. try : {0}".format(
+                        list(values.keys()))) 
         if keys.lower() ==unit_freq.lower(): 
             if keys.lower() in values.keys():
                 freq_value= freq_value * values[keys.lower()]
             else : 
-                raise CSex.pyCSAMTError_Emag("Input units is not valid. try : {0}"\
-                                                 .format(list(values.keys()))) 
+                raise CSex.pyCSAMTError_Emag(
+                    "Input units is not valid. try : {0}".format(
+                        list(values.keys()))) 
         
     #--> component real part and imag 
     Zij =magn_E_field /magn_H_field
@@ -453,11 +449,14 @@ def rhophi2z ( phase, freq , resistivity=None,  z_array= None):
         except : ValueError('must be flost number of integer . not str !')
     
     try :    
-        if resistivity is not None : resistivity =np.array([float(res) for res in resistivity])
-        if z_array is not None : z_array =np.array([float(z) for z in z_array])
+        if resistivity is not None : 
+            resistivity =np.array([float(res) for res in resistivity])
+        if z_array is not None : 
+            z_array =np.array([float(z) for z in z_array])
     except : ValueError('Arguments number must be float or int')
     
-    if freq.size != phase.size and (phase.size != resistivity.size or phase.size != z_array.size):
+    if freq.size != phase.size and (phase.size != resistivity.size or\
+                                    phase.size != z_array.size):
         raise 'Arrays nust get the same size.'
     
     
@@ -474,7 +473,8 @@ def rhophi2z ( phase, freq , resistivity=None,  z_array= None):
 
 def get_reffreq_index(freq_array, reffreq_value): 
     """ 
-    Get the index of reference index. From this index ,All array will filter data at this reffreq
+    Get the index of reference index. From this index, 
+    All array will filter data at this reffreq
     value . 
     :param freq_array: array of frequency values
     :type freq_array: array_like 
@@ -484,7 +484,8 @@ def get_reffreq_index(freq_array, reffreq_value):
     """
     freq_array=np.array([float(ss) for ss in freq_array])
     if float(reffreq_value) not in freq_array : 
-        raise CSex.pyCSAMTError_frequency('Reference frequency must be a value of frequency array.')
+        raise CSex.pyCSAMTError_frequency(
+            'Reference frequency must be a value of frequency array.')
 
     for ii, freq in enumerate(freq_array): 
         if freq == reffreq_value:
@@ -505,7 +506,8 @@ def interpolate_sets (array_to, fill_value =None , array_size=None ):
     return ff(xx_array_to)
 
 def  _interpolate_array_fromreffreq(stationNames , freq_array , reffreq_array,
-                                    array_dict_loc, x_new=None, rigoureous=True,  order_axis=0): 
+                                    array_dict_loc, x_new=None,
+                                    rigoureous=True,  order_axis=0): 
     """ 
     Interpolate value from  reference frequency : 
  
@@ -537,30 +539,37 @@ def  _interpolate_array_fromreffreq(stationNames , freq_array , reffreq_array,
 
         Y_intp_value =[]
         for ss, rowline in enumerate(array_to):
-            func_interp = spi.interp1d(x_old, rowline, kind='linear', fill_value=fill_value)
+            func_interp = spi.interp1d(x_old, rowline, kind='linear',
+                                       fill_value=fill_value)
             y_new=func_interp(x_new)
 
             Y_intp_value.append(y_new)
-        new_Y_array =func.concat_array_from_list(list_of_array=Y_intp_value, concat_axis=order_axis)
+        new_Y_array =func.concat_array_from_list(list_of_array=Y_intp_value,
+                                                 concat_axis=order_axis)
         
         return new_Y_array
     
     if x_new is None : x_new=freq_array
-    x_old =freq_array[:get_reffreq_index(freq_array=freq_array,
-                                                    reffreq_value=reffreq_array)+1] # add the value of rffreq_freqq
+    # add the value of rffreq_freqq
+    x_old =freq_array[:get_reffreq_index(
+        freq_array=freq_array,reffreq_value=reffreq_array)+1] 
     if rigoureous is True : 
         x_new = np.linspace(freq_array[0], freq_array[-1], x_old.size)
 
-    temp_list =[values [:get_reffreq_index(freq_array=freq_array,
-                                                     reffreq_value=reffreq_array)+1] for  keys , values in array_dict_loc.items() \
-                                                       for  stn in stationNames  if keys ==stn  ]
-    value_to_intp =func.concat_array_from_list(list_of_array=temp_list, concat_axis=order_axis) 
+    temp_list =[values [:get_reffreq_index(
+        freq_array=freq_array,reffreq_value=reffreq_array)+1] 
+        for  keys , values in array_dict_loc.items() for  stn in stationNames 
+        if keys ==stn  ]
+    value_to_intp =func.concat_array_from_list(
+        list_of_array=temp_list, concat_axis=order_axis) 
     return value_to_intp , _interpolate_array(array_to=value_to_intp)
        
 
-def find_reference_frequency(freq_array =None, reffreq_value =None , sharp =False, etching=True): 
+def find_reference_frequency(freq_array =None, reffreq_value =None ,
+                             sharp =False, etching=True): 
     """
-    Method to find and interpolate reference value if it is not present on the frequency range. 
+    Method to find and interpolate reference value if it is not present
+    on the frequency range. 
 
     :param freq_array: array_like frequency range 
     :type freq_array: array_like
@@ -581,25 +590,35 @@ def find_reference_frequency(freq_array =None, reffreq_value =None , sharp =Fals
     """
 
     if freq_array is None or reffreq_value is None : 
-        raise ValueError("None value can not be computed. check your frequency array or reference value.")
+        raise ValueError("None value can not be computed. check "
+                         "your frequency array or reference value.")
         
     if freq_array.dtype not in ['float', 'int']: 
         try : freq_array=np.array([float(ff) for ff in freq_array])
-        except :raise TypeError('Frequency data must be on (ndarray,1) of float value not str.')
+        except :
+            raise TypeError('Frequency data must be'
+                            ' on (ndarray,1) of float value not str.')
     if type(reffreq_value) is not int or type(reffreq_value) is not float: 
         try : reffreq_value= np.int(reffreq_value)
-        except: raise CSex.pyCSAMTError_frequency("Reference frequency must be either float value or integer.")
+        except: 
+            raise CSex.pyCSAMTError_frequency(
+                "Reference frequency must be either float value or integer.")
         
     if freq_array.min() > reffreq_value > freq_array.max():
-        warnings.warn('Reference frequency is out of frequency range. see more infos about reference '\
-                                                  ' frequency.|{0}|'.format(infos.notion.reference_frequency))
-        raise CSex.pyCSAMTError_frequency ("Input reference frequency is out the frequency range. "\
-                                          "Please put value between the frequency range. "\
-                                        "Frequency range is [{0} Hz to {1} Hz].".format(freq_array.min(), freq_array.max()))
+        warnings.warn('Reference frequency is out of frequency '
+                      'range. see more infos about reference'
+                      ' frequency.|{0}|'.format(
+                          infos.notion.reference_frequency))
+        raise CSex.pyCSAMTError_frequency (
+            "Input reference frequency is out the frequency range. "
+             "Please put value between the frequency range. "
+             "Frequency range is [{0} Hz to {1} Hz].".format(
+                 freq_array.min(), freq_array.max()))
     
     def force_interpolation (value_to_steep= None): 
         """ 
-        Method to force reference value interpolated to find a value in frequency range close to . 
+        Method to force reference value interpolated to find a value 
+        in frequency range close to . 
 
         :param value_to_steep:  reference frequency value to be forced .
         :type value_to_steep: float 
@@ -639,8 +658,10 @@ def find_reference_frequency(freq_array =None, reffreq_value =None , sharp =Fals
 
     if sharp ==True :
         if etching:
-            print('---> Input reference frequency <{0}> Hz has been interpolated to < {1} > Hz.'.\
-                   format(np.float(reffreq_value), np.around(float(new_reference_value ),2)))
+            print('---> Input reference frequency <{0}> '
+                  'Hz has been interpolated to < {1} > Hz.'.
+                   format(np.float(reffreq_value), np.around(
+                       float(new_reference_value ),2)))
         return force_interpolation(value_to_steep=new_reference_value  )
     elif sharp ==False :return new_reference_value 
 
@@ -650,9 +671,10 @@ def find_reference_frequency(freq_array =None, reffreq_value =None , sharp =Fals
                                                               
 def get_data_from_reference_frequency(array_loc, freq_array, reffreq_value):
     """
-    Function to get reference frequency  without call especially stations array.
-    The function is profitable but . It's less expensive However if something wrong happened
-    by using the first step to get a reference array , it will try the traditionnally function 
+    Function to get reference frequency  without call especially 
+    stations array. The function is profitable but  It's less expensive 
+    However if something wrong happened by using the first step to get a 
+    reference array , it will try the traditionnally function 
     to get it. If none value is found , an Error will 
     occurs. 
 
@@ -662,8 +684,9 @@ def get_data_from_reference_frequency(array_loc, freq_array, reffreq_value):
     :param freq_array:  frequency array 
     :type  freq_array: array_like
     
-    :param reffreq_value:  reffrence value, If the reference value is not in frequency array ,
-                            function will force to interpolate value and find the correlative array.
+    :param reffreq_value:  reffrence value, If the reference value is not 
+            in frequency array function will force to interpolate value 
+            and find the correlative array.
                            
     :type reffreq_value: float or int 
             
@@ -679,7 +702,9 @@ def get_data_from_reference_frequency(array_loc, freq_array, reffreq_value):
     
     if type(reffreq_value) is str : 
         try: reffreq_value=np.float(reffreq_value)
-        except:raise CSex.pyCSAMTError_frequency("Reference value must be float or int value, not str!")
+        except:
+            raise CSex.pyCSAMTError_frequency(
+                "Reference value must be float or int value, not str!")
     #find the size of array loc : seem to be the size of stationsNames .
     stn_size =np.array(list(array_loc.keys())).size
     # # we sorted data for ensurity
@@ -703,14 +728,15 @@ def get_data_from_reference_frequency(array_loc, freq_array, reffreq_value):
                             reffreq_value=reffreq_value,
                             stnNames=sorted(array_loc.keys()))
         if reffreq_array is None :
-            raise CSex.pyCSAMTError_frequency('Something wrong happened during reference array computing.'\
-                                             ' Please check the your inputs data size, and your station size.')
+            raise CSex.pyCSAMTError_frequency(
+                'Something wrong happened during reference array computing.'
+                 ' Please check the your inputs data size, and your station size.')
         return reffreq_array
 
 def perforce_reference_freq(dataset, frequency_array=None ):
     """ 
-    Function to get automatically the reference frequency. If user doesnt provide the value , 
-    function will find automatically value . 
+    Function to get automatically the reference frequency. If user
+    does not provide the value, the function will find automatically value . 
  
     :param data: array of avg DATA,  ndim>1 
     :type data: array_like 
@@ -799,12 +825,15 @@ def hanning (dipole_length=50., number_of_points=7, large_band=False):
  
 def weight_beta (dipole_length =50. , number_of_points = 7, window_width=None): 
     """
-    WeightBeta function is  weight Hanning window . if window width is not provide  , function 
+    WeightBeta function is  weight Hanning window . 
+    if window width is not provide  , function 
     will compute the width of window. 
     
     .. seealso:: 
-            Torres-Verdin and Bostick, 1992, Principles of spatial surface electric field filtering in
-            magnetotellurics: electromagnetic array profiling (EMAP), Geophysics, v57, p603-622.
+            Torres-Verdin and Bostick, 1992, Principles of spatial 
+            surface electric field filtering in
+            magnetotellurics: electromagnetic array profiling (EMAP),
+            Geophysics, v57, p603-622.
             ...
             
     .. note::SUM(Betaj (j=1..M)=1 .
@@ -828,7 +857,8 @@ def weight_beta (dipole_length =50. , number_of_points = 7, window_width=None):
     if window_width is not None : 
         try : number_of_points = np.int(window_width / dipole_length ) 
         except : 
-            warnings.warn('Please see more info about coeff.Beta :<{0}>'.format(infos.notion.weighted_Beta))
+            warnings.warn('Please see more '
+                          'info about coeff.Beta :<{0}>'.format(infos.notion.weighted_Beta))
 
             raise CSex.pyCSAMTError_processing('Window width type must be float number.')
     
@@ -857,16 +887,19 @@ def compute_adaptative_moving_average ( z_array =None  , weighted_window=None ,
         see `compute_AMA` !
     """
      
-    if z_array is None : raise CSex.pyCSAMTError_Z('NoneType Impedance can not be computed.')
+    if z_array is None :
+        raise CSex.pyCSAMTError_Z('NoneType Impedance can not be computed.')
     if weighted_window is None : 
         if dipole_length is None or number_of_points is None :
             raise CSex.pyCSAMTError_inputarguments('Please check '
-                'your Inputs values ! NoneType values of dipole length or number_of_stations'
-                ' can not be computed.!')
+                'your Inputs values ! NoneType values of dipole length '
+                ' or number_of_stations can not be computed.!')
         try : 
             dipole_length , number_of_points  = np.float(dipole_length) , np.int(number_of_points)
-        except : raise CSex.pyCSAMTError_float('Dipole length, number of points must be a float, and '\
-                                               ' int  number respectively.!')
+        except : 
+            raise CSex.pyCSAMTError_float(
+                'Dipole length, number of points must be a float, and '
+                 ' int  number respectively.!')
 
         weighted_window =weight_beta(dipole_length=dipole_length, 
                                       number_of_points=number_of_points)
@@ -932,11 +965,13 @@ def hanning_xk (dipole_length =50. , number_of_points =7):
 def hanning_x (x_point_value, dipole_length =50.,  number_of_points=7, 
                bandwidth_values=False , on_half=True):
     """
-    Function to compute point on window width .  Use discrete computing . Function show the value
-    at center point of window assume that the point is center locate on the window width . 
-    It intergrates  value between dipole length. User can use see_extraband to see the values 
-    on the total bandwith. If half is False the value of greater than center point will be
-    computed and not be 0 as the normal definition of Hanning window filter. 
+    Function to compute point on window width .  Use discrete computing .
+    Function show the value at center point of window assume that the point
+    is center locate on the window width .  It intergrates  value between 
+   dipole length. User can use see_extraband to see the values 
+    on the total bandwith. If half is False the value of greater than center
+    point will be computed and not be 0 as the normal definition 
+   of Hanning window filter. 
     
     :param x_point_value:  value  to intergrate.
     :type x_point_value: float 
@@ -947,8 +982,8 @@ def hanning_x (x_point_value, dipole_length =50.,  number_of_points=7,
     :param number_of_point: survey point or number point to apply.
     :type number_of_point: int 
     
-    :param bandwidth_values: see all value on the bandwith , value greater than x_center
-                            point will be computed .
+    :param bandwidth_values: see all value on the bandwith, value greater 
+                            than x_center point will be computed .
     :type bandwidth_values:bool 
                             
     :param on_half:  value on the bandwith; value greater that x_center point = 0.
@@ -1008,8 +1043,9 @@ def hanning_x (x_point_value, dipole_length =50.,  number_of_points=7,
 def wbetaX2 (Xpos, dipole_length=50., number_of_points=5) :
     """
     weight Beta is  computed following the paper of 
-    Torres-verdfn, C., and F. X. Bostick, 1992, Principles of spatial surface electric field 
-    filtering in magnetotellurics - Electromagnetic array profiling ( EMAP )- Geophysics, 57(4), 25–34. 
+    Torres-verdfn, C., and F. X. Bostick, 1992, Principles of spatial 
+    surface electric field filtering in magnetotellurics
+     - Electromagnetic array profiling ( EMAP )- Geophysics, 57(4), 25–34. 
         
     :param Xpos: reference position on the field 
     :type Xpos: str 
@@ -1082,8 +1118,9 @@ def compute_sigmas_e_h_and_sigma_rho(pc_emag , pc_hmag, pc_app_rho, app_rho, ema
 def compute_weight_factor_betaj(Xpos , dipole_length=50. , number_of_points =5. , 
                                 window_width=None):
     """
-    weight Beta is  computed following the paper of Torres-verdfn, C., and F. X. Bostick, 1992,
-     Principles of spatial surface electric field filtering in magnetotellurics - Electromagnetic 
+    weight Beta is  computed following the paper of Torres-verdfn,
+    C., and F. X. Bostick, 1992,Principles of spatial surface electric field
+      filtering in magnetotellurics - Electromagnetic 
     array profiling ( EMAP )- Geophysics, 57(4), 25–34. 
         
     :param Xpos: reference position on the field 
@@ -1136,7 +1173,8 @@ def compute_FLMA ( z_array =None  , weighted_window=None ,
     :type weighted_window: array_like 
  
     :param app_rho: array of apparent resistivities in ohm.m , if not provided 
-                    will use impedance zrho to compute app_rho with reference_frequency 
+                    will use impedance zrho to compute app_rho with 
+                    reference_frequency 
     :type app_rho: array_like 
     
     :returns: windowed hanning , filtered window.
@@ -1681,6 +1719,304 @@ def compute_zxy_xk_omega(z_imp, coeffs_bj):
                 
     return np.array(znew_f)
 
+
+def get_array_from_reffreq ( array_loc, freq_array,reffreq_value,
+                            stnNames=None):
+    """ 
+    Get array value at special frequency
+    Parameters
+    ------------
+        * array_loc : dict , 
+            dictionnary of stations , array_value e.g: S00:(ndarray,1) 
+            rho_values
+            
+        * freq_array : (ndarray,1) 
+            frequency array for CSAMT survey 
+            
+        * reffreq_value : int or float 
+            the value of frequency user want to get the value 
+            
+        * stnNames : list 
+            list of stations names . 
+    
+    Returns 
+    ---------
+        array_like
+            an array of all station with reffreq_value . 
+            e.g reffreq_value =1024. it return all value of the array 
+            at 1024Hz frequency . 
+    
+    """
+    if stnNames is None : 
+        raise CSex.pyCSAMTError_station('You may at least specify '
+                        'the array or list of stations-Names or station id.')
+    
+    arrayObj,freqObj=array_loc ,freq_array
+    rfObj,stnObj = reffreq_value,stnNames
+    def get_reffreq_index(freq_array, reffreq_value): 
+        """ 
+        get the index of reference index. From this index,
+        All array will filter data at this reffreq
+        value . 
+        
+        """
+    
+        for ii, freq in enumerate(freq_array): 
+            if freq == reffreq_value:
+                index_rf = ii
+                break
+        return index_rf
+    
+    return np.array([values[get_reffreq_index(freq_array=freqObj, 
+                                              reffreq_value=rfObj)] 
+                for stn in stnObj 
+                for keys, values in arrayObj.items() if stn==keys])
+        
+def relocate_on_dict_arrays(data_array, number_of_frequency,
+                            station_names =None): 
+    """ 
+    Put data arrays on dictionnary where keys is each station and
+    value the array of that station. if station_names is None ,
+    program will create name of station. if station_names is given ,
+    function will sorted stations names . please make sure to provide
+    correctly station according  the disposal you want . 
+   
+    
+    :param number_of_frequency: array of frequency during survey 
+    :type number_of_frequency: array_like
+    
+    :param station_names:  list of station 
+    :type station_names: list of array_like 
+        
+    :returns: infos at data stations 
+    :rtype: dict 
+    
+    """
+        
+    if station_names is not None : 
+        if type(station_names) is list :
+            assert len(station_names) == (data_array.size / number_of_frequency),\
+                CSex.pyCSAMTError_station(
+                    'Number of Station provided must be <{0}> not'
+                    ' <{1}>'.format(np.int(data_array.size / number_of_frequency), 
+                                            len(station_names)))
+        else :
+            assert station_names.size == data_array.size / number_of_frequency, \
+            CSex.pyCSAMTError_station(
+                'Number of Station provided must be <{0}>'
+                ' not <{1}>'.format(np.int(data_array.size / number_of_frequency), 
+                                            station_names.size))
+            station_names =station_names.tolist()
+            
+        NUM_STN=sorted(station_names)
+    elif station_names is None  :
+        station_length =np.int(data_array.size / number_of_frequency )
+        
+        NUM_STN=sorted((_numbering_station(number_of_station=station_length ,
+                                    number_of_freq=number_of_frequency))[0])
+
+    LIST_BROK = truncated_data(data=data_array,
+                               number_of_reccurence=number_of_frequency)   
+    
+    return { key: value for key, value in zip (NUM_STN, LIST_BROK)}
+
+def dipole_center_position (dipole_position=None):
+    """
+    Generaly positions are taken at each electrode of dipole to that 
+    to easy correct data  for ploting and for noise correction ,
+    we adjust coordinate by taking the center position that means ,
+    the number of points will be substract to one.
+    
+    :param dipole_position: postion array at each electrodes. 
+    :type dipole_position: array_like 
+    
+    :returns: centered position value  array 
+    :rtype: array_like 
+    
+    """
+    if dipole_position is None : 
+        raise CSex.pyCSAMTError_inputarguments(
+            'NoneType can not be compute. Please provide the right values.')
+    try : dipole_position= np.array([float(pp) for pp in dipole_position])
+    except : raise CSex.pyCSAMTError_float(
+            'Cannot convert position values. Position must be a'
+            ' number not str.Please check your data!.')
+    # temp_pospp =[(dipole_position[pp]+dipole_position[pp-1])/2 for \
+    #              pp, pos in enumerate( dipole_position) if (
+    # pp>0 and pp <= dipole_position.size) ] 
+    return np.array([(dipole_position[pp]+dipole_position[pp-1])/2 for 
+                 pp, pos in enumerate( dipole_position) 
+                 if ( pp>0 and pp <= dipole_position.size) ])
+        
+
+def get_matrix_from_dict(dict_array, flip_freq =False , 
+                         freq_array= None , transpose =False ):
+    """
+    Function to collect dictionnary  station data with values as array 
+    and build matrix along the line, The rowlines is assumed to be frequency 
+    and colums as stations names. If `freq_array` is provided , `flip_freq` is
+    not usefull.
+    
+    Parameters
+    ----------
+    dict_array : dict
+        stations dictionnary array, keys are stations names and values are 
+        stations values on array_like.
+    transpose : bool, optional
+        transpose  matrix , if true wwill transpose data and 
+        stations should be read as rowlines and frequency as columns.
+        The default is False.
+    freq_array : array , optional 
+        array of frequency, if provided will check if frequency are range from 
+        highest to lowest .Defalut is True
+    flip_freq :bool, optional 
+        set to false if you want frequency to be lowest to highest otherwise
+         frequency are sorted Highest to lowest. Default is False
+
+    Returns
+    -------
+    ndarray(len(stations,), len(frequency))
+        matrix of dictionnary values 
+    bool, 
+        flip_freq, ascertain if frequency array is flipped or not. 
+    """
+    
+    if not isinstance(dict_array, dict): 
+        raise CSex.pyCSAMTError_processing('Main argument `dict array`'
+                                           ' should be dictionnary'
+                                           ', not {0}'.type(dict_array))
+        
+    if freq_array is not None :
+        if isinstance(freq_array, (list, tuple)):
+            freq_array =np.array(freq_array)
+            try :
+                freq_array=freq_array.astype('float')
+            except :
+                raise CSex.pyCSAMTError_float(
+                    'Could not convert array to value !')
+        # now check the order 
+        if freq_array[0] < freq_array[-1]: 
+            freq_array = freq_array[::-1]
+            flip_freq = True        # set flip to True to flip data values  
+            
+    tem= [values for stn , values in dict_array.items()]
+    matrix = func.concat_array_from_list(tem, concat_axis=1)
+    
+    if flip_freq is True : matrix =matrix [::-1]    # reverse matrix 
+    if transpose is True : matrix =matrix.T         # Transpose matrix 
+    
+    return matrix, flip_freq
+        
+
+def plot_reference_frequency (reference_array, frequency_array, 
+                              data_array,
+                              station_names =None ,  **kwargs):
+    """
+    Function to plot reference frequency 
+    
+    Parameters
+    ----------
+    reference_array : array_like, 
+        array_of average_impedance Z_avg.
+    frequency_array: array_like 
+        array of frequency on sites 
+    data_array : ndarray,
+        nadarray of sounding curve,
+        ndarray(len(frequency), len(number_ofstaions).
+
+    Returns
+    -------
+    viewer
+    """
+    import matplotlib.pyplot as plt 
+    
+    ls =kwargs.pop('ls', '-')
+    marker =kwargs.pop('marker', 'o')
+    ms=kwargs.pop('ms', 0.2)
+    lw =kwargs.pop('lw', 2)
+    fs =kwargs.pop('fs', 0.8)
+    if isinstance(data_array, dict): 
+        data_array =sorted(data_array)  # sorted ditionnaries 
+        station_names = list(data_array.keys())
+        data_array = func.concat_array_from_list(list(data_array.values(), 
+                                                      concat_axis=1))
+    
+    if station_names is None : 
+        station_names =['S{0:02}'.format(ii) 
+                        for ii in range(data_array.shape[1])]
+    
+    fig =plt.figure()
+    ax =fig.add_subplot(111)
+    
+    ax.loglog(frequency_array,
+                reference_array, 
+                c='r', ls =ls, lw=lw, ms=ms *fs , 
+                marker =marker)
+    for ii in range(data_array.shape[1]):
+        
+        ax.loglog(frequency_array, data_array[:, ii])
+        
+    plt.show()
+    
+def _numbering_station(number_of_station, number_of_freq): 
+    """
+    small function to numbering stations .
+    
+    Prameters 
+    ---------
+        * number_of_station : int  
+            number of station found on the site. 
+        * number_of freq : int  
+            number of frequency found for survey at each station.
+        
+    Returns
+    --------
+        numbsta : str 
+              station numbered 
+        poly_sta : list 
+             multplie station for each frequency for each stations.
+    """
+   
+    numbsta =['S{:02}'.format(ii) for ii in range (number_of_station)]
+    poly_sta=numbsta*number_of_freq 
+    poly_sta.sort()
+    
+    return numbsta , poly_sta
+   
+def truncated_data (data, number_of_reccurence, **kwargs):
+    """
+    Function to truncate all data according to number of frequency.
+    
+    Parameters
+    ----------
+        * data : list, or nd.array 
+                data must be truncate.
+        * number_of_freq : int
+                number of frequency imaged.
+
+    Returns
+    -------
+        list
+            loc_list , data truncated on list.
+
+    """
+    if type(data) is list : 
+        data =np.array(data) 
+    value_lengh= data.shape[0]
+    # index_loc = [np.int(ss) for ss in np.linspace(0,
+    #value_lengh, number_of_station)]
+    index_loc = [ss for ss in np.arange(0,value_lengh,
+                                        number_of_reccurence)]
+
+    loc_list=[]
+    for ss, value  in enumerate(index_loc) : 
+        if ss ==len(index_loc)-1 : 
+            loc_list.append(data[value:])
+            break
+        loc_list.append(data[value:index_loc[ss+1]])
+            
+    return loc_list 
+    
                           
 if __name__=='__main__': 
     

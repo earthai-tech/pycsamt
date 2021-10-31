@@ -305,9 +305,10 @@ class geoplot1d :
             n_stn = len(lines_id) 
     
             if self.reason in ['resp', 'zonge']:
-                self._logging.info(f"Plot `{n_stn}` "
+                self._logging.info(
+                    f"Plot `{' A single' if n_stn==1 else str(n_stn)+'lines'}` "
                     f"{'Occam Response' if self.reason =='resp' else 'zonge avg'}"
-                    " file{'s' if n_stn>1}.")
+                    f" file{'s' if n_stn >1 else ''}.")
             
             
             if isinstance(station, str): 

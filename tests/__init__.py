@@ -16,8 +16,6 @@ TEST_pyCSAMT_ROOT = os.path.normpath(
 )  # assume tests is on the root level of pyCSAMT goes one step backward 
 
 TEST_DIR = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
-
-
 TEST_TEMP_DIR = os.path.normpath(os.path.join(TEST_DIR, "temp"))
 
 if not os.path.isdir(TEST_TEMP_DIR):

@@ -14,7 +14,7 @@ from pycsamt.modeling.occam2d import Iter2Dat as i2d
 
 
 # path to OCCAM 2D folder 
-path =os.path.join(os.environ ['pyCSAMT'], 'data', 'occam2D')
+path ='data/occam2D'
 
 #savepath folder 
 savepath =None              # if None , will create a folder to hold differents output files

@@ -3,9 +3,9 @@ import os
 from pycsamt.modeling.occam2d import getMisfit 
 
 
-resPath= r'data/inversionFiles'
-pathresp =os.path.join(resPath,'K1.resp' )
-path_data =os.path.join(resPath,'K1.dat' )
+resPath= r'data/occam2D'
+pathresp =os.path.join(resPath,'RESP17.resp' )
+path_data =os.path.join(resPath,'OccamDataFile.dat' )
 getMisfit(data_fn = path_data, resp_fn = pathresp, 
                                     kind='phase')
 

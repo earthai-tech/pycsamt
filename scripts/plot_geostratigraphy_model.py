@@ -11,7 +11,7 @@ Created on Wed Sep 29 09:50:19 2021
 
 import os
 
-from pycsamt.geodrill.geoCore.geodrill import GeoStratigraphy 
+from pycsamt.geodrill.geocore import GeoStratigraphy 
 
 # path to OCCAM2D model files
 occamPath = 'data/Occam2D'

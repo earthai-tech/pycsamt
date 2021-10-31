@@ -1,41 +1,19 @@
 # -*- coding: utf-8 -*-
+#       Copyright © 2021  Kouadio K.Laurent
+#       Author:  ~Daniel03 <etanoyau@gmail.com>
+#       Created:on Wed Oct 14 13:38:13 2020
+#       Licence: LGPL
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-===============================================================================  
-
-.. _module-GeoDataBase::`pycsamt.geodrill.geoDB.sql_recorder`
+.. _module-GeoDataBase::`pycsamt.geodrill.geodatabase`
  
     :synopsis: Special class to manage outputs-input requests from-into 
                 SQL  database .
                 ...
-                
-.. warnings:: Editing this module presume that you are aware of what you  are doing.
-              The module is a core of Geodrill subpackages. It is sensible module.
-              However the the way the dataBase is arranged can be enhanced  and adapted
-              for better convenient or other suitable purposes.
-             
-Created on Wed Oct 14 13:38:13 2020
-
-@author:kkouaoLaurent alias @Daniel03
+.. warnings:: Editing this module presume that you are aware of what you  
+              are doing. The module is a core of Geodrill subpackages.
+              However the the way the dataBase is arranged can be enhanced  
+              and adapted for better convenient or other suitable purposes.
 """
-
-# =============================================================================
 import os
 import sys
 import numpy as np  
@@ -43,10 +21,10 @@ import pandas as pd
 import warnings
 import datetime
 
-from pycsamt.geodrill.geoCore.structural import Geo_formation 
+from pycsamt.geodrill.structural import Geo_formation 
 import  pycsamt.utils.exceptions as CSex 
-from pycsamt.geodrill.geoDB.dict_app import Glob
-from pycsamt.geodrill.geoDB.interfaceDB import ManageDB
+from pycsamt.geodrill._dictapp import Glob
+from pycsamt.geodrill.requestmanager import ManageDB
 from  pycsamt.utils.decorator import redirect_cls_or_func
 from pycsamt.utils._csamtpylog import csamtpylog 
 #set LogInfos
@@ -68,7 +46,7 @@ except Exception as error :
 sys.path.insert(0, os.path.abspath('.'))  
 sys.path.insert(0, os.path.abspath('..')) 
 sys.path.insert(0, os.path.abspath('../..'))  # for consistency 
-sys.path.insert(0, os.path.abspath('pycsamt/geodrill/geoDB/sql_utils/sql_DB'))   
+sys.path.insert(0, os.path.abspath('pycsamt/geodrill/_geomemo'))   
 
 # =============================================================================
 
@@ -101,7 +79,7 @@ class GeoDataBase (object):
     #                'geodrill', 'geoDB','sql_utils', 'sql_DB', 'memory.sq3') 
     # locate the geodataBase
     geoDataBase = os.path.join(
-        os.path.abspath('pycsamt/geodrill/geoDB/sql_utils/sql_DB'),'memory.sq3')
+        os.path.abspath('pycsamt/geodrill/_geomemo'),'memory.sq3')
  
     # :memory: is faster we chose this options :geoDataBase.sq3 
     #in sql_DB contains drill holes and wells Tables 
@@ -178,7 +156,7 @@ class GeoDataBase (object):
             list of data of each columns.
         
         :Exemple:
-            >>> from pycsamt.geodriil.geoDB.sql_recorder import GeoDataBase 
+            >>> from pycsamt.geodrill.geodatabase import GeoDataBase 
             >>> dbObj = GeoDataBase()
             >>>  values = dbObj._retreive_databasecolumns(
                     ['__description', 'electrical_props'])    
@@ -314,7 +292,7 @@ class GeoDataBase (object):
         
         :Example:
             
-            >>> from pycsamt.geodrill.geoDB.sql_recorder import GeoDataBase 
+            >>> from pycsamt.geodrill.geodatabase import GeoDataBase 
             >>> GeoDataBase()._update_geo_structure(
                 **{'__description':'basement rocks', 
                     'electrical_props':[1e99, 1e6 ]})
@@ -502,7 +480,7 @@ class GeoDataBase (object):
         
         :Example: 
             
-            >>> from pycsamt.geodrill.geoDB.sql_recorder import GeoDataBase 
+            >>> from pycsamt.geodrill.geodatabase import GeoDataBase 
             >>> geodatabase_obj= GeoDataBase._add_geo_structure( **{
             ...                                     'name': 'massive sulfure', 
             ...                                     'pattern': 218., 
@@ -1026,7 +1004,7 @@ class Recorder_sql(object):
     
     :Example: 
         
-        >>> from pycsamt.geodrill.geoDB.sql_recorder import Recorder_sql
+        >>> from pycsamt.pycsamt.geodrill.geodatabase import Recorder_sql
         >>> realpath=os.path.dirname(os.path.realpath(__file__)) 
         >>> #where 'the file'sql_recorder is located'
         >>> print(realpath)
@@ -1419,7 +1397,7 @@ class Recorder_sql(object):
 
         :Example:
             
-            >>> from pycsamt.geodrill.geoDB.sql_recorder import recordData
+            >>> from pycsamt.geodrill.geodatabase import recordData
             >>> filename='nofacies_data.csv'
             >>> recordList0=recordData(data=filename,
                                     new_tablename='example')

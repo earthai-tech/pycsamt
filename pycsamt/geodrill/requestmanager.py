@@ -1,42 +1,20 @@
 # -*- coding: utf-8 -*-
+#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
+#       @author: KouaoLaurent alias @Daniel03 <etanoyau@gmail.con>
+#       Created on Tue Oct 13 15:28:57 2020
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================  
-.. _module-Interface::`pycsamt.geodrill.geoDB.interfaceDB`
+.. _module-requestmanager::`pycsamt.geodrill._dblink`
  
-    :synopsis: Specially dedicate to Manage SQL 
-Created on Tue Oct 13 15:28:57 2020
-
-@author: @Daniel03
+    :synopsis: Specially designed to Manage SQL 
 """
-import os, shutil 
-
+import os
+import shutil 
 import warnings
 import pandas as pd 
 # from pg8000 import DBAPI
-
 import sqlite3 as sq3 
 
-#
 try : 
-    from pycsamt.utils  import exceptions as CSex
     from pycsamt.utils._csamtpylog import csamtpylog
     _logger=csamtpylog.get_csamtpy_logger(__name__)
 except :
@@ -78,7 +56,7 @@ class ManageDB(object) :
         
     :Example: 
         
-        >>> from sqlrequests import SqlQ
+        >>> from pycsamt.geodrill.requestmanager import ManageDB
         >>> path= os.getcwd()
         >>> nameofDB='memory.sq3'
         >>> manDB=ManageDB(db_name=nameofDB, 
@@ -112,8 +90,10 @@ class ManageDB(object) :
         :param db_name: str , DataBase name 
         :type db_name: str 
         """
-        if db_host is not None : self.db_host = db_host 
-        if db_name is not None : self.db_name = db_name 
+        if db_host is not None :
+            self.db_host = db_host 
+        if db_name is not None : 
+            self.db_name = db_name 
         
         mess= ''
         if self.db_name is None  :

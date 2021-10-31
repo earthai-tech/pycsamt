@@ -22,7 +22,7 @@ pathfile =  os.path.join(os.environ["pyCSAMT"],'data','j' )
 profile_fn =None                # not necessary when use [EDI|J] file. 
 
 #savefigure 
-savefigure =r'C:\Users\Administrator\Desktop\ThesisImp\plots\pseudo_cross_res_phase\ama\k6_2.png'
+savefigure =None
 
 #delineate resitivity : delineate resistivity contour. Resitivities are not on logarithm scale (ohm m ) . 
 contourRes =[1000]                # for multiple contour delineation , put value on list eg: [500, 7000]

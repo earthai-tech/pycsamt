@@ -1,35 +1,14 @@
 # -*- coding: utf-8 -*-
+#       Author: Kouadio K.Laurent<etanoyau@gmail.con>
+#       Created on Wed Nov 25 16:45:33 2020
+#       Licence: LGPL
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================  
 .. _module-Strata::
     
     :synopsis:Metaclasses of geostrata . Takes conventional strata geocodes 
             look in _geocodes folder . will be deprecated soon
-    
-Created on Wed Nov 25 16:45:33 2020
-
-@author: KouaoLaurent K. alias @Daniel03
 """
-
-from pycsamt.ff.processing.callffunc import set_stratum_on_dict as setdico
+from pycsamt.utils.geo_utils import set_stratum_on_dict as setdico
 try : 
     from pycsamt.utils._csamtpylog import csamtpylog
     _logger=csamtpylog.get_csamtpy_logger(__name__)

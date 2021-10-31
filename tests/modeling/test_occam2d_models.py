@@ -14,16 +14,18 @@ Developer:      etanoyau@gmail.com/kkouao@zju.edu.cn
 
     
 """
-from tests.modeling.__init__ import reset_matplotlib, csamtpylog, diff_files
-
-import os , datetime
-
+import os 
+import  datetime
 import  unittest 
 
 from pycsamt.modeling.occam2d import occam2d_write,Iter2Dat 
 
-
-from tests import EDI_DATA_DIR, OC2D_DIR, make_temp_dir,TEST_TEMP_DIR 
+from tests.modeling.__init__ import (reset_matplotlib,
+                                     csamtpylog, 
+                                     diff_files)
+from tests import (EDI_DATA_DIR, OC2D_DIR,
+                   make_temp_dir,
+                   TEST_TEMP_DIR )
 
 class TestWriteOccam2DInputfiles(unittest.TestCase):
     """

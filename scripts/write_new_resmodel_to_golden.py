@@ -2,14 +2,18 @@
 """
     .Script to write geo_outputfiles to Golden software plots 
     will generate 3 outputs : 
-        1. One model for rho averaged (*_aver), transitory data betwen the calculated rho and true rho.
-        2. second for rho value replaced . Replaced calcualted model structures resistivities 
-        to their closest resistivities as resistivities reference from input resistivities.
-        3. the most important files: the  cut out resistivities value with step descent (._sd) 
+        1. One model for rho averaged (*_aver), transitory data betwen
+            the calculated rho and true rho.
+        2. second for rho value replaced . Replaced calcualted model 
+            structures resistivities to their closest resistivities as
+                resistivities reference from input resistivities.
+        3. the most important files: the  cut out resistivities 
+            value with step descent (._sd) 
             show most dominant stratigraphy sequences .
         4. the station location file (.bln)
         
-        Plot the 3 files in Golden software to see transition from model calculation to truth sequence detail models
+        Plot the 3 files in Golden software to see transition from model
+        calculation to truth sequence detail models
         which is most closest to reality.
         
         
@@ -19,13 +23,12 @@ Created on Mon Feb 15 14:56:18 2021
 
 """
 import os
-from pycsamt.geodrill.geoCore.geodrill import Geodrill 
+from pycsamt.geodrill.geocore import Geodrill 
 
 # path to OCCAM 2D folder 
 #path =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', 'occam2D')
-path = r'C:\Users\Administrator\Desktop\ThesisImp\occam2D\invers+files\inver_res\K8'
+path = 'data/occam2D'
 #path2 =os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data', '_iter2dat_2')
-
 
 # 
 filename = 'k8' #'ybkro'
@@ -34,7 +37,7 @@ filename = 'k8' #'ybkro'
 
 #savepath  = None                #os.path.join(os.environ ['pyCSAMT'], 'csamtpy', 'data','_outputGeoSD_2') 
     
-savepath =r'C:\Users\Administrator\Desktop\ThesisImp\golden_software\K8_edi'
+savepath = None #r'C:\Users\Administrator\Desktop\ThesisImp\golden_software\K8_edi'
 
 #  Maximum depth investigation  for CSAMT , if not provided , will set to 1km 
 DOI = '1km'                 #  can be float like 1000 = 1km 
@@ -73,7 +76,7 @@ path_to_occam_mesh = 'Occam2DMesh'
 # path to occam Model file 
 path_to_occam_model = 'Occam2DModel'
 # path to Occam Iteration file 
-path_to_occam_iter='ITER12.iter'
+path_to_occam_iter='ITER17.iter'
 
 # ---------------Read with Iter2DAT FILE ------------------
 

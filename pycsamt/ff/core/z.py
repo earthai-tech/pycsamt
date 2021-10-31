@@ -1,26 +1,6 @@
 #!/usr/bin/env python
 
 """
-===============================================================================
-    Copyright © 2021  Kouadio K. Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================    
-
 .. module:: Z
    :synopsis: Deal with MT responses Z and Tipper
         Module belongs to  MTpy .see  https://mtpy2.readthedocs.io/en/develop/ 
@@ -32,7 +12,6 @@
         The MTPy software package for magnetotelluric data analysis and visualisation.
         Journal of Open Source Software, 4(37), 1358. https://doi.org/10.21105/joss.01358
         ...
-
 .. moduleauthor:: Jared Peacock <jpeacock@usgs.gov>
 .. moduleauthor:: Lars Krieger
 
@@ -42,14 +21,12 @@
 import cmath
 import copy
 import math
-
-# =================================================================
 import numpy as np
+# =================================================================
 
-import pycsamt.ff.processing.mtcalculator as MTcc
+import pycsamt.utils.mtcalculator as MTcc
 import pycsamt.utils.exceptions as MTex
 from pycsamt.utils._csamtpylog import csamtpylog
-
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 
 

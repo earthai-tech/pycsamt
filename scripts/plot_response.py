@@ -13,11 +13,10 @@ from pycsamt.viewer.plot import Plot2d
 
 # par=th to occam folder 
 
-path = os.path.join(os.environ ['pyCSAMT'],  'data', 'occam2D' )
+path = 'data/occam2D' 
 # path = r'F:\__main__csamt__\paper2_data_old\occam2d_inputfiles\Final_retained_test\k4_model\rho30phas20\K4'
 
 # path to Occam response file 
-path =r'F:\ThesisImp\occam2D\old\K1'
 resp= 'RESP17.resp'
 # path to occam data file 
 data='OccamDataFile.dat'

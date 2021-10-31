@@ -15,11 +15,10 @@ Created on Sun Feb 21 19:26:21 2021
 """
 
 import os 
-from pycsamt.geodrill.geoCore.geodrill import Drill 
+from pycsamt.geodrill.geocore import Drill 
 
 
-path_to_parser_files =os.path.join(os.environ['pyCSAMT'], 
-                                       'data', 'drill_example_files')
+path_to_parser_files ='data/drill_example_files'
 
 #name of parserfile : eg: data collected from `location `nble`. 
 

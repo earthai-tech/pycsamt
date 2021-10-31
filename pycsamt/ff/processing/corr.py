@@ -1,30 +1,14 @@
 # -*- coding: utf-8 -*-
-"""
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================    
- 
+#        Copyright © 2021  Kouadio K.Laurent
+#       Author:  @Daniel03 <etanoyau@gmail.con>
+#       Licence: LGPL
+#       Created on Sat Dec 12 13:55:47 2020
+""" 
 .. _module-Shifting::`pycsamt.ff.processing.corr` 
         :synopsis: Deal with all data files. It corrects apparent resistivity
-                by shitibg value to rj static factor . Apply correction and filters
-                Some filters applied to correct apparent resistivities are 
-                TMA , AMA and FLMA. 
+                by shitibg value to rj static factor . Apply correction 
+                and filters. Some filters applied to correct apparent
+                 resistivities are TMA , AMA and FLMA. 
         ...
         
 Created on Sat Dec 12 13:55:47 2020
@@ -32,27 +16,18 @@ Created on Sat Dec 12 13:55:47 2020
 @author: @Daniel03
 
 """
-
-import os, warnings
-
+import warnings
 import numpy as np 
 import matplotlib.pyplot as plt
 import scipy.interpolate  as spi 
-
-# from pycsamt.etc import infos 
 
 from pycsamt.ff.core.cs import CSAMT
 from pycsamt.ff.core  import avg as CSAMTavg
 from pycsamt.ff.core  import edi as CSAMTedi
 from pycsamt.ff.core  import z as CSAMTz
-
-from pycsamt.ff.processing import zcalculator as Zcc
-from pycsamt.ff.processing import callffunc as cfunc 
-
+from pycsamt.utils import zcalculator as Zcc
 from pycsamt.utils._csamtpylog import csamtpylog
 from pycsamt.utils.decorator import deprecated
-
-# from pycsamt.utils import func_utils as func
 from pycsamt.utils import exceptions as CSex
 
 #-------------------- end import module ---------------------------
@@ -677,10 +652,10 @@ class shifting(object):
         import copy 
         self.stnVSrho_loc= copy.deepcopy(self.res_app_obj)   
         # then compute matrix and flip matrix arrays 
-        res_app_obj, _= cfunc.get_matrix_from_dict(
+        res_app_obj, _= Zcc.get_matrix_from_dict(
             dict_array= self.res_app_obj, flip_freq=self.flip_freq )
                                                     
-        phase_obj,_ = cfunc.get_matrix_from_dict(
+        phase_obj,_ = Zcc.get_matrix_from_dict(
             dict_array= self.phase_obj, freq_array= self.frequency) 
     
         # get apparent resistivity and phase  at reference frequency 
@@ -934,11 +909,11 @@ class shifting(object):
             import copy 
             self.stnVSrho_loc= copy.deepcopy(res_app_obj)   
             # then compute matrix and flip matrix arrays 
-            res_app_obj, _= cfunc.get_matrix_from_dict(
+            res_app_obj, _= Zcc.get_matrix_from_dict(
                 dict_array= res_app_obj, flip_freq=self.flip_freq )
                                                     
         if isinstance(phase_obj, dict): 
-            phase_obj,_ = cfunc.get_matrix_from_dict(
+            phase_obj,_ = Zcc.get_matrix_from_dict(
                 dict_array= phase_obj, freq_array= self.frequency) 
                                                        
             if flag ==1 : # recomputed phase degree to rad 

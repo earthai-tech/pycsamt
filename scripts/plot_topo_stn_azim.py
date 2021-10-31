@@ -23,7 +23,7 @@ path_to_stn_profile_file = None #  os.path.join('data', 'stn_profiles',file_stn)
             # OR 
             
 # provided edipath or jpath when used edifiles or jfiles and 
-edipath_or_jpath = os.path.join(os.path.abspath('.'),'data','edi') # None 
+edipath_or_jpath = 'data/edi' # None 
 #edipath_or_jpath =None                     # uncomment section if station stn file is provided 
 
 

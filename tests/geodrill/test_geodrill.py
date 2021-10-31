@@ -12,11 +12,11 @@ Description:
     `dist`: distorsion removal}
 Created on Wed Apr 14 16:14:00 2021
 
-references modules : `pycsamt.geodrill.geoCore.geodrill.Geodrill`
+references modules : `pycsamt.geodrill.geocore.Geodrill`
                     :members:`.to_oasis_montaj`
                              `.to_golden_software`
-                    `pycsamt.geodrill.geoCore.geodrill.Drill`
-                    `pycsamt.geodrill.geoCore.geodrill.Drill`.Geosurface`
+                    `pycsamt.geodrill.geocore.Drill`
+                    `pycsamt.geodrill.geocore.Geosurface`
                     
 Refencences :
     Scripts: /write_geo_model_files.py
@@ -28,19 +28,24 @@ Refencences :
 
 """
 
-from tests.modeling.__init__ import csamtpylog, reset_matplotlib
-from tests.processing.__init__ import compare_diff_files
-from tests.geodrill.__init__ import remove_control
-import os, datetime
-
+import os
+import datetime
 import  unittest
 import pytest 
-
-from pycsamt.geodrill.geoCore.geodrill import (Geodrill, Drill, Geosurface)
-
-from tests import  make_temp_dir, TEST_TEMP_DIR ,I2DAT_DIR, OC2D_DIR, AVG_DATA_DIR
-from tests import OAS_DIR, DRILL_PARSER_DIR
-
+from pycsamt.geodrill.geocore import (Geodrill,
+                                      Drill,
+                                      Geosurface)
+from tests.modeling.__init__ import (csamtpylog,
+                                     reset_matplotlib)
+from tests.processing.__init__ import compare_diff_files
+from tests.geodrill.__init__ import remove_control
+from tests import  (make_temp_dir,
+                    TEST_TEMP_DIR ,
+                    I2DAT_DIR,
+                    OC2D_DIR,
+                    AVG_DATA_DIR)
+from tests import (OAS_DIR,
+                   DRILL_PARSER_DIR)
 from tests import survey_testname
 
 

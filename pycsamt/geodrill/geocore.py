@@ -1,26 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================
-  
-.. _module-geodrill::`pycsamt.geodrill.geoCore.geodrill`
+#       Copyright © 2021  Kouadio K.Laurent
+#       Author:  ~Daniel03 <etanoyau@gmail.con>
+#       Create:on Sat Sep 19 12:37:42 2020
+#       Licence: LGPL
+"""  
+.. _module-geodrill::`pycsamt.geodrill.geocore`
     
         :synopsis: Deal with geological strata , geological structural info and 
             geological dataBase. Module to deal with inversion file ,and
@@ -29,10 +13,8 @@
             Can also build borehode data andgenerate a report of survey location 
             Deal with geostrata   module to incorporate conventional
             geological codes , pattern and colors. 
-    
-Created on Sat Sep 19 12:37:42 2020
-@author: Daniel03 
 """
+
 from __future__ import division 
 import os 
 import copy 
@@ -44,15 +26,15 @@ import pandas as pd
 import pycsamt.bases as BS
 import  pycsamt.utils.exceptions as CSex
 import pycsamt.utils.geo_utils as GU
+import  pycsamt.geodrill.structural as STRL
 from pycsamt.modeling import occam2d
 from pycsamt.ff.core.cs import Profile
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
-from pycsamt.viewer.mpldecorator  import geoplot2d
 from pycsamt.utils.decorator import deprecated
 from pycsamt.utils.agso import Agso
-from pycsamt.geodrill.geoCore import structural as STRL
-from pycsamt.geodrill.geoDB.sql_recorder import GeoDataBase 
+from pycsamt.viewer.mpldecorator  import geoplot2d
+from pycsamt.geodrill.geodatabase import GeoDataBase 
 
 try : 
     from pycsamt.utils._csamtpylog import csamtpylog
@@ -153,7 +135,7 @@ class Geodrill (object):
     
     :Example: 
         
-        >>> from pycsamt.geodrill.geoCore.geodrill import Geodrill 
+        >>> from pycsamt.geodrill.geocore import Geodrill 
         >>> path =os.path.join(os.environ ['pyCSAMT'],  
         ...                       'data', 'occam2D')
         >>> geo_obj = Geodrill( input_resistivities=[300, 500, 
@@ -252,7 +234,7 @@ class Geodrill (object):
         
         :Example: 
             
-            >>> form pycsamt.geodrill import Geodrill
+            >>> from pycsamt.geodrill.geocore import Geodrill
             >>> path_occam2d = os.path.join(os.environ ['pyCSAMT'],
             ...                                 'data', 'occam2D')
             >>> path_i2d =os.path.join(os.environ ['pyCSAMT'], 
@@ -267,7 +249,7 @@ class Geodrill (object):
         
         :Example:
             
-            >>> form pycsamt.geodrill import Geodrill
+            >>> from pycsamt.geodrill.geocore import Geodrill
             >>> geo_obj =Geodrill(iter2dat_fn  = os.path.join(path_i2d, 'K1.iter.dat'), 
             ...                  bln_fn = os.path.join(path_i2d, 'K1.bln'),)
             >>> geo_model_off = geo_obj.model_x_nodes
@@ -839,8 +821,7 @@ class Geodrill (object):
         ---------
             obj , 
                 Build stratigraphy log obj 
-            
-            
+
         A Sample of electrical_properties_of_rocks is below
             
         =========================  ===================  =======================
@@ -2089,7 +2070,7 @@ class Geosurface :
         
     :Example:
         
-        >>> from pycsamt.geodrill.geoCore.geodrill import Geosurface 
+        >>> from pycsamt.geodrill.geocore import Geosurface 
         >>> gs_obj = geosurface (path =os.path.join(os.environ['pyCSAMT'], 
         ...                                   'geodrill', 'data', 
         ...                                   InputOas), 
@@ -2183,7 +2164,7 @@ class Geosurface :
  
         :Example:
             
-             >>> from pycsamt.geodrill.geoCore.geodrill  import Geosurface 
+             >>> from pycsamt.geodrill.geocore import Geosurface 
              >>> path =  r'F:/__main__csamt__\oasis data\OASISWORKS\all_data'
              >>> geo_surface_obj = Geosurface( path =path )
              >>> geo_surface_obj.read_oasis_files()
@@ -2746,7 +2727,7 @@ class Drill(object):
         
     :Example: 
         
-        >>> from pycsamt.geodrill.geoCore.geodrill import Drill 
+        >>> from pycsamt.geodrill.geocore import Drill 
         >>> parser_file ='nbleDH.csv'
         >>> drill_obj=Drill(well_filename=os.path.join(os.environ['pyCSAMT'],
         ...                  'data', 'drill_example_files',parser_file),
@@ -3742,7 +3723,7 @@ def geoModel( **kwargs ):
                             
     :Example:
         
-        >>> from pycsamt.geodrill.geoCore.geodrill import geoModel 
+        >>> from pycsamt.geodrill.geocore import geoModel 
         >>> path=r'F:\ThesisImp\occam2D\invers+files\inver_res\K1'
         >>> inversion_files = {'model_fn':'Occam2DModel', 
         ...                   'mesh_fn': 'Occam2DMesh',
@@ -4188,6 +4169,7 @@ class GeoStratigraphy(Geodrill):
                 into argument `degree`.
         :Example: 
             
+            >>> from pycsamt.geodrill.geocore import GeoStratigraphy
             >>> geosObj = GeoStratigraphy(**inversion_files, 
                               input_resistivities=input_resistivity_values) 
             >>> ss0, error = geosObj._hardMinError(subblocks=geosObj.subblocks[0],
@@ -4565,7 +4547,7 @@ class GeoStratigraphy(Geodrill):
         
         :Example: 
             
-            >>> from pycsamt.geodrill.geoCore.geodrill import Geostratigraphy 
+            >>> from pycsamt.geodrill.geocore import Geostratigraphy 
             >>> geosObj = GeoStratigraphy(**inversion_files,
                                   input_resistivities=input_resistivity_values, 
                                   input_layers=input_layer_names)
@@ -4649,7 +4631,7 @@ class GeoStratigraphy(Geodrill):
         
         Examples
         --------
-            >>> from pycsamt.geodrill.geoCore.geodrill import GeoStratigraphy 
+            >>> from pycsamt.geodrill.geocore import GeoStratigraphy 
             >>> import pycsamt.utils.geo_utils as GU 
             >>> geosObj = GeoStratigraphy( input_resistivities=GU.TRES, 
             ...              input_layers=GU.LNS,**GU.INVERS_KWS)
@@ -4778,7 +4760,7 @@ def _ps_memory_management(obj=None, option='set'):
     if option in ('set', set): 
         if obj is None: 
             raise TypeError('NoneType object can not be set.') 
-        psobj_token = GU.__build_ps__token(obj)
+        psobj_token = __build_ps__token(obj)
         data = (psobj_token, list(obj.__dict__.items()))
         BS.serialize_data ( data, memory, savepath= memorypath )
 
@@ -4856,7 +4838,7 @@ def display_infos(infos, **kws):
     :param header: Change the `header` to other names. 
     :Example: 
         
-        >>> from pycsamt.geodrill.geoCore.geodrill import display_infos
+        >>> from pycsamt.geodrill.geocore import display_infos
         >>> ipts= ['river water', 'fracture zone', 'granite', 'gravel',
              'sedimentary rocks', 'massive sulphide', 'igneous rocks', 
              'gravel', 'sedimentary rocks']
@@ -4903,8 +4885,8 @@ def fit_default_layer_properties(layers, dbproperties_= ['hatch', 'colorMPL']):
     
     :Example: 
         
-        >>> import pycsamt.utils.geo_utils as GU
-        >>> GU.fit_default_layer_properties(
+        >>> import pycsamt.geodrill.geocore as GC
+        >>> GC.fit_default_layer_properties(
         ...    ['tuff', 'granite', 'evaporite', 'saprock']))
         ... (['none', 'none', 'none', 'none'],
         ...     [(1.0, 1.0, 0.0), (1.0, 0.0, 1.0), (0.0, 0.0, 1.0),
@@ -4933,7 +4915,27 @@ def fit_default_layer_properties(layers, dbproperties_= ['hatch', 'colorMPL']):
     r_props = [GU._sanitize_db_items(r_props[k], force=True )
                for k in range(len (r_props))]
     return tuple(r_props)    
-         
+ 
+def __build_ps__token(obj):
+    """ Build a special token for each GeoStratigraphic model. Please don't 
+    edit anything here. Force editing is your own risk."""
+    import random 
+    random.seed(42)
+    __c =''.join([ i for i in  [''.join([str(c) for c in obj.crmSites.shape]), 
+     ''.join([str(n) for n in obj.nmSites.shape]),
+    ''.join([l for l in obj.input_layers]) + str(len(obj.input_layers)), 
+    str(len(obj.tres))] + [''.join(
+        [str(i) for i in [obj._eta, obj.beta, obj.doi,obj.n_epochs,
+                          obj.ptol, str(obj.z.max())]])]])
+    __c = ''.join(random.sample(__c, len(__c))).replace(' ', '')                                               
+    n= ''.join([str(getattr(obj, f'{l}'+'_fn'))
+                         for l in ['model', 'iter', 'mesh', 'data']])
+    n = ''.join([s.lower() 
+                 for s in random.sample(n, len(n))]
+                ).replace('/', '').replace('\\', '')
+    
+    return ''.join([n, __c]).replace('.', '')
+        
 def fit_tres(lns, tres, autorocks, force=False, **kws): 
     """ Read and get the resistivity values from tres that match the 
      the given layers.
@@ -5054,16 +5056,16 @@ def fit_tres(lns, tres, autorocks, force=False, **kws):
     
     return pseudo_lns , pseudo_tres , newTRES 
 
-def quick_read_geos(lns=GU.LNS, tres=GU.TRES):
+def quick_read_geomodel(lns=GU.LNS, tres=GU.TRES):
     """Quick read and build the geostratigraphy model (NM) 
     
     :param lns: list of input layers 
     :param tres: list of input true resistivity values 
     
     :Example: 
-        >>> import pycsamt.utils.geo_utils as GU 
-        >>> obj= GU.quick_read_geos()
-        >>> GU.fit_tres(obj.input_layers, obj.tres, obj.auto_layer_names)
+        >>> import pycsamt.geodrill.geocore as GC 
+        >>> obj= GC.quick_read_geomodel()
+        >>> GC.fit_tres(obj.input_layers, obj.tres, obj.auto_layer_names)
     """
     if len(GU.INVERS_KWS) ==0: 
         _logger.error("NoneType can not be read! Need the basics Occam2D"
@@ -5079,44 +5081,7 @@ def quick_read_geos(lns=GU.LNS, tres=GU.TRES):
     return geosObj 
 
 
-if __name__=="__main__" :
-
-    path=r'F:\ThesisImp\occam2D\invers+files\inver_res\K4'
-    # path ='data/occam2D'
-    inversion_files = {'model_fn':'Occam2DModel', 
-                        'mesh_fn': 'Occam2DMesh',
-                        "iter_fn":'ITER27.iter',
-                        'data_fn':'OccamDataFile.dat'
-                        }
-    input_resistivity_values =[10, 66, 70, 100, 1000, 2000, 
-                                    3000, 7000, 15000 ] 
-    input_layer_names =['river water', 'fracture zone', 'granite']
-    inversion_files = {key:os.path.join(path, vv) for key,
-                        vv in inversion_files.items()}
-    
-    # GeoStratigraphy.plotPseudostratigraphic(station ='S00')
-    
-#     with np.errstate(divide='ignore'):
-#         ss= np.array(inpt2) /np.array(input_resistivity_values )
-# #         print(ss )
-    geosObj = GeoStratigraphy(**inversion_files,
-                      input_resistivities=input_resistivity_values, 
-                      input_layers=input_layer_names)
-    # # geosObj._createNM()
-    geosObj._strataPropertiesOfSite(geosObj, station ='S03')
-    # crm = geosObj.crmSites
-    # nrm = geosObj.nmSites 
-    
-    # geosObj.stratigraphyModel(kind ='nm',misfit_G=False)
-    
-
-                
-    
-                    
-                    
-                    
-                    
-                    
+            
                     
                     
 

@@ -1,44 +1,23 @@
 # -*- coding: utf-8 -*-
+#        Copyright © 2021  Kouadio K.Laurent
+#       Author:  @Daniel03 <etanoyau@gmail.com>
+#       Licence: LGPL
+#       Created on Sat Nov 28 21:19:13 2020
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================  
-.. _module-Structural::`pycsamt.geodrill.geoCore.structural` 
+.. _module-Structural::`pycsamt.geodrill.structural` 
     
     :synopsis:class for  geological structural analysis 
                contains some conventional structure can populate the data
-    
-Created on Sat Nov 28 21:19:13 2020
-
-@author: @Daniel03
-
 """
-
 
 import os, warnings
 import numpy as np 
-from pycsamt.ff.processing.callffunc import set_stratum_on_dict as strato
+
+from pycsamt.utils.geo_utils import set_stratum_on_dict as strato
 from pycsamt.utils  import exceptions as CSex
 from pycsamt.utils._csamtpylog import csamtpylog
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
-#---- End import modules --------
 
 class geo_pattern: 
     """

@@ -30,13 +30,12 @@ path_to_file = r'data/j'
 #path_to_file =os.path.join(os.environ['pyCSAMT'],'data', 'edi' )
                            
 #save figure 
-savefigure = r'C:\Users\Administrator\Desktop\ThesisImp\plots\correction\K9.png'
 savefigure=None 
 # stn station profile file 
 profile_stn = os.path.join(os.environ['pyCSAMT'],'data','avg','K1.stn')
 profile_stn =None  #  
 
-FILTER='ama'                   # Can be `tma` or `flma`
+FILTER='flma'                   # Can be `tma` or `flma`
 
 #fipole length in meter if `flma filter is provided 
 dipole_length =50.

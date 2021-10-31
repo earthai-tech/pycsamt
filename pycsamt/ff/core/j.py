@@ -1,25 +1,8 @@
 # -*- coding: utf-8 -*-
+#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
+#       Author: KouaoLaurent <etanoyau@gmail.con>
+#       Created on Thu Dec  3 22:31:16 2020
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================
-
 .. _module-j:: `pycsamt.ff.core.j
 
    :synopsis: Deal with J files.  The J class can read and write an A.G.Jones file
@@ -27,22 +10,19 @@
              of the .edi file is given its own class, so the elements of each
              section are attributes for easy access.
              ...
-
-Created on Thu Dec  3 22:31:16 2020
-
-@author: @Daniel03
 """
-import os , re, warnings
-import datetime, shutil
+import os 
+import re
+import shutil
+import warnings
+import datetime
 import webbrowser
 import numpy as np 
 
-
 import pycsamt.ff.core.cs  as cs_obj
-from pycsamt.etc.infos import notion
-
-from pycsamt.ff.core.edi import Edi, Hmeasurement, Emeasurement 
-from pycsamt.etc.infos import _sensitive as SB 
+from pycsamt.utils._p import notion
+from pycsamt.ff.core.edi import (Edi, Hmeasurement, Emeasurement) 
+from pycsamt.utils._p import _sensitive as SB 
 import pycsamt.utils.func_utils as func
 from pycsamt.utils import exceptions as CSex
 from pycsamt.utils._csamtpylog import csamtpylog
@@ -252,7 +232,7 @@ class J_collection :
                 csamt_jobj.jsites_infos = datetime.datetime.fromtimestamp(
                     os.stat(jfn).st_ctime) # return the creation date of file 
                 
-            edi_obj.Head.acqdate = csamt_jobj.jsites_infos[ii]
+            edi_obj.Head.acqdate = csamt_jobj.jsites_infos
             edi_obj.Head.fileby = fileby 
             edi_obj.Head.filedate = datetime.datetime.now(
                 ).strftime('%m-%d-%Y %H:%M:%S')

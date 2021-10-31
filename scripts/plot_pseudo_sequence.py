@@ -33,7 +33,7 @@ path = r'C:\Users\Administrator\Desktop\ThesisImp\occam2D\invers+files\inver_res
 
 #savefigure path
 #savefigure =None              # path to save fig
-savepath =r'C:\Users\Administrator\Desktop\ThesisImp\golden_software\K8_edi'
+savepath =None
 # scale the output data 
 scale= None                # if None : default is "m" .can be [m|km]
 

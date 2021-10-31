@@ -1,15 +1,20 @@
 # -*- coding: utf-8 -*-
 """
     .Script to write geo_outputfiles for oasis montaj of geosoft 
-    To write oasis montaj file , station profile (*stn) or another similar file MUST 
-    be profiles. If not file is provided , Add easting -northing arrays and if necessary an elevation array 
-    Script can generate 3 additionals  outputs files if INPUT truth resistivity values  is provided. 
+    To write oasis montaj file , station profile (*stn) or another similar file 
+    MUST be profiles. If not file is provided , Add easting -northing arrays and 
+    if necessary an elevation array. Script can generate 3 additionals  outputs 
+    files if INPUT truth resistivity values  is provided. 
         of the some layers of the area.  : 
-        1. One model for rho averaged (*_aver), transitory data betwen the calculated rho and true rho.
-        2. second for rho value replaced . Replaced calcualted model structures resistivities 
-        3. the most important files: the  cut out resistivities value with step descent (._sd) 
+        1. One model for rho averaged (*_aver), transitory data betwen the
+            calculated rho and true rho.
+        2. second for rho value replaced . Replaced calcualted model structures
+            resistivities 
+        3. the most important files: the  cut out resistivities value 
+            with step descent (._sd) 
             show most dominant stratigraphy sequences .
-    If input resistivity is not provided , will generate OCCAM2D model files with station coordinates files
+    If input resistivity is not provided , will generate OCCAM2D model files
+        with station coordinates files
  
 Created on Sat Feb 20 16:07:54 2021
 
@@ -17,11 +22,11 @@ Created on Sat Feb 20 16:07:54 2021
 
 """
 import os
-from pycsamt.geodrill.geoCore.geodrill import Geodrill 
+from pycsamt.geodrill.geocore import Geodrill 
 
 # path to OCCAM 2D folder 
-path =os.path.join(os.environ ['pyCSAMT'],  'data', 'occam2D')
-path2 =os.path.join(os.environ ['pyCSAMT'],  'data', '_iter2dat_2')
+path ='data/occam2D'
+path2 ='data/_iter2dat'
 #profile_path =os.path.join(os.environ['pyCSAMT'], 'data', 'avg')
 profile_path = r'F:\ThesisImp\K_reaj'
  
@@ -35,7 +40,6 @@ filename = 'ybkro'
 #save path# path to save output files 
 
 savepath  = None                #os.path.join(os.environ ['pyCSAMT'], 'data','_output2Oasis_2')     
-savepath = r'F:\ThesisImp\occam2D\invers+files\inver_res\K1\oasismap'
 #  Maximum depth investigation  for CSAMT , if not provided , will set to 1km 
 DOI = '1km'                 #  can be float like 1000 = 1km 
 

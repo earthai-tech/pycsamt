@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 
 import pycsamt.utils.func_utils as FU
 import pycsamt.utils.plot_utils as PU
+import pycsamt.utils.exceptions as CSex
 from pycsamt.utils._csamtpylog import csamtpylog
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
@@ -298,10 +299,9 @@ def fit_stratum_property (fittedrocks , z , site_tres):
         
     :Example: 
         
-        >>> import pycsamt.utils.geo_utils as GU
-        >>> obj= GU.quick_read_geos()
+        >>> import pycsamt.geodrill.geocore as GC
+        >>> obj= GC.quick_read_geomodel()
         >>> logS1 = obj.nmSites[:, 0] 
-        >>> obj = make_strata(obj)
         >>> sg, stg, zg, zcg= fit_stratum_property (
             obj.fitted_rocks, obj.z, obj.logS)
     """
@@ -337,9 +337,8 @@ def get_s_thicknesses(grouped_z, grouped_s, display_s =True, station=None):
             
     :Example: 
         
-        >>> import pycsamt.utils.geo_utils as GU
-        >>> obj= GU.quick_read_geos()
-        >>> obj= make_strata(obj)
+        >>> import pycsamt.geodrill.geocore as GC
+        >>> obj= GC.quick_read_geomodel()
         >>> sg, _, zg, _= fit_stratum_property (obj.fitted_rocks,
         ...                                    obj.z, obj.nmSites[:, 0]  )
         >>> get_s_thicknesses( zg, sg)
@@ -682,7 +681,8 @@ def _assert_list_len_and_item_type(lista, listb, typea=None, typeb=None):
         - the status of the length of the two list ``True`` or ``False``
         - the status of the type of `lista` ``True`` if all items are the 
             same type otherwise ``False``
-        - idem of `listb` 
+        - idem of `listb`
+        
     :Example: 
         >>> thicknesses= [59.0, 150.0, 590.0, 200.0]
         >>> hatch =['//.', '.--', '+++.', 'oo+.']
@@ -772,28 +772,6 @@ def set_default_hatch_color_values(hatch, color, dhatch='.--',
     if fs==1: color = tuple(color)
     return hatch, color 
 
-
-def __build_ps__token(obj):
-    """ Build a special token for each GeoStratigraphic model. Please don't 
-    edit anything here. Force editing is your own risk."""
-    import random 
-    random.seed(42)
-    __c =''.join([ i for i in  [''.join([str(c) for c in obj.crmSites.shape]), 
-     ''.join([str(n) for n in obj.nmSites.shape]),
-    ''.join([l for l in obj.input_layers]) + str(len(obj.input_layers)), 
-    str(len(obj.tres))] + [''.join(
-        [str(i) for i in [obj._eta, obj.beta, obj.doi,obj.n_epochs,
-                          obj.ptol, str(obj.z.max())]])]])
-    __c = ''.join(random.sample(__c, len(__c))).replace(' ', '')                                               
-    n= ''.join([str(getattr(obj, f'{l}'+'_fn'))
-                         for l in ['model', 'iter', 'mesh', 'data']])
-    n = ''.join([s.lower() 
-                 for s in random.sample(n, len(n))]
-                ).replace('/', '').replace('\\', '')
-    
-    return '.'.join([n, __c])
-
-
 def print_running_line_prop(obj, inversion_software='Occam2D') :
     """ print the file  in stdout which is currently used
     " for pseudostratigraphic  plot when extracting station for the plot. """
@@ -806,7 +784,81 @@ def print_running_line_prop(obj, inversion_software='Occam2D') :
     print('~'*108)
 
 
+#*** file from _geocodes folder :AGSO & AGSO.STCODES ******
+def _code_strata():
+    return ['code', 'label', 'name', 'pattern',
+                  'size', 'density', 'thickness', 'color']
+
+def agso_data (): 
+    """
+    Geological data codes processing
+    
+    .. deprecated:: function  will later deprecated 
+    
+    """
+    
+    agsofiles =['AGSO.csv', 'AGSO_STCODES.csv']
+    
+    for file in agsofiles : 
+        path_to_agsofile=os.path.join(os.environ["pyCSAMT"], 'geodrill',
+                                                 "_geocodes", file)
+        with open(path_to_agsofile,'r', encoding='utf8') as f:
+                fgeo=f.readlines()
+        for ss, stratum in enumerate(fgeo):
+            stratum=stratum.strip('\n').split(',')
+            fgeo[ss]=stratum
+        if file =='AGSO.csv':
+            fagso=fgeo
+        elif file =='AGSO_STCODES.csv':
+            fagso_stcodes=fgeo
+            fagso_stcodes[0]=fagso[0]
+        else :
+            _logger.warn("Geocodes files < AGS0 & AGS0_STCODES> Not found !")
+            raise CSex.pyCSAMTError_file_handling(
+                'Geocodes files :< AGS0 & AGS0_STCODES> not found.'
+                 'check the right path to _geocodes folder.')
+    return fagso, fagso_stcodes
 
 
+def set_stratum_on_dict():
+    """
+    Process to put geocodes_strata and geocodes_structures into dictionnaries  
+    better way to go on metaclasses merely. Thus each keys of dictionary will be 
+    its own object. 
 
+    Returns
+    -------
+        strata_dict : dict
+            Disctionnary of geostrata 
+        structures_dict : dict
+            Dictionnary of geostructures.
+
+    """
+    code_strata=_code_strata()
+    drop_bar=[' / ',' ', '/','-']
+    attr_dict={}
+    strata_dict, structures_dict={},{}
+    for iiagso in range(2):
+        fstrata=agso_data()[iiagso][1:]
+        
+        for ss , elem in enumerate(fstrata):
+            for jj, attribute in enumerate(code_strata):
+                attr_dict["{0}".format(attribute)]=elem[jj]
+                stratum_description=elem[2]
+            for db in drop_bar :
+                if db in stratum_description : 
+                    stratum_description=stratum_description.replace(db,'_')
+            stratum_description=stratum_description.lower()
+            if stratum_description.startswith('"') or\
+                stratum_description.endswith('"'):
+                stratum_description=stratum_description[1:-1]
+            if iiagso ==1 :
+                structures_dict['{0}'.format(stratum_description)]=attr_dict
+            else :
+                strata_dict['{0}'.format(stratum_description)]=attr_dict
+            attr_dict={}
+
+    return strata_dict, structures_dict
+
+#***  end call file from _geocodes folder :AGSO & AGSO.STCODES ******
 

@@ -14,15 +14,14 @@ from pycsamt.viewer.plot import Plot1d
 
 
 #--- path to files [EDI|J|AVG] 
-path =os.path.join(os.environ['pyCSAMT'], 
-                    'data', '_outputAVG2EDI_') #  can change the path
+path ='data/avg/K1.AVG' #  can change the path
 #plottest_avg : 
     #path =os.path.join(os.environ['pyCSAMT'], 'csamtpy', 'data', 'avg', 'K1.AVG')    
                     
 #---> profile *stn file 
     #profile_stn =os.path.join(os.environ['pyCSAMT'], 'csamtpy', 'data', 'avg', 'K1.stn')
                    
-profile_stn =None 
+profile_stn ='data/avg/K1.stn' 
 #---selected station to plot 
 station_reference =[ 24]             # can be only string  like ["S04,"S25"]
 #---> rename your station 

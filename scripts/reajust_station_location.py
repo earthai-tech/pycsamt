@@ -10,7 +10,7 @@ import os
 from pycsamt.ff.core.cs import Profile as prof_obj
 
 # --- > path to  your stn file
-path =os.path.join(os.environ['pyCSAMT'], 'data', 'stn_profiles') 
+path ='data/stn_profiles' 
 #path =r'C:\Users\Administrator\Desktop\ThesisImp\raw_stn_file'
 
 #--> original stn file . It could be the Station file. 

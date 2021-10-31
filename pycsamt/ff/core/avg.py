@@ -1,25 +1,8 @@
 # -*- coding: utf-8 -*-
+#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
+#       @author: KouaoLaurent alias @Daniel03 <etanoyau@gmail.con>
+#       Created on Wed Nov 18 16:45:35 2020
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
-
-===============================================================================
-
 .. _module-avg:: `pycsamt.ff.core.avg`  
 
     :synopsis: Module to deal with AVG file. each section of Avg file is a class 
@@ -27,23 +10,24 @@
     the main file type as Type 1 . the othe type of AVG will rewrite on t
     the main type. the module can expor that file for other use .
     
-Created on Wed Nov 18 16:45:35 2020
-
-@author: KLaurent K. alias @Daniel03
 """
 
-import os, re 
-import warnings,shutil
+import os
+# import re 
+import warnings
+import shutil
 import numpy as np
 import pandas as pd
+from  datetime import (datetime, timezone)
 
-from pycsamt.etc import infos as infOS
-from  datetime import datetime, timezone
+from pycsamt.utils import _p as infOS
+from pycsamt.ff.site import Site 
 from pycsamt.ff.core.j import J_collection 
 from pycsamt.ff.core.edi import Edi
-from pycsamt.ff.processing import callffunc as cfunc
-from pycsamt.ff.processing import zcalculator as Zcc
+from pycsamt.ff.processing import corr 
+from pycsamt.utils import zcalculator as Zcc
 from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt.utils import avg_utils as cfunc
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import exceptions as CSex
 
@@ -534,7 +518,7 @@ class Avg (object):
             * survey_name:   bool, 
                         survey_area  
         """
-        from pycsamt.ff.core.cs import Site 
+
         
         savepath =kws.pop('savepath', None)
         write_info =kws.pop('writeInfos', False)
@@ -812,8 +796,7 @@ class Avg (object):
             ...           savepath =save_edipath, 
             ...           apply_filter=None ) 
         """
-        from pycsamt.ff.core.cs import Site 
-        from pycsamt.ff.processing import corr 
+
         
         utm_zone = kwargs.pop('utm_zone', None)
         
@@ -2473,7 +2456,7 @@ class  Station(object):
             # print(self.station_data_array)
             #--- build a commun array station-value and truncated on dict.
             # data_to_truncate =np.concatenate((tem_names, self.station_data_array), axis =1 )
-            station_list_truncated =cfunc.truncated_data(
+            station_list_truncated =Zcc.truncated_data(
                 data=self.station_data_array, number_of_reccurence= repsta [0])
 
             self.loc= {keys:values for keys, values in zip(
@@ -2587,10 +2570,10 @@ class Frequency (object):
         
         # self.max, self.min=self.value.max(), self.value.min()
   
-        truncated_freq =cfunc.truncated_data( data =self._freq_array , 
+        truncated_freq =Zcc.truncated_data( data =self._freq_array , 
                                        number_of_reccurence=self.numfreq )
         
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=freq_repeat[0], 
             number_of_freq =self.numfreq)
         
@@ -2821,9 +2804,9 @@ class Amps (object):
         self.max, self.min =vcounts_amps.max(), vcounts_amps.min()
         
         
-        truncated_amps=cfunc.truncated_data( data =self._amps_array, 
+        truncated_amps=Zcc.truncated_data( data =self._amps_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=self.number_of_stations, 
             number_of_freq =self.nfreq)
         self.loc ={ key:value for key, value in zip(name, truncated_amps )}
@@ -2930,9 +2913,9 @@ class Emag (object):
         self.max, self.min =vcounts_e_mag.max(), vcounts_e_mag.min()
         
         
-        truncated_e_mag=cfunc.truncated_data( data =self.e_mag_array, 
+        truncated_e_mag=Zcc.truncated_data( data =self.e_mag_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=self.number_of_stations, 
             number_of_freq =self.nfreq)
         
@@ -3052,9 +3035,9 @@ class Ephz (object):
         self.max, self.min =vcounts_e_phz.max(), vcounts_e_phz.min()
         
         
-        truncated_e_phz=cfunc.truncated_data( data =self.e_phz_array, 
+        truncated_e_phz=Zcc.truncated_data( data =self.e_phz_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=self.number_of_stations, 
                number_of_freq =self.nfreq)
         
@@ -3165,9 +3148,9 @@ class Hmag (object):
         self.max, self.min =vcounts_h_mag.max(), vcounts_h_mag.min()
         
         
-        truncated_h_mag=cfunc.truncated_data( data =self.h_mag_array, 
+        truncated_h_mag=Zcc.truncated_data( data =self.h_mag_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=self.number_of_stations, 
                                number_of_freq =self.nfreq)
         
@@ -3290,9 +3273,9 @@ class Hphz (object):
         self.max, self.min =vcounts_h_phz.max(), vcounts_h_phz.min()
         
         
-        truncated_h_phz=cfunc.truncated_data( data =self.h_phz_array, 
+        truncated_h_phz=Zcc.truncated_data( data =self.h_phz_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=self.number_of_stations, 
                number_of_freq =self.nfreq)
         
@@ -3424,9 +3407,9 @@ class Resistivity (object):
         self.value =vcounts_res
         self.max, self.min =vcounts_res.max(), vcounts_res.min()
         self.mean=self.res_array.mean()
-        truncated_res=cfunc.truncated_data( data =self.res_array, 
+        truncated_res=Zcc.truncated_data( data =self.res_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=self.number_of_stations, 
               number_of_freq =self.nfreq)
         
@@ -3438,7 +3421,7 @@ class Resistivity (object):
             self.max=(vcounts_res.max(),vcounts_sres.max())
             self.min = (vcounts_res.min(),vcounts_sres.min())
             self.mean =(self.mean, self.mean_Sres)
-            truncated_sres=cfunc.truncated_data( data =self.Sres, 
+            truncated_sres=Zcc.truncated_data( data =self.Sres, 
                                        number_of_reccurence=self.nfreq)
             self.loc_Sres ={ key:value for key, value in zip(name, 
                                                              truncated_sres )}
@@ -3567,9 +3550,9 @@ class Phase (object):
         self.max, self.min =vcounts_phz.max(), vcounts_phz.min()
         
         
-        truncated_phz=cfunc.truncated_data( data =self._phase_array, 
+        truncated_phz=Zcc.truncated_data( data =self._phase_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=self.number_of_stations, 
                 number_of_freq =self.nfreq)
         
@@ -3885,9 +3868,9 @@ class Z_Tensor(object):
   
         self.max, self.min =zabs_array.max(), zabs_array.min()
         
-        truncated_zz=cfunc.truncated_data( data =zabs_array, 
+        truncated_zz=Zcc.truncated_data( data =zabs_array, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=self.number_of_stations, 
              number_of_freq =self.nfreq)
         
@@ -3998,9 +3981,9 @@ class pcEmag (object):
         self.max, self.min =vcounts_Emag.max(), vcounts_Emag.min()
         
         
-        truncated_pcEmag=cfunc.truncated_data( data =self._pcEmag, 
+        truncated_pcEmag=Zcc.truncated_data( data =self._pcEmag, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=self.number_of_stations, 
             number_of_freq =self.nfreq)
         
@@ -4134,9 +4117,9 @@ class sEphz(object) :
         self.max, self.min =vcounts_sEphz.max(), vcounts_sEphz.min()
         
         #---> tuncated AVG sHphz value on  dictionnary for easy acces . 
-        truncated_sEphz=cfunc.truncated_data( data =self._sEphz, 
+        truncated_sEphz=Zcc.truncated_data( data =self._sEphz, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=self.number_of_stations, 
                                number_of_freq =self.nfreq)
         
@@ -4247,9 +4230,9 @@ class pcHmag (object):
         self.max, self.min =vcounts_Hmag.max(), vcounts_Hmag.min()
         
         
-        truncated_pcHmag=cfunc.truncated_data( data =self._pcHmag, 
+        truncated_pcHmag=Zcc.truncated_data( data =self._pcHmag, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=self.number_of_stations, 
             number_of_freq =self.nfreq)
         
@@ -4385,9 +4368,9 @@ class sHphz(object) :
         self.max, self.min =vcounts_shphz.max(), vcounts_shphz.min()
         
         #---> tuncated AVG sHphz value on  dictionnary for easy acces . 
-        truncated_shphz=cfunc.truncated_data( data =self._sHphz, 
+        truncated_shphz=Zcc.truncated_data( data =self._sHphz, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=self.number_of_stations, 
                                number_of_freq =self.nfreq)
         
@@ -4487,7 +4470,7 @@ class pcRho (object):
         else : 
             raise CSex.pyCSAMTError_inputarguments(
                 'Please specify the number of stations')
-        
+      
         try : 
             self.nfreq , self.number_of_stations =np.int(self.nfreq),\
                 np.int(self.number_of_stations)
@@ -4506,9 +4489,9 @@ class pcRho (object):
         self.value =vcounts_pcres
         self.max, self.min =vcounts_pcres.max(), vcounts_pcres.min()
         self.mean=self._pcRes.mean()
-        truncated_pcres=cfunc.truncated_data( data =self._pcRes, 
+        truncated_pcres=Zcc.truncated_data( data =self._pcRes, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=self.number_of_stations, 
             number_of_freq =self.nfreq)
         
@@ -4645,9 +4628,9 @@ class sPhz(object) :
         self.max, self.min =vcounts_sphz.max(), vcounts_sphz.min()
         
         #---> tuncated AVG sHphz value on  dictionnary for easy acces . 
-        truncated_sphz=cfunc.truncated_data( data =self._sPhs, 
+        truncated_sphz=Zcc.truncated_data( data =self._sPhs, 
                                        number_of_reccurence=self.nfreq)
-        name, polyname = cfunc._numbering_station(
+        name, polyname = Zcc._numbering_station(
             number_of_station=self.number_of_stations, 
                                number_of_freq =self.nfreq)
         

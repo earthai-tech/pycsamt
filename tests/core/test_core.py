@@ -15,18 +15,16 @@ Created on Wed Apr  7 13:27:27 2021
 @author: @Daniel03
 
 """
-from tests.modeling.__init__ import reset_matplotlib, csamtpylog, diff_files
+
 
 import os
 import datetime
-
 import  unittest 
 
 from pycsamt.ff.core import ( avg, edi, cs,j)
-
+from tests.modeling.__init__ import (reset_matplotlib, csamtpylog, diff_files)
 from tests import EDI_DATA_DIR, AVG_DATA_DIR, make_temp_dir 
 from tests import J_DATA_DIR, TEST_TEMP_DIR , STN_DIR
-
 from tests import survey_testname
 
 

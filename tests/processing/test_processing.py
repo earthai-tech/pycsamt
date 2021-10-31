@@ -16,20 +16,18 @@ Created on Wed Apr 14 13:15:19 2021
 
 @author: @Daniel03
 """
-
-from tests.modeling.__init__ import csamtpylog, reset_matplotlib
-
-from tests.processing.__init__ import compare_diff_files
-
 import os
-
 import  unittest 
 
 from pycsamt.ff.processing import corr
 
-from tests import  make_temp_dir, TEST_TEMP_DIR , EDI_DATA_DIR
-
+from tests import  (make_temp_dir,
+                    TEST_TEMP_DIR,
+                    EDI_DATA_DIR)
 from tests import survey_testname
+from tests.modeling.__init__ import (csamtpylog,
+                                     reset_matplotlib)
+from tests.processing.__init__ import compare_diff_files
 
 class TestEDICOR(unittest.TestCase):
     """
@@ -49,8 +47,6 @@ class TestEDICOR(unittest.TestCase):
                       'reduce_res_factor_x':1, 
                       'reduce_res_factor_y': 1 , 
                       }
-
-
     @classmethod 
     def setUpClass(cls):
         """

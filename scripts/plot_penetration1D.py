@@ -14,12 +14,12 @@ from pycsamt.viewer.plot import Plot1d
 
 #-----> path to your files , may be ED|J|OR AVG file 
 #filespath = os.path.join(os.environ ['pyCSAMT'], 'data', 'edi')
-filespath= r'C:\Users\Administrator\Desktop\ThesisImp\edis\_special_K6_edi\K6_edi_rew'
+filespath= 'data/edi'
 
 #--> profile station file . Necessary if you bring AVG file 
 profile_stn =None
 # savefigure path 
-savefig =r'C:\Users\Administrator\Desktop\ThesisImp\plots\penetration1D\k6\k6.png'
+savefig =None 
 # -- > selected frequencies 
 selected_frequencies =[ 1024, 3000, 8000 ]            # for single frequency , you dont need to put on list 
 

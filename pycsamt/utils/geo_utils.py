@@ -299,10 +299,9 @@ def fit_stratum_property (fittedrocks , z , site_tres):
         
     :Example: 
         
-        >>> import pycsamt.utils.geo_utils as GU
-        >>> obj= GU.quick_read_geos()
+        >>> import pycsamt.geodrill.geocore as GC
+        >>> obj= GC.quick_read_geomodel()
         >>> logS1 = obj.nmSites[:, 0] 
-        >>> obj = make_strata(obj)
         >>> sg, stg, zg, zcg= fit_stratum_property (
             obj.fitted_rocks, obj.z, obj.logS)
     """
@@ -338,9 +337,8 @@ def get_s_thicknesses(grouped_z, grouped_s, display_s =True, station=None):
             
     :Example: 
         
-        >>> import pycsamt.utils.geo_utils as GU
-        >>> obj= GU.quick_read_geos()
-        >>> obj= make_strata(obj)
+        >>> import pycsamt.geodrill.geocore as GC
+        >>> obj= GC.quick_read_geomodel()
         >>> sg, _, zg, _= fit_stratum_property (obj.fitted_rocks,
         ...                                    obj.z, obj.nmSites[:, 0]  )
         >>> get_s_thicknesses( zg, sg)
@@ -774,28 +772,6 @@ def set_default_hatch_color_values(hatch, color, dhatch='.--',
     if fs==1: color = tuple(color)
     return hatch, color 
 
-
-def __build_ps__token(obj):
-    """ Build a special token for each GeoStratigraphic model. Please don't 
-    edit anything here. Force editing is your own risk."""
-    import random 
-    random.seed(42)
-    __c =''.join([ i for i in  [''.join([str(c) for c in obj.crmSites.shape]), 
-     ''.join([str(n) for n in obj.nmSites.shape]),
-    ''.join([l for l in obj.input_layers]) + str(len(obj.input_layers)), 
-    str(len(obj.tres))] + [''.join(
-        [str(i) for i in [obj._eta, obj.beta, obj.doi,obj.n_epochs,
-                          obj.ptol, str(obj.z.max())]])]])
-    __c = ''.join(random.sample(__c, len(__c))).replace(' ', '')                                               
-    n= ''.join([str(getattr(obj, f'{l}'+'_fn'))
-                         for l in ['model', 'iter', 'mesh', 'data']])
-    n = ''.join([s.lower() 
-                 for s in random.sample(n, len(n))]
-                ).replace('/', '').replace('\\', '')
-    
-    return ''.join([n, __c]).replace('.', '')
-
-
 def print_running_line_prop(obj, inversion_software='Occam2D') :
     """ print the file  in stdout which is currently used
     " for pseudostratigraphic  plot when extracting station for the plot. """
@@ -806,7 +782,6 @@ def print_running_line_prop(obj, inversion_software='Occam2D') :
         i, os.path.basename( str(getattr(obj, f'{i}_fn'))))  
      for i in ['model', 'iter', 'mesh', 'data']]) )
     print('~'*108)
-
 
 
 #*** file from _geocodes folder :AGSO & AGSO.STCODES ******

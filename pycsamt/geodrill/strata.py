@@ -8,7 +8,7 @@
     :synopsis:Metaclasses of geostrata . Takes conventional strata geocodes 
             look in _geocodes folder . will be deprecated soon
 """
-from pycsamt.utils.geo_utils import set_stratum_on_dict as setdico
+from pycsamt.utils.geo_utils import mapping_stratum as setdico
 try : 
     from pycsamt.utils._csamtpylog import csamtpylog
     _logger=csamtpylog.get_csamtpy_logger(__name__)

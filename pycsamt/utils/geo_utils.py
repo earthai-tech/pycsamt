@@ -2,13 +2,17 @@
 # Copyright (c) 2021 Kouadio K. Laurent, on Mon Oct 25 15:05:40 2021
 #       This module is a part of pycsamt utils packages
 #       released under a LGL- licence.
-#       @author: K.KL alias Daniel03<etanoyau@gamil.com>
+#       @author-email:<etanoyau@gmail.com>
 import os
-import warnings 
+import warnings
+import shutil  
+from six.moves import urllib 
+from pprint import pprint 
 import numpy as np
 import pandas as pd 
 import matplotlib.pyplot as plt
 
+from pycsamt.bases import sPath 
 import pycsamt.utils.func_utils as FU
 import pycsamt.utils.plot_utils as PU
 import pycsamt.utils.exceptions as CSex
@@ -485,7 +489,7 @@ def base_log( ax, thick, layers, hatch=None, color=None )  :
 
     ax.set_ylabel('Depth(m)', fontsize = 16 , fontweight='bold')
 
-    pg = [0.]+ list(np.cumsum([thick]))
+    pg = [0.]+ list(np.cumsum([thick]))         #### check this part 
     ax.set_yticks(pg)
     ax.set_yticklabels([f'${int(i)}$' for i in  pg] )
     ax.tick_params(axis='y', 
@@ -516,11 +520,11 @@ def annotate_log (ax, thick, layers, colors=None, set_nul='*unknow',
     xinf , xsup =-1, +1
     xpad =  .1* abs(xinf)/2
     ax.set_xlim([xinf, xsup])
-    ax.set_ylim([0, int(np.cumsum(thick).max())])
+    ax.set_ylim([0, int(np.cumsum(thick).max())]) #### 1 check this part 
     # inverse axes 
     plt.gca().invert_yaxis()
     # add 0. to thick to set the origin  
-    pg = np.cumsum([0] + thick)
+    pg = np.cumsum([0] + thick)                     #### 2
     # take values except the last y from 0 to 799 
     v_arrow_bases = [(xinf + xpad, y) for y in  pg ]
     v_xy = v_arrow_bases[:-1]
@@ -618,6 +622,7 @@ def pseudostratigraphic_log (thick, layers, station, *,
     #for hatch and colors
     # print(color)
     hatch , color = set_default_hatch_color_values(hatch, color)
+    #####INSSERT ZOOM TIP HERE####
     fig = plt.figure( f"PseudoLog of Station ={station}",
                      figsize = (10,14), 
                       # dpi =300 
@@ -633,7 +638,7 @@ def pseudostratigraphic_log (thick, layers, station, *,
                        ) 
     doi = sum(thick) 
     axis_base = fig.add_subplot(gs[0, 0],
-                           ylim = [0, int(doi)]
+                           ylim = [0, int(doi)] ####### check this part 
                            )
                 
     axis_annot= fig.add_subplot(gs[0, 1],
@@ -747,7 +752,7 @@ def set_default_hatch_color_values(hatch, color, dhatch='.--',
     :Example: 
         >>> from pycsamt.utils.geo_utils as  GU.
         >>> hatch =['//.', 'none', '+++.', None]
-        >>> color =[(0.5019607843137255, 0.0, 1.0), None, (0.8, 0.6, 1.),  'lime']
+        >>> color =[(0.5019607843137255, 0.0, 1.0), None, (0.8, 0.6, 1.),'lime']
         >>> set_default_hatch_color_values(hatch, color))
     """
     fs=0 # flag to reconvert the single RGB color in tuple 
@@ -784,81 +789,204 @@ def print_running_line_prop(obj, inversion_software='Occam2D') :
     print('~'*108)
 
 
-#*** file from _geocodes folder :AGSO & AGSO.STCODES ******
-def _code_strata():
-    return ['code', 'label', 'name', 'pattern',
-                  'size', 'density', 'thickness', 'color']
+#*** Manage the geological rocks from files:AGSO & AGSO.STCODES ******
+__agso_properties =dict(
+    GIT_REPO = 'https://github.com/WEgeophysics/pyCSAMT', 
+    GIT_ROOT ='https://raw.githubusercontent.com/WEgeophysics/pyCSAMT/master/',
+    props_dir = 'pycsamt/geodrill/_geocodes',
+    props_files = ['AGSO.csv', 'AGSO_STCODES.csv'], 
+    props_codes = ['code', 'label', 'name', 'pattern','size',
+            'density', 'thickness', 'color']
+    )
 
-def agso_data (): 
-    """
-    Geological data codes processing
-    
-    .. deprecated:: function  will later deprecated 
-    
-    """
-    
-    agsofiles =['AGSO.csv', 'AGSO_STCODES.csv']
-    
-    for file in agsofiles : 
-        path_to_agsofile=os.path.join(os.environ["pyCSAMT"], 'geodrill',
-                                                 "_geocodes", file)
-        with open(path_to_agsofile,'r', encoding='utf8') as f:
-                fgeo=f.readlines()
-        for ss, stratum in enumerate(fgeo):
-            stratum=stratum.strip('\n').split(',')
-            fgeo[ss]=stratum
-        if file =='AGSO.csv':
-            fagso=fgeo
-        elif file =='AGSO_STCODES.csv':
-            fagso_stcodes=fgeo
-            fagso_stcodes[0]=fagso[0]
-        else :
-            _logger.warn("Geocodes files < AGS0 & AGS0_STCODES> Not found !")
-            raise CSex.pyCSAMTError_file_handling(
-                'Geocodes files :< AGS0 & AGS0_STCODES> not found.'
-                 'check the right path to _geocodes folder.')
-    return fagso, fagso_stcodes
-
-
-def set_stratum_on_dict():
-    """
-    Process to put geocodes_strata and geocodes_structures into dictionnaries  
-    better way to go on metaclasses merely. Thus each keys of dictionary will be 
-    its own object. 
-
-    Returns
-    -------
-        strata_dict : dict
-            Disctionnary of geostrata 
-        structures_dict : dict
-            Dictionnary of geostructures.
-
-    """
-    code_strata=_code_strata()
-    drop_bar=[' / ',' ', '/','-']
-    attr_dict={}
-    strata_dict, structures_dict={},{}
-    for iiagso in range(2):
-        fstrata=agso_data()[iiagso][1:]
+def set_agso_properties (download_files = True ): 
+    """ Set the rocks and their properties from inner files located in 
+        <  'pycsamt/geodrill/_geocodes'> folder."""
         
-        for ss , elem in enumerate(fstrata):
-            for jj, attribute in enumerate(code_strata):
-                attr_dict["{0}".format(attribute)]=elem[jj]
-                stratum_description=elem[2]
-            for db in drop_bar :
-                if db in stratum_description : 
-                    stratum_description=stratum_description.replace(db,'_')
-            stratum_description=stratum_description.lower()
-            if stratum_description.startswith('"') or\
-                stratum_description.endswith('"'):
-                stratum_description=stratum_description[1:-1]
-            if iiagso ==1 :
-                structures_dict['{0}'.format(stratum_description)]=attr_dict
-            else :
-                strata_dict['{0}'.format(stratum_description)]=attr_dict
-            attr_dict={}
+    msg= ''.join([
+        "Please don't move or delete the properties files located in", 
+        f" <`{__agso_properties['props_dir']}`> directory."])
+    mf =list()
+    __agso= [ os.path.join(os.path.realpath(__agso_properties['props_dir']),
+                           f) for f in __agso_properties['props_files']]
+    for f in __agso: 
+        agso_exists = os.path.isfile(f)
+        if not agso_exists: 
+            mf.append(f)
+            continue 
+    
+    if len(mf)==0: download_files=False 
+    if download_files: 
+        for file_r in mf:
+            success = fetching_data_from_pycsamt_repo(props_files = file_r, 
+                      savepath = os.path.join(
+                          os.path.realpath('.'), __agso_properties['props_dir'])
+                      )
+            if not success:
+                msg_ = ''.join([ "Unable to retreive the geostructure ",
+                      f"{os.path.basename(file_r)!r} property file from",
+                      f" {__agso_properties['GIT_REPO']!r}."])
+                warnings.warn(f"Geological structure file {file_r} "
+                              f"is missing. {msg_}") 
+                _logger.warn( msg_)
+                raise CSex.pyCSAMTError_file_handling(
+                    f"No property file {os.path.basename(file_r)!r}"
+                    f" is found. {msg}.")
+    for f in __agso:
+        with open(f,'r' , encoding ='utf8') as fs: 
+            yield([stratum.strip('\n').split(',')
+                    for stratum in fs.readlines()])
+            
+def mapping_stratum(download_files =True): 
+    """ Map the rocks properties  from  _geocodes files and fit 
+    each rock to its properties. 
+    
+    :param download_files: bool 
+        Fetching data from repository if the geostrutures files are missing.
+    :return: Rocks and structures data  in two diferent dictionnaries
+    """
+    # get code description _index 
+    ix_= __agso_properties['props_codes'].index('name')
+    def mfunc_(d): 
+        """ Set individual layer in dict of properties """
+        _p= {c: k.lower() if c not in ('code', 'label', 'name') else k 
+                 for c,  k in zip(__agso_properties['props_codes'], d) }
+        id_= d[ix_].replace('/', '_').replace(
+            ' ', '_').replace('"', '').replace("'", '').lower()
+        return id_, _p 
+    rock_and_structural_props =list()
+    for agso_data in tuple(set_agso_properties(download_files)): 
+        # remove the header of the property file
+        rock_and_structural_props.append(
+            dict(map( lambda x: mfunc_(x), agso_data[1:])))
+     
+    return   tuple(rock_and_structural_props)
 
-    return strata_dict, structures_dict
 
-#***  end call file from _geocodes folder :AGSO & AGSO.STCODES ******
+def fetching_data_from_pycsamt_repo(repo_file, savepath =None ): 
+    """ Try to retreive data from github repository.
+    
+    :param repo_file: str or Path-like object 
+        Give the full path from the repository root to the file name.
+        For instance, we want to retrieve the file 'AGSO.csv' which is located 
+        in <pycsamt/geodrill/_geocodes> directory then the full path 
+        is: --> 'pycsamt/geodrill/_geocodes/AGSO.csv'
+        
+    :return:`status`: Either ``False` for failed downloading 
+            or ``True`` for successfully downloading
+    """
+    fmsg =['... Please wait for the second attempt...',
+          '... Wait for the last attempt...']
+    status=False 
+    git_repo = __agso_properties['GIT_REPO']
+    git_root = __agso_properties['GIT_ROOT']
+    # max attemps =3 : 
+    for i in range(3):
+        if i ==0 :
+            print("---> Please wait while fetching"
+                  f" {repo_file!r} from {git_repo!r}...")
+        else:print(fmsg [i-1])
+        try : 
+            try :
+                urllib.request.urlretrieve(git_root,  repo_file )
+            except: 
+                with urllib.request.urlopen(git_root) as response:
+                    with open( repo_file,'wb') as out_file:
+                        data = response.read() # a `bytes` object
+                        out_file.write(data)
+        except TimeoutError: 
+            if i ==2: print("---> Established connection failed "
+                      " because connected host has failed to respond.")
+        except:pass 
+        else : 
+            print(f"---> Downloading {repo_file!r} from "
+                  f"{git_repo!r} was successfully done!")
+            status=True
+   
+            break 
+    if status: print(f"---> Downloading {repo_file!r} from {git_repo!r} "
+                 "was successfully done!")
+    else: print(f"---> Failed to download {repo_file!r} from {git_repo!r}!")
+    # now move the file to the right place and create path if dir not exists
+    if savepath is not None: 
+        if not os.path.isdir(savepath): 
+            sPath (savepath)
+        shutil.move(os.path.realpath(repo_file), savepath )
+    if not status:pprint(connect_reason )
+    
+    return status
 
+def get_agso_properties(config_file =None, orient ='series'): 
+    """ Get the geostructures files from <'pycsamt/geodrill/_geocodes'> and 
+    set the properties according to the desire type. When `orient` is 
+    ``series`` it will return a dictionnary with key equal to 
+    properties name and values are the properties items.
+    
+    :param config_file: Path_Like or str 
+        Can be any property file provied hat its obey the disposal of 
+        property files found in   `__agso_properties`.
+    :param orient: string value, ('dict', 'list', 'series', 'split',
+        'records’, ''index') Defines which dtype to convert
+        Columns(series into).For example, 'list' would return a 
+        dictionary of lists with Key=Column name and Value=List 
+        (Converted series). For furthers details, please refer to
+        https://www.geeksforgeeks.org/python-pandas-dataframe-to_dict/
+        
+    :Example: 
+        >>> import pycsamt.utils.geo_utils as GU
+        >>> data=GU.('pycsamt/geodrill/_geocodes/AGSO_STCODES.csv')
+        >>> code_descr={key:value for key , value in zip (data["CODE"],
+                                                       data['__DESCRIPTION'])}
+    """
+    msg= ''.join(["<`{0}`> is the software property file. Please don't move "
+        " or delete the properties files located in <`{1}`> directory."])
+    
+    pd_pos_read ={".csv":pd.read_csv, ".xlsx":pd.read_excel,
+             ".html":pd.read_json,".sql" : pd.read_sql,".json":pd.read_json
+             } 
+    ext='none'
+    if config_file is None: 
+        config_file = os.path.join(os.path.realpath('.'), os.path.join(
+                       __agso_properties['props_dir'],
+                       __agso_properties ['props_files'][0]))
+    if config_file is not None: 
+        is_config = os.path.isfile(config_file)
+        if not is_config : 
+            if os.path.basename(config_file) in __agso_properties['props_files']:
+                _logger.error(f"Unable to find  the geostructure property" 
+                              f"{os.path.basename(config_file)!r} file."
+                              )
+                warnings.warn(msg.format(os.path.basename(config_file) , 
+                                         __agso_properties['props_dir']))
+            raise FileExistsError(f"File `{config_file}`does not exist")
+            
+        _, ext = os.path.splitext(config_file)
+        if ext not in pd_pos_read.keys():
+            _logger.error(f"Unable to read {config_file!r}. Acceptable formats"
+                          f" are {FU.smart_format(list(pd_pos_read.keys()))}.")
+            raise TypeError(
+                f"Format {ext!r} cannot be read. Can only read "
+                    "{FU.smart_format(list(pd_pos_read.keys()))} files."
+                )
+    agso_rock_props = pd_pos_read[ext](config_file).to_dict(orient)
+    if ('name' or 'NAME') in agso_rock_props.keys(): 
+        agso_rock_props['__DESCRIPTION'] = agso_rock_props ['name']
+        del agso_rock_props['name']
+        
+    return  agso_rock_props
+
+#***  end  AGSO & AGSO.STCODES management******
+
+
+
+connect_reason ="""<ConnectionRefusedError><No connection could  '
+            be made because the target machine actively refused it>.
+            There are some possible reasons for that:
+         1. The server is not running. Hence it wont listen to that port. 
+             If it's a service you may want to restart the service.
+         2. The server is running but that port is blocked by Windows Firewall
+             or other firewall. You can enable the program to go through 
+             firewall in the Inbound list.
+        3. There is a security program on your PC, i.e a Internet Security 
+            or Antivirus that blocks several ports on your PC.
+        """   

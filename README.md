@@ -7,7 +7,7 @@
 
 * **Definition**
 
-    CSAMT is geophysical method well-established  as resistivity exploration 
+    CSAMT is a geophysical method well-established  as a resistivity exploration 
     tool in deep geological structure detection. The method is broadly applied in  diverse of exploration problems such as mineral , hydrocarbon,  groundwater resources, 
     as well as mapping the fault-zones etc. 
 
@@ -85,7 +85,7 @@ Click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples
 ```
 To see the output, click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/misfit.png).
 
-2. To evaluate the model errors `misfit G` between the the new resistivity model or stratigraphy models(NMs) from inversion models(CRMs), 
+3. To evaluate the model errors `misfit G` between the the new resistivity model or stratigraphy models(NMs) from inversion models(CRMs), 
 set `misfit_G` argument to `True` . `Misfit G` computation is the best way to see whether different layers with their corresponding resistivity values
 are misclassified or not. With few step of codes we can check the process:
 ```
@@ -115,9 +115,9 @@ click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples
 ```
 >>> from pycsamt.geodrill.geocore import GeoStratigraphy
 >>> station ='S00'      # station to visualize 
->>> zoom =None
+>>> zoom =None          
 >>> GeoStratigraphy.plotPseudostratigraphic(station =station, zoom = zoom )
-... 
+ 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~[ PseudoStratigraphic Details: Station = S00 ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ------------------------------------------------------------------------------------------------------
 |      Rank |            Stratum             |         Thick-range(m)         |     Thickness(m)     |
@@ -138,8 +138,8 @@ click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples
 ``` 
 click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/pseudostratigraphic_log.PNG) for reference output. 
 
-It's possible to zoom the most interesting part of the log using the argument `zoom`. For instance, the running 
-script above with `zoom =25%` gives the following [ouput](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/zoom25.PNG). 
+It's possible to zoom the most interesting part of the log by setting the argument `zoom`, the running 
+script above with `zoom ='25%'` gives the following [ouput](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/zoom25.PNG). 
 
 ## Credits
 
@@ -161,10 +161,10 @@ We use or link some third-party software (beside the usual tool stack: numpy, sc
 
 3. Equipe de Recherche Géophysique Appliquée, Laboratoire de Geologie Ressources Minerales et Energetiques, UFR des Sciences de la Terre et des Ressources Minières, [Université Félix Houphouët-Boigny]( https://www.univ-fhb.edu.ci/index.php/ufr-strm/), Cote d'Ivoire.
 
-* Developer'name: 1, 3- Kouadio K. Laurent; <kkouao@zju.edu.cn, etanoyau@gmail.com>
+* Developer: 1, 3- Kouadio K. Laurent; <etanoyau@gmail.com> <kkouao@zju.edu.cn>,
 * Contributors:
     *  2- Rong LIU; <liurongkaoyang@126.com>
-    *  1- Albert O. MALOR; <amalory@zju.edu.cn>   
+    *  1- Albert O. MALORY; <amalory@zju.edu.cn>   
     *  1- Chun-ming LIU; <lifuming001@163.com> 
 
 

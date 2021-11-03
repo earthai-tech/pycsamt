@@ -122,7 +122,7 @@ def get_closest_gap (value, iter_obj, status ='isin',
     return ix_close_res
 
 def fit_rocks(logS_array, lns_, tres_):
-    """ Find the pseudo rock name at each station from the pseudovalue intres 
+    """ Find the pseudo rock name at each station from the pseudovalue intres. 
     
     :param logS_array: array_like of under the station resistivity value 
     :param lns_: array_like of the rocks or the pseudolayers (automatick)
@@ -756,6 +756,7 @@ def _assert_list_len_and_item_type(lista, listb, typea=None, typeb=None):
     
     is_the_same_length  = len(lista) ==len (listb)
     lista_items_are_the_same, listb_items_are_the_same =False, False
+    
     def check_items_type(list0, type0): 
         """ Verify whether all items  in the list are the same type"""
         all_items_type = False
@@ -778,7 +779,8 @@ def _assert_list_len_and_item_type(lista, listb, typea=None, typeb=None):
 def set_default_hatch_color_values(hatch, color, dhatch='.--', 
                                    dcolor=(0.5019607843137255, 0.0, 1.0),
                                    force =False): 
-    """ Set the none hatch or color to the default value. 
+    """ Set the none hatch or color to their default values. 
+    
     :param hatch: str or list of layer patterns 
     :param color: str or list of layers colors
     :param dhatch: default hatch 
@@ -1003,7 +1005,7 @@ def get_agso_properties(config_file =None, orient ='series'):
                           f" are {FU.smart_format(list(pd_pos_read.keys()))}.")
             raise TypeError(
                 f"Format {ext!r} cannot be read. Can only read "
-                    "{FU.smart_format(list(pd_pos_read.keys()))} files."
+                 f"{FU.smart_format(list(pd_pos_read.keys()))} files."
                 )
     agso_rock_props = pd_pos_read[ext](config_file).to_dict(orient)
     if ('name' or 'NAME') in agso_rock_props.keys(): 
@@ -1091,7 +1093,7 @@ def get_index_for_mapping (ix, tp):
     
 def map_top (top, data, end=None): 
     """ Reduce the plot map from the top value to the bottom assumed to 
-    be the maximum of investigation depth 
+    be the maximum of investigation depth. 
     
     :param top: float, is the top value from which the plot must be starts 
     :param data: the list of layers thicknesses in meters
@@ -1246,7 +1248,7 @@ def frame_top_to_bottom (top, bottom, data ):
             For instance:  [49.0, 150.0, 590.0, 200.0] where 
             - 49 is the thockness of the first layer 
             - 200 m is the thickness of the 
-        - the coverall allow to track bug issues.The thickness of layer 
+        - the coverall allows to track bug issues.The thickness of layer 
             for visualizing should ne the same that shrank. If not the same 
             the mapping was not successfully done. Therefore coverall 
             will be different to 100% and function will return the raw data
@@ -1285,11 +1287,10 @@ def frame_top_to_bottom (top, bottom, data ):
     del tm[0]       #--> [150.0, 590.0, 200.0]
     ep = [bm[-1]]         # 391.
     del bm[-1]      # --> [59.0, 150.0]
-    # computethe intersection of the two list 
+    # compute the intersection of the two lists 
     inter_set_map_tb = set(tm).intersection(set(bm))
     # set obj classification is sometimes messy, so let loop 
     # to keep the layer disposalthe same like the safe data value
-    # if len(inter_set_map_tb )!=0: 
     inter_set_map_tb=[v for v in data_safe if v in inter_set_map_tb]
     top_bottom = sp + inter_set_map_tb + ep 
     # compute coverall to track bug issues 

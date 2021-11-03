@@ -21,11 +21,13 @@ _logger=csamtpylog.get_csamtpy_logger(__name__)
 
 class geo_pattern: 
     """
-    Singleton class to deal with geopattern  with other modules. It is and exhaustive pattern
-    dict, can be add and change. This pattern  will be depreacted later , to create for pyCSAMT,
-    its owwn geological pattern in coformity with the conventional geological swatches .
-     deal with USGS(US Geological Survey ) swatches- references and FGDC (Digital cartographic 
-    Standard for Geological  Map Symbolisation -FGDCgeostdTM11A2_A-37-01cs2.eps)
+    Singleton class to deal with geopattern  with other modules. It 
+    is and exhaustive pattern dict, can be add and change. This pattern
+    will be depreacted later , to create for pyCSAMT,its owwn geological
+    pattern in coformity with the conventional geological swatches .
+    deal with USGS(US Geological Survey ) swatches- references and FGDC 
+    (Digital cartographic Standard for Geological  Map Symbolisation 
+     -FGDCgeostdTM11A2_A-37-01cs2.eps)
          
     make _pattern:{'/', '\', '|', '-', '+', 'x', 'o', 'O', '.', '*'}
             /   - diagonal hatching

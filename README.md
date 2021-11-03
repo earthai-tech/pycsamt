@@ -111,11 +111,12 @@ click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples
 ## Plot the pseudostratigraphic log 
 
  Once the geostratigraphic model is built, we just need to call the model and extract at each station 
- it corresponding  pseudostratigraphic log using the script below: 
+ its corresponding  pseudostratigraphic log using the script below: 
 ```
 >>> from pycsamt.geodrill.geocore import GeoStratigraphy
 >>> station ='S00'      # station to visualize 
->>> GeoStratigraphy.plotPseudostratigraphic(station =station)
+>>> zoom =None
+>>> GeoStratigraphy.plotPseudostratigraphic(station =station, zoom = zoom )
 ... 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~[ PseudoStratigraphic Details: Station = S00 ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ------------------------------------------------------------------------------------------------------
@@ -136,7 +137,9 @@ click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ``` 
 click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/pseudostratigraphic_log.PNG) for reference output. 
- 
+
+It's possible to zoom the most interesting part of the log using the argument `zoom`. For instance, the running 
+script above with `zoom =25%` gives the following [ouput](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/zoom25.PNG). 
 
 ## Credits
 

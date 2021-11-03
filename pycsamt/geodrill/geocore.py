@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #       Copyright © 2021  Kouadio K.Laurent
-#       Author:  ~Daniel03 <etanoyau@gmail.con>
+#       Author:  ~Daniel03 <etanoyau@gmail.com>
 #       Create:on Sat Sep 19 12:37:42 2020
 #       Licence: LGPL
 """  
@@ -14,7 +14,6 @@
             Deal with geostrata   module to incorporate conventional
             geological codes , pattern and colors. 
 """
-
 from __future__ import division 
 import os 
 import copy 
@@ -28,11 +27,10 @@ import  pycsamt.utils.exceptions as CSex
 import pycsamt.utils.geo_utils as GU
 import  pycsamt.geodrill.structural as STRL
 from pycsamt.modeling import occam2d
-from pycsamt.ff.core.cs import Profile
+from pycsamt.ff.site import Profile
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
 from pycsamt.utils.decorator import deprecated
-from pycsamt.utils.agso import Agso
 from pycsamt.viewer.mpldecorator  import geoplot2d
 from pycsamt.geodrill.geodatabase import GeoDataBase 
 
@@ -2958,14 +2956,11 @@ class Drill(object):
         
         ###### FIND AGSO MODULE #######
         #Try to check the name of rocks and their acronym
-        geoelm=Agso._agso_on_dict_(set_agsoDataFrame=False,
-                                   return_orientation="SERIES")
+        geoelm= GU.get_agso_properties()
             # #extract elem with their acronym 
         geolemDico_AGSO={key:value for key , value in \
                          zip (geoelm["CODE"],geoelm['__DESCRIPTION'])}
         # elemgeo_AGSO=sorted(geolemDico.items())
-    
-        
         for ii, elm in enumerate (self.wdico['Rock']):
             if elm.upper() in geolemDico_AGSO.keys():
                 pass 
@@ -3068,40 +3063,16 @@ class Drill(object):
         #Try to check the name of sample and their acronym
         
         if path_to_agso_codefile is None:
-            path_to_agso_codefile=os.path.join(os.path.abspath('.'), 'pycsamt', 
-                                                'geodrill','_geocodes' )
-            # os.path.join(os.environ ['pyCSAMT'],
-            #                                     'geodrill','_geocodes' )
-       
-            agsofilename=[file for file in os.listdir(path_to_agso_codefile) 
-                          if file =='AGSO_STCODES.csv' ]
-            if agsofilename is not None :
-                sampelm=Agso._agso_on_dict_(set_agsoDataFrame=True, 
-                                            return_orientation="series", 
-                            agso_codefile=os.path.join(
-                                path_to_agso_codefile,
-                                agsofilename[0]))
-            elif agsofilename is None :
-
-                self._logging.warning(
-                'None AGSO_STCODES.csv file is found.'
-                ' Please provide the right path ')       
-                warnings.warn(
-                    'None AGSO_STCODES.csv file is found. '
-                    'Please provide the right path ')
-                                      
-        elif path_to_agso_codefile is not None : 
-            #os.chdir(os.path.dirname(path_to_agso_codefile))
-            sampelm=Agso._agso_on_dict_(set_agsoDataFrame=True, 
-                                        return_orientation="series", 
-                            agso_codefile=path_to_agso_codefile)
-        
+            path_to_agso_codefile=os.path.join(os.path.abspath('.'),
+                                             'pycsamt/geodrill/_geocodes' )
+            sampelm= GU.get_agso_properties(
+                config_file = os.path.join(path_to_agso_codefile,
+                                           'AGSO_STCODES.csv') )
             # #extrcat elem with their acronym 
         sampelmDico_AGSO={key:value for key , value in \
                          zip (sampelm["CODE"],sampelm['__DESCRIPTION'])}
         # elemgeo_AGSO=sorted(geolemDico.items())
 
-        
         for ii, elm in enumerate (self.wdico['Sample']):
             if elm.lower() in sampelmDico_AGSO.keys():
                 pass 
@@ -3114,8 +3085,9 @@ class Drill(object):
                     mess=''.join([
                         'The Sample Name({0}) given in is wrong'.format(elm),
                         'Please provide a right name the right Name.', 
-                        'Please consult the AGSO_STCODES.csvfile in _geocodes folder', 
-                        'without changing anything.'])
+                        'Please consult the AGSO_STCODES.csv file located in ', 
+                        '<pycsamt/geodrill/_geocodes> dir. Please keep the'
+                        '  header safe and untouchable.'])
                     self._logging.warn(mess)
                     warnings.warn(mess)
 
@@ -3454,14 +3426,17 @@ class Drill(object):
                     ''.join([self.daTA[0][:-1],'.csv'])), self.savepath))
                 
             elif writeType in ['xlsx','.xlsx', 'excell','Excell','excel','Excel']:
-                
-                shutil.move (os.path.join(os.getcwd(),
-                                           '.'.join([self.daTA[0][:-1],'xlsx'])),
-                             self.savepath)
+                try :
+                    shutil.move (os.path.join(os.getcwd(),
+                                               '.'.join([self.daTA[0][:-1],'xlsx'])),
+                                 self.savepath)
+                except: 
+                    print("--> It seems the destination path "
+                          f"{self.savepath} already exists")
                 
                 print('---> Borehole output <{0}> has been written to {1}.'.\
                       format(os.path.basename(
-                      ''.join([self.daTA[0][:-1],'xlsx'])), self.savepath))
+                      '.'.join([self.daTA[0][:-1],'xlsx'])), self.savepath))
                 
 #------Usefull functions --------------------------
 def get_closest_value (values_range, input_value): 
@@ -3674,8 +3649,6 @@ def geo_length_checker(main_param, optional_param, force =False,
         optional_param= optional_param.tolist()
         optional_param.extend(add_v)
 
-
-    
     return np.array(optional_param)
     
                                                                                     
@@ -4336,7 +4309,6 @@ class GeoStratigraphy(Geodrill):
         self.zmodel = np.concatenate((self.geo_depth.reshape(
             self.geo_depth.shape[0], 1),  self.model_res), axis =1) 
                                     
-        
         vv = self.zmodel[-1, 0] / self.beta 
         for ii, nodev in enumerate(self.zmodel[:, 0]): 
             if nodev >= vv: 
@@ -4551,7 +4523,7 @@ class GeoStratigraphy(Geodrill):
             >>> geosObj = GeoStratigraphy(**inversion_files,
                                   input_resistivities=input_resistivity_values, 
                                   input_layers=input_layer_names)
-            >>> geosObj.strataModel(kind='nm', plot_misfit =False)
+            >>> geosObj.strataModel(kind='nm', misfit_G =False)
         """
         
         def compute_misfit(rawb, newb, percent=True): 
@@ -4715,9 +4687,12 @@ class GeoStratigraphy(Geodrill):
         return obj
     
     @staticmethod
-    def plotPseudostratigraphic(station, annotate_kws=None, **kws):
+    def plotPseudostratigraphic(station, zoom=None, annotate_kws=None, **kws):
         """ Build the pseudostratigraphic log. 
-        :param station: station to visualize the plot. 
+        :param station: station to visualize the plot.
+        :param zoom: float  represented as visualization ratio
+            ex: 0.25 --> 25% view from top =0.to 0.25* investigation depth 
+            or a list composed of list [top, bottom].
         
         :Example: 
             >>> input_resistivity_values =[10, 66,  700, 1000, 1500,  2000, 
@@ -4736,7 +4711,7 @@ class GeoStratigraphy(Geodrill):
                                                        **kws )
         # plot the logs with attributes 
         GU.pseudostratigraphic_log (obj.log_thicknesses, obj.log_layers,station,
-                                    hatch =obj.hatch ,
+                                    hatch =obj.hatch ,zoom=zoom,
                                     color =obj.color, **annotate_kws)
         GU.print_running_line_prop(obj)
         
@@ -4802,7 +4777,7 @@ def makeBlockSites(station_location, x_nodes, block_model):
         
     :Example:
         
-        >>> from pycsamt.geodrill.geoCore.geodrill import makeBlockSite
+        >>> from pycsamt.geodrill.geocore import makeBlockSite
         >>> mainblocks= get_location_value(
             station_location=geosObj.makeBlockSite,
              x_nodes=geosObj.model_x_nodes, block_model=geosObj.model_res )

@@ -13,7 +13,7 @@
 import os, warnings
 import numpy as np 
 
-from pycsamt.utils.geo_utils import set_stratum_on_dict as strato
+from pycsamt.utils.geo_utils import mapping_stratum as strato
 from pycsamt.utils  import exceptions as CSex
 from pycsamt.utils._csamtpylog import csamtpylog
 _logger=csamtpylog.get_csamtpy_logger(__name__)
@@ -609,7 +609,8 @@ class Geo_formation (object):
     @property 
     def agso_fn (self): 
         if self._agso_fn is None : 
-             self._agso_fn = os.path.join(os.path.abspath('.'),'pycsamt', 'geodrill', 
+             self._agso_fn = os.path.join(os.path.abspath('.'),
+                                          'pycsamt', 'geodrill', 
                                          '_geocodes','agso'.upper() + '.csv' )
         if self._agso_fn is not None : 
             if os.path.isfile(self._agso_fn) : 
@@ -620,13 +621,20 @@ class Geo_formation (object):
                     self._AGS0_DATA =agso_lines[1:]
                     
                     if _secags0 != self.codef :
-                        warnings.warn(' !Problem to decode geostructures structures!')
-                        raise CSex.pyCSAMTError_structural('Geostructures files provided is wrong !')
+                        warnings.warn(
+                            ' !Trouble occurs while decoding the geostructures!')
+                        raise CSex.pyCSAMTError_structural(
+                            'Geostructures files provided is wrong !')
             else : 
                 
-                warnings.warn('No Geostructure file detected .{_structures unfound}. It seems the file moved from its host folder.')
-                raise CSex.pyCSAMTError_structural('pyCSAMT inner geocodes property is not in host folder {_geocodes_}.'\
-                                                   ' Please provide a right structures codes.')
+                warnings.warn(
+                    'No Geostructure file detected.It seems the file'
+                    ' is moved or deleted from its home folder'
+                    ' <pycsamt/geodrill/_geocodes>')
+                raise CSex.pyCSAMTError_structural(
+                    'pyCSAMT inner geocodes not found '
+                    'in <pycsamt/geodrill/_geocodes> folder.'
+                     ' Please provide the right structures codes.')
             return self._AGS0_DATA 
     
     def _set_geo_formation(self, agso_fn =None): 

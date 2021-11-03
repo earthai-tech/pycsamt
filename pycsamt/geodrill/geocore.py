@@ -4,15 +4,17 @@
 #       Create:on Sat Sep 19 12:37:42 2020
 #       Licence: LGPL
 """  
-.. _module-geodrill::`pycsamt.geodrill.geocore`
+.. _module-geocore::`pycsamt.geodrill.geocore`
     
-        :synopsis: Deal with geological strata , geological structural info and 
-            geological dataBase. Module to deal with inversion file ,and
-            geologica data and Borehole data  Can read , create an output file
-            directly use by Oasis Montaj of Geosoft corporation and Goldern Software
-            Can also build borehode data andgenerate a report of survey location 
-            Deal with geostrata   module to incorporate conventional
-            geological codes , pattern and colors. 
+:synopsis:  Module deals with Occam2D inversion files, the geological data, 
+            the geological structural infos and borehole data. Can plot the 
+            stratigraphy model and pseudostratigraphic logs under each station.
+            Module can also build borehole data from drillings data collected 
+            in exploration area or to create a report of survey location 
+            with strata in oder to includes them combined with a conventional
+            geological codes < USGS(US Geological Survey ), pattern and colors
+            for plotting purposes or else.
+            ...
 """
 from __future__ import division 
 import os 
@@ -67,29 +69,37 @@ except :
 
 class Geodrill (object): 
     """
-    Class to manage data from Occam2D and Model so to create section of each  
-    sites and it depth.
+    Class to manage occam2D model files comnbined with geoogical informations  
+    to create a stratigraphic log of exploration area.
     
-    Each station constitues an attribute framed by two closest  
-    point of station offsets from model resistivities.
-    Deal with  True resistivities get on the survey or with others firms. 
-    In fact , input truth resistivities values into our model , produce an accuracy 
-    underground map.The challenge to build pseudolog allow to know how layers are 
-    disposal in underground so to emphasize the large conductive zone  especially 
-    in the case of groundwater exploration.  Program works in combinaison with
-    geophysic data especially Occam 2D inversion data,  and  geological data.
-    Actually the program deal only with  Occam 2D inversion files or  Bo Yang
-    (x,y,z) files. We intend to extend later with other external softares but
-    can generate output directly see use with Golder sofware('surfer'). If user
-     has a golder software installed on its computer , It can use  output files 
-     generated here  to produce 2D map so to compare both maps to see how far 
-    is the difference between  Model map and detail-sequences map ) 
-    "pseudosequences model" could match better the reality of underground).
-    Details sequences map is most closest to the reality  When {step descent}
-    parameter is not too  small at all. Indeed True geological data allow
-    to harmonize the value of resistivity produced by Occam2D model so to force 
-    the pogramm to make a correlation  between data fromtruth layers and the model
-    values.
+    Each station is condidered as an attribute and  framed by two closest  
+    points from the station offsets. The class deals with the true resistivity
+    values collected on exploration area from drilling or geolgical companies. 
+    Indeed, the input true resistivity values into the occam2d inversion data 
+    could yield an accuracy underground map. The challenge to build a pseudolog 
+    framed between two stations allow to know the layers disposal or supperposition
+    from to top to the investigation depth. The aim is to  emphasize a  large 
+    conductive zone usefful in of groundwater exploration. 
+    The class `Geodrill` deals at this time with Occam 2D inversion files or 
+    Bo Yang model (x,y,z) files. We intend to extend later with other external 
+    softwares like the Modular System EM (MODEM) and else.
+    It's also possible to generate output straighforwardly for others external 
+    softwares  like Golder sofwares('surfer')or Oasis Montaj:
+        
+        - Surfer: :https://www.goldensoftware.com/products/surfer) 
+        - Oasis: http://updates.geosoft.com/downloads/files/how-to-guides/Oasis_montaj_Gridding.pdf
+         <https://www.seequent.com/products-solutions/geosoft-oasis-montaj/>
+       
+    Note: 
+        If the user has a golder software installed on its computer, it 's 
+        possible to use the output files generated here  to yield a 2D map so 
+        to compare both maps to see the difference between model map (
+            only inversion files and detail-sequences map after including the 
+            input true resistivity values and layer names) 
+    Futhermore, the "pseudosequences model" could match and describe better 
+    the layers disposal (thcikness and contact) in underground than the 
+    raw model map which seems to be close to the reality  when `step descent` 
+    parameter is not too small at all. 
 
 
     Arguments
@@ -101,17 +111,14 @@ class Geodrill (object):
                                                         
         **data_fn** :  str,  
                     full path to occam_data file 
-        **input_resistivities** :   array_like, 
-                            Truth values of resistivities 
+        **input_resistivities** : list, array_like, 
+                            True resistivity values
         **step_descent**: float,   
-                        step to enforce the model resistivities to
-                         keep the  truth layers values as reference
-                         Step to cut out data and to  force resistivites 
-                         calcualted to match the reference data as input 
-                         resistivities if not provided the step will be
-                         20% of D0I
-        **input_layers** :  array_like,  
-                        True input_layers names : geological 
+                         Param to force the model resistivity to
+                         fit the truth input resistivity values. As a 
+                         reference, the param is 20% of D0I.
+        **input_layers**:  array_like,  
+                        True input layers names- geological 
                         informations of encountered layers 
 
     =============  ===========  ===============================================
@@ -2923,9 +2930,9 @@ class Drill(object):
         feell exaction accordinag to a convention AGSO file . If not sure
         for the name of rock and Description and label. You may consult
         the geocode folder before building the well_filename. If the entirely
-        rock name is given , program will search on the AGSO file the corresponding
-        Label and code . If the rock name is  founc then it will take 
-        its CODE else it will generate exception. 
+        rock name is given , program will search on the AGSO file the 
+        corresponding Label and code . If the rock name is  founc then 
+        it will take its CODE else it will generate exception. 
  
         Parameters
         ----------
@@ -4730,7 +4737,7 @@ def _ps_memory_management(obj=None, option='set'):
     mkeys= ('set', 'get', 'recover', 'fetch', set)
     if option not in mkeys: 
         raise ValueError('Wrong `option` argument. Acceptable '
-                         f' values are  {func.smart_format(mkeys[:-1])}.')
+                         f'values are  {func.smart_format(mkeys[:-1])}.')
         
     if option in ('set', set): 
         if obj is None: 

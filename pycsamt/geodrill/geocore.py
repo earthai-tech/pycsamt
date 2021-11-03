@@ -4,7 +4,7 @@
 #       Create:on Sat Sep 19 12:37:42 2020
 #       Licence: LGPL
 """  
-.. _module-geodrill::`pycsamt.geodrill.geocore`
+.. _module-geocore::`pycsamt.geodrill.geocore`
     
 :synopsis:  Module deals with Occam2D inversion files, the geological data, 
             the geological structural infos and borehole data. Can plot the 

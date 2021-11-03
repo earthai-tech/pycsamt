@@ -14,7 +14,6 @@
             Deal with geostrata   module to incorporate conventional
             geological codes , pattern and colors. 
 """
-
 from __future__ import division 
 import os 
 import copy 
@@ -3650,8 +3649,6 @@ def geo_length_checker(main_param, optional_param, force =False,
         optional_param= optional_param.tolist()
         optional_param.extend(add_v)
 
-
-    
     return np.array(optional_param)
     
                                                                                     
@@ -4312,7 +4309,6 @@ class GeoStratigraphy(Geodrill):
         self.zmodel = np.concatenate((self.geo_depth.reshape(
             self.geo_depth.shape[0], 1),  self.model_res), axis =1) 
                                     
-        
         vv = self.zmodel[-1, 0] / self.beta 
         for ii, nodev in enumerate(self.zmodel[:, 0]): 
             if nodev >= vv: 
@@ -4527,7 +4523,7 @@ class GeoStratigraphy(Geodrill):
             >>> geosObj = GeoStratigraphy(**inversion_files,
                                   input_resistivities=input_resistivity_values, 
                                   input_layers=input_layer_names)
-            >>> geosObj.strataModel(kind='nm', plot_misfit =False)
+            >>> geosObj.strataModel(kind='nm', misfit_G =False)
         """
         
         def compute_misfit(rawb, newb, percent=True): 
@@ -4691,9 +4687,12 @@ class GeoStratigraphy(Geodrill):
         return obj
     
     @staticmethod
-    def plotPseudostratigraphic(station, annotate_kws=None, **kws):
+    def plotPseudostratigraphic(station, zoom=None, annotate_kws=None, **kws):
         """ Build the pseudostratigraphic log. 
-        :param station: station to visualize the plot. 
+        :param station: station to visualize the plot.
+        :param zoom: float  represented as visualization ratio
+            ex: 0.25 --> 25% view from top =0.to 0.25* investigation depth 
+            or a list composed of list [top, bottom].
         
         :Example: 
             >>> input_resistivity_values =[10, 66,  700, 1000, 1500,  2000, 
@@ -4712,7 +4711,7 @@ class GeoStratigraphy(Geodrill):
                                                        **kws )
         # plot the logs with attributes 
         GU.pseudostratigraphic_log (obj.log_thicknesses, obj.log_layers,station,
-                                    hatch =obj.hatch ,
+                                    hatch =obj.hatch ,zoom=zoom,
                                     color =obj.color, **annotate_kws)
         GU.print_running_line_prop(obj)
         
@@ -4778,7 +4777,7 @@ def makeBlockSites(station_location, x_nodes, block_model):
         
     :Example:
         
-        >>> from pycsamt.geodrill.geoCore.geodrill import makeBlockSite
+        >>> from pycsamt.geodrill.geocore import makeBlockSite
         >>> mainblocks= get_location_value(
             station_location=geosObj.makeBlockSite,
              x_nodes=geosObj.model_x_nodes, block_model=geosObj.model_res )

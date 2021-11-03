@@ -4,8 +4,10 @@
 #       released under a LGL- licence.
 #       @author-email:<etanoyau@gmail.com>
 import os
+import itertools
 import warnings
-import shutil  
+import shutil 
+import copy 
 from six.moves import urllib 
 from pprint import pprint 
 import numpy as np
@@ -56,7 +58,6 @@ def lns_and_tres_split(ix,  lns, tres):
     if ix ==0: return  lns, tres,[], []
     return  lns[:-ix], tres[:-ix], lns[-ix:], tres[-ix:]   
    
-
 
 def get_closest_gap (value, iter_obj, status ='isin', 
                           condition_status =False, skip_value =0 ):
@@ -445,7 +446,7 @@ def _sanitize_db_items (value, force =True ):
     if isinstance(value, str): 
         value=[value]
     def sf_(v):
-        """Santise only a single value"""
+        """Sanitise only a single value"""
         if '(' and ')' not in  v:
             try : float(v) 
             except : return v 
@@ -462,7 +463,7 @@ def _sanitize_db_items (value, force =True ):
     return list(map(lambda x:sf_(x), value))
 
 
-def base_log( ax, thick, layers, hatch=None, color=None )  : 
+def base_log( ax, thick, layers, *, ylims=None, hatch=None, color=None )  : 
     """ Plot pseudo-stratigraphy basemap and return ax 
     
     :param ax: obj, Matplotlib axis 
@@ -473,33 +474,37 @@ def base_log( ax, thick, layers, hatch=None, color=None )  :
     
     :return: ax: matplotlib axis properties 
     """
+    if ylims is None: 
+        ylims=[0, int(np.cumsum(thick).max())]
+    ax.set_ylim(ylims)
+    th_data = np.array([np.array([i]) for i in thick ]) 
 
-    th_data = [np.array([i]) for i in thick ]
-    # doi = sum(thick)
     for ii, data in enumerate(th_data ): 
-        next_bottom = sum(th_data [:ii])
+        next_bottom = sum(th_data [:ii]) +  ylims[0]
         ax.bar(1,
                data,
                bottom =next_bottom, 
                hatch = hatch[ii], 
                color = color[ii],
                width = .3)
-    # inverse axes 
-    plt.gca().invert_yaxis()
 
     ax.set_ylabel('Depth(m)', fontsize = 16 , fontweight='bold')
+    
+    pg = [ylims[0]] + list (np.cumsum(thick) + ylims[0])
 
-    pg = [0.]+ list(np.cumsum([thick]))         #### check this part 
     ax.set_yticks(pg)
     ax.set_yticklabels([f'${int(i)}$' for i in  pg] )
+    
     ax.tick_params(axis='y', 
                    labelsize= 12., 
                         )
-
+    # inverse axes 
+    plt.gca().invert_yaxis()
     return ax 
 
-def annotate_log (ax, thick, layers, colors=None, set_nul='*unknow',
-                    bbox_kws=None, set_nul_bbox_kws=None, **an_kws): 
+def annotate_log (ax, thick, layers,*, ylims=None, colors=None, 
+                    set_nul='*unknow', bbox_kws=None, 
+                    set_nul_bbox_kws=None, **an_kws): 
     """ Draw annotate stratigraphic map. 
     
     :param ax: obj, Matplotlib axis 
@@ -516,15 +521,20 @@ def annotate_log (ax, thick, layers, colors=None, set_nul='*unknow',
         
     :return: ax: matplotlib axis properties 
     """
-
+    
     xinf , xsup =-1, +1
     xpad =  .1* abs(xinf)/2
     ax.set_xlim([xinf, xsup])
-    ax.set_ylim([0, int(np.cumsum(thick).max())]) #### 1 check this part 
+    if ylims is None: 
+        ax.set_ylim([0, int(np.cumsum(thick).max())]) #### 1 check this part 
+        ylim0=0.
+    else :
+        ax.set_ylim(ylims)
+        ylim0=ylims[0]
     # inverse axes 
     plt.gca().invert_yaxis()
-    # add 0. to thick to set the origin  
-    pg = np.cumsum([0] + thick)                     #### 2
+    # if ylims is None:
+    pg = np.cumsum([ylim0] + thick)# add 0. to thick to set the origin  #### 2
     # take values except the last y from 0 to 799 
     v_arrow_bases = [(xinf + xpad, y) for y in  pg ]
     v_xy = v_arrow_bases[:-1]
@@ -540,9 +550,11 @@ def annotate_log (ax, thick, layers, colors=None, set_nul='*unknow',
                 verticalalignment='top',                         
                 )
     # ------------make horizontal arraow_[properties]
-    # build the mid point where staring annotations 
+    # build the mid point where starting annotations 
     mid_loc = np.array(thick)/2 
+    # if ylims is None: 
     center_positions =  pg[:-1] + mid_loc
+    # else :center_positions =  pg + mid_loc
     h_xy = [ (xinf + xpad, cp) for cp in center_positions]
     h_xytext = [(0, mk ) for mk in center_positions ]
     
@@ -586,14 +598,27 @@ def annotate_log (ax, thick, layers, colors=None, set_nul='*unknow',
 
 
 def pseudostratigraphic_log (thick, layers, station, *,
-                    hatch=None, color=None, **annot_kws) : 
+                    zoom =None, hatch=None, color=None, **annot_kws) : 
     """ Make the pseudostratigraphic log with annotate figure.
     
     :param thick: list of the thicknesses of the layers 
     :param layers: list of the name of layers
     :param hatch: list of the layer patterns
     :param color: list of the layer colors
-    
+    :parm zoom: float, list. If float value is given, it considered as a 
+            zoom ratio and it should be ranged between 0 and 1. 
+            For isntance: 
+                - 0.25 --> 25% plot start from 0. to max depth * 0.25 m.
+                
+            Otherwise if values given are in the list, they should be
+            composed of two items which are the `top` and `bottom` of
+            the plot.  For instance: 
+                - [10, 120] --> top =10m and bottom = 120 m.
+                
+            Note that if the length of `zoom` list is greater than 2, 
+             the function will return all the plot and 
+             no errors should raised. 
+
     :Example: 
         >>> from pycsamt.utils.geo_utils as GU   
         >>> layers= ['$(i)$', 'granite', '$(i)$', 'granite']
@@ -602,6 +627,10 @@ def pseudostratigraphic_log (thick, layers, station, *,
         >>> color =[(0.5019607843137255, 0.0, 1.0), 'b', (0.8, 0.6, 1.), 'lime']
         >>> GU.pseudostratigraphic_log (thicknesses, layers, hatch =hatch ,
         ...                   color =color, station='S00')
+        >>>  GU.pseudostratigraphic_log ( thicknesses,
+                                         layers,
+                                         hatch =hatch, zoom =0.25,
+                                         color =color, station='S00')
     """
     import matplotlib.gridspec as GridSpec
     
@@ -622,7 +651,12 @@ def pseudostratigraphic_log (thick, layers, station, *,
     #for hatch and colors
     # print(color)
     hatch , color = set_default_hatch_color_values(hatch, color)
-    #####INSSERT ZOOM TIP HERE####
+    #####INSERT ZOOM TIP HERE#######
+    ylims =None
+    if zoom is not None: 
+        ylims, thick, layers, hatch, color = zoom_processing(zoom=zoom, 
+             data= thick, layers =layers, hatches =hatch,colors =color)
+    #####################################
     fig = plt.figure( f"PseudoLog of Station ={station}",
                      figsize = (10,14), 
                       # dpi =300 
@@ -645,11 +679,13 @@ def pseudostratigraphic_log (thick, layers, station, *,
                                 sharey=axis_base) 
     axis_base = base_log(ax = axis_base, 
                          thick=thick, 
+                         ylims=ylims, 
                          layers=layers,
                          hatch=hatch,
                          color=color)
     
     axis_annot = annotate_log(ax= axis_annot,
+                              ylims=ylims, 
                              thick=thick,
                              layers=layers,
                              colors =color,
@@ -658,7 +694,9 @@ def pseudostratigraphic_log (thick, layers, station, *,
     for axis in (axis_base, axis_annot):
         for ax_ in ['top','bottom','left','right']:
             if ax_ =='left': 
-                axis.spines[ax_].set_bounds(0, doi)
+                if ylims is None:
+                    axis.spines[ax_].set_bounds(0, doi)
+                else :  axis.spines[ax_].set_bounds(ylims[0], ylims[1])
                 axis.spines[ax_].set_linewidth(3)
             else : axis.spines[ax_ ].set_visible(False)
   
@@ -880,7 +918,7 @@ def fetching_data_from_pycsamt_repo(repo_file, savepath =None ):
     status=False 
     git_repo = __agso_properties['GIT_REPO']
     git_root = __agso_properties['GIT_ROOT']
-    # max attemps =3 : 
+    # max attempts =3 : 
     for i in range(3):
         if i ==0 :
             print("---> Please wait while fetching"
@@ -902,7 +940,6 @@ def fetching_data_from_pycsamt_repo(repo_file, savepath =None ):
             print(f"---> Downloading {repo_file!r} from "
                   f"{git_repo!r} was successfully done!")
             status=True
-   
             break 
     if status: print(f"---> Downloading {repo_file!r} from {git_repo!r} "
                  "was successfully done!")
@@ -923,7 +960,7 @@ def get_agso_properties(config_file =None, orient ='series'):
     properties name and values are the properties items.
     
     :param config_file: Path_Like or str 
-        Can be any property file provied hat its obey the disposal of 
+        Can be any property file provided hat its obey the disposal of 
         property files found in   `__agso_properties`.
     :param orient: string value, ('dict', 'list', 'series', 'split',
         'records’, ''index') Defines which dtype to convert
@@ -977,8 +1014,387 @@ def get_agso_properties(config_file =None, orient ='series'):
 
 #***  end  AGSO & AGSO.STCODES management******
 
+def map_bottom (bottom, data, origin=None): 
+    """Reduce the plot map from the top assumes to start at 0. to the
+    bottom value.
+    
+    :param bottom: float, is the bottom value from
+        which the plot must be end 
+    :param data: the list of layers thicknesses in meters
+    :param origin: The top value for plotting.by the default 
+        the `origin` takes 0. as the starting point
+        
+    :return: the mapping depth from the top to the maximum depth.
+            - the index indicated the endpoint of number of layer 
+                for visualizing.
+            - the list of pairs <top-bottom>, ex: [0, bottom]>
+            - the value of thicknesses ranged from  0. to the bottom 
+            - the coverall, which is the cumul sum of the value of
+                the thicknesses reduced compared to the total depth.
+     Note that to avoid raising errors, if coverall not equal to 100%,
+     will return safety default values (original values).
+     
+    :Example: 
+        >>> ex= [ 59.0, 150.0, 590.0, 200.0]
+        >>> map_bottom(60, ex)
+        ... ((2, [0.0, 60], [59.0, 1.0]), 'coverall = 100.0 %')
+    """
+    
+    cumsum_origin = list(itertools.accumulate(data)) 
+    if origin is None: origin = 0.
+    end = max(cumsum_origin)
+    wf =False # warning flag
+    coverall, index =0., 0
+    wmsg = ''.join([ "Bottom value ={0} m might be less than or ",
+                          "equal to the maximum depth ={1} m."])
+    t_to_b = list(itertools.takewhile(lambda x: x<= bottom,
+                                      cumsum_origin))
+    
+    if bottom > end :bottom , wf = end, True 
+    elif bottom ==0 or bottom < 0: 
+        bottom , wf = data[0], True 
+        to_bottom=([origin , bottom], [bottom])
+    elif bottom < data[0] : 
+        to_bottom = ([origin ,bottom], [bottom]) 
+    elif len(t_to_b) !=0 :
+        # add remain extent bottom values
+        if max(t_to_b) < bottom : 
+            add_bottom = [abs (bottom - max(t_to_b))] 
+            to_bottom = ([origin, bottom], data[:len(t_to_b)] + add_bottom )
+        elif max(t_to_b) ==bottom :
+            to_bottom= ([origin, sum(t_to_b)],  t_to_b)
+        index =len(to_bottom[1])   # get the endpoint of view layers 
+    if bottom ==end : # force to take the bottom value
+        to_bottom= ([origin, bottom], data)
+        index = len(data)
+        
+    if wf:
+        warnings.warn(wmsg.format(bottom, sum(data)), UserWarning)
+        wf =False # shut down the flag
+    coverall=  round(sum(to_bottom[1])/ bottom, 2)
+    cov = f"coverall = {coverall *100} %"
+    if coverall !=1.: 
+        to_bottom = (len(data), [0., sum(data)], data)
+    else : to_bottom = get_index_for_mapping(index, to_bottom )
+    
+    return to_bottom, cov 
+    
+def get_index_for_mapping (ix, tp): 
+    """ get the index and set the stratpoint of the top or the endpoint 
+    of bottom from tuple list. The index should be used to map the o
+    ther properties like `color` or `hatches`"""
+    tp=list(tp)
+    # insert index from which to reduce other property
+    tp.insert(0, ix)
+    return  tuple(tp )
+    
+    
+def map_top (top, data, end=None): 
+    """ Reduce the plot map from the top value to the bottom assumed to 
+    be the maximum of investigation depth 
+    
+    :param top: float, is the top value from which the plot must be starts 
+    :param data: the list of layers thicknesses in meters
+    :param end: The maximum depth for plotting. Might be reduced, 
+        but the default takes the maximum depth investigation depth 
+    
+    :return: 
+         the mapping depth from the top to the maximum depth.
+        - the index indicated the number of layer for visualizing to 
+                from the top to the max depth.
+        - the list of pairs <top-bottom>, ex: [top, max depth]>
+        - the value of thicknesses ranged from 0. to the bottom 
+        - the coverall, which is the cumul sum of the value of
+            the thicknesses reduced compared to the total depth.
+            It allows to track a bug issue.
+            
+        Note that if coverall is different 100%, will return the 
+        default values giving values. 
+        
+    :Example: 
+        >>> ex= [ 59.0, 150.0, 590.0, 200.0] # layers thicknesses 
+        >>> map_top(60, ex)
+        ... ((3, [60, 999.0], [149.0, 590.0, 200.0]), 'coverall = 100.0 %')
+    """
+    wmsg = ''.join([ "Top value ={0} m might be less than ",
+                    "the bottom value ={1} m."])
+    cumsum_origin = list(itertools.accumulate(data)) 
+    if end is None: end = max(cumsum_origin)
+    # filter list and keep value in cumsum 
+    #greater  or equal to top values 
+    data_= copy.deepcopy(data)
+    if top < 0: top =0.
+    elif top > end : 
+        warnings.warn(wmsg.format(top, sum(data)), UserWarning)
+        top = sum(data[:-1])
+    t_to_b = list(filter(lambda x: x > top, cumsum_origin)) 
+    index =0
+    coverall =0.
+    if len(t_to_b) !=0:
+        if min (t_to_b)> top : # top = 60  --> [209.0, 799.0, 999.0]
+            #get index of the min value from the cums_origin 
+            # find 209 in [59.0, 209.0, 799.0, 999.0] --> index = 1
+            index= cumsum_origin.index(min(t_to_b))
+            #  find the  value at index =1 in data 
+            #[ 59.0, 150.0, 590.0, 200.0]=> 150
+             # reduce the downtop abs(59 - 60) = 1
+            r_= abs(sum(data[:index]) - top )
+            # reduced the data at index  1 with r_= 1
+            reduce_top = abs(data [index] - r_)  # data[1]=150-1: 149 m 
+            # replace the top value `150` in data with the reduced value
+            data[index] = reduce_top  # 150==149
+            from_top= ([top, end],data [index:] )# [ 149, 590.0, 200.0]
+        elif min(t_to_b) == top: 
+            index = cumsum_origin.index(min(t_to_b))
+            from_top = ([top, end], data[index:])
+            r_ = abs(sum(data[:index]) - top )
+        
+        coverall = round((sum(data[index :] +data[:index ])
+                          + r_)/ sum(data_),2)
+        
+    cov = f"coverall = {coverall *100} %"
+    if coverall !=1.:
+        from_top = (index, [0., sum(data_)], data_)
+    else:from_top= get_index_for_mapping(index, from_top )
+        
+    return from_top, cov 
+
+def smart_zoom(v):
+    """ select the ratio or value for zooming. Don't raise any error, just 
+    return the original size. No shrunk need to be apply when error occurs.
+
+    :param v: str, float or iterable for zoom
+            - str: 0.25% ---> mean 25% view 
+                    1/4 ---> means 25% view 
+            - iterable: [0, 120]--> the top starts a 0.m  and bottom at 120.m 
+            note: terable should contains only the top value and the bottom 
+                value.
+    :return: ratio float value of iteration list value including the 
+        the value range (top and the bottom values).
+    :Example: 
+        >>> import pycsamt.utils.geo_utils as GU
+        >>> GU.smart_zoom ('1/4')
+        ... 0.25
+        >>> GU.smart_zoom ([60, 20])
+        ... [20, 60]
+    """
+    def str_c (s):
+        try:
+            s=float(s)
+        except:
+            if '/' in s: # get the ratio to zoom 
+                s= list(map(float, sorted(s.split('/'))))
+                s=round(min(s)/max(s),2)
+            elif '%' in s: # remove % and get the ratio for zoom
+                s= float(s.replace('%', ''))*1e-2
+                if s >1.:s=1.
+            else: s=1.
+            if s ==0.:s=1.
+        return s
+    
+    msg="Ratio value `{}` might be greater than 0 and less than 1."
+    emsg = f" Wong given value. Could not convert {v} to float "
+    is_iterable =False 
+    try:iter(v)
+    except :pass 
+    else : 
+        if isinstance(v, str): v= str_c(v)
+        else: is_iterable = True
+    if not is_iterable: 
+        try:  float(v)
+        except ValueError:
+            s=False 
+            try:v = str_c(v)
+            except ValueError :warnings.warn(emsg)
+            else :s=True # conversion to zoom ratio was accepted
+            if not s:
+                warnings.warn(emsg)
+                v=1.
+        else: 
+            if v > 1. or v ==0.:
+                warnings.warn(msg.format(v)) 
+                v=1.
+    elif is_iterable : 
+        if len(v)>2:
+            warnings.warn(f" Expect to get size =2 <top and bottom values>. "
+                          f"Size of `{v}` should not  be greater than 2,"
+                          f" but {len(v)} were given.", UserWarning)
+            v=1.
+        try : v= list(map(float, sorted(v)))
+        except:  
+            warnings.warn(emsg)
+            v=1.
+    return v
+
+def frame_top_to_bottom (top, bottom, data ): 
+    """ Compute the value range between the top and the bottom.
+    
+    Find the main range value for plot ranged between the top model and 
+        the bottom. 
+    :param top: is the top value where plot might be started 
+    :param bottom: is the bottom value where plot must end 
+    :param data: is the list of thicknesses of each layers 
+    :param cumsum_origin: is the list of cumul sum of the `data` 
+    
+    :returns: 
+        - the index for other properties mapping. It indicates the
+            index of layer for the top and the index of layer for the 
+            bottom for visualizing.
+        - the list of pairs top-bottom , ex: [10, 999.0] 
+                where tp -> 10 and bottom ->999. m
+        - the value of thicknesses ranged from the top to the bottom 
+            For instance:  [49.0, 150.0, 590.0, 200.0] where 
+            - 49 is the thockness of the first layer 
+            - 200 m is the thickness of the 
+        - the coverall allow to track bug issues.The thickness of layer 
+            for visualizing should ne the same that shrank. If not the same 
+            the mapping was not successfully done. Therefore coverall 
+            will be different to 100% and function will return the raw data
+            instead of raising errors. 
+            
+    :Example: 
+        >>> import pycsamt.utils.geo_utils as GU
+        >>> layer_thicknesses = [ 59.0, 150.0, 590.0, 200.0]
+        >>> top , bottom = 10, 120 # in meters 
+        >>> GU.frame_top_to_bottom( top = top, bottom =bottom,
+                                data = layer_thicknesses)
+        ...(([0, 2], [10, 120], [49.0, 61.0]), 'coverall = 100.0 %')
+ 
+    """
+    if top > bottom :
+        warnings.warn( f"Top value ={top} should be less than"
+                      " the bottom ={bottom} ")
+        top=0.
+    if top ==bottom :top , bottom = 0.,  sum(data) 
+    if top <0 : top =0.
+    if bottom > sum(data): 
+        warnings.warn( f"Bottom value {bottom} should be less than"
+                      f" or equal to {sum(data)}")
+        bottom =sum(data)
+        
+    # test data = [ 59.0, 150.0, 590.0, 200.0]
+    data_safe = copy.deepcopy(data)
+    data_ = copy.deepcopy(data)
+    # get the value from the to to the bottom 
+    tm,*_ = map_top (top, data = data )
+    ixt, _, tm = tm # [49.0, 150.0, 590.0, 200.0]
+    bm, *_= map_bottom(bottom, data = data_ )
+    ixb, _, bm = bm  # [59.0, 150.0, 391.0])
+    #remove the startpoint and the endpoint from top and bottom 
+    sp = [tm[0]]  # 149.
+    del tm[0]       #--> [150.0, 590.0, 200.0]
+    ep = [bm[-1]]         # 391.
+    del bm[-1]      # --> [59.0, 150.0]
+    # computethe intersection of the two list 
+    inter_set_map_tb = set(tm).intersection(set(bm))
+    # set obj classification is sometimes messy, so let loop 
+    # to keep the layer disposalthe same like the safe data value
+    # if len(inter_set_map_tb )!=0: 
+    inter_set_map_tb=[v for v in data_safe if v in inter_set_map_tb]
+    top_bottom = sp + inter_set_map_tb + ep 
+    # compute coverall to track bug issues 
+    coverall = round(sum(top_bottom)/ abs(top-bottom ), 2)
+    cov = f"coverall = {coverall *100} %"
+    top_bottom = ([ixt, ixb], [top, bottom], top_bottom)
+    if coverall !=1.:
+        top_bottom = ([0, len(data_safe) ],
+                      [0., sum(data_safe )], data_safe )
+ 
+    return top_bottom, cov
+
+def zoom_processing(zoom, data, layers =None, 
+                    hatches=None, colors =None): 
+    """ Zoom the necessary part of the plot. 
+    
+    If some optionals data are given such as `hatches`, `colors`, `layers`,
+    they must be the same size like the data.
+    
+    :param zoom: float, list. If float value is given, it's cnsidered as a 
+            zoom ratio than it should be ranged between 0 and 1. 
+            For isntance: 
+                - 0.25 --> 25% plot start from 0. to max depth * 0.25 m.
+                
+            Otherwise if values given are in the list, they should be
+            composed of two items which are the `top` and `bottom` of
+            the plot.  For instance: 
+                - [10, 120] --> top =10m and bottom = 120 m.
+                
+            Note that if the length of list  is greater than 2, the function 
+            will return all the plot and  no errors should raised.
+    :param data: list of composed data. It should be the thickness from 
+        the top to the bottom of the plot.
+        
+    :param layers: optional, list of layers that fits the `data`
+    :param hatches: optional, list of hatches that correspond to the `data` 
+    :param colors: optional, list of colors that fits the `data`
+    
+    :returns: 
+        - top-botom pairs: list composed of top bottom values
+        - new_thicknesses: new layers thicknesses computed from top to bottom
+        - other optional arguments shrunk to match the number of layers and 
+            the name of exact layers at the depth.
+    
+    :Example: 
+        >>> import pycsamt.utils.geo_utils as GU
+        >>> layers= ['$(i)$', 'granite', '$(i)$', 'granite']
+        >>> thicknesses= [59.0, 150.0, 590.0, 200.0]
+        >>> hatch =['//.', 'none', '+++.', None]
+        >>> color =[(0.5019607843137255, 0.0, 1.0), None, (0.8, 0.6, 1.),'lime'] 
+        >>> zoom_processing(zoom=0.5 , data= thicknesses, layers =layers, 
+                              hatches =hatch, colors =color) 
+        ... ([0.0, 499.5],
+        ...     [59.0, 150.0, 290.5],
+        ...     ['$(i)$', 'granite', '$(i)$'],
+        ...     ['//.', 'none', '+++.'], 
+        ...     [(0.5019607843137255, 0.0, 1.0), None, (0.8, 0.6, 1.0)])
+        
+    """
+    def control_iterable_obj( l, size= len(data)): 
+        """ Control obj size compared with the data size."""
+        if len(l) != size : 
+            warnings.mess(f"The iterable object {l}  and data "
+                        f" must be same size ={size}. But {len(l)}"
+                        f" {'were' if len(l)>1 else 'was'} given.")
+            l=None 
+        return l 
+ 
+    zoom = smart_zoom(zoom) # return ratio or iterable obj 
+    y_low, y_up = 0., sum(data)
+    ix_inf=0
+    try : 
+        iter(zoom)
+    except :
+        if zoom ==1.:# straightforwardly return the raw values (zoom =1)
+            return [y_low, y_up], data, layers,  hatches, colors
+ 
+    if isinstance(zoom, (int, float)): #ratio value ex:zoom= 0.25
+        # by default get the bootom value and start the top at 0.
+        y_up = zoom * sum(data)  # to get the bottom value  as the max depth 
+        bm, *_=map_bottom(y_up, data = data )
+        ix_sup, _, maptopbottom = bm  # [59.0, 150.0, 391.0])
+       
+        y = [y_low, y_up ]
+
+    if isinstance(zoom , (list, tuple, np.ndarray)): 
+        top, bottom = zoom 
+        tb, *_= frame_top_to_bottom (top, bottom, data )
+        ixtb, y, maptopbottom= tb 
+        ix_inf, ix_sup = ixtb  # get indexes range
+        
+    if hatches is not None:
+        hatches = control_iterable_obj(hatches)
+        hatches =hatches [ix_inf:ix_sup]
+    if colors is not None:
+        colors= control_iterable_obj(colors)
+        colors = colors[ix_inf:ix_sup]
+    if layers is not None:
+        layers= control_iterable_obj(layers)
+        layers = layers [ix_inf:ix_sup]
+        
+    return y, maptopbottom, layers, hatches , colors 
 
 
+##############connection git error ##########################
 connect_reason ="""<ConnectionRefusedError><No connection could  '
             be made because the target machine actively refused it>.
             There are some possible reasons for that:

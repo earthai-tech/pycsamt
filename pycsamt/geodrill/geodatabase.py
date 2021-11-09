@@ -21,8 +21,8 @@ import pandas as pd
 import warnings
 import datetime
 
-from pycsamt.geodrill.structural import Geo_formation 
 import  pycsamt.utils.exceptions as CSex 
+from pycsamt.geodrill.structural import Geo_formation 
 from pycsamt.geodrill._dictapp import Glob
 from pycsamt.geodrill.requestmanager import ManageDB
 from  pycsamt.utils.decorator import redirect_cls_or_func

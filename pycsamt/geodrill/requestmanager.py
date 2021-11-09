@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
-#       @author: KouaoLaurent alias @Daniel03 <etanoyau@gmail.con>
+#       @author: KouaoLaurent alias @Daniel03 <etanoyau@gmail.com>
 #       Created on Tue Oct 13 15:28:57 2020
 """
 .. _module-requestmanager::`pycsamt.geodrill._dblink`
@@ -223,8 +223,8 @@ class ManageDB(object) :
                 self.curs.execute(query, param)
                 
         except: 
-            warnings.warn(f'Request SQL {query} failed. May trouble of SQL server connexion. '\
-                          'Please try again later ')
+            warnings.warn(f'Request SQL {query} failed. May trouble of SQL  '
+                          'server connexion. Please try again later ')
             # raise (f'Request SQL {query}executed failed',err)
             return 0
         else : 

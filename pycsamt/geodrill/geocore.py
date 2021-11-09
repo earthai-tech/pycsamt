@@ -4086,7 +4086,7 @@ class GeoStratigraphy(Geodrill):
         if disp:
             display_infos(infos=print_layers,
                           header= hinfos)
-        #STEP 4: Train ANN: see pycsamt.geodrill.geoDB.ann.py  to predict your 
+        #STEP 4: Train ANN: see pycsamt.geodrill.ml.py to predict your 
         #layer: No need to plot the NM 
         
         # copy main attributes for pseudostratigraphic plot purpose 
@@ -4860,7 +4860,7 @@ def fit_default_layer_properties(layers, dbproperties_= ['hatch', 'colorMPL']):
     For instance get the hatches and colors from given layers implemented in 
     the database by given the database `dbproperties_`.
     
-    :param layers: str or list of layers to retrieve it properties
+    :param layers: str or list of layers to retrieve its properties
         If specific property is missing , ``'none'`` will be return 
     :param db_properties_: str, list or database properties 
     :return: property items sanitized

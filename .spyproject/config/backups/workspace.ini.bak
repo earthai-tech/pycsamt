@@ -6,5 +6,5 @@ save_non_project_files = False
 
 [main]
 version = 0.2.0
-recent_files = ['pycsamt\\utils\\geo_utils.py', 'scripts\\avg_F2_to_F1.py', 'pycsamt\\geodrill\\geocore.py', 'untitled0.py', 'scripts\\write_borehole_data.py', 'pycsamt\\ff\\processing\\corr.py']
+recent_files = ['pycsamt\\utils\\geo_utils.py', 'pycsamt\\geodrill\\geocore.py', 'pycsamt\\ff\\processing\\corr.py', 'scripts\\plot_pseudostratigraphic_log.py', 'pycsamt\\geodrill\\structural.py', 'pycsamt\\utils\\ml_utils.py', 'pycsamt\\geodrill\\ml.py', 'pycsamt\\geodrill\\requestmanager.py']
 

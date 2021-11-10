@@ -50,7 +50,7 @@ def serialize_data(data , filename:str=None,  force:bool=True,
         >>> file
     """
     def _cif(filename, force): 
-        """ Controlthe file. If `force` is ``True`` then remove the old file, 
+        """ Control the file. If `force` is ``True`` then remove the old file, 
         Otherwise create a new file with datetime infos."""
         f = copy.deepcopy(filename)
         if force : 
@@ -76,7 +76,8 @@ def serialize_data(data , filename:str=None,  force:bool=True,
     if filename.endswith('.pkl'): 
         filename = filename.replace('.pkl', '')
  
-    _logger.info (f'Reading to dump a file dumping data to `{filename}`!')    
+    _logger.info (
+        f"Save data to {'memory' if filename.find('memo')>=0 else filename}.")    
     try : 
         joblib.dump(data, f'{filename}.pkl')
         filename +='.pkl'

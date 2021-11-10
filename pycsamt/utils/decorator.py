@@ -7,7 +7,8 @@ from pycsamt.utils._csamtpylog import csamtpylog
 class deprecated(object):
     """
         Description:
-            used to mark functions, methods and classes deprecated, and prints warning message when it called
+            used to mark functions, methods and classes deprecated,
+            and prints warning message when it called
             decorators based on https://stackoverflow.com/a/40301488
 
         Usage:
@@ -45,7 +46,8 @@ class deprecated(object):
         def new_func(*args, **kwargs):  # pragma: no cover
             import warnings
             warnings.simplefilter('always', DeprecationWarning)  # turn off filter
-            warnings.warn_explicit(msg, category=DeprecationWarning, filename=filename, lineno=lineno)
+            warnings.warn_explicit(msg, category=DeprecationWarning,
+                                   filename=filename, lineno=lineno)
             warnings.simplefilter('default', DeprecationWarning)  # reset filter
             return cls_or_func(*args, **kwargs)
 
@@ -59,12 +61,13 @@ class gdal_data_check(object):
 
     def __init__(self, func, raise_error=False):
         """
-        this decorator should only be used for the function that requres gdal and gdal-data
-        to function correctly.
+        this decorator should only be used for the function that 
+        requres gdal and gdal-data to function correctly.
 
-        the decorator will check if the GDAL_DATA is set and the path in GDAL_DATA is exist.
-        If GDAL_DATA is not set, then try to use external program "gdal-config --datadir" to
-        findout where the data files are installed.
+        the decorator will check if the GDAL_DATA is set and the path 
+        in GDAL_DATA is exist. If GDAL_DATA is not set, then try to use
+         external program "gdal-config --datadir" to findout where
+         the data files are installed.
 
         If failed to find the data file, then ImportError will be raised.
 

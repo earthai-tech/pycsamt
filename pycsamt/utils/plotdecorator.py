@@ -751,7 +751,6 @@ class geoplot2d(object):
         self.savefig =kws.pop('savefig', None)
         self.change_station_id =kws.pop('new_station_names', None)
 
-   
         self.model_rms =kws.pop('model_rms', None)
         self.model_roughness =kws.pop('model_roughness', None)
         self.plot_style =kws.pop( 'plot_style', 'pcolormesh') 
@@ -775,7 +774,6 @@ class geoplot2d(object):
         customize plots.
         
         """
-        
          #---> get delineate rho curve  : value of resistivities must be on
          #MUST be on OHM- M not log10 resistivity . 
          # check the resistivity value and  round to decimal 1
@@ -824,11 +822,12 @@ class geoplot2d(object):
                 
             if self.depth_scale is not None :
                 self.depth_scale= str(self.depth_scale).lower() 
+
             if self.depth_scale not in ["km", "m"]: 
-                self.depth_scale= "m"
-                mess ="--> ! Depth scale provided ={} is unrecognized."\
-                    " We reset to 'm'.".format(self.depth_scale)
+                mess ="Depth scale =`{}` is unacceptable value."\
+                    " Should be convert to 'm'.".format(self.depth_scale)
                 warnings.warn(mess)
+                self.depth_scale= "m"
                 self._logging.debug (mess)
             
             if self.depth_scale == 'km':
@@ -836,7 +835,6 @@ class geoplot2d(object):
             elif self.depth_scale == 'm': # for CSAMT , we use default as meter"m".
                 dz = 1.
     
-            
             if self.delineate_resistivity_curve is not None : 
                 self.delineate_resistivity_curve= self.additional_tools()
                 
@@ -848,7 +846,9 @@ class geoplot2d(object):
             axm = self.fig.add_subplot(1, 1, 1, aspect=self.fig_aspect)
     
             # get geomodel data 
-            if self.reason is None or self.reason =='model': 
+            if self.reason is None: 
+                self.reason = 'model'# by default
+            if self.reason =='model': 
                 occam_model_resistiviy_obj, occam_data_station_names,\
                     occam_data_station_offsets, occam_model_depth_offsets,\
                     self.doi, self.depth_scale, self.model_rms, \
@@ -875,9 +875,7 @@ class geoplot2d(object):
                     _f=2
                 self.ylimits =(spec_f, self.doi/dz)  
                 
-                self.reason =='model'
-            
-            elif self.reason =='misfit': 
+            if self.reason =='misfit': 
                 occam_model_resistiviy_obj, occam_data_station_names,\
                     occam_data_station_offsets, occam_model_depth_offsets,\
                     self.model_rms, self.model_roughness = func(*args, **kwargs)

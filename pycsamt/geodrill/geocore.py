@@ -32,7 +32,6 @@ from pycsamt.modeling import occam2d
 from pycsamt.ff.site import Profile
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
-from pycsamt.utils.decorator import deprecated
 from pycsamt.utils.plotdecorator  import geoplot2d
 from pycsamt.geodrill.geodatabase import GeoDataBase 
 
@@ -4506,7 +4505,6 @@ class GeoStratigraphy(Geodrill):
                                          _gammaVal))
         return _gammaVal 
        
-    @deprecated(reason= 'Expensive method, should be deprecated soon!')
     @geoplot2d(reason='model',cmap='jet_r', plot_style ='pcolormesh',
                show_grid=False )
     def strataModel(self, kind ='nm', **kwargs): 
@@ -4544,26 +4542,27 @@ class GeoStratigraphy(Geodrill):
         misfit_G =kwargs.pop('misfit_G', False)
         misfit_percentage = kwargs.pop('in_percent', True)
         
-        for v in ['nm', 'strata', 'geomodel']: 
-            if kind.lower().find(v)>=0: 
-                kind = 'nm'
-        if kind  in ['crm', 'resmodel', 'occam']: 
-            kind= 'crm'
+        kind = GU._assert_model_type(kind)
+        if self.nm is None: 
+            self._createNM()  
                 
         if kind =='nm':
-            if self.nmSites is None: 
-                self._createNM()
             data = self.nmSites 
-        elif kind =='crm': 
+        if kind =='crm': 
             data = self.crmSites
 
       # compute model_misfit
         if misfit_G is True : 
-            self._logging.info('Plot strata misfit.')
-            if kind=='nm': 
-                data = compute_misfit(rawb=self.crmSites , 
-                                      newb= self.nmSites, 
-                                      percent = misfit_percentage)
+            if kind =='crm': 
+                warnings.warn("Use `pycsamt.modeling.occam2d.getMisfit` "
+                              "decorated function to visualize occam2d misfit"
+                              "  model. By default, the plot should be the"
+                              " stratigraphic misfit<misfit_G>.")
+    
+            self._logging.info('Visualize the stratigraphic misfit.')
+            data = compute_misfit(rawb=self.crmSites , 
+                                  newb= self.nmSites, 
+                                  percent = misfit_percentage)
             
             print('{0:-^77}'.format('StrataMisfit info'))
             print('** {0:<37} {1} {2} {3}'.format(
@@ -5071,7 +5070,6 @@ def quick_read_geomodel(lns=GU.LNS, tres=GU.TRES):
     return geosObj 
 
 
-            
                     
                     
 

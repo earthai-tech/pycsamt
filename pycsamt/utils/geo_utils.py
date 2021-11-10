@@ -1429,7 +1429,25 @@ def zoom_processing(zoom, data, layers =None,
         
     return y, maptopbottom, layers, hatches , colors 
 
-
+def _assert_model_type(kind):
+    """ Assert stratigraphic model argument parameter.
+    :param param: str, can be : 
+        -'nm', 'strata', 'geomodel', 'logS', '2' for 
+            the stratigraphic model
+        - 'crm', 'resmodel', 'occam', 'rawmodel', '1'
+    """
+    kind =str(kind)
+    for v in [ 'nm', 'strata', 'geomodel', 'logS', 'rr','2']: 
+        if kind.lower().find(v)>=0: 
+            kind = 'nm'
+    if kind  in ['crm', 'resmodel', 'occam', 'rawmodel', '1']: 
+        kind= 'crm'
+    if kind not in ('nm', 'crm'): 
+        raise CSex.pyCSAMTError_strata(
+            f"Argument kind={kind!r} is wrong! Should be `nm`"
+            "for stratigraphyic model and `crm` for occam2d model. ")
+    return kind 
+            
         
 ##############connection git error ##########################
 connect_reason ="""<ConnectionRefusedError><No connection could  '

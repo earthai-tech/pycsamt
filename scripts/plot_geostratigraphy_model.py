@@ -17,9 +17,8 @@ occamPath = 'data/Occam2D'
 # type of model plots
 kindOfPlot ='nm'      # for New strata model, `crm` forOccamResistivity model` plot
                 # `strata` and `plot_misfit` to True plot misfitG 
- 
 # set to True to plot error between CRM and NM
-plotMisfitG=True 
+plotMisfitG=True  
 inversion_files = {'model_fn':'Occam2DModel', 
                     'mesh_fn': 'Occam2DMesh',
                     "iter_fn":'ITER17.iter',

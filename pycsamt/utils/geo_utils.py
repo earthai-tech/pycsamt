@@ -957,23 +957,24 @@ def fetching_data_from_repo(repo_file, savepath =None ):
             from tqdm.notebook  import trange 
     # max attempts =3 :  
     print("---> Please wait while fetching"
-                  f" {repo_file!r} from {git_repo!r}...")
+          f" {repo_file!r} from {git_repo!r}...")
     for k in trange(3, ascii=True, desc ='WEgeophysics', ncols =107):
     #for i in tqdm(range(3), ascii=True, desc ='WEgeophysics', ncols =107):
         for i in trange(1, ascii=True ,desc =fmsg [k],ncols =107):
-            try : 
+            try :
+                urllib.request.urlretrieve(git_root,  repo_file )
+            except: 
                 try :
-                    urllib.request.urlretrieve(git_root,  repo_file )
-                except: 
                     with urllib.request.urlopen(git_root) as response:
                         with open( repo_file,'wb') as out_file:
                             data = response.read() # a `bytes` object
                             out_file.write(data)
-            except TimeoutError: 
-                if k ==2: print("---> Established connection failed "
-                          " because connected host has failed to respond.")
-            except:
-                pass 
+        
+                except TimeoutError: 
+                    if k ==2: 
+                        print("---> Established connection failed "
+                           " because connected host has failed to respond.")
+                except:pass 
             else : status=True
 
         if status: break

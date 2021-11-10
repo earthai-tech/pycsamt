@@ -859,7 +859,7 @@ def set_agso_properties (download_files = True ):
     if len(mf)==0: download_files=False 
     if download_files: 
         for file_r in mf:
-            success = fetching_data_from_pycsamt_repo(props_files = file_r, 
+            success = fetching_data_from_repo(props_files = file_r, 
                       savepath = os.path.join(
                           os.path.realpath('.'), __agso_properties['props_dir'])
                       )
@@ -912,8 +912,9 @@ def subprocess_module_intallation (module):
     #implement pip as subprocess 
     # refer to https://pythongeeks.org/subprocess-in-python/
     MOD_IMP=False 
-    print(f'---> Module  = {module}installation will take a while,'
+    print(f'---> Module {module!r} installation will take a while,'
           ' please be patient...')
+    cmd = f'<pip install {module}> | <python -m pip install {module}>'
     try: 
         subprocess.check_call([sys.executable, '-m', 'pip', 'install',
         f'{module}'])
@@ -925,11 +926,12 @@ def subprocess_module_intallation (module):
         MOD_IMP=True
      
     except: 
-        _logger.info("Failed to install the module =`{module}`")
-
+        _logger.error("Failed to install the module =`{module}`.")
+        print(f'---> Module  {module!r} installation failed, Please use'
+           f'  the following command {cmd} to manually install it.')
     return MOD_IMP 
 
-def fetching_data_from_pycsamt_repo(repo_file, savepath =None ): 
+def fetching_data_from_repo(repo_file, savepath =None ): 
     """ Try to retreive data from github repository.
     
     :param repo_file: str or Path-like object 
@@ -941,45 +943,44 @@ def fetching_data_from_pycsamt_repo(repo_file, savepath =None ):
     :return:`status`: Either ``False` for failed downloading 
             or ``True`` for successfully downloading
     """
-    fmsg =['\n... Please wait for the second attempt...',
-          '\n... Wait for the last attempt...']
+    fmsg =['... 1rst attempt...','... 2nd attempt...','... 3rd attempt...']
     status=False 
     git_repo = __agso_properties['GIT_REPO']
     git_root = __agso_properties['GIT_ROOT']
     
     IMP_TQDM =False 
     try : 
-        from tqdm import tqdm 
+        from tqdm.notebook  import trange 
     except:# Install bar progression
         IMP_TQDM= subprocess_module_intallation('tqdm')
         if IMP_TQDM: 
-            from tqdm import tqdm 
-    # max attempts =3 :     
-    for i in tqdm(range(3), ascii=True, desc ='WEgeophysics', ncols =107):
-        if i ==0 :
-            print("\n---> Please wait while fetching"
+            from tqdm.notebook  import trange 
+    # max attempts =3 :  
+    print("---> Please wait while fetching"
                   f" {repo_file!r} from {git_repo!r}...")
-        else:print(fmsg [i-1])
-        try : 
-            try :
-                urllib.request.urlretrieve(git_root,  repo_file )
-            except: 
-                with urllib.request.urlopen(git_root) as response:
-                    with open( repo_file,'wb') as out_file:
-                        data = response.read() # a `bytes` object
-                        out_file.write(data)
-        except TimeoutError: 
-            if i ==2: print("---> Established connection failed "
-                      " because connected host has failed to respond.")
-        except:pass 
-        else : 
-            print(f"---> Downloading {repo_file!r} from "
-                  f"{git_repo!r} was successfully done!")
-            status=True
-            break 
-    if status: print(f"\n---> Downloading {repo_file!r} from {git_repo!r} "
+    for k in trange(3, ascii=True, desc ='WEgeophysics', ncols =107):
+    #for i in tqdm(range(3), ascii=True, desc ='WEgeophysics', ncols =107):
+        for i in trange(1, ascii=True ,desc =fmsg [k],ncols =107):
+            try : 
+                try :
+                    urllib.request.urlretrieve(git_root,  repo_file )
+                except: 
+                    with urllib.request.urlopen(git_root) as response:
+                        with open( repo_file,'wb') as out_file:
+                            data = response.read() # a `bytes` object
+                            out_file.write(data)
+            except TimeoutError: 
+                if k ==2: print("---> Established connection failed "
+                          " because connected host has failed to respond.")
+            except:
+                pass 
+            else : status=True
+
+        if status: break
+
+    if status: print(f"---> Downloading {repo_file!r} from {git_repo!r} "
                  "was successfully done!")
-    else: print(f"\n---> Failed to download {repo_file!r} from {git_repo!r}!")
+    else: print(f"---> Failed to download {repo_file!r} from {git_repo!r}!")
     # now move the file to the right place and create path if dir not exists
     if savepath is not None: 
         if not os.path.isdir(savepath): 

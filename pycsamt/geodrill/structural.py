@@ -6,11 +6,12 @@
 """
 .. _module-Structural::`pycsamt.geodrill.structural` 
     
-    :synopsis:class for  geological structural analysis 
-               contains some conventional structure can populate the data
+    :synopsis:class for  geological structural analysis. It 
+               contains some conventional structures and properties
 """
 
-import os, warnings
+import os
+import warnings
 import numpy as np 
 
 from pycsamt.utils.geo_utils import mapping_stratum as strato

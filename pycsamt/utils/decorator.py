@@ -87,7 +87,8 @@ class gdal_data_check(object):
         if 'GDAL_DATA' not in os.environ:
             # gdal data not defined, try to define
             from subprocess import Popen, PIPE
-            self._logger.warning("GDAL_DATA environment variable is not set  Please see https://trac.osgeo.org/gdal/wiki/FAQInstallationAndBuilding#HowtosetGDAL_DATAvariable ")
+            self._logger.warning("GDAL_DATA environment variable is not set "
+                                 " Please see https://trac.osgeo.org/gdal/wiki/FAQInstallationAndBuilding#HowtosetGDAL_DATAvariable ")
             try:
                 # try to find out gdal_data path using gdal-config
                 self._logger.info("Trying to find gdal-data path ...")
@@ -110,13 +111,15 @@ class gdal_data_check(object):
                 return False
         else:
             if os.path.exists(os.environ['GDAL_DATA']):
-                self._logger.info("GDAL_DATA is set to: {}".format(os.environ['GDAL_DATA']))
+                self._logger.info(
+                    "GDAL_DATA is set to: {}".format(os.environ['GDAL_DATA']))
 
                 try:
                     from osgeo import osr
                     from osgeo.ogr import OGRERR_NONE
                 except:
-                    self._logger.error("Failed to load module osgeo; looks like GDAL is NOT working")
+                    self._logger.error(
+                        "Failed to load module osgeo; looks like GDAL is NOT working")
                     # print ("Failed to load module osgeo !!! ")
 
                     return False
@@ -124,17 +127,20 @@ class gdal_data_check(object):
 
                 return True
             else:
-                self._logger.error("GDAL_DATA is set to: {}, but the path does not exist.".format(os.environ['GDAL_DATA']))
+                self._logger.error("GDAL_DATA is set to: {}, but the path "
+                                   "does not exist.".format(os.environ['GDAL_DATA']))
                 return False
 
-class redirect_cls_or_func(object) :
+class deprecated_to(object) :
     """
         Description:
-            used to redirected functions or classes. Deprecated functions or class 
-            can call others use functions or classes.
+            used to replace deprecated functions or classes. 
+            Deprecated functions or class 
+            should be called others functions or classes.
             
         Usage:
-            .. todo:: use new function or class to replace old function method or class
+            .. todo:: use new function or class 
+            to replace old function method or class
                 with multiple parameters.
 
         Author: @Daniel03
@@ -151,7 +157,8 @@ class redirect_cls_or_func(object) :
 
         """
         
-        self._reason=[func_or_reason for func_or_reason in args if type(func_or_reason)==str][0]
+        self._reason=[func_or_reason for
+                      func_or_reason in args if type(func_or_reason)==str][0]
         if self._reason is None :
             
             raise TypeError(" Redirected reason must be supplied")
@@ -182,7 +189,7 @@ class redirect_cls_or_func(object) :
 
             lineno=self._new_func_or_cls.__code__.co_firstlineno
             
-            fmt="redirected decorated func/methods .<{reason}> "\
+            fmt="Deprecated func/methods .<{reason}> "\
                 "see line {lineno}."
             
         elif inspect.isclass(self._new_func_or_cls): 
@@ -190,12 +197,12 @@ class redirect_cls_or_func(object) :
             # filename=os.path.basename(_code.co_filename)
             lineno= 1
             
-            fmt="redirected decorated class :<{reason}> "\
+            fmt="Deprecated class :<{reason}> "\
                 "see line {lineno}."
         else :
             # lineno=cls_or_func.__code__.co_firstlineno
             lineno= inspect.getframeinfo(inspect.currentframe())[1]
-            fmt="redirected decorated method :<{reason}> "\
+            fmt="Depreacted decorated method :<{reason}> "\
                 "see line {lineno}."
         
         msg=fmt.format(reason = self._reason, lineno=lineno)

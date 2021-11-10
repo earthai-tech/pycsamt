@@ -33,7 +33,7 @@ from pycsamt.ff.site import Profile
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
 from pycsamt.utils.decorator import deprecated
-from pycsamt.viewer.mpldecorator  import geoplot2d
+from pycsamt.utils.plotdecorator  import geoplot2d
 from pycsamt.geodrill.geodatabase import GeoDataBase 
 
 try : 
@@ -4506,11 +4506,10 @@ class GeoStratigraphy(Geodrill):
                                          _gammaVal))
         return _gammaVal 
        
-    @deprecated(reason= 'Expensive method, should deprecated soon to hard-code'
-                ' and generate a bug when dimensions need to be  resized.!')
+    @deprecated(reason= 'Expensive method, should be deprecated soon!')
     @geoplot2d(reason='model',cmap='jet_r', plot_style ='pcolormesh',
                show_grid=False )
-    def strataModel(self, kind ='nmStrata', **kwargs): 
+    def strataModel(self, kind ='nm', **kwargs): 
         """ 
         Visualize the   `strataModel` after `nm` creating using decorator from 
         :class:'~.geoplot2d'. 
@@ -4532,7 +4531,7 @@ class GeoStratigraphy(Geodrill):
                                   input_layers=input_layer_names)
             >>> geosObj.strataModel(kind='nm', misfit_G =False)
         """
-        
+        m_='pycsamt.geodrill.geocore.GeoStratigraphy.strataModel'
         def compute_misfit(rawb, newb, percent=True): 
             """ Compute misfit with calculated block and new model block """
             m_misfit = .01* np.sqrt (
@@ -4541,22 +4540,27 @@ class GeoStratigraphy(Geodrill):
                 m_misfit= m_misfit *100.
             return m_misfit 
         
-            
         depth_scale = kwargs.pop('scale', 'm')
-        plot_misfit =kwargs.pop('misfit_G', False)
+        misfit_G =kwargs.pop('misfit_G', False)
         misfit_percentage = kwargs.pop('in_percent', True)
         
-        if kind.lower().find('nm')>=0 or kind.lower().find('strata')>=0:
+        for v in ['nm', 'strata', 'geomodel']: 
+            if kind.lower().find(v)>=0: 
+                kind = 'nm'
+        if kind  in ['crm', 'resmodel', 'occam']: 
+            kind= 'crm'
+                
+        if kind =='nm':
             if self.nmSites is None: 
                 self._createNM()
             data = self.nmSites 
-        elif kind.lower().find('crm'): 
+        elif kind =='crm': 
             data = self.crmSites
 
       # compute model_misfit
-        if plot_misfit is True : 
-            self._logging.info('Plot strata misfit')
-            if kind.lower().find('strata')>=0: 
+        if misfit_G is True : 
+            self._logging.info('Plot strata misfit.')
+            if kind=='nm': 
                 data = compute_misfit(rawb=self.crmSites , 
                                       newb= self.nmSites, 
                                       percent = misfit_percentage)
@@ -4568,13 +4572,13 @@ class GeoStratigraphy(Geodrill):
                 'Misfit min','=',data.min()*100., '%' ))                          
             print('-'*77)
             
-        data = np.resize (data, (len(self.geo_depth), 
-                                 len(self.station_location)))
-        self.doi = self.geo_depth.max()
+        warnings.warn(
+            f'Data stored from {m_!r} should be moved on binary drive and'
+            ' method arguments should be keywordly only.', FutureWarning)
         
         return (data, self.station_names, self.station_location,
-            self.geo_depth, self.doi, depth_scale,self.model_rms, 
-            self.model_roughness, plot_misfit ) 
+            self.geo_depth, self.doi, depth_scale, self.model_rms, 
+            self.model_roughness, misfit_G ) 
     
     def stratigraphyModel (self, kind ='nm', misfit_G= False, **kwargs): 
         """ Make stratigraphy model 
@@ -4594,6 +4598,10 @@ class GeoStratigraphy(Geodrill):
         geoModel( kind =kind,
                 plot_misfit=misfit_G,
               **kwargs) 
+        
+        warnings.warn(
+            'Please use `pycsamt.geodrill.geocore.GeoStratigraphy.strataModel`'
+            'instead of `~stratigraphyModel`.', category =DeprecationWarning) 
     
     @staticmethod
     def _strataPropertiesOfSite(obj, station =None, display_s=True): 
@@ -4667,7 +4675,7 @@ class GeoStratigraphy(Geodrill):
             warnings.warn(msg)
             
             pslns, pstres, ps_lnstres =  fit_tres(
-                                            obj.LNS , obj.TRES, 
+                                            obj.LNS, obj.TRES, 
                                             obj.auto_layers)
         # now build the fitting rocks 
         fitted_rocks =GU.fit_rocks(logS_array= obj.nmSites[:,id_],

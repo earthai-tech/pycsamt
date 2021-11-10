@@ -25,7 +25,7 @@ import  pycsamt.utils.exceptions as CSex
 from pycsamt.geodrill.structural import Geo_formation 
 from pycsamt.geodrill._dictapp import Glob
 from pycsamt.geodrill.requestmanager import ManageDB
-from  pycsamt.utils.decorator import redirect_cls_or_func
+from  pycsamt.utils.decorator import deprecated_to
 from pycsamt.utils._csamtpylog import csamtpylog 
 #set LogInfos
 try :
@@ -1362,7 +1362,7 @@ class Recorder_sql(object):
                 
         return dicosqlDB 
     
-    @redirect_cls_or_func( keepDataInfos,'func"recordData" was redirected '
+    @deprecated_to( keepDataInfos,'func"recordData" was redirected '
                           'to func "keepDataInfos" on called it.')
     @staticmethod    
     def recordData (data, new_tablename=None , **kwargs ):
@@ -1481,7 +1481,7 @@ class Recorder_sql(object):
                 return (nump_columns[0],type_of_value,asize,
                         data.shape[1], data.tolist())
     
-    @redirect_cls_or_func(arrangeData_for_dictapp,
+    @deprecated_to(arrangeData_for_dictapp,
                           'set_on_dict will redirect to '
                           '"arrangeData_for_dictapp once called." ')
     @staticmethod    

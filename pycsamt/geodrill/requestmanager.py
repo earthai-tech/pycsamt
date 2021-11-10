@@ -3,7 +3,7 @@
 #       @author: KouaoLaurent alias @Daniel03 <etanoyau@gmail.com>
 #       Created on Tue Oct 13 15:28:57 2020
 """
-.. _module-requestmanager::`pycsamt.geodrill._dblink`
+.. _module-requestmanager::`pycsamt.geodrill.requestmanager`
  
     :synopsis: Specially designed to Manage SQL 
 """

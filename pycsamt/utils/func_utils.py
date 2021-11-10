@@ -1,32 +1,12 @@
 # -*- coding: utf-8 -*-
+#       Copyright © 2021  Kouadio K.Laurent
+#       Author:  ~Daniel03 <etanoyau@gmail.com>
+#       Created on Sun Sep 13 09:24:00 2020
+#       Licence: LGPL
 """
-===============================================================================
-    Copyright © 2021  Kouadio K.Laurent
-    
-    This file is part of pyCSAMT.
-    
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    pyCSAMT is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public License
-    along with pyCSAMT.  If not, see <https://www.gnu.org/licenses/>.
 
-===============================================================================  
 .. _module-Func-utils::`pycsamt.utils.func_utils`  
-    :synopsis: helpers functions 
-     ...
-     
-Created on Sun Sep 13 09:24:00 2020
-@author:  @Daniel03
-
-    :utils: 
+    :synopsis: helpers functions  
         * averageData 
         * concat_array_from_list 
         * sort_array_data 
@@ -53,8 +33,7 @@ Created on Sun Sep 13 09:24:00 2020
         * minimum_parser_to_write_edi        
 """
 
-####################### import modules #######################
-
+####################### import modules ######################
 import os 
 import shutil 
 import warnings
@@ -62,11 +41,9 @@ import inspect
 import numpy as np 
 import matplotlib.pyplot as plt
 from copy import deepcopy
+
 import  pycsamt.utils.gis_tools as gis
 from pycsamt.utils.decorator import deprecated 
-
-# import deprecated
-# set logger #
 from pycsamt.utils._csamtpylog import csamtpylog
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 # _logger.setLevel(logging.DEBUG)
@@ -100,7 +77,7 @@ def smart_format(iter_obj):
     :Example: 
         >>> from pycsamt.utils.func_utils import smart_format
         >>> smart_format(['model', 'iter', 'mesh', 'data'])
-        ... 'model','iter','mesh'and 'data'
+        ... 'model','iter','mesh' and 'data'
     """
     try: 
         iter(iter_obj) 
@@ -111,7 +88,7 @@ def smart_format(iter_obj):
         str_litteral= ','.join([f"{i!r}" for i in iter_obj ])
     elif len(iter_obj)>1: 
         str_litteral = ','.join([f"{i!r}" for i in iter_obj[:-1]])
-        str_litteral += f"and {iter_obj[-1]!r}"
+        str_litteral += f" and {iter_obj[-1]!r}"
     return str_litteral
 
 
@@ -126,7 +103,8 @@ def averageData(np_array, filter_order=0,
                 must be the index of the column you want to sort 
             
         * axis average  : int  
-                axis you want to see data averaged, also , it is the concatenate axis  
+                axis you want to see data averaged, also
+                it is the concatenate axis  
                 default is axis=0 
         
         * astype*: str , 
@@ -1197,10 +1175,12 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
     Parameters
     ----------
         * add_azimuth : Bool, optional
-                compute azimuth if add_azimut is set to True. The default is False.
+                compute azimuth if add_azimut is set to True. 
+                The default is False.
              
         *  utm_zone : Str, optional
-                 WGS84 utm_projection. set your zone if add_azimuth is turn to True. 
+                 WGS84 utm_projection. set your zone if
+                 add_azimuth is turn to True. 
                  The default is "49N".
              
         * report_path : str, optional
@@ -1208,8 +1188,8 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
                 its match the current work directory 
             
         * add_geochemistry_sample: bool
-                add_sample_data.Set to True if you want to add_mannually Geochimistry data.
-                default is False.
+                add_sample_data.Set to True if you want to add_mannually
+                 Geochimistry data. default is False.
 
     Raises
     ------
@@ -1304,7 +1284,8 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
             dh_botdip[1]=(90.)
         elif float(dh_botdip[0])==0.:
             raise Exception(
-            "The curent bottom has a value 0.0 . Must put the bottom of the well as deep as possible !"
+            "The curent bottom has a value 0.0 . "
+            "Must put the bottom of the well as deep as possible !"
                             )
             
         hole_list.append(DH_Hole)
@@ -1315,9 +1296,11 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
         #DH_Hole (ID)	DH_East	DH_North	DH_RH	DH_Dip	DH_Azimuth	DH_Top	DH_Bottom	DH_PlanDepth	DH_Decr	Mask 
         reg_lines.append("".join(text[1]+'{0:>7}'.format(DH_Hole))+"\n")
         reg_lines.append("".join(text[2])+"\n")
-        reg_lines.append(",".join(['{0:>14}'.format(str(ii)) for ii in list(DH_East_North)])+"\n")
+        reg_lines.append(",".join(['{0:>14}'.format(str(ii))
+                                   for ii in list(DH_East_North)])+"\n")
         reg_lines.append("".join(text[3])+"\n")
-        reg_lines.append(",".join(['{0:>7}'.format(str(ii)) for ii in list(dh_botdip)])+"\n")
+        reg_lines.append(",".join(['{0:>7}'.format(str(ii))
+                                   for ii in list(dh_botdip)])+"\n")
         
         comp+=-1
         while DH_Hole :
@@ -1342,9 +1325,10 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
             dh_from_ar=dh_from_ar.reshape((dh_from_ar.shape[0],1)) 
             # check the last input bottom : 
             if dh_from_ar[-1] >= float(dh_botdip[0]):
-                _logger.info("The input bottom of well {{0}}, is {{1}}. It's less last layer thickess: {{2}}."\
-                             "we add maximum bottom at 1.023km depth.".format(DH_Hole,dh_botdip[0],
-                                                                          dh_from_ar[-1]))
+                _logger.info("The input bottom of well {0}, is {1}. "
+                             "It's less last layer thickess: {2}."
+                             "we add maximum bottom at 1.023km depth.".format(
+                                 DH_Hole,dh_botdip[0],dh_from_ar[-1]))
                 dh_botdip[0]=(1023.)
                 wellSites[-1][3]=dh_botdip[0]  # last append of wellSites 
             #find Dh_to through give dh_from
@@ -1365,18 +1349,20 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
                 fromtogeo=np.concatenate((drill_names,dh_from_ar,
                                               dh_to, rock_ar),axis=1)
             except IndexError:
-                _logger.warn("np.ndarry sizeError:Check 'geologie', 'Dh_From', and "\
-                             "'Dh_To' arrays size properly . It seems one size is "\
-                                 " too longeR than another. ")
+                _logger.warn("np.ndarry sizeError:Check 'geologie', 'Dh_From', and "
+                             "'Dh_To' arrays size properly. It seems one size is "
+                              " too longeR than another. ")
                 warnings.warn(" All the arrays size must match propertly!")
                 
             ftgeo.append(fromtogeo)
             comp=-1
             
             reg_lines.append("".join(text[4])+"\n")
-            reg_lines.append(",".join(['{0:>7}'.format(str(jj))  for jj in list(dh_from)])+"\n")
+            reg_lines.append(",".join(['{0:>7}'.format(str(jj)) 
+                                       for jj in list(dh_from)])+"\n")
             reg_lines.append("".join(text[5])+"\n")
-            reg_lines.append(",".join(['{0:>12}'.format(jj) for jj in rock])+"\n") # rock already in list 
+            reg_lines.append(",".join(['{0:>12}'.format(jj) 
+                                       for jj in rock])+"\n") # rock already in list 
             # reg_lines.append("".join(rock+"\n"))
             
         reg_lines.append("\n")
@@ -1409,8 +1395,10 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
     if add_azimuth==False:
         DH_Azimuth=np.full((wellSites.shape[0]),0)
     elif add_azimuth == True :
-        DH_Azimuth=compute_azimuth(easting = np.array([np.float(ii) for ii in wellSites[:,1]]),
-                                   northing =np.array([np.float(ii) for ii in wellSites[:,2]]),
+        DH_Azimuth=compute_azimuth(easting = np.array(
+            [np.float(ii) for ii in wellSites[:,1]]),
+                                   northing =np.array(
+                                       [np.float(ii) for ii in wellSites[:,2]]),
                                    utm_zone=utm_zone)
 
         
@@ -1428,21 +1416,27 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
     # reg_lines.append(text[7]+"\n")
     
     reg_lines.append(text[9]+'\n')
-    reg_lines.append("".join(['{0:>12}'.format(ss) for ss in text[7].split(",")]) +'\n')
+    reg_lines.append("".join(['{0:>12}'.format(ss) 
+                              for ss in text[7].split(",")]) +'\n')
     for rowline in WellData :
-        reg_lines.append(''.join(["{0:>12}".format(ss) for ss in rowline.tolist()])+"\n")
+        reg_lines.append(''.join(["{0:>12}".format(ss)
+                                  for ss in rowline.tolist()])+"\n")
         
     reg_lines.append(text[8]+"\n")
-    reg_lines.append("".join(['{0:>12}'.format(ss) for ss in text[10].split(",")]) +'\n')
+    reg_lines.append("".join(['{0:>12}'.format(ss) 
+                              for ss in text[10].split(",")]) +'\n')
     for ii , row in enumerate(GeolData):
-        reg_lines.append(''.join(["{0:>12}".format(ss) for ss in row.tolist()])+"\n")
+        reg_lines.append(''.join(["{0:>12}".format(ss) 
+                                  for ss in row.tolist()])+"\n")
         
     if add_geochemistry_sample==True:
         SampleData=build_geochemistry_sample()
         reg_lines.append(text[11]+'\n')
-        reg_lines.append("".join(['{0:>12}'.format(ss) for ss in text[12].split(",")]) +'\n')
+        reg_lines.append("".join(['{0:>12}'.format(ss) 
+                                  for ss in text[12].split(",")]) +'\n')
         for ii , row in enumerate(SampleData):
-            reg_lines.append(''.join(["{0:>12}".format(ss) for ss in row.tolist()])+"\n")
+            reg_lines.append(''.join(["{0:>12}".format(ss) 
+                                      for ss in row.tolist()])+"\n")
     else :
         SampleData=None        
         
@@ -1461,8 +1455,10 @@ def build_wellData (add_azimuth=False, utm_zone="49N",
             shutil.move((os.path.join(os.getcwd(),"{0}_wellReport_".\
                                       format(name_of_location))),report_path)
         else :
-            raise OSError ("The path does not exit.Try to put the right path")
-            warnings.warn ("ignore","the report_path doesn't match properly.Try to fix it !")
+            raise OSError (
+                "The path does not exit.Try to put the right path")
+            warnings.warn (
+                "ignore","the report_path doesn't match properly.Try to fix it !")
         
     
     
@@ -1483,10 +1479,13 @@ def compute_azimuth(easting, northing, utm_zone="49N", extrapolate=False):
         * utm_zone : str, optional
                 the utm_zone . if None try to get is through 
                 gis.get_utm_zone(latitude, longitude). 
-                latitude and longitude must be on degree decimals. The default is "49N".
+                latitude and longitude must be on degree decimals. 
+                The default is "49N".
         * extrapolate : bool , 
-                for other purpose , user can extrapolate azimuth value , in order to get the sizesize as 
-                the easting and northing size. The the value will repositionate at each point data were collected. 
+                for other purpose , user can extrapolate azimuth value, 
+                in order to get the sizesize as 
+                the easting and northing size. The the value will
+                repositionate at each point data were collected. 
                     Default is False as originally azimuth computation . 
 
     Returns
@@ -1613,12 +1612,12 @@ def build_geochemistry_sample():
                 samfromto=np.concatenate((holes_names,samp_ar,dh_to,sampName_ar),axis=1)
                 
             except Exception as e :
-                raise ("IndexError!, arrrays sample_DH_From:{0} &DH_To :{1}&"\
+                raise ("IndexError!, arrrays sample_DH_From:{0} &DH_To :{1}&"
                        " 'Sample':{2} doesn't not match proprerrly.{3}".\
                            format(samp_ar.shape,dh_to.shape,sampName_ar.shape, e))
-                warnings.warn("IndexError !, dimentional problem."\
+                warnings.warn("IndexError !, dimentional problem."
                               " please check np.ndarrays.shape.")
-                _logger.warn("IndexError !, dimentional problem."\
+                _logger.warn("IndexError !, dimentional problem."
                               " please check np.ndarrays.shape.")
             tempsamp.append(samfromto)
             comp=-1
@@ -1697,9 +1696,9 @@ def parse_wellData(filename=None, include_azimuth=False,
                     data=f.readlines()
                     _flag=1
         else :
-            _logger.error('The {0} doesnt not match the *csv file'\
+            _logger.error('The {0} doesnt not match the *csv file'
                           ' You must convert file on *.csv format'.format(filename))
-            warnings.error("The input file is wrong ! only *.csv file "\
+            warnings.error("The input file is wrong ! only *.csv file "
                           " can be parsed.")
     elif filename is not None :
         assert filename.endswith(".csv"), "The input file {0} is not in *.csv format"
@@ -1792,8 +1791,10 @@ def parse_wellData(filename=None, include_azimuth=False,
     if include_azimuth==False:
         DH_Azimuth=np.full((collar_ar.shape[0]),0)
     elif include_azimuth== True:
-        DH_Azimuth=compute_azimuth(easting = np.array([np.float(ii) for ii in collar_ar[:,1]]),
-                                  northing = np.array([np.float(ii) for ii in collar_ar[:,2]]),
+        DH_Azimuth=compute_azimuth(easting = np.array([np.float(ii) 
+                                                       for ii in collar_ar[:,1]]),
+                                  northing = np.array([np.float(ii) 
+                                                       for ii in collar_ar[:,2]]),
                                   utm_zone=utm_zone, extrapolate=True)
     
     collar_ar[:,5]=DH_Azimuth
@@ -1923,7 +1924,8 @@ def _order_well (data,**kwargs):
     
     temp=[]
 
-    _logger.info ("You pass by {0} function! Thin now , everything is ok. ".format(this_function_name))
+    _logger.info ("You pass by {0} function! "
+                  "Thin now , everything is ok. ".format(this_function_name))
     
     for jj, value in enumerate (data):
         thickness_len,dial1,dial2=intell_index(datalist=value[1:]) #call intell_index
@@ -1940,15 +1942,21 @@ def _order_well (data,**kwargs):
         if bottomgeo[jj] =="" or bottomgeo[jj]==None :
             bottomgeoidx=1023.
             if max_given_bottom > bottomgeoidx:
-                _logger.warn("value {0} is greater than the Bottom depth {1}".format(max_given_bottom ,bottomgeoidx))
-                warnings.warn ("Given values have a value greater than the depth !")
+                _logger.warn("value {0} is greater than the "
+                             "Bottom depth {1}".format(max_given_bottom ,
+                                                       bottomgeoidx))
+                warnings.warn (
+                    "Given values have a value greater than the depth !")
                 
             dh_to=np.append(dh_to,bottomgeoidx)
         else: #elif :_flag==1 :         # check the bottom , any values given 
                                         # must be less or egual to depth not greater.
             if max_given_bottom> np.float(bottomgeo[jj]):
-                _logger.warn("value {0} is greater than the Bottom depth {1}".format(max_given_bottom ,bottomgeo[jj]))
-                warnings.warn ("Given values have a value greater than the depth !")
+                _logger.warn("value {0} is greater than the Bottom "
+                             "depth {1}".format(max_given_bottom ,
+                                                bottomgeo[jj]))
+                warnings.warn (
+                    "Given values have a value greater than the depth !")
             dh_to=np.append(dh_to,bottomgeo[jj])
             
         dh_hole=np.full((thickness_len),value[0])
@@ -2142,8 +2150,8 @@ def _cross_eraser (data , to_del, deep_cleaner =False):
         * deep_cleaner : bool, optional
                 Way to deeply check. Sometimes the values are uncleaned and 
             capitalizeed . this way must not find their safety correspondace 
-            then the algorth must clean item and to match all at the same time before eraisng.
-            The *default* is False.
+            then the algorth must clean item and to match all at 
+            the same time before erasing. The *default* is False.
 
     Returns
     -------
@@ -2243,7 +2251,8 @@ def stn_check_split_type(data_lines):
     split_type =[',', ':',' ',';' ]
     data_to_read =[]
     if isinstance(data_lines, np.ndarray): # change the data if data is not dtype string elements.
-        if data_lines.dtype in ['float', 'int', 'complex']: data_lines=data_lines.astype('<U12')
+        if data_lines.dtype in ['float', 'int', 'complex']: 
+            data_lines=data_lines.astype('<U12')
         data_lines= data_lines.tolist()
         
     if isinstance(data_lines, list):
@@ -2261,8 +2270,9 @@ def stn_check_split_type(data_lines):
 
 def minimum_parser_to_write_edi (edilines, parser = '='):
     """
-    This fonction validates edifile for writing , string with egal.we assume that 
-    dictionnary in list will be for definemeasurment E and H fied. 
+    This fonction validates edifile for writing , string with egal.
+    We assume that dictionnary in list will be for definemeasurment 
+    E and H fied. 
     
     :param edilines: list of item to parse 
     :type edilines: list 
@@ -2277,7 +2287,8 @@ def minimum_parser_to_write_edi (edilines, parser = '='):
         else :raise TypeError('<Edilines> Must be on list')
     for ii, lines in enumerate(edilines) :
         if isinstance(lines, dict):continue 
-        elif lines.find('=') <0 : raise 'None <"="> found on this item<{0}> of  the edilines list. list can not'\
+        elif lines.find('=') <0 : 
+            raise 'None <"="> found on this item<{0}> of  the edilines list. list can not'\
             ' be parsed.Please put egal between key and value '.format(edilines[ii])
     
     return edilines 

@@ -3,10 +3,9 @@
 #       This module is a part of pycsamt utils packages
 #       released under a LGL- licence.
 #       @author-email:<etanoyau@gmail.com>
-
-import numpy as np 
-import matplotlib. pyplot as plt 
 # Backprop on the Seeds Dataset
+import numpy as np 
+import matplotlib.pyplot as plt 
 from random import seed
 from random import randrange
 from random import random
@@ -80,8 +79,8 @@ def predict (X, W, b):
     # print('Score =', A )
     return A >=0.5
 
-def neuron (X, y, alpha =0.1, n_epochs=100, 
-            optimizer ='sigmoid', scoring ='accuracy', plot ='yes', **kws ): 
+def neuron (X, y, alpha =0.1, n_epochs=100, optimizer ='sigmoid',
+            scoring ='accuracy', plot ='yes', **kws ): 
     """ Build the first neuron and return the updated weights and the 
     history duiring the learnings composed of weights `W`, `b` and  """
     # initialize weight values W and b
@@ -150,7 +149,7 @@ class ReduceImage(BaseEstimator, TransformerMixin):
         X = flatten_variables(X)
         return X
   
-#######################     ANN(Should bedeprecated)  ######################### 
+#######################     ANN(Should be deprecated)  ######################### 
 # https://machinelearningmastery.com/implement-backpropagation-algorithm-scratch-python/  
 # Load a CSV file
 def load_csv(filename):

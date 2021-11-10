@@ -792,14 +792,17 @@ class geoplot2d(object):
         
         return self.delineate_resistivity_curve 
  
+    
     def __call__(self, func):  
         """
         Model decorator to hold the input function with arguments 
         :param func: function to be decorated 
         :type func: object 
-            
         """
+
+        return self.plot2DModel(func)
         
+    def plot2DModel(self, func):
         @functools.wraps(func)
         def new_func (*args, **kwargs): 
             """
@@ -811,10 +814,10 @@ class geoplot2d(object):
             :param kwargs: positional arguments of decorated function
             :type kwargs: dict 
             :return: function decorated after visualisation
-  
+      
             """
             self._logging.info(
-                ' Plot decorated {0} chain'.format(func.__name__))
+                ' Plot decorated {0}.'.format(func.__name__))
     
             _f=0 # flag to separated strata model misfit and occam model misfit
                 #   from occamResponse file 
@@ -843,7 +846,7 @@ class geoplot2d(object):
             plt.clf()
             self.fig_aspect ='auto'
             axm = self.fig.add_subplot(1, 1, 1, aspect=self.fig_aspect)
-
+    
             # get geomodel data 
             if self.reason is None or self.reason =='model': 
                 occam_model_resistiviy_obj, occam_data_station_names,\
@@ -851,14 +854,11 @@ class geoplot2d(object):
                     self.doi, self.depth_scale, self.model_rms, \
                         self.model_roughness, plot_misfit  =\
                         func(*args, **kwargs)
-                        
-                #      # check_dimensionality 
-                # if occam_model_resistiviy_obj.shape !=(len(occam_model_depth_offsets), 
-                #                                         len(occam_data_station_offsets)): 
-                #     occam_model_resistiviy_obj,occam_model_depth_offsets,\
-                #         occam_data_station_offsets =  self._check_dimensionality (
-                #             occam_model_resistiviy_obj,occam_model_depth_offsets,
-                #                                 occam_data_station_offsets)
+                # m0, m1, m2, m3, m4, m5, m6, m7 = func(*args, **kwargs)
+                # occam_model_resistiviy_obj, occam_data_station_names= m0, m1 
+                # occam_data_station_offsets, occam_model_depth_offsets= m2, m3
+                # self.doi, self.depth_scale, self.model_rms=m4, m5 
+                # self.model_roughness, plot_misfit= m6, m7
                     
                 self.doi = occam_model_depth_offsets.max()
                 #     self.doi = occam_model_depth_offsets.max()
@@ -870,16 +870,22 @@ class geoplot2d(object):
                 #0 then substract add value so 
                 # to get space for station names text
                 if self.climits is None :
-                    self.climits =(0,4)
+                    self.climits =(0,4)  
                 if plot_misfit is True : 
                     _f=2
-                self.ylimits =(spec_f, self.doi/dz)    
+                self.ylimits =(spec_f, self.doi/dz)  
                 
+                self.reason =='model'
+            
             elif self.reason =='misfit': 
                 occam_model_resistiviy_obj, occam_data_station_names,\
                     occam_data_station_offsets, occam_model_depth_offsets,\
                     self.model_rms, self.model_roughness = func(*args, **kwargs)
-                
+                # m0, m1, m2, m3, self.model_rms, self.model_roughness= func(
+                #     *args, **kwargs)
+                # occam_model_resistiviy_obj, occam_data_station_names= m0, m1 
+                # occam_data_station_offsets, occam_model_depth_offsets= m2, m3
+     
                 # check if "plotmisfit refers to 'geoStrata model 'geodrill
                 # module then keep the doi and set `spec_f
                 if 'geodtype' in list(kwargs.keys()): 
@@ -915,9 +921,9 @@ class geoplot2d(object):
                     station_id =occam_data_station_names ,
                     new_station_name =self.change_station_id )
                 self._logging.debug(mess)
-
+    
             # plot ---------------figure and properties  ---------------------                           
-
+    
             self.xlimits=(occam_data_station_offsets.min()/dz -self.xpad  , 
                       occam_data_station_offsets.max()/dz + self.xpad )
             
@@ -929,21 +935,21 @@ class geoplot2d(object):
                 elif 'min' in self.climits or 'max' in self.climits : 
                             self.climits = (occam_model_resistiviy_obj.min(), 
                                             occam_model_resistiviy_obj.max())
-
+    
              
             if _f==2 : 
                 self.reason = 'misfit' 
             self._logging.info ('Ready to plot {0}'
                                 ' with matplotlib "{1}" style.'.
                                 format(self.reason, self.plot_style))   
-
+    
             if self.plot_style.lower() =='pcolormesh':
                 mesh_x  , mesh_z= np.meshgrid(occam_data_station_offsets,
                                               occam_model_depth_offsets )
      
                 vmin = self.climits[0]
                 vmax = self.climits[1] 
-
+    
                 axm.pcolormesh (mesh_x/dz  , 
                                 mesh_z/dz ,
                                   occam_model_resistiviy_obj,
@@ -965,7 +971,7 @@ class geoplot2d(object):
                                         inline=True, fmt='%1.1f',
                                         fontsize =self.font_size,
                                           )
-   
+       
             if self.plot_style.lower() =='imshow': 
     
                 mesh_x  , mesh_z= np.meshgrid(occam_data_station_offsets,
@@ -984,7 +990,7 @@ class geoplot2d(object):
                                             self.ylimits[0] - spec_f),
     
                                         )
-
+    
                 if self.delineate_resistivity_curve is not None :
                     origin ='upper'
                     contps = axm.contour(occam_model_resistiviy_obj,
@@ -1004,7 +1010,7 @@ class geoplot2d(object):
                                     fmt='%1.1f',
                                     fontsize =self.font_size,
                                               )
- 
+     
             # for making a color bar 
             if type(self.cmap) == str:
                 self.cmap = cm.get_cmap(self.cmap)
@@ -1016,14 +1022,14 @@ class geoplot2d(object):
             # create twin axis to set ticks to the top station
             axe2=axm.twiny()
             axe2.xaxis.set_visible(False) # let keep only the axe lines 
-  
+      
             #set axis and set boundaries 
             if self.reason =='model' or _f==2 : 
                 ydown_stiteslbls = self.ylimits[0]/5 
                 ydown_stationlbls = self.ylimits[0] -(self.ylimits[0]/3)
                 xhorizontal_lbs = (occam_data_station_offsets.max()/dz)/2
                 yb = 0.95
-
+    
             elif self.reason =='misfit': 
                 ydown_stiteslbls = self.ylimits[0] + 0.1 * self.ylimits[1]
                 ydown_stationlbls= self.ylimits[0] +\
@@ -1069,7 +1075,7 @@ class geoplot2d(object):
                                       'style': self.font_style,
                                       'weight': self.fw},
                             )
-
+    
             # put a grid on if set to True 
             if self.show_grid is True:
                 axm.minorticks_on()

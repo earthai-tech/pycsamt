@@ -7,7 +7,8 @@ from pycsamt.utils._csamtpylog import csamtpylog
 class deprecated(object):
     """
         Description:
-            used to mark functions, methods and classes deprecated, and prints warning message when it called
+            used to mark functions, methods and classes deprecated,
+            and prints warning message when it called
             decorators based on https://stackoverflow.com/a/40301488
 
         Usage:
@@ -45,7 +46,8 @@ class deprecated(object):
         def new_func(*args, **kwargs):  # pragma: no cover
             import warnings
             warnings.simplefilter('always', DeprecationWarning)  # turn off filter
-            warnings.warn_explicit(msg, category=DeprecationWarning, filename=filename, lineno=lineno)
+            warnings.warn_explicit(msg, category=DeprecationWarning,
+                                   filename=filename, lineno=lineno)
             warnings.simplefilter('default', DeprecationWarning)  # reset filter
             return cls_or_func(*args, **kwargs)
 
@@ -59,12 +61,13 @@ class gdal_data_check(object):
 
     def __init__(self, func, raise_error=False):
         """
-        this decorator should only be used for the function that requres gdal and gdal-data
-        to function correctly.
+        this decorator should only be used for the function that 
+        requres gdal and gdal-data to function correctly.
 
-        the decorator will check if the GDAL_DATA is set and the path in GDAL_DATA is exist.
-        If GDAL_DATA is not set, then try to use external program "gdal-config --datadir" to
-        findout where the data files are installed.
+        the decorator will check if the GDAL_DATA is set and the path 
+        in GDAL_DATA is exist. If GDAL_DATA is not set, then try to use
+         external program "gdal-config --datadir" to findout where
+         the data files are installed.
 
         If failed to find the data file, then ImportError will be raised.
 
@@ -87,7 +90,8 @@ class gdal_data_check(object):
         if 'GDAL_DATA' not in os.environ:
             # gdal data not defined, try to define
             from subprocess import Popen, PIPE
-            self._logger.warning("GDAL_DATA environment variable is not set  Please see https://trac.osgeo.org/gdal/wiki/FAQInstallationAndBuilding#HowtosetGDAL_DATAvariable ")
+            self._logger.warning("GDAL_DATA environment variable is not set "
+                                 " Please see https://trac.osgeo.org/gdal/wiki/FAQInstallationAndBuilding#HowtosetGDAL_DATAvariable ")
             try:
                 # try to find out gdal_data path using gdal-config
                 self._logger.info("Trying to find gdal-data path ...")
@@ -110,13 +114,15 @@ class gdal_data_check(object):
                 return False
         else:
             if os.path.exists(os.environ['GDAL_DATA']):
-                self._logger.info("GDAL_DATA is set to: {}".format(os.environ['GDAL_DATA']))
+                self._logger.info(
+                    "GDAL_DATA is set to: {}".format(os.environ['GDAL_DATA']))
 
                 try:
                     from osgeo import osr
                     from osgeo.ogr import OGRERR_NONE
                 except:
-                    self._logger.error("Failed to load module osgeo; looks like GDAL is NOT working")
+                    self._logger.error(
+                        "Failed to load module osgeo; looks like GDAL is NOT working")
                     # print ("Failed to load module osgeo !!! ")
 
                     return False
@@ -124,17 +130,20 @@ class gdal_data_check(object):
 
                 return True
             else:
-                self._logger.error("GDAL_DATA is set to: {}, but the path does not exist.".format(os.environ['GDAL_DATA']))
+                self._logger.error("GDAL_DATA is set to: {}, but the path "
+                                   "does not exist.".format(os.environ['GDAL_DATA']))
                 return False
 
-class redirect_cls_or_func(object) :
+class deprecated_to(object) :
     """
         Description:
-            used to redirected functions or classes. Deprecated functions or class 
-            can call others use functions or classes.
+            used to replace deprecated functions or classes. 
+            Deprecated functions or class 
+            should be called others functions or classes.
             
         Usage:
-            .. todo:: use new function or class to replace old function method or class
+            .. todo:: use new function or class 
+            to replace old function method or class
                 with multiple parameters.
 
         Author: @Daniel03
@@ -151,10 +160,12 @@ class redirect_cls_or_func(object) :
 
         """
         
-        self._reason=[func_or_reason for func_or_reason in args if type(func_or_reason)==str][0]
+        self._reason=[func_or_reason for
+                      func_or_reason in args if type(func_or_reason)==str][0]
         if self._reason is None :
             
-            raise TypeError(" Redirected reason must be supplied")
+            raise TypeError(" Function/method/class transfert"
+                            " reason must be supplied")
         
 
         self._new_func_or_cls = [func_or_reason for func_or_reason in \
@@ -182,7 +193,7 @@ class redirect_cls_or_func(object) :
 
             lineno=self._new_func_or_cls.__code__.co_firstlineno
             
-            fmt="redirected decorated func/methods .<{reason}> "\
+            fmt="Deprecated func/methods .<{reason}> "\
                 "see line {lineno}."
             
         elif inspect.isclass(self._new_func_or_cls): 
@@ -190,12 +201,12 @@ class redirect_cls_or_func(object) :
             # filename=os.path.basename(_code.co_filename)
             lineno= 1
             
-            fmt="redirected decorated class :<{reason}> "\
+            fmt="Deprecated class :<{reason}> "\
                 "see line {lineno}."
         else :
             # lineno=cls_or_func.__code__.co_firstlineno
             lineno= inspect.getframeinfo(inspect.currentframe())[1]
-            fmt="redirected decorated method :<{reason}> "\
+            fmt="Deprecated decorated method :<{reason}> "\
                 "see line {lineno}."
         
         msg=fmt.format(reason = self._reason, lineno=lineno)

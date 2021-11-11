@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2021 Kouadio K. Laurent, on Mon Oct 25 15:05:40 2021
+# Copyright (c) 2021 Kouadio K. Laurent, 
+#       Created on Mon Oct 25 15:05:40 2021
 #       This module is a part of pycsamt utils packages
 #       released under a LGL- licence.
 #       @author-email:<etanoyau@gmail.com>
@@ -8,7 +9,7 @@ import itertools
 import warnings
 import shutil 
 import copy 
-from six.moves import urllib 
+from six.moves import urllib    
 from pprint import pprint 
 import numpy as np
 import pandas as pd 
@@ -19,8 +20,9 @@ import pycsamt.utils.func_utils as FU
 import pycsamt.utils.plot_utils as PU
 import pycsamt.utils.exceptions as CSex
 from pycsamt.utils._csamtpylog import csamtpylog
-_logger=csamtpylog.get_csamtpy_logger(__name__)
 
+_logger=csamtpylog.get_csamtpy_logger(__name__)
+       
 PATH = 'data/occam2D'
 k_ =['model', 'iter', 'mesh', 'data']
 
@@ -672,7 +674,7 @@ def pseudostratigraphic_log (thick, layers, station, *,
                        ) 
     doi = sum(thick) 
     axis_base = fig.add_subplot(gs[0, 0],
-                           ylim = [0, int(doi)] ####### check this part 
+                           ylim = [0, int(doi)] 
                            )
                 
     axis_annot= fig.add_subplot(gs[0, 1],
@@ -739,13 +741,12 @@ def _assert_list_len_and_item_type(lista, listb, typea=None, typeb=None):
     
     def control_global_type(typ):
         """ Check the given type """
-        import pandas as pd 
         builtin_types= [t for t in b.__dict__.values()
                      if isinstance(t, type)] 
         conv_type = builtin_types+ [np.ndarray, pd.Series,pd.DataFrame]
         if not isinstance( typ, (tuple, list)):
             typ =[typ]
-        # Now loop the type and check wether one given type is true
+        # Now loop the type and check whether one given type is true
         for ityp in typ:
             if ityp not in conv_type: 
                 raise TypeError(f"The given type= {ityp} is unacceptable!"
@@ -858,7 +859,7 @@ def set_agso_properties (download_files = True ):
     if len(mf)==0: download_files=False 
     if download_files: 
         for file_r in mf:
-            success = fetching_data_from_pycsamt_repo(props_files = file_r, 
+            success = fetching_data_from_repo(props_files = file_r, 
                       savepath = os.path.join(
                           os.path.realpath('.'), __agso_properties['props_dir'])
                       )
@@ -902,8 +903,35 @@ def mapping_stratum(download_files =True):
      
     return   tuple(rock_and_structural_props)
 
+def subprocess_module_intallation (module): 
+    """ Install  module using subprocess.
+    :param module: str, module name to install  
+    """
+    import sys 
+    import subprocess 
+    #implement pip as subprocess 
+    # refer to https://pythongeeks.org/subprocess-in-python/
+    MOD_IMP=False 
+    print(f'---> Module {module!r} installation will take a while,'
+          ' please be patient...')
+    cmd = f'<pip install {module}> | <python -m pip install {module}>'
+    try: 
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install',
+        f'{module}'])
+        reqs = subprocess.check_output([sys.executable,'-m', 'pip',
+                                        'freeze'])
+        [r.decode().split('==')[0] for r in reqs.split()]
+        _logger.info(f"Intallation of `{module}` and dependancies"
+                     "was successfully done!") 
+        MOD_IMP=True
+     
+    except: 
+        _logger.error("Failed to install the module =`{module}`.")
+        print(f'---> Module  {module!r} installation failed, Please use'
+           f'  the following command {cmd} to manually install it.')
+    return MOD_IMP 
 
-def fetching_data_from_pycsamt_repo(repo_file, savepath =None ): 
+def fetching_data_from_repo(repo_file, savepath =None ): 
     """ Try to retreive data from github repository.
     
     :param repo_file: str or Path-like object 
@@ -915,34 +943,42 @@ def fetching_data_from_pycsamt_repo(repo_file, savepath =None ):
     :return:`status`: Either ``False` for failed downloading 
             or ``True`` for successfully downloading
     """
-    fmsg =['... Please wait for the second attempt...',
-          '... Wait for the last attempt...']
+    fmsg =['... 1rst attempt...','... 2nd attempt...','... 3rd attempt...']
     status=False 
     git_repo = __agso_properties['GIT_REPO']
     git_root = __agso_properties['GIT_ROOT']
-    # max attempts =3 : 
-    for i in range(3):
-        if i ==0 :
-            print("---> Please wait while fetching"
-                  f" {repo_file!r} from {git_repo!r}...")
-        else:print(fmsg [i-1])
-        try : 
+    
+    IMP_TQDM =False 
+    try : 
+        from tqdm.notebook  import trange 
+    except:# Install bar progression
+        IMP_TQDM= subprocess_module_intallation('tqdm')
+        if IMP_TQDM: 
+            from tqdm.notebook  import trange 
+    # max attempts =3 :  
+    print("---> Please wait while fetching"
+          f" {repo_file!r} from {git_repo!r}...")
+    for k in trange(3, ascii=True, desc ='WEgeophysics', ncols =107):
+    #for i in tqdm(range(3), ascii=True, desc ='WEgeophysics', ncols =107):
+        for _ in trange(1, ascii=True ,desc =fmsg [k],ncols =107):
             try :
                 urllib.request.urlretrieve(git_root,  repo_file )
             except: 
-                with urllib.request.urlopen(git_root) as response:
-                    with open( repo_file,'wb') as out_file:
-                        data = response.read() # a `bytes` object
-                        out_file.write(data)
-        except TimeoutError: 
-            if i ==2: print("---> Established connection failed "
-                      " because connected host has failed to respond.")
-        except:pass 
-        else : 
-            print(f"---> Downloading {repo_file!r} from "
-                  f"{git_repo!r} was successfully done!")
-            status=True
-            break 
+                try :
+                    with urllib.request.urlopen(git_root) as response:
+                        with open( repo_file,'wb') as out_file:
+                            data = response.read() # a `bytes` object
+                            out_file.write(data)
+        
+                except TimeoutError: 
+                    if k ==2: 
+                        print("---> Established connection failed "
+                           " because connected host has failed to respond.")
+                except:pass 
+            else : status=True
+
+        if status: break
+
     if status: print(f"---> Downloading {repo_file!r} from {git_repo!r} "
                  "was successfully done!")
     else: print(f"---> Failed to download {repo_file!r} from {git_repo!r}!")
@@ -1265,7 +1301,7 @@ def frame_top_to_bottom (top, bottom, data ):
     """
     if top > bottom :
         warnings.warn( f"Top value ={top} should be less than"
-                      " the bottom ={bottom} ")
+                      f" the bottom ={bottom} ")
         top=0.
     if top ==bottom :top , bottom = 0.,  sum(data) 
     if top <0 : top =0.
@@ -1279,7 +1315,7 @@ def frame_top_to_bottom (top, bottom, data ):
     data_ = copy.deepcopy(data)
     # get the value from the to to the bottom 
     tm,*_ = map_top (top, data = data )
-    ixt, _, tm = tm # [49.0, 150.0, 590.0, 200.0]
+    ixt, _, tm = tm # [149.0, 150.0, 590.0, 200.0]
     bm, *_= map_bottom(bottom, data = data_ )
     ixb, _, bm = bm  # [59.0, 150.0, 391.0])
     #remove the startpoint and the endpoint from top and bottom 
@@ -1365,7 +1401,7 @@ def zoom_processing(zoom, data, layers =None,
     try : 
         iter(zoom)
     except :
-        if zoom ==1.:# straightforwardly return the raw values (zoom =1)
+        if zoom ==1.:# straightforwardly return the raw values (zoom =100%)
             return [y_low, y_up], data, layers,  hatches, colors
  
     if isinstance(zoom, (int, float)): #ratio value ex:zoom= 0.25
@@ -1394,7 +1430,26 @@ def zoom_processing(zoom, data, layers =None,
         
     return y, maptopbottom, layers, hatches , colors 
 
-
+def _assert_model_type(kind):
+    """ Assert stratigraphic model argument parameter.
+    :param param: str, can be : 
+        -'nm', 'strata', 'geomodel', 'logS', '2' for 
+            the stratigraphic model
+        - 'crm', 'resmodel', 'occam', 'rawmodel', '1'
+    """
+    kind =str(kind)
+    for v in [ 'nm', 'strata', 'geomodel', 'logS', 'rr','2']: 
+        if kind.lower().find(v)>=0: 
+            kind = 'nm'
+    if kind  in ['crm', 'resmodel', 'occam', 'rawmodel', '1']: 
+        kind= 'crm'
+    if kind not in ('nm', 'crm'): 
+        raise CSex.pyCSAMTError_strata(
+            f"Argument kind={kind!r} is wrong! Should be `nm`"
+            "for stratigraphyic model and `crm` for occam2d model. ")
+    return kind 
+            
+        
 ##############connection git error ##########################
 connect_reason ="""<ConnectionRefusedError><No connection could  '
             be made because the target machine actively refused it>.

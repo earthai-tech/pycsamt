@@ -33,3 +33,8 @@ plot_1d_obj.plotRMS(fn =logPath,
                     target=RMS_target, 
                     show_grid =showGrid ,
                     show_target_line = showTargetLine , savefig = savefigure )
+
+# display figure in non-interactive mode
+# see  http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.show
+import matplotlib as mpl
+mpl.pyplot.show() 

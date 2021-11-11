@@ -751,7 +751,6 @@ class geoplot2d(object):
         self.savefig =kws.pop('savefig', None)
         self.change_station_id =kws.pop('new_station_names', None)
 
-   
         self.model_rms =kws.pop('model_rms', None)
         self.model_roughness =kws.pop('model_roughness', None)
         self.plot_style =kws.pop( 'plot_style', 'pcolormesh') 
@@ -775,7 +774,6 @@ class geoplot2d(object):
         customize plots.
         
         """
-        
          #---> get delineate rho curve  : value of resistivities must be on
          #MUST be on OHM- M not log10 resistivity . 
          # check the resistivity value and  round to decimal 1
@@ -792,14 +790,17 @@ class geoplot2d(object):
         
         return self.delineate_resistivity_curve 
  
+    
     def __call__(self, func):  
         """
         Model decorator to hold the input function with arguments 
         :param func: function to be decorated 
         :type func: object 
-            
         """
+
+        return self.plot2DModel(func)
         
+    def plot2DModel(self, func):
         @functools.wraps(func)
         def new_func (*args, **kwargs): 
             """
@@ -811,21 +812,22 @@ class geoplot2d(object):
             :param kwargs: positional arguments of decorated function
             :type kwargs: dict 
             :return: function decorated after visualisation
-  
+      
             """
             self._logging.info(
-                ' Plot decorated {0} chain'.format(func.__name__))
+                ' Plot decorated {0}.'.format(func.__name__))
     
             _f=0 # flag to separated strata model misfit and occam model misfit
                 #   from occamResponse file 
                 
             if self.depth_scale is not None :
                 self.depth_scale= str(self.depth_scale).lower() 
+
             if self.depth_scale not in ["km", "m"]: 
-                self.depth_scale= "m"
-                mess ="--> ! Depth scale provided ={} is unrecognized."\
-                    " We reset to 'm'.".format(self.depth_scale)
+                mess ="Depth scale =`{}` is unacceptable value."\
+                    " Should be convert to 'm'.".format(self.depth_scale)
                 warnings.warn(mess)
+                self.depth_scale= "m"
                 self._logging.debug (mess)
             
             if self.depth_scale == 'km':
@@ -833,7 +835,6 @@ class geoplot2d(object):
             elif self.depth_scale == 'm': # for CSAMT , we use default as meter"m".
                 dz = 1.
     
-            
             if self.delineate_resistivity_curve is not None : 
                 self.delineate_resistivity_curve= self.additional_tools()
                 
@@ -843,23 +844,19 @@ class geoplot2d(object):
             plt.clf()
             self.fig_aspect ='auto'
             axm = self.fig.add_subplot(1, 1, 1, aspect=self.fig_aspect)
-
+    
             # get geomodel data 
-            if self.reason is None or self.reason =='model': 
-                occam_model_resistiviy_obj, occam_data_station_names,\
-                    occam_data_station_offsets, occam_model_depth_offsets,\
-                    self.doi, self.depth_scale, self.model_rms, \
-                        self.model_roughness, plot_misfit  =\
-                        func(*args, **kwargs)
-                        
-                #      # check_dimensionality 
-                # if occam_model_resistiviy_obj.shape !=(len(occam_model_depth_offsets), 
-                #                                         len(occam_data_station_offsets)): 
-                #     occam_model_resistiviy_obj,occam_model_depth_offsets,\
-                #         occam_data_station_offsets =  self._check_dimensionality (
-                #             occam_model_resistiviy_obj,occam_model_depth_offsets,
-                #                                 occam_data_station_offsets)
-                    
+            if self.reason is None: 
+                self.reason = 'model'# by default
+                
+            # ----populate special attributes from model or misfit ------------
+            if self.reason =='model': 
+                occam_model_resistiviy_obj, occam_data_station_names, *m = func(
+                    *args, **kwargs)
+                occam_data_station_offsets, occam_model_depth_offsets, *ddrms= m
+                self.doi, self.depth_scale, self.model_rms, *rmisf = ddrms 
+                self.model_roughness, plot_misfit = rmisf
+                
                 self.doi = occam_model_depth_offsets.max()
                 #     self.doi = occam_model_depth_offsets.max()
                 # --> check doi value provided, and convert to default unit {meters}  
@@ -870,15 +867,16 @@ class geoplot2d(object):
                 #0 then substract add value so 
                 # to get space for station names text
                 if self.climits is None :
-                    self.climits =(0,4)
+                    self.climits =(0,4)  
                 if plot_misfit is True : 
                     _f=2
-                self.ylimits =(spec_f, self.doi/dz)    
+                self.ylimits =(spec_f, self.doi/dz)  
                 
-            elif self.reason =='misfit': 
-                occam_model_resistiviy_obj, occam_data_station_names,\
-                    occam_data_station_offsets, occam_model_depth_offsets,\
-                    self.model_rms, self.model_roughness = func(*args, **kwargs)
+            if self.reason =='misfit': 
+                occam_model_resistiviy_obj, occam_data_station_names, *m = func(
+                    *args, **kwargs)     
+                occam_data_station_offsets, occam_model_depth_offsets, *rg=m
+                self.model_rms, self.model_roughness= rg
                 
                 # check if "plotmisfit refers to 'geoStrata model 'geodrill
                 # module then keep the doi and set `spec_f
@@ -901,23 +899,20 @@ class geoplot2d(object):
                     _f=1 
        
                     self.ylimits = (self.doi, occam_model_depth_offsets.min())
-                    
-           
+            
+            #------------- manage stations and climits ------------------------  
             occam_data_station_offsets =np.array(occam_data_station_offsets)
             # station separation and get xpad . ex dl=50 then xpad =25 
             dl = occam_data_station_offsets.max()/ (len(
                 occam_data_station_offsets)-1)
             self.xpad = (dl/2)/dz 
     
-        
             if self.change_station_id is not None :  # call fonction to build a nu
                 occam_data_station_names , mess= mplotus.build_new_station_id(
                     station_id =occam_data_station_names ,
                     new_station_name =self.change_station_id )
                 self._logging.debug(mess)
-
-            # plot ---------------figure and properties  ---------------------                           
-
+                                   
             self.xlimits=(occam_data_station_offsets.min()/dz -self.xpad  , 
                       occam_data_station_offsets.max()/dz + self.xpad )
             
@@ -929,21 +924,22 @@ class geoplot2d(object):
                 elif 'min' in self.climits or 'max' in self.climits : 
                             self.climits = (occam_model_resistiviy_obj.min(), 
                                             occam_model_resistiviy_obj.max())
-
+    
              
             if _f==2 : 
                 self.reason = 'misfit' 
             self._logging.info ('Ready to plot {0}'
                                 ' with matplotlib "{1}" style.'.
-                                format(self.reason, self.plot_style))   
-
+                                format(self.reason, self.plot_style))  
+            
+            # -------------- blocks properties -------------------------------
             if self.plot_style.lower() =='pcolormesh':
                 mesh_x  , mesh_z= np.meshgrid(occam_data_station_offsets,
                                               occam_model_depth_offsets )
      
                 vmin = self.climits[0]
                 vmax = self.climits[1] 
-
+    
                 axm.pcolormesh (mesh_x/dz  , 
                                 mesh_z/dz ,
                                   occam_model_resistiviy_obj,
@@ -965,7 +961,7 @@ class geoplot2d(object):
                                         inline=True, fmt='%1.1f',
                                         fontsize =self.font_size,
                                           )
-   
+       
             if self.plot_style.lower() =='imshow': 
     
                 mesh_x  , mesh_z= np.meshgrid(occam_data_station_offsets,
@@ -982,9 +978,8 @@ class geoplot2d(object):
                                             self.xlimits[1],
                                             self.ylimits[1], 
                                             self.ylimits[0] - spec_f),
-    
                                         )
-
+    
                 if self.delineate_resistivity_curve is not None :
                     origin ='upper'
                     contps = axm.contour(occam_model_resistiviy_obj,
@@ -1004,35 +999,29 @@ class geoplot2d(object):
                                     fmt='%1.1f',
                                     fontsize =self.font_size,
                                               )
- 
-            # for making a color bar 
+            # get colormap for making a colorbar 
             if type(self.cmap) == str:
                 self.cmap = cm.get_cmap(self.cmap)
             
             axm.set_xlim( [self.xlimits[0],  self.xlimits[1]])
             axm.set_ylim ([self.ylimits[1], self.ylimits[0]]) 
     
-    
             # create twin axis to set ticks to the top station
             axe2=axm.twiny()
             axe2.xaxis.set_visible(False) # let keep only the axe lines 
-  
             #set axis and set boundaries 
             if self.reason =='model' or _f==2 : 
                 ydown_stiteslbls = self.ylimits[0]/5 
                 ydown_stationlbls = self.ylimits[0] -(self.ylimits[0]/3)
                 xhorizontal_lbs = (occam_data_station_offsets.max()/dz)/2
-                yb = 0.95
-
+    
             elif self.reason =='misfit': 
                 ydown_stiteslbls = self.ylimits[0] + 0.1 * self.ylimits[1]
                 ydown_stationlbls= self.ylimits[0] +\
                     self.ylimits[1]/self.ylimits[0]
                 xhorizontal_lbs = (occam_data_station_offsets.max()- 
                                    occam_data_station_offsets.min())/2
-                yb=0.98
-                                                                                
-            
+               
             for offset , names in zip (occam_data_station_offsets,
                                        occam_data_station_names):
                 # plot the station marker ' black triangle down ' 
@@ -1069,70 +1058,12 @@ class geoplot2d(object):
                                       'style': self.font_style,
                                       'weight': self.fw},
                             )
-
-            # put a grid on if set to True 
-            if self.show_grid is True:
-                axm.minorticks_on()
-                axm.grid(color='k', ls=':', lw =0.5, 
-                          alpha=self.grid_alpha, which ='major')
-            
     
-              #set color bar properties 
-            cbx = mplcb.make_axes(axm,  shrink=self.cb_shrink,
-                                  pad=self.cb_pad , location ='right' )
-            cb = mplcb.ColorbarBase(cbx[0],
-                            cmap=self.cmap,
-                            norm=mpl.colors.Normalize(vmin=self.climits[0],
-                                            vmax=self.climits[1]))
-            
-            cb.set_label('Resistivity ($\Omega \cdot$m)',
-                      fontdict={'size': self.font_size + 1, 
-                                'weight': 'bold'})
-            
-            if self.reason == 'model' : 
-                cb.set_ticks(np.arange(int(self.climits[0]), 
-                                       int(self.climits[1]) + 1))
-                cb.set_ticklabels(['10$^{0}$'.format('{' + str(nn) + '}') 
-                                   for nn in np.arange(int(self.climits[0]),
-                                              int(self.climits[1]) + 1)])
-                
-                                    
-            else : 
-                cb.set_ticks(np.linspace(self.climits[0], self.climits[1],5))
-                cb.set_ticklabels(['{0}'.format(str(round(nn,2))) for nn in
-                                    np.linspace(self.climits[0],
-                                              self.climits[1],5)])
-                cb.set_label('misfitvalue(%)',
-                      fontdict={'size': self.font_size + 1, 
-                                'weight': 'bold'})
-           
-            # set axes labels
-            axm.set_xlabel('Distance ({0})'.format(self.depth_scale),
-                          fontdict={'size': self.font_size + 2,
-                                    'weight': 'bold'})
-            
-            if self.reason =='misfit':
-                if _f ==2: ylabel = 'Depth ({0})'.format(self.depth_scale)
-                else : ylabel= 'Log10Frequency(Hz)'
-                mesT ='Plot Misfit'
-                
-            elif self.reason =='model':
-                ylabel = 'Depth ({0})'.format(self.depth_scale)
-                mesT = 'Plot strata model' 
-            
-            axm.set_ylabel(ylabel,fontdict={
-                'size': self.font_size + 2, 'weight': 'bold'})
-           
-           
-            self.fig.suptitle('{0}- DataType = {1} :RMS={2}, Roughness={3}'.\
-                              format(mesT, self.reason, self.model_rms, 
-                                    self.model_roughness),
-                      ha='center',
-              fontsize= 7* self.fs, 
-              verticalalignment='center', 
-              style =self.font_style,
-              bbox =dict(boxstyle='round',facecolor ='moccasin'), 
-              y=yb)
+            #-------------------- manage grid and colorbar -------------------- 
+            self.g2dgridandcbManager(axm, _f)
+            #------------------------------------------------------------------
+            # initialize the reason to keep the default reason  
+            self.reason = None
             
             if self.savefig is not None : 
                 plt.savefig(self.savefig, dpi = self.fig_dpi)
@@ -1176,9 +1107,76 @@ class geoplot2d(object):
         return data , z, x 
                 
                 
-              
-                
-              
+    def g2dgridandcbManager(self, axm, _f=None) :
+        """ Plot2d model by configure grid and colorbar. 
+        :param axm: 2d axis plot 
+        :param _f: resize flag; misfit =2 and model =1 """
+        # put a grid on if set to True 
+        if self.show_grid is True:
+            axm.minorticks_on()
+            axm.grid(color='k', ls=':', lw =0.5, 
+                      alpha=self.grid_alpha, which ='major')
+        
+
+          #set color bar properties 
+        cbx = mplcb.make_axes(axm,  shrink=self.cb_shrink,
+                              pad=self.cb_pad , location ='right' )
+        cb = mplcb.ColorbarBase(cbx[0],
+                        cmap=self.cmap,
+                        norm=mpl.colors.Normalize(vmin=self.climits[0],
+                                        vmax=self.climits[1]))
+        
+        cb.set_label('Resistivity ($\Omega \cdot$m)',
+                  fontdict={'size': self.font_size + 1, 
+                            'weight': 'bold'})
+        
+        if self.reason == 'model' : 
+            cb.set_ticks(np.arange(int(self.climits[0]), 
+                                   int(self.climits[1]) + 1))
+            cb.set_ticklabels(['10$^{0}$'.format('{' + str(nn) + '}') 
+                               for nn in np.arange(int(self.climits[0]),
+                                          int(self.climits[1]) + 1)])
+            
+                                
+        else : 
+            cb.set_ticks(np.linspace(self.climits[0], self.climits[1],5))
+            cb.set_ticklabels(['{0}'.format(str(round(nn,2))) for nn in
+                                np.linspace(self.climits[0],
+                                          self.climits[1],5)])
+            cb.set_label('misfitvalue(%)',
+                  fontdict={'size': self.font_size + 1, 
+                            'weight': 'bold'})
+       
+        # set axes labels
+        axm.set_xlabel('Distance ({0})'.format(self.depth_scale),
+                      fontdict={'size': self.font_size + 2,
+                                'weight': 'bold'})
+        
+        if self.reason =='misfit':
+            if _f ==2: ylabel = 'Depth ({0})'.format(self.depth_scale)
+            else : ylabel= 'Log10Frequency(Hz)'
+            mesT ='Plot Misfit'
+            
+        elif self.reason =='model':
+            ylabel = 'Depth ({0})'.format(self.depth_scale)
+            mesT = 'Plot strata model' 
+        
+        axm.set_ylabel(ylabel,fontdict={
+            'size': self.font_size + 2, 'weight': 'bold'})
+       
+       
+        self.fig.suptitle('{0}- DataType = {1} :RMS={2}, Roughness={3}'.\
+                          format(mesT, self.reason, self.model_rms, 
+                                self.model_roughness),
+                  ha='center',
+          fontsize= 7* self.fs, 
+          verticalalignment='center', 
+          style =self.font_style,
+          bbox =dict(boxstyle='round',facecolor ='moccasin'), 
+          y=0.95 if self.reason =='model' else 0.98)
+      
+        return self 
+    
                 
               
                 

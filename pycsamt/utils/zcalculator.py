@@ -15,7 +15,7 @@ import numpy as np
 import pycsamt.utils._p as infos
 from pycsamt.utils import exceptions as CSex
 from pycsamt.utils import func_utils as func
-from pycsamt.utils.decorator import (deprecated, redirect_cls_or_func)
+from pycsamt.utils.decorator import (deprecated, deprecated_to)
 from pycsamt.utils._csamtpylog import csamtpylog 
 
 _logger =csamtpylog.get_csamtpy_logger(__name__)
@@ -1402,7 +1402,7 @@ def compute_TMA (data_array=None, number_of_TMApoints=5. ):
     return np.array(roll_TMA)   
 
 @deprecated('Function too  expensive, redirected to `compute_TMA` more faster.')    
-@redirect_cls_or_func(compute_TMA, "short and faster than the func below")    
+@deprecated_to(compute_TMA, "short and faster than the func below")    
 def compute_trimming_moving_average (data_array=None, number_of_TMApoints=None ):
     """
     function to compute a trimmed-moving-average filter

@@ -147,6 +147,9 @@ target/
 # pyenv python configuration file
 .python-version
 
+# virtual-environ 
+venv/
+
 # jupyther notebooks tests 
 .ipynb_checkpoints
 #*.png

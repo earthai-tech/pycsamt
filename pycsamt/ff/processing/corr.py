@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #        Copyright © 2021  Kouadio K.Laurent
-#       Author:  @Daniel03 <etanoyau@gmail.con>
+#       Author:  @Daniel03 <etanoyau@gmail.com>
 #       Licence: LGPL
 #       Created on Sat Dec 12 13:55:47 2020
 """ 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
-#       @author: KouaoLaurent alias @Daniel03 <etanoyau@gmail.con>
+#       @author: KouaoLaurent alias @Daniel03 <etanoyau@gmail.com>
 #       Created on Fri Jan 22 20:31:14 2021
 """
 .. _module-Occam2D :: `pycsamt.modeling.occam2d`
@@ -33,7 +33,7 @@ import pycsamt.utils.exceptions as CSex
 from pycsamt.modeling.__init__ import  SUCCESS_IMPORT_MTPY
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
-from pycsamt.viewer import  mpldecorator  as mdeco
+from pycsamt.utils import  plotdecorator  as mdeco
 from pycsamt.utils._p import _sensitive as SB 
 from pycsamt.utils._csamtpylog import csamtpylog 
 
@@ -41,28 +41,24 @@ _logger =csamtpylog.get_csamtpy_logger(__name__)
 
 if  SUCCESS_IMPORT_MTPY :
 
-    _logger.info('successfull imported :ref:`MTpy`')
+    _logger.info('`MTpy` successfull loaded!')
     try : 
         from mtpy.modeling import occam2d as MToccam2d
         _logger.info('`occam2d` module sucessfully imported  from `MTpy`.')
         
-        SUCCESS_IMPORT_MTPY =True 
     except :
         _logger.info('loading  `occam2d` module from '
                      '`MTpy`packages  failed')
         warnings.warn('Loading occam2d module from "MTpy" '
-                      'package failed ! Please try again')
+                      'package failed! Please try again')
         
         SUCCESS_IMPORT_MTPY  =False 
     
-else: 
-    _logger.info('Unable to import `MTpy`packages. Loading failed !')
-    warnings.warn('Tries to import :ref:`MTpy` failed !'
-                  ' you can get "MTPY" from :ref:`MTpy`.')
+if not SUCCESS_IMPORT_MTPY:
+    _logger.info('Unable to import `MTpy`packages. Loading failed!')
+    warnings.warn('Try to import `MTpy` module failed! You can get "MTPY"'
+                  ' from <https://github.com/MTgeophysics/mtpy.git>`.')
      
-    SUCCESS_IMPORT_MTPY =False 
-    
-
 
 class occamLog (object) : 
     """

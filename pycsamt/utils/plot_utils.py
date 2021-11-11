@@ -17,7 +17,7 @@ import numpy as np
 # import matplotlib.pyplot as plt
 from pycsamt.utils._p import _sensitive as SB
 from pycsamt.utils import exceptions as CSex 
-from pycsamt.utils.decorator import (deprecated, redirect_cls_or_func)
+from pycsamt.utils.decorator import (deprecated, deprecated_to)
 
 
 def share_props_for_each_plot(number_of_plot = 3 ,  **kwargs):
@@ -1372,7 +1372,7 @@ def average_rho_in_deeper (dep_array, rho_array, step_descent ) :
 
 @deprecated("function deprecated , it's does not cover the total depth when "
             "last value is outside the model depth range. ")
-@redirect_cls_or_func(average_rho_in_deeper,"Function replaced ,"
+@deprecated_to(average_rho_in_deeper,"Function replaced ,"
                       " it redirects to {average_rho_in_deeper}.")
 def average_rho_in_deep (dep_array, rho_array, step_descent)   :
     """

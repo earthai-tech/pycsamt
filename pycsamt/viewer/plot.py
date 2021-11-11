@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#       Author: Kouadio K.Laurent<etanoyau@gmail.con>
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
 #       Created on Mon Dec 28 14:28:06 2020
 """
@@ -36,7 +36,7 @@ from pycsamt.ff.core.cs import CSAMT
 from pycsamt.ff.site import Profile
 from pycsamt.modeling import occam2d
 from pycsamt.geodrill import geocore  as geoD
-import pycsamt.viewer.mpldecorator  as mdeco
+import pycsamt.utils.plotdecorator  as mdeco
 from pycsamt.utils._p import suit 
 from pycsamt.utils._csamtpylog import csamtpylog 
 from pycsamt.ff.processing.corr import shifting as Scor

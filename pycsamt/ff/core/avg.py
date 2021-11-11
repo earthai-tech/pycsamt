@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
-#       @author: KouaoLaurent alias @Daniel03 <etanoyau@gmail.con>
+#       @author: KouaoLaurent alias @Daniel03 <etanoyau@gmail.com>
 #       Created on Wed Nov 18 16:45:35 2020
 """
 .. _module-avg:: `pycsamt.ff.core.avg`  

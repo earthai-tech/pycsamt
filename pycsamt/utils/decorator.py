@@ -164,7 +164,8 @@ class deprecated_to(object) :
                       func_or_reason in args if type(func_or_reason)==str][0]
         if self._reason is None :
             
-            raise TypeError(" Redirected reason must be supplied")
+            raise TypeError(" Function/method/class transfert"
+                            " reason must be supplied")
         
 
         self._new_func_or_cls = [func_or_reason for func_or_reason in \
@@ -205,7 +206,7 @@ class deprecated_to(object) :
         else :
             # lineno=cls_or_func.__code__.co_firstlineno
             lineno= inspect.getframeinfo(inspect.currentframe())[1]
-            fmt="Depreacted decorated method :<{reason}> "\
+            fmt="Deprecated decorated method :<{reason}> "\
                 "see line {lineno}."
         
         msg=fmt.format(reason = self._reason, lineno=lineno)

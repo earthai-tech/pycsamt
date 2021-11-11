@@ -960,7 +960,7 @@ def fetching_data_from_repo(repo_file, savepath =None ):
           f" {repo_file!r} from {git_repo!r}...")
     for k in trange(3, ascii=True, desc ='WEgeophysics', ncols =107):
     #for i in tqdm(range(3), ascii=True, desc ='WEgeophysics', ncols =107):
-        for i in trange(1, ascii=True ,desc =fmsg [k],ncols =107):
+        for _ in trange(1, ascii=True ,desc =fmsg [k],ncols =107):
             try :
                 urllib.request.urlretrieve(git_root,  repo_file )
             except: 

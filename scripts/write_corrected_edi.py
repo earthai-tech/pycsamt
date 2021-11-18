@@ -13,14 +13,12 @@ Created on Fri Mar 19 19:15:46 2021
 @author: @Daniel03
 """
 import os 
-from pycsamt.ff.processing.corr import shifting
-
-
-# from pycsamt.ff.processing.corr import shifting 
+# from pycsamt.ff.processing.corr import shifting
+from pycsamt.ff.processing import Processing
 
 # profile edipath : full path to edifiles or single edifile 
 # edipath =os.path.join(os.environ['pyCSAMT'], 'data','_outputEDIFiltered_AMA') #'edi')#, 'new_csa000.edi' )
-edipath = 'data/K1_edi'
+edipath = 'data/edi'
 
 # path to hold edi outputs files 
 savepath =None  # r'C:\Users\Administrator\Desktop\ThesisImp\edis\_special_K6_edi\k6_TMA'
@@ -64,7 +62,7 @@ distortion_err_tensor = None
 #------------------------------------------------------------------------------
 # call correction object 
 
-corr_obj= shifting().write_corrected_edi(data_fn = edipath, 
+corr_obj= Processing().write_corrected_edi(data_fn = edipath, 
                              number_of_points =number_of_filter_points,
                              reference_frequency=reference_frequency,
                              number_of_skin_depth=number_of_skin_depth, 

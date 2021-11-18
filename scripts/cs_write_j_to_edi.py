@@ -7,9 +7,10 @@ Created on Mon Oct 25 13:43:02 2021
 """
 
 
-from pycsamt.ff.core.j import J_collection as JObjs
+from pycsamt.ff.core  import CSAMT
 path2j = 'data/j' 
 savepath =None 
 
-JObjs().j2edi(jfn=path2j, 
-            savepath =savepath )
+CSAMT().j2edi(jfn= path2j , savepath = savepath)
+# JObjs().j2edi(jfn=path2j, 
+#             savepath =savepath )

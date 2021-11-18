@@ -91,7 +91,21 @@ def smart_format(iter_obj):
         str_litteral += f" and {iter_obj[-1]!r}"
     return str_litteral
 
-
+def make_introspection(Obj , subObj): 
+    """ Make introspection by using the attributes of instance created to 
+    populate the new classes created.
+    :param Obj: callable 
+        New object to fully inherits of `subObject` attributes 
+    :param subObj: Callable 
+        Instance created.
+    """
+    # make introspection and set the all  attributes to self object.
+    # if Obj attribute has the same name with subObj attribute, then 
+    # Obj attributes get the priority.
+    for key, value in  subObj.__dict__.items(): 
+        if not hasattr(Obj, key) and key  != ''.join(['__', str(key), '__']):
+            setattr(Obj, key, value)
+            
 def averageData(np_array, filter_order=0, 
                 axis_average=0, astype="float32"): #array_of_average_array=0
     """

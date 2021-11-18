@@ -22,8 +22,6 @@ import matplotlib.pyplot as plt
 import scipy.interpolate  as spi 
 
 from pycsamt.ff.core.cs import CSAMT
-from pycsamt.ff.core  import avg as CSAMTavg
-from pycsamt.ff.core  import edi as CSAMTedi
 from pycsamt.ff.core  import z as CSAMTz
 from pycsamt.utils import zcalculator as Zcc
 from pycsamt.utils._csamtpylog import csamtpylog
@@ -188,8 +186,10 @@ class shifting(object):
         self._phase_array=phz
         
 
-    def read_processing_file(self, data_fn=None , profile_fn=None,
-                              reference_freq=None,  **kwargs ):
+    def read_processing_file(self, data_fn=None , 
+                             profile_fn=None,
+                              reference_freq=None,
+                              **kwargs ):
         """
         Mehod read processing files and load attributes for use.
         
@@ -227,10 +227,11 @@ class shifting(object):
         if self.data_fn is None :
             if self.frequency is None or self.res_app_obj is None or \
                 self.phase_obj is None :
-                mess= 'NoneType data can not be computed. Please provide your'+\
-                    ' data path or station dictionnaries of resistivities'+\
-                    ' and phases values or ndarray(len(frequency),len(sites))'+\
-                    ' of resistivities and phases values in degree.'
+                mess= ''.join([
+                    'NoneType data can not be computed. Please provide your',
+                    ' data path or station dictionnaries of resistivities',
+                    ' and phases values or ndarray(len(frequency),len(sites))',
+                    ' of resistivities and phases values in degree.'])
                     
                 self._logging.info(mess)
                 warnings.warn(mess)
@@ -284,11 +285,12 @@ class shifting(object):
                 self.frequency = csamt_obj.freq 
                 self.res_app_obj = csamt_obj.resistivity
                 self.phase_obj ={ key:np.deg2rad(values) 
-                            for key, values in csamt_obj.phase.items()}
+                            for key, values in csamt_obj.phase.items()
+                            }
                 self.site_id= sorted(self.res_app_obj.keys())
                 self.station_distance = csamt_obj.station_distance 
                 
-                # try to get dipole length attribute 
+            # try to get dipole length attribute 
                 try :
                     self.dipolelength =csamt_obj.dipolelength 
                 except:
@@ -304,11 +306,27 @@ class shifting(object):
                         print('---> ! No station profile file is given.'
                               ' Value of dipole length is set to 50.m')
                         self.dipolelength = 50.
-            except : 
+            except PermissionError: 
+                l1=''.join([' https://stackoverflow.com/questions/13215716/', 
+                              'ioerror-errno-13-permission-denied-when-trying-to', 
+                              '-open-hidden-file-in-w-mod'])
+                l2 = ''.join([
+                    'https://docs.microsoft.com/en-us/windows/win32/api/',
+                    'fileapi/nf-fileapi-createfilea?redirectedfrom=MSDN'])
+                
+                raise (f"[Errno 13] Permission denied: {self.data_fn!r}. "
+                      f"Please consult the following links: {l1!r} and {l2!r} .")
+            except: 
                 if self.profile_fn is None and  flag==1: 
                     # force to read only avg data from avg object
                     # without station profile file
+                    ######################################################
+                    from pycsamt.ff.core  import avg as CSAMTavg
+                    ######################################################
+                    
                     csamt_obj =CSAMTavg.Avg(data_fn =self.data_fn)
+                    
+                    
                     self.res_app_obj= csamt_obj.Data_section.Resistivity.loc
                     
                     # Zonge phase are in mrad then converted to rad 
@@ -321,8 +339,8 @@ class shifting(object):
                     #self.site_id=sorted(avg_obj.Data_section.Station.names)
                     self.site_id=sorted(self.res_app_obj.keys()) 
                     # get avg data and seek the reference frequency at safety data 
-                    avg_data_section = csamt_obj.Data_section._data_array
-                    
+                    # avg_data_section = csamt_obj.Data_section._data_array
+
                     self.frequency= csamt_obj.Data_section.Frequency.value 
                     self.station_distance = csamt_obj.Data_section.Station.value
                     
@@ -341,7 +359,7 @@ class shifting(object):
             if flag ==1 :
                 try : 
                     self.referencefreq, *_= Zcc.perforce_reference_freq(
-                        dataset=avg_data_section,
+                        dataset=csamt_obj._data_section,
                         frequency_array=self.frequency)
     
                 except : 
@@ -1074,6 +1092,8 @@ class shifting(object):
             
         """
        
+        from pycsamt.ff.core  import edi as CSAMTedi
+        
         new_edifilename =kwargs.pop('filename', None)
         number_of_points= kwargs.pop('number_of_points', 1)
         dipole_length = kwargs.pop('dipole_length', 50.)
@@ -1115,7 +1135,8 @@ class shifting(object):
             # Default range is Highest frequency to lowest 
         flip_freq =False 
         
-        if data_fn is not None : self.data_fn = data_fn # call data path  
+        if data_fn is not None : 
+            self.data_fn = data_fn # call data path  
         
         #--> call multi edi # create multi ediobj
         edi_objs = CSAMTedi.Edi_collection(edipath =self.data_fn ) 
@@ -1140,10 +1161,10 @@ class shifting(object):
 
         if _filter in ['tma', 'ama', 'flma'] and datatype =='mt':
             
-            mess ='---> EDI file provided is MT data. Filter {0} '\
-                ' should be appliedand Impedance tensor should be '\
-                 'computed and corrected along the default  components'\
-                ' `xy` as EMAP data with unknown strike direction.'
+            mess = ''.join(['---> EDI file provided is MT data. Filter {0} ',
+                ' should be applied and Impedance tensor should be ',
+                 'computed and corrected along the default components',
+                ' `xy` as EMAP data with unknown strike direction.'])
         
             warnings.warn('!'+ mess.format(_filter, datatype) )
                         

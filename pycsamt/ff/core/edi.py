@@ -17,12 +17,12 @@ import warnings
 import datetime
 import shutil
 import time
-
 import numpy as np 
+
 import pycsamt.utils.func_utils as func
-import pycsamt.ff.core.cs  as CSobj
 import pycsamt.ff.core.z as MTz
 from pycsamt.utils. _p import suit 
+from pycsamt.ff.site import  Location
 from pycsamt.utils. _p import _sensitive as SB 
 from pycsamt.utils import gis_tools as gis 
 from pycsamt.utils import exceptions as CSex
@@ -102,7 +102,7 @@ class Edi_collection :
         self.edifiles =list_of_edifiles
         self.survey_name =survey_name
         self.Edi =Edi()
-        self.Location =CSobj.Location ()
+        self.Location =Location ()
         self.freq_array = None 
         
         if self.edifiles is None and edipath is not None : 
@@ -1306,7 +1306,7 @@ class Head (object):
     def __init__(self, edi_header_list=None , **kwargs):
         
         self.logging =csamtpylog.get_csamtpy_logger(self.__class__.__name__)
-        self.Location =CSobj.Location ()
+        self.Location =Location ()
         self.dataid =None 
         self.acqby =None 
         self.fileby =None 

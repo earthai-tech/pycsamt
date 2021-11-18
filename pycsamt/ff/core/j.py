@@ -19,10 +19,11 @@ import datetime
 import webbrowser
 import numpy as np 
 
-import pycsamt.ff.core.cs  as cs_obj
+from pycsamt.ff.site import Site, Location, Profile 
 from pycsamt.utils._p import notion
 from pycsamt.ff.core.edi import (Edi, Hmeasurement, Emeasurement) 
 from pycsamt.utils._p import _sensitive as SB 
+from pycsamt.utils.decorator import deprecated
 import pycsamt.utils.func_utils as func
 from pycsamt.utils import exceptions as CSex
 from pycsamt.utils._csamtpylog import csamtpylog
@@ -89,8 +90,8 @@ class J_collection :
         self.survey_name =survey_name
         
         self.J=J()
-        self.Location =cs_obj.Location ()
-        self.Site =cs_obj.Site()
+        self.Location =Location ()
+        self.Site =Site()
         
         self._latitude =None 
         self._longitude =None
@@ -170,8 +171,9 @@ class J_collection :
                 raise CSex.pyCSAMTError_J(
                     'Stations names must be on list or the number'
                     ' of stations not <{0}>.'.format(type(jstnames)))
+                
     
-
+    @deprecated("Use `pycsamt.ff.core.CSAMT.j2edi ` instead.")
     def j2edi(self, jfn=None, savepath =None, **kwargs): 
         """
         Method to convert j-files to edi files. Method calls CSAMT class object
@@ -191,6 +193,9 @@ class J_collection :
             
     
         """
+        #####################################################################
+        import pycsamt.ff.core.cs  as cs_obj
+        #####################################################################
         prospect =kwargs.pop('contractor_name', None)
         #hardwareInfos = kwargs.pop('hardware_name', None)
         fileby =kwargs.pop('fileby', 'jediSoftware')
@@ -528,7 +533,7 @@ class J_collection :
                                                                            
 
         # ----> compute station separation using Profile obj 
-        jstn_separation = cs_obj.Profile().stn_separation(
+        jstn_separation = Profile().stn_separation(
             easting =jeasting , northing =jnorthing)[0]
        
         #---- > interpolate Jstn_separation  so to get the same size as stations.

@@ -17,14 +17,13 @@ import os
 from pycsamt.ff.processing import Processing
 
 # profile edipath : full path to edifiles or single edifile 
-# edipath =os.path.join(os.environ['pyCSAMT'], 'data','_outputEDIFiltered_AMA') #'edi')#, 'new_csa000.edi' )
 edipath = 'data/edi'
 
 # path to hold edi outputs files 
-savepath =None  # r'C:\Users\Administrator\Desktop\ThesisImp\edis\_special_K6_edi\k6_TMA'
+savepath =None 
 
 # new edi output filenames 
-new_edifilename = 'K1_c'#None #'k6'                  #'ybro_survey' 
+new_edifilename = 'K1_c'#None #'k6'                 
  
 # Applied filter 
 FILTER = 'ama'                          # availables filters [`tma`, `flma`,`ama`, `ss`, `dist`]

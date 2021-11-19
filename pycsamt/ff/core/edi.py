@@ -1970,7 +1970,7 @@ class DefineMeasurement:
             >>> print(definemeas.meas_ex)
                 
         .. note:: to get measurement_hx or measurement_ex  
-                    for instance get attribute <id> of Emeasurement , do the 
+                    for instance get attribute <id> of Emeasurement, run the 
                     following script
                     
         :Example:
@@ -2116,9 +2116,9 @@ class DefineMeasurement:
             >>> ex =Emeasurement(**ex_dict)
             >>> ey =Emeasurement(**ey_dict)
             >>> hy=Hmeasurement(**hy_dict)
-            ... definemeas.__setattr__('meas_ex', ex)
-            ... definemeas.__setattr__('meas_ey', ey)
-            ... definemeas.__setattr__('meas_hy', hy)
+            >>> definemeas.__setattr__('meas_ex', ex)
+            >>> definemeas.__setattr__('meas_ey', ey)
+            >>> definemeas.__setattr__('meas_hy', hy)
             >>> print(definemeas.write_define_measurement())
             
         """
@@ -2571,8 +2571,8 @@ class MTEMAP (object):
             ...         'ex':'1005.4','hz':'1006.3', 'ey':1002.3 , 
             ...         'hy':'1000.2'}#'chksum':18, 'ndipole':47, 'type':'hann'
             >>> mtemapsection_obj = MTEMAP(**mtinfo)
-            ... writeinfomtemapsect = mtemapsection_obj.write_mtemap_section()
-            ... print(writeinfomtemapsect)
+            >>> writeinfomtemapsect = mtemapsection_obj.write_mtemap_section()
+            >>> print(writeinfomtemapsect)
         """ 
         self._logging.info ('Writing MT or EMAP section')
         fmt='{:>7}'
@@ -2702,14 +2702,14 @@ class Copyright(object):
     def __init__(self, **kwargs):
         self.References = References()
         self.conditions_of_use = ''.join([
-            'All data sets located in the "data" directory <csamtpy/data>',
-            ' may be usedto test the performance of the software "pyCSAMT"', 
+            'All data sets located in the "data" directory <data/> may be',
+            ' used to test the performance of the software "pyCSAMT"', 
             'but cannot be used for commercial and distributive purposes',
             '. They can only be used for understanding the program and cannot',
             ' be distributed to a third party. However, user can go to IRIS ',
             'website: http://ds.iris.edu/ds/tags/magnetotelluric-data/ to download ',
             'metadata from other useful tests. All data and metadata from  this ',
-            'site areavailable free of charge and may be copied freely, duplicated',
+            'site are available free of charge and may be copied freely, duplicated',
             ' and further distributed provided this data set is cited as the',
             ' reference.'])
                                           
@@ -2855,7 +2855,8 @@ class Software(object):
     """
 
     def __init__(self, **kwargs):
-        for key in ['name', 'version', 'realease'] :self.__setattr__(key, None)
+        for key in ['name', 'version', 'release'] :
+            self.__setattr__(key, None)
         self.Author = Person()
 
         for key in kwargs:
@@ -2863,8 +2864,8 @@ class Software(object):
             
 def minimum_parser_to_write_edi (edilines, parser =None ):
     """
-    This fonction validate edifile for writing , string with egal. We assume that 
-    dictionnary in list will be for definemeasurment E and H fieds. 
+    This function validates edifile for writing , string with egal. We assume 
+    that dictionnary in list will be for definemeasurment E and H fieds. 
 
     :param edilines: list of items to parse
     :type edilines: list 

@@ -43,10 +43,8 @@ except :
 
 #==============================================================================
 # LOCATION CLASS 
-#==============================================================================
-                
+#==============================================================================                
 class Location (object): 
-    
     """
     Details of sation location . Classe used to convert 
     cordinnates and check values for lat/lon , east/north 
@@ -73,11 +71,7 @@ class Location (object):
                                     to latitude/longitude 
     ============================  =============================================
     """
-
-
     def __init__(self, **kwargs) :
-        
-
         self.datum ='WGS84'
         self._latitude =None 
         self._longitude =None 
@@ -87,8 +81,7 @@ class Location (object):
         self._utm_zone =None
         self._stn_pos = None 
         self._azimuth = None 
-        
-    
+ 
         for key in list(kwargs.keys()): 
             self.__setattr__(key, kwargs[key])
     
@@ -310,10 +303,9 @@ class Site(object):
         **data_fn** :str 
                  path to site file , the same file as profile 
                  or X,Y coordinates values 
-
     :Example: 
         
-        >>>  from pycsamt.ff.core.cs import Site 
+        >>>  from pycsamt.ff.site import Site 
         >>>  site=Site(data_fn=path)
         >>>  print(site.east['S07'])
         >>>  print(site.north['S09'])
@@ -364,19 +356,15 @@ class Site(object):
         if self.stn_name is None : 
             self.stn_name = latitude.size
             warnings.warn(
-                'You are not provided stations_names : '
-                'We will defined stations names'
-                 ' automatically starting by S-XX [{0},..,{1}]so '
-                 'to zip data with latitude. If you dont want this'
-                 ' station nomenclatureplease provide station names.'.format(
-                             self.stn_name[0], self.stn_name[-1]))
+                "By default station names should be defined using the prefix -S"
+                " e.g. S{0} ---> {1}".format(
+                self.stn_name[0], self.stn_name[-1]))
             
         elif self.stn_name is not None : 
             assert len(self.stn_name)== latitude.size, \
                 CSex.pyCSAMTError_site(
-                'Stations_names provided '
-                 'must have the same size with latitude data.'
-                 ' latitude size is <{0}>'.format(latitude.size))
+                'Station names and latitude data must have the same size.'
+                 ' But the given latitude size is <{0}>'.format(latitude.size))
 
         self._lat ={stn:lat for stn, lat in zip (self.stn_name, latitude)}
     
@@ -572,7 +560,7 @@ class Profile (object):
     
     :Example: 
         
-        >>> from pycsamt.ff.core.cs import Profile 
+        >>> from pycsamt.ff.site import Profile 
         >>> file_stn = 'K1.stn'
         >>> path =  os.path.join(os.environ["pyCSAMT"], 
         ...                      'pycsamt','data', file_stn)
@@ -747,9 +735,9 @@ class Profile (object):
                         profile_lines= data_lines , spliting=split_type)
                     if decision <2:
                         raise CSex.pyCSAMTError_profile(
-                            'Please provide  at least the Easting'
-                             ' and northing coordinate values or '
-                             'lat/lon values for parsing. ')
+                            'Please provide at least the Easting'
+                             ' and northing coordinates or set the '
+                             'lat/lon values to parse the data. ')
             
                     else :
                         data_list_of_array= [np.array (
@@ -761,24 +749,21 @@ class Profile (object):
 
                 for lab, index in stn_headlines_id: 
                     if ref =='scalled': 
-                        warnings.warn("It seems the data <{0}> is already"
-                                "scaled. We don't need to rescale. "
-                                "To force scaling , please use "
-                                "func.{Profile.reajust_coordinates_value}.")
+                        warnings.warn(
+                            "It seems the profile data is already"
+                            "scaled. Please use  the method "
+                            "<pycsamt.site.Profile.reajust_coordinates_value>"
+                            " to force scaling.")
                         coords_array = data_array[1:, index]
                     else : 
                         self._logging.info(
                             'Rescaling station positions'
                         ' from file <%s>'% os.path.basename(self.profile_fn))
                         warnings.warn(
-                        'Scaling station positions : Usually Zonge'
-                        ' Hardware provides station locations at each'
-                        ' electrodes NOT in center of each dipoles. Station'
-                        ' locations and EM component orientations are taken'
-                        ' at each electrodes point.So, we will rescale stations '
-                        ' to dipolecenter position.Distance will stay the same'
-                        '  along with profile but the number of points'
-                        ' will be minus 1.')
+                        ' Zonge Hardware usually provides the station locations '
+                        ' at each electrode location rather than the center of '
+                        'dipoles. Locations should move to the dipole center.'
+                        )
                         # try :
                         coords_array =cfunc.dipole_center_position(
                             dipole_position = data_array[1:,index])
@@ -850,9 +835,7 @@ class Profile (object):
                 
                 self.dipole_length = cfunc.round_dipole_length(
                     self.stn_interval.mean())
-                
-    
-        
+   
         elif _pflag ==2 or _pflag ==3 : 
             if _pflag == 2 : 
                 assert easting.size == northing.size ,\
@@ -1029,7 +1012,7 @@ class Profile (object):
                     
         :Example :  
             
-            >>> from pycsamt.ff.core.cs import Profile 
+            >>> from pycsamt.ff.site import Profile 
             >>> stn_file =K1.stn
             >>> path =  os.path.join(os.environ["pyCSAMT"],
             ...                         'pycsamt','data',

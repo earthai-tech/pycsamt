@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['pycsamt\\utils\\decorator.py', 'pycsamt\\ff\\core\\cs.py', 'pycsamt\\ff\\core\\avg.py', 'pycsamt\\ff\\core\\edi.py', 'pycsamt\\ff\\site.py', 'scripts\\cs_write_j_to_edi.py', 'pycsamt\\ff\\processing\\corr.py', 'pycsamt\\ff\\core\\__init__.py']
+recent_files = ['C:\\Users\\Administrator\\.spyder-py3\\temp.py', 'pycsamt\\utils\\_p.py', 'pycsamt\\ff\\core\\edi.py', 'pycsamt\\ff\\core\\cs.py', 'pycsamt\\ff\\processing\\corr.py']
 
 [main]
 version = 0.2.0

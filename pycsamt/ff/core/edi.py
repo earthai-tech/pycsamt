@@ -97,12 +97,13 @@ class Edi_collection :
     """
     
     def __init__(self, list_of_edifiles =None, edipath =None , 
-                 survey_name =None  ): 
+                 survey_name =None ): 
         self._logging= csamtpylog.get_csamtpy_logger(self.__class__.__name__)
         self.edifiles =list_of_edifiles
         self.survey_name =survey_name
         self.Edi =Edi()
         self.Location =Location ()
+        
         self.freq_array = None 
         
         if self.edifiles is None and edipath is not None : 
@@ -222,7 +223,8 @@ class Edi_collection :
         self._logging.info (
             'Collectiong edilfiles from <%s>'% self.__class__.__name__)
         
-        if edifiles_list is not None : self.edifiles = edifiles_list
+        if edifiles_list is not None : 
+            self.edifiles = edifiles_list
         if self.edifiles is None and ediobjs is None  : 
             raise CSex.pyCSAMTError_EDI(
                 'No edifiles found to read.Please check your right path ')
@@ -239,18 +241,18 @@ class Edi_collection :
             self.edi_obj_list= list(ediobjs)
             
         assert len(self.edi_obj_list) > 0 , CSex.pyCSAMTError_EDI(
-            "Can't read none value. Provided at least one edifiles!")
+            "Can't read none value. Provided at least one edifile!")
             
         self._logging.info (
             'Running list of <%s> edifiles'% len(self.edifiles))
-        print('Number of edifiles or stations'
-              ' read successfully = <%s>'% len(self.edifiles))
+        try:
+            func.show_quick_edi_stats(self.edifiles, self.edi_obj_list)
+        except: pass 
 
         sta , lat,lon, elev , freq , zz, zz_err, rho,\
             rho_err, phs , phs_err =[[] for ii in range (11)]
             
         #--> set gereference attributes 
-        
         for  edi_obj in self.edi_obj_list : 
             sta.append(edi_obj.Head.dataid ) 
             if edi_obj.Head.long is None : 
@@ -298,7 +300,6 @@ class Edi_collection :
         self.freq_array = freq[0] 
 
         #---> set ino dictionnary the impdance and phase Tensor 
-        
         self._logging.debug('Setting impedances, resistivities and'
                             ' phase tensors into dictionnaries.')
         
@@ -310,11 +311,6 @@ class Edi_collection :
 
         self._phs ={key:value for key , value in zip (self.id, phs)}
         self._phs_err ={key:value for key , value in zip (self.id, phs_err)}
-        
-        # self._phs_det ={key:value for key ,
-        # value in zip (self.id, phs_det)} 
-        # self._phs_det_err ={key:value for key , 
-        #value in zip (self.id, phs_det_err)} 
         
     #---> set a few pertinent atttributes thought components xy and yx 
     
@@ -441,7 +437,7 @@ class Edi :
         
     """
     
-    def __init__(self, edi_filename=None, **kwargs):
+    def __init__(self, edi_filename=None, verbose =0, **kwargs):
         
         self._logging =csamtpylog.get_csamtpy_logger(self.__class__.__name__)
         
@@ -452,7 +448,7 @@ class Edi :
         self.MTEMAP =MTEMAP()
         self.Z =MTz.Z()
         self.Tip =MTz.Tipper()
-
+        self.verbose =verbose 
 
         self.block_size = 6 
         self.data_head_com ='>!****{0}****!\n'
@@ -783,6 +779,15 @@ class Edi :
                      ['tyr.exp', 'tyi.exp', 'tyvar.exp']]
                           
         f=0
+        verbose = kwargs.pop('verbose', None)
+        if verbose is not None: 
+            self.verbose = verbose 
+        if self.verbose is None: self.verbose =0 
+        if not hasattr(self, 'savepath'):
+            self.savepath =None 
+            
+        if savepath is not None: 
+            self.savepath =savepath 
         
         if edi_fn is not None : self.edifile =edi_fn 
         
@@ -824,8 +829,8 @@ class Edi :
             if re.match(datatype.lower(), 'emapsect') is None \
                 and re.match(datatype.lower(), 'mtsect') is None :
                 warnings.warn (
-                    'Currently <pyCSAMT> can write ">=MTSECT" or ">=EMAPSECT".'
-                     ' The only dataType keys acceptables'
+                    'Currently <pyCSAMT> can write ">=MTSECT" or '
+                     ' ">=EMAPSECT". The only acceptables datatype keys '
                      ' are either "mt" or "emap".')
                 raise CSex.pyCSAMTError_EDI(
                     'Datatype provided is not acceptable .'
@@ -1029,7 +1034,6 @@ class Edi :
         write_edilines = edi_header_infolines + edi_info_infolines +\
             edi_definemeasurement_infolines + edi_mtemap_infolines  
 
-
         if self.typefile =='mt': 
             for ilines in [edi_freq_infolines , 
                            edi_zrot_infolines,
@@ -1040,65 +1044,56 @@ class Edi :
                 if ilines== [''] : continue 
                 else : write_edilines += ilines +['\n'] 
             
-                
         if self.typefile =='emap': 
             for ilines in [edi_freq_infolines , edi_z_data_infolines,
                            edi_rhophs_infolines]:
                 write_edilines +=ilines +['\n'] 
         
         write_edilines.append('>END')
-                        
         # writenow file : 
-        with open (new_edifilename , 'w', encoding = 'utf8') as fw : 
+        with open (new_edifilename , 'w+', encoding = 'utf8') as fw : 
             fw.writelines(write_edilines)
             
-        if savepath  is None : # create a folder in your current work directory
+        if self.savepath  is None : 
+            # create a folder in your current work directory
+            self.savepath = os.path.join(os.getcwd(), '_outputEDI_')
+            
+        if self.savepath is not None: 
             try :
-                savepath = os.path.join(os.getcwd(), '_outputEDI_')
-                if not os.path.isdir(savepath):
-                    os.mkdir(savepath)
-                self.logging.info (
-                    'Create newpath <%s> to save edifile'% savepath)    
+                if not os.path.isdir(self.savepath):
+                    os.mkdir(self.savepath)
+                    self._logging.info (
+                        'New path <%s> created to save edifile'% self.savepath)    
             except : 
-                warnings.warn("It seems the path already exists !")
-        
-        if savepath is not None :
+                if self.verbose > 0:
+                    warnings.warn(
+                        f"It seems the path {self.savepath!r} already exists!")
+                
+                new_path = 'new_edi.{0}.{1}'.format(
+                    'ff', datetime.datetime.now().month)
+                
+                self._logging.info (
+                    'Create another path <%s> to save edifiles'% os.path.join(
+                        os.path.realpath('.'), new_path))
+                
+                os.mkdir(new_path)    
+                self.savepath =os.path.join(
+                    os.path.realpath ('.'), new_path )
+
             try : 
-                if os.path.exists(savepath) : 
+                if os.path.isdir(self.savepath) : 
                     shutil.move(os.path.join(os.getcwd(),new_edifilename), 
-                                savepath )
-                else : 
-                    try :
-                        warnings.warn (
-                            'File <{0}> already exists ,New file will be'
-                                       '  set on new folder {1}:' 
-                               .format(os.path.basename(new_edifilename),
-                                ('new_edi.{0}.{1}'.\
-                                 format('ff', datetime.datetime.now().month))))
-                        new_path = 'new_edi.{0}.{1}'.\
-                            format('ff', datetime.datetime.now().month)
-                        
-                        os.mkdir(os.path.join(savepath, new_path))
-                        
-                        self.logging.info ('Create newpath <%s> to save edifile'% \
-                                           os.path.join(savepath, new_path))
-                    except :pass 
-                    
-                    else : 
-                        shutil.move(os.path.join(os.getcwd(),new_edifilename),
-                                    os.path.join(os.getcwd(), new_path))
+                                self.savepath )
             except : pass 
 
         write_edilines=[]
         
-       
-        
-        print('-'*77)
-        print('---> Edifile <{0}> has be successfully written to'
-              ' your savepath.\n---> savepath : <{1}>'.\
-              format(os.path.basename(new_edifilename), savepath ))
-        # print('-'*77)  
-        
+        if self.verbose >0 : 
+            print('-'*77)
+            print('---> Edifile <{0}> has be successfully written to'
+                  ' your savepath.\n---> savepath : <{1}>'.\
+                  format(os.path.basename(new_edifilename), self.savepath ))
+
         return new_edifilename
             
       

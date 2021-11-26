@@ -15,7 +15,7 @@ from pycsamt.viewer.plot import Plot2d
 
 #path file 
 
-pathfile =  os.path.join(os.environ["pyCSAMT"],'data','j' )
+pathfile =  'data/K1_edi'# os.path.join(os.environ["pyCSAMT"],'data','j' )
 #pathfile = r'C:\Users\Administrator\Desktop\ThesisImp\edis\_special_K6_edi\k6_AMA'
 #pathfile= os.path.join(os.environ["pyCSAMT"],'data', 'correctedEDI_AMA') # test with corrected edi
 # if user user avg file , add the profile fn 

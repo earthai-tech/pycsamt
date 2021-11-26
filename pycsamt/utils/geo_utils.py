@@ -136,8 +136,9 @@ def fit_rocks(logS_array, lns_, tres_):
     :Example: 
         
         >>> import pycsamt.utils.geo_utils as GU
-        >>> obj= GU.quick_read_geos()
-        >>> pslns , pstres,  ps_lnstres= make_strata(obj)
+        >>> import pycsamt.geodrill.geocore as GC 
+        >>> obj= GC.quick_read_geomodel()
+        >>> pslns , pstres,  ps_lnstres= GU.make_strata(obj)
         >>> logS1 =obj.nmSites[0] # station S0
         >>> fit_rock(logS1, lns_= pslns, tres_= pstres)
     """
@@ -167,8 +168,9 @@ def assert_station(id, nm =None):
     :return: Index at specific station
     :Example:
         >>> import pycsamt.utils.geo_utils as GU
-        >>> geoObj = GU.quick_read_geos() 
-        >>> assert_station(id=47, nm=geoObj.nmSites)
+        >>> import pycsamt.geodrill.geocore as GC 
+        >>> obj= GC.quick_read_geomodel()
+        >>> GU.assert_station(id=47, nm=geoObj.nmSites)
         ...46
         
     """
@@ -440,7 +442,7 @@ def _sanitize_db_items (value, force =True ):
         >>> GU._sanitize_db_items (test)
         ...[(1.0, 0.5019607843137255, 1.0),
         ...    '+o++.', (0.25, 0.0, 0.98), (0.23, 0.0, 1.0)]
-        >>> _sanitize_db_items (test, force =False)
+        >>> GU._sanitize_db_items (test, force =False)
         ... [(1.0, 0.5019607843137255, 1.0), 
              '(+o++.)', (0.25, 0.0, 0.98), (0.23, 0.0, 1.0)]
     """
@@ -729,9 +731,10 @@ def _assert_list_len_and_item_type(lista, listb, typea=None, typeb=None):
         - idem of `listb`
         
     :Example: 
+        >>> import pycsamt.utils.geo_utils as GU
         >>> thicknesses= [59.0, 150.0, 590.0, 200.0]
         >>> hatch =['//.', '.--', '+++.', 'oo+.']
-        >>> _assert_list_len_and_item_type(thicknesses, hatch,
+        >>> GU._assert_list_len_and_item_type(thicknesses, hatch,
         ...                                   typea =(int, float, np.ndarray),
         ...                                    typeb =str))
         ... (True, True, True)
@@ -794,7 +797,7 @@ def set_default_hatch_color_values(hatch, color, dhatch='.--',
         >>> from pycsamt.utils.geo_utils as  GU.
         >>> hatch =['//.', 'none', '+++.', None]
         >>> color =[(0.5019607843137255, 0.0, 1.0), None, (0.8, 0.6, 1.),'lime']
-        >>> set_default_hatch_color_values(hatch, color))
+        >>> GU.set_default_hatch_color_values(hatch, color))
     """
     fs=0 # flag to reconvert the single RGB color in tuple 
     def set_up_(hc, dhc):
@@ -903,7 +906,7 @@ def mapping_stratum(download_files =True):
      
     return   tuple(rock_and_structural_props)
 
-def subprocess_module_intallation (module): 
+def subprocess_module_installation (module): 
     """ Install  module using subprocess.
     :param module: str, module name to install  
     """
@@ -952,7 +955,7 @@ def fetching_data_from_repo(repo_file, savepath =None ):
     try : 
         from tqdm.notebook  import trange 
     except:# Install bar progression
-        IMP_TQDM= subprocess_module_intallation('tqdm')
+        IMP_TQDM= subprocess_module_installation('tqdm')
         if IMP_TQDM: 
             from tqdm.notebook  import trange 
     # max attempts =3 :  
@@ -1149,9 +1152,10 @@ def map_top (top, data, end=None):
         Note that if coverall is different 100%, will return the 
         default values giving values. 
         
-    :Example: 
+    :Example:
+        >>> import pycsamt.utils.geo_utils as GU
         >>> ex= [ 59.0, 150.0, 590.0, 200.0] # layers thicknesses 
-        >>> map_top(60, ex)
+        >>> GU.map_top(60, ex)
         ... ((3, [60, 999.0], [149.0, 590.0, 200.0]), 'coverall = 100.0 %')
     """
     wmsg = ''.join([ "Top value ={0} m might be less than ",
@@ -1357,7 +1361,7 @@ def zoom_processing(zoom, data, layers =None,
                 - [10, 120] --> top =10m and bottom = 120 m.
                 
             Note that if the length of list  is greater than 2, the function 
-            will return all the plot and  no errors should raised.
+            will return the entire plot and  no errors should be raised.
     :param data: list of composed data. It should be the thickness from 
         the top to the bottom of the plot.
         
@@ -1377,7 +1381,7 @@ def zoom_processing(zoom, data, layers =None,
         >>> thicknesses= [59.0, 150.0, 590.0, 200.0]
         >>> hatch =['//.', 'none', '+++.', None]
         >>> color =[(0.5019607843137255, 0.0, 1.0), None, (0.8, 0.6, 1.),'lime'] 
-        >>> zoom_processing(zoom=0.5 , data= thicknesses, layers =layers, 
+        >>> GU.zoom_processing(zoom=0.5 , data= thicknesses, layers =layers, 
                               hatches =hatch, colors =color) 
         ... ([0.0, 499.5],
         ...     [59.0, 150.0, 290.5],

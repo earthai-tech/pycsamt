@@ -26,15 +26,19 @@ from pycsamt.utils import func_utils as func
 from pycsamt.utils._csamtpylog import csamtpylog
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 
-
+try : 
+    from pycsamt.__init__ import itqdm 
+    if itqdm : 
+        import tqdm
+except: pass
+ 
 class CSAMT(object): 
     """
-      CSAMT class is super class container of all the information of the 
-      other classes,J, Avg and Edi. In fact, the CS object collect all 
-     the information of the other classes, once questioned for specific uses.
-     The purpose of the construction of this object to avoid the repetition
-     of scripts throughout the project.Objet CSAMT can recognize the typycal
-      input obj of file and set attributes for use . 
+     CSAMT class is a class container of all the information of the 
+     other classes,J, Avg and Edi. In fact, the CS object collect all 
+     the information of the other classes for specific uses.
+     Objet CSAMT can recognize the typical input obj of file and 
+     set attributes for use . 
      
     Arguments 
     ---------
@@ -79,6 +83,8 @@ class CSAMT(object):
     zyx_err             dict                imped. Tensor error  at each
                                             station from yx
     freq                ndarray,1           frequency array from survey   
+    verbose             int                 control the level of verbosity. 
+                                            Higher more messages. Default is 0.
     =================  ===================  ===================================
 
     ===========================  ==============================================
@@ -88,6 +94,8 @@ class CSAMT(object):
     _read_edi_obj                   read_edi_obj and set attributes 
     _read_avg_obj                   read Zonge Eng. Avg file and set attributes
     _read_j_obj                     read A.G. Jones file and set attributes.
+    avg2edi                         convert AVG to EDI files 
+    j2edi                           convert J to EDI files
     ===========================  ==============================================
      
     :Example:
@@ -132,6 +140,7 @@ class CSAMT(object):
         self._fpath =None 
         
         self.save_path = kwargs.pop('savepath', None)
+        self.verbose =kwargs.pop('verbose', 0)
         
         for key  in list(kwargs.keys()): 
             setattr(self, key, kwargs[key])
@@ -161,9 +170,7 @@ class CSAMT(object):
     @property 
     def station (self): 
         return self.Site.stn_name 
-   
-    
-    
+
     #----- SET ATTRIBUTES ---------
     
     @station.setter 
@@ -187,23 +194,15 @@ class CSAMT(object):
     @east.setter 
     def east(self, easting): 
         self.Location.easting =easting
-        
-      
-        
-      
+
     @property 
     def fpath (self): 
         """
-        assert path and redirect to file either single file,edifiles or Jfiles. 
-        find the specific path [EDI|J] path.
+        assert path and redirect to file either single file,edifiles 
+         or Jfiles. Find the specific path [EDI|J] path.
         """
         self._fpath = CSAMT.find_path(path = self._fn )
         return self._fpath
-    
-    # @fpath.setter 
-    # def fpath(self, fp): 
-    #     self._fpath = fp
- 
 
     def _read_csamt_objs (self, fn=None ): 
         """
@@ -216,7 +215,7 @@ class CSAMT(object):
             * edipath : str  
                     full path to edifiles ,  edi directory
             * jpath : str 
-                    full path to AG.Jones files , j directory
+                    full path to AG.Jones files, j directory
         """
         self._logging.info("Reading <%s> file from <%s> " % (self._fn ,
                                self._read_csamt_objs.__name__))
@@ -224,61 +223,25 @@ class CSAMT(object):
         if fn is not None :
             self._fn = fn 
      
-        # if path is not None : self._path =path 
-
-        # if  self.fpath =='isfile' : 
-        #     if inFO._sensitive.which_file(filename= self._fn,
-        #                                   deep =False) =='avg':
-                
-        #             self._read_avg_obj(avgfile = self._fn)
-        #     elif inFO._sensitive.which_file(filename= self._fn, 
-        #                                     deep =False) =='edi':
-        #             self._read_edi_obj(edi_fn = self._fn )
-        #     elif inFO._sensitive.which_file(filename= self._fn,
-        #                                     deep =False) =='j':  
-        #             self._read_j_obj(j_fn= self._fn  )
-        #     else : 
-        #         warnings.warn(
-        #             'Currently  pyCSAMT work with "edi", "j" and "avg" file. '
-        #                       'Please provided one amomg them.')
-        #         self._logging.warn(
-        #             'It seems file provided <%s> does not match '\
-        #                 '"edi" nor "avg" nor "j" file.' % self._fn)
-        #         raise CSex.pyCSAMTError_file_handling(
-        #             'Error reading <%s> file. Please check your'\
-        #                 ' file.'%os.path.basename(self._fn) )
-                
-        # elif self.fpath   =='edipath' :
-        #     self._read_edi_obj(edi_fn = self._fn  )
-            
-        # elif self.fpath =='jpath' : 
-        #     self._read_j_obj(j_fn = self._fn  )
-        fp =None 
-        if  self.fpath in ('isfile', 'jpath', 'edipath') : 
-            fp = inFO._sensitive.which_file(filename= self._fn, deep =False)
-            
-        else :
+        if self.fpath not in ('edipath','jpath','j','edi','avg'):
             warnings.warn(
-                'Currently  pyCSAMT work with "edi", "j" and "avg" file. '
-                          'Please provided one amomg them.')
+                'Currently pyCSAMT works with "edi", "j" and "avg" file. '
+                 'Please provide one amomg them.')
             self._logging.warn('It seems file provided <%s> does not match '
                                '"edi" nor "avg" nor "j" file.' % self._fn)
             raise CSex.pyCSAMTError_file_handling(
-                'Error reading <%s> file. Please check your'
-                    ' file.'%os.path.basename(self._fn) )
+                f"Unable to read {self._fn!r}. Only 'edi', 'j' and 'avg' "
+                " formats can be parsed. Please check your path|file." )
             
-        if fp =='avg': 
+        if self.fpath == 'avg': 
             self._read_avg_obj(avgfile = self._fn)
                     
-        elif self.fpath =='edipath'  or fp =='edi' :
+        elif self.fpath in ('edipath','edi') :
             self._read_edi_obj(edi_fn = self._fn  )
             
-        elif self.fpath =='jpath' or fp =='j': 
+        elif self.fpath in ('jpath' ,'j'): 
             self._read_j_obj(j_fn = self._fn  )
 
-            
-            
-        
     def _read_edi_obj (self, edi_fn =None ):
         """
         read edifiles and populates important attributes 
@@ -288,7 +251,6 @@ class CSAMT(object):
                         where edifiles are located . 
         :type edi_fn: str 
             
-        
         1. Read single edifile
         
         :Example:
@@ -315,7 +277,8 @@ class CSAMT(object):
         
         self._logging.info("Reading <%s> edifile from edi_obj "% edi_fn)
          
-        if edi_fn is not None : self._fn =edi_fn
+        if edi_fn is not None :
+            self._fn =edi_fn
         
         # if self._fn is not None : 
         if self.fpath  =='edipath': #---> set the path then collect all jfiles .
@@ -326,9 +289,9 @@ class CSAMT(object):
         
         # if edifile is not None : self._fn =edifile 
         #-- > once only edifile is provided then put on list ...
-        elif self.fpath  == 'isfile' : 
+        elif self.fpath  == 'edi' : 
             edifiles =[self._fn]
-
+  
         edi_obj = CSAMTedi.Edi_collection(list_of_edifiles =edifiles)
 
         self._logging.info ('Compute Z impedance Tensor  and '
@@ -359,11 +322,9 @@ class CSAMT(object):
         self.elev =edi_obj.elevation 
         self.station = edi_obj.id
         
-        # inherit all edit object attributes 
+        # inherit all edi object attributes 
         func.make_introspection(self , edi_obj)
             
-    
-        
     def _read_j_obj(self, j_fn =None, jpath =None): 
         """
         Read A. G. Jones files and populate attributes. 
@@ -406,10 +367,9 @@ class CSAMT(object):
 
                 # if jfile is not None : self._fn = jfile 
                 #-- > once only jfile is provided then put on list ...
-        elif self.fpath =='isfile' :  
+        elif self.fpath =='j' :  
                 jfiles =[self._fn]
                 
-
         j_obj = CSAMTj.J_collection(list_of_jfiles= jfiles )
         self.jfiles_list= j_obj.jfiles_list
         self.lon = j_obj.longitude
@@ -441,16 +401,10 @@ class CSAMT(object):
         self._phs_err = {key: phs_err -self._phs [key] for key ,
                          phs_err in zip (self.station , j_obj.phamax) }
 
-
         #---> get frequency through the first list of period element 
-   
         self._freq = 1/j_obj.period[0]
-        
-        
-        # self.z_err_xy , self._z_xy, self.z_err_yx , self._z_yx = [{} for ii in range(4)]
-        
-        #--- > compute impedance Tensor and set attributes accordingly -----
-        
+        #--- > compute impedance Tensor and
+        # set attributes accordingly -----
         #--> build Z_obj
         
         self._logging.info (
@@ -530,18 +484,9 @@ class CSAMT(object):
                                          elevation =elevation , 
                                          latitude =latitude , 
                                          longitude =longitude )
-            
-        # profile_obj =Profile()
-        # profile_obj.read_stnprofile(profile_fn =self._pfn , 
-        #                             easting =easting , 
-        #                             northing =northing ,
-        #                             elevation  =elevation, 
-        #                             latitude =latitude , 
-        #                             longitude =longitude )
-        
         avg_obj = CSAMTavg.Avg(data_fn=self._fn)
         
-        self._logging.info ('Compute Z impedance Tensor,Rho and phase '\
+        self._logging.info ('Compute Z impedance Tensor,Rho and phase '
                             ' and set attributes. _ '
                             'Func <%s>'%self._read_avg_obj.__name__)
         #--- set attribute --- 
@@ -620,9 +565,8 @@ class CSAMT(object):
             self.lon= self.Location.longitude
             # self.azim =profile_obj.azimuth
             # self.elev =profile_obj.elev
-           
             self.elev = self.Profile.elev
- 
+        # store AVG obj attributes 
         func.make_introspection(self , avg_obj)
     #-----------------------------------------------------
     # reseetting specific attributes 
@@ -680,11 +624,8 @@ class CSAMT(object):
             northing =self.north)[1]
     @property 
     def station_separation(self): 
-        return self.Profile.stn_separation(easting=self.north, 
-                                           northing =self.north, 
-                                           interpolate=True)[0]
- 
-    
+        return self.Profile.stn_separation(
+            easting=self.north, northing =self.north, interpolate=True)[0]
     @staticmethod    
     def find_path (path =None, ptol =0.7):
         """
@@ -704,10 +645,11 @@ class CSAMT(object):
                     located on the path and determine the typical
                      path of files either edipath or jpath.
         """
-        
         if path is None : return 
         if path is not None : 
-            if os.path.isfile (path) is True : return 'isfile'
+            if os.path.isfile (path) is True :
+                return  inFO._sensitive.which_file(filename= path )
+            
             elif os.path.isdir(path) is True :
                 if os.listdir(path) is not None : 
                     ex = [file for file in os.listdir(path) if 
@@ -742,7 +684,6 @@ class CSAMT(object):
             >>> path2j = 'data/j' 
             >>> jObjs= JObjs().j2edi(path2j)
             
-    
         """
         prospect =kwargs.pop('contractor_name', None)
         #hardwareInfos = kwargs.pop('hardware_name', None)
@@ -766,19 +707,15 @@ class CSAMT(object):
         # export to savepath 
         if savepath is not None: 
             self.save_path =savepath 
-        if self.save_path is None : # create a folder in your current work directory
-            try :
-                self.save_path = os.path.join(os.getcwd(), '_outputJ2EDI_')
-                if not os.path.isdir(self.save_path):
-                    os.mkdir(self.save_path)#  mode =0o666)
-            except : 
-                warnings.warn("It seems the path already exists !")
-        
+        # create a folder in your current work directory 
+        self.save_path =func.cpath(self.save_path, '_outputJ2EDI_')
+    
         # call CSAMT obj 
-        
         # self= cs_obj.CSAMT(data_fn=jfn)
-        
         # create edi-obj and set attributes 
+        if itqdm : 
+            pbar =tqdm.tqdm(total= len(self.station), ascii=True,
+                             desc ='pyCSAMT[J ---> EDI]', ncols =77)
         for ii, stn in enumerate (self.station):
             # create an edi_obj and fill attributes 
             edi_obj=CSAMTedi.Edi()
@@ -822,15 +759,12 @@ class CSAMT(object):
 
             #=====>  set EDI OBJ INFOS
             # edi_obj.Info.maxinfo = 999
-  
             edi_obj.Info.Source.__setattr__('project', project_name)
             edi_obj.Info.Source.__setattr__('survey',  edi_obj.Head.dataid)
             edi_obj.Info.Source.__setattr__('sitename', edi_obj.Head.dataid)
             edi_obj.Info.Processing.__setattr__('processedby', 'pyCSAMT' )
             edi_obj.Info.Processing.ProcessingSoftware.__setattr__(
                 'name', edi_obj.Head.fileby )
-    
-           
             #====> definemeas 
             edi_obj.DefineMeasurement.maxchan =4
             edi_obj.DefineMeasurement.maxrun = len(self.station)
@@ -886,8 +820,6 @@ class CSAMT(object):
                                                     'x2':0., 
                                                     'y2':0. , 
                                                           }))
-     
-                     
             #====> EMAPSECT
             edi_obj.MTEMAP.sectid = stn 
             edi_obj.MTEMAP.__setattr__('nfreq', len(self.freq))
@@ -904,15 +836,17 @@ class CSAMT(object):
             edi_obj.Z.freq = self.freq 
             #add rotation angle 
             edi_obj.Z.rotation_angle = rotation_angle
-    
-            
             # set phase and resistitivity including error propagation 
             # compute error propagation  
             #-->  initialize ndarray(nfreq, 2, 2) 
-            res_array = np.zeros((edi_obj.Z.freq.size, 2,2 ), dtype = np.float)
-            res_array_err = np.zeros((edi_obj.Z.freq.size, 2,2 ), dtype = np.float)
-            phs_array = np.zeros((edi_obj.Z.freq.size, 2,2 ), dtype = np.float)
-            phs_array_err = np.zeros((edi_obj.Z.freq.size, 2,2 ), dtype = np.float)
+            res_array = np.zeros((edi_obj.Z.freq.size, 2,2 ),
+                                 dtype = np.float)
+            res_array_err = np.zeros((edi_obj.Z.freq.size, 2,2 ),
+                                     dtype = np.float)
+            phs_array = np.zeros((edi_obj.Z.freq.size, 2,2 ), 
+                                 dtype = np.float)
+            phs_array_err = np.zeros((edi_obj.Z.freq.size, 2,2 ),
+                                     dtype = np.float)
             
             #dictionnary of components . we set only component into XY . 
             res_array [:, 0 , 1 ] = self.resistivity[stn]  
@@ -927,13 +861,18 @@ class CSAMT(object):
                                     phase_err_array=phs_array_err)
             
             edi_obj.write_edifile(savepath = self.save_path)
-               
-        if len(self.station) > 1: 
-            print('-'*77)    
-            print('---> {0} wrote sucessfully from j-files.\n---> see path:<{1}> '.\
-                  format(len(self.station), self.save_path))
-            print('-'*77)
-                    
+            
+            if itqdm :
+                pbar.update(ii + 1)
+            
+        if itqdm :
+            pbar.close()
+        print(' completed 'if itqdm else '--- conversion completed---')
+        print('*'*77)
+        print(f' <{len(self.station)}> EDI-outputs saved to {self.save_path!r}.')
+        print('*'*77)
+
+    
     def avg2edi (self,
                  data_fn =None ,
                  profile_fn =None , 
@@ -1002,15 +941,17 @@ class CSAMT(object):
             ...           savepath =save_edipath, 
             ...           apply_filter=None ) 
         """
-        # import module Hmeasurement and Emeasurement(
-        # from pycsamt.ff.core.edi import (Hmeasurement, Emeasurement)
+
+        #######################################################################
         from pycsamt.ff.processing import corr 
-        # import pycsamt.ff.core.avg as CSAMTavg 
-        # import pycsamt.ff.core.edi as CSAMTedi 
-        
-        
+        #######################################################################
+
         utm_zone = kwargs.pop('utm_zone', None)
-        
+        verbose = kwargs.pop('verbose', None)
+        if verbose is not None: 
+            self.verbose =verbose 
+        if self.verbose is None: 
+            self.verbose =0
         
         if data_fn is not None : 
             self._fn = data_fn 
@@ -1020,15 +961,12 @@ class CSAMT(object):
                 "Please provide your right AVG file.")
         
         
-        # export to savepath 
-        if savepath is None : # create a folder in your current work directory
-            try :
-                savepath = os.path.join(os.getcwd(), '_outputAVG2EDI_')
-                if not os.path.isdir(savepath):
-                    os.mkdir(savepath)#  mode =0o666)
-            except : 
-                warnings.warn("It seems the path already exists !")
-        
+        # export to savepath
+        if savepath is not None: 
+            self.save_path =savepath 
+        # save data in the default path if no path is given.
+        self.save_path =func.cpath(self.save_path, '_outputAVG2EDI_')
+
         if profile_fn is not None :
             self._pfn = profile_fn 
             
@@ -1047,16 +985,13 @@ class CSAMT(object):
                                                                    
         #---> get the list of stations 
         head_dataid_list = sorted(self.Data_section.Station.names)
-        
-
         #-- compute dipole lenght  between station close 
         dipole_length= self.Data_section.Station.loc[head_dataid_list [1]][0]-\
             self.Data_section.Station.loc[head_dataid_list[0]][0]
         
         #--> nfrequency = 
         nfreq = self.Data_section.Frequency.value.size
-        
-        
+ 
         #-------------------------------------------------------------------
         #---> compute error propagation , phase and resistivity 
         app_rho_obj = self.Data_section.Resistivity.loc 
@@ -1074,7 +1009,8 @@ class CSAMT(object):
         AS_flag =0         
         if self.Header.HardwareInfos.numfilterfreq is not None :
             # self.Header.HardwareInfos.numfilterfreq is not None :
-            print('---> Reading Zonge `ASTATIC` file !')
+            if self.verbose >0:
+                print('---> Reading Zonge `ASTATIC` file !')
             AS_rho =self.Data_section.Resistivity.loc_Sres
             AS_flag =1
             
@@ -1114,9 +1050,10 @@ class CSAMT(object):
                                   type(apply_filter)))
                 apply_filter=None
             else :
-                print('{0:-^77}'.format('Filter Infos'))
-                print('** {0:<27} {1} {2}'.format(
-                    'Filter applied', '=', apply_filter.upper()))
+                if self.verbose >0:
+                    print('{0:-^77}'.format('Filter Infos'))
+                    print('** {0:<27} {1} {2}'.format(
+                        'Filter applied', '=', apply_filter.upper()))
                 
         if apply_filter in ['ama', 'tma', 'flma']:
             # create processing_obj , unique obj for all filters  
@@ -1133,11 +1070,11 @@ class CSAMT(object):
                                       )
                 
                 reference_frequency =corr_obj.referencefreq
-                
-                print('** {0:<27} {1} {2}'.format('TMA filter points', 
-                                                  '=', number_of_points))
-                print('** {0:<27} {1} {2} Hz.'.format('Reference frequency',
-                                                      '=', reference_frequency))
+                if self.verbose >0:
+                    print('** {0:<27} {1} {2}'.format('TMA filter points', 
+                                                      '=', number_of_points))
+                    print('** {0:<27} {1} {2} Hz.'.format(
+                        'Reference frequency','=', reference_frequency))
                 
             elif apply_filter =='flma':
                 self._logging.info (
@@ -1148,13 +1085,13 @@ class CSAMT(object):
                 
                 dipolelength= corr_obj.dipolelength
                 reference_frequency =corr_obj.referencefreq
-
-                print('** {0:<27} {1} {2}'.format('FLMA filter points',
-                                                  '=', number_of_points))
-                print('** {0:<27} {1} {2} Hz.'.format('Reference frequency',
-                                                  '=', reference_frequency))
-                print('** {0:<27} {1} {2} m.'.format('Dipole length ',
-                                                     '=', dipolelength))
+                if self.verbose >0:
+                    print('** {0:<27} {1} {2}'.format('FLMA filter points',
+                                                      '=', number_of_points))
+                    print('** {0:<27} {1} {2} Hz.'.format('Reference frequency',
+                                                      '=', reference_frequency))
+                    print('** {0:<27} {1} {2} m.'.format('Dipole length ',
+                                                         '=', dipolelength))
             elif apply_filter == 'ama': 
                 self._logging.info (
                     'Computing rho with adaptative moving average (AMA) filter.')
@@ -1164,13 +1101,13 @@ class CSAMT(object):
   
                 dipolelength= corr_obj.dipolelength
                 reference_frequency =corr_obj.referencefreq
-                
-                print('** {0:<27} {1} {2}'.format('Number of skin depths',
-                                                  '=', int(number_of_skin_depth)))
-                print('** {0:<27} {1} {2} Hz.'.format('Reference frequency',
-                                                  '=', reference_frequency))
-                print('** {0:<27} {1} {2} m.'.format('Dipole length ',
-                                                     '=', dipolelength))
+                if self.verbose >0:
+                    print('** {0:<27} {1} {2}'.format(
+                        'Number of skin depths','=', int(number_of_skin_depth)))
+                    print('** {0:<27} {1} {2} Hz.'.format('Reference frequency',
+                                                      '=', reference_frequency))
+                    print('** {0:<27} {1} {2} m.'.format('Dipole length ',
+                                                         '=', dipolelength))
      
             elif apply_filter is not None and apply_filter  not in ['tma, ama, flma']: 
                 warnings.warn('filter %s provided is UNrecognizing.'
@@ -1237,6 +1174,10 @@ class CSAMT(object):
         
         # from pycsamt.utils import gis_tools as gis 
         #   for stn in head_dataid_list : #loop for all station or dataid 
+        if itqdm : 
+            pbar =tqdm.tqdm(total= len(head_dataid_list), ascii=True,unit ='B',
+                             desc ='pyCSAMT[AVG ---> EDI]', ncols =77)
+            
         for ii, stn in enumerate(head_dataid_list): 
             #create Ediobj for eac datalist 
             edi_obj =CSAMTedi.Edi()
@@ -1266,8 +1207,7 @@ class CSAMT(object):
             #=====>  set edi_obj_info . 
             # edi_obj.Info.maxinfo = 999
             edi_obj.Info.filter =self.Header.HardwareInfos.freq_filter
-            
-               
+
             edi_obj.Info.Source.__setattr__(
                 'project', self.Header.SurveyAnnotation.project_name)
             edi_obj.Info.Source.__setattr__('survey',  head_dataid_list[ii])
@@ -1275,8 +1215,7 @@ class CSAMT(object):
             edi_obj.Info.Processing.__setattr__('processedby', 'pyCSAMT' )
             edi_obj.Info.Processing.ProcessingSoftware.__setattr__(
                 'name', edi_obj.Head.fileby )
-            
-    
+
             #====> definemeas 
             edi_obj.DefineMeasurement.maxchan =4
             edi_obj.DefineMeasurement.maxrun = len(head_dataid_list)
@@ -1333,8 +1272,7 @@ class CSAMT(object):
                                     'x2':0., 
                                     'y2':0. , 'acqchan': '0.00', 
                                 'filter':avgfilter}))
-                
-                        
+
             #====> EMAPSECT
             edi_obj.MTEMAP.sectid = stn 
  
@@ -1385,36 +1323,29 @@ class CSAMT(object):
                                     phase_err_array=phs_array_err)
             # write edifiles ...
             if AS_flag ==1 :
-                edi_obj.write_edifile(savepath = savepath, 
+                edi_obj.write_edifile(savepath = self.save_path, 
                                       add_filter_array =res_as_array )
                 
             elif apply_filter is not None:
-               edi_obj.write_edifile(savepath = savepath, 
+               edi_obj.write_edifile(savepath = self.save_path, 
                                      add_filter_array = fres_array )
                
-            else : edi_obj.write_edifile(savepath = savepath)
+            else : edi_obj.write_edifile(savepath = self.save_path)
                 
-        
-        print('-'*77) 
-        print('---> {0} Edi-files have been rewritten.\n---> see path:<{1}> '.\
-              format(len(head_dataid_list), savepath))
-        print('-'*77)    
+            if itqdm :
+                pbar.update(ii + 1)
+                
+        if itqdm :
+            pbar.close()
 
+        print(' completed 'if itqdm else '--- conversion completed---')
+        print('*'*77)
+        print(f' <{len(head_dataid_list)}> EDI-outputs saved to {self.save_path!r}.')
+        print('*'*77)
+
+
+    
         
-# if __name__== '__main__': 
-    
-#     file_1='K1.AVG'
-#     file_2='LCS01.avg'
-#     file_3='LCS01_2_to_1.avg'
-    
-#     testj= 'csi000.dat'
-#     testedi='testemap3.edi'
-#     testavg ='K1.AVG'
-    
-#     data = '/data/avg/K1.AVG'
-#     data2= r'C:\Users\Administrator\OneDrive\Python\pyCSAMT\data\avg\K1.AVG'
-#     csamt_obj = CSAMT(data_fn=data2)
-#     print(csamt_obj.resistivity['S00'])
 
         
     

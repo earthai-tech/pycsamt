@@ -72,7 +72,7 @@ the static shift correction.
 ...                  rms =['1.013', '1.451', '1.00', '1.069'], # rms of each line
 ...                  error_type ='resi' )
 ``` 
-Click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/examplefitcurves.png) to see the reference output. 
+Click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/examplefitcurves.png) to see the reference output. 
 
 2. To plot the `misfit`of the model response from the FE algorithms: 
 ```
@@ -83,7 +83,7 @@ Click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples
 ...         logfile=os.path.join(path_data, 'LogFile.logfile'), 
 ...          data_fn = path_data)
 ```
-To see the output, click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/misfit.png).
+To see the output, click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/misfit.png).
 
 3. To evaluate the model errors `misfit G` between the the new resistivity model or stratigraphy models(NMs) from inversion models(CRMs), 
 set `misfit_G` argument to `True` . `Misfit G` computation is the best way to see whether different layers with their corresponding resistivity values
@@ -101,7 +101,7 @@ are misclassified or not. With few step of codes we can check the process:
 ...                      input_layers=layer_names)
 >>> geosObj.stratigraphyModel(kind='nm', misfit_G =False)           # 'nm':New Model
 ```
-click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/geofit.PNG) for reference output. 
+click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/geofit.PNG) for reference output. 
 
 
 * **Note** : 
@@ -136,7 +136,7 @@ click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples
 |model = Occam2DModel     |iter  = ITER17.iter      |mesh  = Occam2DMesh      |data  = OccamDataFile.dat|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ``` 
-click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/pseudostratigraphic_log.PNG) for reference output. 
+click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/pseudostratigraphic_log.PNG) for reference output. 
 
 It's possible to zoom the most interesting part of the log by setting the argument `zoom`, the running 
 script above with `zoom ='25%'` gives the following [ouput](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/zoom25.PNG). 
@@ -161,7 +161,7 @@ We use or link some third-party software (beside the usual tool stack: numpy, sc
 
 3. Equipe de Recherche Géophysique Appliquée, Laboratoire de Geologie Ressources Minerales et Energetiques, UFR des Sciences de la Terre et des Ressources Minières, [Université Félix Houphouët-Boigny]( https://www.univ-fhb.edu.ci/index.php/ufr-strm/), Cote d'Ivoire.
 
-* Developer: 1, 3- Kouadio K. Laurent; <etanoyau@gmail.com> <kkouao@zju.edu.cn>,
+* Developer: 1, 3- Kouadio K. Laurent; <etanoyau@gmail.com>, <kkouao@zju.edu.cn>,
 * Contributors:
     *  2- Rong LIU; <liurongkaoyang@126.com>
     *  1- Albert O. MALORY; <amalory@zju.edu.cn>   

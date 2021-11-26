@@ -6,7 +6,12 @@
 """
 
 .. _module-Func-utils::`pycsamt.utils.func_utils`  
-    :synopsis: helpers functions  
+    :synopsis: helpers functions 
+        * subprocess_module_installation
+        * cpath
+        * smart_format
+        * make_introspection
+        * show_quick_edi_stats
         * averageData 
         * concat_array_from_list 
         * sort_array_data 
@@ -30,10 +35,11 @@
         *_cross_eraser 
         * _remove_str_word 
         * stn_check_split_type
-        * minimum_parser_to_write_edi        
+        * minimum_parser_to_write_edi
+        * round_dipole_length
+        * keepmin        
 """
 
-####################### import modules ######################
 import os 
 import shutil 
 import warnings
@@ -53,9 +59,11 @@ try:
     scipy_version = [int(ss) for ss in scipy.__version__.split('.')]
     if scipy_version[0] == 0:
         if scipy_version[1] < 14:
-            warnings.warn('Note: need scipy version 0.14.0 or higher or interpolation '
+            warnings.warn('Note: need scipy version 0.14.0 '
+                          'or higher or interpolation '
                           'might not work.', ImportWarning)
-            _logger.warning('Note: need scipy version 0.14.0 or higher or interpolation '
+            _logger.warning('Note: need scipy version 0.14.0 '
+                            'or higher or interpolation '
                             'might not work.')
     import scipy.interpolate as spi
 
@@ -68,8 +76,84 @@ except ImportError:  # pragma: no cover
                     'check installation you can get scipy from scipy.org.')
     interp_import = False
 
-###################### end import module ################################### 
+def subprocess_module_installation (module, upgrade =True , DEVNULL=False,
+                                    action=True, verbose =0, **subpkws): 
+    """ Install or uninstall a module using the subprocess.
+    :param module: str, module name 
+    :param upgrade:bool, install the lastest version.
+    :param verbose:output a message 
+    :param DEVNULL: decline the stdoutput the message in the console 
+    :param action: str, install or uninstall a module 
+    :param subpkws: additional subprocess keywords arguments.
+    
+    :Example: 
+        >>> from pycsamt.utils.func_utils import subprocess_module_installation
+        >>> subprocess_module_installation(
+            'tqdm', action ='install', DEVNULL=True, verbose =1)
+        >>> subprocess_module_installation(
+            'tqdm', action ='uninstall', verbose =1)
+    """
+    import sys 
+    import subprocess 
+    #implement pip as subprocess 
+    # refer to https://pythongeeks.org/subprocess-in-python/
+    if not action: 
+        if verbose > 0 :
+            print("---> No action `install`or `uninstall`"
+                  f" of the module {module} performed.")
+        return action  # DO NOTHING 
+    
+    MOD_IMP=False 
 
+    action_msg ='uninstallation' if action =='uninstall' else 'installation' 
+
+    if action in ('install', 'uninstall', True) and verbose > 0:
+        print(f'---> Module {module!r} {action_msg} will take a while,'
+              ' please be patient...')
+        
+    cmdg =f'<pip install {module}> | <python -m pip install {module}>'\
+        if action in (True, 'install') else ''.join([
+            f'<pip uninstall {module} -y> or <pip3 uninstall {module} -y ',
+            f'or <python -m pip uninstall {module} -y>.'])
+        
+    upgrade ='--upgrade' if upgrade else '' 
+    
+    if action == 'uninstall':
+        upgrade= '-y' # Don't ask for confirmation of uninstall deletions.
+    elif action in ('install', True):
+        action = 'install'
+
+    cmd = ['-m', 'pip', f'{action}', f'{module}', f'{upgrade}']
+
+    try: 
+        STDOUT = subprocess.DEVNULL if DEVNULL else None 
+        STDERR= subprocess.STDOUT if DEVNULL else None 
+    
+        subprocess.check_call(
+            [sys.executable] + cmd, stdout= STDOUT, stderr=STDERR,
+                              **subpkws)
+        if action in (True, 'install'):
+            # freeze the dependancies
+            reqs = subprocess.check_output(
+                [sys.executable,'-m', 'pip','freeze'])
+            [r.decode().split('==')[0] for r in reqs.split()]
+            _logger.info( f"{action_msg.capitalize()} of `{module}` "
+                         "and dependancies was successfully done!") 
+        MOD_IMP=True
+           
+    except: 
+        _logger.error(f"Failed to {action} the module =`{module}`.")
+        
+        if verbose > 0 : 
+            print(f'---> Module {module!r} {action_msg} failed. Please use'
+                f' the following command: {cmdg} to manually do it.')
+    else : 
+        if verbose > 0: 
+            print(f"{action_msg.capitalize()} of `{module}` "
+                      "and dependancies was successfully done!") 
+        
+    return MOD_IMP 
+        
 def smart_format(iter_obj): 
     """ Smart format iterable obj 
     :param iter_obj: iterable obj 
@@ -106,6 +190,51 @@ def make_introspection(Obj , subObj):
         if not hasattr(Obj, key) and key  != ''.join(['__', str(key), '__']):
             setattr(Obj, key, value)
             
+def cpath (savepath=None , dpath= None): 
+    """ Control the existing path and create one of it does not exist.
+    :param savepath: Pathlike obj, str 
+    :param dpath: str, default pathlike obj
+    """
+    if dpath is None:
+        file, _= os.path.splitext(os.path.basename(__file__))
+        dpath = ''.join(['_', file,
+                         '_']) #.replace('.py', '')
+    if savepath is None : 
+        savepath  = os.path.join(os.getcwd(), dpath)
+    if savepath is not None:
+        try :
+            if not os.path.isdir(savepath):
+                os.mkdir(savepath)#  mode =0o666)
+        except : pass 
+    return savepath   
+
+def show_quick_edi_stats(nedic , nedir, fmtl='~', lenl=77): 
+    """ Format the Edi files and ckeck the number of edifiles
+    successfully read. 
+    :param nedic: number of input or collected edifiles 
+    :param nedir: number of edifiles read sucessfully 
+    :param fmt: str to format the stats line 
+    :param lenl: length of line denileation."""
+    
+    def get_obj_len (value):
+        """ Control if obj is iterable then take its length """
+        try : 
+            iter(value)
+        except :pass 
+        else : value =len(value)
+        return value 
+    nedic = get_obj_len(nedic)
+    nedir = get_obj_len(nedir)
+    
+    print(fmtl * lenl )
+    mesg ='|'.join( ['|{0:<15}{1:^2} {2:<7}',
+                     '{3:<15}{4:^2} {5:<7}',
+                     '{6:<9}{7:^2} {8:<7}%|'])
+    print(mesg.format('EDI collected','=',  nedic, 'EDI success. read',
+                      '=', nedir, 'Rate','=', round ((nedir/nedic) *100, 2),
+                      2))
+    print(fmtl * lenl )
+    
 def averageData(np_array, filter_order=0, 
                 axis_average=0, astype="float32"): #array_of_average_array=0
     """

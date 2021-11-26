@@ -25,9 +25,9 @@ import numpy as np
 import pandas as pd 
 
 import pycsamt.bases as BS
-import  pycsamt.utils.exceptions as CSex
+import pycsamt.utils.exceptions as CSex
 import pycsamt.utils.geo_utils as GU
-import  pycsamt.geodrill.structural as STRL
+import pycsamt.geodrill.structural as STRL
 from pycsamt.modeling import occam2d
 from pycsamt.ff.site import Profile
 from pycsamt.utils import func_utils as func
@@ -64,7 +64,12 @@ except :
                     'check installation you can get scipy from scipy.org.')
     
     stats_import =False 
-
+    
+try : 
+    from pycsamt.__init__ import itqdm 
+    if itqdm : 
+        import tqdm
+except: pass 
 
 class Geodrill (object): 
     """
@@ -4036,11 +4041,17 @@ class GeoStratigraphy(Geodrill):
         
         self.s0 , errors=[], []
         #step1 : SOFMINERROR 
+        if itqdm : 
+            pbar =tqdm.tqdm(total= 3,
+                             ascii=True,unit='B',
+                             desc ='WEgeophysics[NM construction]', 
+                             ncols =77)
+            
         for ii in range(len(self.subblocks)):
             s1, error = self._softMinError(subblocks= self.subblocks[ii])
             self.s0.append(s1)
             errors.append(error)
-
+            if itqdm: pbar.update(1)
         #step2 : MODELFUNCTION USING DESCENT GRADIENT 
         for ii in range(len(self.s0)):
             if 0 in self.s0[ii][:, :]: 
@@ -4048,7 +4059,7 @@ class GeoStratigraphy(Geodrill):
                                             s0= self.s0[ii])
                 self.s0[ii]=s2
                 errors[ii]= error 
-
+            if itqdm: pbar.update(2)
         arp_=[]
         #Step 3: USING DATABASE 
         for ii in range(len(self.s0)):
@@ -4062,6 +4073,10 @@ class GeoStratigraphy(Geodrill):
         self.z=self.nm[:, 0]
         self.nm = self.nm[:, 1:]
         
+        if itqdm: 
+            pbar.update(3)
+            pbar.close()
+            print(' process completed ')
         # make site blocks 
         self.nmSites= makeBlockSites(x_nodes=self.model_x_nodes, 
                         station_location= self.station_location, 
@@ -4714,7 +4729,7 @@ class GeoStratigraphy(Geodrill):
             >>> input_layer_names =['river water', 'fracture zone', 'granite']
             # Run it to create your model block alfter that you can only use 
             #  `plotPseudostratigraphic` only
-            # >>> obj= GU.quick_read_geos(lns = input_layer_names, 
+            # >>> obj= quick_read_geomodel(lns = input_layer_names, 
             #                             tres = input_resistivity_values)
             >>> plotPseudostratigraphic(station ='S00')
         

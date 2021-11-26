@@ -4,8 +4,6 @@ Created on Fri Sep  4 19:08:08 2020
 
     !!!Deprecated module !!!
 
-@author: Daniel03
-
 Main Avg Application Using Tkinter graphical Interface 
 
 """
@@ -14,7 +12,10 @@ Main Avg Application Using Tkinter graphical Interface
 import os 
 from tkinter import *
 import pycsamt.ff.gui.gui_avgapp as gui
-from pycsamt.ff.gui.gui_frames import Press_EDIR, Press_STND, Press_AVG,Press_OAS
+from pycsamt.ff.gui.gui_frames import (Press_EDIR,
+                                       Press_STND,
+                                       Press_AVG,
+                                       Press_OAS)
 
 #++++++++++++++++++++++++++
 def create_rect(cannev, x, y, color="white"):

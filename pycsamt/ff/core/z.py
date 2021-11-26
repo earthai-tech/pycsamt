@@ -182,8 +182,9 @@ class ResPhase(object):
                 for jj in range(2):
                     abs_z = np.sqrt(5 * self.freq[idx_f] * \
                                     self.resistivity[idx_f, ii, jj])
-                    rel_error_res = self.resistivity_err[idx_f, ii, jj] / \
-                                    self.resistivity[idx_f, ii, jj]
+                    with np.errstate(all='ignore'): 
+                        rel_error_res = self.resistivity_err[idx_f, ii, jj] / \
+                                        self.resistivity[idx_f, ii, jj]
                     # relative error varies by a factor of 0.5, which is the
                     # exponent in the relation between them:
                     abs_z_error = 0.5 * abs_z * rel_error_res

@@ -61,7 +61,7 @@ distortion_err_tensor = None
 #------------------------------------------------------------------------------
 # call correction object 
 
-corr_obj= Processing().write_corrected_edi(data_fn = edipath, 
+corr_obj= Processing().correct_edi(data_fn = edipath, 
                              number_of_points =number_of_filter_points,
                              reference_frequency=reference_frequency,
                              number_of_skin_depth=number_of_skin_depth, 

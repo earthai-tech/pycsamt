@@ -2,9 +2,6 @@
 """
    
 Created on Fri Apr 14 14:47:48 2017
-...:: Module author :: jrpeacock 
-
-@author : jrpeacock 
 
 """
 

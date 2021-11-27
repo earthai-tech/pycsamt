@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 from pycsamt.modeling.occam2d import plotResponse 
 
 # path to your Occam inversion inversion files  composed of 

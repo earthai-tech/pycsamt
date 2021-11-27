@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
-#       Author-email: <etanoyau@gmail.com>
-#       Licence: LGPL
 #       Created on Sat Dec 12 16:21:10 2020
 """
  
@@ -26,15 +23,19 @@ from pycsamt.utils.exceptions import pyCSAMTError_file_handling
 
 class notion :
     """
-    Singular class to explain CSAMT technical word in details. Also usefull 
-    for user to have info  about any scientific context is does Know.
-    Just call the word directly in warnings to give an overview of why error
-    occurs. It like a short documentation  using pyCSAMT software. 
-    Used everywhere in the script. 
+    Definition singular class to explain CSAMT technical words. 
+    Also usefull for user to have info  about any scientific context 
+    the sofware introduces. Each warnings refering to any context 
+    could give the details of the errors by printing the definition itself.
+    It seems like a short documentation.
     """
  
-    reference_frequency =''.join(['"Reference number " is The highest ',
-                                  'frequency with clean data.'])
+    reference_frequency =''.join([
+        '"Reference number " is The highest frequency with clean data.' 
+        'More details in <Weik, M. H., 2001, reference frequency,',
+         ' in Computer Science and Communications ',
+         'Dictionary, Springer US, 1442.>  or consult the link:', 
+         ' http://www.zonge.com/legacy/PDF_DatPro/Astatic.pdf'])
     
     TMA=''.join(['Trimmed-Moving-Average filter : design to remove ',
                  'single-station offsetswhile preserving broader scale ',

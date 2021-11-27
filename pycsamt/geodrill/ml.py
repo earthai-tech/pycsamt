@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
-#       @Daniel03 <etanoyau@gmail.com>
 
 import os
 import  numpy as np
@@ -40,7 +38,18 @@ class ML:
         * Palacky, G. J., 1988, Resistivity Characteristics of Geologic 
             Targets: Geophysics, 3, 
             https://doi.org/52–129.10.1190/1.9781560802631.ch3 
-
+    .. note:: 
+        The `ML`class is separated from the whole package to be an 
+        online additional module. It development is still ongoing and 
+        it does not affect the software to work properly. Indeed, 
+        its development consists to fetching the better parameters from the 
+        online database trained using the artificial neural network to 
+        predict the layer name according to the given attributes (layer
+        porosity, permeability, density,mineral composition, etc.).
+        The better way is to keep the parameters updated rather than those 
+        computed using only a case study previously done. Huger the data from 
+        the different geological areas should be, better should be 
+        the parameters for the layer name prediction.
     """
     database_ = os.path.join(os.path.realpath ('.'),
                              'pycsamt/geodrill/_geomemo')
@@ -67,8 +76,8 @@ class ML:
 
     
             
-if __name__=='__main__': 
-    # db_dirsql ='pycsamt/geodrill/_geomemo/memory.sq3'
-    mlObj = ML()
-    print(mlObj.df)
+# if __name__=='__main__': 
+#     # db_dirsql ='pycsamt/geodrill/_geomemo/memory.sq3'
+#     mlObj = ML()
+#     print(mlObj.df)
     

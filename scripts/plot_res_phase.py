@@ -1,26 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-    . Script to plot Resistivity phase at each station. Deal with [EDI|J|AVG]
-    *AVG is Zonge Engineering file.If provided , please add your profile (*.stn) file.
-    
+    . Script to plot the resistivity and phase at each station.
+    Deal with [EDI|J|AVG].*AVG is Zonge Engineering file.If provided, 
+    please add your profile (*.stn) file.
     
 Created on Thu Jan 21 08:57:20 2021
-
-@author: @Daniel03
-
 """
-import os 
-from pycsamt.viewer.plot import Plot1d
 
+from pycsamt.viewer.plot import Plot1d
 
 #--- path to files [EDI|J|AVG] 
 path ='data/avg/K1.AVG' #  can change the path
-#plottest_avg : 
-    #path =os.path.join(os.environ['pyCSAMT'], 'csamtpy', 'data', 'avg', 'K1.AVG')    
-                    
-#---> profile *stn file 
-    #profile_stn =os.path.join(os.environ['pyCSAMT'], 'csamtpy', 'data', 'avg', 'K1.stn')
-                   
+
+#---> profile *stn file                   
 profile_stn ='data/avg/K1.stn' 
 #---selected station to plot 
 station_reference =[ 24]             # can be only string  like ["S04,"S25"]

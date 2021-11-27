@@ -13,9 +13,6 @@ Created on Tue Apr  6 17:01:00 2021
         like  `Path to avg file - str - [None]`
         ....
 
-
-@author: @Daniel03
-
 """
 from pycsamt.ff.core import avg 
 from pycsamt.gui.wrap_console_scripts import wrap_cscripts as wrs

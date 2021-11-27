@@ -7,8 +7,6 @@ Created on Tue Apr  6 10:19:19 2021
     .. note:: Try to use dict_kwargs to collect input arguments values, 
             as well as defaults values 
 
-@author: @Daniel03
-
 """
 
 from pycsamt.ff.core import avg 

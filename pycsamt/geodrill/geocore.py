@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent
-#       Author:  ~Daniel03 <etanoyau@gmail.com>
 #       Create:on Sat Sep 19 12:37:42 2020
-#       Licence: LGPL
 """  
 .. _module-geocore::`pycsamt.geodrill.geocore`
     
@@ -48,20 +45,21 @@ try :
       if scipy_version [0] == 1 : 
           if scipy_version [1] < 4 :
               warnings.warn('Note: need scipy version 1.4.0 or more . '
-                'It may probably  get a trouble when import "stats" attribute'
-                'under such version.It may probably move from ', ImportWarning)
+                'It may probably get a trouble when import `stats` attribute'
+                f'under version {scipy_version}. It may probably deprecated ',
+                ImportWarning)
               
               _logger.warning('Note: need scipy version 0.14.0 or higher'
                        ' or for stats.linearegress. Under such version'
                           'it might not work.')
-      # from sp import stats 
       stats_import =True 
           
 except :
-    warnings.warn('Could not find scipy.stats, cannot use method linearregression'
-                  'check installation you can get scipy from scipy.org.')
-    _logger.warning('Could not find scipy.stats, cannot use method linearegress'
-                    'check installation you can get scipy from scipy.org.')
+    warnings.warn(
+        'Could not find `scipy.stats`, cannot use method linearregression.'
+        'Please check installation you can get scipy from https://scipy.org/')
+    _logger.warning('Could not find scipy.stats, cannot use method linearegress.'
+                    'check installation you may get scipy from https://scipy.org/')
     
     stats_import =False 
     
@@ -201,8 +199,14 @@ class Geodrill (object):
     geoparams =['geo_offsets', 'geo_depth', 'geo_res', 'geo_name', 
                     'geo_location', 'geo_elevation']
     
-    def __init__(self, iter2dat_fn=None , model_fn =None , data_fn=None ,
-                 iter_fn=None , mesh_fn=None , bln_fn =None , verbose =0,
+    def __init__(self,
+                 iter2dat_fn=None,
+                 model_fn =None ,
+                 data_fn=None ,
+                 iter_fn=None ,
+                 mesh_fn=None ,
+                 bln_fn =None ,
+                 verbose =0,
                  **kwargs):
                 
         self._logging = csamtpylog.get_csamtpy_logger(self.__class__.__name__)
@@ -221,6 +225,7 @@ class Geodrill (object):
         self.elevation =kwargs.pop('elevation', None)
         self.etacoeff = kwargs.pop('etaCoef', 5)
         self.step_descent =kwargs.pop('step_descent', None)
+        self.savepath =kwargs.pop('savepath', None)
         
         self.model_res =None 
         
@@ -1327,9 +1332,9 @@ class Geodrill (object):
 
         return real_layer_names, geo_color , pattern      
                        
-    def to_golden_software(self, input_resistivities=None, input_layers =None, 
-                               step_descent = None,  filename =None,
-                               savepath =None , **kwargs ): 
+    def to_golden_software(self, input_resistivities=None,input_layers =None, 
+                            step_descent = None, filename =None,
+                            savepath =None ,**kwargs ): 
         """
         Output average files, rehoreplaced files, spseudosequennces
         files and station locations files  will generate 3 outputs for 
@@ -1397,6 +1402,7 @@ class Geodrill (object):
         write_negative_depth=kwargs.pop('to_negative_depth', True)
         etaCoef = kwargs.pop('etaCoef', None)
         scale =kwargs.pop('scale', 'm')
+    
         if scale is None : scale= 'm'
         
         # rescale data 
@@ -1406,14 +1412,20 @@ class Geodrill (object):
             df =1000. 
         else : df =1.
         
-        if input_layers is not None : self.input_layers = input_layers 
+        if savepath is not None: 
+            self.savepath =savepath 
+        if input_layers is not None :
+            self.input_layers = input_layers 
         if input_resistivities is not None : 
             self.input_resistivities  = input_resistivities 
             
-        if etaCoef is not None : self.etacoeff = etaCoef     
-        if step_descent is not None : self.step_descent= step_descent 
+        if etaCoef is not None : 
+            self.etacoeff = etaCoef     
+        if step_descent is not None :
+            self.step_descent= step_descent 
         
-        if elevation is not None : self.elevation = elevation 
+        if elevation is not None : 
+            self.elevation = elevation 
         
         
         if self.elevation is None : 
@@ -1510,15 +1522,8 @@ class Geodrill (object):
                 '{0:<7.6f},'.format(
                     self.elevation[ikey]),
                 '{0:<4}'.format(stn), '\n']))
-            
-        if savepath is None : # create a folder in your current work directory
-            try :
-                savepath = os.path.join(os.getcwd(), '_outputGeoSD_')
-                if not os.path.isdir(savepath):
-                    os.mkdir(savepath)#  mode =0o666)
-            except : 
-                warnings.warn("It seems the path already exists !")
-                
+   
+        
         #writes files 
         for ii , (tfiles , wfiles) in enumerate(zip(
                 ['_aver', '_rr', '_sd', '_yb'], 
@@ -1530,15 +1535,16 @@ class Geodrill (object):
                       'w') as fw : 
                 fw.writelines(wfiles)
                 
-        #savefile inot it savepath 
-        if savepath is not None : 
+        #savefile or create one if not provide
+        self.savepath = func.cpath(self.savepath , '_outputGeoSD_' )
+        if self.savepath is not None : 
             import shutil 
             try :
                 for jj, file in enumerate( [
                         filename + '_aver.dat', filename +'_rr.dat',
                         filename +'_sd.dat', filename + '_yb.bln']):
                     shutil.move(os.path.join(os.getcwd(),file) ,
-                        os.path.join(savepath , file))
+                        os.path.join(self.savepath , file))
             except : 
                 warnings.warn("It seems the files already exists !")
                 
@@ -1548,7 +1554,7 @@ class Geodrill (object):
 
         print('---> geo output files {0}, {1}, {2}  & {3}'
               ' have been successfully written to  <{4}>.'.format(
-                  *filenames, savepath))
+                  *filenames, self.savepath))
            
     def to_oasis_montaj (self,  model_fn=None , iter_fn=None ,profile_fn =None, 
                          mesh_fn=None  , data_fn=None , filename=None,
@@ -1714,8 +1720,11 @@ class Geodrill (object):
         input_rho =kwargs.pop('input_resistivities', None)
         input_layers =kwargs.pop('input_layers', None)
         step_descent =kwargs.pop('step_descent', None)
- 
-        if input_rho is not None :  self.input_resistivities  = input_rho 
+        
+        if savepath is not None: 
+            self.savepath =savepath 
+        if input_rho is not None : 
+            self.input_resistivities  = input_rho 
         
         if self.input_resistivities is not None : 
             write_external_files=True 
@@ -1951,23 +1960,16 @@ class Geodrill (object):
                 ' Could not write geo file to oasis.'\
                     ' Support only *.xlsx or *.csv format ')
 
-        # export to savepath 
-        if savepath is None : # create a folder in your current work directory
-            try :
-                savepath = os.path.join(os.getcwd(), '_output2Oasis_')
-                if not os.path.isdir(savepath):
-                    os.mkdir(savepath)#  mode =0o666)
-            except : 
-                warnings.warn("It seems the path already exists !")
-                
-         
-        if savepath is not None : 
+        # export to savepath  
+        self.savepath = func.cpath(self.savepath , '_output2Oasis_')
+
+        if self.savepath is not None : 
             import shutil 
             try :
                 if fex ==2 : 
                    shutil.move(os.path.join(os.getcwd(),''.join(
                        [filename,'.main._cor_oas', writeType])) ,
-                   os.path.join(savepath , ''.join([
+                   os.path.join(self.savepath , ''.join([
                        filename,'.main._cor_oas', writeType])))
                 else : 
                     for jj, file in enumerate(  
@@ -1978,7 +1980,7 @@ class Geodrill (object):
                         shutil.move(os.path.join(os.getcwd(),
                                                  ''.join([filename, file, 
                                                 '_cor_oas', writeType])) ,
-                            os.path.join(savepath , 
+                            os.path.join(self.savepath , 
                                 ''.join([filename, file, 
                                          '_cor_oas', writeType])))
             except : 
@@ -2037,7 +2039,7 @@ class Geodrill (object):
             print('---> geo output file {0}, '
                   ' has been successfully written to  <{1}>.'.
                   format(''.join([filename, '.main._cor_oas',
-                                  writeType]), savepath))
+                                  writeType]), self.savepath))
         elif fex ==1 : #read external files 
 
             filenames =[ filename + file +'_cor_oas'+ writeType for file ,
@@ -2047,7 +2049,7 @@ class Geodrill (object):
 
             print('---> geo output files {0}, {1}, {2} '
                   ' & {3} have been successfully '\
-                  'written to  <{4}>.'.format(*filenames, savepath))
+                  'written to  <{4}>.'.format(*filenames, self.savepath))
                 
 
         print('-'*77)
@@ -2104,7 +2106,6 @@ class Geosurface :
         self.export_format =kwargs.pop ('fileformat', 'xlsx')
         self.savepath =kwargs.pop('savepath', None)
 
-    
         if self.path is not None : 
             self._validate_oasis_path() 
                
@@ -2422,11 +2423,15 @@ class Geosurface :
         writeIndex= kwargs.pop('write_index', False)
         csvsetHeader =kwargs.pop('add_header',True)
         csvsep =kwargs.pop('csv_separateType',',')
-        if savepath is not None : self.savepath =savepath 
+        if savepath is not None : 
+            self.savepath =savepath 
 
-        if path is not None : self.path = path 
-        if depth_values is not None : self.depth_values =depth_values 
-        if fileformat is not None : self.export_format = fileformat.lower() 
+        if path is not None :
+            self.path = path 
+        if depth_values is not None : 
+            self.depth_values =depth_values 
+        if fileformat is not None : 
+            self.export_format = fileformat.lower() 
         if self.export_format is not None : 
             self.export_format= self.export_format.lower() # for consistency 
             
@@ -2436,9 +2441,10 @@ class Geosurface :
         elif self.export_format.find('csv')>=0 : 
             self.export_format ='csv'
         else : 
-            mess=''.join(['-->Sorry! Geosurface actually does not support the {0} ',
-                          'format provided. Only support `xlsx` or `csv` format.', 
-                          ' Please provided the rigth format !'])
+            mess=''.join([
+                '-->Sorry! Depth map actually does not support the {0} ',
+                    'format provided. Only support `xlsx` or `csv` format.', 
+                    ' Please provided the rigth format !'])
             self._logging.error(mess.format(self.export_format))
             warnings.warn(mess.format(self.export_format))
             raise CSex.pyCSAMTError_file_handling(
@@ -2460,7 +2466,7 @@ class Geosurface :
             self._logging.warning(
                 'Need to provide the rigth path `geodrill` model output files.')
             raise CSex.pyCSAMTError_inputarguments(
-                'No path detected ! Please provide a right path to `geodrill`\
+                'No path detected! Please provide a right path to `geodrill`\
                     oasis montaj outputfiles ')
   
         self.get_depth_surfaces() # call methods to create 
@@ -2499,15 +2505,7 @@ class Geosurface :
                              self.export_format]))
                 
         # export to savepath 
-        if self.savepath is None : # create a folder in your current work directory
-            try :
-                self.savepath = os.path.join(os.getcwd(), '_outputGS_')
-                if not os.path.isdir(self.savepath):
-                    os.mkdir(self.savepath)#  mode =0o666)
-            except : 
-                warnings.warn("It seems the path already exists !")
-                
-        #savefile inot it savepath 
+        self.savepath = func.cpath(self.savepath , '_outputGS_')
         if self.savepath is not None : 
             import shutil 
             try :
@@ -2515,11 +2513,9 @@ class Geosurface :
                    shutil.move(os.path.join(
                        os.getcwd(),  nfile),           
                        os.path.join(self.savepath , nfile))
-
             except : 
                 warnings.warn("It seems files already exist !")
-                
-        # fmt =''.join(['{0}'.format(ifile) for ifile in filenames])
+
         print('---> Geosurfaces outputfiles :{0} : have been successfully '\
                   'written to  <{1}>.'.format(','.join(
                       ['{0}'.format(ifile) for ifile in filenames]),
@@ -2749,7 +2745,11 @@ class Drill(object):
         >>> swrite=drill.writeDHData(data2write ="*",
                                  savepath =None)
     """
-    
+    try:
+        import openpyxl
+    except ImportError: 
+        func.subprocess_module_installation('openpyxl')
+        
     def __init__(self, well_filename=None , auto=True, **kwargs):
         
         self._logging=csamtpylog.get_csamtpy_logger(self.__class__.__name__)
@@ -4044,7 +4044,7 @@ class GeoStratigraphy(Geodrill):
         if itqdm : 
             pbar =tqdm.tqdm(total= 3,
                              ascii=True,unit='B',
-                             desc ='WEgeophysics[NM construction]', 
+                             desc ='WEgeophysics-pycsamt[NM construction]', 
                              ncols =77)
             
         for ii in range(len(self.subblocks)):
@@ -4075,8 +4075,9 @@ class GeoStratigraphy(Geodrill):
         
         if itqdm: 
             pbar.update(3)
+            print(' process completed')
             pbar.close()
-            print(' process completed ')
+            
         # make site blocks 
         self.nmSites= makeBlockSites(x_nodes=self.model_x_nodes, 
                         station_location= self.station_location, 

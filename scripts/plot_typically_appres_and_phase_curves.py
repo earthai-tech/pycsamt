@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 import os 
 from pycsamt.viewer.plot import plot_dataAndFits
 

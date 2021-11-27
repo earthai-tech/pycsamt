@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
-#       Author: KouaoLaurent <etanoyau@gmail.con>
 #       Created on Thu Dec  3 22:31:16 2020
 """
 .. _module-j:: `pycsamt.ff.core.j
@@ -117,7 +115,12 @@ class J_collection :
         self.weight =None
         self.loc =None 
         self.id =None 
-        
+       
+        for key in list(kwargs.keys()): 
+            setattr(self, key, kwargs[key])
+            
+        if not hasattr(self, 'savepath'):
+            setattr(self, 'savepath' , None)
 
         if self.jfiles_list is not None :
             self.collect_jfiles()
@@ -176,8 +179,8 @@ class J_collection :
     @deprecated("Use `pycsamt.ff.core.CSAMT.j2edi ` instead.")
     def j2edi(self, jfn=None, savepath =None, **kwargs): 
         """
-        Method to convert j-files to edi files. Method calls CSAMT class object
-        and get from this class edi infos 
+        Method to convert j-files to edi files. Method calls CSAMT 
+        class objectand get from this class edi infos. 
         
         :param jfn: collection of jfiles or path-like str  
         :type list_of_files: str  
@@ -190,8 +193,7 @@ class J_collection :
             >>> from pycsamt.ff.core.j import J_collection as JObjs
             >>> path2j = 'data/j' 
             >>> jObjs= JObjs().j2edi(path2j)
-            
-    
+  
         """
         #####################################################################
         import pycsamt.ff.core.cs  as cs_obj
@@ -544,7 +546,6 @@ class J_collection :
 
         jstn_separation_extrap = ff(xx_new)
 
-        
         if compute_azimuth is True :
 
             self.azimuth =func.compute_azimuth(
@@ -592,8 +593,14 @@ class J_collection :
         :type savepath: str   
         """
         
-        if list_of_jfiles is not None : self.jfiles_list =list_of_jfiles 
-        if survey_name is not None : self.survey_name =survey_name 
+        if list_of_jfiles is not None :
+            self.jfiles_list =list_of_jfiles 
+        if survey_name is not None : 
+            self.survey_name =survey_name 
+            
+        if savepath is not None: 
+            self.savepath = savepath 
+            
         if self.jfiles_list is  None : 
             raise CSex.pyCSAMTError_J(
                 'No files found to read . '
@@ -601,7 +608,6 @@ class J_collection :
         elif self.jfiles_list is not None : 
             self.collect_jfiles(list_of_jfiles =self.jfiles_list )
          
-            
         #--- > start writing 
         write_jlines =[]
         if self.survey_name is None :
@@ -609,6 +615,9 @@ class J_collection :
         elif self.survey_name is not None :
             code_name = self.survey_name[:-3]+'{0:02}-{1}'
         codespace= 5*' '
+        
+        # create a path if not exist and move the file(s).
+        self.savepath = func.cpath (self.savepath ,'_outrewritej_')
         
         for ii in range (len(self.id)) : 
             #-- > write Head j 
@@ -719,17 +728,16 @@ class J_collection :
                       encoding='utf8') as fj:
                 fj.writelines(write_jlines)
             
-                
-            if savepath is not None : 
+            
+            if self.savepath is not None : 
                 shutil.move ('{0}{1}'.format(
-                    self.id[ii],j_extension), savepath)
+                    self.id[ii],j_extension), self.savepath)
                                                            
             write_jlines=[]  
             
         print('-'*77) 
-        if savepath is None :savepath =os.getcwd()
         print('---> {0} J-files have been rewritten to <{1}>'
-              ' <----'.format(len(self.id), savepath))
+              ' <----'.format(len(self.id), self.savepath))
         print('-'*77)
                                                             
 

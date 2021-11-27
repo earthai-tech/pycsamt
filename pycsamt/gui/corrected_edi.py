@@ -4,7 +4,6 @@ Created on Tue Apr  6 17:19:54 2021
     .Console scripts. 
     $ python pycsamt corrected_edi
     
-@author: @Daniel03
 
     `**` before the default keys means to convert input values into float
     `*` before the default keys means to convert into interger 

@@ -27,4 +27,5 @@ try :
 except ImportError: 
     from pycsamt.utils.func_utils import  subprocess_module_installation
     itqdm =subprocess_module_installation ('tqdm', DEVNULL =True)
-else :itqdm =True 
+else :
+    itqdm =True 

@@ -9,21 +9,23 @@
     ::r'//pyCSAMT/geodrill/data/drill_example_files'::
     Later , an other simple parser file will propose . 
 
+Note: If an error occurs like 
+    ModuleNotFoundError: No module named 'openpyxl'
+    Please install `openpyxl` nanually using: 
+        <python -m pip install openpyxl>
+    before running this script 
 Created on Sun Feb 21 19:26:21 2021
 
-@author: @Daniel03
 """
 
 import os 
 from pycsamt.geodrill.geocore import Drill 
-
 
 path_to_parser_files ='data/drill_example_files'
 
 #name of parserfile : eg: data collected from `location `nble`. 
 
 parser_file ='nbleDH.csv'
-
 #savepath : path to save outfile borehole files 
 savepath = None 
 # data2zrite : whick kind of data do you want to output ?
@@ -36,7 +38,8 @@ kind_of_data2output = '*'       # can be '5',"all",
 # if set to False , user will add step by step all data with the layer thicknesses 
 build_borehole_auto=True
 
-borehole_obj = Drill (well_filename= os.path.join(path_to_parser_files, parser_file)  , 
+borehole_obj = Drill (well_filename= os.path.join(path_to_parser_files,
+                                                  parser_file), 
                    auto= build_borehole_auto)
 borehole_obj.writeDHData(data2write=kind_of_data2output, 
                          savepath  = savepath )

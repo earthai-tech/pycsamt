@@ -11,26 +11,22 @@
     will contain static shift corrected FRHO and Uncorrected resistivities. 
 
 Created on Sat Jan 16 19:55:58 2021
-
-@author: @Daniel03
 """
 
 import os 
-from pycsamt.ff.core import avg 
-
+from pycsamt.ff.core import CSAMT
 
 #--> path to avg file : example where avg file  is located
 # avg file and station profile file must be located in the same path  
-#path_to_avgfile =os.path.join(os.environ ['pyCSAMT'], 'data', 'avg') 
-path_to_avgfile= r'C:\Users\Administrator\Desktop\ThesisImp\avg'
-#--savepath :
-#save_edipath =  None         #r'C:\Users\Administrator\Desktop\test\edi_from_avg'
-save_edipath =None#r'C:\Users\Administrator\Desktop\ThesisImp\edis\K9_edi'
-#path to Zonge AVG file
 
-avgfile = 'K9.AVG'
+path_to_avgfile= 'data/avg'
+#--savepath :
+#save_edipath =  None         
+save_edipath ='data/K1_edi'
+#path to Zonge AVG file
+avgfile = 'K1.AVG'
 #--- > add profile file : 
-station_profile_file = 'K9_reaj.stn'
+station_profile_file = 'K1.stn'
 
 #---Appply filter . 
 add_filter = None              # can be "tma", 'flma' or "ama" filters , if filter is not None
@@ -46,10 +42,9 @@ reference_frequency = None      #8192  # if reference frequency is None AND add 
                                 # reference frequency  will be compute automatically  
 #-- Call avgobject 
 
-avg_obj= avg.Avg()
-
-avg_obj.avg_to_edifile(data_fn= os.path.join(path_to_avgfile, avgfile) , 
-                       profile_fn = os.path.join(path_to_avgfile, station_profile_file), 
+avg_obj= CSAMT().avg2edi(data_fn= os.path.join(path_to_avgfile, avgfile) , 
+                       profile_fn = os.path.join(path_to_avgfile, 
+                                                 station_profile_file), 
                        savepath =save_edipath, 
                        reference_frequency= reference_frequency, 
                        apply_filter=add_filter, 

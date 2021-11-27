@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-#        Copyright © 2021  Kouadio K.Laurent
 #       Created on Tue Feb 16 11:37:47 2021
 """
     .Script to UPDATE and UPGRADE GeoDataBase. GeoDataBase is the Core 
@@ -24,7 +23,6 @@
  
 Created on Tue Feb 16 11:37:47 2021
 
-@author: @Daniel03
 """
 
 from pycsamt.geodrill.geodatabase import GeoDataBase 

@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
-#       Author: KouaoLaurent <etanoyau@gmail.con>
 #       Created on Mon Jan 11 11:37:51 2021
 """
 .. _module-edi:: `pycsamt.ff.core.edi`

@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent
-#       Author:  ~Daniel03 <etanoyau@gmail.com>
 #       Created on Sun Sep 13 09:24:00 2020
-#       Licence: LGPL
+
 """
 
 .. _module-Func-utils::`pycsamt.utils.func_utils`  
     :synopsis: helpers functions 
+        * check_dimensionality
         * subprocess_module_installation
         * cpath
         * smart_format
@@ -41,6 +40,8 @@
 """
 
 import os 
+import sys 
+import subprocess 
 import shutil 
 import warnings
 import inspect
@@ -52,29 +53,68 @@ import  pycsamt.utils.gis_tools as gis
 from pycsamt.utils.decorator import deprecated 
 from pycsamt.utils._csamtpylog import csamtpylog
 _logger = csamtpylog.get_csamtpy_logger(__name__)
-# _logger.setLevel(logging.DEBUG)
+
+_msg= ''.join([
+    'Note: need scipy version 0.14.0 or higher or interpolation,',
+    ' might not work.']
+)
+_msg0 = ''.join([
+    'Could not find scipy.interpolate, cannot use method interpolate'
+     'check installation you can get scipy from scipy.org.']
+)
+
 try:
     import scipy
-
     scipy_version = [int(ss) for ss in scipy.__version__.split('.')]
     if scipy_version[0] == 0:
         if scipy_version[1] < 14:
-            warnings.warn('Note: need scipy version 0.14.0 '
-                          'or higher or interpolation '
-                          'might not work.', ImportWarning)
-            _logger.warning('Note: need scipy version 0.14.0 '
-                            'or higher or interpolation '
-                            'might not work.')
+            warnings.warn(_msg, ImportWarning)
+            _logger.warning(_msg)
+            
     import scipy.interpolate as spi
 
     interp_import = True
-
-except ImportError:  # pragma: no cover
-    warnings.warn('Could not find scipy.interpolate, cannot use method interpolate'
-                  'check installation you can get scipy from scipy.org.')
-    _logger.warning('Could not find scipy.interpolate, cannot use method interpolate'
-                    'check installation you can get scipy from scipy.org.')
+ # pragma: no cover
+except ImportError: 
+    
+    warnings.warn(_msg0)
+    _logger.warning(_msg0)
+    
     interp_import = False
+    
+def check_dimensionality(obj, data, z, x):
+    """ Check dimensionality of data and fix it.
+    
+    :param obj: Object, can be a class logged or else.
+    :param data: 2D grid data of ndarray (z, x) dimensions
+    :param z: array-like should be reduced along the row axis
+    :param x: arraylike should be reduced along the columns axis.
+    """
+    def reduce_shape(Xshape, x, axis_name =None): 
+        """ Reduce shape to keep the same shape"""
+        mess ="`{0}` shape({1}) {2} than the data shape `{0}` = ({3})."
+        ox = len(x) 
+        dsh = Xshape 
+        if len(x) > Xshape : 
+            x = x[: int (Xshape)]
+            obj._logging.debug(''.join([
+                f"Resize {axis_name!r}={ox!r} to {Xshape!r}.", 
+                mess.format(axis_name, len(x),'more',Xshape)])) 
+                                    
+        elif len(x) < Xshape: 
+            Xshape = len(x)
+            obj._logging.debug(''.join([
+                f"Resize {axis_name!r}={dsh!r} to {Xshape!r}.",
+                mess.format(axis_name, len(x),'less', Xshape)]))
+        return int(Xshape), x 
+    
+    sz0, z = reduce_shape(data.shape[0], 
+                          x=z, axis_name ='Z')
+    sx0, x =reduce_shape (data.shape[1],
+                          x=x, axis_name ='X')
+    data = data [:sz0, :sx0]
+    
+    return data , z, x 
 
 def subprocess_module_installation (module, upgrade =True , DEVNULL=False,
                                     action=True, verbose =0, **subpkws): 
@@ -93,14 +133,12 @@ def subprocess_module_installation (module, upgrade =True , DEVNULL=False,
         >>> subprocess_module_installation(
             'tqdm', action ='uninstall', verbose =1)
     """
-    import sys 
-    import subprocess 
     #implement pip as subprocess 
     # refer to https://pythongeeks.org/subprocess-in-python/
     if not action: 
         if verbose > 0 :
             print("---> No action `install`or `uninstall`"
-                  f" of the module {module} performed.")
+                  f" of the module {module!r} performed.")
         return action  # DO NOTHING 
     
     MOD_IMP=False 
@@ -140,7 +178,7 @@ def subprocess_module_installation (module, upgrade =True , DEVNULL=False,
             _logger.info( f"{action_msg.capitalize()} of `{module}` "
                          "and dependancies was successfully done!") 
         MOD_IMP=True
-           
+        
     except: 
         _logger.error(f"Failed to {action} the module =`{module}`.")
         

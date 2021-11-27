@@ -14,8 +14,6 @@
     
 Created on Tue Apr  6 21:33:23 2021
 
-@author: @Daniel03
-
 """
 import os 
 from pycsamt.geodrill.geocore import Drill 

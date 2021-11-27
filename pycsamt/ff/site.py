@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
-#       Author: @Daniel03 <etanoyau@gmail.con>
 #       Created on Wed Dec  2 11:29:32 2020
 import os
 import re
@@ -356,8 +354,8 @@ class Site(object):
         if self.stn_name is None : 
             self.stn_name = latitude.size
             warnings.warn(
-                "By default station names should be defined using the prefix -S"
-                " e.g. S{0} ---> {1}".format(
+                "By default, the station names should be defined using "
+                " the prefix -S. e.g.<{0} ---> {1}>".format(
                 self.stn_name[0], self.stn_name[-1]))
             
         elif self.stn_name is not None : 
@@ -591,6 +589,7 @@ class Profile (object):
         self.azimuth =None 
         
         self.utm_zone =kwargs.pop('utm_zone', '49N')
+        self.savepath =kwargs.pop('savepath', None)
         
         for keys in list(kwargs.keys()): 
             setattr(self, keys, kwargs[keys])
@@ -1026,7 +1025,6 @@ class Profile (object):
         east =kwargs.pop('easting', None)
         north=kwargs.pop('northing', None)
         
-
         if isinstance(x, str) or isinstance(y,str) : 
             try : float(x), float(y)
             except :
@@ -1157,13 +1155,13 @@ class Profile (object):
             with open(''.join([fnew_, '.stn']), 'w', encoding='utf8') as fid : 
                 fid.writelines(stn_write_lines)
                 
+            savepath = func.cpath (savepath,
+                                   f'_{Profile.__name__.lower()}_')
             if savepath is not None :
                 shutil.move( os.path.join(os.getcwd(),
                                           ''.join([fnew_, '.stn'])),
                                           savepath )
-            elif savepath is None : savepath =os.getcwd()
     
-   
             print('-'*77)
             print('---> New <{0}> station file has been rewritten.'.\
                   format(''.join([fnew_, '.stn'])))
@@ -1176,7 +1174,8 @@ class Profile (object):
         
     def straighten_profileline (self, X=None, Y=None ,
                                 straight_type ='classic', 
-                                reajust=(0,0), output =False,**kwargs):
+                                reajust=(0,0), output =False,
+                                **kwargs):
         """
         Method to straighten profile line and/or rescaled 
         coordinates.  User can readjust coordinateq 
@@ -1216,19 +1215,21 @@ class Profile (object):
                                 format( straight_type))
         
         savepath =kwargs.pop('savepath', None)
+        if savepath is not None: 
+            self.savepath = savepath
         
         REW=False               # coordinates scaling flag and control new outputs
         
         if X is not None : self.east = X 
         if Y is not None : self.north = Y
         if self.east is None or self.north is None :
-            raise CSex.pyCSAMTError_profile('No possible way to straighten up '
+            raise CSex.pyCSAMTError_profile('No possible way to straighten out '
                 'the profile line . Please provide the right coordinates. ')
         
         if self.east.size != self.north.size : 
             raise CSex.pyCSAMTError_profile('X and Y must be the same size. '
                        'X has a size <{0}> while Y has the size <{1}>. '
-                       'Line cannot be redressed. '
+                       'Line cannot be straightened. '
                          'Please provide the same size of both arrays'.\
                              format(self.east.size, self.north.size))
                 
@@ -1259,8 +1260,8 @@ class Profile (object):
                 stn_pk = np.arange(int(self.dipole_length/2), 
                                     self.east.size * self.dipole_length,
                                     self.dipole_length)
-                warnings.warn('Dipole length is = {0} m. Stations are assumed '
-                              'to be in center of each dipole.'
+                warnings.warn('Dipole length is = {0} m. Stations location'
+                              'moved to the center of each dipole.'
                               ' Total length is = {1} m'.
                                 format(self.dipole_length,
                                     (self.east.size - 1) * self.dipole_length ))
@@ -1276,11 +1277,11 @@ class Profile (object):
                                         station_pk=stn_pk, 
                                         rewrite=REW, elevation= elev)
             
-            print("---> Locations coordinates are reajusting to straightening "
-                  " out profile. Elevation is added.")
+            print("---> Locations coordinates are scaled "
+                  "and elevation is added.")
             self._logging.info (
-                "Locations coordinates are reajusting to"
-                " straighten out profile and we'll top elevation.")
+                "Locations coordinates are scaled to"
+                " and elvevation should be topped.")
             REW =True 
         
         #then reascaled 
@@ -1336,7 +1337,7 @@ class Profile (object):
                                         northing =self.north ,
                                         x=0., y=0., station_pk=stn_pk, 
                                         rewrite=REW, elevation= elev, 
-                                        savepath =savepath)
+                                        savepath =self.savepath)
             
             self._logging.info (
                 "Locations coordinates are reajusted and "
@@ -1381,24 +1382,32 @@ class Profile (object):
         dipole_length =kwargs.pop('dipole_length', None)
         output_name =kwargs.pop('output_name', None)
         savepath =kwargs.pop('savepath', None)
-        if output_name is None : output_name='new_profile'
         
-        if utm_zone is not None : self.utm_zone = utm_zone
-
-        write_profile_lines =[]
-        if area_name is None : area_name ='' 
-        if username is None : username =''
-        if easting is not None : self.east =np.array(easting )
-        if northing is not None : self.north = np.array(northing) 
-        if elevation is not None :self.elev = np.array(elevation)
-        
+        if savepath is not None: 
+            self.savepath = savepath 
+        if output_name is None :
+            output_name='new_profile'
+        if utm_zone is not None : 
+            self.utm_zone = utm_zone
+        if area_name is None :
+            area_name ='' 
+        if username is None :
+            username =''
+        if easting is not None :
+            self.east =np.array(easting )
+        if northing is not None :
+            self.north = np.array(northing) 
+        if elevation is not None :
+            self.elev = np.array(elevation)
         if self.east is None or self.north is None : 
-            self._logging.warn("It seems you didnt provide any easting"
-                               " values nor northing value.")
+            self._logging.warning(
+                "It seems you did not provide any easting"
+                            " values nor northing value.")
             raise CSex.pyCSAMTError_profile(
-                "You may provide value before"
-                " rewriten station profile file.!")
-        
+                "You may provide easting and northing values before"
+                " writting a new station profile <*.stn> ")
+            
+        write_profile_lines =[]
         write_profile_lines.append(''.join(['{0:<17}'.format(
             '>LOCATION'),':'," {0:<55}".format(area_name) ])+'\n')
         write_profile_lines.append(''.join(['{0:<17}'.format(
@@ -1434,7 +1443,7 @@ class Profile (object):
                     
         if dipole_length is None :
             self._logging.info('Automatic dipole length calculation and '
-                               'stations position  values are set with.')
+                               'stations position values are set with.')
             
             self.dipole_length, self.stn_position = \
                 self.compute_dipolelength_from_coords(
@@ -1502,11 +1511,13 @@ class Profile (object):
         
         with open (''.join([output_name,'.stn']),'w', encoding='utf8') as fid: 
                 fid.writelines(write_profile_lines)
-        
-        if savepath is not None :
+                
+        self.savepath = func.cpath (self.savepath, 
+                                    f'_{self.__class__.__name__.lower()}_')
+        if self.savepath is not None :
             shutil.move (os.path.join(os.getcwd(),
-                                     ''.join([output_name,'.stn'])),
-                         savepath)
+                                      ''.join([output_name,'.stn'])),
+                         self.savepath)
             
     def stn_separation(self, easting  =None , northing =None ,
                        interpolate =False): 
@@ -1542,11 +1553,11 @@ class Profile (object):
                     "NoneType can not be computed."
                     "Please provide the right coordinates!.")
         
-        if easting.size != northing.size :raise CSex.pyCSAMTError_profile(
+        if easting.size != northing.size :
+            raise CSex.pyCSAMTError_profile(
             "Both coordinates array must have the same size."
              "The first argument size is <{0}>, while the second is <{1}>.".
                  format(easting.size, northing.size))
-    
         # for kk in range(self.east.size): 
         #     if kk <=self.east.size -2 : 
         #         np.sqrt((self.east[kk+1]-self.east[kk-1])**2 +

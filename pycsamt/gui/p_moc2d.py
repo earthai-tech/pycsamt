@@ -10,8 +10,7 @@ Created on Tue Apr  6 17:43:47 2021
     Should compolsory to specify , if not will let inbput values as str 
 
     Jokers `**` and `*` can be anywhere else in the string default_kwargs key.
-    
-@author: @Daniel03
+
 """
 import os 
 from pycsamt.viewer.plot import Plot2d

@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
-#       Licence: LGPL
 #       Created on Mon Dec 28 14:28:06 2020
 """
 .. _module-Visualization:`pycsamt.viewer.plot`
@@ -13,7 +11,6 @@
    the editor to easy customize the plots without knowning deeply the module 
    itself. Special plot 1d, 2d and 3D.
         ... 
-@author: KLaurent alias @Daniel03
 """
 
 import os 
@@ -42,8 +39,6 @@ from pycsamt.utils._csamtpylog import csamtpylog
 from pycsamt.ff.processing.corr import shifting as Scor
 
 _logger=csamtpylog.get_csamtpy_logger(__name__)
-
-
 
 ###############################################################################
  
@@ -128,10 +123,6 @@ class Plot1d :
         self.subplot_top = kwargs.pop('subplot_top', .85)
         self.subplot_bottom = kwargs.pop('subplot_bottom', .1)
         
-        # self.elevation =None 
-        # self.station_pk =None 
-        
-    
     def plot_topo_sep_azim(self,fn = None , profile_fn=None  , 
                            savefig =None ,  **kwargs):
         """
@@ -1371,11 +1362,12 @@ class Plot1d :
         csamt_stndis_obj= csamt_obj.station_distance
         
         
-        
         if selected_frequency is None : 
-            warnings.warn ('You may selected frequency between freauency range.'\
+            warnings.warn ('You may selected frequency between frequency range.'
                            ' If you dont know the number of frequency')
-            raise 
+            raise ValueError('No frequency detected! Please provide ' 
+                             'at least one frequency value in Hz.'
+                           )
         
         def depth1D (freq_selected): 
             """
@@ -2096,8 +2088,23 @@ class Plot1d :
     def plot_multiStations(self, X =None , Y=None,  path =None, 
                            profile_lines =None,  **kwargs): 
         """
-        Plot multisations of site sof survey area 
+        Plot the survey area multiple stations   
         
+        ..TODO:: For the future plan- added rose diagram from strikes angles   
+            computation for all `edi`, `avg` or `j` files. Rose Diagram  
+            actually does not work. We keep windrose plot for future version. 
+            For the future version because  we will use windrose to 
+            add Rose diagram plot. For instance:: 
+                
+                >>> from pycsamt.utils import func_utils as func 
+                >>> IMPWINR= func.subprocess_module_installation('windrose')
+                >>> if  IMPWINR:
+                ...    import windrose
+                ...    gs=gspec.GridSpec(1, 2, figure =self.fig)
+                ...    axeProfiles = self.fig.add_subplot(gs[0, 0])
+                ...    axeStrikes=self.fig.add_subplot(gs[0,1] ,
+                ...                                    projection='polar' )
+                
         Parameters
         -----------
             * path : str 
@@ -2127,7 +2134,6 @@ class Plot1d :
         scale =kwargs.pop('scale', 'm')
         
         # scalled plots 
-        
         if scale.lower() is None : scale ='m'
         if scale.lower() =='m' : 
             dz = 1. 
@@ -2234,8 +2240,7 @@ class Plot1d :
                     
             print('---> {0:02} * survey* lines read !'.format(
                                             len(self.X)))
-                    
-        
+
         # ------------------------DECLARE FIGURE AND PROPERTIES --------------
         
         # statement of figures 
@@ -2244,32 +2249,11 @@ class Plot1d :
         # add a subplot to the figure with the specified aspect ratio
         self.fig_aspect ='auto'
                 #--- using window rose to plot diagramm ------- 
-       
-        # .. note:: 
-        # ======================================================================
-        # For the future plan : ADDED rose diagram from strikes angles   
-        # computation from all `edi` , `avg` or `j` files . Rose Diagram plot 
-        # actually doesnt work , consequently we gonna plot windrose to False. 
-        # because when  we use windrose , it does not give exactly what we expect
-        # to get . We intend for the future plan add this section of Rose diagram 
-        # plot. 
-        # ======================================================================
-       
-        
-        #windrose_import = False             # windrose_import BLOCKED to FALSE 
-        # if windrose_import is True : 
-        #     gs=gspec.GridSpec(1, 2, figure =self.fig)
-            
-        #     axeProfiles = self.fig.add_subplot(gs[0, 0])
-        #     #****Future plan **** 
-        #     axeStrikes=self.fig.add_subplot(gs[0,1] , projection='polar' )
-        # else : 
+                # -----**future plan ****
 
         axeProfiles = self.fig.add_subplot(1,1,1)
  
-        
         # get min max for easting and northing profile
-    
         Xmin, Xmax = self.X[0].min(), self.X[0].max()
         Ymin, Ymax = self.Y[0].min(), self.Y[0].max()
         for ii, (east, north)  in enumerate( zip( self.X , self.Y)):
@@ -2283,8 +2267,8 @@ class Plot1d :
             if north.max()> Ymax: 
                 Ymax = north.max()
         
-        self.xlimits , self.ylimits =  (Xmin/dz, Xmax/dz ), (Ymin/dz, Ymax/dz )
-        
+        self.xlimits=  (Xmin/dz, Xmax/dz ) 
+        self.ylimits= (Ymin/dz, Ymax/dz )
         # -------------------------------------------------------------------
         leghandles= []
         for ii in range(len(self.X)): 
@@ -2390,10 +2374,11 @@ class Plot1d :
         
         # plt.tight_layout()
         
-        if savefig is not None : plt.savefig(savefig, dpi = self.fig_dpi, 
+        if savefig is not None : plt.savefig(savefig, 
+                                             dpi = self.fig_dpi, 
                                                  # orientation =orientation
                                                  )
-        
+    
         plt.show()
   
         
@@ -2454,7 +2439,6 @@ class Plot2d (object):
         self._logging= csamtpylog.get_csamtpy_logger(self.__class__.__name__)
         
         self.fs =kws.pop('fs', 0.7)
-        
         self.fig_num = kws.pop('fig_num', 1)
         self.fig_size = kws.pop('fig_size', [7,7])
         self.fig_aspect = kws.pop('fig_aspect','auto')
@@ -2465,9 +2449,7 @@ class Plot2d (object):
         self.aspect = kws.pop('aspect', 'auto')
         self.font_style =kws.pop('font_style', 'italic')
         self.orient=kws.pop('orientation', 'landscape')
-        
-        
-        
+
         self.plot_style = kws.pop('plot_style', 'imshow')
         self.imshow_interp = kws.pop('imshow_interp', 'bicubic')
 
@@ -2494,7 +2476,6 @@ class Plot2d (object):
         self.show_grid = kws.pop('show_grid',True)
         
         # set makers properties
-        
         self.marker = kws.pop('marker', 'o')
         self.ls =kws.pop('ls', '-')
         self.lc = kws.pop('lc', None)
@@ -2504,7 +2485,6 @@ class Plot2d (object):
         self.lw =kws.pop('lw', 2)
         
         #------ticks parameters ------------------
-        # self.ticks_label_rotation = kws.pop('ticks_rotation',45)
         self.fw =kws.pop('font_weight', 'bold')
         self.depth_scale=kws.pop('depth_scale', 'm')
         
@@ -2525,13 +2505,10 @@ class Plot2d (object):
         self.xpad = kws.pop('xpad', 1.0)
         self.ypad = kws.pop('ypad', 1.0)
 
-
         self.xminorticks = kws.pop('xminorticks', 5)
         self.yminorticks = kws.pop('yminorticks', 1)
 
         self.cmap = kws.pop('cmap', 'jet_r')
-
-
 
         for keys in list(kws.keys()): 
             setattr(self, keys, kws[keys])
@@ -3083,7 +3060,8 @@ class Plot2d (object):
         plt.show()
 
     def plot_occam2dModel(self, model_fn =None, iter_fn=None , 
-                          mesh_fn =None , data_fn =None, doi=1000,  **kwargs ):
+                          mesh_fn =None , data_fn =None, doi=1000, 
+                          **kwargs ):
         
         """
         Plotoccam Model  form Occam Model class 
@@ -3126,12 +3104,10 @@ class Plot2d (object):
         
         savefig =kwargs.pop('savefig', None)
         change_station_id =kwargs.pop('new_station_names', None)
-        
-        
+
         plot_style =kwargs.pop('plot_style', None )
         if plot_style is None : plot_style = 'pcolormesh'
-        
-        
+  
         show_contour =kwargs.pop('show_contour', False)
         contourlines =kwargs.pop('contour_lines_styles', '-')
         contourcolors =kwargs.pop('contour_lines_colors', 'white')
@@ -3457,7 +3433,7 @@ class Plot2d (object):
     def plot_Response(self, data_fn =None ,
                       response_fn =None , mode =None,   **kws ): 
         """
-        Function to plot forward value , and residual value from Occam 2D 
+        Function to plot forward value, and residual value from Occam 2D 
         
         list of params are below :
         
@@ -3485,7 +3461,7 @@ class Plot2d (object):
             ...                             response_fn=  pathresp )
             
         """
-        self._logging.info('Plot occam pseudosection of forward , residual value ')
+        self._logging.info('Plot occam pseudosection of forward, residual value ')
         plot_style =kws.pop('plot_style', None)
         
         contourlines =kws.pop('contour_lines_styles', '-')
@@ -3499,10 +3475,12 @@ class Plot2d (object):
         set_station_label=kws.pop('show_station_id', True)
 
         #-----------STATEMENT RESPONSE OBJECT ----------------------
-        resp_obj = occam2d.Response (data_fn =data_fn , response_fn=response_fn)
+        resp_obj = occam2d.Response (data_fn =data_fn ,
+                                     response_fn=response_fn)
         # get occam data type  and build large list of possible mode 
         
-        make_mode = resp_obj.occam_dtype + [str(mm)for mm in resp_obj.occam_mode]
+        make_mode = resp_obj.occam_dtype + [
+            str(mm)for mm in resp_obj.occam_mode]
         
         resp_occam_dtype_obj = resp_obj.occam_dtype
         
@@ -3510,26 +3488,26 @@ class Plot2d (object):
         #---------MANAGE OCCAM PLOT MODE -------------------------
         # if mode is not provided , then take the first occam mode 
 
-        if mode is None : mode = resp_occam_dtype_obj [0]
+        if mode is None : 
+            mode = resp_occam_dtype_obj [0]
         
         mode =str(mode).lower() 
-        
-  
+ 
         # check the mode if provided 
         if mode not in  make_mode  : 
-            mess =''.join([
-                'Occam mode provided ={0} is wrong !. Occam2D data mode is ={1}'.\
-                format(mode, make_mode ), 
-                       'Please select the right mode.'])
-            warnings.warn(mess)
-            self._logging.error (mess)
+            mess =''.join(['Occam mode provided ={0} is wrong !.',
+                           ' Occam2D data mode is ={1}', 
+                           'Please select the right mode.'])
+            warnings.warn(mess.format(mode, make_mode ))
+            self._logging.error (mess.format(mode, make_mode ))
             
         # check the mode provided , can be str 
         for im , imode in enumerate(resp_obj.occam_mode) :
             if imode ==mode : 
                 resp_occam_dtype_obj  =  resp_occam_dtype_obj [im]
                 
-        for im , imode  in enumerate( [str(mm) for mm in resp_obj.occam_mode]): 
+        for im , imode  in enumerate( [str(mm) 
+                                       for mm in resp_obj.occam_mode]): 
             if imode ==mode : 
                 resp_occam_dtype_obj  =  resp_occam_dtype_obj [im]  
             
@@ -3546,7 +3524,8 @@ class Plot2d (object):
                 if not isinstance (delineate_resistivity_curve, list ): 
                     delineate_resistivity_curve=[delineate_resistivity_curve ]
             except : 
-                # be sure to stay on the same output value if something wrong happen 
+                # be sure to stay on the same
+                # output value if something wrong happen 
                 
                 delineate_resistivity_curve=delineate_resistivity_curve
                 pass 
@@ -3611,6 +3590,11 @@ class Plot2d (object):
         
         print('---> Occam 2D plot style  = "{}"'.format(plot_style))
         
+        #--> check dimensionality 
+        self.resp_forward, *rr = func.check_dimensionality(
+            self,self.resp_forward, self.resp_freq,self.resp_sites_offsets)
+        self.resp_freq,self.resp_sites_offsets=rr
+        
         if plot_style =='pcolormesh': 
             
             self._logging.info (
@@ -3619,10 +3603,8 @@ class Plot2d (object):
             mesh_x , mesh_y =np.meshgrid (self.resp_sites_offsets,
                                           self.resp_freq, 
                                           )
-            
             # if you keep plot_x_axis and plot_z_axis in meter ,
             # be sure to divided py dz  meshes respectively 
-            
             #------plot forward response -------
             axeFW.pcolormesh (mesh_x , 
                             mesh_y ,
@@ -3878,26 +3860,25 @@ class Plot2d (object):
         """
         Build pseudodrill from the model resistivity . 
         
-        Deal with true value of ressitivity obtained during survey .In fact ,
-        How to input these values into our model to produce an accuracy 
-        underground map is the chalenge.Building pseudolog allow to know how 
-        layers are disposal in underground so to emphasize the large
-        conductive zone in the case of groundwater exploration. It is 
-        combinaison with geophysic data especially inversion data with
-        geological data. Actually the program deal with  Occam 2D inverison file  
-        or Bo Yang (x,y,z) file. We will extend this program later with
-        other external softares files extension. If user have a golder software
-        installed on its  computer , can use the files generated by  the software
-        and to produce 2D map so to compare both . Model map and detail-sequences
-        map to see the difference Details sequences map  is  most closest
-        to the reality . When step descent parameter is small ,the detail 
-        sequences  trend to model map . So More geological values are, more the
-        accuracy of detail sequences logs becomes. Geological data allow to
-        harmonize  the value of resistivity produced by our model so to force
-        the pogramm to make a correlation between data from true layers and
-        the model values.
+        Deal with  True resistivities get on the survey or with others firms.
+        Indeed the input  resistivities values into our model,could yield 
+        an accuracy underground map.The challenge to build a pseudolog is
+        to know how the layers are disposal in underground so to emphasize
+        the large conductive zone  especially in the case of groundwater
+        exploration. 
         
-         
+        Program works in combinaison with geophysic data especially Occam 2D 
+        inversion data,  with geological data. Actually the program deals only
+        with  Occam 2D inversion files or  Bo Yang (x,y,z) files and outputs some 
+        model files for other external softares such as Golder sofware('surfer'). 
+        If user has a golder software installed on its computer,  he can use the 
+        output files generated to produce 2D map so to compare both maps: 
+        the model map and detail-sequences map to see the difference  between
+        the "calculated model" and "pseudosequences model" which could match
+        better the underground. When `step_descent` parameter is small,
+        the detail sequences trends to the model map. So more geological data
+        are, better the accuracy of detail sequences logs should be. 
+        
         :param station_id:  Number or the site id of the survey area 
                             number starts from 1 to the end .
         :type station_id:  str, int
@@ -3966,19 +3947,19 @@ class Plot2d (object):
             ...                                          'augen gneiss',
             ...                                          'granite'],
             ...                            mesh_fn=os.path.join(path, 
-            ...                                                 'Occam2DMesh')
+            ...                                             'Occam2DMesh')
             ...                            iter_fn = os.path.join(path,
-            ...                                                   'ITER17.iter'), 
+            ...                                             'ITER17.iter'), 
             ...                            model_fn =os.path.join(path,
-            ...                                                   'Occam2DModel') , 
+            ...                                          'Occam2DModel') , 
             ...                            data_fn =os.path.join(path, 
-            ...                                                  'OccamDataFile.dat'),
+            ...                                       'OccamDataFile.dat'),
             ...                            doi='1km', 
             ...                            step_descent=200., 
             ...                            plot_style= 'pcolormesh')
         """
         
-        self._logging.info('Building pseudo drill and pseudostratigraphy .')
+        self._logging.info('Building pseudo-drill and pseudostratigraphy .')
         
         #set other important kwargs argumenents 
         
@@ -4062,17 +4043,21 @@ class Plot2d (object):
             if f !=4 and f !=0:
                 if f >2 : mt='are'
                 else :mt='is'
-                print('--> Expected 04 files , only {0} one {1} given !'.format(f, mt))
+                print('--> Expected 04 files, '
+                      'only {0} one {1} given !'.format(f, mt))
                 for oss in imf : 
-                    mess =' ! {0} is not provided ! '\
-                        'Could not possible to build pseudodrill and stratigraphy log.'\
-                            ' Please provide {0} file.'.format(oss.split('_')[0]) 
+                    mess =''.join([
+                        ' ! {0} is not provided!Could not possible',
+                        'to build pseudodrill and stratigraphy log.',
+                            ' Please provide {0} file.'.format(
+                                oss.split('_')[0])]) 
+                    
                     self._logging.error(mess)
             
             if p==0 and f==0 : 
-                mess ='None files are found ! Please provided either '\
-                    'Occam2D outputfiles {Mesh|Model|Data|iter} '\
-                    'or Bo Yang Data File output files {Iter2dat|bln}.'
+                mess =''.join(['None files are found ! Please provided either',
+                    'Occam2D outputfiles {Mesh|Model|Data|iter} ',
+                    'or Bo Yang Data File output files {Iter2dat|bln}.'])
                 warnings.warn(mess)
                 self._logging.error(mess)
         
@@ -4158,14 +4143,11 @@ class Plot2d (object):
         axePseudosequences = self.fig.add_subplot(gs[1:6,3:], 
                                                   sharey=  axePseudodrill)
   
-  
         axe_Legends_rho_sequences = self.fig.add_subplot(gs[6, :4])
         
         axe_Legends_rho_sequences.set_xticks([])
         axe_Legends_rho_sequences.set_yticks([])
-        
 
-        
         # ----> Manage XY limits --------------------------------------
         
         # build  the distance separation by 
@@ -4175,8 +4157,7 @@ class Plot2d (object):
                                           /(len(self.station_location)-1)))
         dx =df/5        # xpad = dx
         dy=30           # ypad =dy      to locate station
-        
-        
+   
         # ---> build a smallsites offsets set x 
         #pseudodrill limits  of three stations 
         
@@ -4196,9 +4177,7 @@ class Plot2d (object):
             else : # let framed the main station id 
                 plot_sites_names= ['S{0:02}'.format(ii) for ii in range(ids-1,  
                                                              ids+2) ]
-      
-       
-        
+
         #----let get default plot and set scale ----- 
         if pseudo_plot_style==None  :
             pseudo_plot_style = 'imshow'
@@ -4237,7 +4216,7 @@ class Plot2d (object):
             self.xloglimits= (minlog, maxlog) 
             
                     #--------------------------------BUILD PSEUDO DRILL -----
-            self._logging.info('Build Pseudo drill from Occam 2D models.')
+            self._logging.info('Build Pseudo-drill from Occam 2D models.')
             
             if pseudo_plot_style.lower() == 'pcolormesh': 
                 
@@ -4287,9 +4266,8 @@ class Plot2d (object):
                 
 
             #---- Locate the axe station id
-            
-   
-            for offs , names in zip (plot_sites_offsets, plot_sites_names):
+            for offs , names in zip (plot_sites_offsets,
+                                     plot_sites_names):
                 # plot the station marker ' black triangle down ' 
                 # always plots at the surface.
                 if names == stn :
@@ -4321,9 +4299,7 @@ class Plot2d (object):
                             horizontalalignment='center',
                             verticalalignment='baseline',
                             fontdict=fdict
-                            )
-
-                                                    
+                            )                   
             # create a temporary axe to hold station names 
             tempax= axePseudodrill.twiny()
             # customize frame stations id 
@@ -4468,12 +4444,10 @@ class Plot2d (object):
                           mode='expand',
                          edgecolor = 'white', 
                          )
-            
-           
-            
+
             #----------------------------PLOT PSEUDSEDQUENCES  --------------
             self._logging.info(
-                'Build Pseudo sequences with delais logs'\
+                'Build Pseudo sequences with delais logs'
                     ' sequences curve and average curves..')
             # call the speudosecquence object from geo_obj 
 
@@ -4501,7 +4475,8 @@ class Plot2d (object):
             # the bottom as the top of the next bar 
             # loop value of pseudo_sequences  and create bar plot 
             
-            for ii, pseuds in enumerate(self.geo_dpseudo_sequence_thickness[stn]):
+            for ii, pseuds in enumerate(
+                    self.geo_dpseudo_sequence_thickness[stn]):
                 # sum all the previous bars sequences
                 next_bottom_bar = self.geo_dpseudo_sequence_thickness[stn][:ii].sum() 
      
@@ -4516,7 +4491,6 @@ class Plot2d (object):
                           alpha =1.,
             
                           )
-
             # prepare a cumul sum  for annotation starting to
             # 0 and terminate at the depth minums 1 
             annotate_cumsum = self.geo_dpseudo_sequence_thickness[stn].cumsum()
@@ -4526,9 +4500,7 @@ class Plot2d (object):
             _, annotate_lnames = mplotus.annotate_tip(
                 layer_thickness= annotate_cumsum ,
                                  layer_names =self.input_layers )
-                                                                 
 
- 
             # get station name closest to station text.  
             axePS.text(plot_sites_offsets[0]/(dz *2),
                       self.ylimits[0] - 2*dy/dz,  
@@ -4537,9 +4509,7 @@ class Plot2d (object):
                       verticalalignment='baseline',
                       fontdict=mfontdict,
                       rotation = self.station_label_rotation,
-                      
                           )
-            
             # axePS.set_xticks
             # location of the station marker 
             axePS.text(plot_sites_offsets[0]/(dz *2) ,
@@ -4552,7 +4522,8 @@ class Plot2d (object):
                         )
  
                 
-            axePS.legend(labels=[ ln.capitalize() for ln in annotate_lnames], 
+            axePS.legend(labels=[ ln.capitalize() 
+                                 for ln in annotate_lnames], 
                          loc ='upper right', 
                          prop ={'size':self.font_size , 
                                 'style': self.font_style, 
@@ -4562,14 +4533,16 @@ class Plot2d (object):
   
             # position of site and marker 
             # create a temporary axe t ohost x labels 
-            axePS.set_xticks(ticks=[plot_sites_offsets[0]/(dz *2)], minor=False )
+            axePS.set_xticks(ticks=[plot_sites_offsets[0]/(dz *2)],
+                             minor=False )
             axePS.set_xticklabels([stn] , 
                                   rotation=self.station_label_rotation, 
                                   color ='white',
                                   )
 
             axePS.set_xlabel('Pseudo-sequences',
-                          fontdict={'size': self.font_size , 'weight': 'bold', 
+                          fontdict={'size': self.font_size , 
+                                    'weight': 'bold', 
                                     'style':self.font_style})
    
             
@@ -4624,15 +4597,15 @@ class Plot2d (object):
             # axePseudodrill.set_xticks([])  
     
             self.fig.suptitle(
-                'Pseudo-stratigraphy log construction: Station : {0}'.format(stn),
+                'Pseudosequence of Station : {0}'.format(stn),
                          fontsize=  self.font_size *1.2, 
                          verticalalignment='center', 
                          style ='italic',
                          bbox =dict(boxstyle='round',facecolor ='moccasin'), 
                          y=0.95)
             
-  
-            if savefig is not None : plt.savefig(savefig , dpi = self.fig_dpi)
+            if savefig is not None :
+                plt.savefig(savefig , dpi = self.fig_dpi)
 
      
 @mdeco.geoplot1d(reason = 'zonge_engineering', color_mode='bw', 

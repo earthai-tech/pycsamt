@@ -12,10 +12,7 @@
         The MTPy software package for magnetotelluric data analysis and visualisation.
         Journal of Open Source Software, 4(37), 1358. https://doi.org/10.21105/joss.01358
         ...
-.. moduleauthor:: Jared Peacock <jpeacock@usgs.gov>
-.. moduleauthor:: Lars Krieger
 
-.. edited ::  @Daniel03
 """
 
 import cmath
@@ -37,8 +34,6 @@ class ResPhase(object):
     """
     resistivity and phase container
     .. module:: Z
-    .. moduleauthor:: Jared Peacock <jpeacock@usgs.gov>
-    .. moduleauthor:: Lars Krieger
     """
 
     def __init__(self, z_array=None, z_err_array=None, freq=None, **kwargs):

@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2021 Kouadio K. Laurent, 
-#       Created on Mon Oct 25 15:05:40 2021
-#       This module is a part of pycsamt utils packages
-#       released under a LGL- licence.
-#       @author-email:<etanoyau@gmail.com>
+
 import os
 import itertools
 import warnings

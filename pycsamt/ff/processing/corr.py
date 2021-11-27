@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-#        Copyright © 2021  Kouadio K.Laurent
-#       Author:  @Daniel03 <etanoyau@gmail.com>
-#       Licence: LGPL
 #       Created on Sat Dec 12 13:55:47 2020
 """ 
 .. _module-Shifting::`pycsamt.ff.processing.corr` 
@@ -12,9 +9,6 @@
         ...
         
 Created on Sat Dec 12 13:55:47 2020
-
-@author: @Daniel03
-
 """
 import copy 
 import warnings
@@ -1595,7 +1589,7 @@ class shifting(object):
         if itqdm : 
             pbar =tqdm.tqdm(total= len(edi_objs_id),
                              ascii=True,unit='B',
-                             desc ='pyCSAMT[---> EDICorrected]', 
+                             desc ='WEgeophysics-pycsamt[---> EDICorrected]', 
                              ncols =77)
             
         

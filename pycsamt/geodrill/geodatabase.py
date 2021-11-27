@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent
-#       Author:  ~Daniel03 <etanoyau@gmail.com>
 #       Created:on Wed Oct 14 13:38:13 2020
-#       Licence: LGPL
 """
 .. _module-GeoDataBase::`pycsamt.geodrill.geodatabase`
  
@@ -34,10 +31,12 @@ try :
     filename=os.path.basename(__file__)
     # lineno=__file__.__code__.co_firstlineno + 1
 except Exception as error :
-    _logger.warning("No basic configuration found. Try to set logging.basicConfig()"\
-                    "file as .json file or .yml file",error )
+    _logger.warning("No basic configuration found. Try to set "
+                    "logging.basicConfig() file as .json file or .yml file",
+                    error )
     
-    warnings.warn_explicit('you may configure logFile', category=DeprecationWarning,
+    warnings.warn_explicit('you may configure logFile', 
+                           category=DeprecationWarning,
                            filename=filename, lineno=1)
     pass 
 

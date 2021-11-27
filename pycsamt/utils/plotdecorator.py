@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2021 Kouadio K. Laurent, Wed Jul 14 20:00:26 2021
-# This module is part of the pyCSAMT viewer package, which is 
-# released under a GNU LGL- licence.
+# This module is part of the pyCSAMT viewer package
+
 """
 Created on Sat Aug 21 15:55:48 2021
 
@@ -11,9 +10,7 @@ Created on Sat Aug 21 15:55:48 2021
                 - `misfit` :plot error between NM and occam inversion results. 
                 - `zonge` or `avg`: plot typical resistivity and phase values 
                 - `response`: plot fitting curves of inversion rho and phase
-@author: @Daniel03
 """
-
 import warnings
 import functools 
 import numpy as np 
@@ -22,9 +19,7 @@ import matplotlib as mpl
 import  matplotlib.pyplot  as plt
 import matplotlib.cm as cm 
 import matplotlib.colorbar as mplcb
-
 import matplotlib.gridspec as gspec
-
 # from mpl_toolkits.axes_grid1 import make_axes_locatable
 # from matplotlib.ticker import MultipleLocator, NullLocator
 
@@ -932,7 +927,15 @@ class geoplot2d(object):
                                 ' with matplotlib "{1}" style.'.
                                 format(self.reason, self.plot_style))  
             
-            # -------------- blocks properties -------------------------------
+            # -------------- check dimensionnality ---------------------------
+            occam_model_resistiviy_obj, *dm= self._check_dimensionality (
+                        occam_model_resistiviy_obj,
+                        occam_model_depth_offsets,
+                          occam_data_station_offsets
+                          )
+            occam_model_depth_offsets, occam_data_station_offsets = dm
+
+            
             if self.plot_style.lower() =='pcolormesh':
                 mesh_x  , mesh_z= np.meshgrid(occam_data_station_offsets,
                                               occam_model_depth_offsets )

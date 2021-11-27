@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
-#       @author: KouaoLaurent alias @Daniel03 <etanoyau@gmail.com>
 #       Created on Fri Jan 22 20:31:14 2021
 """
 .. _module-Occam2D :: `pycsamt.modeling.occam2d`
@@ -1954,18 +1952,24 @@ class Iter2Dat (object):
         bln_fn =kws.pop('bln_fn', None)
         elev=kws.pop('elevation', None)
         
-        if elev is not None : self.elevation = elev 
-        if bln_fn is not None : self.bln_fn = bln_fn 
-        if doi is not None : self.doi =doi
+        if elev is not None :
+            self.elevation = elev 
+        if bln_fn is not None : 
+            self.bln_fn = bln_fn 
+        if doi is not None :
+            self.doi =doi
         
-        if savepath is not None : self.savepath =savepath
+        if savepath is not None : 
+            self.savepath =savepath
         # statement to do so to 
         if iter2dat_fn is not None : 
             self.iter2dat_fn= iter2dat_fn
             
         elif self.iter2dat_fn is None :
-            if model_fn is not None : self.model_fn =model_fn 
-            if occam_model_obj is not None : self.OccamModel = occam_model_obj
+            if model_fn is not None :
+                self.model_fn =model_fn 
+            if occam_model_obj is not None :
+                self.OccamModel = occam_model_obj
             
             # resseting other main attributes 
             if iter_fn is not None : setattr(self, 'iter_fn', iter_fn)
@@ -2054,14 +2058,7 @@ class Iter2Dat (object):
                     '{0:>15.7f}'.format(self.model_res[ii,jj]),
                     '\n',
                     ]))
-        # create a folder in your current work directory
-        if self.savepath is None : 
-            try :
-                self.savepath = os.path.join(os.getcwd(), '_iter2dat_')
-                if not os.path.isdir(self.savepath):
-                    os.mkdir(self.savepath)#  mode =0o666)
-            except : 
-                warnings.warn("It seems the path already exists !")
+
         #writes files 
         for ii , wfiles in enumerate([write_iter2data_lines, write_bln_lines ]): 
             if ii == 0 : mm='.dat'
@@ -2073,6 +2070,7 @@ class Iter2Dat (object):
                 fw.writelines(wfiles)
                 
         #savefile
+        self.savepath = func.cpath(self.savepath, '_savei2dout_')
         if self.savepath is not None : 
             import shutil 
             try :
@@ -2534,7 +2532,7 @@ class occam2d_write(object):
         :type interpolate_freq: bool 
         
         :param geoelectric_strike: geoelectric strike angle assuming N = 0, E = 90.
-                            If True , provided , losgspace interpolation as tuple value
+                            If True, provided, losgspace interpolation as tuple value
         :type geoelectric_strike: float
         
         :return: outfiles building occam2d inputfiles 
@@ -2570,21 +2568,17 @@ class occam2d_write(object):
         OccamDataFile = kwargs.pop('occamDataFile','OccamDataFile.dat' )
         
         
-        if savepath is None : 
-            savepath = os.path.join(os.path.abspath('.'),
-                                    'occam2dBuildInputfiles')
-            
-        if not os.path.exists(savepath):
-            os.mkdir(savepath)
-        
+        savepath = func.cpath (savepath ,'_saveoc2dInputfiles_' )
         # collected the list of stations from edifile object 
         
-        slst=[edi[0:-4] for edi in os.listdir(edi_fn) if edi.find('.edi')>0]
+        slst=[edi[0:-4] for edi in
+              os.listdir(edi_fn) if edi.find('.edi')>0]
         
     
         # create an occam data object
         
-        _logger.info('Read occam2d Data, write data and build regularization mesh ')
+        _logger.info('Read occam2d Data,'
+                     ' write data and build regularization mesh ')
         
         ocd = MToccam2d.Data(edi_path=edi_fn,
                            station_list=slst,
@@ -2631,6 +2625,7 @@ class occam2d_write(object):
         
         print('---> Read occam2D data and write occam Data done !')
         # make model and mesh files
+  
         ocr = MToccam2d.Regularization(ocd.station_locations, 
                                        n_layers =number_of_layers, 
                                        cell_width = cell_width, 
@@ -2711,7 +2706,7 @@ class occam2d_write(object):
         
         print('-'*77)  
 
-        print('---> Building occamInputfiles  function successfully run. !')  
+        print('---> Building occamInputfiles  successfully done. ')  
  
          
 @mdeco.geoplot2d(reason='misfit', cmap ='bwr', climits=(-2,2), show_grid=False)
@@ -2751,12 +2746,17 @@ def getMisfit(resp_fn =None, data_fn =None, kind='rho', **kwargs) :
     # call reponse Object 
     mode =kwargs.pop('mode', None)
     oclogfile =kwargs.pop('logfile', None)
-
+    
     useResiValue= kwargs.pop('residual', False)
-    if kind.lower().find('rho')>=0 or kind==1: 
+    if kind.lower().find('rho')>=0 or \
+        kind.lower().find('res')>=0  or kind==1: 
         kind='rho'
     elif kind.lower().find('ph')>=0 or kind==2: 
         kind = 'phase'
+    else :
+        raise CSex.pyCSAMTError_occam2d(
+            f'Wrong argument kind {kind!r}.'
+            'Should be `rho` or `phase`')
 
     resp_obj  =Response(response_fn =resp_fn , data_fn =data_fn)
     

@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
-#       Create:on Fri Oct 29 12:31:01 2021
-#       Licence: LGPL
+#       created on Fri Oct 29 12:31:01 2021
 import os
 import warnings
 import copy

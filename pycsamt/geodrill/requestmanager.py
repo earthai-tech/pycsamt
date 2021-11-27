@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
-#       @author: KouaoLaurent alias @Daniel03 <etanoyau@gmail.com>
 #       Created on Tue Oct 13 15:28:57 2020
 """
 .. _module-requestmanager::`pycsamt.geodrill.requestmanager`

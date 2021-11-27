@@ -11,7 +11,6 @@
     
 Created on Tue Apr  6 20:53:41 2021
 
-@author: @Daniel03
 """
 from  pycsamt.modeling.occam2d import occam2d_write
 from pycsamt.gui.wrap_console_scripts import wrap_cscripts as wrs

@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-#       Author: Kouadio K.Laurent<etanoyau@gmail.con>
-#       Licence: LGPL
 #       Created on Wed Dec  2 11:29:32 2020
 """
 .. _module-cs:: `pycsamt.ff.core.cs` 
@@ -667,12 +665,12 @@ class CSAMT(object):
                     return 
                 
                 
-    def j2edi(self, jfn=None, savepath =None, **kwargs): 
+    def j2edi(self, data_fn=None, savepath =None, **kwargs): 
         """
         Method to convert j-files to edi files. Method calls CSAMT class object
         and get from this class edi infos 
         
-        :param jfn: collection of jfiles or path-like str  
+        :param data_fn: collection of jfiles or path-like str  
         :type list_of_files: str  
 
         :rtype: str
@@ -693,10 +691,10 @@ class CSAMT(object):
         project_name =kwargs.pop('project_name', None)
         dipole_length =kwargs.pop('dipole_length', 100.)
         rotation_angle =kwargs.pop ('rotation_angle', 0.)
-        
-        if jfn is not None : 
-            self._fn =jfn 
-        
+
+        if data_fn is not None : 
+            self._fn =data_fn 
+
         if self._fn is not None:
             self._read_j_obj(j_fn =self._fn, jpath = self.fpath)
             # self.jfiles_list = jfn
@@ -715,7 +713,8 @@ class CSAMT(object):
         # create edi-obj and set attributes 
         if itqdm : 
             pbar =tqdm.tqdm(total= len(self.station), ascii=True,
-                             desc ='pyCSAMT[J ---> EDI]', ncols =77)
+                             desc ='WEgeophysics-pycsamt[J ---> EDI]', 
+                             ncols =77)
         for ii, stn in enumerate (self.station):
             # create an edi_obj and fill attributes 
             edi_obj=CSAMTedi.Edi()
@@ -726,12 +725,15 @@ class CSAMT(object):
  
             if self.jsites_infos is None  or\
                 self.jsites_infos==[None]: 
+                # return the creation date of file     
                 self.jsites_infos = datetime.datetime.fromtimestamp(
-                    os.stat(self._fn).st_ctime) # return the creation date of file 
+                    os.stat(self._fn).st_ctime) 
             
             try: 
                 edi_obj.Head.acqdate = self.jsites_infos[ii]
-            except: #TypeError: 'datetime.datetime' object is not subscriptable
+            except: 
+                #TypeError: 'datetime.datetime' 
+                #   object is not subscriptable
                 edi_obj.Head.acqdate= self.jsites_infos
                 
             edi_obj.Head.fileby = fileby 
@@ -1175,8 +1177,10 @@ class CSAMT(object):
         # from pycsamt.utils import gis_tools as gis 
         #   for stn in head_dataid_list : #loop for all station or dataid 
         if itqdm : 
-            pbar =tqdm.tqdm(total= len(head_dataid_list), ascii=True,unit ='B',
-                             desc ='pyCSAMT[AVG ---> EDI]', ncols =77)
+            pbar =tqdm.tqdm(total= len(head_dataid_list), ascii=True,
+                            unit ='B',
+                             desc ='WEgeophysics-pycsamt[AVG ---> EDI]', 
+                             ncols =77)
             
         for ii, stn in enumerate(head_dataid_list): 
             #create Ediobj for eac datalist 

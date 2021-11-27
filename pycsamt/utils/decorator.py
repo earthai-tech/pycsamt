@@ -14,7 +14,6 @@ class deprecated(object):
         Usage:
             todo: write usage
 
-        Author: YingzhiGou
         Date: 20/06/2017
     """
     def __init__(self, reason):  # pragma: no cover
@@ -146,7 +145,6 @@ class deprecated_to(object) :
             to replace old function method or class
                 with multiple parameters.
 
-        Author: @Daniel03
         Date: 18/10/2020
     """
     

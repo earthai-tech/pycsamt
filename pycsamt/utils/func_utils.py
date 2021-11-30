@@ -36,7 +36,9 @@
         * stn_check_split_type
         * minimum_parser_to_write_edi
         * round_dipole_length
-        * keepmin        
+        * keepmin  
+        * get_closest_value
+        * geo_length_checker
 """
 
 import os 
@@ -50,8 +52,10 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 
 import  pycsamt.utils.gis_tools as gis
+import pycsamt.utils.exceptions as CSex
 from pycsamt.utils.decorator import deprecated 
 from pycsamt.utils._csamtpylog import csamtpylog
+
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 
 _msg= ''.join([
@@ -2498,9 +2502,209 @@ def keepmin(array):
         os= os[0]
     return int(os), array[int(os)]
 
+
+def get_closest_value (values_range, input_value): 
+    """
+    Function  to select the closest values when input values is
+    not in the values range. We assume that value types are arrays.
+    If the same value is repeated, should take the first index and 
+    the value at that index. 
+    
+    :param values_range: values to get 
+    :type values_range: array_like   
+                 
+    :param input_value: specific value
+    :type input_value: float,
+
+    :returns: the closest value and its index
+    :rtye: float 
+    
+    """
+
+    values_range = np.array(values_range)
+    # if all element less than zero than convert 
+     #in put value to negative value 
+    if np.all(values_range <0) : 
+        if input_value >0 : 
+            input_value *=-1  # for depth select purpose 
+        
+    if input_value < values_range.min(): 
+        print('--> ! Input value ={0} is out  the range,'
+              ' min value = {1}. Value should be reset to ={1}.'.
+              format(input_value, values_range.min())
+              )
+        
+        warnings.warn('Input value ={0} is out  '
+                      'the range ! min value = {1}'.
+                      format(input_value, values_range.min())
+                      )
+        _logger.debug('Input value ={0} is out '
+                      'the range ! min value = {1}'.
+                      format(input_value, values_range.min())
+                      )  
+            
+        input_value = values_range.min()
+    elif input_value > values_range.max(): 
+        
+        warnings.warn('Input value ={0} is out '
+                      'the range ! max value = {1}'.
+                      format(input_value, values_range.max())
+                      )
+        _logger.debug('Input value ={0} is out '
+                      'the range ! max value = {1}'.
+                      format(input_value, values_range.max()))
+            
+        input_value = values_range.max()
+        print('!--> Input value ={0} is out '
+              'the range , min value = {1}. Value'
+              ' should be reset to ={1}.'.format(
+                  input_value, values_range.max()))
+        
+    if input_value in values_range : 
+        indexes,*_= np.where(values_range==input_value)
+        if len(indexes)==1 : 
+            index =int(indexes )
+        # mean element is repeated then take the first index    
+        elif len(indexes)>1 : 
+            index = int(indexes)[0]
+            
+        value = values_range[index]
+        return value , index 
+    
+    elif values_range.min() < input_value < values_range.max(): 
+        # values_range = sorted(values_range)
+        for ii, xx in enumerate(values_range): 
+            if xx > input_value : 
+                #compute distance : 
+                # make the diffence between distances 
+                d0 = abs(input_value-xx) 
+                # need to take the short
+                d1= abs(values_range[ii-1]-input_value) 
+                if d0 < d1 : 
+                    return  xx , ii
+                elif d0> d1 : 
+                    return   values_range[ii-1], ii-1
+                
+def geo_length_checker(main_param, 
+                       optional_param,
+                       force =False, 
+                        param_names =('input_resistivities',
+                                      'input_layers'),
+                        **kws): 
+    """
+    Geo checker is a function to check the differents length 
+    of different geoparams.
+    
+    The length of optional params  should depend of the length of main params. 
+    Therefore if the length of optional params is larger than the length of 
+    the main params, the length of optional params will be reduced to
+    the length of main params.Otherwise if the length of optional params 
+    is shorther than the length of the main params, will filled it either 
+    with "None" if dtype param is string or 0. is float or 0 if integer.
+    If `force`  is set ``True``, shoud raise errors if the main params and 
+    the optional params have are not the same length. 
+  
+    Parameters 
+    ------------
+        * main_param : array_like, list 
+                 main parameter that must took 
+                 its length as reference length 
+                 
+        * optional params : array_like, list 
+                 optional params, whom length depend 
+                 to the length of main params
+                 
+        * param_names : tuple or str 
+                 names of main params and optional params 
+                 so to generate error if exits.
+                 
+        * fill_value: str, float, optional  
+                Default value to fill thearray in the case where 
+                the length of optional param is 
+                less than the length of the  main param .If None ,
+                will fill according to array dtype
+            
+    Returns 
+    --------
+        array_like 
+           optional param truncated according to the man params 
+    """
+    add_v =kws.pop('fill_value', None)
+    
+
+    if isinstance(main_param, (str, float, int)):
+        main_param = np.array([main_param])
+    if isinstance(optional_param, (str, float, int)):
+       optional_param = np.array([optional_param])
+    if isinstance(main_param, (list, tuple)):
+        main_param =np.array(main_param)
+    if isinstance(optional_param, (list, tuple)):
+        optional_param =np.array(optional_param)
+            
+    mes=''
+    if len(optional_param) > len(main_param): 
+        mes ="".join(["---> Note ! {0} will be truncated ",
+            "to length = {1}as the same length of {2} ."])
+        
+        warnings.warn(mes.format(param_names[1],
+                                 len(main_param),param_names[0] ))
+        
+        optional_param= optional_param[:len(main_param)]
+        if force is True : 
+            mess =''.join(['--> `force` argument is set ``True``,', 
+                           ' Can not truncate {0} = {1} to fit the ',
+                           'length of {2} = {3}.'])
+
+            raise CSex.pyCSAMTError_parameter_number(
+                mess.format(param_names[1], 
+                        len(param_names[1]), 
+                        param_names[0],
+                        len(param_names[0])))
+
+    elif len(optional_param) < len(main_param) : 
+        if force is True : 
+            mess =''.join([ '--> `force` argument  is set ``True``,',
+                           ' Can not fill the value of {0} ',
+                            'to match the length of {1} = {2}.'])
+            
+            raise CSex.pyCSAMTError_parameter_number(
+                mess.format(param_names[1], param_names[0],
+                            len(param_names[0])))
+        if add_v is not None : 
+            # repeat the value to add 
+            add_v =[add_v for vv in range(
+                len(main_param)-len(optional_param))]
+            add_v = np.array(add_v)
+        if add_v is None :
+             if optional_param.dtype not in [ 'float', 'int'] : 
+                 add_v =['None' for i in range(
+                     len(main_param)-len(optional_param))]
+    
+             else : 
+                 for type_param, fill_value in zip(
+                         [ 'float', 'int'],[ 0., 0] ): 
+                     if  type_param  == optional_param.dtype :
+                         add_v =[fill_value for i in range(
+                             len(main_param)-len(optional_param))]
+
+        mes =''.join(["--> Length of {0} is ={1} which ",
+                      "length of {2} is ={3}. We'll add {4}", 
+                      "to fill {5} value."
+                      ])
+
+        warnings.warn(mes.format(param_names[1],
+                                 len(optional_param),
+                                 param_names[0],
+               len(main_param), add_v[0], param_names[1]))
+        optional_param= optional_param.tolist()
+        optional_param.extend(add_v)
+
+    return np.array(optional_param)
+
 # if __name__=="__main__" :
 
-    # parse_=parse_wellData(filename='shimenDH.csv', include_azimuth=True,utm_zone='49N')
+    # parse_=parse_wellData(filename='shimenDH.csv',
+    # include_azimuth=True,utm_zone='49N')
     
     # print("NameOflocation:\n",parse_[0])
     # print("WellData:\n",parse_[1])

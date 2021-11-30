@@ -979,7 +979,7 @@ class Geodrill (object):
             
         if input_layers is not None :
             # rebuild input_layers 
-            self.input_layers = ascertain_layers_with_its_resistivities(
+            self.input_layers = assert_len_layers_with_resistivities(
                 real_layer_names= input_layers, 
                 real_layer_resistivities=self.input_resistivities) 
 
@@ -1186,7 +1186,7 @@ class Geodrill (object):
             #check weither the layer of resistivities
             if real_layer_names is not None : 
                #are the same dimension and return new layer with same dimension
-                real_layer_names = ascertain_layers_with_its_resistivities(
+                real_layer_names = assert_len_layers_with_resistivities(
                     real_layer_names =real_layer_names,
                     real_layer_resistivities= structures_resistivities)
             else : 
@@ -1216,7 +1216,7 @@ class Geodrill (object):
                 real_layer_names = Geodrill.get_structure(
                     structures_resistivities)
             elif real_layer_names is not None :  
-                real_layer_names = ascertain_layers_with_its_resistivities(
+                real_layer_names = assert_len_layers_with_resistivities(
                     real_layer_names =real_layer_names,
                      real_layer_resistivities= structures_resistivities) 
 
@@ -1437,9 +1437,11 @@ class Geodrill (object):
                 self.elevation  = np.repeat(0., len(self.station_location))
         elif self.elevation is not None : 
             
-            self.elevation = geo_length_checker(main_param= self.station_location,
-                                                optional_param = self.elevation, 
-                param_names = ('station location', 'elevation'), fill_value=0.)
+            self.elevation = func.geo_length_checker(
+                main_param= self.station_location,
+                optional_param = self.elevation, 
+                param_names = ('station location', 'elevation'),
+                fill_value=0.)
         
         # now read files 
         if  self.input_resistivities is not None : 
@@ -2359,7 +2361,7 @@ class Geosurface :
             # get attributes array : depth and resistivity
             #get depth index from info_depthvalues dictionnary (key  :
                     # values = info_names, depth_values, depth spacing )
-            new_depth_value, index =  get_closest_value(
+            new_depth_value, index =  func.get_closest_value(
                 values_range= self.info_depthvalues[site_name][1],
                               input_value= depth_value)
             # now get especially array or depth and resistivy at that value
@@ -3449,220 +3451,7 @@ class Drill(object):
                       format(os.path.basename(
                       '.'.join([self.daTA[0][:-1],'xlsx'])), self.savepath))
                 
-#------Usefull functions --------------------------
-def get_closest_value (values_range, input_value): 
-    """
-    Fonction  to get closest values when input values is not in the values range
-    we assume that values are single on array. if the same value is repeated 
-    will take the first index and the value at that index 
-    
-    :param values_range: values to get 
-    :type values_range: array_like   
-                 
-    :param input_value: specific value
-    :type input_value: float,
-
-    :returns: the closest value and its index
-    :rtye: float 
-    
-    """
-
-    values_range = np.array(values_range)
-    if np.all(values_range <0) : # if all element less than zero than convert 
-                                    #inoput value to negative value 
-        if input_value >0 : input_value *=-1  # for depth select purpose 
-        
-    if input_value < values_range.min(): 
-        print('--> ! Input value ={0} is out  the range, min value = {1}. Value'\
-              ' should be reset to ={1}.'.format(input_value, values_range.min()))
-        
-        warnings.warn('Input value ={0} is out  the range ! min value = {1}'.\
-                      format(input_value, values_range.min()))
-        _logger.debug('Input value ={0} is out  the range ! min value = {1}'.\
-                      format(input_value, values_range.min()))  
-            
-        input_value = values_range.min()
-    elif input_value > values_range.max(): 
-        
-        warnings.warn('Input value ={0} is out  the range ! max value = {1}'.\
-                      format(input_value, values_range.max()))
-        _logger.debug('Input value ={0} is out  the range ! max value = {1}'.\
-                      format(input_value, values_range.max()))
-            
-        input_value = values_range.max()
-        print('!--> Input value ={0} is out  the range , min value = {1}. Value'\
-              ' should be reset to ={1}.'.format(input_value, values_range.max()))
-        
-    if input_value in values_range : 
-        indexes,*_= np.where(values_range==input_value)
-        if len(indexes)==1 : 
-            index =int(indexes )
-        elif len(indexes)>1 : # mean element is repeated then take the first index
-            index = int(indexes)[0]
-            
-        value = values_range[index]
-        return value , index 
-    
-    elif values_range.min() < input_value < values_range.max(): 
-        # values_range = sorted(values_range)
-        for ii, xx in enumerate(values_range): 
-            if xx > input_value : 
-                #compute distance : 
-                d0 = abs(input_value-xx) # make the diffence between distances 
-                d1= abs(values_range[ii-1]-input_value) # nad take the short
-                if d0 < d1 : 
-                    return  xx , ii
-                elif d0> d1 : 
-                    return   values_range[ii-1], ii-1
-                
-
- 
-def ascertain_layers_with_its_resistivities(real_layer_names , 
-                                            real_layer_resistivities): 
-    """
-    Assert the length of of real resistivites with their corresponding layers.
-    If length of resistivities of larger that the layer's names, then will add
-    layer that match the best the remained resistivities. If the length 
-    of layer is larger than resistivities , to avoid miscomputation , will
-    cut out this more layer and work only the length of resistivities provided.
-    
-    Parameters
-    ----------
-        * real_layer_names: array_like , list 
-                    list of input layer names as real 
-                    layers names encountered in area 
-                    
-        * real_layer_resistivities :array_like , list 
-                    list of resistivities get on survey area
-                
-    Returns 
-    --------
-        list 
-            real_layer_names,  new list of input layers 
-    """
-    # for consistency put on string if user provide a digit
-    real_layer_names =[str(ly) for ly in real_layer_names]      
-    
-    if len(real_layer_resistivities) ==len(real_layer_names): 
-        return real_layer_names
-    
-    elif len(real_layer_resistivities) > len(real_layer_names): 
-         # get the last value of resistivities  to find the structres
-         # names ans structures sresistivities 
-        sec_res = real_layer_resistivities[len(real_layer_names):]        
-       # get the name of structure as possible 
-        geos =Geodrill.get_structure(resistivities_range=sec_res) 
-        if len(geos)>1 : tm = 's'
-        else :tm =''
-        print('---> !We added other {0} geological struture{1}.'\
-              ' You may ignore it.'.format(len(geos), tm))
-        real_layer_names.extend(geos)       
-        return real_layer_names 
-    elif len(real_layer_names) > len(real_layer_resistivities): 
-        real_layer_names = real_layer_names[:len(real_layer_resistivities)]        
-        return real_layer_names
-
-def geo_length_checker(main_param, optional_param, force =False, 
-                param_names =('input_resistivities', 'input_layers'), **kws): 
-    """
-    Geo checker is a function to check differents length of different params.
-    
-    the length of optional params  depend of the length of main params . if
-    the length of optional params is larger than the length of main 
-    params, the length of optional params will be reduce to the length of 
-    main params .If the optional params  length is shorther than the length of
-    main params, will filled it either with "None" if dtype param is string
-    of 0.if dtype params is float or 0 if integer.if Force  is set True , 
-    it will absolutely check if the main params and the optional params have
-    the same length. if not the case ,   will generate an error .
-  
-    Parameters 
-    ------------
-        * main_param : array_like, list 
-                 main parameter that must took 
-                 its length as reference length 
-                 
-        * optional params : array_like, list 
-                 optional params, whom length depend 
-                 to the length of main params
-                 
-        * param_names : tuple or str 
-                 names of main params and optional params 
-                 so to generate error if exits.
-                 
-        * fill_value: str, float, optional  
-                Default value to fill thearray in the case where 
-                the length of optional param is 
-                less than the length of the  main param .If None ,
-                will fill according to array dtype
-            
-    Returns 
-    --------
-        array_like 
-           optional param truncated according to the man params 
-    """
-    add_v =kws.pop('fill_value', None)
-    
-
-    if isinstance(main_param, (str, float, int)):
-        main_param = np.array([main_param])
-    if isinstance(optional_param, (str, float, int)):
-       optional_param = np.array([optional_param])
-    if isinstance(main_param, (list, tuple)):
-        main_param =np.array(main_param)
-    if isinstance(optional_param, (list, tuple)):
-        optional_param =np.array(optional_param)
-            
-
-    mes=''
-    if len(optional_param) > len(main_param): 
-        mes ="---> Note ! {0} will be truncated to length = {1} '\
-            as the same length of {2} .".\
-            format(param_names[1], len(main_param),param_names[0] )
-        warnings.warn(mes)
-        
-        optional_param= optional_param[:len(main_param)]
-        if force is True : 
-            mess = '--> force argument  is set <True>, Can not truncate {0}'\
-                ' = {1} to match the length of {2} = {3}.'\
-                .format(param_names[1], len(param_names[1]), param_names[0],
-                        len(param_names[0]))
-            raise CSex.pyCSAMTError_parameter_number(mess)
-
-    elif len(optional_param) < len(main_param) : 
-        if force is True : 
-            mess = '--> force argument  is set <True>, Can not fill value of {0} '\
-                'to match the length of {1} = {2}.'\
-                .format(param_names[1], param_names[0], len(param_names[0]))
-            raise CSex.pyCSAMTError_parameter_number(mess)
-            
-        if add_v is not None : 
-            add_v =[add_v for vv in range(
-                len(main_param)-len(optional_param))] # repeat the value to add 
-            add_v = np.array(add_v)
-        if add_v is None :
-             if optional_param.dtype not in [ 'float', 'int'] : 
-                 add_v =['None' for i in range(
-                     len(main_param)-len(optional_param))]
-                 
-             else : 
-                 for type_param, fill_value in zip([ 'float', 'int'],[ 0., 0] ): 
-                     if  type_param  == optional_param.dtype :
-                         add_v =[fill_value for i in range(
-                             len(main_param)-len(optional_param))]
-
-        mes ="--> !Note Length of {0} is ={1} which  length of {2} is ={3}.'\
-            We'll add {4} to fill {5} value.".\
-            format(param_names[1], len(optional_param), param_names[0],
-                   len(main_param), add_v[0], param_names[1])
-            
-        warnings.warn(mes)
-        optional_param= optional_param.tolist()
-        optional_param.extend(add_v)
-
-    return np.array(optional_param)
-    
-                                                                                    
+                                                                           
 @geoplot2d(reason='model', cmap='jet_r', plot_style ='pcolormesh')
 def geoModel( **kwargs ):
     """
@@ -3960,7 +3749,8 @@ class GeoStratigraphy(Geodrill):
         try : 
             self._ptol =float(ptol0)
         except Exception :
-            TypeError
+            raise TypeError ('Tolerance parameter `ptol` should be '
+                             f'a float number not {type (ptol0)!r}.')
         else : 
             if 0 >= self._ptol >1: 
                 self._logging.debug(f"Tolerance value `{self._ptol}` is "
@@ -4003,7 +3793,7 @@ class GeoStratigraphy(Geodrill):
              
             :returns:rocks sanitized and resistivities. 
             """
-    
+
             listOfauto_rocks= np.concatenate((listOfauto_rocks), axis =1)
             rho_= listOfauto_rocks[1, :]
             rho_=np.array([float(ss) for ss in rho_])
@@ -4023,7 +3813,9 @@ class GeoStratigraphy(Geodrill):
         tres =kws.pop('tres', None)
         subblocks =kws.pop('subblocks', None)
         disp= kws.pop('display_infos', True)
-        hinfos =kws.pop('headerinfos', ' Layers [auto=automatic]')
+        n_epochs = kws.pop('n_epochs', None)
+        hinfos =kws.pop('headerinfos',
+                        ' Layers [auto=automatic]')
         if subblocks is not None: 
             self.subblocks = subblocks
         
@@ -4038,7 +3830,9 @@ class GeoStratigraphy(Geodrill):
             self.beta = beta 
         if ptol is not None:
             self.ptol = ptol 
-        
+        if n_epochs is not None: 
+            self.n_epochs = n_epochs 
+            
         self.s0 , errors=[], []
         #step1 : SOFMINERROR 
         if itqdm : 
@@ -4171,17 +3965,23 @@ class GeoStratigraphy(Geodrill):
                                      s0=geosObj.s0[0])
         """
         
-        if tres is not None: self.tres = tres 
-        if ptol is not None: self.ptol = ptol 
+        if tres is not None:
+            self.tres = tres 
+        if ptol is not None: 
+            self.ptol = ptol 
         
         eta = kwargs.pop('eta', None)
-        if eta is not None: self._eta = eta 
+        if eta is not None: 
+            self._eta = eta 
         n_epochs =kwargs.pop('n_epochs', None)
-        if n_epochs is not None: self.n_epochs = n_epochs 
+        if n_epochs is not None: 
+            self.n_epochs = n_epochs 
         kind = kwargs.pop('kind', None)
-        if kind is not None: self._kind = kind 
+        if kind is not None:
+            self._kind = kind 
         degree = kwargs.pop('degree', None) 
-        if degree is not None: self._degree = degree 
+        if degree is not None: 
+            self._degree = degree 
         
         buffer =self.ptol +1  #bufferr error 
         _z= s0[:, 0]
@@ -5085,7 +4885,54 @@ def quick_read_geomodel(lns=GU.LNS, tres=GU.TRES):
     
     return geosObj 
 
-
+def assert_len_layers_with_resistivities(
+        real_layer_names:str or list, real_layer_resistivities: float or list ): 
+    """
+    Assert the length of of the real resistivites with their
+    corresponding layers. If the length of resistivities is larger than 
+    the layer's names list of array, the best the remained resistivities
+    should be topped up to match the same length. Otherwise if the length 
+    of layers is larger than the resistivities array or list, layer'length
+    should be reduced to fit the length of the given resistivities.
+    
+    Parameters
+    ----------
+        * real_layer_names: array_like, list 
+                    list of input layer names as real 
+                    layers names encountered in area 
+                    
+        * real_layer_resistivities :array_like , list 
+                    list of resistivities get on survey area
+                
+    Returns 
+    --------
+        list 
+            real_layer_names,  new list of input layers 
+    """
+    # for consistency put on string if user provide a digit
+    real_layer_names =[str(ly) for ly in real_layer_names]      
+    
+    if len(real_layer_resistivities) ==len(real_layer_names): 
+        return real_layer_names
+    
+    elif len(real_layer_resistivities) > len(real_layer_names): 
+         # get the last value of resistivities  to match the structures
+         # names and its resistivities 
+        sec_res = real_layer_resistivities[len(real_layer_names):]        
+       # fetch the name of structure 
+        geos =Geodrill.get_structure(resistivities_range=sec_res) 
+        if len(geos)>1 : tm = 's'
+        else :tm =''
+        print(f"---> Temporar{'ies' if tm=='s' else 'y'} "
+              f"{len(geos)} geological struture{tm}."
+              f" {'were' if tm =='s' else 'was'} added."
+              " Uncertained layers should be ignored.")
+        
+        real_layer_names.extend(geos)       
+        return real_layer_names 
+    elif len(real_layer_names) > len(real_layer_resistivities): 
+        real_layer_names = real_layer_names[:len(real_layer_resistivities)]        
+        return real_layer_names
                     
                     
 

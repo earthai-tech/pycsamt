@@ -17,6 +17,6 @@ data_fn: data/occam2D\OccamDataFile.dat
 iter_fn: data/occam2D\ITER17.iter
 mesh_fn: data/occam2D\Occam2DMesh
 model_fn: data/occam2D\Occam2DModel
-ptol: 0.1
+ptol: 0.2
 beta: 5
 n_epochs: 100

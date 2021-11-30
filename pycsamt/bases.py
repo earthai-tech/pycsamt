@@ -1,13 +1,21 @@
 # -*- coding: utf-8 -*-
 #       created on Fri Oct 29 12:31:01 2021
 import os
+import json 
+import yaml 
 import warnings
 import copy
 import joblib 
 import pickle
 import datetime
 import shutil 
+from six.moves import urllib 
+from typing import Union, TypeVar , Any, Optional, Type
 
+T=TypeVar('T')
+A=TypeVar('A')
+
+import pycsamt.utils.func_utils as FU
 from pycsamt.utils._csamtpylog import csamtpylog
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
@@ -164,6 +172,315 @@ def load_serialized_data (filename:str, verbose:int =0):
     
     return data 
 
+def parse_json(json_fn:str =None, data:Union[T, Type[Any], list, tuple] =None, 
+               todo:str ='load', savepath:Optional[str] =None,
+               verbose:int =0, **jsonkws) -> T:
+    """ Parse Java Script Object Notation file and collect data from JSON
+    config file. 
+    
+    :param json_fn: Json filename, URL or output JSON name if `data` is 
+        given and `todo` is set to ``dump``.Otherwise the JSON output filename 
+        should be the `data` or the given variable name.
+    :param data: Data in Python obj to serialize. 
+    :param todo: Action to perform with JSON: 
+        - load: Load data from the JSON file 
+        - dump: serialize data from the Python object and create a JSON file
+    :param savepath: If ``default``  should save the `json_fn` 
+        If path does not exist, should save to the <'_savejson_'>
+        default path .
+    :param verbose: int, control the verbosity. Output messages
+    
+    .. see also:: Read more about JSON doc
+            https://docs.python.org/3/library/json.html
+         or https://www.w3schools.com/python/python_json.asp 
+         or https://www.geeksforgeeks.org/json-load-in-python/
+         ...
+ 
+    :Example: 
+        >>> import pycsamt.utils.geo_utils as GU 
+        >>> geo_kws ={'oc2d': GU.INVERS_KWS, 
+                      'TRES':GU.TRES, 'LN':GU.LNS}
+        # serialize json data and save to  'jsontest.json' file
+        >>> GU.parse_json(json_fn = 'jsontest.json', 
+                          data=geo_kws, todo='dump', indent=3,
+                          savepath ='data/saveJSON', sort_keys=True)
+        # Load data from 'jsontest.json' file.
+        >>> GU.parse_json(json_fn='data/saveJSON/jsontest.json', todo ='load')
+    
+    """
+    todo, domsg =return_ctask(todo)
+    # read urls by default json_fn can hold a url 
+    try :
+        if json_fn.find('http') >=0 : 
+            todo, json_fn, data = fetch_json_data_from_url(json_fn, todo)
+    except:
+        #'NoneType' object has no attribute 'find' if data is not given
+        pass 
+
+    if todo.find('dump')>=0:
+        json_fn = get_config_fname_from_varname(
+            data, config_fname= json_fn, config='.json')
+        
+    JSON = dict(load=json.load,# use loads rather than load  
+                loads=json.loads, 
+                dump= json.dump, 
+                dumps= json.dumps)
+    try :
+        if todo=='load': # read JSON files 
+            with open(json_fn) as fj: 
+                data =  JSON[todo](fj)  
+        elif todo=='loads': # can be JSON string format 
+            data = JSON[todo](json_fn) 
+        elif todo =='dump': # store data in JSON file.
+            with open(f'{json_fn}.json', 'w') as fw: 
+                data = JSON[todo](data, fw, **jsonkws)
+        elif todo=='dumps': # store data in JSON format not output file.
+            data = JSON[todo](data, **jsonkws)
+
+    except json.JSONDecodeError: 
+        raise json.JSONDecodeError(f"Unable {domsg} JSON {json_fn!r} file. "
+                              'Please check your file.', f'{json_fn!r}', 1)
+    except: 
+        msg =''.join([
+        f"{'Unrecognizable file' if todo.find('load')>=0 else'Unable to serialize'}"
+        ])
+        
+        raise TypeError(f'{msg} {json_fn!r}. Please check your'
+                        f" {'file' if todo.find('load')>=0 else 'data'}.")
+        
+    cparser_manager(f'{json_fn}.json',savepath, todo=todo, dpath='_savejson_', 
+                    verbose=verbose , config='JSON' )
+
+    return data 
+ 
+def fetch_json_data_from_url (url:str , todo:str ='load'): 
+    """ Retrieve JSON data from url 
+    :param url: Universal Resource Locator .
+    :param todo:  Action to perform with JSON:
+        - load: Load data from the JSON file 
+        - dump: serialize data from the Python object and create a JSON file
+    """
+    with urllib.request.urlopen(url) as jresponse :
+        source = jresponse.read()
+    data = json.loads(source)
+    if todo .find('load')>=0:
+        todo , json_fn  ='loads', source 
+        
+    if todo.find('dump')>=0:  # then collect the data and dump it
+        # set json default filename 
+        todo, json_fn = 'dumps',  '_urlsourcejsonf.json'  
+        
+    return todo, json_fn, data 
+    
+    
+def return_ctask (todo:Optional[str]=None): 
+    """ Get the convenient action to do if users misinput the `todo` action.
+    :param todo: Action to perform: 
+        - load: Load data from the config [YAML|CSV|JSON] file
+        - dump: serialize data from the Python object and 
+            create a config [YAML|CSV|JSON] file."""
+    ltags = ('load', 'recover', True, 'fetch') 
+    dtags = ('serialized', 'dump', 'save', 'write', 'serialize')
+    if todo is None: 
+        raise ValueError('NoneType action can not be perform. Please '
+                         'specify your action: `load` or `dump`?' )
+        
+    todo =str(todo).lower() 
+    ltags = list(ltags) + [todo] if  todo=='loads' else ltags
+    dtags= list(dtags) +[todo] if  todo=='dumps' else dtags 
+    if todo in ltags: 
+        todo = 'loads' if todo=='loads' else 'load'
+        domsg= 'to parse'
+    elif todo in dtags: 
+        todo = 'dumps' if todo=='dumps' else 'dump'
+        domsg  ='to serialize'
+        
+    else :raise ValueError(f'Wrong action {todo!r}. Please select'
+                           ' the action to perform:  `load` or `dump`?')
+    return todo, domsg  
+
+def parse_yaml (yml_fn:str =None, data:Union[T , list, tuple]=None,
+                todo:str ='load', savepath:Optional[str] =None,
+                verbose:int =0, **ymlkws) -> T: 
+    """ Parse yml file and collect data from YAML config file. 
+    
+    :param yml_fn: yaml filename and can be the output YAML name if `data` is 
+        given and `todo` is set to ``dump``.Otherwise the YAML output filename 
+        should be the `data` or the given variable name.
+    :param data: Data in Python obj to serialize. 
+    :param todo: Action to perform with YAML: 
+        - load: Load data from the YAML file 
+        - dump: serialize data from the Python object and create a YAML file
+    :param savepath: If ``default``  should save the `yml_fn` 
+        to the default path otherwise should store to the convenient path.
+        If path does not exist, should set to the default path.
+    :param verbose: int, control the verbosity. Output messages
+    
+    .. see also:: Read more about YAML file https://pynative.com/python-yaml/
+         or https://python.land/data-processing/python-yaml and download YAML 
+         at https://pypi.org/project/PyYAML/
+         ...
+    :Example: 
+        >>> import pycsamt.utils.geo_utils as GU 
+        >>> geo_kws ={'oc2d': GU.INVERS_KWS, 
+                      'TRES':GU.TRES, 'LN':GU.LNS}
+        # serialize yaml data 
+        >>> GU.parse_yaml(data =geo_kws , todo='dump',
+                          savepath =None, sort_keys=True, 
+                          default_flow_style=True, verbose =1)
+        ... '_saveYAML_/testgeo.yml'
+        # load the data from data `testgeo.yml`
+        >>> GU.parse_yaml('_saveYAML_/testgeo.yml')
+        ... {'LN': ['river water','fracture zone','MWG','LWG','granite',
+        ...   'igneous rocks','basement rocks'],
+        ...  'TRES': [10, 66, 70, 100, 1000, 3000],
+        ...  'oc2d': {'data_fn': 'data/occam2D\\OccamDataFile.dat',
+        ...           'iter_fn': 'data/occam2D\\ITER17.iter',
+        ...           'mesh_fn': 'data/occam2D\\Occam2DMesh',
+        ...           'model_fn': 'data/occam2D\\Occam2DModel'}}
+    """ 
+    
+    todo, domsg =return_ctask(todo)
+    #in the case user use dumps or loads with 's'at the end 
+    if todo.find('dump')>= 0: 
+        todo='dump'
+    if todo.find('load')>=0:
+        todo='load'
+    if todo=='dump':
+        yml_fn = get_config_fname_from_varname(data, yml_fn)
+    try :
+        if todo=='load':
+            with open(yml_fn) as fy: 
+                data =  yaml.load(fy, Loader=yaml.SafeLoader)  
+                # args =yaml.safe_load(fy)
+        elif todo =='dump':
+        
+            with open(f'{yml_fn}.yml', 'w') as fw: 
+                data = yaml.dump(data, fw, **ymlkws)
+    except yaml.YAMLError: 
+        raise yaml.YAMLError(f"Unable {domsg} YAML {yml_fn!r} file. "
+                             'Please check your file.')
+    except: 
+        msg =''.join([
+        f"{'Unrecognizable file' if todo=='load'else'Unable to serialize'}"
+        ])
+        
+        raise TypeError(f'{msg} {yml_fn!r}. Please check your'
+                        f" {'file' if todo=='load' else 'data'}.")
+        
+    cparser_manager(f'{yml_fn}.yml',savepath, todo=todo, dpath='_saveyaml_', 
+                    verbose=verbose , config='YAML' )
+
+    return data 
+ 
+def cparser_manager (cfile:str, savepath:Union[None, Type[Any], str] =None, 
+                     todo:str ='load', dpath:str =None, verbose:int =0,
+                     **pkws): 
+    """ Save and output message according to the action. 
+    :param cfile: name of the configuration file
+    :param savepath: Path-like object 
+    :param dpath: default path 
+    :param todo: Action to perform with config file. Can ve 
+        ``load`` or ``dump``
+    :param config: Type of configuration file. Can be ['YAML|CSV|JSON]
+    :param verbose: int, control the verbosity. Output messages
+    
+    """
+    if savepath is not None:
+        if savepath =='default': 
+            savepath = None 
+        yml_fn,_= move_cfile(cfile,savepath, dpath=dpath)
+    if verbose > 0: 
+        print_cmsg(yml_fn, todo, **pkws)
+        
+    
+def get_config_fname_from_varname(data: Union[T, list, tuple],
+                                  config_fname:Optional[str] =None,
+                                  config:str ='.yml') -> str: 
+    """ use the variable name given to data as the config file name.
+    :param data: Given data to retrieve the variable name 
+    :param config_fname: Configurate variable filename. If ``None`` , use 
+        the name of the given varibale data 
+    :param config: Type of file for configuration. Can be ``json``, ``yml`` 
+        or ``csv`` file. default is ``yml``.
+    :return: str, the configuration data.
+    
+    """
+    try:
+        if '.' in config: 
+            config =config.replace('.','')
+    except:pass # in the case None is given
+    
+    if config_fname is None: # get the varname 
+        # try : 
+        #     from varname.helpers import Wrapper 
+        # except ImportError: 
+        #     import_varname=False 
+        #     import_varname = FU.subprocess_module_installation('varname')
+        #     if import_varname: 
+        #         from varname.helpers import Wrapper 
+        # else : import_varname=True 
+        try : 
+            for c, n in zip(['yml', 'yaml', 'json', 'csv'],
+                            ['cy.data', 'cy.data', 'cj.data',
+                             'c.data']):
+                if config ==c:
+                    config_fname= n
+                    break 
+            if config_fname is None:
+                raise # and go to except  
+        except: 
+            #using fstring 
+            config_fname= f'{data=}'.split('=')[0]
+            
+    elif config_fname is not None: 
+        config_fname= config_fname.replace(
+            f'.{config}', '').replace(f'.{config}', '').replace('.yaml', '')
+    
+    return config_fname
+    
+
+def move_cfile (cfile:str , savepath:Optional[str]=None, **ckws):
+    """ Move file to its savepath and output message. 
+    If path does not exist, should create one to save data.
+    :param cfile: name of the configuration file
+    :param savepath: Path-like object 
+    :param dpath: default path 
+    
+    :returns: 
+        - configuration file 
+        - out message 
+    """
+    savepath = FU.cpath(savepath, **ckws)
+    try :shutil.move(cfile, savepath)
+    except: warnings.warn("It seems the path already exist!")
+    
+    cfile = os.path.join(savepath, cfile)
+    
+    msg = ''.join([
+    f'--> Data was successfully stored to {os.path.basename(cfile)!r}', 
+        f' and saved to {os.path.realpath(cfile)!r}.']
+        )
+        
+    return cfile, msg
+
+def print_cmsg(cfile:str, todo:str='load', config:str='YAML') -> str: 
+    """ Output configuration message. 
+    
+    :param cfile: name of the configuration file
+    :param todo: Action to perform with config file. Can ve 
+        ``load`` or ``dump``
+    :param config: Type of configuration file. Can be [YAML|CSV|JSON]
+    """
+    if todo=='load': 
+        msg = ''.join([
+        f'--> Data was successfully stored to {os.path.basename(cfile)!r}', 
+            f' and saved to {os.path.realpath(cfile)!r}.']
+            )
+    elif todo=='dump': 
+        msg =''.join([ f"--> {config.upper()} {os.path.basename(cfile)!r}", 
+                      " data was sucessfully loaded."])
+    return msg 
 
 
 

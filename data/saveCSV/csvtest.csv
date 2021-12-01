@@ -1,0 +1,1 @@
+"{'iter_fn': 'data/occam2D\\ITER17.iter', 'mesh_fn': 'data/occam2D\\Occam2DMesh', 'model_fn': 'data/occam2D\\Occam2DModel', 'data_fn': 'data/occam2D\\OccamDataFile.dat'}","[10, 66, 70, 100, 1000, 3000]","['river water', 'fracture zone', 'MWG', 'LWG', 'granite', 'igneous rocks', 'basement rocks']"

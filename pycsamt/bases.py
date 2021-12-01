@@ -2,7 +2,8 @@
 #       created on Fri Oct 29 12:31:01 2021
 import os
 import json 
-import yaml 
+import yaml
+import csv 
 import warnings
 import copy
 import joblib 
@@ -10,13 +11,28 @@ import pickle
 import datetime
 import shutil 
 from six.moves import urllib 
-from typing import Union, TypeVar , Any, Optional, Type
+from typing import (
+    Union,
+    TypeVar,
+    Any,
+    Optional,
+    Type,
+    Tuple,
+    Dict ,
+    Sequence, 
+    Iterable,
+    List, 
+)
+
+import pycsamt.utils.func_utils as FU
+from pycsamt.utils._csamtpylog import csamtpylog
+
 
 T=TypeVar('T')
 A=TypeVar('A')
 
-import pycsamt.utils.func_utils as FU
-from pycsamt.utils._csamtpylog import csamtpylog
+V= List[Union[float, int]]
+
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
 def sPath (name_of_path:str):
@@ -30,8 +46,11 @@ def sPath (name_of_path:str):
         return
     return savepath 
 
-def serialize_data(data , filename:str=None,  force:bool=True, 
-                         savepath:str =None, verbose:int =0): 
+def serialize_data(data:Union [V, T], 
+                   filename:Optional[A]=None, 
+                   force:Optional[bool]=True, 
+                    savepath:Optional[Union[A,str]] =None,
+                    verbose:int =0): 
     """ Store a data into a binary binary file 
     
     :param data: Object
@@ -123,7 +142,7 @@ def serialize_data(data , filename:str=None,  force:bool=True,
             
     return os.path.join(savepath, filename) 
     
-def load_serialized_data (filename:str, verbose:int =0): 
+def load_serialized_data (filename:Union[A, str], verbose:int =0): 
     """ Load data from dumped file.
     :param filename: str or path-like object 
         Name of dumped data file.
@@ -172,9 +191,211 @@ def load_serialized_data (filename:str, verbose:int =0):
     
     return data 
 
-def parse_json(json_fn:str =None, data:Union[T, Type[Any], list, tuple] =None, 
-               todo:str ='load', savepath:Optional[str] =None,
-               verbose:int =0, **jsonkws) -> T:
+def parse_csv(csv_fn:A =None,
+              data:Sequence [Dict[str, Type[Any]]] =None, 
+              todo:Optional[str] ='reader', 
+               fieldnames: Iterable[str]=None, 
+               savepath:Optional[str] =None,
+               header: bool=False, 
+               verbose:int=0,
+               **csvkws) -> T: 
+    """ Parse comma separated file or collect data from CSV.
+    
+    :param csv_fn: csv filename,or output CSV name if `data` is 
+        given and `todo` is set to ``write|dictwriter``.Otherwise the CSV 
+        output filename should be the `c.data` or the given variable name.
+    :param data: Sequence Data in Python obj to write. 
+    :param todo: Action to perform with JSON: 
+        - reader|DictReader: Load data from the JSON file 
+        - writer|DictWriter: Write data from the Python object 
+        and create a CSV file
+    :param savepath: If ``default``  should save the `csv_fn` 
+        If path does not exist, should save to the <'_savecsv_'>
+        default path.
+    :param fieldnames: is a sequence of keys that identify the order
+        in which values in the dictionary passed to the `writerow()`
+            method are written `csv_fn` file.
+    :param savepath: If ``default``  should save the `csv_fn` 
+        If path does not exist, should save to the <'_savecsv_'>
+        default path .
+    :param verbose: int, control the verbosity. Output messages
+    :param csvkws: additional keywords csv class arguments 
+    
+    .. see also:: Read more about CSV module in:
+        https://docs.python.org/3/library/csv.html or find some examples
+        here https://www.programcreek.com/python/example/3190/csv.DictWriter 
+        or find some FAQS here: 
+    https://stackoverflow.com/questions/10373247/how-do-i-write-a-python-dictionary-to-a-csv-file
+        ...
+    :Example: 
+        >>> import pycsamt.utils.geo_utils as GU 
+        >>> import pycsamt.bases as BS
+        >>> geo_kws ={'oc2d': GU.INVERS_KWS, 
+                      'TRES':GU.TRES, 'LN':GU.LNS}
+        # write data and save to  'csvtest.csv' file 
+        # here the `data` is a sequence of dictionary geo_kws
+        >>> BS.parse_csv(csv_fn = 'csvtest.csv',data = [geo_kws], 
+                         fieldnames = geo_kws.keys(),todo= 'dictwriter',
+                         savepath = 'data/saveCSV')
+        # collect csv data from the 'csvtest.csv' file 
+        >>> BS.parse_csv(csv_fn ='data/saveCSV/csvtest.csv',
+                         todo='dictreader',fieldnames = geo_kws.keys()
+                         )
+    
+    """
+    todo, domsg =return_ctask(todo) 
+    
+    if todo.find('write')>=0:
+        csv_fn = get_config_fname_from_varname(
+            data, config_fname= csv_fn, config='.csv')
+    try : 
+        if todo =='reader': 
+            with open (csv_fn, 'r') as csv_f : 
+                csv_reader = csv.reader(csv_f) # iterator 
+                data =[ row for row in csv_reader]
+                
+        elif todo=='writer': 
+            # write without a blank line, --> new_line =''
+            with open(f'{csv_fn}.csv', 'w', newline ='',
+                      encoding ='utf8') as new_csvf:
+                csv_writer = csv.writer(new_csvf, **csvkws)
+                csv_writer.writerows(data) if len(
+                    data ) > 1 else csv_writer.writerow(data)  
+                # for row in data:
+                #     csv_writer.writerow(row) 
+        elif todo=='dictreader':
+            with open (csv_fn, 'r', encoding ='utf8') as csv_f : 
+                # generate an iterator obj 
+                csv_reader= csv.DictReader (csv_f, fieldnames= fieldnames) 
+                # return csvobj as a list of dicts
+                data = list(csv_reader) 
+        
+        elif todo=='dictwriter':
+            with open(f'{csv_fn}.csv', 'w') as new_csvf:
+                csv_writer = csv.DictWriter(new_csvf, **csvkws)
+                if header:
+                    csv_writer.writeheader()
+                # DictWriter.writerows()expect a list of dicts,
+                # while DictWriter.writerow() expect a single row of dict.
+                csv_writer.writerow(data) if isinstance(
+                    data , dict) else csv_writer.writerows(data)  
+                
+    except csv.Error: 
+        raise csv.Error(f"Unable {domsg} CSV {csv_fn!r} file. "
+                      "Please check your file.")
+    except: 
+
+        msg =''.join([
+        f"{'Unrecognizable file' if todo.find('read')>=0 else'Unable to write'}"
+        ])
+        
+        raise TypeError(f'{msg} {csv_fn!r}. Please check your'
+                        f" {'file' if todo.find('read')>=0 else 'data'}.")
+    cparser_manager(f'{csv_fn}.csv',savepath, todo=todo, dpath='_savecsv_', 
+                    verbose=verbose , config='CSV' )
+    
+    return data 
+
+def fr_en_parser (f, delimiter =':'): 
+    """ Parse the translated data file. 
+    
+    :param f: translation file to parse 
+    :param delimiter: str, delimiter
+    
+    :return: generator obj, composed of a list of 
+        french  and english Input translation. 
+    
+    :Example:
+        >>> file_to_parse = 'pme.parserf.md'
+        >>> path_pme_data = r'C:/Users\Administrator\Desktop\__elodata
+        >>> data =list(BS.fr_en_parser(
+            os.path.join(path_pme_data, file_to_parse)))
+    """
+    
+    is_file = os.path.isfile (f)
+    if not is_file: 
+        raise IOError(f'Input {f} is not a file. Please check your file.')
+    
+    with open(f, 'r', encoding ='utf8') as ft: 
+        data = ft.readlines()
+        for row in data :
+            if row in ( '\n', ' '):
+                continue 
+            fr, en = row.strip().split(delimiter)
+            yield([fr, en])
+
+def convert_csvdata_from_fr_to_en( csv_fn, pf, destfile = 'pme.en.csv',
+                                  savepath =None, delimiter =':'): 
+    """ Translate variable data from french csva data  to english with 
+    varibale parser file. 
+    
+    :param csv_fn: data collected in csv format 
+    :param pf: parser file 
+    :param destfile: str,  Destination file, outputfile 
+    :param savepath: [Path-Like object, save data to a path 
+                      
+    :Example: 
+        # to execute this script, we need to import the two modules below
+        >>> import os 
+        >>> import csv 
+        >>> path_pme_data = r'C:/Users\Administrator\Desktop\__elodata
+        >>> datalist=convert_csvdata_from_fr_to_en(
+            os.path.join( path_pme_data, _enuv2.csv') , 
+            os.path.join(path_pme_data, pme.parserf.md')
+                         savefile = 'pme.en.cv')
+    """
+    # read the parser file and separed english from french 
+    parser_data = list(fr_en_parser (pf,delimiter) )
+    
+    with open (csv_fn, 'r', encoding ='utf8') as csv_f : 
+        csv_reader = csv.reader(csv_f) 
+        csv_data =[ row for row in csv_reader]
+    # get the index of the last substring row 
+    ix = csv_data [0].index ('Industry_type') 
+    # separateblock from two 
+    csv_1b = [row [:ix +1] for row in csv_data] 
+    csv_2b =[row [ix+1:] for row in csv_data ]
+    # make a copy of csv_1b
+    csv_1bb= copy.deepcopy(csv_1b)
+   
+    for ii, rowline in enumerate( csv_1bb[3:]) : # skip the first two rows 
+        for jj , row in enumerate(rowline): 
+            for (fr_v, en_v) in  parser_data: 
+                # remove the space from french parser part
+                # this could reduce the mistyping error 
+                fr_v= fr_v.replace(
+                    ' ', '').replace('(', '').replace(
+                        ')', '').replace('\\', '').lower()
+                 # go  for reading the half of the words
+                row = row.lower().replace(
+                    ' ', '').replace('(', '').replace(
+                        ')', '').replace('\\', '')
+                if row.find(fr_v[: int(len(fr_v)/2)]) >=0: 
+                    csv_1bb[3:][ii][jj] = en_v 
+    
+    # once translation is done, concatenate list 
+    new_csv_list = [r1 + r2 for r1, r2 in zip(csv_1bb,csv_2b )]
+    # now write the new scv file 
+    if destfile is None: 
+        destfile = f'{os.path.basename(csv_fn)}_to.en'
+        
+    destfile.replace('.csv', '')
+    
+    with open(f'{destfile}.csv', 'w', newline ='',encoding ='utf8') as csvf: 
+        csv_writer = csv.writer(csvf)
+        csv_writer.writerows(new_csv_list)
+        # for row in  new_csv_list: 
+        #     csv_writer.writerow(row)
+    FU.cpath(savepath , '__pme')
+    
+    return new_csv_list
+    
+def parse_json(json_fn: Union[A, str] =None,
+               data:Dict[str, Type[Any]] =None, 
+               todo:Optional[str] ='load',
+               savepath:Optional[str] =None,
+               verbose:int =0,
+               **jsonkws) -> T:
     """ Parse Java Script Object Notation file and collect data from JSON
     config file. 
     
@@ -198,14 +419,15 @@ def parse_json(json_fn:str =None, data:Union[T, Type[Any], list, tuple] =None,
  
     :Example: 
         >>> import pycsamt.utils.geo_utils as GU 
+        >>> import pycsamt.bases as BS
         >>> geo_kws ={'oc2d': GU.INVERS_KWS, 
                       'TRES':GU.TRES, 'LN':GU.LNS}
         # serialize json data and save to  'jsontest.json' file
-        >>> GU.parse_json(json_fn = 'jsontest.json', 
+        >>> BS.parse_json(json_fn = 'jsontest.json', 
                           data=geo_kws, todo='dump', indent=3,
                           savepath ='data/saveJSON', sort_keys=True)
         # Load data from 'jsontest.json' file.
-        >>> GU.parse_json(json_fn='data/saveJSON/jsontest.json', todo ='load')
+        >>> BS.parse_json(json_fn='data/saveJSON/jsontest.json', todo ='load')
     
     """
     todo, domsg =return_ctask(todo)
@@ -239,7 +461,7 @@ def parse_json(json_fn:str =None, data:Union[T, Type[Any], list, tuple] =None,
 
     except json.JSONDecodeError: 
         raise json.JSONDecodeError(f"Unable {domsg} JSON {json_fn!r} file. "
-                              'Please check your file.', f'{json_fn!r}', 1)
+                              "Please check your file.", f'{json_fn!r}', 1)
     except: 
         msg =''.join([
         f"{'Unrecognizable file' if todo.find('load')>=0 else'Unable to serialize'}"
@@ -273,30 +495,55 @@ def fetch_json_data_from_url (url:str , todo:str ='load'):
     return todo, json_fn, data 
     
     
-def return_ctask (todo:Optional[str]=None): 
-    """ Get the convenient action to do if users misinput the `todo` action.
+def return_ctask (todo:Optional[str]=None) -> Tuple [str, str]: 
+    """ Get the convenient task to do if users misinput the `todo` action.
+    
     :param todo: Action to perform: 
         - load: Load data from the config [YAML|CSV|JSON] file
         - dump: serialize data from the Python object and 
             create a config [YAML|CSV|JSON] file."""
-    ltags = ('load', 'recover', True, 'fetch') 
-    dtags = ('serialized', 'dump', 'save', 'write', 'serialize')
+            
+    def p_csv(v, cond='dict', base='reader'):
+        """ Read csv instead. 
+        :param v: str, value to do 
+        :param cond: str, condition if  found in the value `v`. 
+        :param base: str, base task to do if condition `cond` is not met. 
+        
+        :Example: 
+            
+        >>> todo = 'readingbook' 
+        >>> p_csv(todo) <=> 'dictreader' if todo.find('dict')>=0 else 'reader' 
+        """
+        return  f'{cond}{base}' if v.find(cond) >=0 else base   
+    
+    ltags = ('load', 'recover', True, 'fetch')
+    dtags = ('serialized', 'dump', 'save', 'write','serialize')
     if todo is None: 
         raise ValueError('NoneType action can not be perform. Please '
                          'specify your action: `load` or `dump`?' )
-        
+    
     todo =str(todo).lower() 
     ltags = list(ltags) + [todo] if  todo=='loads' else ltags
     dtags= list(dtags) +[todo] if  todo=='dumps' else dtags 
+
     if todo in ltags: 
         todo = 'loads' if todo=='loads' else 'load'
         domsg= 'to parse'
     elif todo in dtags: 
         todo = 'dumps' if todo=='dumps' else 'dump'
         domsg  ='to serialize'
+    elif todo.find('read')>=0:
+        todo = p_csv(todo)
+        domsg= 'to read'
+    elif todo.find('write')>=0: 
+        todo = p_csv(todo, base ='writer')
+        domsg =' to write'
         
-    else :raise ValueError(f'Wrong action {todo!r}. Please select'
-                           ' the action to perform:  `load` or `dump`?')
+    else :
+        raise ValueError(f'Wrong action {todo!r}. Please select'
+                         f' the action to perform: `load` or `dump`?'
+                        ' for [JSON|YAML] and `read` or `write`? '
+                        'for [CSV].')
     return todo, domsg  
 
 def parse_yaml (yml_fn:str =None, data:Union[T , list, tuple]=None,
@@ -481,6 +728,8 @@ def print_cmsg(cfile:str, todo:str='load', config:str='YAML') -> str:
         msg =''.join([ f"--> {config.upper()} {os.path.basename(cfile)!r}", 
                       " data was sucessfully loaded."])
     return msg 
+
+
 
 
 

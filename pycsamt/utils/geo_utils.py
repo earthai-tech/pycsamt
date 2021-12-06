@@ -5,15 +5,13 @@ import itertools
 import warnings
 import shutil 
 import copy 
-import yaml
-import json 
 from six.moves import urllib 
 from pprint import pprint 
 import numpy as np
 import pandas as pd 
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as GridSpec
 
-from pycsamt.bases import sPath 
 import pycsamt.utils.func_utils as FU
 import pycsamt.utils.plot_utils as PU
 import pycsamt.utils.exceptions as CSex
@@ -426,8 +424,8 @@ def _sanitize_db_items (value, force =True ):
     convert numerical data to float. 
     
     :param value: float of list of values to sanitize.
-    :param force:If `force` is `True` will return value whtout parenthesis 
-        but not convert the inside values
+    :param force:If `force` is ``True`` will return value without 
+        parenthesis but not convert the inside values
         
     :return: A list of sanitized items 
     
@@ -473,7 +471,7 @@ def base_log( ax, thick, layers, *, ylims=None, hatch=None, color=None )  :
     :param hatch: list of the layer patterns
     :param color: list of the layer colors
     
-    :return: ax: matplotlib axis properties 
+    :return: ax- matplotlib axis properties 
     """
     if ylims is None: 
         ylims=[0, int(np.cumsum(thick).max())]
@@ -633,8 +631,7 @@ def pseudostratigraphic_log (thick, layers, station, *,
                                          hatch =hatch, zoom =0.25,
                                          color =color, station='S00')
     """
-    import matplotlib.gridspec as GridSpec
-    
+
     is_the_same, typea_status, typeb_status= _assert_list_len_and_item_type(
         thick, layers,typea =(int, float, np.ndarray),typeb =str)
     if not is_the_same: 
@@ -652,7 +649,7 @@ def pseudostratigraphic_log (thick, layers, station, *,
     #for hatch and colors
     # print(color)
     hatch , color = set_default_hatch_color_values(hatch, color)
-    #####INSERT ZOOM TIP HERE#######
+    #####INSERT ZOOM TIP HERE############
     ylims =None
     if zoom is not None: 
         ylims, thick, layers, hatch, color = zoom_processing(zoom=zoom, 
@@ -985,7 +982,7 @@ def fetching_data_from_repo(repo_file, savepath =None ):
     # now move the file to the right place and create path if dir not exists
     if savepath is not None: 
         if not os.path.isdir(savepath): 
-            sPath (savepath)
+            FU.sPath (savepath)
         shutil.move(os.path.realpath(repo_file), savepath )
     if not status:pprint(connect_reason )
     
@@ -1286,7 +1283,7 @@ def frame_top_to_bottom (top, bottom, data ):
             - 49 is the thockness of the first layer 
             - 200 m is the thickness of the 
         - the coverall allows to track bug issues.The thickness of layer 
-            for visualizing should ne the same that shrank. If not the same 
+            for visualizing should be the same that shrank. Otherwise, 
             the mapping was not successfully done. Therefore coverall 
             will be different to 100% and function will return the raw data
             instead of raising errors. 
@@ -1327,7 +1324,7 @@ def frame_top_to_bottom (top, bottom, data ):
     # compute the intersection of the two lists 
     inter_set_map_tb = set(tm).intersection(set(bm))
     # set obj classification is sometimes messy, so let loop 
-    # to keep the layer disposalthe same like the safe data value
+    # to keep the layer disposal the same like the safe data value
     inter_set_map_tb=[v for v in data_safe if v in inter_set_map_tb]
     top_bottom = sp + inter_set_map_tb + ep 
     # compute coverall to track bug issues 

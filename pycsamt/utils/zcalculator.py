@@ -655,11 +655,7 @@ def find_reference_frequency(freq_array =None, reffreq_value =None ,
                        float(new_reference_value ),2)))
         return force_interpolation(value_to_steep=new_reference_value  )
     elif sharp ==False :return new_reference_value 
-
-
-
-     
-                                                              
+                                                           
 def get_data_from_reference_frequency(array_loc, freq_array, reffreq_value):
     """
     Function to get reference frequency  without call especially 

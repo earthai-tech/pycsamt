@@ -41,13 +41,9 @@ except Exception as error :
     pass 
 
 # let set the systeme path find memory dataBase
- 
-sys.path.insert(0, os.path.abspath('.'))  
-sys.path.insert(0, os.path.abspath('..')) 
-sys.path.insert(0, os.path.abspath('../..'))  # for consistency 
-sys.path.insert(0, os.path.abspath('pycsamt/geodrill/_geomemo'))   
-
-# =============================================================================
+for p in ('.', '..', '../..', 'pycsamt/geodrill/_geomemo'): 
+    # for consistency, force system to find the database path.
+    sys.path.insert(0, os.path.abspath(p))  
 
 class GeoDataBase (object): 
     """
@@ -90,7 +86,6 @@ class GeoDataBase (object):
         self.dateTime= datetime.datetime.now().utcnow()   # Get the date time now  
         self.comment =None                                # initialise comment  text
         
-  
         self._mplcolor =None 
         self._rgb =None 
         self._electrical_props=None 
@@ -113,10 +108,10 @@ class GeoDataBase (object):
 
     def _avoid_injection (self): 
         """
-        For secure , we do not firstly introduce directly the request. We will 
-        check whether the object `request`   exists effectively  in our
-        GeoDatabase . if not , request will be redirect to structural and 
-        strata class issue from  module `structural`
+        For secure, we do not firstly introduce directly the request. We will 
+        check whether the object `request` exists effectively  in our
+        GeoDatabase. If not, request will be redirect to structural and 
+        strata classes from  module `structural` to not corrupt the memory.
         
         """
         # self.manage_geoDataBase.executeReq(" select __description  from AGS0")

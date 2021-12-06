@@ -624,6 +624,7 @@ class CSAMT(object):
     def station_separation(self): 
         return self.Profile.stn_separation(
             easting=self.north, northing =self.north, interpolate=True)[0]
+    
     @staticmethod    
     def find_path (path =None, ptol =0.7):
         """
@@ -652,7 +653,8 @@ class CSAMT(object):
                 if os.listdir(path) is not None : 
                     ex = [file for file in os.listdir(path) if 
                           os.path.splitext(file)[1] =='.edi']
-                    if len(ex)/len(os.listdir(path))>= ptol :return 'edipath'
+                    if len(ex)/len(os.listdir(path))>= ptol :
+                        return 'edipath'
                     elif len(ex)/len(os.listdir(path)) < ptol : 
                         m=[]
                         try : m= [file for file in os.listdir(path) 
@@ -660,7 +662,8 @@ class CSAMT(object):
                                           filename = os.path.join(path,
                                                         file)) =='j' ]
                         except : pass 
-                        if len(m)/len(os.listdir(path)) >= ptol :return 'jpath'
+                        if len(m)/len(os.listdir(path)) >= ptol :
+                            return 'jpath'
                             
                     return 
                 

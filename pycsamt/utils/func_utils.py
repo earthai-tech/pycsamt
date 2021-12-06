@@ -11,6 +11,7 @@
         * smart_format
         * make_introspection
         * show_quick_edi_stats
+        * sPath
         * averageData 
         * concat_array_from_list 
         * sort_array_data 
@@ -39,6 +40,8 @@
         * keepmin  
         * get_closest_value
         * geo_length_checker
+        * fr_en_parser
+        * convert_csvdata_from_fr_to_en
 """
 
 import os 
@@ -47,6 +50,7 @@ import subprocess
 import shutil 
 import warnings
 import inspect
+import csv
 import numpy as np 
 import matplotlib.pyplot as plt
 from copy import deepcopy
@@ -276,7 +280,23 @@ def show_quick_edi_stats(nedic , nedir, fmtl='~', lenl=77):
                       '=', nedir, 'Rate','=', round ((nedir/nedic) *100, 2),
                       2))
     print(fmtl * lenl )
-    
+
+def sPath (name_of_path:str):
+    """ Savepath func. Create a path  with `name_of_path` 
+    if path not exists.
+    :param name_of_path: str, Path-like object. If path does not exist,
+    `name_of_path` should be created.
+    """
+    try :
+        savepath = os.path.join(os.getcwd(), name_of_path)
+        if not os.path.isdir(savepath):
+            os.mkdir(name_of_path)#  mode =0o666)
+    except :
+        warnings.warn("The path seems to be existed!")
+        return
+    return savepath 
+
+
 def averageData(np_array, filter_order=0, 
                 axis_average=0, astype="float32"): #array_of_average_array=0
     """
@@ -1097,17 +1117,18 @@ def _search_ToFill_Data (dicoReal, arrayTemp ,
              
     return dicoReal
         
-
 def straighten_out_list (main_list , list_to_straigh):
     """
     Parameters
     ----------
         * main_list : list
-                list of which the data must absolutely appear into the straighen list.
-                in our case , it is the station list : a list of offset 
+                list of which the data must absolutely appear into 
+                the straighen list.in our case , it is the station 
+                list : a list of offset 
                 
         * list_to_straigh : list
-                list contain the data (offset calculated , the depth and the resistivity (log10)), 
+                list contain the data (offset calculated,
+                 the depth and the resistivity (log10)), 
 
     Returns
     -------
@@ -2700,6 +2721,103 @@ def geo_length_checker(main_param,
         optional_param.extend(add_v)
 
     return np.array(optional_param)
+
+def fr_en_parser (f, delimiter =':'): 
+    """ Parse the translated data file. 
+    
+    :param f: translation file to parse 
+    :param delimiter: str, delimiter
+    
+    :return: generator obj, composed of a list of 
+        french  and english Input translation. 
+    
+    :Example:
+        >>> file_to_parse = 'pme.parserf.md'
+        >>> path_pme_data = r'C:/Users\Administrator\Desktop\__elodata
+        >>> data =list(BS.fr_en_parser(
+            os.path.join(path_pme_data, file_to_parse)))
+    """
+    
+    is_file = os.path.isfile (f)
+    if not is_file: 
+        raise IOError(f'Input {f} is not a file. Please check your file.')
+    
+    with open(f, 'r', encoding ='utf8') as ft: 
+        data = ft.readlines()
+        for row in data :
+            if row in ( '\n', ' '):
+                continue 
+            fr, en = row.strip().split(delimiter)
+            yield([fr, en])
+
+def convert_csvdata_from_fr_to_en(csv_fn, pf, destfile = 'pme.en.csv',
+                                  savepath =None, delimiter =':'): 
+    """ Translate variable data from french csva data  to english with 
+    varibale parser file. 
+    
+    :param csv_fn: data collected in csv format 
+    :param pf: parser file 
+    :param destfile: str,  Destination file, outputfile 
+    :param savepath: [Path-Like object, save data to a path 
+                      
+    :Example: 
+        # to execute this script, we need to import the two modules below
+        >>> import os 
+        >>> import csv 
+        >>> path_pme_data = r'C:/Users\Administrator\Desktop\__elodata
+        >>> datalist=convert_csvdata_from_fr_to_en(
+            os.path.join( path_pme_data, _enuv2.csv') , 
+            os.path.join(path_pme_data, pme.parserf.md')
+                         savefile = 'pme.en.cv')
+    """
+    # read the parser file and separed english from french 
+    parser_data = list(fr_en_parser (pf,delimiter) )
+    
+    with open (csv_fn, 'r', encoding ='utf8') as csv_f : 
+        csv_reader = csv.reader(csv_f) 
+        csv_data =[ row for row in csv_reader]
+    # get the index of the last substring row 
+    ix = csv_data [0].index ('Industry_type') 
+    # separateblock from two 
+    csv_1b = [row [:ix +1] for row in csv_data] 
+    csv_2b =[row [ix+1:] for row in csv_data ]
+    # make a copy of csv_1b
+    csv_1bb= deepcopy(csv_1b)
+   
+    for ii, rowline in enumerate( csv_1bb[3:]) : # skip the first two rows 
+        for jj , row in enumerate(rowline): 
+            for (fr_v, en_v) in  parser_data: 
+                # remove the space from french parser part
+                # this could reduce the mistyping error 
+                fr_v= fr_v.replace(
+                    ' ', '').replace('(', '').replace(
+                        ')', '').replace('\\', '').lower()
+                 # go  for reading the half of the sentence
+                row = row.lower().replace(
+                    ' ', '').replace('(', '').replace(
+                        ')', '').replace('\\', '')
+                if row.find(fr_v[: int(len(fr_v)/2)]) >=0: 
+                    csv_1bb[3:][ii][jj] = en_v 
+    
+    # once translation is done, concatenate list 
+    new_csv_list = [r1 + r2 for r1, r2 in zip(csv_1bb,csv_2b )]
+    # now write the new scv file 
+    if destfile is None: 
+        destfile = f'{os.path.basename(csv_fn)}_to.en'
+        
+    destfile.replace('.csv', '')
+    
+    with open(f'{destfile}.csv', 'w', newline ='',encoding ='utf8') as csvf: 
+        csv_writer = csv.writer(csvf)
+        csv_writer.writerows(new_csv_list)
+        # for row in  new_csv_list: 
+        #     csv_writer.writerow(row)
+    savepath = cpath(savepath , '__pme')
+    try :
+        shutil.move (f'{destfile}.csv', savepath)
+    except:pass 
+    
+    return new_csv_list
 
 # if __name__=="__main__" :
 

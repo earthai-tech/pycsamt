@@ -526,7 +526,10 @@ class J_collection :
         elif self.jfiles_list is not None :
             self.collect_jfiles(list_of_jfiles =self.jfiles_list )
             
+        #######################################################################
         from pycsamt.viewer.plot import Plot1d 
+        #######################################################################
+        
         #--> create Plot1d Obj 
         plot_obj= Plot1d()
         #--> get easting northing arrays after converting from lat, lon
@@ -1038,7 +1041,8 @@ class J:
         return self._jweight
     @jweight.setter 
     def jweight (self, jweight):
-        if jweight is None : self._jweight = np.full((self.japp_rho.size,),1.)
+        if jweight is None : 
+            self._jweight = np.full((self.japp_rho.size,),1.)
         for ii, item in enumerate(jweight): 
             if item in ['','*'] or item == str(self._jnan): 
                 jweight[ii]=np.nan

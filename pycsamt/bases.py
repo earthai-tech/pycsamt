@@ -35,23 +35,13 @@ V= List[Union[float, int]]
 
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
-def sPath (name_of_path:str):
-    """ Savepath func. Create a path  with `name_of_path` if path not exists."""
-    try :
-        savepath = os.path.join(os.getcwd(), name_of_path)
-        if not os.path.isdir(savepath):
-            os.mkdir(name_of_path)#  mode =0o666)
-    except :
-        warnings.warn("The path seems to be existed !")
-        return
-    return savepath 
 
 def serialize_data(data:Union [V, T], 
                    filename:Optional[A]=None, 
-                   force:Optional[bool]=True, 
+                   force:bool =True, 
                     savepath:Optional[Union[A,str]] =None,
                     verbose:int =0): 
-    """ Store a data into a binary binary file 
+    """ Store a data into a binary file 
     
     :param data: Object
         Object to store into a binary file. 
@@ -70,7 +60,7 @@ def serialize_data(data:Union [V, T],
         >>> import numpy as np
         >>> import pycsamt.bases import serialize_data
         >>> data = np.arange(15)
-        >>> file = GU.serialize_data(data, filename=None,  force=True, 
+        >>> file = serialize_data(data, filename=None,  force=True, 
         ...                          savepath =None, verbose =3)
         >>> file
     """
@@ -119,7 +109,7 @@ def serialize_data(data:Union [V, T],
 
     if savepath is  None:
         dirname ='_memory_'
-        try : savepath = sPath(dirname)
+        try : savepath = FU.sPath(dirname)
         except :
             # for consistency
             savepath = os.getcwd() 
@@ -295,101 +285,7 @@ def parse_csv(csv_fn:A =None,
                     verbose=verbose , config='CSV' )
     
     return data 
-
-def fr_en_parser (f, delimiter =':'): 
-    """ Parse the translated data file. 
-    
-    :param f: translation file to parse 
-    :param delimiter: str, delimiter
-    
-    :return: generator obj, composed of a list of 
-        french  and english Input translation. 
-    
-    :Example:
-        >>> file_to_parse = 'pme.parserf.md'
-        >>> path_pme_data = r'C:/Users\Administrator\Desktop\__elodata
-        >>> data =list(BS.fr_en_parser(
-            os.path.join(path_pme_data, file_to_parse)))
-    """
-    
-    is_file = os.path.isfile (f)
-    if not is_file: 
-        raise IOError(f'Input {f} is not a file. Please check your file.')
-    
-    with open(f, 'r', encoding ='utf8') as ft: 
-        data = ft.readlines()
-        for row in data :
-            if row in ( '\n', ' '):
-                continue 
-            fr, en = row.strip().split(delimiter)
-            yield([fr, en])
-
-def convert_csvdata_from_fr_to_en( csv_fn, pf, destfile = 'pme.en.csv',
-                                  savepath =None, delimiter =':'): 
-    """ Translate variable data from french csva data  to english with 
-    varibale parser file. 
-    
-    :param csv_fn: data collected in csv format 
-    :param pf: parser file 
-    :param destfile: str,  Destination file, outputfile 
-    :param savepath: [Path-Like object, save data to a path 
-                      
-    :Example: 
-        # to execute this script, we need to import the two modules below
-        >>> import os 
-        >>> import csv 
-        >>> path_pme_data = r'C:/Users\Administrator\Desktop\__elodata
-        >>> datalist=convert_csvdata_from_fr_to_en(
-            os.path.join( path_pme_data, _enuv2.csv') , 
-            os.path.join(path_pme_data, pme.parserf.md')
-                         savefile = 'pme.en.cv')
-    """
-    # read the parser file and separed english from french 
-    parser_data = list(fr_en_parser (pf,delimiter) )
-    
-    with open (csv_fn, 'r', encoding ='utf8') as csv_f : 
-        csv_reader = csv.reader(csv_f) 
-        csv_data =[ row for row in csv_reader]
-    # get the index of the last substring row 
-    ix = csv_data [0].index ('Industry_type') 
-    # separateblock from two 
-    csv_1b = [row [:ix +1] for row in csv_data] 
-    csv_2b =[row [ix+1:] for row in csv_data ]
-    # make a copy of csv_1b
-    csv_1bb= copy.deepcopy(csv_1b)
    
-    for ii, rowline in enumerate( csv_1bb[3:]) : # skip the first two rows 
-        for jj , row in enumerate(rowline): 
-            for (fr_v, en_v) in  parser_data: 
-                # remove the space from french parser part
-                # this could reduce the mistyping error 
-                fr_v= fr_v.replace(
-                    ' ', '').replace('(', '').replace(
-                        ')', '').replace('\\', '').lower()
-                 # go  for reading the half of the words
-                row = row.lower().replace(
-                    ' ', '').replace('(', '').replace(
-                        ')', '').replace('\\', '')
-                if row.find(fr_v[: int(len(fr_v)/2)]) >=0: 
-                    csv_1bb[3:][ii][jj] = en_v 
-    
-    # once translation is done, concatenate list 
-    new_csv_list = [r1 + r2 for r1, r2 in zip(csv_1bb,csv_2b )]
-    # now write the new scv file 
-    if destfile is None: 
-        destfile = f'{os.path.basename(csv_fn)}_to.en'
-        
-    destfile.replace('.csv', '')
-    
-    with open(f'{destfile}.csv', 'w', newline ='',encoding ='utf8') as csvf: 
-        csv_writer = csv.writer(csvf)
-        csv_writer.writerows(new_csv_list)
-        # for row in  new_csv_list: 
-        #     csv_writer.writerow(row)
-    FU.cpath(savepath , '__pme')
-    
-    return new_csv_list
-    
 def parse_json(json_fn: Union[A, str] =None,
                data:Dict[str, Type[Any]] =None, 
                todo:Optional[str] ='load',
@@ -541,7 +437,7 @@ def return_ctask (todo:Optional[str]=None) -> Tuple [str, str]:
         
     else :
         raise ValueError(f'Wrong action {todo!r}. Please select'
-                         f' the action to perform: `load` or `dump`?'
+                         f' the right action to perform: `load` or `dump`?'
                         ' for [JSON|YAML] and `read` or `write`? '
                         'for [CSV].')
     return todo, domsg  
@@ -620,9 +516,10 @@ def parse_yaml (yml_fn:str =None, data:Union[T , list, tuple]=None,
 
     return data 
  
-def cparser_manager (cfile:str, savepath:Union[None, Type[Any], str] =None, 
-                     todo:str ='load', dpath:str =None, verbose:int =0,
-                     **pkws): 
+def cparser_manager (cfile:Union[A, str],
+                     savepath:Union[Type[Any], str] =None, 
+                     todo:str ='load', dpath:Optional[str] =None,
+                     verbose:int =0, **pkws): 
     """ Save and output message according to the action. 
     :param cfile: name of the configuration file
     :param savepath: Path-like object 
@@ -700,7 +597,7 @@ def move_cfile (cfile:str , savepath:Optional[str]=None, **ckws):
     """
     savepath = FU.cpath(savepath, **ckws)
     try :shutil.move(cfile, savepath)
-    except: warnings.warn("It seems the path already exist!")
+    except: warnings.warn("It seems the path already exists!")
     
     cfile = os.path.join(savepath, cfile)
     
@@ -729,7 +626,16 @@ def print_cmsg(cfile:str, todo:str='load', config:str='YAML') -> str:
                       " data was sucessfully loaded."])
     return msg 
 
-
+def sPath (name_of_path:str):
+    """ Savepath func. Create a path  with `name_of_path` if path not exists."""
+    try :
+        savepath = os.path.join(os.getcwd(), name_of_path)
+        if not os.path.isdir(savepath):
+            os.mkdir(name_of_path)#  mode =0o666)
+    except :
+        warnings.warn("The path seems to be existed !")
+        return
+    return savepath 
 
 
 

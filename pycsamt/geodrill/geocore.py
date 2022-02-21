@@ -868,7 +868,7 @@ class Geodrill (object):
         Graphite                        10^-2.5             10^-3.5
         =========================  ===================  =======================
         
-        .. seealso:: https://www.eoas.ubc.ca/ubcgif/iag/foundations/properties/resistivity.htm
+        .. seealso:: https://www.eoas.ubc.ca/ubcgif/iag/foundations/properties/resistivity.html
                 list is not exhaustive and depend of the geological formations of 
                 survey area. 
                 
@@ -3645,7 +3645,7 @@ class GeoStratigraphy(Geodrill):
                                 *Default* is ``1e+4`` for linear. If `kind` is 
                                 set to `polynomial` the default value should 
                                 be `1e-8`. 
-    degree          int         Polynomail function degree to impelment 
+    degree          int         Polynomail function degree to implement 
                                 gradient descent algorithm. If `kind` is set to 
                                 `Polynomial` the default `degree` is 3. 
                                 and details sequences 
@@ -3655,7 +3655,7 @@ class GeoStratigraphy(Geodrill):
     
     :Example: 
         
-        >>> from pycsamt.geodrill.geoCore import Geostratigraphy 
+        >>> from pycsamt.geodrill.geocore import Geostratigraphy 
         >>> path=r'F:\ThesisImp\occam2D\invers+files\inver_res\K4'
         >>> inversion_files = {'model_fn':'Occam2DModel', 
                            'mesh_fn': 'Occam2DMesh',
@@ -3788,7 +3788,7 @@ class GeoStratigraphy(Geodrill):
     def _createNM(self, crm =None, beta =5 , ptol= 0.1, **kws): 
         """ Create NM through the differents steps of NM creatings. 
         
-        - step 1 : sof minimal computing 
+        - step 1 : soft minimal computing 
         - step2 : model function computing 
         - step 3: add automatic layers
         - step 4: use ANN to find likehood layers
@@ -4020,7 +4020,7 @@ class GeoStratigraphy(Geodrill):
                                 buffer = sfme_k  
                                 s0[ii, jj]= self.tres[k]
                                
-                    buffer = self.ptol +1      # initilize buffer 
+                    buffer = self.ptol +1      # initialize buffer 
                     
         s0= np.concatenate((_z.reshape(_z.shape[0], 1), s0.T), axis =1)    
         return s0, error 
@@ -4073,7 +4073,7 @@ class GeoStratigraphy(Geodrill):
             try : 
                 kind_degree= int(kind_degree)
             except Exception :
-                raise ValueError('Could not convert to integer.')
+                raise ValueError(f'Could not `{kind_degree}` convert to integer.')
                 
         
         def kindOfModel(degree, x, y) :
@@ -4219,8 +4219,10 @@ class GeoStratigraphy(Geodrill):
         disp = kws.pop('display_infos', False)
         hinfos = kws.pop('header', 'Automatic layers')
         
-        if tres is not None :self.tres = tres 
-        if ptol is not None: self.ptol = ptol 
+        if tres is not None :
+            self.tres = tres 
+        if ptol is not None: 
+            self.ptol = ptol 
         
         def _findGeostructures(_res): 
             """ Find the layer from database and keep the ceiled value of 
@@ -4780,7 +4782,7 @@ def fit_tres(lns, tres, autorocks, force=False, **kws):
      
     Find the layers and  their corresponding resistivity values from the 
     database especially when values in the TRES and LN are not the same
-    length. It's therefore not possible to match each value to its
+    length. It's not possible to match each value to its
     correspinding layer name. Therefore the best approach is to read the
     TRES and find the layer name in the database based on the closest value.
 

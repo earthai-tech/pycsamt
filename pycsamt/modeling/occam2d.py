@@ -1529,7 +1529,7 @@ class Response (Data):
         # not sorted according this principle.
         # if freq is range to increase order , let flip the data so
         # to get the frequency as occam 2D range 
-        #  Higest frequency to lowest frequency 
+        #  Highest frequency to lowest frequency 
         
         if self.data_flip_freq : # get attribute from inheret Data object 
             for occ in self.occam_dtype :
@@ -1758,7 +1758,7 @@ class Iter2Dat (object):
             
     Bo Yang matlab-script is on `add.info` sub-packages of pyCSAMT.
     If your are familiar with matlab and you want to rewrite  the script
-    please contact author at: 
+    please contact the author at: 
         
     Bo Yang, 2011.
     ------------------
@@ -2719,7 +2719,7 @@ def getMisfit(resp_fn =None, data_fn =None, kind='rho', **kwargs) :
     For more details , refer to :class:pycsamt.viewer.plot.geoplot2d
     
     :warning:: when using decorator`geoplot2d`, set always *reason* 
-                argument to `misfit` or else.
+                argument to `misfit`.
     
     :param kwargs: use the main argument from getMisfit function
     :type kwargs: dict 
@@ -2881,7 +2881,7 @@ def plotResponse(data_fn =None, resp_fn =None, stations =None, **kws):
         - `1` : visualize the misfit compute manually
         - `2`:  visualize the raw error from raw occam data 
         - `3`: visualzie the error data and phase  defined as 
-                * error = (input data - foward data)/ RESI 
+                * error = (input data - forward data)/ RESI 
         - `4` or 'residual`': Visualize only  the residual data . 
         
         Default is `residual.`
@@ -2890,7 +2890,7 @@ def plotResponse(data_fn =None, resp_fn =None, stations =None, **kws):
     :param resp_fn: Response file and can be string or list of response file. 
     :param stations:  str or list of station to visualize. 
     
-    .. note:: To visualize multiple files. Can prodile only the path 
+    .. note:: To visualize multiple files. Can provide only the path 
     where occam (data and response) files are located. In that case, set
     datafile and response file the name like:: 
         

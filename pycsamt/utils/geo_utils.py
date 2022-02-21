@@ -155,7 +155,8 @@ def fit_rocks(logS_array, lns_, tres_):
     return fitted_rocks 
 
 def assert_station(id, nm =None):
-    """ Assert station according to the number of stations investigated
+    """ Assert station according to the number of stations investigated.
+    
     :param id: int or str, station number. The station counter start from 01 
         as litteral count except whn provided value in string format 
         following the letter `S`. For instance : `S00` =1
@@ -424,7 +425,7 @@ def _sanitize_db_items (value, force =True ):
     convert numerical data to float. 
     
     :param value: float of list of values to sanitize.
-    :param force:If `force` is ``True`` will return value without 
+    :param force: If `force` is ``True`` will return value without 
         parenthesis but not convert the inside values
         
     :return: A list of sanitized items 
@@ -463,7 +464,7 @@ def _sanitize_db_items (value, force =True ):
 
 
 def base_log( ax, thick, layers, *, ylims=None, hatch=None, color=None )  : 
-    """ Plot pseudo-stratigraphy basemap and return ax 
+    """ Plot pseudo-stratigraphy basemap and return axis. 
     
     :param ax: obj, Matplotlib axis 
     :param thick: list of the thicknesses of the layers 
@@ -719,7 +720,7 @@ def _assert_list_len_and_item_type(lista, listb, typea=None, typeb=None):
     :param typeb: The type which all items in `listb` might be
     
     :returns: 
-        - the status of the length of the two list ``True`` or ``False``
+        - the status of the length of the two lists ``True`` or ``False``
         - the status of the type of `lista` ``True`` if all items are the 
             same type otherwise ``False``
         - idem of `listb`

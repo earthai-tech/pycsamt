@@ -2808,7 +2808,7 @@ def convert_csvdata_from_fr_to_en(csv_fn, pf, destfile = 'pme.en.csv',
     destfile.replace('.csv', '')
     
     with open(f'{destfile}.csv', 'w', newline ='',encoding ='utf8') as csvf: 
-        csv_writer = csv.writer(csvf)
+        csv_writer = csv.writer(csvf, delimiter=',')
         csv_writer.writerows(new_csv_list)
         # for row in  new_csv_list: 
         #     csv_writer.writerow(row)

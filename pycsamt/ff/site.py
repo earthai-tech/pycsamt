@@ -44,7 +44,7 @@ except :
 #==============================================================================                
 class Location (object): 
     """
-    Details of sation location . Classe used to convert 
+    Details of station location. Class used to convert 
     cordinnates and check values for lat/lon , east/north 
 
     ==================  ====================  =================================

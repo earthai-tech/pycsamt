@@ -65,18 +65,18 @@ class GeoDataBase (object):
     make_pattern_symbol =["/", "\\", "|", '-', '+', 'x', 'o', 'O', '.', 
                           '*', '\-', '\+', '\o', '\O', '\.', '\*'] 
     #use '\\' rather than '\'.
-    # latter , i will be deprecated to FGDC geological map symbolisation . 
+    # latter , it will be deprecated to FGDC geological map symbolisation . 
     
     codef = ['code','label','__description','pattern', 'pat_size',	
              'pat_density','pat_thickness','rgb','electrical_props', 
                  'hatch', 'colorMPL', 'FGDC' ]
     # geoDataBase=os.path.join(os.environ['pyCSAMT'],'pycsamt',
-    #                'geodrill', 'geoDB','sql_utils', 'sql_DB', 'memory.sq3') 
+    #                'geodrill', '_geomemo', 'memory.sq3') 
     # locate the geodataBase
     geoDataBase = os.path.join(
         os.path.abspath('pycsamt/geodrill/_geomemo'),'memory.sq3')
  
-    # :memory: is faster we chose this options :geoDataBase.sq3 
+    # :memory: is faster but we chose the static option :~.sq3 
     #in sql_DB contains drill holes and wells Tables 
     # will develop in the future extensions 
 

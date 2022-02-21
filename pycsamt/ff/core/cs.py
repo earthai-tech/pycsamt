@@ -204,7 +204,8 @@ class CSAMT(object):
 
     def _read_csamt_objs (self, fn=None ): 
         """
-        read cs object and set attributes , actualy can read J, Avg and Edifile 
+        read cs object and set attributes, currently can read J, 
+        Avg and Edifile. 
 
         Parameters 
         ----------
@@ -671,7 +672,7 @@ class CSAMT(object):
     def j2edi(self, data_fn=None, savepath =None, **kwargs): 
         """
         Method to convert j-files to edi files. Method calls CSAMT class object
-        and get from this class edi infos 
+        and get from this class edi infos. 
         
         :param data_fn: collection of jfiles or path-like str  
         :type list_of_files: str  
@@ -889,10 +890,10 @@ class CSAMT(object):
                 number_of_skin_depth=3., 
                 **kwargs):
         """
-        Method to write avg file to SEG-EDIfile.Convert both files.Astatic 
-        or plainty avg file .if ASTATIC file is provided , will add the filter 
-        and filter values .if avg file is not astatic file , user an apply
-        filter by setting filter to "tma, ama, or flma".Once apply ,
+        Method to write avg file to SEG-EDIfile.Convert both files Astatic 
+        or plainty avg file .if ASTATIC file is provided, will add the filter 
+        and filter values .If avg file is not an astatic file, user can apply
+        filter by setting filter to "tma, ama, or flma". Once apply,
         edifiles will exported by computing resistivities filtered
         
         Parameters 

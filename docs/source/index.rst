@@ -14,7 +14,7 @@ Welcome to pyCSAMT's documentation!
    processing
    modeling 
    geocore 
-   geodb
+   geodatabase
    utils
    viewer
 

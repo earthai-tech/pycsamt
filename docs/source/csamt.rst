@@ -3,7 +3,7 @@
 Package CSAMT
 ======================
 
-
+	
 **Module AVG**
 =================
 .. automodule:: pycsamt.ff.core.avg

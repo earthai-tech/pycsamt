@@ -4,11 +4,10 @@ Package Utils
 ==============================
 
 
-**Module Agso**
-================
-.. automodule:: pycsamt.utils.agso
+**Module Base**
+=====================
+.. automodule:: pycsamt.base
 	:members:
-
 	
 **Module Decorator**
 =====================
@@ -22,12 +21,6 @@ Package Utils
     :members:
 	
 	
-**Module AVG-utils**
-=====================
-.. automodule:: pycsamt.utils.avg_utils
-    :members:
-
-
 **Module Geo-utils**
 =====================
 .. automodule:: pycsamt.utils.geo_utils

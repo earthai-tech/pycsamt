@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 # This module is part of the pyCSAMT viewer package
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 
 """
 Created on Sat Aug 21 15:55:48 2021

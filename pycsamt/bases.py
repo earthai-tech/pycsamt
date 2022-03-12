@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #       created on Fri Oct 29 12:31:01 2021
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 import os
 import json 
 import yaml

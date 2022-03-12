@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Thu Dec  3 22:31:16 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
 .. _module-j:: `pycsamt.ff.core.j
 

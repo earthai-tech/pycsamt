@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Wed Nov 18 16:45:35 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
 .. _module-avg:: `pycsamt.ff.core.avg`  
 

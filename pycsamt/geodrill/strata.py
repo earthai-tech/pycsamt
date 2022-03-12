@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
 """
 .. _module-Strata::

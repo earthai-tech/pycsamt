@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Tue Oct 13 15:28:57 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
 .. _module-requestmanager::`pycsamt.geodrill.requestmanager`
  

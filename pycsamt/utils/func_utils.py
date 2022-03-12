@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Sun Sep 13 09:24:00 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 
 """
 

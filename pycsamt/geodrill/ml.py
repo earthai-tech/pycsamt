@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 
 import os
 import  numpy as np

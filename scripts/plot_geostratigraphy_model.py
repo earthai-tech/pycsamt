@@ -14,7 +14,7 @@ from pycsamt.geodrill.geocore import GeoStratigraphy
 # path to OCCAM2D model files
 occamPath = 'data/Occam2d'
 # type of model plots
-kindOfPlot ='crm'      # for New strata model, `crm` forOccamResistivity model` plot
+kindOfPlot ='nm'      # for New strata model, `crm` forOccamResistivity model` plot
                 # `strata` and `plot_misfit` to True plot misfitG 
 # set to True to plot error between CRM and NM
 plotMisfitG=False  
@@ -26,11 +26,13 @@ inversion_files = {'model_fn':'Occam2DModel',
 inversion_files = {key:os.path.join(occamPath , vv) for key,
                     vv in inversion_files.items()}
 # input_True_resistivities (TRES)
-TRES= [10, 60, 70, 180, 1000,  3000, 7000]                                 
+TRES= [10,70, 180, 1000,   3000, 7000]     
+#[10, 60, 70, 180, 1000,  3000, 7000]                                 
 # Input layers names (LN) 
-LN =['river water','sedimentary rocks', 'fracture zone', 
-     'gravel', 'granite','igneous rocks','basement rocks' ]
-
+LN =['MWG2', 'MWG1', 
+     'FG', 'LWG', 'Igneous rocks','Basement rocks' ]
+# ['river water','sedimentary rocks', 'fracture zone', 
+#     'gravel', 'granite','igneous rocks','basement rocks' ]
 geosObj = GeoStratigraphy(**inversion_files,
                       input_resistivities=TRES, 
                       input_layers=LN)

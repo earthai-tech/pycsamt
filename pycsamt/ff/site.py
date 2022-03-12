@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Wed Dec  2 11:29:32 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 import os
 import re
 import time

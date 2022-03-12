@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 
 import os
 import itertools
@@ -926,7 +928,7 @@ def subprocess_module_installation (module):
     except: 
         _logger.error("Failed to install the module =`{module}`.")
         print(f'---> Module  {module!r} installation failed, Please use'
-           f'  the following command {cmd} to manually install it.')
+           f' the following command {cmd} to manually install it.')
     return MOD_IMP 
 
 def fetching_data_from_repo(repo_file, savepath =None ): 

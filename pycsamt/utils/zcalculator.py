@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Thu Dec  3 16:44:29 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 
 """
 .. _module-ZCalculator::`pycsamt.utils.zcalculator`

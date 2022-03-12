@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Tue Oct 13 14:52:08 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
 use : 
     for sql dataBase works 

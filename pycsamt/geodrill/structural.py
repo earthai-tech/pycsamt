@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Sat Nov 28 21:19:13 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
 .. _module-Structural::`pycsamt.geodrill.structural` 
     

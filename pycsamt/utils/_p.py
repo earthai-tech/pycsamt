@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Sat Dec 12 16:21:10 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
  
 .. _module-Infos::`csamtpy.etc.infos`

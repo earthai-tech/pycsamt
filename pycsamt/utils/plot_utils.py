@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 #       Created on Tue Dec 29 19:18:44 2020
 #       This module is a part of pycsamt utils packages
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
 .. _module-Plot_Utils:: `pycsamt.utils.plot_utils` 
     :synopsis: helpers functions for visualization 

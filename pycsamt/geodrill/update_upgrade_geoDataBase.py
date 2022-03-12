@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Tue Feb 16 11:37:47 2021
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
     .Script to UPDATE and UPGRADE GeoDataBase. GeoDataBase is the Core 
         of geodrill module.More than 150 rocks as well as their properties

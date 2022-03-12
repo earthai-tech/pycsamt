@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
     .looging file was tst only on .yaml file.  
     . see load_configure_set_logfile (only for .yaml file )

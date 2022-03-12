@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Sat Dec 12 13:55:47 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """ 
 .. _module-Shifting::`pycsamt.ff.processing.corr` 
         :synopsis: Deal with all data files. It corrects apparent resistivity

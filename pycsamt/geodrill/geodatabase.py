@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created:on Wed Oct 14 13:38:13 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
 .. _module-GeoDataBase::`pycsamt.geodrill.geodatabase`
  
@@ -300,7 +302,7 @@ class GeoDataBase (object):
                 geo_formation_name=str(kws['name'])
             else : 
                 raise CSex.pyCSAMTError_SQL_update_geoinformation(
-                    ' ! Unable to find a new geological structure name.')
+                    ' Unable to find a new geological structure name.')
     
         if not isinstance(geo_formation_name, str) : 
             raise CSex.pyCSAMTError_SQL_update_geoinformation(
@@ -489,7 +491,7 @@ class GeoDataBase (object):
         
         def __generate_structure_code (__description , __geocodeList) : 
             """
-            Will geological description will create a code and label 
+            Each input geological description will generate a code and label 
 
             :param __description: name of geological formation 
             :type __description: str 
@@ -500,8 +502,8 @@ class GeoDataBase (object):
             """
             def _rev_func_code (code, CODE): 
                 """
-                generate code and check thin new code  doesnt not exist in 
-                amongs the code of geoDataBase .
+                generate code and check thin the new code does not exist in 
+                the database.
 
                 :param code:  new_generate code 
                 :type code: str 

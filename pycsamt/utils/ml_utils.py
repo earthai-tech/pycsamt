@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 #       This module is a part of pycsamt utils packages related to the ML
 #       online module to predict the layer name.
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 
 import numpy as np 
 import matplotlib.pyplot as plt 

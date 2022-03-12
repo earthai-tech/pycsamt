@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
 Created on Tue Aug  4 16:03:30 2020
     module will be deprecated soon !

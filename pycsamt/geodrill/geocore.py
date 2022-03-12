@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Create:on Sat Sep 19 12:37:42 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """  
 .. _module-geocore::`pycsamt.geodrill.geocore`
     
@@ -2457,7 +2459,7 @@ class Geosurface :
             mess=''.join([
                 '-->Sorry! Depth map actually does not support the {0} ',
                     'format provided. Only support `xlsx` or `csv` format.', 
-                    ' Please provided the rigth format !'])
+                    ' Please provide the rigth format !'])
             self._logging.error(mess.format(self.export_format))
             warnings.warn(mess.format(self.export_format))
             raise CSex.pyCSAMTError_file_handling(
@@ -2472,7 +2474,7 @@ class Geosurface :
             self._logging.warn(
                 'Need to specify the value of depth for imaging !')
             raise CSex.pyCSAMTError_inputarguments(
-                '! Need to specify the depth value for imaging.')
+                'Need to specify the depth value for imaging.')
         if self.path is None : 
             warnings.warn(
                 'Need to provide the rigth path `geodrill` model output files.')
@@ -2852,8 +2854,6 @@ class Drill(object):
         for keys in kwargs.keys():
             self.__setattr__(keys, kwargs[keys])
             
- 
-  
     def _collar(self, DH_Top=None,add_elevation =None ):
         """
         Method to build Collar Data 
@@ -3728,7 +3728,7 @@ class GeoStratigraphy(Geodrill):
                 self._logging.debug(
                  " Unaceptable iteration value! Must be a positive value not "
                 f"{'a negative value.' if self._n_epochs <0 else 'equal to 0.'}")
-                warnings.warn(" {self._n_epochs} is unaceptable value."
+                warnings.warn(f" {self._n_epochs} is unaceptable value."
                           " Could be resset to the default value=100.")
                 self._n_epochs = 100 
                 
@@ -3738,7 +3738,7 @@ class GeoStratigraphy(Geodrill):
         return self._beta 
     @beta.setter 
     def beta(self, beta0 ):
-        """ Block constructor must be interger value."""
+        """ Block constructor must be integer value."""
         try : 
             self._beta = int(beta0)
         except Exception: 
@@ -4199,7 +4199,7 @@ class GeoStratigraphy(Geodrill):
         
         self._subblocks = subblks 
         
-    def _createAutoLayer (self, subblocks=None, s0=None,
+    def _createAutoLayer(self, subblocks=None, s0=None,
                           ptol = None,**kws):
         """ 
         The third step of replacement using the geological database. 
@@ -4570,6 +4570,7 @@ class GeoStratigraphy(Geodrill):
             >>> plotPseudostratigraphic(station ='S00')
         
         """
+        annotate_kws = {'fontsize':12} if annotate_kws is None else annotate_kws
         if not isinstance(annotate_kws, dict):annotate_kws=dict()
         obj = _ps_memory_management(option ='get' )  
         obj = GeoStratigraphy._strataPropertiesOfSite (obj,station=station,

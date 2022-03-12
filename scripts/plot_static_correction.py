@@ -1,19 +1,24 @@
 # -*- coding: utf-8 -*-
 """
      .Script to plot static correction . Deal with [EDI|J|AVG]files. If 
-     Zonge Engineering file "*avg" is given, user should  provided 
-     also profile station file '*.stn'. Availbale Filters to correct apparent 
-     resistivities are  `AMA` , `TMA` and `FLMA`. 
+     Zonge Engineering file "*avg" is given, user should provide 
+     also the profile station file '*.stn'. Available Filters 
+     to correct apparent resistivities are  `AMA` , `TMA` and `FLMA`. 
      AMA: Adapatative moving average based on the idea of Torres-Verdin, 
      FLMA: fixed length dipole moving average ,
      TMA: Trimming moving average most used by Zonge Engineering company.
-     If reference value set is not in frequency range, it shoul be interpolated.
-     reference frequency value is highest frequency with clean data. 
-     
-     
+     If the given reference value  is not in the frequency range, 
+     it shoul be interpolated. 
+     Note that the reference frequency value is highest frequency with
+     clean data. For more details about  the `reference frequency`,
+     please run the code below in your terminal:
+         
+         >>> from pycsamt.utils._p import notion 
+         >>> notion.reference_frequency
+
 Created on Tue Jan 19 16:57:08 2021
 
-@author: @Daniel03
+@author:K.L ~ @Daniel03
 
 """
 import os 
@@ -21,18 +26,14 @@ import os
 from pycsamt.viewer.plot import Plot1d 
 
 #--- > path to your file 
-
 # path_to_file = r'data/avg/K1.AVG'
 path_to_file = r'data/j'
 # path_to_file= r'F:\ThesisImp\edis\K1_edi'
 
-#path_to_file = r'C:\Users\Administrator\Desktop\ThesisImp\edis\K9_edi' 
-#path_to_file =os.path.join(os.environ['pyCSAMT'],'data', 'edi' )
-                           
 #save figure 
 savefigure=None 
-# stn station profile file 
-profile_stn = os.path.join(os.environ['pyCSAMT'],'data','avg','K1.stn')
+# stn station profile file if`path_to_file ` is j format.
+profile_stn ='data/avg/K1.stn'
 profile_stn =None  #  
 
 FILTER='flma'                   # Can be `tma` or `flma`
@@ -40,12 +41,13 @@ FILTER='flma'                   # Can be `tma` or `flma`
 #fipole length in meter if `flma filter is provided 
 dipole_length =50.
 
-# When plot AMA filter add number of filter : default is 1 , can be 1 to 10
+# When plot AMA filter add number of filter:
+    # default is 1 , can be 1 to 10
 number_of_skinDepth=3.
 
 #---> Filter points 
 FILERpoints = 7.
-#reference frequency at that station  . for multipleplot , 
+#reference frequency at that station. for multipleplot , 
 #add reference frequency into a list eg : [8, 1024, 2012]
 reference_frequency =8192.
 

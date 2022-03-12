@@ -14,10 +14,9 @@
     Jokers `**` and `*` can be anywhere else in the string default_kwargs key.
 Created on Tue Apr  6 19:39:57 2021
 
-@author: @Daniel03
 """
 import os 
-from pycsamt.geodrill.geoCore.geodrill import Geodrill 
+from pycsamt.geodrill.geocore import Geodrill 
 from pycsamt.gui.wrap_console_scripts import wrap_cscripts as wrs
 
 

@@ -10,7 +10,6 @@
    
     
 Created on Thu Jan 14 22:00:21 2021
-
 @author: @Daniel03
 
 """
@@ -19,13 +18,9 @@ import os
 from pycsamt.ff.core.edi import Edi 
 
 #---> set edipath 
-
-path = os.path.join(os.environ['pyCSAMT'], 'data','edi') #'_outputAVG2EDI_')#
-#path = r'C:\Users\Administrator\Desktop\ThesisImp\edis\_special_K6_edi\K6_edi'
-
-
+path = 'data/edi' 
 # path to save edifile # if None , save edi in your current work directory 
-save_path =  None # r'C:\Users\Administrator\Desktop\ThesisImp\edis\_special_K6_edi\K6_edi_rew'   
+save_path =  None 
 
 #--> set the type of datasection 
 data_section  ='emap'  #  may be "mt" or "emap"
@@ -33,7 +28,9 @@ data_section  ='emap'  #  may be "mt" or "emap"
 # add new output edi name
 new_edi_name = None # 'k6'
 # get edilist 
-edilist = [os.path.join(path,edifile) for edifile in os.listdir(path) if edifile.endswith('.edi')]
+edilist = [os.path.join(path,edifile) 
+           for edifile in os.listdir(path) 
+           if edifile.endswith('.edi')]
 
 # print(edilist)
 for edi in edilist :

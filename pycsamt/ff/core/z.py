@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+#       Authors: Lars Krieger, Jared R. Peacock & Alison Louise Kirkby
+#       contact: < https://github.com/MTgeophysics/mtpy.git>
+#       Licence: GPL
 
 """
 .. module:: Z
@@ -12,10 +15,7 @@
         The MTPy software package for magnetotelluric data analysis and visualisation.
         Journal of Open Source Software, 4(37), 1358. https://doi.org/10.21105/joss.01358
         ...
-.. moduleauthor:: Jared Peacock <jpeacock@usgs.gov>
-.. moduleauthor:: Lars Krieger
 
-.. edited ::  @Daniel03
 """
 
 import cmath
@@ -37,8 +37,6 @@ class ResPhase(object):
     """
     resistivity and phase container
     .. module:: Z
-    .. moduleauthor:: Jared Peacock <jpeacock@usgs.gov>
-    .. moduleauthor:: Lars Krieger
     """
 
     def __init__(self, z_array=None, z_err_array=None, freq=None, **kwargs):
@@ -182,8 +180,9 @@ class ResPhase(object):
                 for jj in range(2):
                     abs_z = np.sqrt(5 * self.freq[idx_f] * \
                                     self.resistivity[idx_f, ii, jj])
-                    rel_error_res = self.resistivity_err[idx_f, ii, jj] / \
-                                    self.resistivity[idx_f, ii, jj]
+                    with np.errstate(all='ignore'): 
+                        rel_error_res = self.resistivity_err[idx_f, ii, jj] / \
+                                        self.resistivity[idx_f, ii, jj]
                     # relative error varies by a factor of 0.5, which is the
                     # exponent in the relation between them:
                     abs_z_error = 0.5 * abs_z * rel_error_res

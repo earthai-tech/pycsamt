@@ -7,11 +7,12 @@ include LICENSE.md
 include COPYING.LESSER
 include README.md
 
-include pycsamt/utils/epsg.npy
-include .travis.yml .readthedocs.yml 
-include project_description.md
-include _demo_user_guide.py
-include pycsamt_user_guide/*
+exclude .travis.yml .readthedocs.yml 
+exclude pycsamt/utils/epsg.npy
+exclude project_description.md
+exclude _demo_user_guide.py
+exclude pycsamt_user_guide/*
+exclude mpl.rcParams_infos.py 
 
 exclude Scripts
 global-exclude *.py[cod] __pycache__/* *.so *.dylib .coverage .coverage.* 

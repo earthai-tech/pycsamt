@@ -8,8 +8,6 @@
         Script use output Occam 2D files such as Model, Iteration, Mesh and data file .
         
 Created on Tue Apr  6 19:56:09 2021
-
-@author: @Daniel03
 """
 import os 
 from pycsamt.modeling.occam2d import Iter2Dat as i2d

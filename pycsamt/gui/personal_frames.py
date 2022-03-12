@@ -3,7 +3,6 @@
 Created on Fri Sep 11 13:08:02 2020
 Deprecated Module !
 
-@author: Daniel03
 
 """
 from tkinter import *

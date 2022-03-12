@@ -1,13 +1,11 @@
 #!/usr/bin/env python
-
+#       Authors: Lars Krieger, Jared R. Peacock & Alison Louise Kirkby
+#       contact: < https://github.com/MTgeophysics/mtpy.git>
+#       Licence: GPL
 """
 mtpy/utils/calculator.py
 
 Helper functions for standard calculations, e.g. error propagation
-
-
-@UofA, 2013
-(LK)
 
 """
 
@@ -364,8 +362,8 @@ def z_error2r_phi_error(z_real, z_imag, error):
     """
         
     z_amp = np.abs(z_real + 1j*z_imag)
-
-    z_rel_err = error/z_amp
+    with np.errstate(all='ignore'):
+        z_rel_err = error/z_amp
     
     res_rel_err = 2.*z_rel_err
     
@@ -389,25 +387,25 @@ def z_error2r_phi_error(z_real, z_imag, error):
 
 def old_z_error2r_phi_error(x,x_error,y, y_error):
     """
-        Error estimation from rect to polar, but with small variation needed for 
-        MT: the so called 'relative phase error' is NOT the relative phase error,
-        but the ABSOLUTE uncertainty in the angle that corresponds to the relative
-        error in the amplitude. 
+    Error estimation from rect to polar, but with small variation needed for 
+    MT: the so called 'relative phase error' is NOT the relative phase error,
+    but the ABSOLUTE uncertainty in the angle that corresponds to the relative
+    error in the amplitude. 
 
-        So, here we calculate the transformation from rect to polar coordinates, 
-        esp. the absolute/length of the value. Then we find the uncertainty in 
-        this length and calculate the relative error of this. The relative error of
-        the resistivity will be double this value, because it's calculated by taking 
-        the square of this length.
-        
-        The relative uncertainty in length defines a circle around (x,y) 
-        (APPROXIMATION!). The uncertainty in phi is now the absolute of the 
-        angle beween the vector to (x,y) and the origin-vector tangential to the
-        circle.
-        BUT....since the phase angle uncertainty is interpreted with regard to 
-        the resistivity and not the Z-amplitude, we have to look at the square of
-        the length, i.e. the relative error in question has to be halfed to get
-        the correct relationship between resistivity and phase errors!!.
+    So, here we calculate the transformation from rect to polar coordinates, 
+    esp. the absolute/length of the value. Then we find the uncertainty in 
+    this length and calculate the relative error of this. The relative error of
+    the resistivity will be double this value, because it's calculated by taking 
+    the square of this length.
+    
+    The relative uncertainty in length defines a circle around (x,y) 
+    (APPROXIMATION!). The uncertainty in phi is now the absolute of the 
+    angle beween the vector to (x,y) and the origin-vector tangential to the
+    circle.
+    BUT....since the phase angle uncertainty is interpreted with regard to 
+    the resistivity and not the Z-amplitude, we have to look at the square of
+    the length, i.e. the relative error in question has to be halfed to get
+    the correct relationship between resistivity and phase errors!!.
 
     """
 

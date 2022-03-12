@@ -1,12 +1,19 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent
-#       Author:  ~Daniel03 <etanoyau@gmail.com>
 #       Created on Sun Sep 13 09:24:00 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
+
 """
 
 .. _module-Func-utils::`pycsamt.utils.func_utils`  
-    :synopsis: helpers functions  
+    :synopsis: helpers functions 
+        * check_dimensionality
+        * subprocess_module_installation
+        * cpath
+        * smart_format
+        * make_introspection
+        * show_quick_edi_stats
+        * sPath
         * averageData 
         * concat_array_from_list 
         * sort_array_data 
@@ -30,46 +37,171 @@
         *_cross_eraser 
         * _remove_str_word 
         * stn_check_split_type
-        * minimum_parser_to_write_edi        
+        * minimum_parser_to_write_edi
+        * round_dipole_length
+        * keepmin  
+        * get_closest_value
+        * geo_length_checker
+        * fr_en_parser
+        * convert_csvdata_from_fr_to_en
 """
 
-####################### import modules ######################
 import os 
+import sys 
+import subprocess 
 import shutil 
 import warnings
 import inspect
+import csv
 import numpy as np 
 import matplotlib.pyplot as plt
 from copy import deepcopy
 
 import  pycsamt.utils.gis_tools as gis
+import pycsamt.utils.exceptions as CSex
 from pycsamt.utils.decorator import deprecated 
 from pycsamt.utils._csamtpylog import csamtpylog
+
 _logger = csamtpylog.get_csamtpy_logger(__name__)
-# _logger.setLevel(logging.DEBUG)
+
+_msg= ''.join([
+    'Note: need scipy version 0.14.0 or higher or interpolation,',
+    ' might not work.']
+)
+_msg0 = ''.join([
+    'Could not find scipy.interpolate, cannot use method interpolate'
+     'check installation you can get scipy from scipy.org.']
+)
+
 try:
     import scipy
-
     scipy_version = [int(ss) for ss in scipy.__version__.split('.')]
     if scipy_version[0] == 0:
         if scipy_version[1] < 14:
-            warnings.warn('Note: need scipy version 0.14.0 or higher or interpolation '
-                          'might not work.', ImportWarning)
-            _logger.warning('Note: need scipy version 0.14.0 or higher or interpolation '
-                            'might not work.')
+            warnings.warn(_msg, ImportWarning)
+            _logger.warning(_msg)
+            
     import scipy.interpolate as spi
 
     interp_import = True
-
-except ImportError:  # pragma: no cover
-    warnings.warn('Could not find scipy.interpolate, cannot use method interpolate'
-                  'check installation you can get scipy from scipy.org.')
-    _logger.warning('Could not find scipy.interpolate, cannot use method interpolate'
-                    'check installation you can get scipy from scipy.org.')
+ # pragma: no cover
+except ImportError: 
+    
+    warnings.warn(_msg0)
+    _logger.warning(_msg0)
+    
     interp_import = False
+    
+def check_dimensionality(obj, data, z, x):
+    """ Check dimensionality of data and fix it.
+    
+    :param obj: Object, can be a class logged or else.
+    :param data: 2D grid data of ndarray (z, x) dimensions
+    :param z: array-like should be reduced along the row axis
+    :param x: arraylike should be reduced along the columns axis.
+    """
+    def reduce_shape(Xshape, x, axis_name =None): 
+        """ Reduce shape to keep the same shape"""
+        mess ="`{0}` shape({1}) {2} than the data shape `{0}` = ({3})."
+        ox = len(x) 
+        dsh = Xshape 
+        if len(x) > Xshape : 
+            x = x[: int (Xshape)]
+            obj._logging.debug(''.join([
+                f"Resize {axis_name!r}={ox!r} to {Xshape!r}.", 
+                mess.format(axis_name, len(x),'more',Xshape)])) 
+                                    
+        elif len(x) < Xshape: 
+            Xshape = len(x)
+            obj._logging.debug(''.join([
+                f"Resize {axis_name!r}={dsh!r} to {Xshape!r}.",
+                mess.format(axis_name, len(x),'less', Xshape)]))
+        return int(Xshape), x 
+    
+    sz0, z = reduce_shape(data.shape[0], 
+                          x=z, axis_name ='Z')
+    sx0, x =reduce_shape (data.shape[1],
+                          x=x, axis_name ='X')
+    data = data [:sz0, :sx0]
+    
+    return data , z, x 
 
-###################### end import module ################################### 
+def subprocess_module_installation (module, upgrade =True , DEVNULL=False,
+                                    action=True, verbose =0, **subpkws): 
+    """ Install or uninstall a module using the subprocess.
+    :param module: str, module name 
+    :param upgrade:bool, install the lastest version.
+    :param verbose:output a message 
+    :param DEVNULL: decline the stdoutput the message in the console 
+    :param action: str, install or uninstall a module 
+    :param subpkws: additional subprocess keywords arguments.
+    
+    :Example: 
+        >>> from pycsamt.utils.func_utils import subprocess_module_installation
+        >>> subprocess_module_installation(
+            'tqdm', action ='install', DEVNULL=True, verbose =1)
+        >>> subprocess_module_installation(
+            'tqdm', action ='uninstall', verbose =1)
+    """
+    #implement pip as subprocess 
+    # refer to https://pythongeeks.org/subprocess-in-python/
+    if not action: 
+        if verbose > 0 :
+            print("---> No action `install`or `uninstall`"
+                  f" of the module {module!r} performed.")
+        return action  # DO NOTHING 
+    
+    MOD_IMP=False 
 
+    action_msg ='uninstallation' if action =='uninstall' else 'installation' 
+
+    if action in ('install', 'uninstall', True) and verbose > 0:
+        print(f'---> Module {module!r} {action_msg} will take a while,'
+              ' please be patient...')
+        
+    cmdg =f'<pip install {module}> | <python -m pip install {module}>'\
+        if action in (True, 'install') else ''.join([
+            f'<pip uninstall {module} -y> or <pip3 uninstall {module} -y ',
+            f'or <python -m pip uninstall {module} -y>.'])
+        
+    upgrade ='--upgrade' if upgrade else '' 
+    
+    if action == 'uninstall':
+        upgrade= '-y' # Don't ask for confirmation of uninstall deletions.
+    elif action in ('install', True):
+        action = 'install'
+
+    cmd = ['-m', 'pip', f'{action}', f'{module}', f'{upgrade}']
+
+    try: 
+        STDOUT = subprocess.DEVNULL if DEVNULL else None 
+        STDERR= subprocess.STDOUT if DEVNULL else None 
+    
+        subprocess.check_call(
+            [sys.executable] + cmd, stdout= STDOUT, stderr=STDERR,
+                              **subpkws)
+        if action in (True, 'install'):
+            # freeze the dependancies
+            reqs = subprocess.check_output(
+                [sys.executable,'-m', 'pip','freeze'])
+            [r.decode().split('==')[0] for r in reqs.split()]
+            _logger.info( f"{action_msg.capitalize()} of `{module}` "
+                         "and dependancies was successfully done!") 
+        MOD_IMP=True
+        
+    except: 
+        _logger.error(f"Failed to {action} the module =`{module}`.")
+        
+        if verbose > 0 : 
+            print(f'---> Module {module!r} {action_msg} failed. Please use'
+                f' the following command: {cmdg} to manually do it.')
+    else : 
+        if verbose > 0: 
+            print(f"{action_msg.capitalize()} of `{module}` "
+                      "and dependancies was successfully done!") 
+        
+    return MOD_IMP 
+        
 def smart_format(iter_obj): 
     """ Smart format iterable obj 
     :param iter_obj: iterable obj 
@@ -90,6 +222,81 @@ def smart_format(iter_obj):
         str_litteral = ','.join([f"{i!r}" for i in iter_obj[:-1]])
         str_litteral += f" and {iter_obj[-1]!r}"
     return str_litteral
+
+def make_introspection(Obj , subObj): 
+    """ Make introspection by using the attributes of instance created to 
+    populate the new classes created.
+    :param Obj: callable 
+        New object to fully inherits of `subObject` attributes 
+    :param subObj: Callable 
+        Instance created.
+    """
+    # make introspection and set the all  attributes to self object.
+    # if Obj attribute has the same name with subObj attribute, then 
+    # Obj attributes get the priority.
+    for key, value in  subObj.__dict__.items(): 
+        if not hasattr(Obj, key) and key  != ''.join(['__', str(key), '__']):
+            setattr(Obj, key, value)
+            
+def cpath (savepath=None , dpath= None): 
+    """ Control the existing path and create one of it does not exist.
+    :param savepath: Pathlike obj, str 
+    :param dpath: str, default pathlike obj
+    """
+    if dpath is None:
+        file, _= os.path.splitext(os.path.basename(__file__))
+        dpath = ''.join(['_', file,
+                         '_']) #.replace('.py', '')
+    if savepath is None : 
+        savepath  = os.path.join(os.getcwd(), dpath)
+    if savepath is not None:
+        try :
+            if not os.path.isdir(savepath):
+                os.mkdir(savepath)#  mode =0o666)
+        except : pass 
+    return savepath   
+
+def show_quick_edi_stats(nedic , nedir, fmtl='~', lenl=77): 
+    """ Format the Edi files and ckeck the number of edifiles
+    successfully read. 
+    :param nedic: number of input or collected edifiles 
+    :param nedir: number of edifiles read sucessfully 
+    :param fmt: str to format the stats line 
+    :param lenl: length of line denileation."""
+    
+    def get_obj_len (value):
+        """ Control if obj is iterable then take its length """
+        try : 
+            iter(value)
+        except :pass 
+        else : value =len(value)
+        return value 
+    nedic = get_obj_len(nedic)
+    nedir = get_obj_len(nedir)
+    
+    print(fmtl * lenl )
+    mesg ='|'.join( ['|{0:<15}{1:^2} {2:<7}',
+                     '{3:<15}{4:^2} {5:<7}',
+                     '{6:<9}{7:^2} {8:<7}%|'])
+    print(mesg.format('EDI collected','=',  nedic, 'EDI success. read',
+                      '=', nedir, 'Rate','=', round ((nedir/nedic) *100, 2),
+                      2))
+    print(fmtl * lenl )
+
+def sPath (name_of_path:str):
+    """ Savepath func. Create a path  with `name_of_path` 
+    if path not exists.
+    :param name_of_path: str, Path-like object. If path does not exist,
+    `name_of_path` should be created.
+    """
+    try :
+        savepath = os.path.join(os.getcwd(), name_of_path)
+        if not os.path.isdir(savepath):
+            os.mkdir(name_of_path)#  mode =0o666)
+    except :
+        warnings.warn("The path seems to be existed!")
+        return
+    return savepath 
 
 
 def averageData(np_array, filter_order=0, 
@@ -912,17 +1119,18 @@ def _search_ToFill_Data (dicoReal, arrayTemp ,
              
     return dicoReal
         
-
 def straighten_out_list (main_list , list_to_straigh):
     """
     Parameters
     ----------
         * main_list : list
-                list of which the data must absolutely appear into the straighen list.
-                in our case , it is the station list : a list of offset 
+                list of which the data must absolutely appear into 
+                the straighen list.in our case , it is the station 
+                list : a list of offset 
                 
         * list_to_straigh : list
-                list contain the data (offset calculated , the depth and the resistivity (log10)), 
+                list contain the data (offset calculated,
+                 the depth and the resistivity (log10)), 
 
     Returns
     -------
@@ -2317,9 +2525,306 @@ def keepmin(array):
         os= os[0]
     return int(os), array[int(os)]
 
+
+def get_closest_value (values_range, input_value): 
+    """
+    Function  to select the closest values when input values is
+    not in the values range. We assume that value types are arrays.
+    If the same value is repeated, should take the first index and 
+    the value at that index. 
+    
+    :param values_range: values to get 
+    :type values_range: array_like   
+                 
+    :param input_value: specific value
+    :type input_value: float,
+
+    :returns: the closest value and its index
+    :rtye: float 
+    
+    """
+
+    values_range = np.array(values_range)
+    # if all element less than zero than convert 
+     #in put value to negative value 
+    if np.all(values_range <0) : 
+        if input_value >0 : 
+            input_value *=-1  # for depth select purpose 
+        
+    if input_value < values_range.min(): 
+        print('--> ! Input value ={0} is out  the range,'
+              ' min value = {1}. Value should be reset to ={1}.'.
+              format(input_value, values_range.min())
+              )
+        
+        warnings.warn('Input value ={0} is out  '
+                      'the range ! min value = {1}'.
+                      format(input_value, values_range.min())
+                      )
+        _logger.debug('Input value ={0} is out '
+                      'the range ! min value = {1}'.
+                      format(input_value, values_range.min())
+                      )  
+            
+        input_value = values_range.min()
+    elif input_value > values_range.max(): 
+        
+        warnings.warn('Input value ={0} is out '
+                      'the range ! max value = {1}'.
+                      format(input_value, values_range.max())
+                      )
+        _logger.debug('Input value ={0} is out '
+                      'the range ! max value = {1}'.
+                      format(input_value, values_range.max()))
+            
+        input_value = values_range.max()
+        print('!--> Input value ={0} is out '
+              'the range , min value = {1}. Value'
+              ' should be reset to ={1}.'.format(
+                  input_value, values_range.max()))
+        
+    if input_value in values_range : 
+        indexes,*_= np.where(values_range==input_value)
+        if len(indexes)==1 : 
+            index =int(indexes )
+        # mean element is repeated then take the first index    
+        elif len(indexes)>1 : 
+            index = int(indexes)[0]
+            
+        value = values_range[index]
+        return value , index 
+    
+    elif values_range.min() < input_value < values_range.max(): 
+        # values_range = sorted(values_range)
+        for ii, xx in enumerate(values_range): 
+            if xx > input_value : 
+                #compute distance : 
+                # make the diffence between distances 
+                d0 = abs(input_value-xx) 
+                # need to take the short
+                d1= abs(values_range[ii-1]-input_value) 
+                if d0 < d1 : 
+                    return  xx , ii
+                elif d0> d1 : 
+                    return   values_range[ii-1], ii-1
+                
+def geo_length_checker(main_param, 
+                       optional_param,
+                       force =False, 
+                        param_names =('input_resistivities',
+                                      'input_layers'),
+                        **kws): 
+    """
+    Geo checker is a function to check the differents length 
+    of different geoparams.
+    
+    The length of optional params  should depend of the length of main params. 
+    Therefore if the length of optional params is larger than the length of 
+    the main params, the length of optional params will be reduced to
+    the length of main params.Otherwise if the length of optional params 
+    is shorther than the length of the main params, will filled it either 
+    with "None" if dtype param is string or 0. is float or 0 if integer.
+    If `force`  is set ``True``, shoud raise errors if the main params and 
+    the optional params have are not the same length. 
+  
+    Parameters 
+    ------------
+        * main_param : array_like, list 
+                 main parameter that must took 
+                 its length as reference length 
+                 
+        * optional params : array_like, list 
+                 optional params, whom length depend 
+                 to the length of main params
+                 
+        * param_names : tuple or str 
+                 names of main params and optional params 
+                 so to generate error if exits.
+                 
+        * fill_value: str, float, optional  
+                Default value to fill thearray in the case where 
+                the length of optional param is 
+                less than the length of the  main param .If None ,
+                will fill according to array dtype
+            
+    Returns 
+    --------
+        array_like 
+           optional param truncated according to the man params 
+    """
+    add_v =kws.pop('fill_value', None)
+    
+
+    if isinstance(main_param, (str, float, int)):
+        main_param = np.array([main_param])
+    if isinstance(optional_param, (str, float, int)):
+       optional_param = np.array([optional_param])
+    if isinstance(main_param, (list, tuple)):
+        main_param =np.array(main_param)
+    if isinstance(optional_param, (list, tuple)):
+        optional_param =np.array(optional_param)
+            
+    mes=''
+    if len(optional_param) > len(main_param): 
+        mes ="".join(["---> Note ! {0} will be truncated ",
+            "to length = {1}as the same length of {2} ."])
+        
+        warnings.warn(mes.format(param_names[1],
+                                 len(main_param),param_names[0] ))
+        
+        optional_param= optional_param[:len(main_param)]
+        if force is True : 
+            mess =''.join(['--> `force` argument is set ``True``,', 
+                           ' Can not truncate {0} = {1} to fit the ',
+                           'length of {2} = {3}.'])
+
+            raise CSex.pyCSAMTError_parameter_number(
+                mess.format(param_names[1], 
+                        len(param_names[1]), 
+                        param_names[0],
+                        len(param_names[0])))
+
+    elif len(optional_param) < len(main_param) : 
+        if force is True : 
+            mess =''.join([ '--> `force` argument  is set ``True``,',
+                           ' Can not fill the value of {0} ',
+                            'to match the length of {1} = {2}.'])
+            
+            raise CSex.pyCSAMTError_parameter_number(
+                mess.format(param_names[1], param_names[0],
+                            len(param_names[0])))
+        if add_v is not None : 
+            # repeat the value to add 
+            add_v =[add_v for vv in range(
+                len(main_param)-len(optional_param))]
+            add_v = np.array(add_v)
+        if add_v is None :
+             if optional_param.dtype not in [ 'float', 'int'] : 
+                 add_v =['None' for i in range(
+                     len(main_param)-len(optional_param))]
+    
+             else : 
+                 for type_param, fill_value in zip(
+                         [ 'float', 'int'],[ 0., 0] ): 
+                     if  type_param  == optional_param.dtype :
+                         add_v =[fill_value for i in range(
+                             len(main_param)-len(optional_param))]
+
+        mes =''.join(["--> Length of {0} is ={1} which ",
+                      "length of {2} is ={3}. We'll add {4}", 
+                      "to fill {5} value."
+                      ])
+
+        warnings.warn(mes.format(param_names[1],
+                                 len(optional_param),
+                                 param_names[0],
+               len(main_param), add_v[0], param_names[1]))
+        optional_param= optional_param.tolist()
+        optional_param.extend(add_v)
+
+    return np.array(optional_param)
+
+def fr_en_parser (f, delimiter =':'): 
+    """ Parse the translated data file. 
+    
+    :param f: translation file to parse 
+    :param delimiter: str, delimiter
+    
+    :return: generator obj, composed of a list of 
+        french  and english Input translation. 
+    
+    :Example:
+        >>> file_to_parse = 'pme.parserf.md'
+        >>> path_pme_data = r'C:/Users\Administrator\Desktop\__elodata
+        >>> data =list(BS.fr_en_parser(
+            os.path.join(path_pme_data, file_to_parse)))
+    """
+    
+    is_file = os.path.isfile (f)
+    if not is_file: 
+        raise IOError(f'Input {f} is not a file. Please check your file.')
+    
+    with open(f, 'r', encoding ='utf8') as ft: 
+        data = ft.readlines()
+        for row in data :
+            if row in ( '\n', ' '):
+                continue 
+            fr, en = row.strip().split(delimiter)
+            yield([fr, en])
+
+def convert_csvdata_from_fr_to_en(csv_fn, pf, destfile = 'pme.en.csv',
+                                  savepath =None, delimiter =':'): 
+    """ Translate variable data from french csva data  to english with 
+    varibale parser file. 
+    
+    :param csv_fn: data collected in csv format 
+    :param pf: parser file 
+    :param destfile: str,  Destination file, outputfile 
+    :param savepath: [Path-Like object, save data to a path 
+                      
+    :Example: 
+        # to execute this script, we need to import the two modules below
+        >>> import os 
+        >>> import csv 
+        >>> path_pme_data = r'C:/Users\Administrator\Desktop\__elodata
+        >>> datalist=convert_csvdata_from_fr_to_en(
+            os.path.join( path_pme_data, _enuv2.csv') , 
+            os.path.join(path_pme_data, pme.parserf.md')
+                         savefile = 'pme.en.cv')
+    """
+    # read the parser file and separed english from french 
+    parser_data = list(fr_en_parser (pf,delimiter) )
+    
+    with open (csv_fn, 'r', encoding ='utf8') as csv_f : 
+        csv_reader = csv.reader(csv_f) 
+        csv_data =[ row for row in csv_reader]
+    # get the index of the last substring row 
+    ix = csv_data [0].index ('Industry_type') 
+    # separateblock from two 
+    csv_1b = [row [:ix +1] for row in csv_data] 
+    csv_2b =[row [ix+1:] for row in csv_data ]
+    # make a copy of csv_1b
+    csv_1bb= deepcopy(csv_1b)
+   
+    for ii, rowline in enumerate( csv_1bb[3:]) : # skip the first two rows 
+        for jj , row in enumerate(rowline): 
+            for (fr_v, en_v) in  parser_data: 
+                # remove the space from french parser part
+                # this could reduce the mistyping error 
+                fr_v= fr_v.replace(
+                    ' ', '').replace('(', '').replace(
+                        ')', '').replace('\\', '').lower()
+                 # go  for reading the half of the sentence
+                row = row.lower().replace(
+                    ' ', '').replace('(', '').replace(
+                        ')', '').replace('\\', '')
+                if row.find(fr_v[: int(len(fr_v)/2)]) >=0: 
+                    csv_1bb[3:][ii][jj] = en_v 
+    
+    # once translation is done, concatenate list 
+    new_csv_list = [r1 + r2 for r1, r2 in zip(csv_1bb,csv_2b )]
+    # now write the new scv file 
+    if destfile is None: 
+        destfile = f'{os.path.basename(csv_fn)}_to.en'
+        
+    destfile.replace('.csv', '')
+    
+    with open(f'{destfile}.csv', 'w', newline ='',encoding ='utf8') as csvf: 
+        csv_writer = csv.writer(csvf, delimiter=',')
+        csv_writer.writerows(new_csv_list)
+        # for row in  new_csv_list: 
+        #     csv_writer.writerow(row)
+    savepath = cpath(savepath , '__pme')
+    try :
+        shutil.move (f'{destfile}.csv', savepath)
+    except:pass 
+    
+    return new_csv_list
+
 # if __name__=="__main__" :
 
-    # parse_=parse_wellData(filename='shimenDH.csv', include_azimuth=True,utm_zone='49N')
+    # parse_=parse_wellData(filename='shimenDH.csv',
+    # include_azimuth=True,utm_zone='49N')
     
     # print("NameOflocation:\n",parse_[0])
     # print("WellData:\n",parse_[1])

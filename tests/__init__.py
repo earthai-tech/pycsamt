@@ -57,6 +57,5 @@ survey_testname ='nibykro_survey'
 
 # set test logging configure
 csamtpylog.load_configure(
-    os.path.join(os.path.abspath('.'), 'pycsamt', '_logfile',
-                 "main_logging_configfile.yml"))
+    os.path.join(os.path.abspath('.'), 'pycsamt', 'utils', "p.configlog.yml"))
 

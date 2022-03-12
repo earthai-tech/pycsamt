@@ -3,8 +3,6 @@
        .Specific exceptions for pyCSAMT.
     .Created on Wed Nov 18 17:17:13 2020
 
-@author: @Daniel03
-
 """
 
 #=================================================================

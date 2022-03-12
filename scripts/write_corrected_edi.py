@@ -9,45 +9,46 @@
    to process MT data.
 
 Created on Fri Mar 19 19:15:46 2021
-
-@author: @Daniel03
+@author:K.L ~ @Daniel03
 """
-import os 
-from pycsamt.ff.processing.corr import shifting
-
-
-# from pycsamt.ff.processing.corr import shifting 
+# from pycsamt.ff.processing.corr import shifting
+from pycsamt.ff.processing import Processing
 
 # profile edipath : full path to edifiles or single edifile 
-# edipath =os.path.join(os.environ['pyCSAMT'], 'data','_outputEDIFiltered_AMA') #'edi')#, 'new_csa000.edi' )
-edipath = 'data/K1_edi'
+edipath = 'data/edi'
 
 # path to hold edi outputs files 
-savepath =None  # r'C:\Users\Administrator\Desktop\ThesisImp\edis\_special_K6_edi\k6_TMA'
+savepath =None 
 
 # new edi output filenames 
-new_edifilename = 'K1_c'#None #'k6'                  #'ybro_survey' 
+new_edifilename = 'K1_c'#None #'k6'                 
  
 # Applied filter 
-FILTER = 'ama'                          # availables filters [`tma`, `flma`,`ama`, `ss`, `dist`]
-                                        # default is `tma`
+# availables filters [`tma`, `flma`,`ama`, `ss`, `dist`]
+# default is `tma`
+FILTER = 'ama'                         
                                         
 # number of points : to computed the window width  
-number_of_filter_points = 7.            # default is 7. set to 01. when use si ngle edifiles 
+# default is 7. set to 01. when use si ngle edifiles 
+number_of_filter_points = 7.            
 # number of skin depth : specially provided to compute rho ith AMA filter 
-number_of_skin_depth =3.                # default is 3. can be 1 to 10 skin depths 
+# default is 3. can be 1 to 10 skin depths 
+number_of_skin_depth =3.                
 
 # reference frequency 
-reference_frequency = 8192.             # frequency at clean data , usefull when data is EMAP data 
-                                        # not use for MT data 
+# frequency at clean data, usefull when data is EMAP data 
+# not use for MT data 
+reference_frequency = None            
                                         
-#dipole length  in meter : provided to integrate on one segment of dipole 
-dipoleLength = 50.                      # default is 50m for CSAMT survey 
+#dipole length  in meter: provided to integrate on one segment of dipole
+# default is 50m for CSAMT survey  
+dipoleLength = 50.                      
 
-#datatype correspond either EMAP data or MT data , if None , will detect automatically       
-datatype = None                     # Type of edifile , can be `mt` or`emap` 
+#datatype correspond either EMAP data or MT data, 
+#if None , will detect automatically
+# Type of edifile , can be `mt` or`emap`        
+datatype = None                     
     
-
 
 #------------------------------------------------------------------------------
 # Optional params but usefull when used MT data 
@@ -64,7 +65,7 @@ distortion_err_tensor = None
 #------------------------------------------------------------------------------
 # call correction object 
 
-corr_obj= shifting().write_corrected_edi(data_fn = edipath, 
+corr_obj= Processing().correct_edi(data_fn = edipath, 
                              number_of_points =number_of_filter_points,
                              reference_frequency=reference_frequency,
                              number_of_skin_depth=number_of_skin_depth, 

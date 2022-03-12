@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-#       Author: Kouadio K.Laurent<etanoyau@gmail.con>
-#       Created on Wed Nov 25 16:45:33 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
 """
 .. _module-Strata::

@@ -1,37 +1,38 @@
 # -*- coding: utf-8 -*-
 """
     .Script to generate occam2d building inputfiles from 'MTpy' module. 
-    MTpy is a magnetotelluric toolbox from authors Alison Louise Kirkby1,Fei Zhang1, Jared Peacock2, 
-    Rakib Hassan1, and Jingming Duan is already available. Get the documentation here :.
+    MTpy is a magnetotelluric toolbox from authors 
+    Alison Louise Kirkby1,Fei Zhang1, Jared Peacock2, 
+    Rakib Hassan1, and Jingming Duan is already available. 
+    Get the documentation here :.
         - DOI : 10.21105/joss.01358 
         - https://mtpy2.readthedocs.io/en/develop/core.html
         
 Created on Wed Apr 15 09:51:02 2015
-@author: Alison Kirkby
-sets up input files for running 2d occam inversions using the occam2d_rewrite module    
+sets up input files for running 2d occam inversions using 
+the occam2d_rewrite module    
     
     if you are already MTpy installed on your computer you may use this script to 
     build occam 2D input files.  if 'MTpy' is not intalled 'pyCSAMT' will try tp 
     install mtpy with its dependancies. To avoid some packages conflits , better 
     approch is to create a virtual environnement to use 'pyCSAMT' . If automatic
     downloading failed ,  you can download MTpy  floowing steps in MTpy wiki page : 
-        https://github.com/MTgeophysics/mtpy/wiki : see intallation guide and dependancies.
+        https://github.com/MTgeophysics/mtpy/wiki : see intallation
+        guide and dependancies.
     
 Edited  on Mon Feb 15 16:27:49 2021
-by: @Daniel03
+@author: @Daniel03
 
 """
 import os
 from  pycsamt.modeling.occam2d import occam2d_write
 
 
-
 #path where edi files are located
-edipath = os.path.join(os.environ['pyCSAMT'], 'data', 'edi') # specify the path where edi is located 
+edipath ='data/edi' # specify the path where edi is located 
 
  # specify the path to save the Occam 2D inputfiles
-savepath = os.path.join(os.path.abspath('.'),
-                        'data', 'occam2dBuildInputfiles')
+savepath = 'data/occam2dBuildInputfiles'
 
 # occam_output_dataname 
 OccamDataFile= 'OccamDataFile.dat'

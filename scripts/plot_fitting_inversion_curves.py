@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+#       author: @Daniel03
 
 from pycsamt.modeling.occam2d import plotResponse 
 

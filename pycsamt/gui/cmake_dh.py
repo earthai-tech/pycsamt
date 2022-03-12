@@ -14,11 +14,9 @@
     
 Created on Tue Apr  6 21:33:23 2021
 
-@author: @Daniel03
-
 """
 import os 
-from pycsamt.geodrill.geoCore.geodrill import Drill 
+from pycsamt.geodrill.geocore import Drill 
 from pycsamt.gui.wrap_console_scripts import wrap_cscripts as wrs
 
 default_kwargs = {'Path to parser drill files - str - ' : None , 

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
+#       Authors: Lars Krieger, Jared R. Peacock & Alison Louise Kirkby
+#       contact: < https://github.com/MTgeophysics/mtpy.git>
+#       Licence: GPL
 """
    
 Created on Fri Apr 14 14:47:48 2017
-...:: Module author :: jrpeacock 
-
-@author : jrpeacock 
 
 """
 

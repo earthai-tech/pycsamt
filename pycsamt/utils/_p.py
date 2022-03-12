@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
-#       Author-email: <etanoyau@gmail.com>
-#       Licence: LGPL
 #       Created on Sat Dec 12 16:21:10 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
  
 .. _module-Infos::`csamtpy.etc.infos`
 
     :synopsis: Module contains various parameters  of files handling and 
-        glossary of some technical words.
+        the definition of some technical words.
 
-.. warnings:: `_sensible` class is parser class. It parses of differents 
-                inputs format recognized  by the software.  Editing this
-                class could affect how others submodules could run.
-                 However, improving the code to become 
-                less expensive is welcome.
+.. warnings:: `_sensible` class is parser class. It parses and controls  the  
+                different inputs formats recognized  by the software.
+                class could affect how the software could run.
+                However, improving the code to become less expensive 
+                is welcome.
                 ...
 """
 import os
@@ -26,15 +25,19 @@ from pycsamt.utils.exceptions import pyCSAMTError_file_handling
 
 class notion :
     """
-    Singular class to explain CSAMT technical word in details. Also usefull 
-    for user to have info  about any scientific context is does Know.
-    Just call the word directly in warnings to give an overview of why error
-    occurs. It like a short documentation  using pyCSAMT software. 
-    Used everywhere in the script. 
+    Definition singular class to explain CSAMT technical words. 
+    Also usefull for user to have info  about any scientific context 
+    the sofware introduces. Each warnings refering to any context 
+    could give the details of the errors by printing the definition itself.
+    It seems like a short documentation.
     """
  
-    reference_frequency =''.join(['"Reference number " is The highest ',
-                                  'frequency with clean data.'])
+    reference_frequency =''.join([
+        '"Reference number " is The highest frequency with clean data.' 
+        'More details in <Weik, M. H., 2001, reference frequency,',
+         ' in Computer Science and Communications ',
+         'Dictionary, Springer US, 1442.>  or consult the link:', 
+         ' http://www.zonge.com/legacy/PDF_DatPro/Astatic.pdf'])
     
     TMA=''.join(['Trimmed-Moving-Average filter : design to remove ',
                  'single-station offsetswhile preserving broader scale ',
@@ -203,12 +206,15 @@ class suit :
 
 class _sensitive:
     """
-    .. note :: `sensitive class` . Please keep carefully the indices like 
-        it's ranged. Better Ways to avoid redundancy in code during the program 
-        design. Core of parser of each files except files from 
-        :ref:`module-geodrill`. Aims are:
-            1. to check file . it is was the right file provided or not 
-            2. to write file. to Zonge Avg_format or J-Format or
+    Be aware to editing the class instances below. Editing instance 
+    attributes is your own risk. 
+    
+    .. note :: `sensitive class` . Please keep carefully the indices as 
+        it was ranged. It's a core of program to correctly run.
+        Core of parser of each files except files from `pycsamt.geodrill`
+        packages. Aims are:
+            1. checking file. Control the given files
+            2. reading and writting file. Zonge Avg_format or J-Format or
                 EDI -format and else.
             3. to compute value . Indice are used for computation, 
                 set and get specific value.
@@ -228,68 +234,121 @@ class _sensitive:
     _avg=['skp','Station',' Freq','Comp',' Amps','Emag',
          'Ephz','Hmag','Hphz','Resistivity','Phase',
          '%Emag','sEphz','%Hmag','sHphz','%Rho','sPhz', 
-                             'Tx.Amp','E.mag','E.phz','B.mag','B.phz','Z.mag',
-                             'Z.phz','ARes.mag','SRes','E.wgt', 'B.wgt','E.%err',
-                             'E.perr','B.%err','B.perr','Z.%err','Z.perr',
-                             'ARes.%err']
-    
+                    'Tx.Amp','E.mag','E.phz','B.mag','B.phz','Z.mag',
+                    'Z.phz','ARes.mag','SRes','E.wgt', 'B.wgt','E.%err',
+                    'E.perr','B.%err','B.perr','Z.%err','Z.perr',
+                    'ARes.%err']
     
     _edi =['>HEAD','>INFO', #Head=Infos-Freuency-Rhorot,Zrot and end blocks
         '>=DEFINEMEAS','>=MTSECT', '>FREQ ORDER=INC', #Definitions Measurments Blocks
         '>ZROT','>RHOROT','>!Comment','>FREQ','>HMEAS','>EMEAS',
-        
-              '>RHOXY','>PHSXY','>RHOXY.VAR','>PHSXY.VAR','>RHOXY.ERR','>PHSXY.ERR','>RHOXY.FIT','>PHSXY.FIT', #Apparents Resistivities  and Phase Blocks
-              '>RHOYX','>PHSYX','>RHOYX.VAR','>PHSYX.VAR','>RHOYX.ERR','>PHSYX.ERR','>RHOYX.FIT','>PHSYX.FIT',
-              '>RHOXX','>PHSXX','>RHOXX.VAR','>PHSXX.VAR','>RHOXX.ERR','>PHSXX.ERR','>RHOXX.FIT','>PHSXX.FIT',
-              '>RHOYY','>PHSYY','>RHOYY.VAR','>PHSYY.VAR','>RHOYY.ERR','>PHSYY.ERR','>RHOYY.FIT','>PHSYY.FIT',
-              '>FRHOXY','>FPHSXY','>FRHOXY.VAR','>FPHSXY.VAR','>FRHOXY.ERR','>FPHSXY.ERR','>FRHOXY.FIT','>FPHSXY.FIT', 
-              '>FRHOXX','>FPHSXX','>FRHOXX.VAR','>FPHSXX.VAR','>FRHOXX.ERR','>FPHSXX.ERR','>FRHOXX.FIT','>FPHSXX.FIT',
-                        '>TSERIESSECT', '>TSERIES', '>=SPECTRASECT', '>=EMAPSECT', '>=OTHERSECT', #Time series-Sepctra and EM/OTHERSECT
-                              
-                        '>ZXYR','>ZXYI','>ZXY.VAR', '>ZXYR.VAR','>ZXYI.VAR', '>ZXY.COV', #Impedance Data Blocks
-                        '>ZYXR','>ZYXI','>ZYX.VAR', '>ZYXR.VAR','>ZYXI.VAR', '>ZYX.COV',
-                        '>ZYYR','>ZYYI','>ZYY.VAR', '>ZYYR.VAR','>ZYYI.VAR', '>ZYY.COV',
-                        '>ZXXR', '>ZXXI','>ZXXR.VAR','>ZXXI.VAR','>ZXX.VAR','>ZXX.COV',
-                        '>FZXXR','>FZXXI','>FZXYR','>FZXYI', 
-
-                                      '>RES1DXX', '>DEP1DXX', '>RES1DXY', '>DEP1DXY', #Continuous 1D inversion 
-                                      '>RES1DYX', '>DEP1DYX', '>RES1DYY', '>DEP1DYY',
-                                      '>FRES1DXX', '>FDEP1DXX', '>FRES1DXY', '>FDEP1DXY',
-          
-                        '>COH','>EPREDCOH','>HPREDCOH','>SIGAMP','>SIGNOISE', # Coherency and Signal Data Blocks
-          
-                        '>TIPMAG','>TIPPHS','TIPMAG.ERR', '>TIPMAG.FIT', '>TIPPHS.FIT', #Tipper Data blocks 
-                        '>TXR.EXP', '>TXI.EXP', '>TXVAR.EXP','>TYR.EXP','>TYI.EXP','>TYVAR.EXP',
-                        '>ZSTRIKE','>ZSKEW','>ZELLIP', '>TSTRIKE', '>TSKEW','>TELLIP', #Strike, Skew, and Ellipticity Data Blocks 
-                        
-                        '>FILWIDTH','>FILANGLE','>EQUIVLEN' , '>END'] #Spatial filter blocks
+        #Apparents Resistivities  and Phase Blocks
+        '>RHOXY','>PHSXY','>RHOXY.VAR','>PHSXY.VAR','>RHOXY.ERR','>PHSXY.ERR','>RHOXY.FIT','>PHSXY.FIT', 
+        '>RHOYX','>PHSYX','>RHOYX.VAR','>PHSYX.VAR','>RHOYX.ERR','>PHSYX.ERR','>RHOYX.FIT','>PHSYX.FIT',
+        '>RHOXX','>PHSXX','>RHOXX.VAR','>PHSXX.VAR','>RHOXX.ERR','>PHSXX.ERR','>RHOXX.FIT','>PHSXX.FIT',
+        '>RHOYY','>PHSYY','>RHOYY.VAR','>PHSYY.VAR','>RHOYY.ERR','>PHSYY.ERR','>RHOYY.FIT','>PHSYY.FIT',
+        '>FRHOXY','>FPHSXY','>FRHOXY.VAR','>FPHSXY.VAR','>FRHOXY.ERR','>FPHSXY.ERR','>FRHOXY.FIT','>FPHSXY.FIT', 
+        '>FRHOXX','>FPHSXX','>FRHOXX.VAR','>FPHSXX.VAR','>FRHOXX.ERR','>FPHSXX.ERR','>FRHOXX.FIT','>FPHSXX.FIT',
+        #Time series-Sepctra and EM/OTHERSECT
+        '>TSERIESSECT', '>TSERIES', '>=SPECTRASECT', '>=EMAPSECT', '>=OTHERSECT',
+         #Impedance Data Blocks
+        '>ZXYR','>ZXYI','>ZXY.VAR', '>ZXYR.VAR','>ZXYI.VAR', '>ZXY.COV', 
+        '>ZYXR','>ZYXI','>ZYX.VAR', '>ZYXR.VAR','>ZYXI.VAR', '>ZYX.COV',
+        '>ZYYR','>ZYYI','>ZYY.VAR', '>ZYYR.VAR','>ZYYI.VAR', '>ZYY.COV',
+        '>ZXXR', '>ZXXI','>ZXXR.VAR','>ZXXI.VAR','>ZXX.VAR','>ZXX.COV',
+        '>FZXXR','>FZXXI','>FZXYR','>FZXYI', 
+        #Continuous 1D inversion 
+        '>RES1DXX', '>DEP1DXX', '>RES1DXY', '>DEP1DXY',
+        '>RES1DYX', '>DEP1DYX', '>RES1DYY', '>DEP1DYY',
+        '>FRES1DXX', '>FDEP1DXX', '>FRES1DXY', '>FDEP1DXY',
+        # Coherency and Signal Data Blocks
+        '>COH','>EPREDCOH','>HPREDCOH','>SIGAMP','>SIGNOISE', 
+        #Tipper Data blocks 
+        '>TIPMAG','>TIPPHS','TIPMAG.ERR', '>TIPMAG.FIT', '>TIPPHS.FIT',
+        '>TXR.EXP', '>TXI.EXP', '>TXVAR.EXP','>TYR.EXP','>TYI.EXP','>TYVAR.EXP',
+        #Strike, Skew, and Ellipticity Data Blocks 
+        '>ZSTRIKE','>ZSKEW','>ZELLIP', '>TSTRIKE', '>TSKEW','>TELLIP', 
+        #Spatial filter blocks
+        '>FILWIDTH','>FILANGLE','>EQUIVLEN' , '>END'] 
     
-    _occam_startup =['Format', 'Description', 'Model File',
-                    'Data File','Date/Time', 'Iterations to run','Target Misfit','Roughness Type','Diagonal Penalties',
-                    'Stepsize Cut Count','Model Limits','Model Value Steps','Debug Level','Iteration',
-                    'Lagrange Value','Roughness Value','Misfit Value','Misfit Reached','Param Count'] # end with file or startup 
+    _occam_startup =['Format', 
+                     'Description',
+                     'Model File',
+                    'Data File',
+                    'Date/Time',
+                    'Iterations to run',
+                    'Target Misfit',
+                    'Roughness Type',
+                    'Diagonal Penalties',
+                    'Stepsize Cut Count',
+                    'Model Limits',
+                    'Model Value Steps',
+                    'Debug Level',
+                    'Iteration',
+                    'Lagrange Value',
+                    'Roughness Value',
+                    'Misfit Value',
+                    'Misfit Reached',
+                    'Param Count'] # end with file or startup 
     
-    _occam_datafile =['FORMAT','TITLE','SITES','OFFSETS (M)','FREQUENCIES','DATA BLOCKS','DATUM','ERROR'] #data of simple file.or dat 
+    _occam_datafile =['FORMAT',
+                      'TITLE',
+                      'SITES',
+                      'OFFSETS (M)',
+                      'FREQUENCIES',
+                      'DATA BLOCKS',
+                      'DATUM',
+                      'ERROR'] #data of simple file.or dat 
                      
-    _occam_modelfile =['FORMAT', 'MODEL NAME','DESCRIPTION','MESH FILE','MESH TYPE','STATICS FILE','PREJUDICE FILE','BINDING OFFSET','NUM LAYERS'] # model of simple file 
+    _occam_modelfile =['FORMAT',
+                       'MODEL NAME',
+                       'DESCRIPTION',
+                       'MESH FILE',
+                       'MESH TYPE',
+                       'STATICS FILE',
+                       'PREJUDICE FILE',
+                       'BINDING OFFSET',
+                       'NUM LAYERS'] # model of simple file 
                       
-    _occam_meshfile =['?????????????','ZZZZZZZZZZZZ','YYYYYYYYYYYY','000000000000', 'AAAAAAAAAAAAA'] # end by mesh or simple file 
-                            #Check the firstS layer (LIST NUMBER 0 135 52 0 0 2) SPECIFIED the catacteristik of mesh
-                            #only difference between the startup is at the end , the startup file have the same number so 
+    _occam_meshfile =['?????????????',
+                      'ZZZZZZZZZZZZ',
+                      'YYYYYYYYYYYY',
+                      '000000000000', 
+                      'AAAAAAAAAAAAA'] # end by mesh or simple file 
+                            #Check the firstS layer (LIST NUMBER 0 135 52 0 0 2) 
+                            #SPECIFIED the catacteristik of mesh
+                            #only difference between the startup is at the end ,
+                            # the startup file have the same number so 
                             # the iter is not the same case , number change .
                             #response file , check if the range or the lenght == 7. 
-    _occam_logfile =['STARTING R.M.S', ' ** ITERATION','TOFMU: MISFIT',
-                    'AND IS','USING','STEPSIZE IS','ROUGHNESS IS']          #or end with Logfile.
+    _occam_logfile =['STARTING R.M.S',
+                     ' ** ITERATION',
+                     'TOFMU: MISFIT',
+                    'AND IS',
+                    'USING',
+                    'STEPSIZE IS',
+                    'ROUGHNESS IS']#or end with Logfile.
     
-    _stn=['""dot','""e','""h', '""n','""sta','""len','""east',
-         '""north','""lat','""long','""elev','""azim','""stn']
+    _stn=['""dot',
+          '""e',
+          '""h',
+          '""n',
+          '""sta',
+          '""len',
+          '""east',
+         '""north',
+         '""lat',
+         '""long',
+         '""elev',
+         '""azim',
+         '""stn']
     
     
     @classmethod
     def which_file(cls, filename=None, deep= True): 
         """
-        Which file is class method . List of files are the typical files able
-        to read by pyCSAMT softwares.
+        Which file is the class method. List of recognized files able to parse
+        by pyCSAMT software.
         Sensitive class method. 
         
         Parameters
@@ -304,8 +363,8 @@ class _sensitive:
         Returns  
         ---------
             str 
-               FileType could be [`avg` | `j` | `edi` | `resp` | `mesh` | `occamdat` |
-                    `stn` | `model` | `iter` | `logfile` | `startup`]
+            FileType could be [`avg` | `j` | `edi` | `resp` | `mesh` | `occamdat` |
+                 `stn` | `model` | `iter` | `logfile` | `startup`]
         
        
         List of files read by pyCSAMT :
@@ -351,7 +410,6 @@ class _sensitive:
                  'resp': ['none','none'],
                   }
         
-        
         _filename = filename
         
         if _filename is None : 
@@ -365,9 +423,18 @@ class _sensitive:
             else : _flag = 0 #file not recognized 
 
         # Open the file now 
-        with open (_filename , 'r', encoding ='utf8') as _f : 
-                _data_lines =_f.readlines()
-                
+        try :
+            with open (_filename , 'r', encoding ='utf8') as _f : 
+                    _data_lines =_f.readlines()
+        except PermissionError:
+            msg =''.join(['https://stackoverflow.com/questions/36434764/',
+                          'permissionerror-errno-13-permission-denied'])
+            raise PermissionError(
+                    'This Error occurs because you try to access a file '
+                   'from Python without having the necessary permissions. '
+                    f'Please read the following guide <{msg}> to let Python'
+                   ' to have permission to read and write files.')
+            
         if _flag !=0 :  
                                    # file extension has been recognized on dict code keys. 
             cls._logger.info('Reading %s file' % os.path.basename(_filename))
@@ -445,7 +512,8 @@ class _sensitive:
                         if _ccounter >=5 : return _flag
                     if _ccounter>=7 :return _flag 
             if _ccounter <7 :
-                raise pyCSAMTError_file_handling('ERROR occurs while reading file !<{0}>. '
+                raise pyCSAMTError_file_handling(
+                    'ERROR occurs while reading file !<{0}>. '
                  'File doesnt not match the typical <{1}>'
                  ' Format.'.format(os.path.basename(_filename), _flag))  
         
@@ -468,23 +536,31 @@ class _sensitive:
                             else :return _keycode
                         return _keycode
                     
-            #Now we assune that the file must be the response file then read according response control 
+            #Now we assune that the file must be the 
+            #response file then read according response control 
             try :
                 resp0 =[float(ss) for ss in _data_lines [0]]
                 resp_end =[float(ss) for ss in _data_lines[-1]]
                 resp_mid = [float(ss) for ss in _data_lines [int(len(_data_lines)/2)]] # get the middele of file and try float converter 
                 assert (len(resp0) == len(resp_end)) and (len(resp_end)==len(resp_mid)),\
-                    pyCSAMTError_file_handling('We presume that  RESP <{0}> file doesnt not match a OCCAM-RESPONSE file.'.format(os.path.basename(_filename)))
+                    pyCSAMTError_file_handling(
+                        'We presume that  RESP <{0}> file doesnt not '
+                        'match a OCCAM-RESPONSE file.'.format(
+                            os.path.basename(_filename)))
             except :
                 
-                message =''.join('Error reading File. pyCSAMT can read only <{0}> Format file.', 
-                             'Format file. Program can not find the type of that file : <{1}>.', 
-                             'You may use script <rewriteXXX> of  pyCSAMT to try to rewrite file', 
-                             'either to SEG-EDI |j|STN|AVG| or OCCAM{DAT, RESP,MODEL,ITER} files.')
+                message =''.join([
+                    'Error reading File. pyCSAMT can read only <{0}> Format file.', 
+                    'Format file. Program can not find the type of that file : <{1}>.', 
+                    'You may use script <rewriteXXX> of  pyCSAMT to try to rewrite file', 
+                    'either to SEG-EDI |j|STN|AVG| or OCCAM{DAT, RESP,MODEL,ITER} files.'
+                    ])
                 cls._logger.error(message.format(
-                    '|'.join(list(_code.keys())),os.path.basename(_filename) ))
+                    '|'.join(list(_code.keys())),
+                    os.path.basename(_filename) ))
                 warnings.warn(message.format(
-                    '|'.join(list(_code.keys())),os.path.basename(_filename) ))
+                    '|'.join(list(_code.keys())),
+                    os.path.basename(_filename) ))
 
                 return 
             

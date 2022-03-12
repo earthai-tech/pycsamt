@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
-#       Author: KouaoLaurent <etanoyau@gmail.con>
 #       Created on Thu Dec  3 22:31:16 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
 .. _module-j:: `pycsamt.ff.core.j
 
@@ -19,10 +19,11 @@ import datetime
 import webbrowser
 import numpy as np 
 
-import pycsamt.ff.core.cs  as cs_obj
+from pycsamt.ff.site import Site, Location, Profile 
 from pycsamt.utils._p import notion
 from pycsamt.ff.core.edi import (Edi, Hmeasurement, Emeasurement) 
 from pycsamt.utils._p import _sensitive as SB 
+from pycsamt.utils.decorator import deprecated
 import pycsamt.utils.func_utils as func
 from pycsamt.utils import exceptions as CSex
 from pycsamt.utils._csamtpylog import csamtpylog
@@ -89,8 +90,8 @@ class J_collection :
         self.survey_name =survey_name
         
         self.J=J()
-        self.Location =cs_obj.Location ()
-        self.Site =cs_obj.Site()
+        self.Location =Location ()
+        self.Site =Site()
         
         self._latitude =None 
         self._longitude =None
@@ -116,7 +117,12 @@ class J_collection :
         self.weight =None
         self.loc =None 
         self.id =None 
-        
+       
+        for key in list(kwargs.keys()): 
+            setattr(self, key, kwargs[key])
+            
+        if not hasattr(self, 'savepath'):
+            setattr(self, 'savepath' , None)
 
         if self.jfiles_list is not None :
             self.collect_jfiles()
@@ -170,12 +176,13 @@ class J_collection :
                 raise CSex.pyCSAMTError_J(
                     'Stations names must be on list or the number'
                     ' of stations not <{0}>.'.format(type(jstnames)))
+                
     
-
+    @deprecated("Use `pycsamt.ff.core.CSAMT.j2edi ` instead.")
     def j2edi(self, jfn=None, savepath =None, **kwargs): 
         """
-        Method to convert j-files to edi files. Method calls CSAMT class object
-        and get from this class edi infos 
+        Method to convert j-files to edi files. Method calls CSAMT 
+        class objectand get from this class edi infos. 
         
         :param jfn: collection of jfiles or path-like str  
         :type list_of_files: str  
@@ -188,9 +195,11 @@ class J_collection :
             >>> from pycsamt.ff.core.j import J_collection as JObjs
             >>> path2j = 'data/j' 
             >>> jObjs= JObjs().j2edi(path2j)
-            
-    
+  
         """
+        #####################################################################
+        import pycsamt.ff.core.cs  as cs_obj
+        #####################################################################
         prospect =kwargs.pop('contractor_name', None)
         #hardwareInfos = kwargs.pop('hardware_name', None)
         fileby =kwargs.pop('fileby', 'jediSoftware')
@@ -519,7 +528,10 @@ class J_collection :
         elif self.jfiles_list is not None :
             self.collect_jfiles(list_of_jfiles =self.jfiles_list )
             
+        #######################################################################
         from pycsamt.viewer.plot import Plot1d 
+        #######################################################################
+        
         #--> create Plot1d Obj 
         plot_obj= Plot1d()
         #--> get easting northing arrays after converting from lat, lon
@@ -528,7 +540,7 @@ class J_collection :
                                                                            
 
         # ----> compute station separation using Profile obj 
-        jstn_separation = cs_obj.Profile().stn_separation(
+        jstn_separation = Profile().stn_separation(
             easting =jeasting , northing =jnorthing)[0]
        
         #---- > interpolate Jstn_separation  so to get the same size as stations.
@@ -539,7 +551,6 @@ class J_collection :
 
         jstn_separation_extrap = ff(xx_new)
 
-        
         if compute_azimuth is True :
 
             self.azimuth =func.compute_azimuth(
@@ -587,8 +598,14 @@ class J_collection :
         :type savepath: str   
         """
         
-        if list_of_jfiles is not None : self.jfiles_list =list_of_jfiles 
-        if survey_name is not None : self.survey_name =survey_name 
+        if list_of_jfiles is not None :
+            self.jfiles_list =list_of_jfiles 
+        if survey_name is not None : 
+            self.survey_name =survey_name 
+            
+        if savepath is not None: 
+            self.savepath = savepath 
+            
         if self.jfiles_list is  None : 
             raise CSex.pyCSAMTError_J(
                 'No files found to read . '
@@ -596,7 +613,6 @@ class J_collection :
         elif self.jfiles_list is not None : 
             self.collect_jfiles(list_of_jfiles =self.jfiles_list )
          
-            
         #--- > start writing 
         write_jlines =[]
         if self.survey_name is None :
@@ -604,6 +620,9 @@ class J_collection :
         elif self.survey_name is not None :
             code_name = self.survey_name[:-3]+'{0:02}-{1}'
         codespace= 5*' '
+        
+        # create a path if not exist and move the file(s).
+        self.savepath = func.cpath (self.savepath ,'_outrewritej_')
         
         for ii in range (len(self.id)) : 
             #-- > write Head j 
@@ -714,17 +733,16 @@ class J_collection :
                       encoding='utf8') as fj:
                 fj.writelines(write_jlines)
             
-                
-            if savepath is not None : 
+            
+            if self.savepath is not None : 
                 shutil.move ('{0}{1}'.format(
-                    self.id[ii],j_extension), savepath)
+                    self.id[ii],j_extension), self.savepath)
                                                            
             write_jlines=[]  
             
         print('-'*77) 
-        if savepath is None :savepath =os.getcwd()
         print('---> {0} J-files have been rewritten to <{1}>'
-              ' <----'.format(len(self.id), savepath))
+              ' <----'.format(len(self.id), self.savepath))
         print('-'*77)
                                                             
 
@@ -1025,7 +1043,8 @@ class J:
         return self._jweight
     @jweight.setter 
     def jweight (self, jweight):
-        if jweight is None : self._jweight = np.full((self.japp_rho.size,),1.)
+        if jweight is None : 
+            self._jweight = np.full((self.japp_rho.size,),1.)
         for ii, item in enumerate(jweight): 
             if item in ['','*'] or item == str(self._jnan): 
                 jweight[ii]=np.nan

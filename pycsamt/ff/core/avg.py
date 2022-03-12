@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
-#       @author: KouaoLaurent alias @Daniel03 <etanoyau@gmail.com>
 #       Created on Wed Nov 18 16:45:35 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
 .. _module-avg:: `pycsamt.ff.core.avg`  
 
@@ -21,10 +21,8 @@ import pandas as pd
 from  datetime import (datetime, timezone)
 
 from pycsamt.utils import _p as infOS
+from pycsamt.utils.decorator import deprecated
 from pycsamt.ff.site import Site 
-from pycsamt.ff.core.j import J_collection 
-from pycsamt.ff.core.edi import Edi
-from pycsamt.ff.processing import corr 
 from pycsamt.utils import zcalculator as Zcc
 from pycsamt.utils._csamtpylog import csamtpylog
 from pycsamt.utils import avg_utils as cfunc
@@ -518,7 +516,9 @@ class Avg (object):
             * survey_name:   bool, 
                         survey_area  
         """
-
+        #################################################
+        from pycsamt.ff.core.j import J_collection 
+        ##################################################
         
         savepath =kws.pop('savepath', None)
         write_info =kws.pop('writeInfos', False)
@@ -733,7 +733,7 @@ class Avg (object):
               format(len(station_list), savepath))
         print('-'*77)
         
-        
+    @deprecated("Use `pycsamt.ff.core.CSAMT.avg2edi ` instead.")    
     def avg_to_edifile (self, data_fn =None , profile_fn =None , 
                         savepath =None , apply_filter =None, 
                         reference_frequency =None, number_of_points=7.,
@@ -796,7 +796,10 @@ class Avg (object):
             ...           savepath =save_edipath, 
             ...           apply_filter=None ) 
         """
-
+        #######################################################################
+        from pycsamt.ff.core.edi import (Edi, Hmeasurement, Emeasurement)
+        from pycsamt.ff.processing import corr 
+        #######################################################################
         
         utm_zone = kwargs.pop('utm_zone', None)
         
@@ -1018,8 +1021,7 @@ class Avg (object):
              head_edi_elev = site_obj.elev 
         
         #------------------------START SETTING EDI ATTRIBUTE ----------------
-        # import module Hmeasurement and Emeasurement
-        from pycsamt.ff.core.edi import Hmeasurement, Emeasurement
+        
         # from pycsamt.utils import gis_tools as gis 
         #   for stn in head_dataid_list : #loop for all station or dataid 
         for ii, stn in enumerate(head_dataid_list): 

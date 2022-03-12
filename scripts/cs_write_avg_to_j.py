@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-     .Script to write straightforwardly your avg file to A.G.Jones J-format. Both type of 
-     AVG file (plainty file or AsTatic file can be converted into Jformat. )
+     .Script to write straightforwardly your avg file to 
+     A.G.Jones J-format. Both type of AVG file (plainty file or asTatic 
+     file can be converted into Jformat. )
      
 Created on Wed Jan  6 13:49:02 2021
-
 @author: @Daniel03
 """
 
@@ -15,7 +15,7 @@ from pycsamt.ff.core.avg import Avg
 #---> path to your avg file 
 path = 'data/avg'
 #---> savepath 
-savepath =None # r'C:\Users\Administrator\Desktop\test\avg_toj\jfilenew'
+savepath =None 
 
 #--> Zonge avgfile name 
 avgfile ='K2.AVG'
@@ -29,10 +29,6 @@ surveyName =None
 #---> add your avg info in your jformat output file 
 write_avg_file_infos = True
 
-#---> see documentation : set to True 
-see_doc =False
-#---> set to True and run cell to write files. 
-WRITE =True 
 
 #set UTM zone 
 utmZone ='49N'
@@ -41,12 +37,11 @@ path_to_avg=os.path.join(path, avgfile)
 path_to_station_file = os.path.join(path, station_file)
 #--->
 avg_obj =Avg()
-if WRITE : 
-    avg_obj.avg_to_jfile(avg_data_fn=path_to_avg, 
-                                profile_fn=path_to_station_file,
-                                j_extension=j_extension,
-                                savepath=savepath  ,
-                                writeInfos=write_avg_file_infos, 
-                                utm_zone =utmZone , 
-                                survey_name =surveyName)
-if see_doc :help(avg_obj.avg_to_jfile)
+ 
+avg_obj.avg_to_jfile(avg_data_fn=path_to_avg, 
+                            profile_fn=path_to_station_file,
+                            j_extension=j_extension,
+                            savepath=savepath  ,
+                            writeInfos=write_avg_file_infos, 
+                            utm_zone =utmZone , 
+                            survey_name =surveyName)

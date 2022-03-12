@@ -2,7 +2,6 @@
 """
 Created on Fri Sep  4 15:49:10 2020
 
-@author: Administrator
 
 """
 import os 

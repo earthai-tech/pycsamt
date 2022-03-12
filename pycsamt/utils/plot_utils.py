@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2021 
 #       Created on Tue Dec 29 19:18:44 2020
 #       This module is a part of pycsamt utils packages
-#       released under a LGL- licence.
-#       @author: Daniel03<etanoyau@gmail.com>
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
 .. _module-Plot_Utils:: `pycsamt.utils.plot_utils` 
     :synopsis: helpers functions for visualization 
@@ -644,7 +643,7 @@ def slice_csamt_matrix ( block_matrix , station_offsets,
     
     #check wheren the value provide is on the offset 
     if offset_min < offset_start : 
-        warnings.warn ('Povided minimal offset is out of the range '
+        warnings.warn ('Provide minimal offset is out of the range '
                        '!Offset minimal for plottig is ={0}'.format(
                            offset_start))
         raise CSex.pyCSAMTError_plot_tip(
@@ -887,7 +886,8 @@ def build_new_station_id (station_id , new_station_name ):
     return [str(id_) for id_ in station_id] , mess
 
 def get_conductive_and_resistive_zone (data, site_names,
-                                       purpose ='groundwater',**kws): 
+                                       purpose ='groundwater',
+                                       **kws): 
     """
     function to get the probability of conductive and resistive zone .
     It is not absolutely True but give an overview of decison .
@@ -1060,9 +1060,9 @@ def get_conductive_and_resistive_zone (data, site_names,
         print()
         print( '!IMPORTANT NOTE! :')
         bfreport =''.join(['This present report is',
-                           '  for {0}  exploration purpose.',  
-                           'If your survey purpose if far from',
-                           ' {0} exploration , please ignore it.'])
+                           ' for {0}  exploration purpose. ',  
+                           'If yoursurvey purpose if far from',
+                           ' {0} exploration, please ignore it.'])
         bfreport =bfreport.format(purpose)
         
         fttext = fmt_text(data_text = bfreport, fmt='-', leftspace=3)
@@ -1074,7 +1074,7 @@ def get_conductive_and_resistive_zone (data, site_names,
         report=''.join([
             'In the case of {0} exploration, along the survey line,',
             ' site {1} seems to be the best conductive zone with reliability ',
-            ' ratio estimates to  = {2} % compared to the threshold = {3} %.',
+            ' ratio estimates to = {2} % compared to the threshold = {3} %.',
             ' {4} Site {1} is considered as {5}. '
                     ])
         report= report.format(purpose, 
@@ -1084,7 +1084,7 @@ def get_conductive_and_resistive_zone (data, site_names,
                               fm, 
                               mess)
         caution =''.join([
-            'The present  report is NOT absolute. It might be',
+            'The present report is NOT absolute. It might be',
             ' taken with cautiousness because in groundwater ', 
             ' exploration, many other parameters are considering',
             ' before a possible drilling decison. We hope in  ', 

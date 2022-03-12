@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-    . Script  to straighten profile .
+    . Script  to correct the profile  line.
     The purpose of this script is to straighten out the coordinates taken 
     during the data collection. Due to the aleas of the terrain being
     in mountainous or in forest regions, the land harvesting
@@ -24,25 +24,24 @@
         arguments (x, y) ; index  
         
 Created on Fri Jan 29 18:57:32 2021
-
-@author: @Daniel03
-
+@author:K.L ~ @Daniel03
 """
-import os 
+
 from pycsamt.viewer.plot import Plot1d
-from pycsamt.ff.core.cs import Profile
+from pycsamt.ff.site import Profile
 
 # full path to your profile file : stn 
 path ='data/avg/K1.stn'            # change your path 
 #saveyour figure path 
-savepath = None                 #r'C:\Users\Administrator\Desktop\ThesisImp\K_reaj'
+savepath = None                 
 
-# if stn file is not available , set CREATE to True and REAJUST to False
+# if stn file is not available, set CREATE to True and REAJUST to False
 # Then you will generate your own stn file for reajusting coordinates
 CREATE =False
-REAJUST=True 
+REAJUST=True
 # choose the type to straithen your profile 
-straighten_out_mode  ='classic'          # can be 'distored|natural, or "equisistant".Default is "classic".
+# can be 'distored|natural, or "equisistant".Default is "classic".
+straighten_out_mode  ='classic'          
 # correct coordinates : 
 X = 0.                                  # correct easting value : eg : X =300238.702               
 Y = 0.                                  # correct northing coordinates : eg Y = 2369.252

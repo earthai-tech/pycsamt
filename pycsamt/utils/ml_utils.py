@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2021 Kouadio K. Laurent, Created on Thu Nov  4 12:38:40 2021
-#       This module is a part of pycsamt utils packages
-#       released under a LGL- licence.
-#       @author-email:<etanoyau@gmail.com>
-# Backprop on the Seeds Dataset
+#       This module is a part of pycsamt utils packages related to the ML
+#       online module to predict the layer name.
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
+
 import numpy as np 
 import matplotlib.pyplot as plt 
 from random import seed
@@ -22,8 +22,6 @@ X, y = make_blobs (n_samples = 100 , n_features =2 ,
                    centers =2 , random_state =0 )
 y= y.reshape((y.shape[0], 1))
 ###############################################################################
-
-
 
 def quick_view (X, c=y, cmap='summer'): 
     """ quick view datasets X"""
@@ -149,7 +147,7 @@ class ReduceImage(BaseEstimator, TransformerMixin):
         X = flatten_variables(X)
         return X
   
-#######################     ANN(Should be deprecated)  ######################### 
+
 # https://machinelearningmastery.com/implement-backpropagation-algorithm-scratch-python/  
 # Load a CSV file
 def load_csv(filename):

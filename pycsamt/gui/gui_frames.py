@@ -2,13 +2,14 @@
 """
 Created on Sat Sep  5 10:46:37 2020
 
-@author: Daniel 
-    Module is deprecated !
 """
 
 import os 
 from tkinter import *
-from pycsamt.ff.gui.gui_avgapp import Gui_Ediwrite, Gui_StnToDat,Gui_AvgToJformat,Gui_ITER2OASIS
+from pycsamt.ff.gui.gui_avgapp import (Gui_Ediwrite, 
+                                       Gui_StnToDat,
+                                       Gui_AvgToJformat,
+                                       Gui_ITER2OASIS)
 
 #=============================
 

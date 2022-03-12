@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent, Licence: LGPL
-#       @author: KouaoLaurent alias @Daniel03 <etanoyau@gmail.con>
 #       Created on Tue Oct 13 14:52:08 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
 use : 
     for sql dataBase works 

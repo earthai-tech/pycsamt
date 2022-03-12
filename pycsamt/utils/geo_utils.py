@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2021 Kouadio K. Laurent, 
-#       Created on Mon Oct 25 15:05:40 2021
-#       This module is a part of pycsamt utils packages
-#       released under a LGL- licence.
-#       @author-email:<etanoyau@gmail.com>
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
+
 import os
 import itertools
 import warnings
 import shutil 
 import copy 
-from six.moves import urllib    
+from six.moves import urllib 
 from pprint import pprint 
 import numpy as np
 import pandas as pd 
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as GridSpec
 
-from pycsamt.bases import sPath 
 import pycsamt.utils.func_utils as FU
 import pycsamt.utils.plot_utils as PU
 import pycsamt.utils.exceptions as CSex
@@ -34,8 +32,7 @@ try :
                   }
 except :
     INVERS=dict()
-
-
+ 
 TRES=[10, 66,  70, 100, 1000, 3000]# 7000] #[10,  70, 100, 1000,  3000]
 #[10, 66, 70, 100, 1000, 2000, 3000, 7000, 15000 ]      
 LNS =['river water','fracture zone', 'MWG', 'LWG', 
@@ -136,8 +133,9 @@ def fit_rocks(logS_array, lns_, tres_):
     :Example: 
         
         >>> import pycsamt.utils.geo_utils as GU
-        >>> obj= GU.quick_read_geos()
-        >>> pslns , pstres,  ps_lnstres= make_strata(obj)
+        >>> import pycsamt.geodrill.geocore as GC 
+        >>> obj= GC.quick_read_geomodel()
+        >>> pslns , pstres,  ps_lnstres= GU.make_strata(obj)
         >>> logS1 =obj.nmSites[0] # station S0
         >>> fit_rock(logS1, lns_= pslns, tres_= pstres)
     """
@@ -159,7 +157,8 @@ def fit_rocks(logS_array, lns_, tres_):
     return fitted_rocks 
 
 def assert_station(id, nm =None):
-    """ Assert station according to the number of stations investigated
+    """ Assert station according to the number of stations investigated.
+    
     :param id: int or str, station number. The station counter start from 01 
         as litteral count except whn provided value in string format 
         following the letter `S`. For instance : `S00` =1
@@ -167,8 +166,9 @@ def assert_station(id, nm =None):
     :return: Index at specific station
     :Example:
         >>> import pycsamt.utils.geo_utils as GU
-        >>> geoObj = GU.quick_read_geos() 
-        >>> assert_station(id=47, nm=geoObj.nmSites)
+        >>> import pycsamt.geodrill.geocore as GC 
+        >>> obj= GC.quick_read_geomodel()
+        >>> GU.assert_station(id=47, nm=geoObj.nmSites)
         ...46
         
     """
@@ -427,8 +427,8 @@ def _sanitize_db_items (value, force =True ):
     convert numerical data to float. 
     
     :param value: float of list of values to sanitize.
-    :param force:If `force` is `True` will return value whtout parenthesis 
-        but not convert the inside values
+    :param force: If `force` is ``True`` will return value without 
+        parenthesis but not convert the inside values
         
     :return: A list of sanitized items 
     
@@ -440,7 +440,7 @@ def _sanitize_db_items (value, force =True ):
         >>> GU._sanitize_db_items (test)
         ...[(1.0, 0.5019607843137255, 1.0),
         ...    '+o++.', (0.25, 0.0, 0.98), (0.23, 0.0, 1.0)]
-        >>> _sanitize_db_items (test, force =False)
+        >>> GU._sanitize_db_items (test, force =False)
         ... [(1.0, 0.5019607843137255, 1.0), 
              '(+o++.)', (0.25, 0.0, 0.98), (0.23, 0.0, 1.0)]
     """
@@ -466,7 +466,7 @@ def _sanitize_db_items (value, force =True ):
 
 
 def base_log( ax, thick, layers, *, ylims=None, hatch=None, color=None )  : 
-    """ Plot pseudo-stratigraphy basemap and return ax 
+    """ Plot pseudo-stratigraphy basemap and return axis. 
     
     :param ax: obj, Matplotlib axis 
     :param thick: list of the thicknesses of the layers 
@@ -474,7 +474,7 @@ def base_log( ax, thick, layers, *, ylims=None, hatch=None, color=None )  :
     :param hatch: list of the layer patterns
     :param color: list of the layer colors
     
-    :return: ax: matplotlib axis properties 
+    :return: ax- matplotlib axis properties 
     """
     if ylims is None: 
         ylims=[0, int(np.cumsum(thick).max())]
@@ -634,8 +634,7 @@ def pseudostratigraphic_log (thick, layers, station, *,
                                          hatch =hatch, zoom =0.25,
                                          color =color, station='S00')
     """
-    import matplotlib.gridspec as GridSpec
-    
+
     is_the_same, typea_status, typeb_status= _assert_list_len_and_item_type(
         thick, layers,typea =(int, float, np.ndarray),typeb =str)
     if not is_the_same: 
@@ -653,7 +652,7 @@ def pseudostratigraphic_log (thick, layers, station, *,
     #for hatch and colors
     # print(color)
     hatch , color = set_default_hatch_color_values(hatch, color)
-    #####INSERT ZOOM TIP HERE#######
+    #####INSERT ZOOM TIP HERE############
     ylims =None
     if zoom is not None: 
         ylims, thick, layers, hatch, color = zoom_processing(zoom=zoom, 
@@ -723,15 +722,16 @@ def _assert_list_len_and_item_type(lista, listb, typea=None, typeb=None):
     :param typeb: The type which all items in `listb` might be
     
     :returns: 
-        - the status of the length of the two list ``True`` or ``False``
+        - the status of the length of the two lists ``True`` or ``False``
         - the status of the type of `lista` ``True`` if all items are the 
             same type otherwise ``False``
         - idem of `listb`
         
     :Example: 
+        >>> import pycsamt.utils.geo_utils as GU
         >>> thicknesses= [59.0, 150.0, 590.0, 200.0]
         >>> hatch =['//.', '.--', '+++.', 'oo+.']
-        >>> _assert_list_len_and_item_type(thicknesses, hatch,
+        >>> GU._assert_list_len_and_item_type(thicknesses, hatch,
         ...                                   typea =(int, float, np.ndarray),
         ...                                    typeb =str))
         ... (True, True, True)
@@ -794,7 +794,7 @@ def set_default_hatch_color_values(hatch, color, dhatch='.--',
         >>> from pycsamt.utils.geo_utils as  GU.
         >>> hatch =['//.', 'none', '+++.', None]
         >>> color =[(0.5019607843137255, 0.0, 1.0), None, (0.8, 0.6, 1.),'lime']
-        >>> set_default_hatch_color_values(hatch, color))
+        >>> GU.set_default_hatch_color_values(hatch, color))
     """
     fs=0 # flag to reconvert the single RGB color in tuple 
     def set_up_(hc, dhc):
@@ -903,7 +903,7 @@ def mapping_stratum(download_files =True):
      
     return   tuple(rock_and_structural_props)
 
-def subprocess_module_intallation (module): 
+def subprocess_module_installation (module): 
     """ Install  module using subprocess.
     :param module: str, module name to install  
     """
@@ -928,7 +928,7 @@ def subprocess_module_intallation (module):
     except: 
         _logger.error("Failed to install the module =`{module}`.")
         print(f'---> Module  {module!r} installation failed, Please use'
-           f'  the following command {cmd} to manually install it.')
+           f' the following command {cmd} to manually install it.')
     return MOD_IMP 
 
 def fetching_data_from_repo(repo_file, savepath =None ): 
@@ -952,7 +952,7 @@ def fetching_data_from_repo(repo_file, savepath =None ):
     try : 
         from tqdm.notebook  import trange 
     except:# Install bar progression
-        IMP_TQDM= subprocess_module_intallation('tqdm')
+        IMP_TQDM= subprocess_module_installation('tqdm')
         if IMP_TQDM: 
             from tqdm.notebook  import trange 
     # max attempts =3 :  
@@ -985,7 +985,7 @@ def fetching_data_from_repo(repo_file, savepath =None ):
     # now move the file to the right place and create path if dir not exists
     if savepath is not None: 
         if not os.path.isdir(savepath): 
-            sPath (savepath)
+            FU.sPath (savepath)
         shutil.move(os.path.realpath(repo_file), savepath )
     if not status:pprint(connect_reason )
     
@@ -1149,9 +1149,10 @@ def map_top (top, data, end=None):
         Note that if coverall is different 100%, will return the 
         default values giving values. 
         
-    :Example: 
+    :Example:
+        >>> import pycsamt.utils.geo_utils as GU
         >>> ex= [ 59.0, 150.0, 590.0, 200.0] # layers thicknesses 
-        >>> map_top(60, ex)
+        >>> GU.map_top(60, ex)
         ... ((3, [60, 999.0], [149.0, 590.0, 200.0]), 'coverall = 100.0 %')
     """
     wmsg = ''.join([ "Top value ={0} m might be less than ",
@@ -1285,7 +1286,7 @@ def frame_top_to_bottom (top, bottom, data ):
             - 49 is the thockness of the first layer 
             - 200 m is the thickness of the 
         - the coverall allows to track bug issues.The thickness of layer 
-            for visualizing should ne the same that shrank. If not the same 
+            for visualizing should be the same that shrank. Otherwise, 
             the mapping was not successfully done. Therefore coverall 
             will be different to 100% and function will return the raw data
             instead of raising errors. 
@@ -1326,7 +1327,7 @@ def frame_top_to_bottom (top, bottom, data ):
     # compute the intersection of the two lists 
     inter_set_map_tb = set(tm).intersection(set(bm))
     # set obj classification is sometimes messy, so let loop 
-    # to keep the layer disposalthe same like the safe data value
+    # to keep the layer disposal the same like the safe data value
     inter_set_map_tb=[v for v in data_safe if v in inter_set_map_tb]
     top_bottom = sp + inter_set_map_tb + ep 
     # compute coverall to track bug issues 
@@ -1357,7 +1358,7 @@ def zoom_processing(zoom, data, layers =None,
                 - [10, 120] --> top =10m and bottom = 120 m.
                 
             Note that if the length of list  is greater than 2, the function 
-            will return all the plot and  no errors should raised.
+            will return the entire plot and  no errors should be raised.
     :param data: list of composed data. It should be the thickness from 
         the top to the bottom of the plot.
         
@@ -1377,7 +1378,7 @@ def zoom_processing(zoom, data, layers =None,
         >>> thicknesses= [59.0, 150.0, 590.0, 200.0]
         >>> hatch =['//.', 'none', '+++.', None]
         >>> color =[(0.5019607843137255, 0.0, 1.0), None, (0.8, 0.6, 1.),'lime'] 
-        >>> zoom_processing(zoom=0.5 , data= thicknesses, layers =layers, 
+        >>> GU.zoom_processing(zoom=0.5 , data= thicknesses, layers =layers, 
                               hatches =hatch, colors =color) 
         ... ([0.0, 499.5],
         ...     [59.0, 150.0, 290.5],
@@ -1448,8 +1449,10 @@ def _assert_model_type(kind):
             f"Argument kind={kind!r} is wrong! Should be `nm`"
             "for stratigraphyic model and `crm` for occam2d model. ")
     return kind 
-            
+
+
         
+    
 ##############connection git error ##########################
 connect_reason ="""<ConnectionRefusedError><No connection could  '
             be made because the target machine actively refused it>.

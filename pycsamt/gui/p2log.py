@@ -12,8 +12,6 @@
     
 Created on Tue Apr  6 18:03:21 2021
 
-@author: @Daniel03
-
 """
 
 import os 

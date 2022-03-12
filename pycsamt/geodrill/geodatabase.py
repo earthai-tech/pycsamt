@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-#       Copyright © 2021  Kouadio K.Laurent
-#       Author:  ~Daniel03 <etanoyau@gmail.com>
 #       Created:on Wed Oct 14 13:38:13 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
 """
 .. _module-GeoDataBase::`pycsamt.geodrill.geodatabase`
@@ -34,21 +33,19 @@ try :
     filename=os.path.basename(__file__)
     # lineno=__file__.__code__.co_firstlineno + 1
 except Exception as error :
-    _logger.warning("No basic configuration found. Try to set logging.basicConfig()"\
-                    "file as .json file or .yml file",error )
+    _logger.warning("No basic configuration found. Try to set "
+                    "logging.basicConfig() file as .json file or .yml file",
+                    error )
     
-    warnings.warn_explicit('you may configure logFile', category=DeprecationWarning,
+    warnings.warn_explicit('you may configure logFile', 
+                           category=DeprecationWarning,
                            filename=filename, lineno=1)
     pass 
 
 # let set the systeme path find memory dataBase
- 
-sys.path.insert(0, os.path.abspath('.'))  
-sys.path.insert(0, os.path.abspath('..')) 
-sys.path.insert(0, os.path.abspath('../..'))  # for consistency 
-sys.path.insert(0, os.path.abspath('pycsamt/geodrill/_geomemo'))   
-
-# =============================================================================
+for p in ('.', '..', '../..', 'pycsamt/geodrill/_geomemo'): 
+    # for consistency, force system to find the database path.
+    sys.path.insert(0, os.path.abspath(p))  
 
 class GeoDataBase (object): 
     """
@@ -70,18 +67,18 @@ class GeoDataBase (object):
     make_pattern_symbol =["/", "\\", "|", '-', '+', 'x', 'o', 'O', '.', 
                           '*', '\-', '\+', '\o', '\O', '\.', '\*'] 
     #use '\\' rather than '\'.
-    # latter , i will be deprecated to FGDC geological map symbolisation . 
+    # latter , it will be deprecated to FGDC geological map symbolisation . 
     
     codef = ['code','label','__description','pattern', 'pat_size',	
              'pat_density','pat_thickness','rgb','electrical_props', 
                  'hatch', 'colorMPL', 'FGDC' ]
     # geoDataBase=os.path.join(os.environ['pyCSAMT'],'pycsamt',
-    #                'geodrill', 'geoDB','sql_utils', 'sql_DB', 'memory.sq3') 
+    #                'geodrill', '_geomemo', 'memory.sq3') 
     # locate the geodataBase
     geoDataBase = os.path.join(
         os.path.abspath('pycsamt/geodrill/_geomemo'),'memory.sq3')
  
-    # :memory: is faster we chose this options :geoDataBase.sq3 
+    # :memory: is faster but we chose the static option :~.sq3 
     #in sql_DB contains drill holes and wells Tables 
     # will develop in the future extensions 
 
@@ -91,7 +88,6 @@ class GeoDataBase (object):
         self.dateTime= datetime.datetime.now().utcnow()   # Get the date time now  
         self.comment =None                                # initialise comment  text
         
-  
         self._mplcolor =None 
         self._rgb =None 
         self._electrical_props=None 
@@ -114,10 +110,10 @@ class GeoDataBase (object):
 
     def _avoid_injection (self): 
         """
-        For secure , we do not firstly introduce directly the request. We will 
-        check whether the object `request`   exists effectively  in our
-        GeoDatabase . if not , request will be redirect to structural and 
-        strata class issue from  module `structural`
+        For secure, we do not firstly introduce directly the request. We will 
+        check whether the object `request` exists effectively  in our
+        GeoDatabase. If not, request will be redirect to structural and 
+        strata classes from  module `structural` to not corrupt the memory.
         
         """
         # self.manage_geoDataBase.executeReq(" select __description  from AGS0")
@@ -306,7 +302,7 @@ class GeoDataBase (object):
                 geo_formation_name=str(kws['name'])
             else : 
                 raise CSex.pyCSAMTError_SQL_update_geoinformation(
-                    ' ! Unable to find a new geological structure name.')
+                    ' Unable to find a new geological structure name.')
     
         if not isinstance(geo_formation_name, str) : 
             raise CSex.pyCSAMTError_SQL_update_geoinformation(
@@ -495,7 +491,7 @@ class GeoDataBase (object):
         
         def __generate_structure_code (__description , __geocodeList) : 
             """
-            Will geological description will create a code and label 
+            Each input geological description will generate a code and label 
 
             :param __description: name of geological formation 
             :type __description: str 
@@ -506,8 +502,8 @@ class GeoDataBase (object):
             """
             def _rev_func_code (code, CODE): 
                 """
-                generate code and check thin new code  doesnt not exist in 
-                amongs the code of geoDataBase .
+                generate code and check thin the new code does not exist in 
+                the database.
 
                 :param code:  new_generate code 
                 :type code: str 

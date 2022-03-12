@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-#        Copyright © 2021  Kouadio K.Laurent
-#       Author:  @Daniel03 <etanoyau@gmail.con>
-#       Licence: LGPL
 #       Created on Thu Dec  3 16:44:29 2020
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 
 """
 .. _module-ZCalculator::`pycsamt.utils.zcalculator`
@@ -21,26 +20,19 @@ from pycsamt.utils._csamtpylog import csamtpylog
 _logger =csamtpylog.get_csamtpy_logger(__name__)
 try:
     import scipy
-
     scipy_version = [int(ss) for ss in scipy.__version__.split('.')]
     if scipy_version[0] == 0:
         if scipy_version[1] < 14:
-            warnings.warn('Note: need scipy version 0.14.0 or higher or interpolation '
-                          'might not work.', ImportWarning)
-            _logger.warning('Note: need scipy version 0.14.0 or higher or interpolation '
-                            'might not work.')
+            warnings.warn(func._msg, ImportWarning)
+            _logger.warning(func._msg)
     import scipy.interpolate as spi
 
     interp_import = True
 
 except ImportError: 
-    warnings.warn('Could not find scipy.interpolate, cannot use method interpolate'
-                  'check installation you can get scipy from scipy.org.')
-    _logger.warning('Could not find scipy.interpolate, cannot use method interpolate'
-                    'check installation you can get scipy from scipy.org.')
+    warnings.warn(func._msg0)
+    _logger.warning(func._msg0)
     interp_import = False
-
-############################# END MODULE IMPORT ############################################
 
 mu0= 4* np.pi * 1e-7 
 phase_referencing = 2 * np.pi 
@@ -278,6 +270,7 @@ def compute_components_Z_Phz(magn_E_field , magn_H_field, phz_E_field,
          
     :Example: 
         
+        >>> from pycsamt.utils import zcalculator as Zcc
         >>> from pycsamt.core import avg 
         >>> path =  os.path.join(os.environ["pyCSAMT"], 
         ...              data', 'avg', 'K1.AVG')
@@ -287,7 +280,7 @@ def compute_components_Z_Phz(magn_E_field , magn_H_field, phz_E_field,
         >>> hphz_obj = avg.Hphz(path)
         >>> freq_obj =avg.Frequency(path)
         >>> station_name ='S00'
-        >>> rho, phz, Z, real, imag, comp =compute_components_Z_Phz( 
+        >>> rho, phz, Z, real, imag, comp =Zcc.compute_components_Z_Phz( 
         ...    magn_E_field=emag_ob.loc[station_name], 
         ...                            magn_H_field =hmag_obj.loc[station_name], 
         ...                            phz_E_field =ephz_obj.loc[station_name], 
@@ -664,11 +657,7 @@ def find_reference_frequency(freq_array =None, reffreq_value =None ,
                        float(new_reference_value ),2)))
         return force_interpolation(value_to_steep=new_reference_value  )
     elif sharp ==False :return new_reference_value 
-
-
-
-     
-                                                              
+                                                           
 def get_data_from_reference_frequency(array_loc, freq_array, reffreq_value):
     """
     Function to get reference frequency  without call especially 
@@ -968,10 +957,10 @@ def hanning_x (x_point_value, dipole_length =50.,  number_of_points=7,
     Function to compute point on window width .  Use discrete computing .
     Function show the value at center point of window assume that the point
     is center locate on the window width .  It intergrates  value between 
-   dipole length. User can use see_extraband to see the values 
+    dipole length. User can use see_extraband to see the values 
     on the total bandwith. If half is False the value of greater than center
     point will be computed and not be 0 as the normal definition 
-   of Hanning window filter. 
+    of Hanning window filter. 
     
     :param x_point_value:  value  to intergrate.
     :type x_point_value: float 
@@ -1182,13 +1171,13 @@ def compute_FLMA ( z_array =None  , weighted_window=None ,
     
     :Example:
         
-        >>> from pycsamt.ff.core.processing import zcalculator as Zcc
+        >>> from pycsamt.utils import zcalculator as Zcc
         >>> z1= np.array([2.46073791 +3.00162006j ,
         ...             9.74193019 +1.82209497j,
         ...             15.68879141 + 12.91164264j ,
         ...             5.84384925 +3.6899018j, 
         ...             2.4430065  +0.57175607j])
-        >>> flma= compute_FLMA(z_array=z1, dipole_length=50. ,
+        >>> flma= Zcc.compute_FLMA(z_array=z1, dipole_length=50. ,
                                number_of_points=4)
         >>> print(flma)
     """
@@ -1285,7 +1274,7 @@ def compute_TMA (data_array=None, number_of_TMApoints=5. ):
     
     :Example:
         
-        >>> from pycsamt.ff.core.processing import zcalculator as Zcc
+        >>> from pycsamt.utils import zcalculator as Zcc
         >>> z2 = np.array([2.46073791 , 3.00162006 ,
         ...     9.74193019 ])# 1.82209497,
         ...     # 15.68879141 ,  12.91164264 ,
@@ -1419,7 +1408,7 @@ def compute_trimming_moving_average (data_array=None, number_of_TMApoints=None )
           
     :Example:
         
-        >>> from pycsamt.ff.core.processing import zcalculator as Zcc
+        >>> from pycsamt.utils import zcalculator as Zcc
         >>> z2 = np.array([2.46073791 , 3.00162006 ,
         ...     9.74193019 ])# 1.82209497,
         ...     # 15.68879141 ,  12.91164264 ,
@@ -1433,14 +1422,19 @@ def compute_trimming_moving_average (data_array=None, number_of_TMApoints=None )
     """
     
     if data_array is None or number_of_TMApoints is None :
-        raise CSex.pyCSAMTError_processing('NoneType arguments can not be computed!.')
+        raise CSex.pyCSAMTError_processing(
+            'NoneType arguments can not be computed!.')
         
     if data_array.dtype not in ['float', 'int']: 
         try :data_array=np.array([float(dd) for dd in data_array])
-        except : raise CSex.pyCSAMTError_AvgData('Data must be on array_like float number.!')
+        except :
+            raise CSex.pyCSAMTError_AvgData(
+                'Data must be on array_like float number.!')
     if type(number_of_TMApoints) is not int :
         try : number_of_TMApoints=np.int(number_of_TMApoints)
-        except : raise CSex.pyCSAMTError_parameter_number('TMA filter point must be integer.')
+        except : 
+            raise CSex.pyCSAMTError_parameter_number(
+                'TMA filter point must be integer.')
     
     roll_TMA,window  =[], np.int(np.trunc(number_of_TMApoints/2)),
 
@@ -1514,7 +1508,7 @@ def compute_AMA(reference_freq=None, z_array =None,
     
     :Example:
         
-        >>> from pycsamt.ff.core.processing import zcalculator as Zcc
+        >>> from pycsamt.utils import zcalculator as Zcc
         >>> z1= np.array([2.46073791 +3.00162006j ,
         ...     9.74193019 +1.82209497j,
         ...     15.68879141 + 12.91164264j ,
@@ -1530,7 +1524,8 @@ def compute_AMA(reference_freq=None, z_array =None,
     """
     
     if reference_freq is None : 
-        raise CSex.pyCSAMTError_frequency('Please add your reference frequency!')
+        raise CSex.pyCSAMTError_frequency(
+            'Please add your reference frequency!')
         
     mu0 = 4* np.pi * 1e-7 
     omega_reffreq  = 2* np.pi *  reference_freq  
@@ -1674,7 +1669,7 @@ def compute_zxy_xk_omega(z_imp, coeffs_bj):
     
     :Example: 
         
-        >>> from pycsamt.ff.processing import z_calculator as Zcc 
+        >>> from pycsamt.utils import zcalculator as Zcc
         >>> z1= np.array([2.46073791 +3.00162006j ,
         ...     9.74193019 +1.82209497j,
         ...     15.68879141 + 12.91164264j ,

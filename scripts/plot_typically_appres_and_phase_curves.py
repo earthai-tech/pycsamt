@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+#       author:K.L ~ @Daniel03
+
 
 import os 
 from pycsamt.viewer.plot import plot_dataAndFits

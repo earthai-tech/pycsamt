@@ -6,6 +6,7 @@
         you can also add its station file know as profile file  (*.stn)
         
 Created on Wed Jan 20 15:00:33 2021
+@author: @Daniel03
 """
 
 from pycsamt.viewer.plot import Plot1d 

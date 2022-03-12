@@ -7,6 +7,8 @@ Created on Sat Oct 30 21:38:24 2021
     
     Run the script `plot_geostratigraphy_model.py` only one time 
      is sufficient to visualize the station of all block model.
+     
+@author:K.L ~ @Daniel03
 """
 
 from pycsamt.geodrill.geocore import GeoStratigraphy

@@ -4,6 +4,9 @@
     response and Residual 
     
 Created on Tue Feb  9 07:53:16 2021
+
+@author:K.L ~ @Daniel03
+
 """
 
 import os 

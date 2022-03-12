@@ -4,6 +4,9 @@
     correct coordinates values for UTM projection 
 
 Created on Tue Jan  5 17:38:54 2021
+
+@author:K.L ~ @Daniel03
+
 """
 import os 
 from pycsamt.ff.site import Profile

@@ -17,6 +17,9 @@
          >>> notion.reference_frequency
 
 Created on Tue Jan 19 16:57:08 2021
+
+@author:K.L ~ @Daniel03
+
 """
 import os 
 # from pycsamt.viewer import plot 

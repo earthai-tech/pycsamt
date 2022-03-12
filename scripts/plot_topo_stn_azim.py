@@ -5,6 +5,9 @@
     get the the kind of profile you want. 
     
 Created on Wed Dec 30 19:27:04 2020
+
+@author:K.L ~ @Daniel03
+
 """
 
 from pycsamt.viewer.plot import Plot1d

@@ -5,6 +5,7 @@
      file can be converted into Jformat. )
      
 Created on Wed Jan  6 13:49:02 2021
+@author: @Daniel03
 """
 
 import os 

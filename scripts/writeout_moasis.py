@@ -16,6 +16,7 @@
         with station coordinates files
         
 Created on Sat Feb 20 16:07:54 2021
+@author:K.L ~ @Daniel03
 
 """
 import os

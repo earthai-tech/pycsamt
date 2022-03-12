@@ -11,6 +11,7 @@
     will contain static shift corrected FRHO and Uncorrected resistivities. 
 
 Created on Sat Jan 16 19:55:58 2021
+@author: @Daniel03
 """
 
 import os 

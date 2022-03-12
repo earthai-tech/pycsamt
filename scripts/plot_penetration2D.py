@@ -6,6 +6,7 @@
     in Plot2d class. 
     
 Created on Thu Jan 21 21:20:39 2021
+@author: @Daniel03
 """
 
 from pycsamt.viewer.plot import Plot2d

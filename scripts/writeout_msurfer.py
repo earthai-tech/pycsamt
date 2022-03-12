@@ -18,6 +18,7 @@
         which is most closest to reality.
 
 Created on Mon Feb 15 14:56:18 2021
+@author:K.L ~ @Daniel03
 """
 import os
 from pycsamt.geodrill.geocore import Geodrill 

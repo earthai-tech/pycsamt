@@ -2,6 +2,9 @@
 """
     . Script to rewrite edifiles .
 Created on Tue Feb 23 13:15:59 2021
+
+@author:K.L ~ @Daniel03
+
 """
 
 import os 

@@ -22,6 +22,7 @@
     Customize your sequences(layers) using the matplotlib hatches and patterns.
 
 Created on Mon Feb 15 13:25:21 2021
+@author:K.L ~ @Daniel03
 
 """
 import os 

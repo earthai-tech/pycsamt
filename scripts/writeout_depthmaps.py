@@ -6,7 +6,9 @@
     to build  the output files before using this script.
     Once the files are built, it is possible to visualize the resistivity 
     distribution of different lines at each gievn depth.
+    
 Created on Wed Nov 25 11:39:11 2020
+@author:K.L ~ @Daniel03
 """
 
 from pycsamt.geodrill.geocore import Geosurface 

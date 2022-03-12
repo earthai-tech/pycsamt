@@ -3,6 +3,8 @@
     .script to rewrite jfile. 
     
 Created on Tue Jan  5 12:11:07 2021
+
+@author:K.L ~ @Daniel03
 """
 import os 
 from pycsamt.ff.core.j import J_collection as J 

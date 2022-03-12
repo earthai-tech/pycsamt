@@ -24,6 +24,7 @@
         arguments (x, y) ; index  
         
 Created on Fri Jan 29 18:57:32 2021
+@author:K.L ~ @Daniel03
 """
 
 from pycsamt.viewer.plot import Plot1d

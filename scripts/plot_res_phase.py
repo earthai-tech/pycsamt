@@ -5,6 +5,7 @@
     please add your profile (*.stn) file.
     
 Created on Thu Jan 21 08:57:20 2021
+@author:K.L ~ @Daniel03
 """
 
 from pycsamt.viewer.plot import Plot1d

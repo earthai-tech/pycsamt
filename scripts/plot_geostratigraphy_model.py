@@ -5,6 +5,7 @@
     - strata model by setting `kind`=``nm`` 
     - Misfit by setting kind ='strata' and `plot_misfit` to ``True``
 Created on Wed Sep 29 09:50:19 2021
+@author: @Daniel03
 
 """
 

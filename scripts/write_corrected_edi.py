@@ -9,6 +9,7 @@
    to process MT data.
 
 Created on Fri Mar 19 19:15:46 2021
+@author:K.L ~ @Daniel03
 """
 # from pycsamt.ff.processing.corr import shifting
 from pycsamt.ff.processing import Processing

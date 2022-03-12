@@ -21,6 +21,7 @@ the occam2d_rewrite module
         guide and dependancies.
     
 Edited  on Mon Feb 15 16:27:49 2021
+@author: @Daniel03
 
 """
 import os

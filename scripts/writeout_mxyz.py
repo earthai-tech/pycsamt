@@ -6,6 +6,7 @@
         Iteration, Mesh and data file .
 
 Created on Fri Feb  5 12:45:05 2021
+@author:K.L ~ @Daniel03
 """
 import os 
 from pycsamt.modeling.occam2d import Iter2Dat as i2d

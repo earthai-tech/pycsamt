@@ -4,6 +4,9 @@
     Browse to see others params to customize your plot.
     
 Created on Sat Jan 23 18:31:02 2021
+
+@author:K.L ~ @Daniel03
+
 """
 import os 
 from pycsamt.viewer.plot import Plot1d

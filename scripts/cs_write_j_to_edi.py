@@ -2,6 +2,7 @@
 """
     Script to convert j to edi .
 Created on Mon Oct 25 13:43:02 2021
+@author: @Daniel03
 """
 
 

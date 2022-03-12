@@ -13,6 +13,9 @@
     Can customize plot using differents matplotlib properties 
 
 Created on Mon Feb 22 22:14:59 2021
+
+@author:K.L ~ @Daniel03
+
 """
  
 from pycsamt.viewer.plot import Plot1d

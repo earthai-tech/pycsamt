@@ -4,6 +4,8 @@
     
 Created on Fri Dec 11 20:26:52 2020
 
+@author: @Daniel03
+
 """
 
 import os 

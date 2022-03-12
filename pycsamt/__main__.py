@@ -21,4 +21,19 @@ from pycsamt.cli import (
     
 )
 
+from pycsamt.gui import (
+    oc2d_bdin,
+    wa2edi,
+    wa2j,
+    corrected_edi,
+    p_moc2d,
+    p2log,
+    oas2f,
+    gs2f,
+    wi2d,
+    cmake_dh ,
+
+)
+
+
 

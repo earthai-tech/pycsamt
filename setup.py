@@ -43,7 +43,19 @@ setup_kwargs['entry_points'] = {'console_scripts':
                      'write_occam2oasis= pycsamt.gui.oas2f:main',
                      'write_occam2golden= pycsamt.gui.gs2f:main'
                      'write_iter2dat = pycsamt.gui.wi2d:main',
-                     'write_drillhole= pycsamt.gui.cmake_dh:main']}
+                     'write_drillhole= pycsamt.gui.cmake_dh:main', 
+                     'correctedi = pycsamt.cli.correctedi:main', 
+                     'avg2edi= pycsamt.cli.avg2edi:main', 
+                     'j2edi=pycsamt.cli.j2edi:main', 
+                     'misfit2d=pycsamt.cli.misfit2d:main', 
+                     'nm=pycsamt.cli.nm:main', 
+                     'penetration1d=pycsamt.cli.penetration1d:main', 
+                     'penetration2d=pycsamt.cli.penetration2d:main', 
+                     'pseudostratigraphic=pycsamt.cli.pseudostratigraphic:main', 
+                     'rewriteedi=pycsamt.cli.rewriteedi:main', 
+                     'rms=pycsamt.cli.rms:main', 
+                     ]
+                    }
                      
                         
 
@@ -70,10 +82,10 @@ setup_kwargs['packages'] = [
                             'pycsamt.gui',
                             'pycsamt.ff.processing',
                             'pycsamt.geodrill',
-                            'pycsamt.geodrill.geoCore',
-                            'pycsamt.geodrill.geoDB',
-                            'pycsamt.geodrill.geoDB.sql_utils',
-                            'pycsamt.geodrill.geoDB.sql_utils.sql_DB',
+                            # 'pycsamt.geodrill.geocore',
+                            # 'pycsamt.geodrill.geoDB',
+                            # 'pycsamt.geodrill.geoDB.sql_utils',
+                            # 'pycsamt.geodrill.geoDB.sql_utils.sql_DB',
                             'pycsamt.viewer',
                             'pycsamt.modeling',
                             'pycsamt.utils',
@@ -87,7 +99,8 @@ setup_kwargs['install_requires'] = ['numpy>=1.8.1',
                                      'mtpy >=1.1.0',
                                      'pyyaml',
                                      'pyproj',
-                                     'configparser']
+                                     'configparser', 
+                                     'tqdm']
                                      
 setup_kwargs['python_requires'] ='>=3.7'
 

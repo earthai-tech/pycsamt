@@ -76,10 +76,10 @@ if setuptools is False:
 
 setup_kwargs['packages'] = [ 
                             'pycsamt',
-                            'pycsamt.etc',
                             'pycsamt.ff',
                             'pycsamt.ff.core',
                             'pycsamt.gui',
+                            'pycsamt.cli',
                             'pycsamt.ff.processing',
                             'pycsamt.geodrill',
                             # 'pycsamt.geodrill.geocore',
@@ -120,7 +120,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/WEgeophysics/pyCSAMT",
     project_urls={
-        "API Documentation"  : "https://pycsamt.readthedocs.io/en/latest/",
+        "API Documentation"  : "https://pycsamt.readthedocs.io/en/master/",
         "Home page" : "https://github.com/WEgeophysics/pyCSAMT/wiki",
         "Bugs tracker": "https://github.com/WEgeophysics/pyCSAMT/issues",
         "Installation guide" : "https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux", 

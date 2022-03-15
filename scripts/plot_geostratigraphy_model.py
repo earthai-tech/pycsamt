@@ -30,10 +30,10 @@ inversion_files = {key:os.path.join(occamPath , vv) for key,
 TRES= [10,70, 180, 1000,   3000, 7000]     
 #[10, 60, 70, 180, 1000,  3000, 7000]                                 
 # Input layers names (LN) 
-LN =['MWG2', 'MWG1', 
-     'FG', 'LWG', 'Igneous rocks','Basement rocks' ]
-# ['river water','sedimentary rocks', 'fracture zone', 
-#     'gravel', 'granite','igneous rocks','basement rocks' ]
+# LN =['MWG2', 'MWG1', 
+#      'FG', 'LWG', 'Igneous rocks','Basement rocks' ]
+LN = ['river water','Sedimentary rock', 'Fractured granite', 
+    'Granite most weathered', 'Granite less weathered','igneous rocks']
 geosObj = GeoStratigraphy(**inversion_files,
                       input_resistivities=TRES, 
                       input_layers=LN)

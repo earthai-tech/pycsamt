@@ -20,4 +20,4 @@ model_fn: data/occam2D\Occam2DModel
 ptol: 0.2
 beta: 5
 n_epochs: 100
-build:false
+build: true

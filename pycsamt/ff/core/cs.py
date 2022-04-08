@@ -30,6 +30,9 @@ try :
     from pycsamt.__init__ import itqdm 
     if itqdm : 
         import tqdm
+    else:
+        itqdm = False # for consistency  
+    
 except: pass
  
 class CSAMT(object): 
@@ -717,10 +720,13 @@ class CSAMT(object):
         # call CSAMT obj 
         # self= cs_obj.CSAMT(data_fn=jfn)
         # create edi-obj and set attributes 
+  
         if itqdm : 
             pbar =tqdm.tqdm(total= len(self.station), ascii=True,
                              desc ='WEgeophysics-pycsamt[J ---> EDI]', 
                              ncols =77)
+ 
+            
         for ii, stn in enumerate (self.station):
             # create an edi_obj and fill attributes 
             edi_obj=CSAMTedi.Edi()

@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 #Created on Thu Nov 25 13:38:29 2021
 """
-
-  <python pycsamt nm --data =*.file --model=*.model --iter=*.iter --data=*.dat> 
+    Compute the stratigraphic model (NM) from the forward modeling CRM
+    
+    <python pycsamt nm --data =*.file --model=*.model --iter=*.iter --data=*.dat> 
   
-  where *. is the filename. In addition, rather than passes all the occam model
-  files as arguments, use --crmf option instead. for instance:
+  where *. is the filename. In addition, rather than passing all the occam2D 
+  files individually as arguments, use --crmf option instead. for instance:
       `crm_files` is a dict valuewhich contain all occam2d model files like:
           
           crm_files =dict(
@@ -14,37 +15,46 @@
                     model_fn ='data/occam2d/Occam2DModel', 
                     data_fn ='data/occam2d/OccamDataFile.dat')
           with TRES= [10, 70, 100, 1000, 3000]  and 
-          LN= ['river water’, 'fracture zone’, 'MWG', ‘LWG'] 
+          LN= ['river water', 'fracture zone', 'MWG', 'LWG', igneous rocks] 
                
-   The CLI should be write as:
+   The CLI should be written as e.g.:
        
   <python pycsamt nm --crmf=crm_files --tres=TRES --ln=LN --beta=4 --ptol=0.2> 
   
 """
+import pycsamt
 import os 
 import sys 
 import argparse 
-from pycsamt.geodrill.geocore import GeoStratigraphy 
+#from pycsamt.geodrill.geocore import GeoStratigraphy 
 
 prog = os.path.basename (__file__).replace('.py', '')
-hptol = ''. join(['likelihood error parameter. Probabilistic error ', 
+hptol = ''. join(['likelihood error. Probabilistic error ', 
                   '  between the TRES collected from boreholes or wells', 
                   ' and the CRM from inversion.']) 
 def main(): 
     parser =argparse.ArgumentParser(
         prog= prog, 
         formatter_class=argparse.ArgumentDefaultsHelpFormatter ,
-        description= "Compute the stratigraphic model NM from CRM of %(prog)s"
+        description ='Generate strata model (NM) from the forward modeling CRM.', 
+        #usage =pycsamt.poof_cli_usage (pycsamt.nm.__doc__), 
+        allow_abbrev=False, 
         ) 
     parser.add_argument('--crm', dest ='crm',
-                        help = 'Calculated resistivity model  from Occam2d') 
+                        help = 'Calculated resistivity model from forward computation.'
+                                        ) 
     parser.add_argument('--odict', '--crmf', '--dict', '--oc2d',
                         dest ='oc2df',
                         type =dict , 
                         default =dict(),
-                        help =''.join(['Dictionnary of occam model files.',
-                                       ' Usefull rather than passing ',
-                                       'individual occam2d model files.'])
+                        help =''.join(['Dictionnary of occam2d input files.',
+                                       ' Use dictionnary to pass individual', 
+                                       ' occam2d input files e.g. ', 
+                                       ' {"model_fn":<model file location>,',
+                                       ' "iter_fn":<iteration file location>,', 
+                                       ' "data_fn":<data file location>,', 
+                                       ' "mesh_fn":<mesh file location>}.'
+                                       ])
                         )
     
     parser.add_argument('--df', '--data-fn','--data', 
@@ -74,7 +84,7 @@ def main():
                         dest ='beta', 
                         type =int , 
                         default=5, 
-                        help ='Divided coefficient of the CRM block.'
+                        help ='Number of the CRM block constructor.'
                         ) 
     parser.add_argument('-n','--n-epochs', '--n-iter',
                         dest ='n_epochs',
@@ -98,20 +108,17 @@ def main():
                         help ='Electrical rock properties collected'\
                             ' in the exploration area'
                         ) 
-    parser.add_argument('-v', '--verbose', 
+    parser.add_argument('-v', '--verbosity', 
                         dest ='verbose',
                         default =0, 
                         action='count',
-                        help= 'verbosity-Control the level of out-messages')
+                        help= 'verbosity: control the level of output messages',
+                        )
     
-    return parser.parse_args()
+    args = parser.parse_args()
     
-    
-    
-if __name__== '__main__':
-    args = main()
-
-    sys.stdout.write(GeoStratigraphy(crm = args.crm ,
+    pycsamt.geodrill.geocore.GeoStratigraphy(
+                                      crm = args.crm ,
                                       data_fn = args.data_fn , 
                                       mesh_fn = args.mesh_fn , 
                                       iter_fn = args.iter_fn , 
@@ -123,5 +130,12 @@ if __name__== '__main__':
                                       verbose = args.verbose , 
                                       **args.oc2df
                                       )
-                      )
+                      
+    
+    #return parser.parse_args()
+    
+
+if __name__== '__main__':
+    main()
+
 

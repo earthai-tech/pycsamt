@@ -92,6 +92,8 @@ except ImportError:
     
     interp_import = False
     
+ 
+
 def check_dimensionality(obj, data, z, x):
     """ Check dimensionality of data and fix it.
     
@@ -128,7 +130,8 @@ def check_dimensionality(obj, data, z, x):
 
 def subprocess_module_installation (module, upgrade =True , DEVNULL=False,
                                     action=True, verbose =0, **subpkws): 
-    """ Install or uninstall a module using the subprocess.
+    """ Install or uninstall a module using the subprocess under the hood.
+    
     :param module: str, module name 
     :param upgrade:bool, install the lastest version.
     :param verbose:output a message 

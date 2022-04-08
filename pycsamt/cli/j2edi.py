@@ -9,8 +9,9 @@ Created on Thu Nov 25 16:21:30 2021
 import os 
 import sys 
 import argparse 
-from pycsamt.ff.core import CSAMT
 
+import pycsamt
+#from pycsamt.ff.core import CSAMT
 PROG = os.path.basename (__file__).replace('.py', '')
 
 def main(): 
@@ -18,6 +19,7 @@ def main():
         prog= PROG, 
         formatter_class=argparse.ArgumentDefaultsHelpFormatter ,
         description= "Output J-EDI from Alan G. Jones (1994)  J/DAT file",
+        usage =pycsamt.poof_cli_usage (pycsamt.j2edi.__doc__)
         ) 
     parser.add_argument('-d', '--data-fn', '--data',
                         type =str,
@@ -35,7 +37,7 @@ def main():
 
 if __name__== '__main__':
     args = main()
-    sys.stdout.write( CSAMT().j2edi(
+    sys.stdout.write( pycsamt.ff.core.CSAMT().j2edi(
                                data_fn =args.data_fn,
                                savepath =args.savepath)
         )

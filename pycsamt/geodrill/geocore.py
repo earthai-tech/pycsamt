@@ -69,7 +69,10 @@ try :
     from pycsamt.__init__ import itqdm 
     if itqdm : 
         import tqdm
-except: pass 
+except: 
+    itqdm =False 
+    
+    pass 
 
 class Geodrill (object): 
     """
@@ -233,9 +236,9 @@ class Geodrill (object):
         
         for key in self.geo_params :  
             setattr(self, key, None)
-        
-        for key in list(kwargs.keys()):
-            setattr(self, key, kwargs[key])
+
+        # for key in list(kwargs.keys()):
+        #     setattr(self, key, kwargs[key])
             
         if self.model_fn is not None and self.data_fn is not None\
             or self.iter2dat_fn is not None : 
@@ -3679,7 +3682,7 @@ class GeoStratigraphy(Geodrill):
         >>> geosObj.nm 
 
     """
-    def __init__(self, crm=None, beta=5, ptol=0.1 , n_epochs=100, **kwargs):
+    def __init__(self, crm=None, beta=5, ptol=0.1 , n_epochs=100,  **kwargs):
         Geodrill.__init__(self, **kwargs)
 
         self.crm =crm 
@@ -3691,6 +3694,7 @@ class GeoStratigraphy(Geodrill):
         self._eta = kwargs.pop('eta', 1e-4)
         self._kind =kwargs.pop('kind', 'linear')
         self._degree = kwargs.pop('degree', 1)
+        self._b = kwargs.pop('build', False)
         
         self.s0 =None 
         self._zmodel =None
@@ -3708,9 +3712,15 @@ class GeoStratigraphy(Geodrill):
             
         if self.input_resistivities is not None: 
             self.tres = self.input_resistivities
+     
 
         if self.crm is not None: 
             self._makeBlock()
+            
+     
+        self.build 
+
+ 
      
     @property 
     def n_epochs(self): 
@@ -3784,6 +3794,40 @@ class GeoStratigraphy(Geodrill):
         except : 
             raise ValueError('Unable to convert TRES values') 
         
+    @property 
+    def build (self): 
+        """ Trigger the NM build and return the NM building option """
+        
+        ntres ='True resistivity values'
+        nln ='collected layer names (True)'
+        mes =''.join([
+            '{0} {1} not defined. Unable to triggered the NM construction. '
+            'Please, provide the list/array of {2} of survey area.'])
+         
+        if self._b:
+            if (self.tres and self.input_layers ) is None: 
+                warnings.warn(mes.format(
+                    'TRES and LN', 'are', ntres +'and'+nln))
+                self._b=False 
+            elif self.tres is None and self.input_layers is not None: 
+                warnings.warn(mes.format('TRES', 'is', ntres))
+                self._b=False 
+            elif self.input_layers is None and self.tres is not None: 
+                warnings.warn(mes.format('LN', 'is', nln))
+                self._b=False 
+                
+            if not self._b:
+                self._logging.debug ( "Build is set to TRUE, however,"
+                    '{0}'.mes.format(
+                        f'{"TRES" if self.tres is None else "LN"}',
+                        'is', f'{ntres if self.tres is None else nln}')
+                )
+                
+        if self._b: 
+            self._createNM()
+        
+        #return self._b
+   
         
     def _createNM(self, crm =None, beta =5 , ptol= 0.1, **kws): 
         """ Create NM through the differents steps of NM creatings. 
@@ -4364,7 +4408,7 @@ class GeoStratigraphy(Geodrill):
         :class:'~.geoplot2d'. 
         
         :param kind: can be : 
-            - `nms` mean new model plots after inputs the `tres`
+            - `nm` mean new model plots after inputs the `tres`
             - `crm` means calculated resistivity from occam model blocks 
             *default* is `nm`.
         :param plot_misft:  Set to ``True`` if you want to visualise the error 
@@ -4389,6 +4433,9 @@ class GeoStratigraphy(Geodrill):
                 m_misfit= m_misfit *100.
             return m_misfit 
         
+        if isinstance(kind, bool): 
+            kind ='nm' if kind else 'crm'
+
         depth_scale = kwargs.pop('scale', 'm')
         misfit_G =kwargs.pop('misfit_G', False)
         misfit_percentage = kwargs.pop('in_percent', True)

@@ -4,7 +4,9 @@
 """
         Plot the pseudostratigraphic from  NM
         
-     <python pycsamt pseudostratigraphic -s=S00 -z=25% >
+     <$ pycsamt pseudostratigraphic -s=S00 -z=25% > 
+     <$ python pycsamt/cli/pseudostratigraphic.py --station=S00 --zoom=25%  > 
+     
 
  `zoom` parameter can be a list or a float number. Please refer to
     pycsamt.geodrill.geocore.GeoStratigraphy.plotPseudostratigraphic.__doc__

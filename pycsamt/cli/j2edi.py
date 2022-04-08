@@ -2,7 +2,8 @@
 """
 Created on Thu Nov 25 16:21:30 2021
 
-    < python pycsamt j2edi --data=data/j  -s=data/j_edi>
+    < pycsamt j2edi --data=data/j  -s=data/j_edi>
+    < $ python pycsamt/cli/j2edi.py --data=data/j > 
 
 """
 
@@ -10,8 +11,8 @@ import os
 import sys 
 import argparse 
 
-import pycsamt
-#from pycsamt.ff.core import CSAMT
+# import pycsamt
+from pycsamt.ff.core import CSAMT
 PROG = os.path.basename (__file__).replace('.py', '')
 
 def main(): 
@@ -19,7 +20,7 @@ def main():
         prog= PROG, 
         formatter_class=argparse.ArgumentDefaultsHelpFormatter ,
         description= "Output J-EDI from Alan G. Jones (1994)  J/DAT file",
-        usage =pycsamt.poof_cli_usage (pycsamt.j2edi.__doc__)
+        #usage =pycsamt.poof_cli_usage (pycsamt.j2edi.__doc__)
         ) 
     parser.add_argument('-d', '--data-fn', '--data',
                         type =str,
@@ -30,14 +31,16 @@ def main():
     parser.add_argument('-s', '--savepath', 
                         dest ='savepath',
                         type =str , 
-                        help = 'Save output edifiles'
+                        help = 'Save J collection destination files'
                         ) 
+    
+    args =parser.parse_args()
+    CSAMT().j2edi(
+                data_fn =args.data_fn,
+                savepath =args.savepath
+        )
+    
 
-    return parser.parse_args()
 
 if __name__== '__main__':
-    args = main()
-    sys.stdout.write( pycsamt.ff.core.CSAMT().j2edi(
-                               data_fn =args.data_fn,
-                               savepath =args.savepath)
-        )
+    main()

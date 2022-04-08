@@ -155,6 +155,8 @@ venv/
 #*.png
 pycsamt_user_guide/
 
+# exclude data files 
+# data/_conffiles/
 
 # ignore quick examples docs 
 #quick_examples/

@@ -45,6 +45,7 @@ setup_kwargs['entry_points'] = {
                              'write_occam2golden= pycsamt.gui.gs2f:main'
                              'write_iter2dat = pycsamt.gui.wi2d:main',
                              'write_drillhole= pycsamt.gui.cmake_dh:main', 
+                             
                              'correctedi = pycsamt.cli.correctedi:main', 
                              'avg2edi= pycsamt.cli.avg2edi:main', 
                              'j2edi=pycsamt.cli.j2edi:main', 
@@ -54,7 +55,8 @@ setup_kwargs['entry_points'] = {
                              'penetration2d=pycsamt.cli.penetration2d:main', 
                              'pseudostratigraphic=pycsamt.cli.pseudostratigraphic:main', 
                              'rewriteedi=pycsamt.cli.rewriteedi:main', 
-                             'rms=pycsamt.cli.rms:main', 
+                             'rms=pycsamt.cli.rms:main',
+                             'mconfig=pycsamt.cli.mconfig:main'
                      ]
      }
                      
@@ -104,47 +106,51 @@ authors =["Kouadio K. Laurent, ", 'Rong Liu, ',
           'Binbin Mi, ','Chum-ning Liu, ', 'Albert O. Malory.']
 authors_emails =['etanoyau@gmail.com,', 'liurongkaoyang@126.com,',
                 'mibinbin@zju.edu.cn,', 'lifuming001@163.com,','amalory@zju.edu.cn']
-# setup(
-# 	name="pycsamt",
-# 	version=pycsamt.__version__,
-# 	author=' '.join([aa for aa in authors]),
-#     author_email='kkouao@zju.edu.cn',
-#     maintainer="Kouadio K. Laurent",
-#     maintainer_email='etanoyau@gmail.com',
-# 	description="A Python open-source toolkit for Controlled Source Audio-frequency Magnetotelluric ",
-# 	long_description=LONG_DESCRIPTION,
-#     long_description_content_type="text/markdown",
-#     url="https://github.com/WEgeophysics/pyCSAMT",
-#     project_urls={
-#         "API Documentation"  : "https://pycsamt.readthedocs.io/en/master/",
-#         "Home page" : "https://github.com/WEgeophysics/pyCSAMT/wiki",
-#         "Bugs tracker": "https://github.com/WEgeophysics/pyCSAMT/issues",
-#         "Installation guide" : "https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux", 
-#         "User guide" : "https://github.com/WEgeophysics/pyCSAMT/blob/develop/docs/pyCSAMT%20User%20Guide.pdf",
-#         },
-# 	#data_files=[('', ['pycsamt/utils/epsg.npy',]),], #this will install datafiles in wearied palce such as ~/.local/
-# 	include_package_data=True,
-# 	license="GNU LESSER GENERAL PUBLIC LICENSE v3",
-# 	classifiers=[
-#         "Development Status :: 3 - Alpha",
-#         "Intended Audience :: Hydro-Geophysicists",
-#        # "Topic :: Software Development :: Build Tools",
-#        "License :: OSI Approved :: LGPL License",
-#         "Programming Language :: Python :: 3.8",
-#         "Operating System :: OS Independent",
-#         ],
-#     keywords="hydrogeophysic, groundwater, exploration, csamt",
-#     package_dir={"pycsamt": "pyCSAMT/pycsamt"},  # Optional
-#     package_data={'pycsamt': [
-#                             'utils/p.configlog.yml', 
-#                             'geodrill/_geocodes/*.csv', 
-#                             'geodrill/_geocodes/__memory.pkl', 
-#                             'geodrill/_geomemo/*.sq3'
-#                             ]
-#                   },
+setup(
+ 	name="pycsamt",
+ 	version=pycsamt.__version__,
+ 	author=' '.join([aa for aa in authors]),
+    author_email='kkouao@zju.edu.cn',
+    maintainer="Kouadio K. Laurent",
+    maintainer_email='etanoyau@gmail.com',
+ 	description="A Python open-source toolkit for Controlled Source Audio-frequency Magnetotelluric ",
+ 	long_description=LONG_DESCRIPTION,
+    long_description_content_type="text/markdown",
+    url="https://github.com/WEgeophysics/pyCSAMT",
+    project_urls={
+        "API Documentation"  : "https://pycsamt.readthedocs.io/en/master/",
+        "Home page" : "https://github.com/WEgeophysics/pyCSAMT/wiki",
+        "Bugs tracker": "https://github.com/WEgeophysics/pyCSAMT/issues",
+        "Installation guide" : "https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux", 
+        "User guide" : "https://github.com/WEgeophysics/pyCSAMT/blob/develop/docs/pyCSAMT%20User%20Guide.pdf",
+        },
+ 	#data_files=[('', ['pycsamt/utils/epsg.npy',]),], #this will install datafiles in wearied palce such as ~/.local/
+ 	include_package_data=True,
+ 	license="GNU LESSER GENERAL PUBLIC LICENSE v3",
+ 	classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Hydro-Geophysicists",
+        # "Topic :: Software Development :: Build Tools",
+        "License :: OSI Approved :: LGPL License",
+        "Programming Language :: Python :: 3.8",
+        "Operating System :: OS Independent",
+        ],
+    keywords="hydrogeophysic, groundwater, exploration, csamt",
+    package_dir={"pycsamt": "pyCSAMT/pycsamt"},  # Optional
+    package_data={'pycsamt': [
+                            'utils/p.configlog.yml', 
+                            'utils/espg.npy',
+                            'geodrill/_geocodes/*.csv', 
+                            'geodrill/_geocodes/__memory.pkl', 
+                            'geodrill/_geomemo/*.sq3', 
+                            '_mdata/e.g.data.json', 
+                            '_mdata/e.g.data.yaml', 
+                            
+                            ]
+                  },
     
-# 	**setup_kwargs
-# )
+ 	**setup_kwargs
+)
 
 if __name__=='__main__': 
     print(**setup_kwargs)

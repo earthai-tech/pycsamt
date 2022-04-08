@@ -2,7 +2,9 @@
 """
 Created on Thu Nov 25 16:08:01 2021
  
-    < python pycsamt avg2edi -d='data/avg/K1.AVG -p=data/avg/K1.stn -s=data/K1_edi>
+    <$ pycsamt avg2edi -d='data/avg/K1.AVG -p=data/avg/K1.stn -s=data/K1_edi>
+    <$ python pycsamt/cli/avg2edi.py  -d='data/avg/K1.AVG -p=data/avg/K1.stn >
+     
 """
 
 import os 
@@ -16,33 +18,35 @@ def main():
     parser =argparse.ArgumentParser(
         prog= PROG, 
         formatter_class=argparse.ArgumentDefaultsHelpFormatter ,
-        description= "Output SEG-EDI from Zonge International Engineering AVG file",
+        description= "Output SEG-EDI from Zonge International Engineering file",
         ) 
     parser.add_argument('-d', '--data-fn', '--data',
-                        type =argparse.FileType('r'),
+                        # type =str #argparse.FileType('r'),
                         help ='*.avg format collected from GDP-II hardware.', 
                         dest='data_fn', 
                         required=True,
                         )
     
     parser.add_argument('-p', '--profile-fn', '--profile', 
-                        type =argparse.FileType('r'),
+                        # type =str #argparse.FileType('r'),
                         help ='Station location file', 
                         dest = 'profile_fn',
                         required=True,
                         )
     parser.add_argument('-s', '--savepath', 
                         dest ='savepath',
-                        type =str , 
-                        help = 'Save output edifiles'
+                        # type =str , 
+                        help = 'Save destination (output) edifiles'
                         ) 
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    CSAMT().avg2edi(
+                    data_fn =args.data_fn,
+                    profile_fn =args.profile_fn, 
+                    savepath =args.savepath
+                    
+    )
+    
 
 if __name__== '__main__':
-    args = main()
-    sys.stdout.write( CSAMT().avg2edi(
-                               data_fn =args.data_fn,
-                               profile_fn =args.profile_fn, 
-                               savepath =args.savepath)
-        )
+    main()

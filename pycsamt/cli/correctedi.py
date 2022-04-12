@@ -114,7 +114,7 @@ def main():
                                 dipole_length= args.dipole_length, 
                                 number_of_skin_depth= args.number_of_skin_depth,
                                 )
-cmd=['EXAMPLE CMDs: <$ pycsamt correctedi data/edi -ft tma --npoint 3 >', 
+cmd=['EXAMPLE CMDs: <$ correctedi data/edi -ft tma --npoint 3 >', 
      '<$ python pycsamt/cli/correctedi.py data/edi -ft flma --ndipole 7 >', 
      '<$ python pycsamt/cli/correctedi.py data/edi --filter=ama --nskin=3 >']
 

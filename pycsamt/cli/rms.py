@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sat Nov 27 16:40:47 2021
-    < pycsamt rms  data/occam2d/LogFile.logfile >
+    < rms  data/occam2d/LogFile.logfile >
     
 """
 import os 
@@ -53,7 +53,7 @@ def main ():
                         savefig = args.savefigure 
                         )
     
-cmd = ['EXAMPLE COMMANDS: < $ pycsamt rms  data/occam2d/logFile.logfile --show-target >', 
+cmd = ['EXAMPLE COMMANDS: < $ rms  data/occam2d/logFile.logfile --show-target >', 
        '< $ python pycsamt/cli/rms.py  data/occam2d/logFile.logfile --show-target  >', 
        '< $ python pycsamt/cli/rms.py  data/occam2d/logFile.logfile --grid --show-target >', 
 ]

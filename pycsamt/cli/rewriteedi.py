@@ -5,7 +5,7 @@
 Created on Thu Nov 25 17:21:37 2021
     Rewrite Electromagnetic  Array Profiling (EMAP) and Magnetotelluric (MT)
 
-    < pycsamt rewriteedi -d data/edi/new_csa000.edi -n=testedi --dtype=emap --verbose=4  >
+    < rewriteedi -d data/edi/new_csa000.edi -n=testedi --dtype=emap --verbose=4  >
 
 """
 
@@ -73,7 +73,7 @@ def main():
                                       verbose = args.verbose
                                       )
 
-cmd = ['EXAMPLE COMMANDS: < $ pycsamt rewriteedi  data/edi --verbose 2 >', 
+cmd = ['EXAMPLE COMMANDS: < $ rewriteedi  data/edi --verbose 2 >', 
        '< $ python pycsamt/cli/rewriteedi.py data/edi/new_csa000.edi -n=testedi -dtype=emap --verbose=4 >', 
     '< $ python pycsamt/cli/rewriteedi.py data/edi -dtype=emap  >', 
 ]

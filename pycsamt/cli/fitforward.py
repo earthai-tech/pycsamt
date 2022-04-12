@@ -72,7 +72,7 @@ def main():
                       error_type =args.error )
     
     
-cmd=['EXAMPLE CMDs:<$ pycsamt fitforward --stations S01 S02 --rms 1.12 1.23 >', 
+cmd=['EXAMPLE CMDs:<$ fitforward --stations S01 S02 --rms 1.12 1.23 >', 
      '<$ python pycsamt/cli/fitforward.py data/inversionFiles -s s05 S07 --rms=1.14 >', 
      '<$ python pycsamt/cli/pseudocrossresistivityandphase.py data/edi --phic 45 --style=pcolormesh >']
 

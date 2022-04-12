@@ -12,11 +12,11 @@ import argparse
 
 prog = os.path.basename (__file__).replace('.py', '')
 
-cmd =['<$ pycsamt mconfig --show --json >', '\n', '|',
-      '< $ python pycsamt/cli/mconfig.py --show --yml >'
+cmd =['<$ myconfigfile --show --json >', 
+      '< $ python pycsamt/cli/myconfigfile.py --show --yml >'
 ] 
 
-l2git ='https://github.com/WEgeophysics/pyCSAMT/tree/develop/pycsamt/metadata/'
+l2git ='https://raw.githubusercontent.com/WEgeophysics/pyCSAMT/master/pycsamt/metadata/'
 
 def display_help_config(path_to_config_file:str ,
                         ctype:str ='yml',
@@ -51,7 +51,7 @@ def display_help_config(path_to_config_file:str ,
             
     if data is None: 
         data = ''.join(['Config files (*e.g.data.YMl/*e.g.data.JSON) not found! ', 
-            f'Get the config files from Github repository <{l2git}{ctype}>'])
+            f'Get the config files from Github repository <!curl -O {l2git}{ctype}>'])
      
     return data 
 
@@ -63,7 +63,7 @@ def main ():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter ,
         description ='Show example of configuration file content for NM construction.', 
         #usage =pycsamt.poof_cli_usage (pycsamt.nm.__doc__), 
-        epilog = ''.join(cmd),
+        epilog = ' | '.join(cmd),
         allow_abbrev=False, 
         ) 
     
@@ -91,7 +91,7 @@ def main ():
     
     ftype= 'json' if args.json else 'yml' 
     
-    sys.stdout.write( display_help_config(path_to_config_file='pycsamt/_mdata',
+    sys.stdout.write( display_help_config(path_to_config_file='pycsamt/metadata',
                         ctype = ftype, show =args.show)
                       )
     

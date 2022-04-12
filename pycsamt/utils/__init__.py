@@ -5,7 +5,7 @@
 # Check for gdal availability at module level so we don't have to
 # do this every time a function in gis_tools is being called.
 from .decorator import gdal_data_check
-import os, re
+import os, re, sys
 import numpy as np
 
 HAS_GDAL = gdal_data_check(None)._gdal_data_found
@@ -50,8 +50,10 @@ except Exception as e:
     # local copy of these mappings to ensure backward compatibility.
 
     path = os.path.dirname(os.path.abspath(__file__))
-    epsg_dict_fn = os.path.join(path, 'epsg.npy')
-
-    EPSG_DICT = np.load(epsg_dict_fn, allow_pickle=True).item()
+    try:
+        epsg_dict_fn = os.path.join(path, 'epsg.npy')
+        EPSG_DICT = np.load(epsg_dict_fn, allow_pickle=True).item()
+    except: 
+        sys.stdout.write(f'Do not find `epsg.npy` in {epsg_dict_fn}')
 
 # end try

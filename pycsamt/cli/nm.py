@@ -5,7 +5,7 @@
 """
     Compute the stratigraphic model (NM) from the forward modeling CRM
     
-    <python pycsamt nm --data =*.file --model=*.model --iter=*.iter --data=*.dat> 
+    <$ nm --data =*.file --model=*.model --iter=*.iter --data=*.dat> 
   
   where *. is the filename. In addition, rather than passing all the occam2D 
   files individually as arguments, use --crmf option instead. for instance:
@@ -33,7 +33,7 @@ import argparse
 from pycsamt.geodrill.geocore import GeoStratigraphy 
 
 cmd = [
-    'EXAMPLE COMMANDS: <$ pycsamt nm -c pycsamt/metadata/e.g.data.yml --show >', ' | ',
+    'EXAMPLE COMMANDS: <$ nm -c pycsamt/metadata/e.g.data.yml --show >', ' | ',
     '<$ python pycsamt/cli/nm.py -c pycsamt/metadata/e.g.data.json --show --misfit >'
 ]
 

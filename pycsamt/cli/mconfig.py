@@ -16,6 +16,7 @@ cmd =['<$ pycsamt mconfig --show --json >', '\n', '|',
       '< $ python pycsamt/cli/mconfig.py --show --yml >'
 ] 
 
+l2git ='https://github.com/WEgeophysics/pyCSAMT/tree/develop/pycsamt/metadata/'
 
 def display_help_config(path_to_config_file:str ,
                         ctype:str ='yml',
@@ -23,7 +24,9 @@ def display_help_config(path_to_config_file:str ,
                         show:bool =True): 
     """ Display the content as the help for the model config file.
     :param confif_file: Path-Like object, 
-        can be *.yml of *.json file 
+        Is *.yml of *.json file located in `pycsamt/_mdata/` directory. 
+        If folder not created during installation, when user will run
+        the command line, it will be notified 
     
     """
     cfile = f'{cprefix}.json' if ctype =='json' else f'{cprefix}.yml'
@@ -47,8 +50,9 @@ def display_help_config(path_to_config_file:str ,
             data =str(data)
             
     if data is None: 
-        data ='Config files (*e.g.data.YMl/*e.g.data.JSON) not found!'
-        
+        data = ''.join(['Config files (*e.g.data.YMl/*e.g.data.JSON) not found! ', 
+            f'Get the config files from Github repository <{l2git}{ctype}>'])
+     
     return data 
 
 

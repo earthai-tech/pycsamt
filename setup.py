@@ -45,7 +45,6 @@ setup_kwargs['entry_points'] = {
                              'write_occam2golden= pycsamt.gui.gs2f:main'
                              'write_iter2dat = pycsamt.gui.wi2d:main',
                              'write_drillhole= pycsamt.gui.cmake_dh:main', 
-                             
                              'correctedi = pycsamt.cli.correctedi:main', 
                              'avg2edi= pycsamt.cli.avg2edi:main', 
                              'j2edi=pycsamt.cli.j2edi:main', 
@@ -56,7 +55,11 @@ setup_kwargs['entry_points'] = {
                              'pseudostratigraphic=pycsamt.cli.pseudostratigraphic:main', 
                              'rewriteedi=pycsamt.cli.rewriteedi:main', 
                              'rms=pycsamt.cli.rms:main',
-                             'mconfig=pycsamt.cli.mconfig:main'
+                             'mconfig=pycsamt.cli.mconfig:main', 
+                             'pseudocrossresistivityandphase=pycsamt.cli.pseudocrossresistivityandphase:main', 
+                             'staticshift=pycsamt.cli.staticshift:main', 
+                             'fitforward=pycsamt.cli.fitforward:main', 
+                             'occambuildinputs=pycsamt.cli.occambuildinputs:main'
                      ]
      }
                      
@@ -143,10 +146,19 @@ setup(
                             'geodrill/_geocodes/*.csv', 
                             'geodrill/_geocodes/__memory.pkl', 
                             'geodrill/_geomemo/*.sq3', 
-                            '_mdata/e.g.data.json', 
-                            '_mdata/e.g.data.yaml', 
+                            'metadata/e.g.data.json', 
+                            'metadata/e.g.data.yaml', 
+                            '_loggerfiles/*.txt',
                             
-                            ]
+                            ], 
+                    "":[
+                        'data/occam2d/', 
+                        'data/drill_example_files/', 
+                        'data/avg/K1.avg', 
+                        'data/avg/K1.stn', 
+                        'data/avg/K2.avg', 
+                        'data/avg/K2.stn',
+                        ]
                   },
     
  	**setup_kwargs

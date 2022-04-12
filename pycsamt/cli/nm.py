@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-#Created on Thu Nov 25 13:38:29 2021
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
+#       Created on Thu Nov 25 13:38:29 2021
 """
     Compute the stratigraphic model (NM) from the forward modeling CRM
     
@@ -19,20 +21,20 @@
                
    The CLI should be written as e.g.:
        
-  < pycsamt nm --crmf=crm_files --tres=TRES --ln=LN --beta=4 --ptol=0.2 > 
+  <$ pycsamt nm --crmf=crm_files --tres=TRES --ln=LN --beta=4 --ptol=0.2 > 
   
-  <$ python pycsamt/cli/nm.py -c pycsamt/_mdata/e.g.data.json --show --misfit > 
+  <$ python pycsamt/cli/nm.py -c pycsamt/metadata/e.g.data.json --show --misfit > 
   
 """
 
 import os 
-import sys 
+# import sys 
 import argparse 
 from pycsamt.geodrill.geocore import GeoStratigraphy 
 
 cmd = [
-    '<$ pycsamt nm -c pycsamt/_mdata/e.g.data.yml --show >', '\n',
-    '<$ python pycsamt/cli/nm.py -c pycsamt/_mdata/e.g.data.json --show --misfit >'
+    'EXAMPLE COMMANDS: <$ pycsamt nm -c pycsamt/metadata/e.g.data.yml --show >', ' | ',
+    '<$ python pycsamt/cli/nm.py -c pycsamt/metadata/e.g.data.json --show --misfit >'
 ]
 
 prog = os.path.basename (__file__).replace('.py', '')
@@ -106,9 +108,9 @@ def main():
                           dest ='crm',
                           help =''.join([
                             'Calculated resistivity model(CRM) from forward computation.',
-                            'Load *.NPY/NPZ data from Numpy (https://numpy.org/doc/stable/reference/generated/numpy.load.html)', 
+                            'Load *.NPY/NPZ data from Numpy (https://numpy.org/doc/stable/reference/generated/numpy.load.html).', 
                             'As a reminder, CRM is composed of numpy 2D array ', 
-                            '(i.e. X -horizontal nodes and Z-vertical nodes)'
+                            '(i.e. X -horizontal nodes and Z-vertical nodes). ',
                             'If given, user does not need to supply the Occam2d ', 
                             'files (*.dat, *.iter., *.model, *.mesh).']
                             )

@@ -658,7 +658,7 @@ def pseudostratigraphic_log (thick, layers, station, *,
         ylims, thick, layers, hatch, color = zoom_processing(zoom=zoom, 
              data= thick, layers =layers, hatches =hatch,colors =color)
     #####################################
-    fig = plt.figure( f"PseudoLog of Station ={station}",
+    fig = plt.figure( f"PseudoLog of Station ={station.upper()}",
                      figsize = (10,14), 
                       # dpi =300 
                      )
@@ -703,7 +703,7 @@ def pseudostratigraphic_log (thick, layers, station, *,
   
         axis.set_xticks([]) 
         
-    fig.suptitle( f"PseudoStratigraphic log of Station ={station}",
+    fig.suptitle( f"PseudoStratigraphic log of Station ={station.upper()}",
                 ha='center',
         fontsize= 7* 2., 
         verticalalignment='center', 
@@ -1239,6 +1239,7 @@ def smart_zoom(v):
     else : 
         if isinstance(v, str): v= str_c(v)
         else: is_iterable = True
+        
     if not is_iterable: 
         try:  float(v)
         except ValueError:
@@ -1249,10 +1250,11 @@ def smart_zoom(v):
             if not s:
                 warnings.warn(emsg)
                 v=1.
-        else: 
-            if v > 1. or v ==0.:
+        else:
+            if v > 1. or v ==0.: 
                 warnings.warn(msg.format(v)) 
                 v=1.
+                    
     elif is_iterable : 
         if len(v)>2:
             warnings.warn(f" Expect to get size =2 <top and bottom values>. "
@@ -1395,7 +1397,43 @@ def zoom_processing(zoom, data, layers =None,
                         f" {'were' if len(l)>1 else 'was'} given.")
             l=None 
         return l 
+   
+    #**********************************************************************
+    # In the case, only the depth is given.
+    # [120] and float `value` is given. 
+    # If float value is greater than one, value should be consider as a 
+    # max_depth for visualization 
+    l1ratio , l1trange= round(data[0] /sum(data), 2), [0. , data[0]]
+    
+    raise_msg , set_l1 =False , False 
+    if isinstance(zoom, list): # e.g., [120] 
+        if len(zoom)==1: 
+            try : float(zoom [0])
+            except: 
+                if ('%' or '/') in zoom [0]: zoom =zoom [0]
+                else:raise_msg =True # e.g. [120%]
+                
+            else:  zoom = zoom[0]
  
+    try: zoom = float(zoom)
+    except: pass
+
+    if isinstance(zoom, float):#e.g. 0.12 < 0.25 of ratio fist layer .
+        if zoom < l1ratio: # map only the first layer from ratio 
+            zoom =l1ratio
+        elif 1. < zoom < data[0]: # 1 < 120 < 129.
+            set_l1 =True 
+        else: zoom =[0. , zoom]
+    
+    if set_l1: # map the first layer from the list 
+        zoom = l1trange 
+         
+    if raise_msg :    
+        raise ValueError(f'The given `zoom` value =`{zoom}` is wrong.'
+            ' `zoom` param expects a ratio (e.g. `25%` or `1/4`) or a'
+            ' list of [top, bottom] values, not {zoom!r}.'
+            )
+    #**********************************************************************
     zoom = smart_zoom(zoom) # return ratio or iterable obj 
     y_low, y_up = 0., sum(data)
     ix_inf=0
@@ -1410,10 +1448,9 @@ def zoom_processing(zoom, data, layers =None,
         y_up = zoom * sum(data)  # to get the bottom value  as the max depth 
         bm, *_=map_bottom(y_up, data = data )
         ix_sup, _, maptopbottom = bm  # [59.0, 150.0, 391.0])
-       
         y = [y_low, y_up ]
 
-    if isinstance(zoom , (list, tuple, np.ndarray)): 
+    if isinstance(zoom , (list, tuple, np.ndarray)):
         top, bottom = zoom 
         tb, *_= frame_top_to_bottom (top, bottom, data )
         ixtb, y, maptopbottom= tb 
@@ -1449,9 +1486,6 @@ def _assert_model_type(kind):
             f"Argument kind={kind!r} is wrong! Should be `nm`"
             "for stratigraphyic model and `crm` for occam2d model. ")
     return kind 
-
-
-        
     
 ##############connection git error ##########################
 connect_reason ="""<ConnectionRefusedError><No connection could  '

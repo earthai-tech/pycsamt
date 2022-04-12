@@ -2542,7 +2542,7 @@ class occam2d_write(object):
         
         if SUCCESS_IMPORT_MTPY is False : return 
            
-        freq_logspace =kwargs.pop('intp_freq_logspace', (-1,4,17 ))
+        freq_logspace =kwargs.pop('intp_freq_logspace', None)
         startup_basename =kwargs.pop('startup_basename', 'Startup')
         
         res_tm_error_floor =kwargs.pop('res_tm_err', 10.)
@@ -2591,7 +2591,8 @@ class occam2d_write(object):
         #### make data file
         # geoelectric strike for rotation
         # if not specified will calculate from the data
-        
+        if freq_logspace is None: 
+            freq_logspace= (-1,4,17 )
         ocd.geoelectric_strike = geoelectric_strike
         print('---> geoelectric strike added !')
         

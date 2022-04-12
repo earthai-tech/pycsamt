@@ -868,7 +868,7 @@ class Plot1d :
                 plt.savefig(savefig,
                             dpi=self.fig_dpi,
                             orientation =orient)
-                
+        plt.show()
     @mdeco.geoplot1d(reason = 'staticshift', mtmm='s', ctmm=(.8, 0.2, .9),
                       color_mode='color', ms_r=1.,lw_r=.7, 
                       )                   
@@ -1331,6 +1331,7 @@ class Plot1d :
         lw                  float           change the linewdth 
         plot_grid           bool            add grid on your plot . 
                                             Default is False 
+        verbose             bool            Control the level of verbosity 
         =================  ===============  ==================================
         
         .. note:: browse to see others plot config.
@@ -1356,6 +1357,7 @@ class Plot1d :
         lw = kwargs.pop('lw', 1.5)
         savefig = kwargs.pop('savefigure', None)
         orient =kwargs.pop('orientation', 'landscape')
+        verbose = kwargs.pop('verbose', False)
 
         #------BUILD CSAMTOBJ------------------------------------
         csamt_obj = CSAMT(data_fn =fn , profile_fn =profile_fn )
@@ -1432,11 +1434,12 @@ class Plot1d :
                 interpFreq =Zcc.find_reference_frequency(
                     freq_array=csamt_freq_obj, 
                      reffreq_value=freqs,sharp=True, etching=False)
-                warnings.warn ('Frequency {0} not in frequency range. '
-                               'It will be interpolated to find '
-                               'maximum closest  frequency.'.format(freqs))
-                print('--->Input frequency <{0}> Hz has been interpolated to'
-                      ' <{1}Hz>.'.format(freqs,  float(interpFreq)))
+                if verbose:
+                    warnings.warn ('Frequency {0} not in frequency range. '
+                                   'It will be interpolated to find '
+                                   'maximum closest  frequency.'.format(freqs))
+                    print('---> Input frequency <{0}> Hz has been interpolated to'
+                          ' <{1}Hz>.'.format(freqs,  float(interpFreq)))
                 freqs = float(interpFreq)
                 
                 
@@ -1444,9 +1447,10 @@ class Plot1d :
                                         marker ='*', markersize =self.ms*3*fs , 
                                         label = 'freq {0}'.format(freqs)) 
             
-            print('--->Max depth reached by freq={0} Hz is <{1}> km.'.\
-                  format(freqs,
-                         np.around(depth1D(freqs).max()*1e-3,2)))
+            if verbose: 
+                print('---> Max depth reached by freq={0} Hz is <{1}> km.'.\
+                      format(freqs,
+                             np.around(depth1D(freqs).max()*1e-3,2)))
             
             axis.grid(color ='k', ls=':', lw=0.25, alpha= .8 , which ='minor')
     
@@ -1483,10 +1487,11 @@ class Plot1d :
         
         if len(freqSELECT) >1 :fmt ='frequencies'
         else :fmt='frequency'
-        print('---> On the set of {0} {1}, max depth reached '
-              '={2} km at freq ={3} Hz.'.format(len(freqSELECT),
-                                                fmt, np.around(depmax*1e-3,2), 
-                                                int(freqmax)  ))
+        if verbose:
+            print('---> On the set of {0} {1}, max depth reached '
+                  '={2} km at freq ={3} Hz.'.format(len(freqSELECT),
+                                                    fmt, np.around(depmax*1e-3,2), 
+                                                    int(freqmax)  ))
         # fig.suptitle(' Penetration depth plot at {0} {1} '.format(len(freqSELECT), fmt),
         #              fontsize= self.font_size, verticalalignment='center', 
         #              )
@@ -1499,6 +1504,8 @@ class Plot1d :
         if savefig is not None :
             plt.savefig(savefig, dpi=self.fig_dpi, orientation =orient )
 
+        plt.show()
+        
     def plot_curves (self, fn =None , savefig =None ,
                      selected_stations =1,  ** kws): 
         """
@@ -1781,6 +1788,7 @@ class Plot1d :
         if savefig is not None : plt.savefig(savefig,
                                              dpi = self.fig_dpi, 
                                              orientation =orientation)
+        plt.show()
     
     def  plotRMS(self, fn=None ,target =1. ,savefig =None,  **kwargs): 
         """
@@ -2566,7 +2574,7 @@ class Plot2d (object):
         self._logging.info ('Contructing 2D penetration depth')
         
         stnnames = kwargs.pop('rename_station', None )
-        plot_style = kwargs.pop('plot_style',None)
+        plot_style = kwargs.pop('plot_style', None)
         alpha= kwargs.pop('alpha', 0.5)
         mplcmap =kwargs.pop('cm', 'twilight')
         
@@ -2698,6 +2706,7 @@ class Plot2d (object):
 
         cbarmin = dep2D_GRID_obj.min()
         cbarmax = dep2D_GRID_obj.max()
+        
         cbound = mplotus.resetting_colorbar_bound(cbmax =cbarmax, cbmin =cbarmin)
         cb = fig.colorbar(cf , ax= axs)
         # mplcb.ColorbarBase(ax=axs, cmap=cmap , 

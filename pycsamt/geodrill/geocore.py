@@ -4617,8 +4617,10 @@ class GeoStratigraphy(Geodrill):
             >>> plotPseudostratigraphic(station ='S00')
         
         """
-        annotate_kws = {'fontsize':12} if annotate_kws is None else annotate_kws
-        if not isinstance(annotate_kws, dict):annotate_kws=dict()
+        
+        if annotate_kws is None: annotate_kws = {'fontsize':12}
+        if not isinstance(annotate_kws, dict):
+            annotate_kws=dict()
         obj = _ps_memory_management(option ='get' )  
         obj = GeoStratigraphy._strataPropertiesOfSite (obj,station=station,
                                                        **kws )

@@ -30,7 +30,7 @@ try :
     from pycsamt.__init__ import itqdm 
     if itqdm : 
         import tqdm
-except: pass 
+except: itqdm = False 
 
 TAGS =dict(
     ama= 'Adaptative moving-average', 

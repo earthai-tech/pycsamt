@@ -614,7 +614,7 @@ def print_cmsg(cfile:str, todo:str='load', config:str='YAML') -> str:
     """ Output configuration message. 
     
     :param cfile: name of the configuration file
-    :param todo: Action to perform with config file. Can ve 
+    :param todo: Action to perform with config file. Can be 
         ``load`` or ``dump``
     :param config: Type of configuration file. Can be [YAML|CSV|JSON]
     """

@@ -13,10 +13,11 @@ Created on Sat Oct 30 21:38:24 2021
 
 from pycsamt.geodrill.geocore import GeoStratigraphy
 
-zoom=[0, 125]#'25' #  '25%' or [60, 700] --> [top bottom] list value
-station ='S00'
+zoom= '25%' #  '25%' or [60, 700] --> [top bottom] list value
+station ='s17'
 annotate_kws = {'fontsize':12}
 GeoStratigraphy.plotPseudostratigraphic(station =station, zoom =zoom, 
                                         annotate_kws =annotate_kws )
+
 
 

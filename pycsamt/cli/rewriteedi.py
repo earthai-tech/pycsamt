@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
+#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Licence: LGPL
 """
 Created on Thu Nov 25 17:21:37 2021
+    Rewrite Electromagnetic  Array Profiling (EMAP) and Magnetotelluric (MT)
 
-
-    < python pycsamt rewriteedi -d data/edi/new_csa000.edi -n=testedi --dtype=emap --verbose=4  >
+    < pycsamt rewriteedi -d data/edi/new_csa000.edi -n=testedi --dtype=emap --verbose=4  >
 
 """
 
@@ -19,24 +21,25 @@ def main():
         prog= PROG, 
         formatter_class=argparse.ArgumentDefaultsHelpFormatter ,
         description= "Rewrite EDI files. Call `~.edi.Edi_collection` "\
-            "to rewrite multiples files. "
+            "to rewrite multiples files in SEG EMAP or MT  formats.", 
+        allow_abbrev=False, 
+        epilog =' | '.join(cmd)
         ) 
 
-    parser.add_argument('-d','-edi', '--edi-fn', '--data-fn','--edi-filename',
-                        type =argparse.FileType('r'),
-                        dest='edi_fn', 
-                        required=True,
-                        help ='Path to EDI file to rewrite' 
+    parser.add_argument('data',
+                        type =str,
+                        help ='Path to EDI files to rewrite' 
                             )
-    parser.add_argument('-n', '--name', '--output-filename','new-edi-name', 
-                            dest ='new_edifilename', 
-                            type =str , 
-                            help ='Output filename used as EDI-prefix.'
-                            )
+    parser.add_argument('-n', '--name', '--output-filename','--new-edis', 
+                        dest ='new_edis', 
+                        type =str , 
+                        help ='Output filename used as EDI-prefix.'
+                        )
     parser.add_argument('-dtype', '--data-type', '--datatype',
                         dest ='datatype', 
                         choices =('mt', 'emap'),
-                        help ='Type of EDI file "mt" or "emap"'
+                        help ='Type of EDI file "emap" or "mt". `emap` for'
+                        ' Electromagnetic Array Profiling and `mt` for Magnetotelluric '
                         )
     
     parser.add_argument('-s', '--savepath', 
@@ -46,19 +49,35 @@ def main():
                         ) 
     parser.add_argument('-v', '--verbose', 
                         dest ='verbose',
+                        type =int, 
                         default =0, 
-                        action='count',
-                        help = 'Control the level of verbosity. Higher more messages',
+                        help = 'Control the level of verbosity.',
                         )
 
-    return parser.parse_args()
+    args= parser.parse_args()
+    if os.path.isfile (args.data): # if edi is a single file
+        args.data = os.path.dirname (args.data) # get the directory
+    if os.path.isdir(args.data): 
+        args.data =[os.path.join(args.data, f) 
+                    for f in os.listdir(args.data) if f.find('.edi')>=0]
+        if len(args.data) ==0: 
+            sys.stdout.write(
+                'No edi-data found in the given path. '
+                'Please provide the right path containing at least one edi file.')
+        else: 
+            for f in args.data : 
+                Edi().write_edifile(edi_fn= f, 
+                                    savepath =args.savepath,
+                                      datatype=args.datatype.lower(),
+                                      new_edifilename =args.new_edis,
+                                      verbose = args.verbose
+                                      )
+
+cmd = ['EXAMPLE COMMANDS: < $ pycsamt rewriteedi  data/edi --verbose 2 >', 
+       '< $ python pycsamt/cli/rewriteedi.py data/edi/new_csa000.edi -n=testedi -dtype=emap --verbose=4 >', 
+    '< $ python pycsamt/cli/rewriteedi.py data/edi -dtype=emap  >', 
+]
 
 if __name__== '__main__':
-    args = main()
-    sys.stdout.write(Edi().write_edifile(edi_fn= args.edi_fn, 
-                                 savepath =args.savepath,
-                          datatype=args.datatype,
-                          new_edifilename =args.new_edi_name,
-                          verbose = args.verbose
-                          )
-        )
+    main()
+

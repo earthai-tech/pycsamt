@@ -20,6 +20,19 @@ the occam2d_rewrite module
         https://github.com/MTgeophysics/mtpy/wiki : see intallation
         guide and dependancies.
     
+-------------------------------------------------------------------------------
+... note:: Note that pycsamt uses `MTpy` for building model inputfiles. 
+    So when you build your occam2d  building files on WINDOW, you will meet a 
+    little bug into the `MTpy module` such ``FileNotFoundError::
+        
+        [Errno 2] No such file or directory: '/tmp/profile_angle0.png` 
+        relate to `line 1392: plt.savefig('/tmp/profile_angle0.png')`
+
+    Please comment this line of code in the MTpy module and run it again or 
+    create a temp directory to hold the profile angle image...
+    ... 
+-------------------------------------------------------------------------------
+
 Edited  on Mon Feb 15 16:27:49 2021
 @author: @Daniel03
 

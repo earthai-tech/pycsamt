@@ -25,37 +25,44 @@ def main():
         prog= PROG, 
         formatter_class=argparse.ArgumentDefaultsHelpFormatter ,
         description=  'Plot the pseudostratigraphic from  NM.',
-        epilog = GeoStratigraphy.plotPseudostratigraphic.__doc__,
+        epilog = ' | '.join(cmd),
         fromfile_prefix_chars='@',
         #usage = pycsamt.poof_cli_usage (pycsamt.pseudostratigraphic.__doc__),
         ) 
-    
-    parser.add_argument('-s', '--station', 
-                        dest ='station',
-                        help = 'Station|Site id to fetch the log. e.g.S00'
-                        ) 
-    parser.add_argument('-a', '--annotate', '--akws', 
-                        dest ='annotate_kws',
-                        type =dict , 
-                        default ={'fontsize':12},
-                        help =' Matplotlib log layout properties'
-                        )
+    #mygroup = parser.add_mutually_exclusive_group(required =True)
     
     parser.add_argument('-z', '--zoom', 
-                        nargs ='*',
-                        #action ='append', 
-                        dest ='zoom',
-                        help ='Visualize a specific part of the'\
-                            ' pseudostratigraphic log. ')
-        
-        
+                    nargs ='+', 
+                    dest ='zoom',
+                    help ='Visualize a specific part of the pseudostratigraphic log'\
+                        'Can be a list of `[top, bottom]` i.e it accepts only two values for fitting.'\
+                            'Given values more than 1 are gathered into a list.')
+    parser.add_argument('-s', '--station',
+                        help = 'Station|Site ID. `S00` is known as the first station name.'+\
+                            ' See the documentation at `GeoStratigraphy.plotPseudostratigraphic.__doc__`'\
+                                ' for a deep implementation as the use of Matplotlib hatches customizing.',
+                        default ='S00', 
+                        ) 
+    
+    parser.add_argument( '--lf', '--fontsize', '--label-fontsize', 
+                        dest ='fontsize',
+                        type =float, 
+                        default =12.,
+                        help =' Label fontsize.'
+                        )
+    
+
+  
     args = parser.parse_args()
 
     GeoStratigraphy.plotPseudostratigraphic(
         station =args.station, zoom =args.zoom, 
-        annotate_kws =args.annotate_kws)
+        annotate_kws ={'fontsize': args.fontsize} )
     
     #return parser.parse_args()
+cmd = ['EXAMPLE COMMANDS: < $ pycsamt pseudostratigraphic --station=S10 --zoom=25% >', 
+    '< $ python pycsamt/cli/pseudostratigraphic.py -s=s17 -z=10 120 >', 
+]
 
 if __name__=='__main__': 
     main()

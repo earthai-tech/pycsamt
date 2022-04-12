@@ -13,6 +13,7 @@ Created on Thu Nov 25 16:27:24 2021
 import os 
 import sys 
 import argparse 
+from pycsamt.utils.func_utils import smart_format 
 from pycsamt.ff.processing import Processing, corr
 
 PROG = os.path.basename (__file__).replace('.py', '')
@@ -23,69 +24,72 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter ,
         description= "Correction and remove static"\
             " shift effect from [EDI|AVG|J] files",
+        epilog =' | '.join(cmd)
         ) 
-    my_group = parser.add_mutually_exclusive_group(required=True)
+    #my_group = parser.add_mutually_exclusive_group(required=True)
         
-    parser.add_argument('-d', '--data-fn', '--data',
+    parser.add_argument('data',
                         type =str,
                         help ='Path to [EDI|AVG|J] files', 
-                        dest='data_fn', 
-                        required=True,
                         )
-    parser.add_argument('-f', '--filter', '--FILTER',
+    parser.add_argument('-ft', '--filter', 
                         type =str,
                         dest='FILTER',
                         default ='ama',
                         choices=list(corr.TAGS.keys()),
-                        help ='Filter to correct EDI files' 
+                        help ='Filter type to correct EDI files It could be one of' 
+                        f' the following {smart_format(list(corr.TAGS.keys()))} filters.'  
                         )
-    parser.add_argument('-p', '--profile-fn', '--profile',
-                    type =argparse.FileType('r'),
+    parser.add_argument('-p', '--profile-fn',
+                    type =str,
                     dest='profile_fn', 
-                    required=True,
+
                     help ='Path to Zonge Engineering station location.'\
-                        ' Set the profile if the data is in zonge (AVG) format.'
+                        ' Set the profile if the given data is (AVG) format.'
                         )
-    parser.add_argument('-s', '--savepath', 
-                        dest ='savepath',
-                        type =str , 
-                        help = 'Save output edifiles corrected'
-                        ) 
-    
-    parser.add_argument('--rf', '--refreq', '--reference-frequency',
+
+    parser.add_argument('-f','-rf', '--refreq', '--reference-frequency',
                         type =float,
                         help ='Reference frequency in Hertz.', 
                         dest='reference_frequency', 
-                        required=True,
+                        
                         )
-    parser.add_argument('--name', '--output-filename', 
+    
+    parser.add_argument('-s', '--savepath', 
+                    dest ='savepath',
+                    type =str , 
+                    help = 'Path to save the corrected edifiles.'
+                    ) 
+    
+    parser.add_argument('-n', '--name', '--output-filename', 
                         dest ='filename', 
                         type =str , 
                         help ='Output filename used as EDI-prefix.'
                         )
 
-    parser.add_argument('--dl', '--dipole-length',
+    parser.add_argument('-dl', '--dipole-length',
                         dest ='dipole_length', 
                         type =int , 
                         default =50,
-                        help ='length of fixed dipole for Hanning window'
+                        help ='length of fixed dipole for Hanning window.'
                         )
     #-------------------------------------------------------------------------
-    
-    my_group.add_argument('--npoint', '--number-of-points', '--ntma',
+    parser.add_argument('--npoint', '--number-of-points', '--ntma',
                         dest ='number_of_points', 
                         type =int , 
                         default =1,
-                        help ='Number of TMA filter points'
+                        help ='Number of TMA filter points', 
+                        metavar='NUMBER_OF_POINTS'
                         )
     
-    my_group .add_argument('--nskin', '--number-of-skin-depth', '--nama',
+    parser.add_argument('--nskin', '--number-of-skin-depth', '--nama',
                         dest ='number_of_skin_depth', 
                         type =int, 
                         default =3,
-                        help ='Number of AMA skin depths'
+                        help ='Number of AMA skin depths', 
+                        metavar='NUMBER_OF_SKIN_DEPTHS'
                         )
-    my_group .add_argument('--ndipole', '--number-of-dipoleS', '--nflma',
+    parser.add_argument('--ndipole', '--number-of-dipoles', '--nflma',
                         dest ='number_of_points', 
                         type =int , 
                         default =5,
@@ -93,29 +97,26 @@ def main():
                         metavar='NUMBER_OF_DIPOLES'
                         )
     #-------------------------------------------------------------------------
-    
-
-    
-    parser.add_argument('--kws', 
-                        type =dict , 
-                        dest ='ckws',
-                        default = dict(),
-                        help = 'Additional keywords arguments. Please refer'\
-                        ' to <~.Processing.correct_edi.__doc__> for more details.'
-                        )
 
     args= parser.parse_args()
-    Processing().correct_edi(
-                            data_fn =args.data_fn,
-                            FILTER=args.FILTER, 
-                            filename =args.filename,
-                            reference_frequency= args.reference_frequency,
-                            savepath =args.savepath, 
-                            number_of_points= args.number_of_points, 
-                            dipole_length= args.dipole_length, 
-                            number_of_skin_depth= args.number_of_skin_depth,
-                            **args.ckws
-                            )
+        
+    if args.data.lower().endswith('.avg') and args.profile_fn is None: 
+        sys.stdout.write ('correctedi: error: AVG file is detected.'
+                          'Please provide the Zonge station file `*.stn`')
+    else:
+        Processing().correct_edi(
+                                data_fn =args.data,
+                                FILTER=args.FILTER, 
+                                filename =args.filename,
+                                reference_frequency= args.reference_frequency,
+                                savepath =args.savepath, 
+                                number_of_points= args.number_of_points, 
+                                dipole_length= args.dipole_length, 
+                                number_of_skin_depth= args.number_of_skin_depth,
+                                )
+cmd=['EXAMPLE CMDs: <$ pycsamt correctedi data/edi -ft tma --npoint 3 >', 
+     '<$ python pycsamt/cli/correctedi.py data/edi -ft flma --ndipole 7 >', 
+     '<$ python pycsamt/cli/correctedi.py data/edi --filter=ama --nskin=3 >']
 
 if __name__== '__main__':
     main()

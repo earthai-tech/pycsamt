@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
     .Script to rewrite EDI file. Can Rewrite MT edifile or EMAP edifile . 
     User can force  the programm to write file into different section

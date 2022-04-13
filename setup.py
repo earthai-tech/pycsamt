@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 #https://github.com/pypa/sampleproject/blob/main/setup.py
+# See:
+# https://packaging.python.org/guides/distributing-packages-using-setuptools/
+# https://github.com/pypa/sampleproject
+
 import pycsamt
 import os 
 
@@ -49,13 +53,13 @@ setup_kwargs['entry_points'] = {
                              'avg2edi= pycsamt.cli.avg2edi:main', 
                              'j2edi=pycsamt.cli.j2edi:main', 
                              'misfit2d=pycsamt.cli.misfit2d:main', 
-                             'nm=pycsamt.cli.nm.main', 
+                             'nm=pycsamt.cli.nm:main', 
                              'penetration1d=pycsamt.cli.penetration1d:main', 
                              'penetration2d=pycsamt.cli.penetration2d:main', 
                              'pseudostratigraphic=pycsamt.cli.pseudostratigraphic:main', 
                              'rewriteedi=pycsamt.cli.rewriteedi:main', 
                              'rms=pycsamt.cli.rms:main',
-                             'mconfig=pycsamt.cli.mconfig:main', 
+                             'myconfigfile=pycsamt.cli.myconfigfile:main', 
                              'pseudocrossresistivityandphase=pycsamt.cli.pseudocrossresistivityandphase:main', 
                              'staticshift=pycsamt.cli.staticshift:main', 
                              'fitforward=pycsamt.cli.fitforward:main', 
@@ -132,14 +136,14 @@ setup(
  	license="GNU LESSER GENERAL PUBLIC LICENSE v3",
  	classifiers=[
         "Development Status :: 3 - Alpha",
-        "Intended Audience :: Hydro-Geophysicists",
+        "Intended Audience :: Developers",
         # "Topic :: Software Development :: Build Tools",
-        "License :: OSI Approved :: LGPL License",
+        #"License :: OSI Approved :: GNU License",
         "Programming Language :: Python :: 3.8",
         "Operating System :: OS Independent",
         ],
     keywords="hydrogeophysic, groundwater, exploration, csamt",
-    package_dir={"pycsamt": "pyCSAMT/pycsamt"},  # Optional
+    #package_dir={"": "pyCSAMT"},  # Optional
     package_data={'pycsamt': [
                             'utils/p.configlog.yml', 
                             'utils/espg.npy',
@@ -147,13 +151,13 @@ setup(
                             'geodrill/_geocodes/__memory.pkl', 
                             'geodrill/_geomemo/*.sq3', 
                             'metadata/e.g.data.json', 
-                            'metadata/e.g.data.yaml', 
+                            'metadata/e.g.data.yml', 
                             '_loggerfiles/*.txt',
                             
                             ], 
                     "":[
-                        'data/occam2d/', 
-                        'data/drill_example_files/', 
+                        'data/occam2d/*', 
+                        'data/drill_example_files/*', 
                         'data/avg/K1.avg', 
                         'data/avg/K1.stn', 
                         'data/avg/K2.avg', 
@@ -164,8 +168,6 @@ setup(
  	**setup_kwargs
 )
 
-if __name__=='__main__': 
-    print(**setup_kwargs)
 
 
 

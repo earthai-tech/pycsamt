@@ -12,7 +12,7 @@ from pycsamt.viewer.plot import Plot1d
 
 PROG = os.path.basename (__file__).replace('.py', '')
 
-cmd = ['EXAMPLE COMMANDS: < $ pycsamt penetration1d data/edi -f 1024 300 8000 -o=portrait --verbose >', 
+cmd = ['EXAMPLE COMMANDS: < $ penetration1d data/edi -f 1024 300 8000 -o=portrait --verbose >', 
     '< $ python pycsamt/cli/penetration1d.py data/avg/K1.avg -f=1024 -p=data/avg/K1.stn >', 
     '< $ python pycsamt/cli/penetration1d.py data/edi -f 1024 3000 8000 -o=portrait >',
 ]

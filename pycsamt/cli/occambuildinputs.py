@@ -4,7 +4,7 @@ Created on Tue Apr 12 11:59:05 2022
       Special class to build occam2d imput files with.
       see `pycsamt.modeling.occam2d.occam2d_write.buildingInputfiles.__doc__`
       
-      <$ pycsamt occambuildinputs --help > 
+      <$ occambuildinputs --help > 
       
 @author: @Daniel03
 """
@@ -231,7 +231,7 @@ Note: pyCSAMT uses `MTpy` for building model inputfiles.
 
 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-EXAMPLE COMMANDS:<$ pycsamt occambuildinputs --help> | <$ pycsamt occambuildinputs data/edi > |
+EXAMPLE COMMANDS:<$ occambuildinputs --help> | <$ occambuildinputs data/edi > |
       <$ python pycsamt/cli/occambuildinputs.py data/edi -mode=6 -niter 112 -cw=7 --nlayers=32 -z=1000 -zb=5000  --ifreq >', 
 """
     

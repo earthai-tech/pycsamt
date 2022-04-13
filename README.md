@@ -1,4 +1,4 @@
-# pyCSAMT : A Python open-source toolkit for Controlled Source Audio-frequency Magnetotellurics (CSAMT)
+# pyCSAMT: A Python open-source toolkit for Controlled Source Audio-frequency Magnetotellurics (CSAMT)
 
 [![Documentation Status](https://readthedocs.org/projects/pycsamt/badge/?version=latest)](https://pycsamt.readthedocs.io/en/latest/?badge=latest) [![Build Status](https://travis-ci.com/WEgeophysics/pyCSAMT.svg?branch=master)](https://travis-ci.com/WEgeophysics/pyCSAMT) [![Requirements Status](https://requires.io/github/WEgeophysics/pyCSAMT/requirements.svg?branch=master)](https://requires.io/github/WEgeophysics/pyCSAMT/requirements/?branch=master)
   ![GitHub](https://img.shields.io/github/license/WEgeophysics/pyCSAMT?color=blue&logo=GNU&logoColor=red) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/WEgeophysics/pyCSAMT?color=orange) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5533467.svg)](https://doi.org/10.5281/zenodo.5533467)
@@ -13,15 +13,19 @@
 
 * **Purpose**
 
-    The software contains bacics steps and improve CSAMT standard data processing and deals with [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) for modeling part.
-    It also contains its inner database composed of geological structures and electrical properties of rocks,
-    based on representative chart of  Palacky (1988) and the rock and mineral property classification of Slichter and Telkes (1942)
-    to generate  a pseudo-stratigraphy log for drilling operations.
+    The software contains basic steps, uses the CSAMT standard data processing and deals with [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) for modeling part.
+    The idea behind the development of this toolbox is to improve the groundwater exploration techniques and fight against the numerous unsucessful drillings mostly due to their wrong
+    locations after geophysical surveys. The main goal is to minimize the use of supplement methods to CSAMT which commonly increases the operating budgets
+    to right locate the drilling (e.g., demarcating well the fracture zones) to reducing the misinterpretation of modeling results. 
+    Indirectly, it could help the geophysical and drilling companies to reduce their loss when purcharsing the material for borehole
+     equipment (e.g., PVC pipes) since the toolbox could estimate with a few margin error the layer thicknesses. 
+    To meet the global objective, the software  uses the previous informations of the survey area such as the boreholes/wells and 
+    geological data combined with the inversion results to generate a predicted log called a pseudostratigraphic log for drilling operations.
 
  * **Note**
  
     Actually pyCSAMT only works  in far field and several  outputs are provided for other external modeling softwares such as  [MTpy](https://github.com/MTgeophysics/mtpy), [OasisMontaj](http://updates.geosoft.com/downloads/files/how-to-guides/Oasis_montaj_Gridding.pdf)
-    and [GoldenSoftware](https://www.goldensoftware.com/products/surfer).
+    and [GoldenSoftware](https://www.goldensoftware.com/products/surfer). Note that the software is not designed to solve all the problem met when using the CSAMT method. 
 
 ## Documentation 
 * API Documentation  : https://pycsamt.readthedocs.io/en/latest/
@@ -30,94 +34,111 @@
 * Installation Guide : https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux
 * User Guide : https://github.com/WEgeophysics/pyCSAMT/blob/develop/docs/pyCSAMT%20User%20Guide.pdf
 
-
 ## Licence 
+
 pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/pyCSAMT/blob/master/LICENSE.md).
 
+## Installation 
 
-## Units used    
+Use [PyPI release](https://pypi.org/project/pycsamt/) ` for quick installation 
+* `$ pip install pycsamt` or
+* `$ pip install --user pycsamt` (Window users)
 
-* Frequency : [F] in Hz 
-* Skin depth (sigma):  sigma  = 503 *sqrt([Rho]/[F]) in meters(m). 
-* Apparent resistivy(Rho) : in Ω.m 
-* E-field magnitude : [E]=  microvolt/meter (muv/m)
-* H-field magnitude : [H] =  gamma /amp 
-* Impedance Tensor [Z] in 2*2 matrices : [Z] = [E]/[H]:  km/s
-* Angle : Theta in degrees clockwise 
-* Location coordinates ( X =N-S , Y = E-W) in m. 
-* Coordinates in (UTM- Easting, Northing ) m. 
-* Geomagnetic North : 0 degree azimuth 
-* Step descent in m.
-* Input true resistivities in Ω.m 
+However, it is recommended the installation from the repository to get the latest development code. 
 
 ## Available filters 
 
 1. Trimming moving average (TMA) mostly used by [Zonge International Engineering](http://zonge.com/) .
 2. Fixed-length-dipole moving average (FLMA) also used by [Zonge International Engineering](https://zonge.com.au/).
 3. Adaptative moving-average (AMA) based on idea of [Torres-Verdin](https://sci-hub.se/http://dx.doi.org/10.1190/1.1443273).
-4. MT Removal distorsion (`dist`)  and  static shift removal (`ss`) filters basically used to correct magnetotellurics (MT) data. 
+4. MT Removal distorsion (`dist`)  and  static shift removal (`ss`) filters basically used to correct magnetotellurics (MT) data.
+
+For example, removing static shift into a corrupted [SEG](https://seg.org/) EDI data, user can apply one of above filter (e.g., FLMA)
+to correct the EDI data located in `data/edi` directory as: 
+``` 
+ $ staticshift data/edi -ft flma --ndipole 5 --dipole-length=50  
+``` 
                                                                
 ## Plot inversion misfit and geostratigraphy misfit (misfit G)
 
-To plot the `misfit` from measured data and the calculated inversion data, bring the _occam response file_ (_*.rep_) and  _Occamlogfile_ (optional _*.logfile_) then 
-run the script below:
+For this quickstart, we assume the user has already the forward modeling files (`*.resp`, `*.dat`, `*.mesh`, `*.iter`
+and `*.logfile`(optional)), and the supplement ( boreholes/wells and geological data) data collected in the survey area.
  
 1. Plot some fitting curves of resistivity and phase inversion after applying on observed data
-the static shift correction. 
+the static shift correction. For instance, we visualize the fitting curves of four survey lines with their corresponding 
+RMS with random stations `S00 S04, s08 and S12`.
 ```
->>> from pycsamt.modeling.occam2d import plotResponse 
->>> resPath =r'data/inversionFiles'                  # path to inversion files for each line
->>> _=plotResponse(data_fn =resPath,
-...                 stations = ['S00', 'S04', 's08', 'S12'],  # sites to visualize 
-...                  rms =['1.013', '1.451', '1.00', '1.069'], # rms of each line
-...                  error_type ='resi' )
-``` 
+$ fitforward  data/inversionFiles --stations S00 S04 s08 S12 --rms 1.013 1.451 1. 1.069 
+```
+
 Click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/examplefitcurves.png) to see the reference output. 
 
-2. To plot the `misfit`of the model response from the FE algorithms: 
+2. To plot the `misfit`of the model response from the FE algorithms. For the error in phase, set `kind` argument to `phase`.
 ```
->>> import os
->>> from pycsamt.modeling.occam2d import getMisfit 
->>> path_data ='data/occam2D'
->>> _=getMisfit(response_fn = os.path.join(path_data,'RESP17.resp'),
-...         logfile=os.path.join(path_data, 'LogFile.logfile'), 
-...          data_fn = path_data)
+$ misfit2d data/inversionFiles/K1.dat data/inversionFiles/K1.resp --kind=rho 
 ```
+
 To see the output, click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/misfit.png).
 
-3. To evaluate the model errors `misfit G` between the the new resistivity model or stratigraphy models(NMs) from inversion models(CRMs), 
-set `misfit_G` argument to `True` . `Misfit G` computation is the best way to see whether different layers with their corresponding resistivity values
-are misclassified or not. With few step of codes we can check the process:
+3. The the new resistivity model (NM) named the stratigraphy models is built from the additional data (e.g., borehole/well data) collected in the exploration area combined with the forward modeling (CRM).
+The fast and the best approach to build the NM model is to gather all the data collected in the exploration area into a single configuration file in `*.json` or `*.yml` format. For illustrating, 
+we will use `myexploration_area.yml` file like: 
 ```
->>> from pycsamt.geodrill.geocore import GeoStratigraphy
->>> inversion_files = {'model_fn':'data/occam2D/Occam2DModel', 
-                       'mesh_fn': 'data/occam2D/Occam2DMesh',
-                        "iter_fn":'data/occam2D/ITER17.iter',
-                       'data_fn':'data/occam2D/OccamDataFile.dat'}
->>> resistivity_values =[10, 60, 70, 180, 1000,  3000, 7000]   # resistivity values of layers to map
->>> layer_names =['river water','sedimentary rocks', 'fracture zone',  'gravel', 'granite', 'igneous rocks','basement rocks' ]
->>> geosObj = GeoStratigraphy(**inversion_files,
-...                      input_resistivities=resistivity_values, 
-...                      input_layers=layer_names)
->>> geosObj.stratigraphyModel(kind='nm', misfit_G =False)           # 'nm':New Model
+# myexploration_area.yml
+input_layers:
+    - river water
+    - sedimentary rocks
+    - fracture zone
+    - gravel
+    - granite
+    - igneous rocks
+    - basement rocks
+input_resistivities:
+    - 10
+    - 66
+    - 70
+    - 180
+    - 1000
+    - 3000
+    - 7000
+data_fn: data/occam2D\K1.dat
+iter_fn: data/occam2D\K1.iter
+mesh_fn: data/occam2D\Occam2DMesh
+model_fn: data/occam2D\Occam2DModel
+ptol: 0.2
+beta: 5
+n_epochs: 100
+build: true
 ```
-click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/geofit.PNG) for reference output. 
+where `(data_fn, iter_fn, mesh_fn ,model_fn)` and `(ptol, beta, n_epochs, build)` are occam2d inversion files and constructor parameters 
+respectively. From the CLI below, NM is fast created. 
+```
+$ nm --config myexploration_area.yml --show
+```
 
+4. Furthermore, to evaluate the model errors called `misfit G` between the the NM  and CRM, one need to add the following argument `--misfit` to the previous command. For instance 
+ in the case where the configure file is written in `*.json` format, the CLI becomes:
+```
+$ nm -c myexploration_area.json --show --misfit
+```
+Indeed,  `Misfit G` computation is the best way to see whether different layers with their corresponding resistivity values
+are misclassified or not. 
+click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/geofit.PNG) to see the reference output (Misfit map). 
 
 * **Note** : 
-    For CSAMT data processing and some codes implementation,
+    For CSAMT data processing and the deep implementations,
     please refer to our [wiki page](https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F).
 
 ## Plot the pseudostratigraphic log 
 
  Once the geostratigraphic model is built, we just need to call the model and extract at each station 
- its corresponding  pseudostratigraphic log using the script below: 
+ its corresponding  pseudostratigraphic log using the following command 
 ```
->>> from pycsamt.geodrill.geocore import GeoStratigraphy
->>> station ='S00'      # station to visualize 
->>> zoom =None          
->>> GeoStratigraphy.plotPseudostratigraphic(station =station, zoom = zoom )
- 
+$ pseudostratigraphic --station=S00 --zoom=25%
+```
+The output below with layer thicknesses estimation are displayed.
+
+``` 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~[ PseudoStratigraphic Details: Station = S00 ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ------------------------------------------------------------------------------------------------------
 |      Rank |            Stratum             |         Thick-range(m)         |     Thickness(m)     |
@@ -136,10 +157,17 @@ click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/geofi
 |model = Occam2DModel     |iter  = ITER17.iter      |mesh  = Occam2DMesh      |data  = OccamDataFile.dat|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ``` 
-click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/pseudostratigraphic_log.PNG) for reference output. 
+click [here](https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/pseudostratigraphic_log.PNG) to see the predicted log. 
 
-It's possible to zoom the most interesting part of the log by setting the argument `zoom`, the running 
-script above with `zoom ='25%'` gives the following [ouput](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/zoom25.PNG). 
+Another interesting feature when fetching the predicted log from NM, is its ability to select the most interesting part of the log for a specific purpose.
+One needs to fiddle with the `zoom` parameter. Obviously, it does not make sense to expect to drill until to reach `1km`depth. 
+For instance, the script above with `zoom=25%` only displays the first `250m` assuming that the investigation depth 
+is `1000m` maximum. the following [ouput](https://github.com/WEgeophysics/pyCSAMT/blob/develop/quick_examples/zoom25.PNG) gives the reference 
+output with  `zoom=25%`. It's also possible to provide the top (e.g., `10m`) and the bottom(e.g., `120m`) of the log for visualization like 
+
+```
+$ pseudostratigraphic -s=S00 --zoom 10 120 --fontsize 12
+```
 
 ## Credits
 
@@ -151,7 +179,7 @@ We use or link some third-party software (beside the usual tool stack: numpy, sc
     - ASTATIC: http://www.zonge.com/legacy/PDF_DatPro/Astatic.pdf
 
 ## System requirements 
-* Python 3.6+ 
+* Python 3.7+ 
 
 ## Contributors
   

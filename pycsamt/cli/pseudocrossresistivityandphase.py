@@ -5,7 +5,7 @@ Created on Tue Apr 12 10:17:58 2022
      CLI to plot pseudo-cross-section of apparent
         resistivity and phase. Deals with[AVG|J|EDI] file.
         
-        <$ pycsamt pseudocrossresistivityandphase data/edi --help >
+        <$ pseudocrossresistivityandphase data/edi --help >
         
         
 @author: @Daniel03
@@ -99,7 +99,7 @@ def main():
             savefig = args.savefig, 
             contour_lines_style=args.contourline 
                                         )
-cmd=['EXAMPLE CMDs: <$ pycsamt pseudocrossresistivityandphase data/edi --help >', 
+cmd=['EXAMPLE CMDs: <$ pseudocrossresistivityandphase data/edi --help >', 
      '<$ python pycsamt/cli/pseudocrossresistivityandphase.py data/edi >', 
      '<$ python pycsamt/cli/pseudocrossresistivityandphase.py data/edi --rhoc 500 7000>', 
      '<$ python pycsamt/cli/pseudocrossresistivityandphase.py data/edi --phic 45 --style=pcolormesh >']

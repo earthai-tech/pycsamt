@@ -2,7 +2,7 @@
 """
 Created on Thu Nov 25 16:21:30 2021
 
-    < pycsamt j2edi --data=data/j  -s=data/j_edi>
+    < j2edi --data=data/j  -s=data/j_edi>
     < $ python pycsamt/cli/j2edi.py --data=data/j > 
 
 """
@@ -21,6 +21,7 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter ,
         description= "Output J-EDI from Alan G. Jones (1994)  J/DAT file",
         #usage =pycsamt.poof_cli_usage (pycsamt.j2edi.__doc__)
+        epilog =cmd 
         ) 
     parser.add_argument('-d', '--data-fn', '--data',
                         type =str,
@@ -40,7 +41,7 @@ def main():
                 savepath =args.savepath
         )
     
-
+cmd= """ < j2edi --data=data/j  -s=data/j_edi> | < $ python pycsamt/cli/j2edi.py --data=data/j > """
 
 if __name__== '__main__':
     main()

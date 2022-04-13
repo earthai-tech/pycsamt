@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sat Nov 27 16:25:59 2021
-    < python pycsamt -d data/j --style pcolormesh>
+    < $ penetration2d data/j --style pcolormesh>
 """
 
 import os 
@@ -76,7 +76,7 @@ def main():
                                 savefig=args.savefigure , 
                                 cm = args.cm, 
                                 )
-cmd = ['EXAMPLE COMMANDS: < $ pycsamt penetration2d data/edi --doi 1000 >', 
+cmd = ['EXAMPLE COMMANDS: < $ penetration2d data/edi --doi 1000 >', 
     '< $ python pycsamt/cli/penetration2d.py data/avg/K1.avg  -p=data/avg/K1.stn >', 
     '< $ python pycsamt/cli/penetration2d.py data/edi -d=1000 --cmap=jet_r >',
 ]

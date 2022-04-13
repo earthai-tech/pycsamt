@@ -4,7 +4,7 @@
 """
         Plot the pseudostratigraphic from  NM
         
-     <$ pycsamt pseudostratigraphic -s=S00 -z=25% > 
+     <$ pseudostratigraphic -s=S00 -z=25% > 
      <$ python pycsamt/cli/pseudostratigraphic.py --station=S00 --zoom=25%  > 
      
 
@@ -60,7 +60,7 @@ def main():
         annotate_kws ={'fontsize': args.fontsize} )
     
     #return parser.parse_args()
-cmd = ['EXAMPLE COMMANDS: < $ pycsamt pseudostratigraphic --station=S10 --zoom=25% >', 
+cmd = ['EXAMPLE COMMANDS: < $ pseudostratigraphic --station=S10 --zoom=25% >', 
     '< $ python pycsamt/cli/pseudostratigraphic.py -s=s17 -z=10 120 >', 
 ]
 

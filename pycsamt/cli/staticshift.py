@@ -182,7 +182,7 @@ def main():
             savefig =args.savefig
             )
 
-cmd=['EXAMPLE CMDs: <$ pycsamt staticshift data/edi -ft tma --npoint 3 >', 
+cmd=['EXAMPLE CMDs: <$ staticshift data/edi -ft tma --npoint 3 >', 
      '<$ python pycsamt/cli/staticshift.py data/edi --help >', 
      '<$ python pycsamt/cli/staticshift.py data/edi -ft flma --mk D --cflma=blue --ndipole=5 >']
 

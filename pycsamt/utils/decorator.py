@@ -1,6 +1,7 @@
 import functools
 import inspect
 import os
+import warnings 
 from pycsamt.utils._csamtpylog import csamtpylog
 
 
@@ -43,7 +44,6 @@ class deprecated(object):
 
         @functools.wraps(cls_or_func)
         def new_func(*args, **kwargs):  # pragma: no cover
-            import warnings
             warnings.simplefilter('always', DeprecationWarning)  # turn off filter
             warnings.warn_explicit(msg, category=DeprecationWarning,
                                    filename=filename, lineno=lineno)
@@ -80,7 +80,7 @@ class gdal_data_check(object):
             if(raise_error):
                 raise ImportError("GDAL  is NOT installed correctly")
             else:
-                print ("Ignore GDAL as it is not working. Will use pyproj")
+                self._logger.debug("Ignore GDAL as it is not working. Will use pyproj")
 
     def __call__(self, *args, **kwargs):  # pragma: no cover
         return self._func(*args, **kwargs)
@@ -89,8 +89,11 @@ class gdal_data_check(object):
         if 'GDAL_DATA' not in os.environ:
             # gdal data not defined, try to define
             from subprocess import Popen, PIPE
-            self._logger.warning("GDAL_DATA environment variable is not set "
-                                 " Please see https://trac.osgeo.org/gdal/wiki/FAQInstallationAndBuilding#HowtosetGDAL_DATAvariable ")
+            #with warnings.catch_warnings():
+            mess ="""GDAL_DATA environment variable is not set 
+                Please see https://trac.osgeo.org/gdal/wiki/FAQInstallationAndBuilding#HowtosetGDAL_DATAvariable"""
+            self._logger.debug(mess)
+               
             try:
                 # try to find out gdal_data path using gdal-config
                 self._logger.info("Trying to find gdal-data path ...")
@@ -115,7 +118,6 @@ class gdal_data_check(object):
             if os.path.exists(os.environ['GDAL_DATA']):
                 self._logger.info(
                     "GDAL_DATA is set to: {}".format(os.environ['GDAL_DATA']))
-
                 try:
                     from osgeo import osr
                     from osgeo.ogr import OGRERR_NONE

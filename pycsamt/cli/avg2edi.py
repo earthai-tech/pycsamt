@@ -2,13 +2,12 @@
 """
 Created on Thu Nov 25 16:08:01 2021
  
-    <$ pycsamt avg2edi -d='data/avg/K1.AVG -p=data/avg/K1.stn -s=data/K1_edi>
+    <$ avg2edi -d='data/avg/K1.AVG -p=data/avg/K1.stn -s=data/K1_edi>
     <$ python pycsamt/cli/avg2edi.py  -d='data/avg/K1.AVG -p=data/avg/K1.stn >
      
 """
 
-import os 
-import sys 
+import os  
 import argparse 
 from pycsamt.ff.core import CSAMT
 
@@ -19,6 +18,7 @@ def main():
         prog= PROG, 
         formatter_class=argparse.ArgumentDefaultsHelpFormatter ,
         description= "Output SEG-EDI from Zonge International Engineering file",
+        epilog= cmd 
         ) 
     parser.add_argument('-d', '--data-fn', '--data',
                         # type =str #argparse.FileType('r'),
@@ -47,6 +47,8 @@ def main():
                     
     )
     
-
+cmd =""" EXAMPLE COMMANDS: <$ avg2edi -d='data/avg/K1.AVG -p=data/avg/K1.stn -s=data/K1_edi>
+ | <$ python pycsamt/cli/avg2edi.py  -d='data/avg/K1.AVG -p=data/avg/K1.stn > """
+ 
 if __name__== '__main__':
     main()

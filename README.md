@@ -13,7 +13,7 @@
 
 * **Purpose**
 
-    The software contains bacics steps and improve CSAMT standard data processing and deals with [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) for modeling part.
+    The software contains basic steps, uses the CSAMT standard data processing and deals with [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) for modeling part.
     The idea behind the development of this toolbox is to improve the groundwater exploration techniques and fight against the numerous unsucessful drillings due to their wrong
     locations after geophysical surveys. The main goal is to minimize the use of supplement methods to CSAMT which commonly increases the operating budgets. Indeed, CSAMT is commonly associated to
     other geophysical methods to better ascertain the interpretation results after surveys. However,  finding the right location (e.g., well demarcated the fracture zones) with the 
@@ -37,37 +37,28 @@
 * User Guide : https://github.com/WEgeophysics/pyCSAMT/blob/develop/docs/pyCSAMT%20User%20Guide.pdf
 
 ## Licence 
+
 pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/pyCSAMT/blob/master/LICENSE.md).
 
-
-## Units used    
-
-* Frequency : [F] in Hz 
-* Skin depth (sigma):  sigma  = 503 *sqrt([Rho]/[F]) in meters(m). 
-* Apparent resistivy(Rho) : in Ω.m 
-* E-field magnitude : [E]=  microvolt/meter (muv/m)
-* H-field magnitude : [H] =  gamma /amp 
-* Impedance Tensor [Z] in 2*2 matrices : [Z] = [E]/[H]:  km/s
-* Angle : Theta in degrees clockwise 
-* Location coordinates ( X =N-S , Y = E-W) in m. 
-* Coordinates in (UTM- Easting, Northing ) m. 
-* Geomagnetic North : 0 degree azimuth 
-* Step descent in m.
-* Input true resistivities in Ω.m 
-
-## Available filters 
-
-1. Trimming moving average (TMA) mostly used by [Zonge International Engineering](http://zonge.com/) .
-2. Fixed-length-dipole moving average (FLMA) also used by [Zonge International Engineering](https://zonge.com.au/).
-3. Adaptative moving-average (AMA) based on idea of [Torres-Verdin](https://sci-hub.se/http://dx.doi.org/10.1190/1.1443273).
-4. MT Removal distorsion (`dist`)  and  static shift removal (`ss`) filters basically used to correct magnetotellurics (MT) data. 
-  
 ## Installation 
 
 Use [PyPI release](https://pypi.org/project/pycsamt/) ` for quick installation 
 * `$ pip install pycsamt` or
 * `$ pip install --user pycsamt` (Window users)
 However, it is recommended the installation from the repository to get the latest development code. 
+
+## Available filters 
+
+1. Trimming moving average (TMA) mostly used by [Zonge International Engineering](http://zonge.com/) .
+2. Fixed-length-dipole moving average (FLMA) also used by [Zonge International Engineering](https://zonge.com.au/).
+3. Adaptative moving-average (AMA) based on idea of [Torres-Verdin](https://sci-hub.se/http://dx.doi.org/10.1190/1.1443273).
+4. MT Removal distorsion (`dist`)  and  static shift removal (`ss`) filters basically used to correct magnetotellurics (MT) data.
+
+For example, removing static shift into a corrupted [SEG](https://seg.org/) EDI data, user can apply one of above filter (e.g., FLMA)
+to correct the EDI data located in `data/edi` directory as: 
+``` 
+ $ staticshift data/edi -ft flma --ndipole 5 --dipole-length=50  
+``` 
                                                                
 ## Plot inversion misfit and geostratigraphy misfit (misfit G)
 

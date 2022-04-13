@@ -40,7 +40,7 @@ pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/p
 
 ## Installation 
 
-Use [PyPI release](https://pypi.org/project/pycsamt/) ` for quick installation 
+Use [PyPI release](https://pypi.org/project/pycsamt/) for quick installation 
 * `$ pip install pycsamt` or
 * `$ pip install --user pycsamt` (Window users)
 

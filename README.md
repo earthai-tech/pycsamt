@@ -14,15 +14,13 @@
 * **Purpose**
 
     The software contains basic steps, uses the CSAMT standard data processing and deals with [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) for modeling part.
-    The idea behind the development of this toolbox is to improve the groundwater exploration techniques and fight against the numerous unsucessful drillings due to their wrong
-    locations after geophysical surveys. The main goal is to minimize the use of supplement methods to CSAMT which commonly increases the operating budgets. Indeed, CSAMT is commonly associated to
-    other geophysical methods to better ascertain the interpretation results after surveys. However,  finding the right location (e.g., well demarcated the fracture zones) with the 
-    use of CSAMT only and reduce the misinterpretation, are the challenge that the software tried to workaround. Henceforth, the use of pyCSAMT could be an alternative solution to 
-    right propose the borehole location after the survey. Furthermore, it could help the geophysical and drilling companies to reduce 
-    their loss when purcharsing the material for borehole equipment (e.g., PVC pipes) since the toolbox could estimate with a few margin error the layer thicknesses. 
-    To meet the global objective, the software  uses a database composed of geological structures and electrical properties of rocks,
-    based on representative chart of  Palacky (1988) and the rock and mineral property classification of Slichter and Telkes (1942)
-    to generate a predicted log called a pseudo-stratigraphy log for drilling operations.
+    The idea behind the development of this toolbox is to improve the groundwater exploration techniques and fight against the numerous unsucessful drillings mostly due to their wrong
+    locations after geophysical surveys. The main goal is to minimize the use of supplement methods to CSAMT which commonly increases the operating budgets
+    to right locate the drilling (e.g., demarcating well the fracture zones) to reducing the misinterpretation of modeling results. 
+    Indirectly, it could help the geophysical and drilling companies to reduce their loss when purcharsing the material for borehole
+     equipment (e.g., PVC pipes) since the toolbox could estimate with a few margin error the layer thicknesses. 
+    To meet the global objective, the software  uses the previous informations of the survey area such as the boreholes/wells and 
+    geological data combined with the inversion results to generate a predicted log called a pseudo-stratigraphy log for drilling operations.
 
  * **Note**
  
@@ -45,6 +43,7 @@ pyCSAMT is under GNU Lesser GPL version3 [LGPLv3](https://github.com/03-Daniel/p
 Use [PyPI release](https://pypi.org/project/pycsamt/) ` for quick installation 
 * `$ pip install pycsamt` or
 * `$ pip install --user pycsamt` (Window users)
+
 However, it is recommended the installation from the repository to get the latest development code. 
 
 ## Available filters 

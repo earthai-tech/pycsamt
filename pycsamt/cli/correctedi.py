@@ -2,7 +2,7 @@
 """
 Created on Thu Nov 25 16:27:24 2021
 
-    < $ pycsamt correctedi -d data/edi -f flma --ndipole 150 --rf 1024  >
+    < $ correctedi -d data/edi -f flma --ndipole 150 --rf 1024  >
     
                         or using the script : 
                             

@@ -21,7 +21,7 @@
                
    The CLI should be written as e.g.:
        
-  <$ pycsamt nm --crmf=crm_files --tres=TRES --ln=LN --beta=4 --ptol=0.2 > 
+  <$ nm --crmf=crm_files --tres=TRES --ln=LN --beta=4 --ptol=0.2 > 
   
   <$ python pycsamt/cli/nm.py -c pycsamt/metadata/e.g.data.json --show --misfit > 
   

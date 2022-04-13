@@ -20,7 +20,7 @@
     Indirectly, it could help the geophysical and drilling companies to reduce their loss when purcharsing the material for borehole
      equipment (e.g., PVC pipes) since the toolbox could estimate with a few margin error the layer thicknesses. 
     To meet the global objective, the software  uses the previous informations of the survey area such as the boreholes/wells and 
-    geological data combined with the inversion results to generate a predicted log called a pseudo-stratigraphy log for drilling operations.
+    geological data combined with the inversion results to generate a predicted log called a pseudostratigraphic log for drilling operations.
 
  * **Note**
  

@@ -1,5 +1,5 @@
 ---
-title: "The pyCSAMT software package for enhancing the groundwater exploration technique using controlled source audio-frequency magnetotelluric data"
+title: "The pyCSAMT software package for enhancing the groundwater exploration technique using the CSAMT data"
 tags:
 	- Python
 	- pyCSAMT
@@ -55,9 +55,9 @@ the standard Electronic Data Interchange (EDI) file format). It is composed of t
 ![pyCSAMT packages structures and the keys modules. The colors in the workflow diagram represent which parts of the software are used in each step. For example, the modules in the geodrill packages are usedfor NM construction and PS prediction ](paper_figures/pycsamt_workflow_and_packages.png){width="7.260416666666667in" }
 
 
-The core sub-package contains functionality to read and write CSAMT data from industry-standard formats such as AVG, DAT, and EDI including metadata from the header of the EDI file, the location, and also the impedance tensor (Z).
+The core sub-package contains functionality to read and write CSAMT data from industry-standard formats such as \*.DAT, \*AVG and \*EDI including metadata from the header of the EDI file, the location, and also the impedance tensor (Z).
 
-The processing sub-package is designed to facilitate working with \*.DAT, \*AVG and EDI data and generating inputs for existing third-party processing codes(e.g., the module Z of [@Kirkbyetal2019; @Krieger2014]).
+The processing sub-package is designed to facilitate working with DAT, AVG and EDI data and generating inputs for existing third-party processing codes(e.g., the module Z of [@Kirkbyetal2019; @Krieger2014]).
 
 The viewer package is essentially dedicated to data and log sequences visualization (1D and 2D plots).
 
@@ -69,8 +69,7 @@ The geodrill package mainly deals with geological, borehole and/or well data col
 of [@Slichteretal1942] and [@Palacky1988] for new model construction (NM). Thus, from NM, the PS under each station is retrieved.  Moreover, NM is constructed (e.g., Figure 2b) from the forward modeling results as well as the model error (e.g., Figure 2c). The  PS technique developed in  [@Kouadioetal2022] 
 is used for log forecasting (e.g., Figure 2d) and thickness estimation display fetched from the software memory (e.g., Figure 2e). Overall, the packages provide features coded in Python classes, methods, and functions.
 
-![An example of software functionalities. a) 2D forward modeling results (error floors set at 10% apparent resistivities and 20% phase with starting model set at 150 Ω.m) with the broad delimitation of four different geological structures (S1 to S4). b) NM model generated
-including the geological and boreholes data. c) The error map between the 2D inversion model and the NM. It could indicate the layer misclassification with larger errors. d) An example of PS built at station S00 at 125 m depth. e) The display layer thicknesses estimated at station S00 fetched from the memory storage thin 1km depth.](paper_figures/NMpseudostratigraphic_log_at_125_m_depth.png){width="7.490972222222222in"}
+![An example of software functionalities. a) 2D forward modeling results (error floors set at 10% apparent resistivities and 20% phase with starting model set at 150 Ω.m) with the broad delimitation of four different geological structures (S1 to S4). b) NM model generated including the geological and boreholes data. c) The error map between the 2D inversion model and the NM. It could indicate the layer misclassification with larger errors. d) An example of PS built at station S00 at 125 m depth. e) The display layer thicknesses estimated at station S00 fetched from the memory storage thin 1km depth.](paper_figures/NMpseudostratigraphic_log_at_125_m_depth.png){width="7.490972222222222in"}
 
 
 # Availability

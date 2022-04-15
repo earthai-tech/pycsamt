@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['setup.py', 'pycsamt\\cli\\j2edi.py', 'pycsamt\\__init__.py', 'pycsamt\\cli\\__init__.py', 'pycsamt\\cli\\nm.py', 'pycsamt\\cli\\pseudostratigraphic.py', 'pycsamt\\__main__.py']
+recent_files = ['README.md']
 
 [main]
 version = 0.2.0

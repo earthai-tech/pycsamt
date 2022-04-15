@@ -60,7 +60,7 @@ pyCSAMT follows the modular approach of existing software like MTpy [@krieger201
   the packages provide features coded in Python classes, methods, and functions. Figure 1 shows an 
   overview of pyCSAMT packages and sub-packages with their roles.
 
-![pyCSAMT packages structures and the keys modules. The colors in the workflow diagram represent which parts of the software are used in each step. For example, the modules in the geodrill packages are usedfor NM construction and PS prediction ](paper_figures/pycsamt_workflow_and_packages2.png){width="7.260416666666667in" }
+![pyCSAMT packages structures and the keys modules. The colors in the workflow diagram represent which parts of the software are used in each step. For example, the modules in the geodrill packages are usedfor NM construction and PS prediction ](paper_figures/pycsamt_workflow_and_packages2.PNG){width="7.260416666666667in" }
 
 The core sub-package contains functionality to read and write CSAMT data from industry-standard formats 
 such as \*.DAT, \*AVG and \*EDI including metadata from the header of the EDI file, the location,

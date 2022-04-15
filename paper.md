@@ -15,8 +15,6 @@ authors:
 	  affiliation: 1
 	- name: Binbin, Mi
 	  affiliation: 1
-	- name: Chun-ming, Liu
-	  affiliation: 2
 affiliations:
 	- name: Key Laboratory of Geoscience Big Data and Deep Resource of Zhejiang Province, School of Earth Sciences, Zhejiang University, China.
 	  index: 1

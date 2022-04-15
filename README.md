@@ -210,8 +210,6 @@ If the software seems useful to you, you may cite the authors as a contribution.
 * Developer: 1, 3- Kouadio K. Laurent; <etanoyau@gmail.com>, <kkouao@zju.edu.cn>,
 * Contributors:
     *  2- Rong LIU; <liurongkaoyang@126.com>
-    *  1- Albert O. MALORY; <amalory@zju.edu.cn> 
     *  1- Binbin MI; <mibinbin1991@126.com>  
-    *  2- Chun-ming LIU; <lifuming001@163.com> 
 
 

@@ -61,7 +61,7 @@ However, it is recommended the installation from the repository to get the lates
 For example, to remove the static shift effect into a corrupted [SEG](https://seg.org/) EDI data, user can apply one of above filters (e.g., FLMA)
 to correct the EDI data located in `data/edi` directory as the below command line (CLI) indicates. 
 ``` 
- $ staticshift data/edi -ft flma --ndipole 5 --dipole-length=50  
+ $ correctedi data/edi -ft flma --ndipole 5 --dipole-length=50  
 ``` 
                                                                
 ## Plot inversion and geostratigraphy(G) misfits

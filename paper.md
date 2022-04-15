@@ -1,26 +1,26 @@
 ---
 title: "The pyCSAMT software package for enhancing the groundwater exploration technique using the CSAMT data"
 tags:
-	- Python
-	- pyCSAMT
-	- groundwater 
-	- controlled source audio-frequency magnetotelluric 
+  - Python
+  - pyCSAMT
+  - groundwater
+  - CSAMT
 authors:
-	- name: Kouao Laurent Kouadio
-	  orcid: 0000-0001-7259-7254
-	  affiliation: 1,3
-	- name: Rong Liu
-	  affiliation: 2
-	- name: Binbin Mi
-	  affiliation: 1
+  - name: Kouao Laurent Kouadio^[Co-first author]
+    orcid: 0000-0001-7259-7254
+    affiliation: "1, 3"
+  - name: Rong Liu^[Co-first author]
+    affiliation: 2
+  - name: Binbin Mi^[Corresponding author]
+    affiliation: 1
 affiliations:
-	- name: Key Laboratory of Geoscience Big Data and Deep Resource of Zhejiang Province, School of Earth Sciences, Zhejiang University, China.
-	  index: 1
-	- name: Department of Geophysics, School of Geosciences and Info-physics, Central South University, China.
-	  index: 2
-	- name: Equipe de Recherche Géophysique Appliquée, Laboratoire de Geologie Ressources Minerales et Energetiques, Université Félix Houphouët-Boigny, Cote d'Ivoire.
-	  index: 3
-date: 14 March 2022
+  - name: Key Laboratory of Geoscience Big Data and Deep Resource of Zhejiang Province, School of Earth Sciences, Zhejiang University, China.
+    index: 1
+  - name: Department of Geophysics, School of Geosciences and Info-physics, Central South University, China
+    index: 2
+  - name: Equipe de Recherche Géophysique Appliquée, Laboratoire de Geologie Ressources Minerales et Energetiques, UFR des Sciences de la Terre et des Ressources Minières, Université Félix Houphouët-Boigny, Cote d'Ivoire
+    index: 3
+date: 14 April 2022
 bibliography: paper.bib
 ---
 

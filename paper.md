@@ -9,9 +9,9 @@ authors:
   - name: Kouao Laurent Kouadio^[Co-first author]
     orcid: 0000-0001-7259-7254
     affiliation: "1, 3"
-  - name: Rong Liu^[Co-first author]
-    affiliation: 2
   - name: Binbin Mi^[Corresponding author]
+    affiliation: 2
+  - name: Rong Liu^[Co-first author]
     affiliation: 1
 affiliations:
   - name: Key Laboratory of Geoscience Big Data and Deep Resource of Zhejiang Province, School of Earth Sciences, Zhejiang University, China.

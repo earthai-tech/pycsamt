@@ -34,7 +34,7 @@ For this quickstart, we assume the user has already the forward modeling files (
 Plotting some fitting curves of resistivity and phase inversion after applying on observed data the static shift correction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  
 
-For instance, we visualize the fitting curves of four survey lines with their corresponding RMS. The stations (e.g. ``S00``,``S04`` ,   ``s08``, and ``S12``) are randomly chosen of each survey line: 
+For instance, we visualize the fitting curves of four survey lines with their corresponding RMS. The stations (e.g. ``S00``, ``S04`` ,   ``s08``, and ``S12``) are randomly chosen of each survey line: 
 
 .. code-block:: 
 

@@ -9,9 +9,7 @@
 
 * **Definition**
 
-    CSAMT is a geophysical method well-established  as a resistivity exploration 
-    tool in deep geological structure detection. The method is broadly applied in  diverse of exploration problems such as mineral, hydrocarbon,  groundwater resources, 
-    as well as mapping the fault-zones etc. 
+    CSAMT is a frequency-domain electromagnetic method well-established  as a resistivity exploration tool in deep geological structure detection. The method is broadly applied in  diverse of exploration problems such as mineral, hydrocarbon,  groundwater resources, as well as mapping the fault-zones etc. 
 
 * **Purpose**
 

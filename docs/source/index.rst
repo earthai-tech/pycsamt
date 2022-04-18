@@ -10,6 +10,8 @@ Welcome to pyCSAMT's documentation!
    :maxdepth: 2
    :caption: Contents:
    
+   installation
+   demo
    csamt
    processing
    modeling 
@@ -17,8 +19,7 @@ Welcome to pyCSAMT's documentation!
    geodatabase
    utils
    viewer
-   installation
-   demo
+
 
 Indices and tables
 ==================

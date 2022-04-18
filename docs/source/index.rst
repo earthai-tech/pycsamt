@@ -10,6 +10,8 @@ Welcome to pyCSAMT's documentation!
    :maxdepth: 2
    :caption: Contents:
    
+   installation
+   demo
    csamt
    processing
    modeling 

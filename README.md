@@ -33,11 +33,11 @@
 
 ## Documentation 
 
-* API Documentation  : https://pycsamt.readthedocs.io/en/latest/
-* Home Page : https://github.com/WEgeophysics/pyCSAMT/wiki
-* Some examples: https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F
-* Installation Guide : https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux
-* User Guide : https://github.com/WEgeophysics/pyCSAMT/blob/develop/docs/pyCSAMT%20User%20Guide.pdf
+* [API Documentation](https://pycsamt.readthedocs.io/en/latest/)
+* [Home Page](https://github.com/WEgeophysics/pyCSAMT/wiki)
+* [Some examples](https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F)
+* [Installation Guide](https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux)
+* [User Guide](https://github.com/WEgeophysics/pyCSAMT/blob/develop/docs/pyCSAMT%20User%20Guide.pdf)
 
 ## Licence 
 
@@ -181,11 +181,11 @@ $ pseudostratigraphic --station S00 --zoom 10 120 --fontsize 12
 ## Credits
 
 We use or link some third-party software (beside the usual tool stack: numpy, scipy, matplotlib) and are grateful for all the work made by the authors of these awesome open-source tools:
-* MTpy: https://github.com/MTgeophysics/mtpy.git
-* Occam2D: https://marineemlab.ucsd.edu/Projects/Occam/index.html
+* [MTpy](https://github.com/MTgeophysics/mtpy.git)
+* [Occam2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html)
 * Zonge Engineering softwares:
-    - AMTAVG: http://www.zonge.com/legacy/DatPro.html/
-    - ASTATIC: http://www.zonge.com/legacy/PDF_DatPro/Astatic.pdf
+    - [AMTAVG](http://www.zonge.com/legacy/DatPro.html/)
+    - [ASTATIC](http://www.zonge.com/legacy/PDF_DatPro/Astatic.pdf)
 
 ## System requirements 
 * Python 3.7+ 
@@ -211,5 +211,6 @@ If the software seems useful to you, you may cite the authors as a contribution.
 * Contributors:
     *  2- Rong LIU; <liurongkaoyang@126.com>
     *  1- Binbin MI; <mibinbin1991@126.com>  
+    *  1- Albert O. Malory; <mibinbin1991@126.com>  
 
 

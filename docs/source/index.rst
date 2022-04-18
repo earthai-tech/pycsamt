@@ -17,6 +17,8 @@ Welcome to pyCSAMT's documentation!
    geodatabase
    utils
    viewer
+   installation
+   demo
 
 Indices and tables
 ==================

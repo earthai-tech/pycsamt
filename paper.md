@@ -9,9 +9,9 @@ authors:
   - name: Kouao Laurent Kouadio^[Co-first author]
     orcid: 0000-0001-7259-7254
     affiliation: "1, 3"
-  - name: Rong Liu^[Co-first author]
-    affiliation: 2
   - name: Binbin Mi^[Corresponding author]
+    affiliation: 2
+  - name: Rong Liu^[Co-first author]
     affiliation: 1
 affiliations:
   - name: Key Laboratory of Geoscience Big Data and Deep Resource of Zhejiang Province, School of Earth Sciences, Zhejiang University, China.
@@ -60,7 +60,7 @@ pyCSAMT follows the modular approach of existing software like MTpy [@krieger201
   the packages provide features coded in Python classes, methods, and functions. Figure 1 shows an 
   overview of pyCSAMT packages and sub-packages with their roles.
 
-![pyCSAMT packages structures and the keys modules. The colors in the workflow diagram represent which parts of the software are used in each step. For example, the modules in the geodrill packages are used for NM construction and PS prediction ](paper_figures/workflow2.PNG){width="5.260416666666667in" }
+![pyCSAMT packages structures and the keys modules. The colors in the workflow diagram represent which parts of the software are used in each step. For example, the modules in the geodrill packages are used for NM construction and PS prediction ](paper_figures/workflow2.png){width="5.260416666666667in" }
 
 The core sub-package contains functionality to read and write CSAMT data from industry-standard formats 
 such as \*.DAT, \*AVG and \*EDI including metadata from the header of the EDI file, the location,

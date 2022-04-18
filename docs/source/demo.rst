@@ -27,21 +27,26 @@ For example, to remove the static shift effect into a corrupted `SEG <https://se
    
 Plot inversion and geostratigraphy(G) misfits
 ----------------------------------------------
+
 For this quickstart, we assume the user has already the forward modeling files (``*.resp``, ``*.dat``, ``*.mesh``, ``*.iter`` and ``*.logfile`` (optional)), and the supplement data (i.e. boreholes/wells and geological data) collected in the survey area.
+
  
 Plotting some fitting curves of resistivity and phase inversion after applying on observed data the static shift correction
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  
 
-For instance, we visualize the fitting curves of four survey lines with their corresponding RMS. The stations (e.g. ``S00``,``S04`` , ``s08``, and ``S12``) are randomly chosen of each survey line: 
+For instance, we visualize the fitting curves of four survey lines with their corresponding RMS. The stations (e.g. ``S00``,``S04`` ,   ``s08``, and ``S12``) are randomly chosen of each survey line: 
 
 .. code-block:: 
 
    $ fitforward  data/inversionFiles --stations S00 S04 s08 S12 --rms 1.013 1.451 1. 1.069 
 
+
 Click `here <https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/examplefitcurves.png>`_ to see the reference output
+  
 
 Plotting the misfit of the model response from the forward modeling (FM) of line K1
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 
 Set kind argument to phase for the error in phase.
 
@@ -49,10 +54,12 @@ Set kind argument to phase for the error in phase.
  
    $ misfit2d data/inversionFiles/K1.dat data/inversionFiles/K1.resp --kind=rho 
 	
+	
 To see the output, click on the `reference output <https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/misfit.png>`_.
+
  
 Construction of the new resistivity model (NM) also called the geostratigraphy model
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The latter is built from the additional data (e.g. borehole/well data and/or geological data) collected in the exploration area combined with the FM. The best approach to fastly build the NM model is to gather all the data collected in the exploration area into a 
 single configuration file in ``*.json`` or ``*.yml`` format. For illustrating, we will use ``mysurveyarea_data.yml`` file like:
@@ -92,11 +99,13 @@ and the constructor parameters respectively. From the CLI below, NM is created.
  
    $ nm -c mysurveyarea_data.json --show --misfit
 	
+
 Indeed, the ``Misfit G`` helps to determine whether the different layers with their corresponding resistivity values 
 are misclassified or not. An example of misfit G map can be visualized here.
 
 **Note**: For CSAMT data processing and an example of a deep implementation, please refer to our 
 `wiki page <https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F>`_.
+
 
 
 Plot the pseudostratigraphic log
@@ -110,6 +119,7 @@ corresponding pseudostratigraphic log. An example of the command to do this task
 
    $ pseudostratigraphic -s S00 
    
+
 The output below with layer thicknesses estimation are displayed.
 
 .. code-block:: bash 
@@ -132,6 +142,7 @@ The output below with layer thicknesses estimation are displayed.
 	|model = Occam2DModel     |iter  = ITER17.iter      |mesh  = Occam2DMesh      |data  = OccamDataFile.dat|
 	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	
+
 Click `here <https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/pseudostratigraphic_log.PNG>`_ to see the predicted log.
 Obviously, it does not make sense to expect to drill until to reach ``1km`` depth. Therefore, another feature is implemented to help 
 the user to only fetch from the SPM the most interesting part of the predicted log for a specific purpose. To do such task,
@@ -142,6 +153,7 @@ that the investigation depth is ``1000m`` maximum.
    
    $ pseudostratigraphic --station=S00 --zoom 25%
    
+
 Check the following `ouput <https://github.com/WEgeophysics/pyCSAMT/blob/develop/examples/zoom25.PNG>`_ to see the new log. Futhermore,
 it's also possible to provide the top (e.g. ``10m``) and the bottom(e.g. ``120m``) of the log for visualization as:
  
@@ -149,4 +161,8 @@ it's also possible to provide the top (e.g. ``10m``) and the bottom(e.g. ``120m`
 
    $ pseudostratigraphic --station S00 --zoom 10 120 --fontsize 12
    
-   
+
+Go Deeper 
+----------
+
+For a deep implementation, refer to `some examples <https://github.com/WEgeophysics/pyCSAMT/wiki/How-pyCSAMT-works-%3F>`_. 

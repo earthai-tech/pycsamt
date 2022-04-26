@@ -62,7 +62,7 @@ If you use pyCSAMT in any published work, consider citing the paper below as a c
 
 > *Kouao Laurent Kouadio, Rong Liu, Binbin Mi, Chun-ming Liu. pyCSAMT: An alternative Python toolbox for groundwater 
   exploration using controlled source audio-frequency magnetotelluric; Journal of Applied Geophysics;
-  104647(2022); https://doi.org/10.1016/j.jappgeo.2022.104647.*
+  201(2022)104647; https://doi.org/10.1016/j.jappgeo.2022.104647.*
 
 
 ## Contributors

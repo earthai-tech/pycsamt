@@ -24,7 +24,6 @@ from pycsamt.ff.site import (Site, Location, Profile)
 from pycsamt.utils import exceptions as CSex
 from pycsamt.utils import func_utils as func
 from pycsamt.utils._csamtpylog import csamtpylog
-_logger = csamtpylog.get_csamtpy_logger(__name__)
 
 try : 
     from pycsamt.__init__ import itqdm 
@@ -34,7 +33,9 @@ try :
         itqdm = False # for consistency  
     
 except: pass
- 
+
+_logger = csamtpylog.get_csamtpy_logger(__name__)
+
 class CSAMT(object): 
     """
      CSAMT class is a class container of all the information of the 
@@ -88,6 +89,19 @@ class CSAMT(object):
     freq                ndarray,1           frequency array from survey   
     verbose             int                 control the level of verbosity. 
                                             Higher more messages. Default is 0.
+    component           str                 Given component to read and populate 
+                                            attributes. Can be `xy`, `yx`, 
+                                            `xx` and `yy`. Default is `xy` 
+    sort_edi_along      str                 Value to sort edi files. Default  
+                                            sort i in alphabetic order. If edi 
+                                            is composed of station name and 
+                                            digit, `sort_edi_along` with force 
+                                            the sort to be only on the digit. 
+                                            For instance "new_E1_97.edi" file 
+                                            can be sorted efficiently by given 
+                                            to the param `sort_edi_along` to 
+                                            ``'new_E1_'`` which correspond to 
+                                            the edi prefix before the digit `97`. 
     =================  ===================  ===================================
 
     ===========================  ==============================================
@@ -120,7 +134,6 @@ class CSAMT(object):
         
         self._logging =csamtpylog.get_csamtpy_logger(self.__class__.__name__)
         
-        
         self.Site =Site()
         self.Location =Location()
         self.Profile =Profile()
@@ -143,6 +156,10 @@ class CSAMT(object):
         self._fpath =None 
         
         self.save_path = kwargs.pop('savepath', None)
+        ### ADD component attributes 
+        self.component = kwargs.pop('component', 'xy')
+        self.sort_edi_along =kwargs.pop('sort_edi_along', None)
+        # ---------- 
         self.verbose =kwargs.pop('verbose', 0)
         
         for key  in list(kwargs.keys()): 
@@ -286,33 +303,81 @@ class CSAMT(object):
         
         # if self._fn is not None : 
         if self.fpath  =='edipath': #---> set the path then collect all jfiles .
+            eddfiles  = sorted(os.listdir(self._fn)) 
+            # sometimes edi are sorted in alphabetic order with does not fit 
+            # the correct way when the edi includes the digit values 
+            # then it could be removed by sorted along. 
+            if self.sort_edi_along is not None: 
+                self.sort_edi_along = str(self.sort_edi_along)
+                try : 
+                    eddfiles = sorted (
+                        eddfiles, key = lambda r : float(
+                            r.replace(self.sort_edi_along,''
+                                      ).replace('edi', ''))) 
+                except : pass 
         
             edifiles =[os.path.join(self._fn, eddfile) for
-                       eddfile in os.listdir(self._fn) 
+                       eddfile in eddfiles 
                        if eddfile.endswith('.edi')]
-        
+            
         # if edifile is not None : self._fn =edifile 
         #-- > once only edifile is provided then put on list ...
         elif self.fpath  == 'edi' : 
             edifiles =[self._fn]
-  
-        edi_obj = CSAMTedi.Edi_collection(list_of_edifiles =edifiles)
-
+            
+        # create the list of collection to keep the sorted_edi lists
+        ediObjs = [CSAMTedi.Edi(edi_filename= ediobj) for ediobj in edifiles]
+        # read the collectoions with ediObjs
+        edi_obj = CSAMTedi.Edi_collection(ediObjs = ediObjs)
+        
+        self.edinames = edi_obj.edinames 
+        
         self._logging.info ('Compute Z impedance Tensor  and '
                             'set attributes. _ Func '
                             '<%s>'%self._read_edi_obj.__name__)
         
-        self._res = edi_obj.res_xy 
-        self._res_err = edi_obj.res_err_xy
-        
-        self._phs_err =edi_obj.phs_err_xy
-        self._phs = edi_obj.phs_xy
-        
+        self.component = str(self.component).lower() 
+        if self.component not in ('xx', 'yy', 'xy', 'yx'): 
+            warnings.warn(f"Component {self.component} is wrong. Shoud be "
+                          f"{func.smart_format(['xx', 'yy', 'xy', 'yx'])}."
+                          " Default is `xy`")
+            self.component ='xy'
+            
+        #################
+        self._res_xy= edi_obj.res_xy 
+        self._res_err_xy  = edi_obj.res_err_xy
+        self._phs_err_xy =edi_obj.phs_err_xy
+        self._phs_xy= edi_obj.phs_xy
         self._z_xy =edi_obj.z_xy 
+        self._z_err_xy =edi_obj.z_err_xy
+            
+        self._res_yx = edi_obj.res_yx 
+        self._res_err_yx= edi_obj.res_err_yx
+        self._phs_err_yx=edi_obj.phs_err_yx
+        self._phs_yx= edi_obj.phs_yx
         self._z_yx =edi_obj.z_yx
-        self.z_err_xy =edi_obj.z_err_xy
-        self.z_err_yx =edi_obj.z_err_yx
-        
+        self._z_err_yx =edi_obj.z_err_yx
+
+        self._res_xx= edi_obj.res_xx 
+        self._res_err_xx= edi_obj.res_err_xx
+        self._phs_err_xx=edi_obj.phs_err_xx
+        self._phs_xx= edi_obj.phs_xx
+        self._z_xx =edi_obj.z_xx 
+        self._z_err_xx =edi_obj.z_err_xx
+
+        self._res_yy= edi_obj.res_yy 
+        self._res_err_yy= edi_obj.res_err_yy
+        self._phs_err_yy =edi_obj.phs_err_yy
+        self._phs_yy= edi_obj.phs_yy
+        self._z_yy=edi_obj.z_yy
+        self._z_err_yy =edi_obj.z_err_yy
+    
+        # selected the needeed components  
+        for attr in ('res', 'res_err', 'phs', 'phs_err', 'z', 'z_err'): 
+            setattr(self, f'_{attr}', 
+                    getattr(self, f'_{attr}_{self.component}')
+                    )
+            
         self._freq = edi_obj.freq_array
         
     
@@ -415,7 +480,7 @@ class CSAMT(object):
             'Compute Z impedance Tensor ''and set attributes.'
             ' _ Func <%s>'%self._read_j_obj.__name__)
         
-        self._z_err_xy,  self._z_xy,   self._z_yx = [{} for ii in range(3)]
+        self._z_err,  self._z,   self._z_yx = [{} for ii in range(3)]
         csamt_z_obj =CSAMTz.Z()
         for stn, values in self._res.items(): 
             # csamt_obj =  CSAMTz.Z()
@@ -439,8 +504,8 @@ class CSAMT(object):
                                       res_err_array= res_err_array, 
                                       phase_err_array= phs_err_array)
                                   
-            self._z_err_xy [stn] = csamt_z_obj.z_err [:, 0, 1]
-            self._z_xy [stn] = csamt_z_obj.z [:, 0, 1]
+            self._z_err [stn] = csamt_z_obj.z_err [:, 0, 1]
+            self._z[stn] = csamt_z_obj.z [:, 0, 1]
             self._z_yx [stn] = csamt_z_obj.z[:, 1, 0]
         
         
@@ -525,7 +590,7 @@ class CSAMT(object):
                          for stn , sphz_value  in  std_phase_obj.items()}
         
         #--> build Z_obj 
-        self._z_err_xy,  self._z_xy,   self._z_yx = [{} for ii in range(3)]
+        self._z_err,  self._z,   self._z_yx = [{} for ii in range(3)]
         csamt_z_obj =CSAMTz.Z()
         for stn, values in self._res.items(): 
             # csamt_obj =  CSAMTz.Z()
@@ -549,8 +614,8 @@ class CSAMT(object):
                                       res_err_array= res_err_array, 
                                       phase_err_array= phs_err_array)
                                   
-            self._z_err_xy [stn] = csamt_z_obj.z_err [:, 0, 1]
-            self._z_xy [stn] = csamt_z_obj.z [:, 0, 1]
+            self._z_err [stn] = csamt_z_obj.z_err [:, 0, 1]
+            self._z [stn] = csamt_z_obj.z [:, 0, 1]
             self._z_yx [stn] = csamt_z_obj.z[:, 1, 0]
         
         #---> set coordinates attributes 
@@ -587,17 +652,16 @@ class CSAMT(object):
         return {stn: value %90 for stn , value in self._phs.items()} 
     
     @property 
-    def zxy (self): 
-        return self._z_xy 
+    def z(self): 
+        return self._z 
     
-    @property 
-    def zyx (self): 
-        return self._z_yx 
+    # @property 
+    # def zyx (self): 
+    #     return self._z_yx 
     
     @property 
     def resistivity_err (self): 
         return self._res_err 
-        
         
     @property 
     def phase_err (self): 
@@ -605,7 +669,11 @@ class CSAMT(object):
     
     @property 
     def z_err (self): 
-        return self._z_err_xy 
+        return self._z_err
+    @z_err.setter 
+    def z_err (self, zerr): 
+        self._z_err = zerr 
+        
     
     @property 
     def dipolelength (self): 
@@ -614,8 +682,10 @@ class CSAMT(object):
             northing =self.north)[0]
     @property 
     def skindepth (self): 
-        return {stn: 503 * np.sqrt( self.resistivity [stn]/ self.freq) 
-                for stn in self.resistivity}
+        ress = func.resize_resphase_values(
+            self.resistivity,c = self.freq, return_array= False) 
+        return {stn: 503 * np.sqrt(ress [stn]/ self.freq) 
+                for stn in self.resistivity} 
     @property 
     def doi (self): 
         return {stn :  2 ** 0.5 * self.skindepth[stn] 

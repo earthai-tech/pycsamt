@@ -12,10 +12,10 @@ from pycsamt.ff.core.edi import Edi
 
 
 # Directory where edifiles are located 
-edipath = 'data/edi' 
+edipath = r'C:\Users\Daniel\Desktop\Data\AMT\E1\edi'#'data/edi' 
 
 # save new edipath 
-savepath =None 
+savepath = r'C:\Users\Daniel\Desktop\Data\AMT\E1\edi_r' # None 
        #) # change the current directory     
 # list of Edi files 
 stationlst=[os.path.join(edipath,file) for 

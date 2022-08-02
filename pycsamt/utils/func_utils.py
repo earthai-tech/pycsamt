@@ -93,6 +93,61 @@ except ImportError:
     interp_import = False
     
  
+def get_interpolate_freqs (ediObjs, to_log10 =False): 
+    """ From EDI objects, collected thefrequencies Min, Max and find the 
+    frequency for interpolating. 
+    
+    This method is usefull when a collection of EDI-files have some missing 
+    frequency data. 
+    
+    :param ediObjs: list - Collections of EDI-objects 
+    :rtype: pycsamt.ff.core.edi.Edi 
+    
+    :param to_log10: Put the interpolated min-max frequency to log10 values
+    :type to_log10: bool 
+    
+    :returns: Array-like min max and number of frequency for interpolating. 
+    :rtype: tuple
+    
+    :Example: 
+        >>> from pycsamt.ff.core.edi import Edi_collection 
+        >>> from pycsamt.utils.func_utils import find_interpolate_freq
+        >>> edipath = r'/Users/Daniel/Desktop/ediout'
+        >>> cObjs = Edi_collection (edipath)
+        >>> ifreqs, nfreq= get_interpolate_freq(cObjs.ediObjs) 
+        >>> ifreqs, nfreq
+        ... array([5.625e+00, 5.880e+04]), 56 # i.e minimum frequency 
+            for interpolation is 5.625e+00 while the max is 5.880e+04
+            and the number of frequency that can be interpolated is 56. 
+    """
+    # create a matrix of ndarray (nedifiles, [nfreq, minfreq, maxfreq])
+    if not isinstance(ediObjs, (list, tuple)): 
+        ediObjs =[ediObjs]
+
+    freqs= np.zeros((len(ediObjs), 3))
+    #edins = np.zeros_like(freqs , dtype ='>U20')
+    for ii, ediobj in enumerate (ediObjs) : 
+        freqs[ii] = [len(ediobj.Z._freq),ediobj.Z._freq.min(), 
+                     ediobj.Z._freq.max() ]
+        #edins [ii]= os.path.basename(ediobj.edifile).replace('.edi', '') 
+    # frequency for interpolate should be in the bound of frequency ranges 
+    # take all minimum in axis 0 and replace the 
+    # min ranges frequency by the higher to bound the frequency ranges 
+    freqi = freqs.min(0) 
+    freqi[1]= freqs[:, 1].max() 
+
+    # find  the index a  check the edifiles 
+    #ix = np.where (np.all (freqs ==freqs.max(0), axis = 1)) 
+    # get the number of frequency for max freq and in freq columns 
+    fmaxs = freqs[:, 0][freqs [:, -1]==freqi[-1]]
+    fmins = freqs[:, 0][freqs [:, -2]==freqi[-2]]
+    # for consistency if array are composed of repeated max |min values 
+    nfreq = max ( fmaxs.max(),  fmins.max()) 
+    ifreqs = freqi[1:] # exclude the number of freq of each edi (column 0)
+
+    return (np.log10(ifreqs), np.int(nfreq)) if to_log10 else (
+        ifreqs, np.int(nfreq))
+                     
 
 def check_dimensionality(obj, data, z, x):
     """ Check dimensionality of data and fix it.
@@ -281,7 +336,7 @@ def show_quick_edi_stats(nedic , nedir, fmtl='~', lenl=77):
     mesg ='|'.join( ['|{0:<15}{1:^2} {2:<7}',
                      '{3:<15}{4:^2} {5:<7}',
                      '{6:<9}{7:^2} {8:<7}%|'])
-    print(mesg.format('EDI collected','=',  nedic, 'EDI success. read',
+    print(mesg.format('Data collected','=',  nedic, 'EDI success. read',
                       '=', nedir, 'Rate','=', round ((nedir/nedic) *100, 2),
                       2))
     print(fmtl * lenl )
@@ -2294,7 +2349,54 @@ def _nonevalue_checker (list_of_value, value_to_delete=None):
             start_point=0 # not necessary , just for secure the loop. 
             break           # be sure one case or onother , it will break
     return list_of_value 
+
+###OPTIMIZE  
+def resize_resphase_values (dictobj: dict , fill_value: float = np.nan,
+                            c =None,mask_nan:bool =True, return_array =True): 
+    """ Get the resistivity and phases values from dictof items 
+    and concatenate them. 
+    
+    Array must have the same length everywhere. Function get the max 
+    length and add `np.nan` values to reach the size of max array. 
+    if the given data is under the max array. 
+    
+    :param dictobj: dict - container of array-like values 
+    :param fill_value: float - value to append to the max array so 
+        to reach the reference array. Default is ``np.nan`.` 
+    :param c: array-like - Controler; the array value for reference. If given,  
+        its length should be used as the max array length. Default is ``None``.
+    :param mask_value: bool - Mask the appender value. Default is ``True``. 
+    :param return_array: bool - Return concatenated array otherwise return the 
+        dictobject with filled values. 
         
+    :return: ndarray - array of `dictobj` values concatenated into two 
+        dimensional arrays; otherwise return the `dictobj` resized
+        
+    """
+    max_ = len(c) if c is not None else  max (
+        [len(v) for v in dictobj.values()]) 
+    for key,  aval in sorted (dictobj.items()) : 
+        s = max_-len(aval)
+        if s==0: 
+            continue 
+        elif s > 0: 
+            aval = np.append(aval, np.full(
+                (s,), fill_value ))
+        elif s < 0 : 
+            aval = aval [:s]
+         
+        dictobj[key] = aval
+        
+    # if not return_array : 
+    #     return dictobj 
+    
+    ar = np.vstack([v for v in dictobj.values()]) 
+    
+    # masked the fill values
+    return dictobj if not return_array else np.ma.masked_array( ar, mask = np.isnan(ar) 
+                              ) if mask_nan else ar 
+   
+
 def _strip_item(item_to_clean, item=None, multi_space=12):
     """
     Function to strip item around string values.  if the item to clean is None or 
@@ -2329,8 +2431,9 @@ def _strip_item(item_to_clean, item=None, multi_space=12):
     if type(item_to_clean ) != list :#or type(item_to_clean ) !=np.ndarray:
         if type(item_to_clean ) !=np.ndarray:
             item_to_clean=[item_to_clean]
+    ###TIP
     if item_to_clean in cleaner or item_to_clean ==['']:
-        warnings.warn ('No data found in <item_to_clean :{}> We gonna return None.')
+        warnings.warn ('No data found for sanitization; returns None.')
         return None 
 
   

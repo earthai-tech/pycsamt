@@ -12,6 +12,7 @@
         
 Created on Sat Dec 12 13:55:47 2020
 """
+import os 
 import copy 
 import warnings
 import numpy as np 
@@ -19,6 +20,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.interpolate  as spi 
 
+try : 
+    from mtpy.core.mt import MT
+except :
+    pass 
+
+from pycsamt.ff.core.edi import Edi 
 from pycsamt.ff.core.cs import CSAMT
 from pycsamt.ff.core  import z as CSAMTz
 from pycsamt.utils import zcalculator as Zcc
@@ -110,6 +117,7 @@ class shifting(object):
         self._freq_array =freq_array 
         self._res_array =res_array
         self.verbose = verbose 
+        self.component = kwargs.pop('component', 'xy')
         self.profile_fn = kwargs.pop('profile_fn', None)
         self.savepath = kwargs.pop('savepath', None)
         
@@ -201,6 +209,7 @@ class shifting(object):
     def read_processing_file(self, data_fn=None , 
                              profile_fn=None,
                               reference_freq=None,
+                              component =None, 
                               **kwargs ):
         """
         Mehod read processing files and load attributes for use.
@@ -232,7 +241,9 @@ class shifting(object):
             self.res_app_obj = res_array 
         if phase_array is not None:
             self.phase_obj = phase_array
-        
+        if component is not None: 
+            self.component = component 
+            
         flag = 0            # flag to figure out edifiles to to use avg  file
                             # without it profile stn could be possible 
         if self.data_fn is None :
@@ -292,7 +303,8 @@ class shifting(object):
                 
             try : 
                 csamt_obj = CSAMT(data_fn = self.data_fn, 
-                                    profile_fn =self.profile_fn)
+                                    profile_fn =self.profile_fn,
+                                    component=self.component)
                 self.frequency = csamt_obj.freq 
                 self.res_app_obj = csamt_obj.resistivity
                 self.phase_obj ={ key:np.deg2rad(values) 
@@ -355,9 +367,15 @@ class shifting(object):
                     self.station_distance = csamt_obj.Data_section.Station.value
                     
         # set the matrix of rho data 
+        # ignore the dimensionality of the data at each station and masked the 
+        # nan values 
+        self.phase_obj = func.resize_resphase_values(
+            self.phase_obj, return_array =False)
         self.phase_=buildBlock_freqRhoOrPhase(self.phase_obj)
         self.phase_ = np.rad2deg(self.phase_)%90 
         
+        self.res_app_obj= func.resize_resphase_values(
+            self.res_app_obj, return_array =False)
         self.app_res_= buildBlock_freqRhoOrPhase(self.res_app_obj)
         #-----------------------------------------------------------        
         #---> set reference frequency . if not will detect automatically  
@@ -461,8 +479,10 @@ class shifting(object):
             'Computing Trimming Moving Average  filter to correct'
             ' apparent resistivities.!')
         
-        if data_fn is not None : self.data_fn  = data_fn 
-        if profile_fn is not None : self.profile_fn = profile_fn
+        if data_fn is not None :
+            self.data_fn  = data_fn 
+        if profile_fn is not None :
+            self.profile_fn = profile_fn
         
         # print(reference_freq)
         # if reference_freq is not None : self.referencefreq = reference_freq 
@@ -1460,17 +1480,9 @@ class shifting(object):
         number_of_points= kwargs.pop('number_of_points', 1)
         dipole_length = kwargs.pop('dipole_length', 50.)
         number_of_skin_depth= kwargs.pop('number_of_skin_depth', 3.)
-        
-        reduce_res_factor_x=kwargs.pop('reduce_res_factor_x', 1.)
-        reduce_res_factor_y =kwargs.pop('reduce_res_factor_y', 1.)
-        
-        distortion_tensor =kwargs.pop('distortion_tensor', None)
-        distortion_err_tensor =kwargs.pop('distortion_err_tensor', None)
-        
-        distortion_tensor, distortion_err_tensor
-   
         datatype =kwargs.pop('datatype', None)
         savepath = kwargs.pop('savepath', None)
+        
         if savepath is not None: 
             self.savepath =savepath 
         
@@ -1491,7 +1503,7 @@ class shifting(object):
            warnings.warn(msg )
            raise CSex.pyCSAMTError_processing(msg)
     
-        self._logging.info('Apply filters {_filter!r} to edifiles')
+        self._logging.info(f'Apply filters {_filter!r} to edifiles')
  
         # controle the range of frequencies :
             # Default range is Highest frequency to lowest 
@@ -1558,7 +1570,7 @@ class shifting(object):
                                     reference_freq = reference_frequency,
                                     dipole_length = dipole_length
                                     )
-       
+            
             phase_corrected = self.phase_corrected
             
             flip_freq =self.flip_freq 
@@ -1594,7 +1606,6 @@ class shifting(object):
                              desc ='WEgeophysics-pycsamt[---> EDICorrected]', 
                              ncols =77)
             
-        
         #-----> loop all edi objects from collections edifiles 
         # print(res_corrected)
         for k , (stn, edi_obj)  in enumerate(zip (edi_objs_id , ediObjs), 1): 
@@ -1626,49 +1637,7 @@ class shifting(object):
                 # now recompute  all component with corrected values
                 csamt_z_obj.set_res_phase(res_array = res_array,
                             phase_array=phs_array,
-                            freq=  frequency_array) 
-               
-             # use filters `ss` and `dist` for MT data     
-            if  datatype =='mt' or _filter in ['ss', 'dist']:       
-                if _filter =='ss':
-                    static_shift, z_corrected = \
-                        edi_obj.Z.remove_ss(
-                            reduce_res_factor_x=reduce_res_factor_x, 
-                            reduce_res_factor_y=reduce_res_factor_y)
-    
-                    csamt_z_obj.compute_resistivity_phase(
-                        z_array=z_corrected,
-                        z_err_array= edi_obj.Z.z_err, 
-                        freq=edi_obj.Z.freq)
-                # set z_erray error 
-                    z_err_array = edi_obj.Z.z_err 
-                    if self.verbose >0:
-                        print('--> Remove  static shift is done !')
-                
-                if _filter =='dist': # remove only distorsion 
-                    if distortion_tensor is None : 
-                        warnings.warn(
-                            'Could not remove distorsion .Provided real '
-                            'distortion tensor as a 2x2 matrices.')
-                        print('---> Remove distorsion Error ! Please provide '
-                              'the distortion Tensor as 2x2 matrices. ')
-                        raise CSex.pyCSAMTError_processing(
-                            'Could not remove distorsion.Please provided real '
-                            ' distortion 2x2 matrixes')
-                    _, z_corrected, z_corrected_err = \
-                        edi_obj.Z.remove_distortion(
-                            distortion_tensor =distortion_tensor,
-                            distortion_err_tensor=distortion_err_tensor)
-                        
-                    if self.verbose > 0:
-                        print('--> ! Remove  distortion is done !')
-                    
-                    z_err_array = z_corrected_err
-                    
-                csamt_z_obj.compute_resistivity_phase(z_array=z_corrected,
-                                                  z_err_array= z_err_array,
-                                                  freq=edi_obj.Z.freq)
-                                    
+                            freq=  frequency_array)                
             # Resset all components  to let edi 
             #containers to hold news corrected values 
             edi_obj.Z._z = csamt_z_obj.z
@@ -1726,6 +1695,175 @@ class shifting(object):
         print('*'*77)
         
         
+    @staticmethod 
+    def remove_static_shift( edi_fn, ss_x=1., ss_y=1., **kws):
+        """
+        Remove static shift from the apparent resistivity
+
+        Assume the original observed tensor Z is built by a static shift S
+        and an unperturbated "correct" Z0 :
+
+             * Z = S * Z0
+
+        therefore the correct Z will be :
+            * Z0 = S^(-1) * Z
+            
+        :param ss_x: correction factor for x component
+        :type ss_x: float
+    
+        :param ss_y: correction factor for y component
+        :type ss_y: float
+    
+        :returns: new Z object with static shift removed
+        :rtype: pycsamt.core.z.Z
+    
+        .. note:: The factors are in resistivity scale, so the
+                  entries of  the matrix "S" need to be given by their
+                  square-roots!
+
+        :Remove Static Shift: ::
+
+            >>> import pycsamt.ff.processing as Processing 
+            >>> edifile = '/Users/Daniel/Desktop/Data/AMT/E1/di_test/new_csa00.edi'
+            >>> outputedi = 'rmss_csa00.edi'
+            >>> Processing.remove_static_shift(
+                edi_fn = edifile, ss_x= .5, ss_y=1.2,new_edi_fn = outputedi
+                                               )
+        """
+        
+        cedi_obj = MT(fn =edi_fn)
+        new_z_obj = cedi_obj .remove_static_shift(ss_x=ss_x , ss_y=ss_y)
+        ediobj = Edi(edi_filename=edi_fn)
+        ediobj.write_new_edifile( new_Z=new_z_obj, **kws)
+        return new_z_obj  
+        
+        
+    @staticmethod 
+    def remove_distortion( edi_fn , num_freq=None, **kws):
+        """
+        remove distortion following Bibby et al. [2005].
+
+        :param num_freq: number of frequencies to look for distortion from the
+                         highest frequency
+        :type num_freq: int
+
+        :returns: Distortion matrix
+        :rtype: np.ndarray(2, 2, dtype=real)
+
+        :returns: Z with distortion removed
+        :rtype: pycsamt.core.z.Z
+
+        :Remove distortion and write new .edi file: ::
+
+            >>> import pycsamt.ff.processing as Processing 
+            >>> edifile = '/Users/Daniel/Desktop/Data/AMT/E1/di_test/new_csa00.edi'
+            >>> outputedi = 'rmss_csa00.edi'
+            >>> Processing.remove_distortion(edi_fn = edifile, new_edi_fn= outputedi
+                )
+
+        """
+        dedi_obj = MT(fn =edi_fn)
+        D, new_z = dedi_obj.remove_distortion()
+        ediobj = Edi(edi_filename=edi_fn)
+        ediobj.write_new_edifile( new_Z=new_z, **kws)
+        return D, new_z   
+        
+    @staticmethod 
+    def noiseRemoval(edi_fn = None, kind='ss', **kws): 
+        """ Remove multiple noises in EDIs and save to new files. Noise can be 
+        either a `staticshift` or `distorsion` noises.
+        
+        For Electromagnetic Array Profiling (EMAP) data correction, may refer to 
+        :meth:`pycsamt.ff.processing.Processing.correct_edi`. The Remove 
+        distortion following Bibby et al. [2005]. Remove static shift from the 
+        apparent resistivity assume the original observed tensor Z is built by
+        a static shift S and an unperturbated 
+        
+             * Z = S * Z0
+     
+        therefore the correct Z will be :
+            
+            * Z0 = S^(-1) * Z
+                
+        :param edi_fn: Path-Like object. Full path to EDI-files. 
+        :type edi_fn: str 
+        
+        :param kind: Type of noise to remove. Can be a static shift effect for 
+            ``ss`` and distorsion for ``dist``. Default is ``ss``. 
+        :type kind: str 
+        
+        :param ss_x: correction factor for x component
+        :type ss_x: float
+    
+        :param ss_y: correction factor for y component
+        :type ss_y: float
+        
+        :param num_freq: number of frequencies to look for distortion from the
+                         highest frequency
+        :type num_freq: int
+
+        :returns: Distortion matrix
+        :rtype: np.ndarray(2, 2, dtype=real)
+    
+        :returns: 
+            - new Z object with static shift removed
+            - Distortion matrix
+            
+        :rtype: pycsamt.core.z.Z
+        
+        .. note:: The factors are in resistivity scale, so the
+                  entries of  the matrix "S" need to be given by their
+                  square-roots!
+                  
+        :Example:
+            >>> from pycsamt.ff.processing import Processing 
+            >>> edipath = '/Users/Desktop/ediout/'
+            >>> Processing.noiseRemoval(edi_fn =edipath)
+            
+        :See also: 
+            
+            - MTpy of Alison.Kirkby@ga.gov.au via https://github.com/MTgeophysics/mtpy
+            
+        """
+        kind =str(kind).lower() 
+        if kind in ('ss', 'staticshift'): kind =='ss'
+        elif kind in ('dt', 'dist', 'distortion'): kind =='dt'
+        else : 
+            raise ValueError(f"Wrong Param `kind`: {kind}. "
+                             "Should be `ss` or `dist`"
+                             )
+        if os.path.isfile(edi_fn): 
+            edi_fn = os.path.dirname (edi_fn) # keep only the path 
+        if not os.path.dirname(edi_fn): 
+            raise ValueError(f'Wrong given EDI path: {edi_fn}')
+            
+        D= None 
+        # show progress bar 
+        if itqdm : 
+            pbar =tqdm.tqdm(total= len(os.listdir(edi_fn)),ascii=True,unit='B',
+                             desc ='WEgeophysics-pycsamt[---> NoiseRemoval]', 
+                             ncols =77)
+        for k, edi in enumerate (os.listdir(edi_fn)): 
+            edifile = os.path.join(edi_fn, edi)
+            with warnings.catch_warnings(): # ignore multiple warnings 
+                warnings.simplefilter('ignore')
+                if kind =='ss': 
+                    new_z = shifting.remove_static_shift(edifile, **kws)
+                elif kind =='dt': 
+                    D, new_z = shifting.remove_distortion (edifile, **kws)
+                    
+            # show the progress bar ;
+            if itqdm :
+                pbar.update(k)
+        # close the progress bar
+        if itqdm :
+            pbar.close()
+    
+        print(' completed' if itqdm else '--- process completed ----')
+        
+        return new_z, D 
+    
+    
 def interp_to_reference_freq(freq_array, rho_array, 
                              reference_freq, plot=False): 
     """
@@ -1811,11 +1949,7 @@ def buildBlock_freqRhoOrPhase (dictRhoOrPhase):
     return data_block 
 
 
-  
-    
-    
-    
-    
+
     
     
     

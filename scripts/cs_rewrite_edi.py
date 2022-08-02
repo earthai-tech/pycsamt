@@ -19,15 +19,15 @@ import os
 from pycsamt.ff.core.edi import Edi 
 
 #---> set edipath 
-path = 'data/edi' 
+path = r'C:\Users\Daniel\Desktop\Data\AMT\E1\edi' # 'data/edi' 
 # path to save edifile # if None , save edi in your current work directory 
-save_path =  None 
+save_path =  r'C:\Users\Daniel\Desktop\Data\AMT\E1\edi_r'# None 
 
 #--> set the type of datasection 
-data_section  ='emap'  #  may be "mt" or "emap"
+data_section  ='mt'# None # 'emap'  #  may be "mt" or "emap"
 
 # add new output edi name
-new_edi_name = None # 'k6'
+new_edi_name = 'r' #None # 'k6'
 # get edilist 
 edilist = [os.path.join(path,edifile) 
            for edifile in os.listdir(path) 

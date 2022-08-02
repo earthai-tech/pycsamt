@@ -19,17 +19,12 @@ import pycsamt.utils.exceptions as MTex
 
 
 #=================================================================
-
 #define uncertainty for differences between time steps
 epsilon = 1e-9
 #magnetic permeability in free space in H/m (=Vs/Am)
 mu0 = 4e-7*math.pi
 
-
 #=================================================================
-
-
-
 
 def centre_point(xarray, yarray):
     """
@@ -65,7 +60,6 @@ def get_period_list(period_min,period_max,periods_per_decade,include_outside_ran
                                 list just inside or just outside the bounds
                                 specified by period_min and period_max
                                 default True
-    
     """
     
     
@@ -76,7 +70,8 @@ def get_period_list(period_min,period_max,periods_per_decade,include_outside_ran
     if log_period_min % 1 > 0:
         # list of periods, around the minimum period, that will be present in specified 
         # periods per decade
-        aligned_logperiods_min = np.linspace(np.floor(log_period_min),np.ceil(log_period_min),periods_per_decade + 1)
+        aligned_logperiods_min = np.linspace(np.floor(log_period_min),
+                                             np.ceil(log_period_min),periods_per_decade + 1)
         lpmin_diff = log_period_min - aligned_logperiods_min
         # index of starting period, smallest value > 0
         if include_outside_range:
@@ -90,7 +85,8 @@ def get_period_list(period_min,period_max,periods_per_decade,include_outside_ran
     if log_period_max % 1 > 0:
         # list of periods, around the maximum period, that will be present in specified 
         # periods per decade
-        aligned_logperiods_max = np.linspace(np.floor(log_period_max),np.ceil(log_period_max),periods_per_decade + 1)
+        aligned_logperiods_max = np.linspace(np.floor(log_period_max),
+                                             np.ceil(log_period_max),periods_per_decade + 1)
         lpmax_diff = log_period_max - aligned_logperiods_max
         # index of starting period, smallest value > 0
         if include_outside_range:
@@ -101,7 +97,8 @@ def get_period_list(period_min,period_max,periods_per_decade,include_outside_ran
     else:
         stop_period = log_period_max        
         
-    return np.logspace(start_period,stop_period,int((stop_period-start_period)*periods_per_decade + 1))
+    return np.logspace(start_period,stop_period,
+                       int((stop_period-start_period)*periods_per_decade + 1))
 
 
 def nearest_index(val,array):

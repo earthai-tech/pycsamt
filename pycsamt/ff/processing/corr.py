@@ -1661,7 +1661,6 @@ class shifting(object):
         print('{0:*^77}'.format('EDI {0} FILE'.format(datatype.upper())))    
    
         for ff, name in list(TAGS.items()):
-            
             if  ff == _filter :
                 print('** {0:<27} {1} {2}'.format(
                     'Filter ','=', _filter.upper()))

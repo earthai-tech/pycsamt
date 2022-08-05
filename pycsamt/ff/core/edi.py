@@ -231,7 +231,12 @@ class Edi_collection :
         if self.ediObjs is None: 
             raise CSex.pyCSAMTError_EDI("None EDI object detected!")
             
- 
+        # OPTIMIZE 
+        self.ediObjs , self.edinames = func.fit_by_ll(self.ediObjs) 
+        
+        # self.ediObjs =list(self.ediObjs) 
+        # self.edinames= list(self.edinames)
+    
         self._logging.info (
             'Collectiong edilfiles from <%s>'% self.__class__.__name__)
         try:
@@ -242,7 +247,7 @@ class Edi_collection :
             rho_err, phs , phs_err =[[] for ii in range (11)]
             
         #--> set gereference attributes 
-        for  edi_obj in self.ediObjs : 
+        for  edi_obj in self.ediObjs :
             sta.append(edi_obj.Head.dataid ) 
             if edi_obj.Head.long is None : 
                 edi_obj.Head.long= edi_obj.DefineMeasurement.reflong 
@@ -266,7 +271,11 @@ class Edi_collection :
                                        format(edi_obj.Head.dataid))
             elev.append(edi_obj.Head.elev)
             freq.append(edi_obj.Z.freq) 
-            
+        #-----------------------------    
+        # correct_lon_lat 
+        lon,*_ = func.scalePosition(lon)
+        lat,*_ = func.scalePosition(lat)
+        #------------------------------
         # ---> get impednaces , phase tensor and
         # resistivities values form ediobject
         self._logging.debug('Setting impedances tensor , phases tensor and '
@@ -282,10 +291,9 @@ class Edi_collection :
         phs_err= [edi_obj.Z.phase_err for edi_obj in self.ediObjs]
         
         # Create the station ids 
-        self.id = ['S{0:02}'.format(ii) for ii in range(len(self.ediObjs))]
-        #  get the edinames for plot purposes. Name can replace the ids 
-        self.edinames = [os.path.basename(obj.edifile) for obj in self.ediObjs]
-        
+        self.id = func.make_ids(self.ediObjs, prefix='S')
+        #self.id = ['S{0:03}'.format(ii) for ii in range(len(self.ediObjs))]
+
         self.longitude, self.latitude, self.elevation = lon , lat, elev
         
         # get frequency array from the first value of edifiles.
@@ -399,7 +407,194 @@ class Edi_collection :
     def phs_err_yy (self): 
         return {stn :phs_err[: , 1, 1] 
                 for stn, phs_err in self._phs_err.items()}
-    ##################################################
+   
+    
+    def rewrite_edis (self, ediObjs=None,  by = 'name' , prefix = None, 
+                      dataid =None, savepath = None, how='py', 
+                      correct_ll=True, make_coords =False, reflong=None, 
+                      reflat=None, sep ='1km', edi_prefix =None, **kws): 
+        
+        """ Rewrite Edis. 
+        
+        Can rename the dataid,  customize sites and correct the positioning
+        latitudes and longitudes. 
+        
+        Parameters 
+        ------------
+  
+        ediObjs: list 
+            Collection of edi object from pycsamt.ff.core.edi.Edi 
+       
+        dataid: list 
+            list of ids to  rename the existing EDI-dataid from  
+            :class:`Head.dataid`. If given, it should match the length of 
+            the collections of `ediObjs`. A ValueError will occurs if the 
+            length of ids provided is out of the range of the number of EDis
+            objects 
+
+        by: str 
+            Rename according to the inner module Id. Can be ``name``, ``id``, 
+            ``number``. Default is ``name``. If :attr:`~.Edi_collection.survey_name`
+            is given, the whole survey name should be used. An other argument 
+            is ``ix`` out of number formating. 
+            
+        prefix: str
+            Prefix the number of the site. It could be the abbreviation   
+            of the survey area. 
+
+        correct_ll: bool,
+            Write the scaled positions( longitude and latitude). Default is
+            ``True``. 
+            
+        make_coords: bool 
+            Usefful to hide the real coordinates of the sites by generating 
+            a 'fake' coordinates for a specific purposes. When setting to ``True``
+            be sure to provide the `reflong` and `reflat` values otherwise and 
+            error will occurs. 
+            
+        reflong: float or string 
+            Reference longitude  in degree decimal or in DD:MM:SS for the  
+            site considered as the origin of the lamdmark.
+            
+        reflat: float or string 
+            Reference latitude in degree decimal or in DD:MM:SS for the reference  
+            site considered as the landmark origin.
+            
+         sep: float or str 
+             Distance of seperation between different sites in meters. If the  
+             value is given as a string type, except the ``km``, it should be 
+             considered as a ``m`` value. Only meters and kilometers are 
+             accepables. Default value of seperation between the site is ``1km``. 
+             
+        savepath: str 
+            Full path of the save directory. If not given, EDIs  should be 
+            outputed in the created directory. 
+    
+        how: str 
+            The way to index the stations. Default is the Python indexing
+            i.e. the counting starts by 0. Any other value will start counting 
+            the site from 1.
+            
+        kws: dict 
+            Additionnal keyword arguments from `~Edi.write_edifile` and 
+            :func:`pycsamt.utils.func_utils.make_ll_coordinates`. 
+            
+        Examples
+        ---------
+        >>> from pycsamt.ff.core.edi import Edi_Collection
+        >>> edipath = r'/Users/Daniel/Desktop/edi'
+        >>> savepath =  r'/Users/Daniel/Desktop/ediout'
+        >>> cObjs = Edi_collection (edipath)
+        >>> cObjs.rewrite_edis(by='id', new_edifilename ='b1',
+        ...                       savepath =savepath)
+        
+        """
+        def replace_reflatlon (  olist , nval, kind ='reflat'):
+            """ Replace Definemeaseurement Reflat and Reflong by the interpolated
+            values.
+            
+            :param olist: Old list compoing the read EDI measurement infos.
+            :type olist: list 
+            :param nval: New reflat or reflong list. Mostly is the DD:MM:SS 
+                value interpolated. 
+            :param kind: Type of measurement to write. 
+            :type kind:str 
+            
+            :return: List of old element replaced. 
+            :rtype: list 
+            """
+            try : 
+                for ii, comp in enumerate (olist):
+                    if comp.strip().find(kind)>=0: 
+                        olist[ii]= f' {kind}={nval}\n'
+                        break 
+            except:
+                pass
+            return olist 
+                    
+                    
+        regex = re.compile('\d+', re.IGNORECASE)
+        by = str(by).lower() 
+        if by.find('survey')>=0 :
+            by ='name'
+        
+        prefix = str(prefix) 
+        
+        if ediObjs is not None:
+           self.ediObjs = ediObjs
+           self.id = func.make_ids(self.ediObjs, prefix='S', how= how )
+           
+        if how !='py': 
+            self.id = func.make_ids(self.ediObjs, prefix='S',
+                                    cmode =None)  
+        if dataid is None: 
+            if prefix !='None' : 
+                dataid = list(map(lambda s: s.replace('S', prefix), self.id))
+                
+            elif by =='name': 
+                # get the first name of dataId of the EDI ediObjs  and filled
+                # the rename dataId. remove the trail'_'  
+                name = self.survey_name or  regex.sub(
+                    '', self.ediObjs[0].Head.dataid).replace('_', '') 
+                # remove prefix )'S' and keep only the digit 
+                dataid = list(map(lambda n: name + n, regex.findall(
+                    ''.join(self.id)) ))
+                
+            elif by.find('num')>=0: 
+               
+               dataid = regex.findall(''.join(self.id))  
+               
+            elif by =='id': 
+                dataid = self.id 
+                
+            elif by =='ix': 
+                dataid = list(map(
+                    lambda x: str(int(x)), regex.findall(''.join(self.id))))  
+            else :
+                dataid = list(map(lambda obj: obj.Head.dataid, self.ediObjs))
+
+        elif dataid is not None: 
+            if not np.iterable(dataid): 
+                raise ValueError('DataId parameter should be a iterable '
+                                 f'object, not {type(dataid).__name__!r}')
+            if len(dataid) != len(self.ediObjs): 
+                raise ValueError (
+                    'DataId length must bave the same length of the number'
+                    ' of collected EDIs({0}). But {1} {2} given.'.format(
+                    len(self.ediObjs), len(dataid),
+                    f"{'is' if len(dataid)<=1 else 'are'}"))
+       
+    
+        if make_coords: 
+            if (reflong or reflat) is None: 
+                raise ValueError('Reflong and reflat params must not be None!')
+            self.longitude, self.latitude = func.make_ll_coordinates(
+               reflong = reflong, reflat= reflat, nsites= len(self.ediObjs),
+               sep = sep , **kws) 
+        # clean the old main Edi section info and 
+        # and get the new values
+        if correct_ll or make_coords:
+            londms,*_ = func.scalePosition(self.longitude, todms=True)
+            latdms,*_ = func.scalePosition(self.latitude, todms=True)
+  
+        for k, (obj, did) in enumerate(zip(self.ediObjs, dataid)): 
+            obj.Head.edi_header = None  
+            obj.Head.dataid = did 
+            
+            if correct_ll or make_coords:
+                obj.Head.long = float(self.longitude[k])
+                obj.Head.lat = float(self.latitude[k])
+                oc = obj.DefineMeasurement.define_measurement
+                oc= replace_reflatlon(oc, nval= latdms[k])
+                oc= replace_reflatlon(oc, nval= londms[k], kind='reflong')
+                obj.DefineMeasurement.define_measurement = oc 
+  
+            obj.MTEMAP.mtemapsectinfo =None 
+            obj.MTEMAP.sectid= did 
+            obj.write_edifile(savepath = savepath ,
+                              new_edifilename = edi_prefix,  **kws)
+            
+        
 class Edi : 
     """
     Ediclass  is for especialy dedicated to .edi files, mainly reading 
@@ -509,16 +704,18 @@ class Edi :
                 self.read_edi ()
             
     #XXXBUG fixed attribute head(long rather than "lon")
+    # sometimes the lon lat are not in the Head infos. It can be
+    # recovered in DefineMeasurement infos. 
     @property 
     def lon(self): 
-        return self.Head.long
+        return self.Head.long or self.DefineMeasurement.reflong 
     @lon.setter 
     def lon (self, longitude): 
-        self.Head.long =longitude 
+        self.Head.long =longitude  
     
     @property 
     def lat(self): 
-        return self.Head.lat 
+        return self.Head.lat or self.DefineMeasurement.reflat 
     @lat.setter 
     def lat (self, latitude): 
         self.Head.lat=latitude 
@@ -770,7 +967,7 @@ class Edi :
         or from existing file. Can write also EMAP data are filled attribute 
         of EDI.
 
-        :param edifile: new edifile name .If None , will write edi using 
+        :new_edifilename: new edifile name .If None , will write edi using 
                         station_name plus type of survey (MT of EMAP) plus 
                         year of writing as< S00_emap.2021.edi> or 
                         <S00_mt.2021.edi>
@@ -820,9 +1017,11 @@ class Edi :
                           
         f=0
         verbose = kwargs.pop('verbose', None)
+   
         if verbose is not None: 
             self.verbose = verbose 
         if self.verbose is None: self.verbose =0 
+        
         if not hasattr(self, 'savepath'):
             self.savepath =None 
             
@@ -852,7 +1051,6 @@ class Edi :
             self.read_edi()
 
         # write info, definemeasurement and mtsection or emapsection 
-        
         edi_header_infolines = self.Head.write_head_info()
         edi_info_infolines =self.Info.write_edi_info()
         edi_definemeasurement_infolines =\
@@ -1095,37 +1293,12 @@ class Edi :
         with open (new_edifilename , 'w+', encoding = 'utf8') as fw : 
             fw.writelines(write_edilines)
             
-        if self.savepath  is None : 
-            # create a folder in your current work directory
-            self.savepath = os.path.join(os.getcwd(), '_outputEDI_')
-            
-        if self.savepath is not None: 
-            try :
-                if not os.path.isdir(self.savepath):
-                    os.mkdir(self.savepath)
-                    self._logging.info (
-                        'New path <%s> created to save edifile'% self.savepath)    
-            except : 
-                if self.verbose > 0:
-                    warnings.warn(
-                        f"It seems the path {self.savepath!r} already exists!")
-                
-                new_path = 'new_edi.{0}.{1}'.format(
-                    'ff', datetime.datetime.now().month)
-                
-                self._logging.info (
-                    'Create another path <%s> to save edifiles'% os.path.join(
-                        os.path.realpath('.'), new_path))
-                
-                os.mkdir(new_path)    
-                self.savepath =os.path.join(
-                    os.path.realpath ('.'), new_path )
+        self.savepath = func.cpath(self.savepath, '_outputEDI_')
 
-            try : 
-                if os.path.isdir(self.savepath) : 
-                    shutil.move(os.path.join(os.getcwd(),new_edifilename), 
-                                self.savepath )
-            except : pass 
+        try : 
+            shutil.move(new_edifilename, self.savepath )
+        except : 
+            pass 
 
         write_edilines=[]
         
@@ -1537,12 +1710,14 @@ class Head (object):
         return self.Location.latitude 
     @lat.setter 
     def lat (self, lat):
-        try :float(lat)
+        try :
+            float(lat)
         except :
                 self.Location.latitude =gis.convert_position_str2float(lat) 
                 self.logging.info (
                     'Converted string "dms" input latitude  to decimal degree.')
-        else : self.Location.latitude =float(lat)
+        else : 
+            self.Location.latitude =float(lat)
 
 
     @property 
@@ -1654,8 +1829,7 @@ class Head (object):
                             item_to_clean=item.lower().split('=')[0])[0] 
                         if keyi=='lon': keyi= 'long'
                         if keyi =='coordsys' :keyi =='coordinate_system'
-                        #XXXTODO new task to debugg
-                        # get the value otherwise set to None
+
                         try :
                             value = func._strip_item(
                                 item_to_clean=item.split('=')[1])[0]  
@@ -1664,7 +1838,8 @@ class Head (object):
                         new_header.append(''.join([keyi.upper(), '=', value]))
 
         self.edi_header = new_header
-
+        
+        return self 
     
     def write_head_info (self , head_list_infos =None): 
         """
@@ -1692,10 +1867,10 @@ class Head (object):
         self.logging.info ('Writing Edifile info .')
 
         write_header =['>HEAD\n']
-        if head_list_infos is not None : self.edi_header = head_list_infos 
+        if head_list_infos is not None : 
+            self.edi_header = head_list_infos 
         
         if  self.edi_header is None:
-
             for key in self.head_keys : 
                 keyvalue =getattr(self, key)
                 if keyvalue == None :  continue#keyvalue=''
@@ -1892,9 +2067,10 @@ class Info :
                 listinfo.append(''.join([' {0}'.format(
                     item.upper()), '=', infovalue]))
         
-
         self.ediinfo = listinfo
-
+        
+        return self 
+    
             
     def write_edi_info (self, edi_info_list =None ): 
         """
@@ -2286,6 +2462,8 @@ class DefineMeasurement:
         
    
         self.define_measurement = xmeas_list
+        
+        return self 
 
     def write_define_measurement(self, define_measurement_list = None): 
         """
@@ -2342,10 +2520,10 @@ class DefineMeasurement:
                 
                 self.logging.warn(
                     'Please check your definemeasurement '
-                    'list provided. Can not be write.')
+                    'list provided. Can not be written.')
                 raise CSex.pyCSAMTError_EDI(
                     "Can not write the items on the definemeasurement "
-                     "list provided. It seems no right parser if found.")
+                     "list provided. It seems no right parser is found.")
             
             for ii, itemkey in enumerate(self.define_measurement):
                 if not isinstance(itemkey, dict) :
@@ -2401,13 +2579,11 @@ class DefineMeasurement:
                         write_dfmeasurements.append('>emeas'.upper())
                         for eattr in Emeasurement.emeasurementkey :
                             try :tempattr =getattr(self, 'meas_{0}'.format(meastype))
-                            except :
-                                AttributeError 
-                                pass 
+                            except :pass 
                             else : 
                                 
                                 valuemeasxx = tempattr.__dict__["{0}".format(eattr)]
-
+    
                                 if valuemeasxx ==None : valuemeasxx=''
                                 write_dfmeasurements.append(''.join(
                                     ['  {0}'.format(eattr.upper()), '=',
@@ -2428,6 +2604,7 @@ class DefineMeasurement:
                                     ['  {0}'.format(hattr.upper()),
                                      '=', '{0:>10}'.format(str(valuemeasyy).upper())]))
                         write_dfmeasurements.append('\n')
+                        
         write_dfmeasurements.append('\n')
         
         return write_dfmeasurements
@@ -2753,6 +2930,9 @@ class MTEMAP (object):
         
         self.mtemapsectinfo =mtemapsectionlist
         
+        return self 
+    
+    
     def write_mtemap_section (self, mt_or_emap_section_list =None ,
                               nfreq=None):
         """

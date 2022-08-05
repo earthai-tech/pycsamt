@@ -2778,12 +2778,10 @@ class Plot2d (object):
         delineate_phase_curve = kws.pop('delineate_phase', None)
         contourlines =kws.pop('contour_lines_style', '-')
         contourcolors =kws.pop('contour_lines_color', 'white')
-        sort_edi_along = kws.pop('sort_edi_along', None)
-        
+
         #--create obj ----
         csamt_obj =CSAMT(data_fn=fn , profile_fn=profile_fn, 
-                         component =self.plot_comp, 
-                         sort_edi_along = sort_edi_along )
+                         component =self.plot_comp)
         csamt_phase_obj =csamt_obj.phase 
         csamt_res_obj =csamt_obj.resistivity 
         csamt_freq_obj =csamt_obj.freq
@@ -2798,15 +2796,13 @@ class Plot2d (object):
             except : 
                 pass
          
-        #######################################################################
-        ### FIXME IGNORE THE FACT THAT ARRAYS SHOULD HAVE ALL THE SAME LENGTH
-        # AND PLOT ANYWAY
-        csamt_RES_obj = func.resize_resphase_values(csamt_res_obj,
-                                               c =csamt_freq_obj )
+        ### FIXME: Ignore the fact that arrays should have all the same 
+        # length and plot anyway. 
+        csamt_RES_obj = func.resize_resphase_values(
+            csamt_res_obj,c =csamt_freq_obj )
         csamt_PHS_obj = func.resize_resphase_values(csamt_phase_obj,
                                                c = csamt_freq_obj)
-        #######################################################################
-        #convert Res and Phase values on logarithme scale .
+        #convert Res and Phase values onto logarithm scale .
         csamt_RES_obj  = np.log10( csamt_RES_obj)
         csamt_freq_obj = np.log10 (csamt_freq_obj ) 
         
@@ -2902,11 +2898,7 @@ class Plot2d (object):
                                                   )
                     
         if plot_style.lower() =='imshow': 
-            # xres_matrix , yres_matrix =np.meshgrid(csamt_stnDis_obj,
-            #                                        csamt_freq_obj) 
-            # xphase_matrix , yphase_matrix = np.meshgrid(csamt_stnDis_obj,
-            #                                             csamt_freq_obj)
-            
+      
             #---res map 
             app_rho_axe = axe_res.imshow (csamt_RES_obj.T,
                                           # vmax = csamt_RES_obj.max(), 

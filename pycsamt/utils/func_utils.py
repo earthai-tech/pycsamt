@@ -4,46 +4,52 @@
 #       Licence: LGPL
 
 """
-
 .. _module-Func-utils::`pycsamt.utils.func_utils`  
     :synopsis: helpers functions 
-        * check_dimensionality
-        * subprocess_module_installation
-        * cpath
-        * smart_format
-        * make_introspection
-        * show_quick_edi_stats
-        * sPath
-        * averageData 
-        * concat_array_from_list 
-        * sort_array_data 
-        * transfer_array_ (deprecated)
-        * interpol_scipy 
-        * _set_depth_to_coeff 
-        * broke_array_to_ 
-        *  _OlDFUNCNOUSEsearch_fill_data (deprecated)
-        * _search_ToFill_Data 
-        * straighten_out_list  
-        * take_firstValue_offDepth 
-        * dump_comma 
-        * build_wellData 
-        * compute_azimuth 
-        * build_geochemistry_sample 
-        * _nonelist_checker 
-        * _order_well 
-        * intell_index 
-        * _nonevalue_checker 
-        * _clean_space 
-        *_cross_eraser 
-        * _remove_str_word 
-        * stn_check_split_type
-        * minimum_parser_to_write_edi
-        * round_dipole_length
-        * keepmin  
-        * get_closest_value
-        * geo_length_checker
-        * fr_en_parser
-        * convert_csvdata_from_fr_to_en
+    
+    * check_dimensionality
+    * subprocess_module_installation
+    * cpath
+    * smart_format
+    * make_introspection
+    * show_quick_edi_stats
+    * sPath
+    * averageData 
+    * concat_array_from_list 
+    * sort_array_data 
+    * transfer_array_ (deprecated)
+    * interpol_scipy 
+    * _set_depth_to_coeff 
+    * broke_array_to_ 
+    *  _OlDFUNCNOUSEsearch_fill_data (deprecated)
+    * _search_ToFill_Data 
+    * straighten_out_list  
+    * take_firstValue_offDepth 
+    * dump_comma 
+    * build_wellData 
+    * compute_azimuth 
+    * build_geochemistry_sample 
+    * _nonelist_checker 
+    * _order_well 
+    * intell_index 
+    * _nonevalue_checker 
+    * _clean_space 
+    *_cross_eraser 
+    * _remove_str_word 
+    * stn_check_split_type
+    * minimum_parser_to_write_edi
+    * round_dipole_length
+    * keepmin  
+    * get_closest_value
+    * geo_length_checker
+    * fr_en_parser
+    * convert_csvdata_from_fr_to_en
+    * make_ids
+    * make_ll_coordinates 
+    * resize_resphase_values 
+    * _assert_all_types 
+    * scalePosition 
+    *
 """
 
 import os 
@@ -54,6 +60,7 @@ import warnings
 import inspect
 import csv
 import numpy as np 
+import pandas as pd 
 import matplotlib.pyplot as plt
 from copy import deepcopy
 
@@ -82,6 +89,7 @@ try:
             _logger.warning(_msg)
             
     import scipy.interpolate as spi
+    from scipy.optimize import curve_fit
 
     interp_import = True
  # pragma: no cover
@@ -91,8 +99,378 @@ except ImportError:
     _logger.warning(_msg0)
     
     interp_import = False
+
+
     
- 
+    
+      
+def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
+                        sep='1km', order= '+', todms=False): 
+    """ Generate multiples stations coordinates (longitudes, latitudes)
+    from a reference station/sites.
+    
+    One degree of latitude equals approximately 364,000 feet (69 miles), 
+    one minute equals 6,068 feet (1.15 miles), and one-second equals 101 feet.
+    One-degree of longitude equals 288,200 feet (54.6 miles), one minute equals
+    4,800 feet (0.91 mile), and one second equals 80 feet. Illustration showing
+    longitude convergence. (1 feet ~=0.3048 meter)
+    
+    Parameters 
+    ----------
+    reflong: float or string 
+        Reference longitude  in degree decimal or in DD:MM:SS for the first 
+        site considered as the origin of the lamdmark.
+        
+    reflat: float or string 
+        Reference latitude in degree decimal or in DD:MM:SS for the reference  
+        site considered as the landmark origin.
+        
+    nsites: int or float 
+        Number of site to generate the coordinates onto. 
+        
+    r: float or int 
+        The rotate angle in degrees. Rotate the angle feature the direction
+        of the projection line. Default value is ``45`` degrees. 
+        
+    sep: float or str 
+        Distance of seperation between different sites in meters. If the value 
+        is given as string type, except the ``km``, it should be considered as
+        a ``m`` value. Only meters and kilometers are accepables.
+        
+    order: str 
+        Direction of the projection line. By default the projected line is 
+        in ascending order i.e. from SW to NE with angle `r` set to ``45``
+        degrees. Could be ``-`` for descending order. Any other value should 
+        be in ascending order. 
+    
+    todms: bool 
+        Convert the degree decimal values into the DD:MM:SS. Default is ``False``. 
+        
+        
+    Returns 
+    -------
+        Tuple of  generated projected coordinates longitudes and latitudes
+        either in degree decimals or DD:MM:SS
+        
+        
+    Notes 
+    ------
+    The distances vary. A degree, minute, or second of latitude remains 
+    fairly constant from the equator to the poles; however a degree, minute,
+    or second of longitude can vary greatly as one approaches the poles
+    and the meridians converge.
+        
+    References 
+    ----------
+    https://math.answers.com/Q/How_do_you_convert_degrees_to_meters
+    
+    Examples 
+    --------
+    >>> from pycsamt.utils.func_utils import make_ll_coordinates 
+    >>> rlons, rlats = make_ll_coordinates('110:29:09.00', '26:03:05.00', 
+    ...                                     nsites = 7, todms=True)
+    >>> rlons
+    ... array(['110:29:09.00', '110:29:35.77', '110:30:02.54', '110:30:29.30',
+           '110:30:56.07', '110:31:22.84', '110:31:49.61'], dtype='<U12')
+    >>> rlats 
+    ... array(['26:03:05.00', '26:03:38.81', '26:04:12.62', '26:04:46.43',
+           '26:05:20.23', '26:05:54.04', '26:06:27.85'], dtype='<U11')
+    
+    """ 
+    def assert_ll(coord):
+        """ Assert coordinate when the type of the value is string."""
+        try: coord= float(coord)
+        except ValueError: 
+            if ':' not in coord: 
+                raise ValueError(f'Could not convert value to float: {coord!r}')
+            else : 
+                coord = gis.convert_position_str2float(coord)
+        return coord
+    
+    nsites = int(_assert_all_types(nsites,int, float)) 
+
+    sep=str(sep).lower() 
+    if sep.find('km')>=0: # convert to meter 
+        sep = float(sep.replace('km', '')) *1e3 
+    elif sep.find('m')>=0: sep = float(sep.replace('m', '')) 
+    sep = float(sep) # for consistency 
+    
+    if order in ('descending', 'down', '-'): order = '-'
+    else: order ='+'
+    # compute length of line using the reflong and reflat
+    # the origin of the landmark is x0, y0= reflong, reflat
+    x0= assert_ll(reflong) ; y0= assert_ll(reflat) 
+    xinf = x0  + (np.sin(np.deg2rad(r)) * sep * nsites) / (364e3 *.3048) 
+    yinf = y0 + np.cos(np.deg2rad(r)) * sep * nsites /(2882e2 *.3048)
+    
+    reflon_ar = np.linspace(x0 , xinf, nsites ) 
+    reflat_ar = np.linspace(y0, yinf, nsites)
+    #--------------------------------------------------------------------------
+    # r0 = np.sqrt(((x0-xinf)*364e3 *.3048)**2 + ((y0 -yinf)*2882e2 *.3048)**2)
+    # print('recover distance = ', r0/nsites )
+    #--------------------------------------------------------------------------
+    if todms:
+        reflat_ar = np.array(list(
+            map(lambda l: gis.convert_position_float2str(float(l)), reflat_ar)))
+        reflon_ar = np.array(list(
+            map(lambda l: gis.convert_position_float2str(float(l)), reflon_ar)))
+    
+    return (reflon_ar , reflat_ar ) if order =='+' else (
+        reflon_ar[::-1] , reflat_ar[::-1] )
+    
+
+
+def build_array_from_objattr(obj, attr): 
+    """ Quick build array of object attributes value from collections object.
+    
+    :param obj: Iterable collections objects. 
+    :type obj: list, tuple or np.ndarray 
+    
+    :param attr: attribute value to retrieve from each collection object  
+    :type attr: str 
+    
+    :Example: 
+        >>> from pycsamt.ff.core.edi import Edi_Collection
+        >>> from pycsamt.utils.func_utils import 
+        >>> edipath = r'/Users/Daniel/Desktop/ediout'
+        >>> cObjs = Edi_collection (edipath)
+        >>> # retrieve the latitude data and make array 
+        >>> qar = array_from_obj(cobjb1.ediObjs, 'lat')
+        ... array([0.        , 0.        , 0.00027778, 0.00027778, 0.00055556,
+               0.00083333, 0.00083333])
+    
+    """
+    return np.array(list(map(lambda r: getattr(r, attr), obj )))
+
+
+def _assert_all_types (
+        obj: object , 
+        *expected_objtype: type 
+ ) -> object: 
+    """ Quick assertion of object type. Raise an `TypeError` if 
+    wrong type is given."""
+    # if np.issubdtype(a1.dtype, np.integer): 
+    if not isinstance( obj, expected_objtype): 
+        raise TypeError (
+            f'Expected {smart_format(tuple (o.__name__ for o in expected_objtype))}'
+            f' type{"s" if len(expected_objtype)>1 else ""} '
+            f'but `{type(obj).__name__}` is given.')
+            
+    return obj 
+
+def scalePosition(ydata , xdata= None, func = None ,c_order= 0,
+        show: bool =False, todms=False,
+        **kws): 
+    """ Correct data location or position and return new corrected location
+    or data. 
+    
+    Parameters 
+    ----------
+    ydata: array_like, series or dataframe
+        The dependent data, a length M array - nominally ``f(xdata, ...)``.
+        
+    xdata: array_like or object
+        The independent variable where the data is measured. Should usually 
+        be an M-length sequence or an (k,M)-shaped array for functions with
+        k predictors, but can actually be any object. If ``None``, `xdata` is 
+        generated by default using the length of the given `ydata`.
+        
+    func: callable 
+        The model function, ``f(x, ...)``. It must take the independent variable 
+        as the first argument and the parameters to fit as separate remaining
+        arguments. The default `func` is ``linear`` function i.e  for ``f(x)= ax +b``. 
+        where `a` is slope and `b` is the intercept value. Setting your own 
+        function for better fitting is recommended. 
+        
+    c_order: int or str
+        The index or the column name if ``ydata`` is given as a dataframe to 
+        select the right column for scaling.
+    todms: bool 
+        Convert the decimal long/lat to DD:MM:SS. Default is ``False``. 
+        
+    show: bool 
+        Quick visualization of data distribution.
+
+    kws: dict 
+        Additional keyword argument from  `scipy.optimize_curvefit` parameters. 
+        Refer to `scipy.optimize.curve_fit`_.  
+        
+    Returns 
+    --------
+    - ydata - array -like - Data scaled 
+    - popt - array-like Optimal values for the parameters so that the sum of 
+        the squared residuals of ``f(xdata, *popt) - ydata`` is minimized.
+    - pcov - array like The estimated covariance of popt. The diagonals provide
+        the variance of the parameter estimate. To compute one standard deviation 
+        errors on the parameters use ``perr = np.sqrt(np.diag(pcov))``. How the
+        sigma parameter affects the estimated covariance depends on absolute_sigma 
+        argument, as described above. If the Jacobian matrix at the solution
+        doesn’t have a full rank, then ‘lm’ method returns a matrix filled with
+        np.inf, on the other hand 'trf' and 'dogbox' methods use Moore-Penrose
+        pseudoinverse to compute the covariance matrix.
+        
+    Examples
+    --------
+    >>> from pycsamt.utils.func_utils  import scalePosition 
+    >>> from pycsamt.ff.core.edi import Edi_Collection 
+    >>> edipath = r'/Users/Daniel/Desktop/ediout'
+    >>> cObjs = Edi_collection (edipath)
+    >>> # correcting northing coordinates from latitude data 
+    >>> # corrected latitude coordinates using the default x.
+    >>> lat_corrected, *_= scalePosition(ydata =cObjs.lat[:12])
+    >>> cObjs.lat[:12]
+    ... array([0.        , 0.        , 0.00027778, 0.00027778, 0.00055556,
+    ...       0.00083333, 0.00083333, 0.00111111, 0.00138889, 0.00138889,
+    ...       0.00166667, 0.00194444])
+    >>> lat_corrected
+    ... array([-1.31766381e-04,  4.79150482e-05,  2.27596478e-04,  4.07277908e-04,
+    ...        5.86959337e-04,  7.66640767e-04,  9.46322196e-04,  1.12600363e-03,
+    ...        1.30568506e-03,  1.48536649e-03,  1.66504792e-03,  1.84472934e-03])
+    >>> lat_corrected_dms, *_= scalePosition(ydata =cObjs.lat[:12], todms=True)
+    ... array(['0:00:00.47', '0:00:00.17', '0:00:00.82', '0:00:01.47',
+    ...       '0:00:02.11', '0:00:02.76', '0:00:03.41', '0:00:04.05',
+    ...       '0:00:04.70', '0:00:05.35', '0:00:05.99', '0:00:06.64'],
+          dtype='<U10')
+    """
+    
+    def linfunc (x, a, b): 
+        """ Set the simple linear function"""
+        return a * x + b 
+        
+    if str(func).lower() in ('none' , 'linear'): 
+        func = linfunc 
+    elif not hasattr(func, '__call__') or not inspect.isfunction (func): 
+        raise TypeError(
+            f'`func` argument is a callable not {type(func).__name__!r}')
+        
+    ydata = _assert_all_types(ydata, list, tuple, np.ndarray,
+                              pd.Series, pd.DataFrame  )
+    c_order = _assert_all_types(c_order, int, float, str)
+    try : c_order = int(c_order) 
+    except: pass 
+
+    if isinstance(ydata, pd.DataFrame): 
+        if c_order ==0: 
+            warnings.warn("The first column of the data should be considered"
+                          " as the `y` target.")
+        if c_order is None: 
+            raise TypeError('Dataframe is given. The `c_order` argument should '
+                            'be defined for column selection. Use column name'
+                            ' instead')
+        if isinstance(c_order, str): 
+            # check whether the value is on the column name
+            if c_order.lower() not in list(map( 
+                    lambda x :x.lower(), ydata.columns)): 
+                raise ValueError (
+                    f'c_order {c_order!r} not found in {list(ydata.columns)}'
+                    ' Use the index instead.')
+                # if c_order exists find the index and get the 
+                # right column name 
+            ix_c = list(map( lambda x :x.lower(), ydata.columns)
+                        ).index(c_order.lower())
+            ydata = ydata.iloc [:, ix_c] # series 
+        elif isinstance (c_order, (int, float)): 
+            c_order =int(c_order) 
+            if c_order >= len(ydata.columns): 
+                raise ValueError(
+                    f"`c_order`'{c_order}' should be less than the number of " 
+                    f"given columns '{len(ydata.columns)}'. Use column name instead.")
+            ydata= ydata.iloc[:, c_order]
+            
+    ydata = np.array(ydata)
+    if xdata is None: 
+        xdata = np.linspace(0, 4, len(ydata))
+    if len(xdata) != len(ydata): 
+        raise ValueError(" `x` and `y` arrays must have the same length."
+                        "'{len(xdata)}' and '{len(ydata)}' are given.")
+        
+    popt, pcov = curve_fit(func, xdata, ydata, **kws)
+    ydata_new = func(xdata, *popt)
+    
+    if show:
+        plt.plot(xdata, ydata, 'b-', label='data')
+        plt.plot(xdata, func(xdata, *popt), 'r-',
+             label='fit: a=%5.3f, b=%5.3f' % tuple(popt))
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.legend()
+        plt.show()
+        
+    if todms: 
+        ydata_new= np.array(list(map(lambda l: gis.convert_position_float2str(
+            float(l)), ydata_new)))
+        
+    return ydata_new, popt, pcov 
+
+
+def make_ids(ediObjs, prefix =None, how ='py'): 
+    """ Generate auto Id according to the number of given sites. 
+    
+    :param ediObjs: list of EDI object , composed of a collection of 
+        pycsamt.ff.core.edi.Edi object
+    :type ediObjs: pycsamt.ff.core.edi.Edi_Collection 
+    
+    :param prefix: string value to add as prefix of given id. Prefix can be 
+        the site name.
+    :type prefix: str 
+    
+    :param how: Mode to index the station. Default is 'Python indexing' i.e. 
+        the counting starts by 0. Any other mode will start the counting by 1.
+    :type cmode: str 
+    
+    :return: ID number formated 
+    :rtype: list 
+    
+    :Example: 
+        >>> from pycsamt.utils.func_utils import make_ids 
+        >>> values = ['edi1', 'edi2', 'edi3'] 
+        >>> make_ids (values, 'ix')
+        ... ['ix0', 'ix1', 'ix2']
+        
+    """ 
+    fm='{:0' +'{}'.format(int(np.log10(len(ediObjs))) + 1) +'}'
+    id_ =[str(prefix) + fm.format(i if how=='py'else i+ 1 ) if prefix is not 
+          None else fm.format(i if how=='py'else i+ 1) 
+          for i in range(len(ediObjs))] 
+    return id_
+
+def fit_by_ll(ediObjs): 
+    """ Fit edi by location reorganize edi according to the site longitude and 
+    latitude. 
+    
+    Edis data are mostly reading an alphabetically order, so the reoganization  
+    according to the location(longitude and latitude) is usefull for distance 
+    betwen site computing with a right position at each site.  
+    
+    :param ediObjs: list of EDI object , composed of a collection of 
+        pycsamt.ff.core.edi.Edi object 
+    :type ediObjs: pycsamt.ff.core.edi.Edi_Collection 
+    
+    :returns: array splitted into ediObjs and Edifiles basenames 
+    :rtyple: tuple 
+    
+    :Example: 
+        >>> import numpy as np 
+        >>> from pycsamt.ff.core.edi import Edi_Collection 
+        >>> from pycsamt.utils.func_utils import fit_by_ll
+        >>> edipath ='data/edi_ss' 
+        >>> cediObjs = Edi_Collection (edipath) 
+        >>> ediObjs = np.random.permutation(cediObjs.ediObjs) # shuffle the  
+        ... # the collection of ediObjs 
+        >>> ediObjs, ediObjbname = fit_by_ll(ediObjs) 
+        ...
+    
+    """
+    #get the ediObjs+ names in ndarray(len(ediObjs), 2) 
+    objnames = np.c_[ediObjs, np.array(
+        list(map(lambda obj: os.path.basename(obj.edifile), ediObjs)))]
+    lataddlon = np.array (list(map(lambda obj: obj.lat + obj.lon , ediObjs)))
+    sort_ix = np.argsort(lataddlon) 
+    objnames = objnames[sort_ix ] 
+    #ediObjs , objbnames = np.hsplit(objnames, 2) 
+    return objnames[:, 0], objnames[:, -1]
+
+
 def get_interpolate_freqs (ediObjs, to_log10 =False): 
     """ From EDI objects, collected thefrequencies Min, Max and find the 
     frequency for interpolating. 
@@ -298,6 +676,7 @@ def make_introspection(Obj , subObj):
             
 def cpath (savepath=None , dpath= None): 
     """ Control the existing path and create one of it does not exist.
+    
     :param savepath: Pathlike obj, str 
     :param dpath: str, default pathlike obj
     """
@@ -311,7 +690,8 @@ def cpath (savepath=None , dpath= None):
         try :
             if not os.path.isdir(savepath):
                 os.mkdir(savepath)#  mode =0o666)
-        except : pass 
+        except : pass
+    
     return savepath   
 
 def show_quick_edi_stats(nedic , nedir, fmtl='~', lenl=77): 
@@ -427,84 +807,133 @@ def averageData(np_array, filter_order=0,
 
     return np_out_put
 
-
-def concat_array_from_list(list_of_array, concat_axis=0):
-    """
-    Small function to concatenate a list with array contents 
+def concat_array_from_list (list_of_array , concat_axis = 0) :
+    """ Concat array from list and set the None value in the list as NaN.
     
-    Parameters 
-    -----------
-        * list_of_array : list 
-                contains a list for array data. the concatenation is possible 
-                if an index array have the same size 
-        
-    Returns 
-    -------
-        array_like 
-            numpy concatenated data 
-        
+    :param list_of_array: List of array elements 
+    :type list of array: list 
+    
+    :param concat_axis: axis for concatenation ``0`` or ``1``
+    :type concat_axis: int 
+    
+    :returns: Concatenated array with shape np.ndaarry(
+        len(list_of_array[0]), len(list_of_array))
+    :rtype: np.ndarray 
+    
     :Example: 
-        
-        >>> import numpy as np 
-        >>>  np.random.seed(0)
-        >>> ass=np.random.randn(10)
-        >>> ass2=np.linspace(0,15,12)
-        >>>  ass=ass.reshape((ass.shape[0],1))
-        >>>  ass2=ass2.reshape((ass2.shape[0],1))
-        >>> or_list=[ass,ass2]
-        >>> ss_check_error=concat_array_from_list(list_of_array=or_list,
-        ...                                          concat_axis=0)
-        >>>  secont test :
-        >>>  ass=np.linspace(0,15,14)
-        >>> ass2=np.random.randn(14)
-        >>> ass=ass.reshape((ass.shape[0],1))
-        >>> ass2=ass2.reshape((ass2.shape[0],1))
-        >>> or_list=[ass,ass2]
-        >>>  ss=concat_array_from_list(list_of_array=or_list, concat_axis=0)
-        >>> ss=concat_array_from_list(list_of_array=or_list, concat_axis=1)
-        >>> ss
-        >>> ss.shape 
+    >>> import numpy as np 
+    >>> from pycsamt.utils.func_utils import concat_array_from_list 
+    >>> np.random.seed(0)
+    >>> ass=np.random.randn(10)
+    >>> ass = ass2=np.linspace(0,15,10)
+    >>> concat_array_from_list ([ass, ass]) 
+    
     """
-    #first attemp when the len of list is ==1 :
+    concat_axis =int(_assert_all_types(concat_axis, int, float))
+    if concat_axis not in (0 , 1): 
+        raise ValueError(f'Unable to understand axis: {str(concat_axis)!r}')
     
+    list_of_array = list(map(lambda e: np.array([np.nan])
+                             if e is None else np.array(e), list_of_array))
+    # if the list is composed of one element of array, keep it outside
+    # reshape accordingly 
     if len(list_of_array)==1:
-        if type(list_of_array[0])==np.ndarray:
-            output_array=list_of_array[0]
-            if output_array.ndim==1:
-                if concat_axis==0 :
-                    output_array=output_array.reshape((1,output_array.shape[0]))
-                else :
-                    output_array=output_array.reshape((output_array.shape[0],1))
-            return output_array
-        
-        elif type(list_of_array[0])==list:
-            output_array=np.array(list_of_array[0])
-            if concat_axis==0 :
-                output_array=output_array.reshape((1,output_array.shape[0]))
-            else :
-                output_array=output_array.reshape((output_array.shape[0],1))
-            return output_array
-    
-    # check the size of array in the liste when the len of list is >=2
-    
-    for ii,elt in enumerate(list_of_array) :
-        if type(elt)==list:
-            elt=np.array(elt)
-        if elt is None :
-            pass
-        elif elt.ndim ==1 :
-            if concat_axis==0 :
-                elt=elt.reshape((1,elt.shape[0]))
-            else :
-                elt=elt.reshape((elt.shape[0],1))
-        list_of_array[ii]=elt
- 
+        ar = (list_of_array[0].reshape ((1,len(list_of_array[0]))
+                 ) if concat_axis==0 else list_of_array[0].reshape(
+                        (len(list_of_array[0]), 1)
+                 )
+             ) if list_of_array[0].ndim ==1 else list_of_array[0]
+                     
+        return ar 
 
-    output_array=list_of_array[0]
-    for ii in list_of_array[1:]:
-        output_array=np.concatenate((output_array,ii), axis=concat_axis)
+    #if concat_axis ==1: 
+    list_of_array = list(map(
+            lambda e:e.reshape(e.shape[0], 1) if e.ndim ==1 else e ,
+            list_of_array)
+        ) if concat_axis ==1 else list(map(
+            lambda e:e.reshape(1, e.shape[0]) if e.ndim ==1 else e ,
+            list_of_array))
+                
+    return np.concatenate(list_of_array, axis = concat_axis)
+
+
+# @deprecated("Should be removed ")
+# def concat_array_from_list2(list_of_array, concat_axis=0):
+#     """
+#     Small function to concatenate a list with array contents 
+    
+#     Parameters 
+#     -----------
+#         * list_of_array : list 
+#                 contains a list for array data. the concatenation is possible 
+#                 if an index array have the same size 
         
-    return output_array
+#     Returns 
+#     -------
+#         array_like 
+#             numpy concatenated data 
+        
+#     :Example: 
+        
+#         >>> import numpy as np 
+#         >>> np.random.seed(0)
+#         >>> ass=np.random.randn(10)
+#         >>> ass2=np.linspace(0,15,12)
+#         >>> ass=ass.reshape((ass.shape[0],1))
+#         >>>  ass2=ass2.reshape((ass2.shape[0],1))
+#         >>> or_list=[ass,ass2]
+#         >>> ss_check_error=concat_array_from_list(list_of_array=or_list,
+#         ...                                          concat_axis=0)
+#         >>>  secont test :
+#         >>> ass=np.linspace(0,15,14)
+#         >>> ass2=np.random.randn(14)
+#         >>> ass=ass.reshape((ass.shape[0],1))
+#         >>> ass2=ass2.reshape((ass2.shape[0],1))
+#         >>> or_list=[ass,ass2]
+#         >>>  ss=concat_array_from_list(list_of_array=or_list, concat_axis=0)
+#         >>> ss=concat_array_from_list(list_of_array=or_list, concat_axis=1)
+#         >>> ss
+#         >>> ss.shape 
+#     """
+#     #first attemp when the len of list is ==1 :
+    
+#     if len(list_of_array)==1:
+#         if type(list_of_array[0])==np.ndarray:
+#             output_array=list_of_array[0]
+#             if output_array.ndim==1:
+#                 if concat_axis==0 :
+#                     output_array=output_array.reshape((1,output_array.shape[0]))
+#                 else :
+#                     output_array=output_array.reshape((output_array.shape[0],1))
+#             return output_array
+        
+#         elif type(list_of_array[0])==list:
+#             output_array=np.array(list_of_array[0])
+#             if concat_axis==0 :
+#                 output_array=output_array.reshape((1,output_array.shape[0]))
+#             else :
+#                 output_array=output_array.reshape((output_array.shape[0],1))
+#             return output_array
+    
+#     # check the size of array in the liste when the len of list is >=2
+    
+#     for ii,elt in enumerate(list_of_array) :
+#         if type(elt)==list:
+#             elt=np.array(elt)
+#         if elt is None :
+#             pass
+#         elif elt.ndim ==1 :
+#             if concat_axis==0 :
+#                 elt=elt.reshape((1,elt.shape[0]))
+#             else :
+#                 elt=elt.reshape((elt.shape[0],1))
+#         list_of_array[ii]=elt
+ 
+#     output_array=list_of_array[0]
+#     for ii in list_of_array[1:]:
+#         output_array=np.concatenate((output_array,ii), axis=concat_axis)
+        
+#     return output_array
 
 
 def sort_array_data(data,  sort_order =0,

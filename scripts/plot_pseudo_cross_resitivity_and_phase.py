@@ -15,7 +15,7 @@ from pycsamt.viewer.plot import Plot2d
 
 #path file 
 pathfile =  r"C:\Users\Daniel\Desktop\Data\AMT\E1\edi_test" 
-pathfile = r'C:\Users\Daniel\Desktop\Data\AMT\E1\edi_ss'#ediout_batch1"#'data/K1_edi'
+pathfile = r'C:\Users\Daniel\Desktop\Data\AMT\E1\edi_rw'#ediout_batch1"#'data/K1_edi'
 # if user user avg file , add the profile fn 
 profile_fn =None                # not necessary when use [EDI|J] file. 
 
@@ -31,7 +31,7 @@ contourRes =None #[1000]
 contourPhase = None              # can be 45 degree or else :None 
     
 # plot style : [pcolormesh |imshow] . Default is pcolormesh 
-plotStyle =  'pcolormesh' # None 'imshow'#
+plotStyle = 'imshow'#'pcolormesh'
 # create objet 
 #define contout line style 
 contour_lines_style='-'
@@ -41,7 +41,7 @@ plot2d_obj = Plot2d(plot_comp = 'yx', fig_size =(20, 9), #(12,6),
                     station_label_rotation =90, 
                     cmap =  'jet',
                     
-                    )#[12, 6]
+                    )
 plot2d_obj.pseudocrossResPhase(fn=pathfile, 
                                 profile_fn=profile_fn, 
                                 delineate_resistivity=contourRes,
@@ -49,7 +49,5 @@ plot2d_obj.pseudocrossResPhase(fn=pathfile,
                                 plot_style =plotStyle, 
                                 savefig = savefigure, 
                                 contour_lines_style=contour_lines_style,
-                                sort_edi_along = 'ss.E1_',
                                )
-
 

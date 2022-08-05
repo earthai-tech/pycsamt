@@ -12,7 +12,7 @@ from pycsamt.viewer.plot import Plot2d
 
 # path to OCCAM 2D folder 
 
-path ='data/occam2d'
+path =r'C:\Users\Daniel\Desktop\Data\AMT\E1\oci' #'data/occam2d'# 
 
 #savefigure 
 savefigure = None                   
@@ -21,7 +21,7 @@ savefigure = None
 scale= None                # if None : default is "m" .can be [m|km]
 
 # imaging depth : Maximum depth investigation 
-doi = '1km'                 #  can be float like 1000 = 1km 
+doi = '500m'                 #  can be float like 1000 = 1km 
 
 #plot style 
 plotStyle ="pcolormesh"            # if None Default is 'imshow', can be 
@@ -37,7 +37,7 @@ path_to_occam_mesh = 'Occam2DMesh'
 # path to occam Model file 
 path_to_occam_model = 'Occam2DModel'
 # path to Occam Iteration file 
-path_to_occam_iter='ITER17.iter'
+path_to_occam_iter='ITER17.iter'#68
 
 figsize =[9,9]
 # call plot obj 

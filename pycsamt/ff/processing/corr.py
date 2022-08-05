@@ -1862,7 +1862,32 @@ class shifting(object):
         
         return new_z, D 
     
+    #XXX TODO 
+    @staticmethod 
+    def remove_outliers (edi_fn, var=.95 ): 
+        """ Sanitize EDIs data and remove the outliers using the principal 
+        component analysis"""
+        
+        edi_fn = func._assert_all_types(edi_fn, str)
+        if not os.path.isfile(edi_fn): 
+            raise ValueError(f'Wrong given EDI file: {edi_fn}')
     
+        if isinstance (var, str):
+            try : var =float(var) 
+            except: 
+                if '%' in var: 
+                    var = float(var.replace('%', ''))*1e-2
+                else: 
+                    raise ValueError('Variance could be a float '
+                                     f'value not: {type(var).__name__!r}')
+        if var > 1.: 
+            raise ValueError('Variance ratio should be '
+                             f'less than 1 :{str(var)!r}')
+    
+        
+            
+        
+        
 def interp_to_reference_freq(freq_array, rho_array, 
                              reference_freq, plot=False): 
     """

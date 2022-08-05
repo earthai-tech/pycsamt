@@ -158,8 +158,6 @@ class CSAMT(object):
         self.save_path = kwargs.pop('savepath', None)
         ### ADD component attributes 
         self.component = kwargs.pop('component', 'xy')
-        self.sort_edi_along =kwargs.pop('sort_edi_along', None)
-        # ---------- 
         self.verbose =kwargs.pop('verbose', 0)
         
         for key  in list(kwargs.keys()): 
@@ -302,34 +300,19 @@ class CSAMT(object):
             self._fn =edi_fn
         
         # if self._fn is not None : 
-        if self.fpath  =='edipath': #---> set the path then collect all jfiles .
+            #---> set the path then collect all jfiles .
+        if self.fpath  =='edipath': 
             eddfiles  = sorted(os.listdir(self._fn)) 
-            # sometimes edi are sorted in alphabetic order with does not fit 
-            # the correct way when the edi includes the digit values 
-            # then it could be removed by sorted along. 
-            if self.sort_edi_along is not None: 
-                self.sort_edi_along = str(self.sort_edi_along)
-                try : 
-                    eddfiles = sorted (
-                        eddfiles, key = lambda r : float(
-                            r.replace(self.sort_edi_along,''
-                                      ).replace('edi', ''))) 
-                except : pass 
-        
             edifiles =[os.path.join(self._fn, eddfile) for
                        eddfile in eddfiles 
                        if eddfile.endswith('.edi')]
-            
         # if edifile is not None : self._fn =edifile 
         #-- > once only edifile is provided then put on list ...
         elif self.fpath  == 'edi' : 
             edifiles =[self._fn]
             
-        # create the list of collection to keep the sorted_edi lists
-        ediObjs = [CSAMTedi.Edi(edi_filename= ediobj) for ediobj in edifiles]
         # read the collectoions with ediObjs
-        edi_obj = CSAMTedi.Edi_collection(ediObjs = ediObjs)
-        
+        edi_obj = CSAMTedi.Edi_collection(list_of_edifiles= edifiles )# ediObjs = ediObjs)
         self.edinames = edi_obj.edinames 
         
         self._logging.info ('Compute Z impedance Tensor  and '

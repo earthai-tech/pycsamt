@@ -367,17 +367,19 @@ class Data(object):
         temp=[]
         for data in occam_data_lines[indextemp[-1]+1:]:
             temp.append(np.array(data.strip().split()))
-            
+        
         self.data = func.concat_array_from_list(list_of_array=temp)
-
+        
         # set datablocks attributes  
         self.parse_block_data()
+        
+        #FIXME
         
         # for ikey, key in enumerate(self.data_titles ) : 
         occam_data_dict ={key :self.data[:, ikey] 
                           for ikey, key in enumerate(
                                   self.data_blocks_header)}
-
+        
         self.__setattr__('occam_data_blocks', DataBlock(**occam_data_dict))
         #straighten out offset  and get the step 
         # graduate to min to max for consistency
@@ -409,11 +411,10 @@ class Data(object):
         print('-'*77)
         
         
-        
     def parse_block_data(self, datablocks=None):
         """
         From block data, retreive the value of each blocks 
-        each blocks is ndaray(nfrea, nstations)
+        each blocks is ndarray(nfreq, nstations)
         Attributes are : 
             - `self.appRho` for apparent resistivity blocks
             - `self.phase` for phase  values 
@@ -426,8 +427,8 @@ class Data(object):
             self.data = datablocks 
 
         # self.data.astype(np.float)  # for consistency 
-        self.data = np.asarray(self.data,
-                               dtype = np.float64, order= 'K')
+        self.data = np.asarray(self.data,dtype = np.float64, order= 'K')
+        
         sites, *_= np.unique(self.data[:, 0], 
                              return_counts =True)
         freq , *_=np.unique(self.data[:, 1], 
@@ -502,6 +503,7 @@ class Data(object):
                 
         # flip data so of frequency in decrease order   
         if self.data_flip_freq is True : 
+            
             if cf is True or self.occam_dtype_=='log_te': 
                 self.te_appRho=self.te_appRho[::-1]
                 self.te_phase = self.te_phase[::-1]
@@ -513,7 +515,7 @@ class Data(object):
                 self.tm_error_appRho=self.tm_error_appRho[::-1]
                 self.tm_error_phase=self.tm_error_phase[::-1]
                     
-                    
+        
 class DataBlock (object): 
     """
     Read OccamDataBlock aand set corresponding attributes 
@@ -570,11 +572,10 @@ class DataBlock (object):
             if hasattr(self, ikey):
                 if getattr(self, ikey) is not None : 
                     if ikey =='error' : 
-                        setattr(self, ikey, np.array([float(err) 
-                                                      for err in getattr(
-                                                              self, ikey)]))
-                    else : setattr(self, ikey, [int(sf) 
-                                                for sf in getattr(self, ikey)])
+                        setattr(self, ikey, np.array(
+                            [float(err)for err in getattr(self, ikey)]))
+                    else : setattr(self, ikey, 
+                                   [int(sf) for sf in getattr(self, ikey)])
   
         # check if all attribute are set from data  
         self._logging.info ('Ckeck dataBlocks and share corresponding'
@@ -598,26 +599,28 @@ class DataBlock (object):
         like:
             dict_mode ={ '6': }
         """
-   
-        #create data mode dict and put all value inside 
-        if self.data_mode is not None : 
-            # self.dict_mode ={str(key): 
-                #[] for key in Data.occam_modes[self.data_mode]}
-            self.dict_mode ={self.data_mode:[]}
-
-        for kmode, vmode in self.dict_mode.items() : 
-            for itype , occamtype in enumerate(self.type)  : 
-                if str(int(occamtype)) == kmode : 
+        def fill_mode_data (d, mode, keep_otype =False):
+            """ Build each occam data from logtem res/phase values. 
+            :param d: ndarray data of np.ndarray(nsites, 5)
+            :param mode: Occam mode from :attar:`Data.occam_modes`
+            :param keep_otype: Keep occam type inside the data. if ``True`` 
+                type column should be remove in the data. 
+            :return: dict of occam_mode values as dictkeys and their 
+                corresponding  data. 
+            """
+            mvalues = Data.occam_modes[mode]
+            m = {str(vk):d [d[:, 0] ==int(vk)] for ii, vk in enumerate(mvalues)} 
+            return m if keep_otype else {k: v[:, 1:] for k , v in m.items()}
+            
+        ar = func.concat_array_from_list(
+            [self.type, self.site, self.freq, self.datum, self.error], 
+            concat_axis=1 )
+        
+        self.dict_mode= fill_mode_data(ar, mode =self.data_mode)
+        
+        return self 
     
-                    self.dict_mode[kmode].append(np.array([self.site[itype],
-                                                     self.freq[itype], 
-                                                     self.datum[itype], 
-                                                     self.error[itype]]))       
-        # put all value on array of [site, freq , datum , error] 
-        for key, values in self.dict_mode.items (): 
-            self.dict_mode [key] =func.concat_array_from_list(
-                list_of_array=values)
-     
+        
     @staticmethod
     def decode_each_site_data (data_blocks, data_type_index)  : 
         """
@@ -2576,23 +2579,24 @@ class occam2d_write(object):
         
     
         # create an occam data object
-        
+         # if not specified will calculate from the data
+        if freq_logspace is not None: 
+            #freq_logspace= (-1,4,17 )
+            freq_logspace = np.logspace( *freq_logspace)  
         _logger.info('Read occam2d Data,'
                      ' write data and build regularization mesh ')
         
         ocd = MToccam2d.Data(edi_path=edi_fn,
                            station_list=slst,
-                           interpolate_freq=True,
-                           freq=np.logspace(*freq_logspace)
+                           interpolate_freq=interpolate_freq,
+                           freq= freq_logspace 
                            )
         ocd.save_path = savepath
         ocd.freq_num = freq_num# number of frequencies to invert
         
         #### make data file
         # geoelectric strike for rotation
-        # if not specified will calculate from the data
-        if freq_logspace is None: 
-            freq_logspace= (-1,4,17 )
+       
         ocd.geoelectric_strike = geoelectric_strike
         print('---> geoelectric strike added !')
         
@@ -2616,6 +2620,13 @@ class occam2d_write(object):
             ocd.res_tm_err = res_tm_error_floor
             ocd.phase_tm_err = phase_tm_error_floor
         elif occam_model_mode in ['1', '2']: 
+            ocd.res_te_err = res_te_error_floor 
+            ocd.phase_te_err = phase_te_error_floor 
+            
+        elif occam_model_mode =='4': 
+            ocd.model_mode ="4"
+            ocd.res_tm_err = res_tm_error_floor
+            ocd.phase_tm_err = phase_tm_error_floor
             ocd.res_te_err = res_te_error_floor 
             ocd.phase_te_err = phase_te_error_floor 
             

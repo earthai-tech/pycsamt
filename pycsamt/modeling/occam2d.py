@@ -284,10 +284,10 @@ class Data(object):
         self.data_offsets =kwargs.pop('offsets', None)
         self.data_frequencies =kwargs.pop('frequencies', None)
         self.data_nblocks = kwargs.pop('data_blocks', None)
+        self.verbose = kwargs.pop('verbose', 0)
         
         self.occam_data =None
- 
-        
+
         for key in list(kwargs.keys()): 
             self.__setattr__(key, kwargs[key])
         
@@ -346,7 +346,7 @@ class Data(object):
                 indextemp.append(ii)
                 
                 break
-        #--> now get each specials arrays and eliminate (the firsst tiles )
+        #--> now get each specials arrays and eliminate (the first tiles )
         self.data_sites=[site.strip() 
                          for site in occam_data_lines[
                                  indextemp[0]+1:indextemp[1]]]
@@ -373,8 +373,7 @@ class Data(object):
         # set datablocks attributes  
         self.parse_block_data()
         
-        #FIXME
-        
+       #XXXFIXME
         # for ikey, key in enumerate(self.data_titles ) : 
         occam_data_dict ={key :self.data[:, ikey] 
                           for ikey, key in enumerate(
@@ -387,28 +386,30 @@ class Data(object):
             self.data_offsets =self.data_offsets[::-1]
             
         step=  func.round_dipole_length( (
-            self.data_offsets[-1] - self.data_offsets[0])/ len(
-                self.data_offsets) -1)
+            self.data_offsets[-1] - self.data_offsets[0])/ (len(
+                self.data_offsets) -1))
         
-        #regraduate offset 
+        #regraduate offset
         self.data_offsets= np.arange(0, step* len(self.data_offsets), step)
         self.data_frequencies = np.array(self.data_frequencies )
         
-        print('{0:-^77}'.format('Occam 2D Data infos'))
-        print('** {0:<27} {1} {2}'.format('Sites num.', 
-                                          '=', len(self.data_offsets)))
-        print('** {0:<27} {1} {2}'.format('Frequencies num.',
-                                          '=', len(self.data_frequencies)))
-        print('** {0:<27} {1} {2}'.format('Highest frequency (Hz)',
-                                          '=', self.data_frequencies.max()))
-        print('** {0:<27} {1} {2}'.format('Lowest frequency (Hz)', '=',
-                                          self.data_frequencies.min()))
-        
-        print('** {0:<27} {1} {2}'.format('Minimum offset (m)', '=',
-                                          self.data_offsets.min()))
-        print('** {0:<27} {1} {2}'.format('Maximum offset (m)', '=',
-                                          self.data_offsets.max()))
-        print('-'*77)
+        if self.verbose >0: 
+            
+            print('{0:-^77}'.format('Occam 2D Data infos'))
+            print('** {0:<27} {1} {2}'.format('Sites num.', 
+                                              '=', len(self.data_offsets)))
+            print('** {0:<27} {1} {2}'.format('Frequencies num.',
+                                              '=', len(self.data_frequencies)))
+            print('** {0:<27} {1} {2}'.format('Highest frequency (Hz)',
+                                              '=', self.data_frequencies.max()))
+            print('** {0:<27} {1} {2}'.format('Lowest frequency (Hz)', '=',
+                                              self.data_frequencies.min()))
+            
+            print('** {0:<27} {1} {2}'.format('Minimum offset (m)', '=',
+                                              self.data_offsets.min()))
+            print('** {0:<27} {1} {2}'.format('Maximum offset (m)', '=',
+                                              self.data_offsets.max()))
+            print('-'*77)
         
         
     def parse_block_data(self, datablocks=None):
@@ -731,9 +732,8 @@ class Model (object):
         self.model_binding_offset =kwargs.pop('binding_offset', None )
         self.model_num_layers =kwargs.pop('num_layers', None )
         self.model_exceptions = kwargs.pop('numbers_exceptions', None)
-        
-
-        
+        self.verbose = kwargs.pop('verbose', 0)
+   
         for key in list(kwargs.keys()):
             self.__setattr__(key, kwargs[key])
             
@@ -890,46 +890,44 @@ class Model (object):
         self.model_depth_offsets = np.array([occam_mesh_z_nodes[:ii + 1].sum(
             )for ii in range(len(occam_mesh_z_nodes))])
                                 
-
         # center the grid onto the station coordinates
         x0 = self.model_binding_offset - self.model_station_offsets[
             self.model_columns[0][0]]
         self.model_station_offsets += x0
         
-        # rescalle the model offset to to have the top elevation to zero  
+        # rescal the model offset to to have the top elevation to zero  
         self.model_depth_offsets = self.model_depth_offsets -\
             self.model_depth_offsets[0]
         
         # self.model_plot_z = self.model_plot_z[::-1]  #--> flipping depth 
-
-
-        print('{0:-^37}'.format('Boundaries X (Horizontal nodes)'))
-        print('**{0:<27} {1} {2}'.format(' Minimum offset (m)','=' ,
-                                         self.model_station_offsets.min()))
-        print('**{0:<27} {1} {2}'.format(' Maximum offset (m)','=',
-                                         self.model_station_offsets.max()))
-        print('{0:-^37}'.format('Boundaries Z (Vertical nodes)'))
-        print('** {0:<20} {1} {2}'.format('Minimum depth (m)', '=',
-                                          self.model_depth_offsets.min()))
-        print('** {0:<20} {1} {2}'.format('Maximum depth (m)', '=',
-                                          self.model_depth_offsets.max()))
-        
-        print('{0:-^77}'.format('Occam 2D Models params'))
-        print('** {0:<27} {1} {2}'.format('Model layer num.', '=',
-                                          len(self.model_rows)))
-        print('** {0:<27} {1} {2}'.format('Model param count', '=',
-                                          occam_iter_obj.iter_param_count))
-
-        print('** {0:<27} {1} {2}'.format('Iteration num.', '=', 
-                                          occam_iter_obj.iter_iteration))
-        print('** {0:<27} {1} {2}'.format('Occam Misfit value', '=',
-                                          occam_iter_obj.iter_misfit_value))
-        print('** {0:<27} {1} {2}'.format('Occam Misfit reached', '=',
-                                          occam_iter_obj.iter_misfit_reached))
-        print('** {0:<27} {1} {2}'.format('Occam Misfit target', '=',
-                                          occam_iter_obj.iter_target_misfit))
-        print('** {0:<27} {1} {2}'.format('Occam Roughness params', '=',
-                                          self.model_roughness))
+        if self.verbose > 0: 
+            print('{0:-^37}'.format('Boundaries X (Horizontal nodes)'))
+            print('**{0:<27} {1} {2}'.format(' Minimum offset (m)','=' ,
+                                             self.model_station_offsets.min()))
+            print('**{0:<27} {1} {2}'.format(' Maximum offset (m)','=',
+                                             self.model_station_offsets.max()))
+            print('{0:-^37}'.format('Boundaries Z (Vertical nodes)'))
+            print('** {0:<20} {1} {2}'.format('Minimum depth (m)', '=',
+                                              self.model_depth_offsets.min()))
+            print('** {0:<20} {1} {2}'.format('Maximum depth (m)', '=',
+                                              self.model_depth_offsets.max()))
+            
+            print('{0:-^77}'.format('Occam 2D Models params'))
+            print('** {0:<27} {1} {2}'.format('Model layer num.', '=',
+                                              len(self.model_rows)))
+            print('** {0:<27} {1} {2}'.format('Model param count', '=',
+                                              occam_iter_obj.iter_param_count))
+    
+            print('** {0:<27} {1} {2}'.format('Iteration num.', '=', 
+                                              occam_iter_obj.iter_iteration))
+            print('** {0:<27} {1} {2}'.format('Occam Misfit value', '=',
+                                              occam_iter_obj.iter_misfit_value))
+            print('** {0:<27} {1} {2}'.format('Occam Misfit reached', '=',
+                                              occam_iter_obj.iter_misfit_reached))
+            print('** {0:<27} {1} {2}'.format('Occam Misfit target', '=',
+                                              occam_iter_obj.iter_target_misfit))
+            print('** {0:<27} {1} {2}'.format('Occam Roughness params', '=',
+                                              self.model_roughness))
 
         
 
@@ -1375,11 +1373,13 @@ class Response (Data):
         self.__setattr__('occam_mode', occam_mode)
         self.__setattr__('occam_dtype', keymode)
 
-        print('{0:-^77}'.format('Occam 2D Response  infos'))
-        print('** {0:<27} {1} {2}'.format('Occam data type', '=',
-                                          tuple(self.occam_dtype)))
-        print('** {0:<27} {1} {2}'.format('Occam data mode', '=', 
-                                          tuple(self.occam_mode)))
+        if self.verbose > 0: 
+                
+            print('{0:-^77}'.format('Occam 2D Response  infos'))
+            print('** {0:<27} {1} {2}'.format('Occam data type', '=',
+                                              tuple(self.occam_dtype)))
+            print('** {0:<27} {1} {2}'.format('Occam data mode', '=', 
+                                              tuple(self.occam_mode)))
         
        
         # 
@@ -1614,7 +1614,8 @@ class Mesh(object):
                  with open(self.mesh_fn, 'r') as fmesh : 
                     occam_mesh_lines = fmesh.readlines()
             else : 
-                mess ='No Mesh file detected. Please provide the right occam2d mesh files.'
+                mess ='No Mesh file detected. Please provide the'\
+                    ' right occam2d mesh files.'
                 warnings.warn(mess), self._logging.error(mess)
                 raise CSex.pyCSAMTError_occam2d(mess)
          # characteristic of the mesh (nblocks +1)
@@ -1723,14 +1724,17 @@ class Mesh(object):
             self.mesh_values =np.resize(self.mesh_values,
                                         (new_h_nodes , num_v_nodes, 4))
 
-    
-        print('{0:-^77}'.format('Occam 2D Mesh params '))
-        for im , nodes  in zip (['Horizontal', 'Vertical'],
-                                [[new_h_nodes,num_h_nodes ], 
-                                 [new_v_nodes,num_v_nodes]]) : 
-            mess='*** {0} nodes read = {1} instead of {2} in '\
-                'mesh files.'.format(im, nodes[0], nodes[1])
-            print(mess), self._logging.info(mess)
+        if self.verbose> 0: 
+            print('{0:-^77}'.format('Occam 2D Mesh params '))
+            
+            for im , nodes  in zip (['Horizontal', 'Vertical'],
+                                    [[new_h_nodes,num_h_nodes ], 
+                                     [new_v_nodes,num_v_nodes]]) : 
+                mess='*** {0} nodes read = {1} instead of {2} in '\
+                    'mesh files.'.format(im, nodes[0], nodes[1])
+                    
+                print(mess) 
+                self._logging.info(mess)
       
         # generate mesh x_grid and z_grid
 
@@ -1743,10 +1747,11 @@ class Mesh(object):
         self.mesh_z_grid = np.array([self.mesh_z_nodes[:ii].sum()
                                 for ii in range(self.mesh_z_nodes.shape[0])])
         
-        print('---> {0:<20} {1} {2}'.format('Horizontal nodes',
-                                            '=',self.mesh_x_nodes.shape[0]))
-        print('---> {0:<20} {1} {2}'.format('Vertical nodes',
-                                            '=',self.mesh_z_nodes.shape[0]))
+        if self.verbose >0 : 
+            print('---> {0:<20} {1} {2}'.format('Horizontal nodes',
+                                                '=',self.mesh_x_nodes.shape[0]))
+            print('---> {0:<20} {1} {2}'.format('Vertical nodes',
+                                                '=',self.mesh_z_nodes.shape[0]))
         
   
 class Iter2Dat (object): 
@@ -1821,6 +1826,7 @@ class Iter2Dat (object):
         self.bln_fn =kwargs.pop('bln_fn', None)
         self.savepath =kwargs.pop('savepath', None)
         self.OccamModel=kwargs.pop('occam_model_obj', None)
+        self.verbose  = kwargs.pop('verbose', 0)
         
         for keys in list(kwargs.keys()):
             self.__setattr__(keys, kwargs[keys])
@@ -2002,8 +2008,10 @@ class Iter2Dat (object):
             
         #-
         if self.elevation is None : 
-            mess='!Elevation is not provided. We gonna set to 0.'
-            print('-->'+mess)
+            if self.verbse :
+                mess='!Elevation is not provided. Set to 0.'
+                print('-->'+mess)
+                
             self._logging.debug(mess)
             
             if self.station_location is not None :  # assume station location exist
@@ -2099,10 +2107,12 @@ class Iter2Dat (object):
             warnings.warn('---> !'+mess)
             self._logging.debug(mess)
  
-        else : print('---> files {0}.dat & {0}.bln have been '
+        else : 
+          
+            print('---> files {0}.dat & {0}.bln have been '
                      'successfully written to  <{1}>.'.format(
                          filename, self.savepath))
-    
+        
     
     def read_iter2dat(self, iter2dat_fn =None, bln_fn =None, scale ='km',
                       model_fn=None, iter_fn=None , mesh_fn=None , doi='1km',
@@ -2282,12 +2292,12 @@ class Iter2Dat (object):
             if self.doi > model_plot_z.max() : 
                 mess ='doi provided = {0} m is much larger '\
                     'than maximum investigation depth ={1}.'\
-                    'We reset new doi = {1} m.'.format(doi, model_plot_z.max())
+                    'Set new doi = {1} m.'.format(doi, model_plot_z.max())
                 
                 warnings.warn(mess)
                 self._logging.debug(mess)
                 print('---> ! Input doi ={0} m was '
-                      'resetting to maxdepth ={1} m.'.format(
+                      'set to maxdepth ={1} m.'.format(
                           doi,model_plot_z.max() ))
                 
                 doi = model_plot_z.max()
@@ -2347,26 +2357,27 @@ class Iter2Dat (object):
                     self.model_res[ii, jj] = iter2dat_data[:, 2][mm] 
                     mm +=1 
                     
-            print('{0:-^77}'.format('Iter2Dat *Data* info'))
-            
-            print('**{0:<37} {1} {2}'.format(
-                ' Mininum Limit vertical nodes (m)','=' ,
-                self.model_z_nodes.min() +1 ))
-            print('**{0:<37} {1} {2}'.format(
-                ' Maximum limit vertical nodes (m)','=' , 
-                self.model_z_nodes.max() +1 ))
-            print('**{0:<37} {1} {2}'.format(
-                ' Minimum limit Horizontal nodes (m) ',
-                '=' , self.model_x_nodes.min()+1))
-            print('**{0:<37} {1} {2}'.format(
-                ' Maximum limit Horizontal nodes(m)',
-                '=' , self.model_x_nodes.max()+1))
-            print('**{0:<37} {1} {2}'.format(
-                ' Horizontal nodes get from file ',
-                '=' , self.model_res.shape[1] +1))
-            print('**{0:<37} {1} {2}'.format(
-                ' Vertical nodes get from file ',
-                '=' , self.model_res.shape[0] +1))
+            if self.verbose >0: 
+                print('{0:-^77}'.format('Iter2Dat *Data* info'))
+                
+                print('**{0:<37} {1} {2}'.format(
+                    ' Mininum Limit vertical nodes (m)','=' ,
+                    self.model_z_nodes.min() +1 ))
+                print('**{0:<37} {1} {2}'.format(
+                    ' Maximum limit vertical nodes (m)','=' , 
+                    self.model_z_nodes.max() +1 ))
+                print('**{0:<37} {1} {2}'.format(
+                    ' Minimum limit Horizontal nodes (m) ',
+                    '=' , self.model_x_nodes.min()+1))
+                print('**{0:<37} {1} {2}'.format(
+                    ' Maximum limit Horizontal nodes(m)',
+                    '=' , self.model_x_nodes.max()+1))
+                print('**{0:<37} {1} {2}'.format(
+                    ' Horizontal nodes get from file ',
+                    '=' , self.model_res.shape[1] +1))
+                print('**{0:<37} {1} {2}'.format(
+                    ' Vertical nodes get from file ',
+                    '=' , self.model_res.shape[0] +1))
     
             if bln_fn is not None :
                 self.bln_fn = bln_fn 
@@ -2404,29 +2415,30 @@ class Iter2Dat (object):
                                         " Please check your data."
                                 raise CSex.pyCSAMTError_occam2d_iter2dat(mess)
             
-            print('{0:-^77}'.format('Iter2Dat *Station* info'))  
-            try : 
-                for ffmt, fmtvalue in zip ([
-                        ' Stations num.',' Minimum offset (m)',
-                        ' Maximum offset (m)' ], 
-                        [len(self.station_names),
-                         self.station_location.min(),
-                         self.station_location.max() ]):
-                    print('**{0:<27} {1} {2}'.format(ffmt,'=' , fmtvalue))
-            except : 
-                for ffmt in ([' Stations num.',' Minimum offset (m)',
-                              ' Maximum offset (m)' ]):
-                    print('**{0:<27} {1} {2}'.format(ffmt,'=' , None))
-                pass 
-
-                
-            if np.all(self.elevation == 0.) or self.elevation is None: 
-                print('*** ! Elevation not provided.')
-            else : 
-                print('**{0:<27} {1} {2}'.format(' Minimum elevation (m)',
-                                                 '=' , self.elevation.min()))
-                print('**{0:<27} {1} {2}'.format(' Maximum elevation (m)',
-                                                 '=' , self.elevation.max()))
+            if self.verbose > 0:
+                print('{0:-^77}'.format('Iter2Dat *Station* info'))  
+                try : 
+                    for ffmt, fmtvalue in zip ([
+                            ' Stations num.',' Minimum offset (m)',
+                            ' Maximum offset (m)' ], 
+                            [len(self.station_names),
+                             self.station_location.min(),
+                             self.station_location.max() ]):
+                        print('**{0:<27} {1} {2}'.format(ffmt,'=' , fmtvalue))
+                except : 
+                    for ffmt in ([' Stations num.',' Minimum offset (m)',
+                                  ' Maximum offset (m)' ]):
+                        print('**{0:<27} {1} {2}'.format(ffmt,'=' , None))
+                    pass 
+    
+                    
+                if np.all(self.elevation == 0.) or self.elevation is None: 
+                    print('*** ! Elevation not provided.')
+                else : 
+                    print('**{0:<27} {1} {2}'.format(' Minimum elevation (m)',
+                                                     '=' , self.elevation.min()))
+                    print('**{0:<27} {1} {2}'.format(' Maximum elevation (m)',
+                                                     '=' , self.elevation.max()))
                 
                 
 class occam2d_write(object):
@@ -2508,7 +2520,7 @@ class occam2d_write(object):
         ...                        geolectricke_strike=34.)
   
     """
-    
+    verbose = 0 
     if SUCCESS_IMPORT_MTPY is False :
         
             mess = ''.join([
@@ -2517,6 +2529,7 @@ class occam2d_write(object):
                             ' Please try to install :ref:`MTpy` manually !'])
             print('---> '+ mess)
     
+   
     @staticmethod 
     def buildingInputfiles(edi_fn, freq_num =None , savepath =None ,
                                interpolate_freq =False, 
@@ -2598,7 +2611,9 @@ class occam2d_write(object):
         # geoelectric strike for rotation
        
         ocd.geoelectric_strike = geoelectric_strike
-        print('---> geoelectric strike added !')
+        
+        if occam2d_write.verbose >0: 
+            print('---> geoelectric strike added !')
         
        
         if occam_model_mode not in ['{}'.format(mm) 
@@ -2609,7 +2624,6 @@ class occam2d_write(object):
                 
             _logger.error('occam model value given is out'
                           ' of the model mode range . ')
-            
             print('-- > '+ msg.format([
                 '{}'.format(mm) for mm in list(Data.occam_dataType.keys())]))
             return 
@@ -2630,12 +2644,13 @@ class occam2d_write(object):
             ocd.res_te_err = res_te_error_floor 
             ocd.phase_te_err = phase_te_error_floor 
             
-        print('---> Errors floors successfully  added !')
+        if occam2d_write.verbose >0:     
+            print('---> Errors floors successfully  added !')
         
         # now write occam_data_file 
         ocd.write_data_file()
-        
-        print('---> Read occam2D data and write occam Data done !')
+        if occam2d_write.verbose >0: 
+            print('---> Read occam2D data and write occam Data done !')
         # make model and mesh files
   
         ocr = MToccam2d.Regularization(ocd.station_locations, 
@@ -2654,8 +2669,8 @@ class occam2d_write(object):
         ocr.write_mesh_file()
         ocr.write_regularization_file()
         ocr.plot_mesh()
-        
-        print('---> Build occam2d Regularization mesh  done !')
+        if occam2d_write.verbose >0: 
+            print('---> Build occam2d Regularization mesh  done !')
         # make startup file
         ocs=MToccam2d.Startup(iterations_to_run=iterations_to_run, 
                               startup_basename=startup_basename, 
@@ -2667,56 +2682,58 @@ class occam2d_write(object):
         ocs.save_path=ocd.save_path
         ocs.model_fn=ocr.reg_fn
         ocs.write_startup_file()
-    
-        print('---> Build write occam2D startup file done !')
         
-        print('{0:-^77}'.format('Summary *occam2d input params* infos'))  
-        
-        print('**{0:<27} {1} {2}'.format(' Given frequency number',
-                                         '=' , freq_num))
-        print('**{0:<27} {1} {2}'.format(' Interpolate frequencies range',
-                                         '=' , freq_logspace))
-        
-        print('**{0:<27} {1} {2}'.format(' Occam model mode',
-                                         '=' , occam_model_mode))
-        
-        if occam_model_mode in ['6', '5']:
-            print('**{0:<27} {1} {2} %.'.format(' TM rho error floors',
-                                                '=' , res_tm_error_floor))
-            print('**{0:<27} {1} {2} %.'.format(' TM phase error floors',
-                                                '=' , phase_tm_error_floor))
-        elif occam_model_mode in ['1', '2']:
-            print('**{0:<27} {1} {2} %.'.format(' TE rho error floors',
-                                                '=' , res_te_error_floor))
-            print('**{0:<27} {1} {2} %.'.format(' TE phase error floors',
-                                                '=' , phase_te_error_floor))
+        if occam2d_write.verbose >0: 
+            print('---> Build write occam2D startup file done !')
             
-        print('**{0:<27} {1} {2}'.format(' Model cell width',
-                                         '=' , cell_width ))
-        print('**{0:<27} {1} {2}'.format(' model horizontal pad',
-                                         '=' , x_pad_multiplier ))
-        print('**{0:<27} {1} {2}'.format(' Model bricks trigger',
-                                         '=' , trigger ))
-        
-        print('**{0:<27} {1} {2}'.format(' Number of model layers',
-                                         '=' , int(number_of_layers) ))
-        print('**{0:<27} {1} {2} m.'.format(' Top layer thickness',
-                                            '=' , z1_layer ))
-        print('**{0:<27} {1} {2} m.'.format(' Expected image depth',
-                                            '=' , z_target_depth))
-        print('**{0:<27} {1} {2} m.'.format(' Model bottom',
-                                            '=' , z_bottom ))
-        
-        print('**{0:<27} {1} {2}'.format(' Expected iteration to run',
-                                         '=' , iterations_to_run ))
-        print('**{0:<27} {1} {2} ohm.m'.format(' starting model resistivity',
-                                               '=' , np.power(10,
-                                                    resistivity_start) ))
-        
-        print('**{0:<27} {1} +{2} degrees E of N'.format(' Geoelectric strike',
-                                                    '=' ,geoelectric_strike))
-        
-        print('-'*77)  
+            print('{0:-^77}'.format('Summary *occam2d input params* infos'))  
+            
+            print('**{0:<27} {1} {2}'.format(' Given frequency number',
+                                             '=' , freq_num))
+            print('**{0:<27} {1} {2}'.format(' Interpolate frequencies range',
+                                             '=' , (freq_logspace[0], freq_logspace[1])
+                                             ))
+            
+            print('**{0:<27} {1} {2}'.format(' Occam model mode',
+                                             '=' , occam_model_mode))
+            
+            if occam_model_mode in ['6', '5']:
+                print('**{0:<27} {1} {2} %.'.format(' TM rho error floors',
+                                                    '=' , res_tm_error_floor))
+                print('**{0:<27} {1} {2} %.'.format(' TM phase error floors',
+                                                    '=' , phase_tm_error_floor))
+            elif occam_model_mode in ['1', '2']:
+                print('**{0:<27} {1} {2} %.'.format(' TE rho error floors',
+                                                    '=' , res_te_error_floor))
+                print('**{0:<27} {1} {2} %.'.format(' TE phase error floors',
+                                                    '=' , phase_te_error_floor))
+                
+            print('**{0:<27} {1} {2}'.format(' Model cell width',
+                                             '=' , cell_width ))
+            print('**{0:<27} {1} {2}'.format(' model horizontal pad',
+                                             '=' , x_pad_multiplier ))
+            print('**{0:<27} {1} {2}'.format(' Model bricks trigger',
+                                             '=' , trigger ))
+            
+            print('**{0:<27} {1} {2}'.format(' Number of model layers',
+                                             '=' , int(number_of_layers) ))
+            print('**{0:<27} {1} {2} m.'.format(' Top layer thickness',
+                                                '=' , z1_layer ))
+            print('**{0:<27} {1} {2} m.'.format(' Expected image depth',
+                                                '=' , z_target_depth))
+            print('**{0:<27} {1} {2} m.'.format(' Model bottom',
+                                                '=' , z_bottom ))
+            
+            print('**{0:<27} {1} {2}'.format(' Expected iteration to run',
+                                             '=' , iterations_to_run ))
+            print('**{0:<27} {1} {2} ohm.m'.format(' starting model resistivity',
+                                                   '=' , np.power(10,
+                                                        resistivity_start) ))
+            
+            print('**{0:<27} {1} +{2} degrees E of N'.format(' Geoelectric strike',
+                                                        '=' ,geoelectric_strike))
+            
+            print('-'*77)  
 
         print('---> Building occamInputfiles  successfully done. ')  
  

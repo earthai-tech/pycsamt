@@ -12,10 +12,11 @@ from pycsamt.viewer.plot import Plot2d
 
 # path to OCCAM 2D folder 
 
-path =r'C:\Users\Daniel\Desktop\Data\AMT\E1\oci' #'data/occam2d'# 
+path = r'C:\Users\Daniel\Desktop\Data\AMT\E1\oci_20m' #'data/occam2d'#
+path =r'C:\Users\Daniel\Desktop\Data\AMT\E1\oci_res100e20'
 
 #savefigure 
-savefigure = None                   
+savefigure =r'C:\Users\Daniel\Desktop\Data\AMT\E1\model2im.png' #None                   
 
 # scale the output data 
 scale= None                # if None : default is "m" .can be [m|km]
@@ -24,7 +25,7 @@ scale= None                # if None : default is "m" .can be [m|km]
 doi = '500m'                 #  can be float like 1000 = 1km 
 
 #plot style 
-plotStyle ="pcolormesh"            # if None Default is 'imshow', can be 
+plotStyle =     "imshow" # "pcolormesh"#  # if None Default is 'imshow', can be 
                             #["pcolormesh"]
 
 #-----OCCAM 2D output data files ---------
@@ -36,20 +37,24 @@ path_to_occam_mesh = 'Occam2DMesh'
 
 # path to occam Model file 
 path_to_occam_model = 'Occam2DModel'
-# path to Occam Iteration file 
-path_to_occam_iter='ITER17.iter'#68
 
-figsize =[9,9]
+# path to Occam Iteration file 
+path_to_occam_iter='ITER26.iter'#17 #
+
+figsize =[10,4]
 # call plot obj 
 
-plot2d_obj = Plot2d(fig_size =figsize)
+curve =[ 1  ]
+plot2d_obj = Plot2d(fig_size =figsize, station_label_rotation=90, ms=.75, fig_dpi =600)
 plot2d_obj.plot_occam2dModel(mesh_fn=os.path.join(path, path_to_occam_mesh), 
                     iter_fn = os.path.join(path, path_to_occam_iter), 
                     model_fn =os.path.join(path, path_to_occam_model ), 
                     data_fn =os.path.join(path, path_to_occam_data), 
                     doi= doi, 
                     savefig =savefigure, 
-                    plot_style =plotStyle
+                    plot_style =plotStyle, 
+                    #delineate_rho= curve,
+                    #show_contour = True, 
                     )
 
 

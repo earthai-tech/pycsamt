@@ -412,7 +412,7 @@ class Edi_collection :
     def rewrite_edis (self, ediObjs=None,  by = 'name' , prefix = None, 
                       dataid =None, savepath = None, how='py', 
                       correct_ll=True, make_coords =False, reflong=None, 
-                      reflat=None, sep ='1km', edi_prefix =None, **kws): 
+                      reflat=None, step ='1km', edi_prefix =None, **kws): 
         
         """ Rewrite Edis. 
         
@@ -460,11 +460,11 @@ class Edi_collection :
             Reference latitude in degree decimal or in DD:MM:SS for the reference  
             site considered as the landmark origin.
             
-         sep: float or str 
-             Distance of seperation between different sites in meters. If the  
-             value is given as a string type, except the ``km``, it should be 
-             considered as a ``m`` value. Only meters and kilometers are 
-             accepables. Default value of seperation between the site is ``1km``. 
+        step: float or str 
+            Offset or the distance of seperation between different sites in meters. 
+            If the value is given as string type, except the ``km``, it should be 
+            considered as a ``m`` value. Only meters and kilometers are accepables.
+            Default value of seperation between the site is ``1km``. 
              
         savepath: str 
             Full path of the save directory. If not given, EDIs  should be 
@@ -570,7 +570,7 @@ class Edi_collection :
                 raise ValueError('Reflong and reflat params must not be None!')
             self.longitude, self.latitude = func.make_ll_coordinates(
                reflong = reflong, reflat= reflat, nsites= len(self.ediObjs),
-               sep = sep , **kws) 
+               step = step , **kws) 
         # clean the old main Edi section info and 
         # and get the new values
         if correct_ll or make_coords:
@@ -703,9 +703,6 @@ class Edi :
         if self.edifile is not None : 
                 self.read_edi ()
             
-    #XXXBUG fixed attribute head(long rather than "lon")
-    # sometimes the lon lat are not in the Head infos. It can be
-    # recovered in DefineMeasurement infos. 
     @property 
     def lon(self): 
         return self.Head.long or self.DefineMeasurement.reflong 
@@ -1163,9 +1160,7 @@ class Edi :
                 edi_z_data_infolines.extend(zreal_datalines)
                 edi_z_data_infolines.extend(zimag_datalines)
                 edi_z_data_infolines.extend(zvariance_datalines)
-                
-       
-        #===============================================================
+
         # write EMAP  :
         #---------------------------------------------------------------                      
         if self.typefile =='emap':
@@ -1227,8 +1222,6 @@ class Edi :
             # delete one more return                 
             edi_z_data_infolines = edi_z_data_infolines[:-1] 
 
-   
-        #===============================================================
         # write EMAP  pass :***TIPPER  *** 
         #---------------------------------------------------------------
         if np.all(self.Tip.tipper ==0 ) and self.Tip.tipper is not None :
@@ -1269,7 +1262,7 @@ class Edi :
             except : 
                 edi_tip_data_infolines , edi_tip_rot_infolines =[''], ['']
                 
-        #WRITE 
+        #WRITE EDI
         write_edilines = edi_header_infolines + edi_info_infolines +\
             edi_definemeasurement_infolines + edi_mtemap_infolines  
 
@@ -1289,7 +1282,7 @@ class Edi :
                 write_edilines +=ilines +['\n'] 
         
         write_edilines.append('>END')
-        # writenow file : 
+        # write file : 
         with open (new_edifilename , 'w+', encoding = 'utf8') as fw : 
             fw.writelines(write_edilines)
             
@@ -1310,7 +1303,8 @@ class Edi :
 
         return new_edifilename
             
-    def _write_components_blocks (self, edi_datacomp , comp_key, datatype=None ): 
+    def _write_components_blocks (self, edi_datacomp , 
+                                  comp_key, datatype=None ): 
         """
         Method to write blocks  with data components keys . 
         
@@ -1338,11 +1332,6 @@ class Edi :
         if datatype is None : 
             datatype =self.typefile
         
-        # print(edi_datacomp)
-        # print(len(edi_datacomp))
-        # print(type(edi_datacomp))
-        # print(edi_datacomp.size)
-    
         if comp_key.lower() =='freq':
             comp_block_line=['>FREQ  //{0}\n'.format(edi_datacomp.size)]
         if datatype.lower() in ["mt", '>=mtsect', 'mtsect'] :
@@ -1375,7 +1364,6 @@ class Edi :
             
         else :#datatype.lower() not in ['mt' , '>=mtsect'] 
         #and datatype.lower() not in ['emap', '>=emapsect']: 
-            
             warnings.warn (
                 'Two Types of data can be read either  MTsection or EMAPsection.'
                 'The dataType provided <{0}> does not match any of them.'
@@ -1409,7 +1397,6 @@ class Edi :
     def station (self): 
         return self.Head.dataid 
 
-    
     @property 
     def processingsoftware (self): 
         return self.Info.Processing.ProcessingSoftware.name 

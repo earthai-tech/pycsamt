@@ -39,6 +39,15 @@ try :
         import tqdm
 except: itqdm = False 
 
+try: 
+    from sklearn.decomposition import PCA 
+except : 
+    is_sucess = func.subprocess_module_installation('sklearn')
+    if not is_sucess : 
+        raise ImportError( 'Could not import module `sklearn`. Please '
+                          'install scikit-learn manually.')
+
+
 TAGS =dict(
     ama= 'Adaptative moving-average', 
     tma = 'Trimming moving-average',
@@ -1731,7 +1740,7 @@ class shifting(object):
         """
         
         cedi_obj = MT(fn =edi_fn)
-        new_z_obj = cedi_obj .remove_static_shift(ss_x=ss_x , ss_y=ss_y)
+        new_z_obj = cedi_obj.remove_static_shift(ss_x=ss_x , ss_y=ss_y)
         ediobj = Edi(edi_filename=edi_fn)
         ediobj.write_new_edifile( new_Z=new_z_obj, **kws)
         return new_z_obj  
@@ -1808,7 +1817,7 @@ class shifting(object):
             - new Z object with static shift removed
             - Distortion matrix
             
-        :rtype: pycsamt.core.z.Z
+        :rtype: pycsamt.ff.core.z.Z
         
         .. note:: The factors are in resistivity scale, so the
                   entries of  the matrix "S" need to be given by their
@@ -1864,10 +1873,47 @@ class shifting(object):
     
     #XXX TODO 
     @staticmethod 
-    def remove_outliers (edi_fn, var=.95 ): 
+    def remove_outliers (edi_fn, var=.95 , **kws): 
         """ Sanitize EDIs data and remove the outliers using the principal 
-        component analysis"""
+        component analysis
         
+        
+        :param edi_fn: Path-Like object. Full path to EDI-file. 
+        :type edi_fn: str 
+        
+        :param var: component or ratio of moise to remove.  Default value is 
+            ``.95``. 
+        :type var: float
+        
+        :param kws: Additional keywords arguments from mod:`sklearn.decomposition.PCA` 
+        :type kws: dict 
+        
+        :returns: New Z impedance object with remove outliers. 
+        :rtype: pycsamt.ff.core.z.Z
+        
+        :Example: 
+        >>> from pycsamt.ff.processing import Processing 
+        >>> from pycsamt.ff.core.edi import Edi 
+        >>> edifile = '/home/edi/m20.E000.edi'
+        >>> newZ =Processing.remove_outliers( edifile, var =.80 ) 
+        >>> #write a new corrected edifile 
+        >>> _= Edi(edifile).write_new_edifile(new_Z= newZ, 
+        ...               new_edi_fn ='m20.removeO.E000.edi')
+            
+        """
+        
+        
+        def reshape_and_fit_z (z , back =False , fit= 'transform') :
+            """ Reshape z for to np.ndarray(nfreq, 1) for scikit-learn API  
+            back for filling the z ndarray (nfreq, 2, 2)"""
+            z = z.reshape ((1, z.shape [0])) if back else z.reshape (
+                (z.shape [1], 1)) 
+             
+            z = (pca.fit_transform(z) if fit =='transform' else 
+                 pca.inverse_transform(z) ) if fit is not None else z 
+            return z 
+
+                              
         edi_fn = func._assert_all_types(edi_fn, str)
         if not os.path.isfile(edi_fn): 
             raise ValueError(f'Wrong given EDI file: {edi_fn}')
@@ -1884,7 +1930,56 @@ class shifting(object):
             raise ValueError('Variance ratio should be '
                              f'less than 1 :{str(var)!r}')
     
-        
+        #create an EDI OBJECT 
+        ediObj = Edi(edi_fn )
+        # make a new object 
+        new_Z = CSAMTz.Z(z_array=np.zeros((ediObj.Z.freq.shape[0], 2, 2),
+                                       dtype='complex'),
+                      z_err_array=np.zeros((ediObj.Z.freq.shape[0], 2, 2)),
+                      freq=ediObj.Z.freq)
+       
+        # construct the pca object from sklearn 
+        pca = PCA(n_components= var, **kws) 
+        # loop to remove outliers on the Z impedance object 
+    
+        for ii in range(2):
+            for jj in range(2):
+                # need to look out for zeros in the impedance
+                # get the indicies of non-zero components
+                nz_index = np.nonzero(ediObj.Z.z[:, ii, jj])
+                 
+                if len(nz_index[0]) == 0:
+                    continue
+        #       # get the non_zeros components 
+                with np.errstate(all='ignore'):
+                    z_real = ediObj.Z.z[nz_index, ii, jj].real
+                    z_imag = ediObj.Z.z[nz_index, ii, jj].imag
+                    z_err = ediObj.Z.z_err[nz_index, ii, jj]
+    
+                    z_real_t =reshape_and_fit_z(z_real) 
+                    z_imag_t = reshape_and_fit_z(z_imag) 
+                    z_err_t = reshape_and_fit_z(z_err) 
+                    
+                    z_real_b =reshape_and_fit_z(z_real_t,
+                                                back=True,
+                                                fit =None) 
+                    z_imag_b = reshape_and_fit_z(z_imag_t,
+                                                 back=True,
+                                                 fit =None) 
+                    z_err_b = reshape_and_fit_z(z_err_t,
+                                                back=True,
+                                                fit =None 
+                                                ) 
+     
+               # set the new Z object 
+                new_Z.z[nz_index, ii, jj] = z_real_b  + 1j * z_imag_b 
+                new_Z.z_err[nz_index, ii, jj] = z_err_b
+                
+        # # compute resistivity and phase for new Z object
+        new_Z.compute_resistivity_phase()
+     
+        return new_Z
+    
             
         
         

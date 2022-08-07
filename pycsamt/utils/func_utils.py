@@ -49,7 +49,9 @@
     * resize_resphase_values 
     * _assert_all_types 
     * scalePosition 
-    *
+    * get_interpolate_freqs 
+    * fit_by_ll 
+    * build_array_from_objattr
 """
 
 import os 
@@ -64,7 +66,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from copy import deepcopy
 
-import  pycsamt.utils.gis_tools as gis
+import pycsamt.utils.gis_tools as gis
 import pycsamt.utils.exceptions as CSex
 from pycsamt.utils.decorator import deprecated 
 from pycsamt.utils._csamtpylog import csamtpylog
@@ -100,26 +102,23 @@ except ImportError:
     
     interp_import = False
 
-
-    
-    
-      
+          
 def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
-                        sep='1km', order= '+', todms=False): 
+                        step='1km', order= '+', todms=False): 
     """ Generate multiples stations coordinates (longitudes, latitudes)
-    from a reference station/sites.
+    from a reference station/site.
     
     One degree of latitude equals approximately 364,000 feet (69 miles), 
     one minute equals 6,068 feet (1.15 miles), and one-second equals 101 feet.
     One-degree of longitude equals 288,200 feet (54.6 miles), one minute equals
-    4,800 feet (0.91 mile), and one second equals 80 feet. Illustration showing
+    4,800 feet (0.91 mile) , and one second equals 80 feet. Illustration showing
     longitude convergence. (1 feet ~=0.3048 meter)
     
     Parameters 
     ----------
     reflong: float or string 
         Reference longitude  in degree decimal or in DD:MM:SS for the first 
-        site considered as the origin of the lamdmark.
+        site considered as the origin of the landmark.
         
     reflat: float or string 
         Reference latitude in degree decimal or in DD:MM:SS for the reference  
@@ -129,13 +128,13 @@ def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
         Number of site to generate the coordinates onto. 
         
     r: float or int 
-        The rotate angle in degrees. Rotate the angle feature the direction
+        The rotate angle in degrees. Rotate the angle features the direction
         of the projection line. Default value is ``45`` degrees. 
         
-    sep: float or str 
-        Distance of seperation between different sites in meters. If the value 
-        is given as string type, except the ``km``, it should be considered as
-        a ``m`` value. Only meters and kilometers are accepables.
+    step: float or str 
+        Offset or the distance of seperation between different sites in meters. 
+        If the value is given as string type, except the ``km``, it should be 
+        considered as a ``m`` value. Only meters and kilometers are accepables.
         
     order: str 
         Direction of the projection line. By default the projected line is 
@@ -189,19 +188,19 @@ def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
     
     nsites = int(_assert_all_types(nsites,int, float)) 
 
-    sep=str(sep).lower() 
-    if sep.find('km')>=0: # convert to meter 
-        sep = float(sep.replace('km', '')) *1e3 
-    elif sep.find('m')>=0: sep = float(sep.replace('m', '')) 
-    sep = float(sep) # for consistency 
+    step=str(step).lower() 
+    if step.find('km')>=0: # convert to meter 
+        step = float(step.replace('km', '')) *1e3 
+    elif step.find('m')>=0: step = float(step.replace('m', '')) 
+    step = float(step) # for consistency 
     
     if order in ('descending', 'down', '-'): order = '-'
     else: order ='+'
     # compute length of line using the reflong and reflat
     # the origin of the landmark is x0, y0= reflong, reflat
     x0= assert_ll(reflong) ; y0= assert_ll(reflat) 
-    xinf = x0  + (np.sin(np.deg2rad(r)) * sep * nsites) / (364e3 *.3048) 
-    yinf = y0 + np.cos(np.deg2rad(r)) * sep * nsites /(2882e2 *.3048)
+    xinf = x0  + (np.sin(np.deg2rad(r)) * step * nsites) / (364e3 *.3048) 
+    yinf = y0 + np.cos(np.deg2rad(r)) * step * nsites /(2882e2 *.3048)
     
     reflon_ar = np.linspace(x0 , xinf, nsites ) 
     reflat_ar = np.linspace(y0, yinf, nsites)
@@ -217,8 +216,6 @@ def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
     
     return (reflon_ar , reflat_ar ) if order =='+' else (
         reflon_ar[::-1] , reflat_ar[::-1] )
-    
-
 
 def build_array_from_objattr(obj, attr): 
     """ Quick build array of object attributes value from collections object.
@@ -285,6 +282,7 @@ def scalePosition(ydata , xdata= None, func = None ,c_order= 0,
     c_order: int or str
         The index or the column name if ``ydata`` is given as a dataframe to 
         select the right column for scaling.
+        
     todms: bool 
         Convert the decimal long/lat to DD:MM:SS. Default is ``False``. 
         

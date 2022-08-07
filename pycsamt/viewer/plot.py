@@ -2495,7 +2495,7 @@ class Plot2d (object):
         self.markerfacecolor=kws.pop('markerfacecolor', 'k')
         self.ms = kws.pop('ms', 2)
         self.lw =kws.pop('lw', 2)
-        
+        #XXX TIP 
         #------ticks parameters ------------------
         self.fw =kws.pop('font_weight', 'bold')
         self.depth_scale=kws.pop('depth_scale', 'm')
@@ -2796,7 +2796,7 @@ class Plot2d (object):
             except : 
                 pass
          
-        ### FIXME: Ignore the fact that arrays should have all the same 
+        ### Ignore the fact that arrays should have all the same 
         # length and plot anyway. 
         csamt_RES_obj = func.resize_resphase_values(
             csamt_res_obj,c =csamt_freq_obj )
@@ -3081,8 +3081,7 @@ class Plot2d (object):
         contourcolors =kwargs.pop('contour_lines_colors', 'white')
         delineate_resistivity_curve =kwargs.pop('delineate_rho', None)
         grid_alpha =kwargs.pop('alpha', 0.5)
-        show_report=kwargs.pop('show_report', False)
-        
+             
         set_station_label=kwargs.pop('show_station_id', True)
         
         for file , label in zip ( [iter_fn, mesh_fn , data_fn ], 
@@ -3127,7 +3126,6 @@ class Plot2d (object):
                 pass 
                 
         # -------------FIND OBJECTS ----------------------------
-
         # Read occam 2d model object 
         occam_model_obj = occam2d.Model(iter_fn=iter_fn , 
                                         model_fn = model_fn , mesh_fn =mesh_fn)
@@ -3143,7 +3141,7 @@ class Plot2d (object):
         self.xpad = (dl/2)/dz 
 
         occam_data_station_names =occam_data_obj.data_sites
-        
+    
         if change_station_id is not None :  # call fonction to build a nu
             occam_data_station_names , mess= mplotus.build_new_station_id(
                 station_id =occam_data_station_names ,
@@ -3153,7 +3151,6 @@ class Plot2d (object):
                                                 
         
         # --> get plot objects for model class 
-        
         plot_x_axis  =  occam_model_obj.model_station_offsets
         plot_z_axis  =  occam_model_obj.model_depth_offsets
         occam_model_resistiviy_obj = occam_model_obj.model_resistivity
@@ -3165,19 +3162,15 @@ class Plot2d (object):
         # --> check doi value provided , and convert to default unit {meters}  
         doi =mplotus.depth_of_investigation(doi=doi)
         
-   
-                
         # set boundaries of stations offsets and depth 
         spec_f = -(doi/5)/dz  
-                              
-
+                             
         #-25 +0 : 1300 +25 (xpad = 25 )                              
         self.xlimits=(occam_data_station_offsets.min()/dz -self.xpad  , 
                       occam_data_station_offsets.max()/dz + self.xpad )
 
         
         #then new_sation offset becomes 
-        
         self.ylimits =(spec_f, doi/dz) 
 
         # plot ---------------figure and properties  ---------------------
@@ -3201,7 +3194,7 @@ class Plot2d (object):
         self.fig_aspect ='auto'
         axm = self.fig.add_subplot(1, 1, 1, aspect=self.fig_aspect)
         
-        
+        #XXXFIXME 
         #-----PLOTS STATEMENTS -----------------------------
         
                 #fist option is "pcolormesh " 
@@ -3210,18 +3203,24 @@ class Plot2d (object):
         if plot_style =='pcolormesh':
             
             # if you keep plot_x_axis and plot_z_axis in meter ,
-            #  be sure to divided py dz meshes respectively 
+            #  be sure to divided py dz meshes respectively
+            #-----------------------------------
+            plot_x_axis = np.linspace(occam_data_station_offsets.min(),
+                                      occam_data_station_offsets.max(), 
+                                      occam_model_resistiviy_obj.shape[1])
+            
+            #print(occam_model_resistiviy_obj.shape)
             mesh_x  , mesh_z= np.meshgrid(plot_x_axis,  plot_z_axis )
-            rho_axm = axm.pcolormesh (mesh_x/dz  , 
-                                    mesh_z/dz ,
-                                    occam_model_resistiviy_obj,
-                                        vmin = self.climits[0],
-                                        vmax = self.climits[1],  
-                                        shading= 'auto', 
-                                        cmap =self.cmap, 
-                                        alpha = None, 
-                                              
-                                              )
+            axm.pcolormesh (mesh_x/dz  , 
+                            mesh_z/dz ,
+                            occam_model_resistiviy_obj,
+                            # vmin =occam_data_station_offsets.min(),  #self.climits[0],
+                            # vmax = occam_data_station_offsets.max(), #self.climits[1],  
+                            shading= 'auto', 
+                            cmap =self.cmap, 
+                            alpha = None, 
+                                      
+                                      )
 
             if show_contour is True :
                 contps = axm.contour(mesh_x/dz  , mesh_z /dz ,
@@ -3233,22 +3232,24 @@ class Plot2d (object):
                                     inline=True, fmt='%1.1f',
                                     fontsize =self.font_size,
                                       )
-
+            axm.set_xlim( [int(plot_x_axis.min()),  int(plot_x_axis.max())])
+            axm.set_ylim ([self.ylimits[1], self.ylimits[0]]) 
+            
         if plot_style.lower() =='imshow': 
 
-            mesh_x  , mesh_z= np.meshgrid(plot_x_axis  , plot_z_axis )
+            #mesh_x  , mesh_z= np.meshgrid(plot_x_axis  , plot_z_axis )
             # to get the origine =0 of the plot
             axm.imshow (occam_model_resistiviy_obj,
-                                vmax = self.climits[1], 
-                                vmin =self.climits[0], 
-                                interpolation = self.imshow_interp, 
-                                cmap =self.cmap,
-                                aspect = self.fig_aspect,
-                                origin= 'upper', 
-                                extent=( self.xlimits[0],
-                                        self.xlimits[1],
-                                        self.ylimits[1], 
-                                        self.ylimits[0] - spec_f),  
+                        vmax = self.climits[1], 
+                        vmin =self.climits[0], 
+                        interpolation = self.imshow_interp, 
+                        cmap =self.cmap,
+                        aspect = self.fig_aspect,
+                        origin= 'upper', 
+                        extent=( self.xlimits[0],
+                                self.xlimits[1],
+                                self.ylimits[1], 
+                                self.ylimits[0] - spec_f),  
 
                                     )
 
@@ -3259,13 +3260,13 @@ class Plot2d (object):
                                      colors =contourcolors, 
                                       vmax=self.climits[0],
                                       vmin = self.climits[1], 
-                                        linestyles=contourlines, 
-                                        extent =( self.xlimits[0],
-                                                  self.xlimits[1],
-                                                  self.ylimits[1], 
-                                                  self.ylimits[0]),
-                                        extend ='both',
-                                        origin= origin ,  
+                                    linestyles=contourlines, 
+                                    extent =( self.xlimits[0],
+                                              self.xlimits[1],
+                                              self.ylimits[1], 
+                                              self.ylimits[0]),
+                                    extend ='both',
+                                    origin= origin ,  
                                        )
                 axm.clabel(contps, delineate_resistivity_curve ,
                                 inline=True, 
@@ -3273,27 +3274,21 @@ class Plot2d (object):
                                 fontsize =self.font_size,
                                           )
         
-        
+            axm.set_xlim( [self.xlimits[0],  self.xlimits[1]])
+            axm.set_ylim ([self.ylimits[1], self.ylimits[0]]) 
         #-----------------------END PLOTS STATEMENTS---------------
             #set xlimits and y limits for model axes 
         # for making a color bar 
         if type(self.cmap) == str:
             self.cmap = cm.get_cmap(self.cmap)
-        
-        axm.set_xlim( [self.xlimits[0],  self.xlimits[1]])
-        axm.set_ylim ([self.ylimits[1], self.ylimits[0]]) 
-        
-       
-        
+     
         #-----SET TWIN axes for station ticks and labels ---------
-        
-        # create twin axis to set ticks to tehe top station
+        # create twin axis to set ticks to the top station
+        # let keep only the axe lines 
         axe2=axm.twiny()
-        axe2.xaxis.set_visible(False) # let keep only the axe lines 
-    
-
+        axe2.xaxis.set_visible(False) 
+  
         # show station maker points : 
-            
         for offset , names in zip (occam_data_station_offsets,
                                    occam_data_station_names):
             # plot the station marker ' black triangle down ' 
@@ -3309,7 +3304,8 @@ class Plot2d (object):
             
             if set_station_label is True :  # then plot label id 
                 axm.text(offset/dz ,
-                        self.ylimits[0]/5,  # get station name closest to station text.  
+                        # get station name closest to station text.
+                        self.ylimits[0]/5,    
                         s= names,
                         horizontalalignment='center',
                         verticalalignment='baseline',
@@ -3331,7 +3327,6 @@ class Plot2d (object):
                                   'weight': self.fw},
                         )
         
-       
         # put a grid on if set to True 
         if self.show_grid is True:
             # axm.grid(alpha=.3, which='major', lw=.35)
@@ -3362,26 +3357,7 @@ class Plot2d (object):
                       fontdict={'size': self.font_size + 2, 'weight': 'bold'})
         axm.set_ylabel('Depth ({0})'.format(self.depth_scale),
                       fontdict={'size': self.font_size + 2, 'weight': 'bold'})
-        if show_report is True : 
-            
-            # povided model offsets  slce matrix to keep the model value that we need 
-            occam_model_offsets = occam_model_obj.model_station_offsets
-            new_station_offsets,  new_depth_offsets,\
-                new_block_matrix= mplotus.slice_csamt_matrix(
-                             block_matrix =occam_model_resistiviy_obj  ,
-                            station_offsets = occam_model_offsets ,
-                            depth_offsets =occam_model_obj.model_depth_offsets,
-                            offset_MinMax=(occam_data_station_offsets[0], 
-                                           occam_data_station_offsets[-1]),
-                            doi='1km')
-            
-            # new_station_offsets,  new_depth_offsets, new_block_matrix
-            mplotus.get_conductive_and_resistive_zone (
-                data = new_block_matrix,
-                    site_names =occam_data_station_names, 
-                     model_offsets =  new_station_offsets, 
-                     site_offsets = occam_data_station_offsets)
-
+        
         self.fig.suptitle('Plot Resistivity Model :RMS={0}, Roughness={1}'.\
                           format(occam_model_obj.model_rms, 
                                 occam_model_obj.model_roughness),
@@ -3398,8 +3374,8 @@ class Plot2d (object):
         
         plt.show()
 
-    def plot_Response(self, data_fn =None ,
-                      response_fn =None , mode =None,   **kws ): 
+    def plot_Response(self, data_fn =None ,response_fn =None ,
+                      mode =None,   **kws ): 
         """
         Function to plot forward value, and residual value from Occam 2D 
         
@@ -3451,7 +3427,6 @@ class Plot2d (object):
             str(mm)for mm in resp_obj.occam_mode]
         
         resp_occam_dtype_obj = resp_obj.occam_dtype
-        
         
         #---------MANAGE OCCAM PLOT MODE -------------------------
         # if mode is not provided , then take the first occam mode 

@@ -42,10 +42,10 @@ from  pycsamt.modeling.occam2d import occam2d_write
 
 
 #path where edi files are located
-edipath =r'C:\Users\Daniel\Desktop\Data\AMT\E1\maskedis' #'data/edi' # specify the path where edi is located 
+edipath =r'C:\Users\Daniel\Desktop\Data\AMT\E1\maskeditest'#'maskedis' #'data/edi' # specify the path where edi is located 
 #edipath = r'C:\Users\Daniel\Desktop\Data\AMT\E1\attemps\edi_test'#ediout_batch1'#
  # specify the path to save the Occam 2D inputfiles
-savepath = None# r'C:\Users\Daniel\Desktop\Data\AMT\E1\oci'#'data/occam2dBuildInputfiles'
+savepath = r'C:\Users\Daniel\Desktop\Data\AMT\E1\oci_res100e20'#None# r'C:\Users\Daniel\Desktop\Data\AMT\E1\oci'#'data/occam2dBuildInputfiles'
 
 # occam_output_dataname 
 OccamDataFile= 'OccamDataFile.dat'
@@ -53,55 +53,55 @@ StartupFile_name= 'Startup'
 
 # if interpolate frequency is set to true , bring limit of interpolatation il logspace frequency 
 
-#interpolate_frequency =True 
-number_of_frequency = 54 # 17            # number of frequency for interpolated 
+interpolate_frequency =True 
+number_of_frequency = 27#54 # 17            # number of frequency for interpolated 
 
-#frequency_interpolate_range = (1.99,4.76,number_of_frequency ) # (-1, 4, 17) in logspace log10. last item is number of frequency 
+frequency_interpolate_range = (2,4, number_of_frequency ) # 1.99,4.76(-1, 4, 17) in logspace log10. last item is number of frequency 
 
 # ---> create model 
 # number of layers
-number_of_model_layers = 16.#31.
+number_of_model_layers = 31.#31.
 # investigation depth 
 
-expected_investigation_depth_or_z_target =1100. #1100. 
+expected_investigation_depth_or_z_target =550.#1100. #1100. 
 # exaggeration depth , must be enough as possible. Around 5* time  the investigation depth 
 
-exaggerate_vertical_z_bottom =5500.#5000.      # exagerate bottom 
+exaggerate_vertical_z_bottom = 2500.#5000.      # exagerate bottom 
 
-model_first_layer_thickness_z1 = 5.     # first layer value 
+model_first_layer_thickness_z1 = 2.5     # first layer value 
 
 # starting resistivity model value in log 10 res 
 
-starting_res_model_value = 1. 
+starting_res_model_value = 2. 
 
 #number_of_iteration to run 
-number_of_iteration_to_run = 100.
+number_of_iteration_to_run = 500.
 
 # bring geoelectrik strike if provided 
-geoelectric_strike = 45. #34.                     # if not given set to 0.
+geoelectric_strike = 0.#45. #34.                     # if not given set to 0.
 # error floors 
     #----TM mode 
 occam_mode ='4'         # must be string 
-TM_phase_error= 5.#20.      # in percentage 
-TM_res_error =5.#10.        # in percentage 
+TM_phase_error= 20.#20.      # in percentage 
+TM_res_error =20.#10.        # in percentage 
 
     #TE mode 
 #occam_mode = '5'
-TE_phase_error=5.#20.      # in percentage 
-TE_res_error =5.#10.        # in percentage 
+TE_phase_error=20.#20.      # in percentage 
+TE_res_error =20.#10.        # in percentage 
  
 # Configuration mesh features 
 
 model_cell_width = 5. # cell width to aim for, note 
                       # this is the mesh size (2 mesh # blocks per model block)
-horizontal_node_x_pad_multiplier = 1.7#1.7 # controls size of padding
-brick_trigger = 1.12 #1.12            # controls aspect ratio of blocks
+horizontal_node_x_pad_multiplier = .8#1.7 # controls size of padding
+brick_trigger = .5 #1.12            # controls aspect ratio of blocks
 
 
 occam2d_write.buildingInputfiles(edi_fn =edipath,
                            geoelectric_strike= geoelectric_strike,
-                           #interpolate_freq= interpolate_frequency, 
-                           #intp_freq_logspace =frequency_interpolate_range, 
+                           interpolate_freq= interpolate_frequency, 
+                           intp_freq_logspace =frequency_interpolate_range, 
                             iteration_to_run= number_of_iteration_to_run, 
                             resistivity_start = starting_res_model_value, 
                             startup_basename=StartupFile_name,

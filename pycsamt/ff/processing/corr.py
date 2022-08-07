@@ -1875,7 +1875,7 @@ class shifting(object):
     @staticmethod 
     def remove_outliers (edi_fn, var=.95 , **kws): 
         """ Sanitize EDIs data and remove the outliers using the principal 
-        component analysis
+        component analysis.
         
         
         :param edi_fn: Path-Like object. Full path to EDI-file. 
@@ -1885,7 +1885,8 @@ class shifting(object):
             ``.95``. 
         :type var: float
         
-        :param kws: Additional keywords arguments from mod:`sklearn.decomposition.PCA` 
+        :param kws: Additional keywords arguments from
+            :mod:`sklearn.decomposition.PCA` 
         :type kws: dict 
         
         :returns: New Z impedance object with remove outliers. 
@@ -1901,8 +1902,7 @@ class shifting(object):
         ...               new_edi_fn ='m20.removeO.E000.edi')
             
         """
-        
-        
+ 
         def reshape_and_fit_z (z , back =False , fit= 'transform') :
             """ Reshape z for to np.ndarray(nfreq, 1) for scikit-learn API  
             back for filling the z ndarray (nfreq, 2, 2)"""
@@ -1941,7 +1941,6 @@ class shifting(object):
         # construct the pca object from sklearn 
         pca = PCA(n_components= var, **kws) 
         # loop to remove outliers on the Z impedance object 
-    
         for ii in range(2):
             for jj in range(2):
                 # need to look out for zeros in the impedance
@@ -1950,7 +1949,7 @@ class shifting(object):
                  
                 if len(nz_index[0]) == 0:
                     continue
-        #       # get the non_zeros components 
+                # get the non_zeros components 
                 with np.errstate(all='ignore'):
                     z_real = ediObj.Z.z[nz_index, ii, jj].real
                     z_imag = ediObj.Z.z[nz_index, ii, jj].imag
@@ -1970,19 +1969,16 @@ class shifting(object):
                                                 back=True,
                                                 fit =None 
                                                 ) 
-     
                # set the new Z object 
                 new_Z.z[nz_index, ii, jj] = z_real_b  + 1j * z_imag_b 
                 new_Z.z_err[nz_index, ii, jj] = z_err_b
                 
-        # # compute resistivity and phase for new Z object
+        # compute resistivity and phase for new Z object
         new_Z.compute_resistivity_phase()
      
         return new_Z
     
-            
-        
-        
+
 def interp_to_reference_freq(freq_array, rho_array, 
                              reference_freq, plot=False): 
     """

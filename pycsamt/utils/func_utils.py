@@ -255,7 +255,7 @@ def _assert_all_types (
             
     return obj 
 
-def scalePosition(ydata , xdata= None, func = None ,c_order= 0,
+def scale_position(ydata , xdata= None, func = None ,c_order= 0,
         show: bool =False, todms=False,
         **kws): 
     """ Correct data location or position and return new corrected location
@@ -309,13 +309,13 @@ def scalePosition(ydata , xdata= None, func = None ,c_order= 0,
         
     Examples
     --------
-    >>> from pycsamt.utils.func_utils  import scalePosition 
+    >>> from pycsamt.utils.func_utils  import scale_position 
     >>> from pycsamt.ff.core.edi import Edi_Collection 
     >>> edipath = r'/Users/Daniel/Desktop/ediout'
     >>> cObjs = Edi_collection (edipath)
     >>> # correcting northing coordinates from latitude data 
     >>> # corrected latitude coordinates using the default x.
-    >>> lat_corrected, *_= scalePosition(ydata =cObjs.lat[:12])
+    >>> lat_corrected, *_= scale_position(ydata =cObjs.lat[:12])
     >>> cObjs.lat[:12]
     ... array([0.        , 0.        , 0.00027778, 0.00027778, 0.00055556,
     ...       0.00083333, 0.00083333, 0.00111111, 0.00138889, 0.00138889,
@@ -488,7 +488,7 @@ def get_interpolate_freqs (ediObjs, to_log10 =False):
     :Example: 
         >>> from pycsamt.ff.core.edi import Edi_collection 
         >>> from pycsamt.utils.func_utils import find_interpolate_freq
-        >>> edipath = r'/Users/Daniel/Desktop/ediout'
+        >>> edipath = r'/Users/Daniel/Desktop/edi'
         >>> cObjs = Edi_collection (edipath)
         >>> ifreqs, nfreq= get_interpolate_freq(cObjs.ediObjs) 
         >>> ifreqs, nfreq

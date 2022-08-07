@@ -273,8 +273,8 @@ class Edi_collection :
             freq.append(edi_obj.Z.freq) 
         #-----------------------------    
         # correct_lon_lat 
-        lon,*_ = func.scalePosition(lon)
-        lat,*_ = func.scalePosition(lat)
+        lon,*_ = func.scale_position(lon)
+        lat,*_ = func.scale_position(lat)
         #------------------------------
         # ---> get impednaces , phase tensor and
         # resistivities values form ediobject
@@ -574,8 +574,8 @@ class Edi_collection :
         # clean the old main Edi section info and 
         # and get the new values
         if correct_ll or make_coords:
-            londms,*_ = func.scalePosition(self.longitude, todms=True)
-            latdms,*_ = func.scalePosition(self.latitude, todms=True)
+            londms,*_ = func.scale_position(self.longitude, todms=True)
+            latdms,*_ = func.scale_position(self.latitude, todms=True)
   
         for k, (obj, did) in enumerate(zip(self.ediObjs, dataid)): 
             obj.Head.edi_header = None  

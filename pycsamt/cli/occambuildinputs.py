@@ -82,11 +82,12 @@ def main():
 
     parser.add_argument( '-mode', '--occam-mode', 
                     dest ='occam_mode',
-                    choices= ('1', '2', '5', '6'), 
+                    choices= ('1', '2','4',  '5', '6'), 
                     default='6', 
                     help = """Occam model modes.
                     1 or log_all       --->   Log resistivity of TE and TM plus Tipper(MT),
                     2 or log_te_tip    --->   Log resistivity of TE plus Tipper(MT),
+                    4 or log_te_tm     --->   Log resistivity of TE and TM
                     5 or log_te        --->   Log resistivity of TE,
                     6 or log_tm        --->   Log resistivity of TM, 
                     Get more info in :doc:`~pycsamt.modeling.occam2d.Data` or 

@@ -117,6 +117,7 @@ def assert_lon_value(longitude):
     """
     make sure longitude is in decimal degrees
     """
+    
     if longitude in [None, 'None']:
         return None
     try:

@@ -15,13 +15,13 @@ Created on Fri Mar 19 19:15:46 2021
 from pycsamt.ff.processing import Processing
 
 # profile edipath : full path to edifiles or single edifile 
-edipath = 'data/edi'
+edipath = r'C:\Users\Daniel\Desktop\Data\AMT\E1\edi_r2'#'data/edi'
 
 # path to hold edi outputs files 
 savepath =None 
 
 # new edi output filenames 
-new_edifilename = 'K1_c'#None #'k6'                 
+new_edifilename = None#'K1_c'#None #'k6'                 
  
 # Applied filter 
 # availables filters [`tma`, `flma`,`ama`, `ss`, `dist`]

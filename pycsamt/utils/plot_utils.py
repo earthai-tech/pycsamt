@@ -18,7 +18,50 @@ from pycsamt.utils._p import _sensitive as SB
 from pycsamt.utils import exceptions as CSex 
 from pycsamt.utils.decorator import (deprecated, deprecated_to)
 
+def control_delineate_curve(res_deline =None , phase_deline =None ): 
+    """
+    Fonction to controle delineate value given  and return value ceilling . 
 
+    :param res_deline: resistivity value  to delineate.
+    :type res_deline: float, int, list  
+    
+    :param phase_deline:  phase value to  delineate.
+    :type phase_deline: float, int, list 
+    
+    """
+    fmt=['resistivity, phase']
+ 
+    for ii, xx_deline in enumerate([res_deline , phase_deline]): 
+        if xx_deline is  not None  : 
+            if isinstance(xx_deline, (float, int, str)):
+                try :xx_deline= float(xx_deline)
+                except : 
+                    raise CSex.pyCSAMTError_plot(
+                        'Value <{0}> to delineate <{1}> is unacceptable.'\
+                         ' Please ckeck your value.'.format(
+                             xx_deline, fmt[ii]))
+                else :
+                    if ii ==0 : return [np.ceil(
+                            np.log10(xx_deline))]
+                    if ii ==1 : return [np.ceil(xx_deline)]
+  
+            if isinstance(xx_deline , (list, tuple, np.ndarray)):
+                xx_deline =list(xx_deline)
+                try :
+                    if ii == 0 :
+                        xx_deline = [np.ceil(np.log10(float(xx)))
+                                     for xx in xx_deline]
+                    elif  ii ==1 :
+                        xx_deline = [np.ceil(float(xx))
+                                     for xx in xx_deline]
+                        
+                except : 
+                    raise CSex.pyCSAMTError_plot(
+                        'Value to delineate <{0}> is unacceptable.'\
+                         ' Please ckeck your value.'.format(fmt[ii]))
+                else : 
+                    return xx_deline
+                
 def share_props_for_each_plot(number_of_plot = 3 ,  **kwargs):
     """
     Function to set properties for each plot. Easy to customize line and 

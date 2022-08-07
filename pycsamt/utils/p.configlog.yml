@@ -17,7 +17,7 @@ handlers:
         level: DEBUG
         formatter: simple
         filename: pycsamt/_loggerfiles/infos.log
-        maxBytes: 1000000 # 1MB
+        maxBytes: 120000000 # 120MB
         backupCount: 2
         encoding: utf8
         

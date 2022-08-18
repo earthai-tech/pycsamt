@@ -19,6 +19,7 @@ import shutil
 import time
 import numpy as np 
 
+import pycsamt
 import pycsamt.utils.func_utils as func
 import pycsamt.ff.core.z as MTz
 from pycsamt.utils. _p import suit 
@@ -30,7 +31,7 @@ from pycsamt.utils._csamtpylog import csamtpylog
 
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 
-
+    
 class Edi_collection : 
     """
     Super class to deal with Edifiles .Collect edifiles and set important 
@@ -94,60 +95,19 @@ class Edi_collection :
        ... print(edi_objs.res_xy['S01'])
        ... print(edi_objs.phs_err_xy['S00'])
        ... print(edi_objs.z_err_xy['S00'])
+       
+       
     """
     
-    def __init__(self, list_of_edifiles =None, edipath =None , 
+    def __init__(self, list_of_edifiles=None, ediObjs =None , 
                  survey_name =None ): 
         self._logging= csamtpylog.get_csamtpy_logger(self.__class__.__name__)
         self.edifiles =list_of_edifiles
-        self.survey_name =survey_name
-        self.Edi =Edi()
+        self.ediObjs = ediObjs 
         self.Location =Location ()
-        
-        self.freq_array = None 
-        
-        if self.edifiles is None and edipath is not None : 
-            self._logging.info (
-                'Getting edifiles from edipath <%s>'% edipath )
-            
-            if os.path.isfile(edipath) is True : 
-                if edipath.endswith('.edi') is True : 
-                    self.edifiles =[edipath] 
-            else:
-                try :os.path.isdir(edipath)
-                except :raise CSex.pyCSAMTError_EDI(
-                        'Wrong Path, Does not exist,'
-                        ' Please provided right path !')
-                else :
-                    self.edifiles = [os.path.join(edipath , ediobj)
-                                     for ediobj in os.listdir(edipath)
-                                  if ediobj.endswith('.edi') ]
-        if len(self.edifiles ) < 1 : 
-            warnings.warn(
-                'No edifiles found in the path provided <%s>.'
-                ' Iseems the edipath does not match'
-                ' the right edipath.'% edipath)
-            raise CSex.pyCSAMTError_EDI(
-                'No edifiles detected. Please provided the right path.')
-        else :
-            self._logging.info (
-                'Number of edifiles found are <%s>'%len(self.edifiles))
-        
-        if self.edifiles is None and edipath is None : 
-            warnings.warn (
-                'May provided a least alist of edifiles or edipath '
-                'where edifiles are located.None value cannot be computed'
-                ' .Please check your path or your edilist. ')
-            self._logging.warning(
-                'May provided a least alist of edifiles or edipath'
-                ' where edifiles are located.None value cannot be computed.'
-                  ' Please get check your path or your edilist. ')
-            raise CSex.pyCSAMTError_EDI(
-                'Empty list and wrong edipath can not be read. '
-                'Please provided either the list of edifiles '
-                 'or the right edipath. None value can not be computed.')
-                
-        #---> construction of georeference attributes : 
+        self.survey_name =survey_name
+
+        #---> construction of georeference attributes :
         for _key in ['_latitude', '_longitude', '_azimuth', 
                      '_elevation', 'station_names']: 
             self.__setattr__(_key, None )
@@ -158,8 +118,9 @@ class Edi_collection :
                         '_res_det','_phs', '_phs_det', '_phs_det_err'
                          ] :  self.__setattr__( tensor, None) 
                                  
-        if self.edifiles is not None : 
+        if (self.edifiles or self.ediObjs) is not None : 
             self._collect_edifiles()
+
         
     @property 
     def latitude(self): 
@@ -195,16 +156,15 @@ class Edi_collection :
             else :self._station_names =edi_stations
             
       
-    def _collect_edifiles(self, edifiles_list =None,
-                          ediobjs =None, edipath =None ):
+    def _collect_edifiles(self, list_of_edifiles =None, *,  ediObjs =None):
         """
         collect edifiles and set appropriates attributes for each stations. 
 
-        :param edifiles_list: list of edifiles
-        :param edifiles_list: list 
+        :param list_of_edifiles: list of edifiles
+        :type list_of_edifiles: list 
         
         :param ediobjs:  can provided from  class built.
-        :param ediobjs: obj 
+        :type ediobjs: pycsamt.ff.core.edi.Edi
         
         :Example: 
             
@@ -220,40 +180,74 @@ class Edi_collection :
             ... print(edi_objs.freq_array)
             
         """
+        rfiles =[]
+        if list_of_edifiles is not None: 
+            self.edifiles = list_of_edifiles 
+        if ediObjs is not None: 
+            self.ediObjs = ediObjs 
+            
+        #################
+        # data can be a single file or a full path  to edifiles
+        if self.ediObjs is not None: 
+            if not isinstance(self.ediObjs, (list, tuple)): 
+                self.ediObjs = [self.ediObjs] 
+            self.ediObjs =list(self.ediObjs) 
+            if not isinstance(self.ediObjs[0], pycsamt.ff.core.edi.Edi):
+                raise CSex.pyCSAMTError_EDI(
+                    "Given object does not match the `pycsamt.ff.core.edi.Edi`"
+                    " edi objects."
+                    )
+            rfiles = self.ediObjs
+            
+        elif isinstance(self.edifiles, str): 
+            # single edi and get the path 
+            if os.path.isfile (self.edifiles): 
+                edipath = os.path.dirname (self.edifiles) 
+            elif os.path.dirname (self.edifiles): 
+                # path is given and read  
+                edipath = self.edifiles 
+            else : 
+                raise CSex.pyCSAMTError_EDI(f"Wrong path: {self.edifiles}."
+                                            " Please provide the rigth path."
+                    )
+            rfiles = os.listdir (edipath)
+            self.edifiles= sorted ([ os.path.join(edipath, edi ) for edi in 
+                               rfiles if edi.endswith ('.edi')])  
+  
+        elif isinstance(self.edifiles, (tuple, list)): 
+            try : 
+                self.edifiles= sorted(self.edifiles)
+            except TypeError: 
+                raise CSex.pyCSAMTError_EDI(
+                    "It seems argument for `ediObjs`" 
+                    " is passed to the `list_of_edifiles`" 
+                    " param and vice versa!")
+            rfiles = self.edifiles.copy() 
+            
+        if self.edifiles is not None: 
+            self.ediObjs = [Edi(edi_filename= ediobj) 
+                            for  ediobj in self.edifiles]
+            
+        if self.ediObjs is None: 
+            raise CSex.pyCSAMTError_EDI("None EDI object detected!")
+            
+        # OPTIMIZE 
+        self.ediObjs , self.edinames = func.fit_by_ll(self.ediObjs) 
+        
+        # self.ediObjs =list(self.ediObjs) 
+        # self.edinames= list(self.edinames)
+    
         self._logging.info (
             'Collectiong edilfiles from <%s>'% self.__class__.__name__)
-        
-        if edifiles_list is not None : 
-            self.edifiles = edifiles_list
-        if self.edifiles is None and ediobjs is None  : 
-            raise CSex.pyCSAMTError_EDI(
-                'No edifiles found to read.Please check your right path ')
-        
-        self._logging.debug('Building EDI object from edi files.') 
-        if self.edifiles is not None : 
-            if isinstance(self.edifiles , str):
-                self.edifiles = [self.edifiles]
-            self.edifiles=sorted (self.edifiles)
-            self.edi_obj_list = [Edi(edi_filename= ediobj) 
-                                 for  ediobj in self.edifiles ]
-            
-        elif ediobjs is not None : 
-            self.edi_obj_list= list(ediobjs)
-            
-        assert len(self.edi_obj_list) > 0 , CSex.pyCSAMTError_EDI(
-            "Can't read none value. Provided at least one edifile!")
-            
-        self._logging.info (
-            'Running list of <%s> edifiles'% len(self.edifiles))
         try:
-            func.show_quick_edi_stats(self.edifiles, self.edi_obj_list)
+            func.show_quick_edi_stats(rfiles, self.ediObjs)
         except: pass 
-
+    
         sta , lat,lon, elev , freq , zz, zz_err, rho,\
             rho_err, phs , phs_err =[[] for ii in range (11)]
             
         #--> set gereference attributes 
-        for  edi_obj in self.edi_obj_list : 
+        for  edi_obj in self.ediObjs :
             sta.append(edi_obj.Head.dataid ) 
             if edi_obj.Head.long is None : 
                 edi_obj.Head.long= edi_obj.DefineMeasurement.reflong 
@@ -277,23 +271,29 @@ class Edi_collection :
                                        format(edi_obj.Head.dataid))
             elev.append(edi_obj.Head.elev)
             freq.append(edi_obj.Z.freq) 
-            
+        #-----------------------------    
+        # correct_lon_lat 
+        lon,*_ = func.scale_position(lon)
+        lat,*_ = func.scale_position(lat)
+        #------------------------------
         # ---> get impednaces , phase tensor and
         # resistivities values form ediobject
         self._logging.debug('Setting impedances tensor , phases tensor and '
                             ' resisvitivities values from ediobjs.')
         
-        zz= [edi_obj.Z.z for edi_obj in self.edi_obj_list]
-        zz_err= [edi_obj.Z.z_err for edi_obj in self.edi_obj_list]
+        zz= [edi_obj.Z.z for edi_obj in self.ediObjs]
+        zz_err= [edi_obj.Z.z_err for edi_obj in self.ediObjs]
 
-        rho= [edi_obj.Z.resistivity for edi_obj in self.edi_obj_list]
-        rho_err= [edi_obj.Z.resistivity_err for edi_obj in self.edi_obj_list]
+        rho= [edi_obj.Z.resistivity for edi_obj in self.ediObjs]
+        rho_err= [edi_obj.Z.resistivity_err for edi_obj in self.ediObjs]
 
-        phs= [edi_obj.Z.phase for edi_obj in self.edi_obj_list]
-        phs_err= [edi_obj.Z.phase_err for edi_obj in self.edi_obj_list]
+        phs= [edi_obj.Z.phase for edi_obj in self.ediObjs]
+        phs_err= [edi_obj.Z.phase_err for edi_obj in self.ediObjs]
+        
+        # Create the station ids 
+        self.id = func.make_ids(self.ediObjs, prefix='S')
+        #self.id = ['S{0:03}'.format(ii) for ii in range(len(self.ediObjs))]
 
-         #---> set attribute on dictionnary 
-        self.id = ['S{0:02}'.format(ii) for ii in range(len(self.edifiles))]
         self.longitude, self.latitude, self.elevation = lon , lat, elev
         
         # get frequency array from the first value of edifiles.
@@ -302,7 +302,7 @@ class Edi_collection :
         #---> set ino dictionnary the impdance and phase Tensor 
         self._logging.debug('Setting impedances, resistivities and'
                             ' phase tensors into dictionnaries.')
-        
+        #---> set attribute on dictionnary
         self._z = {key:value for key , value in zip (self.id, zz)}
         self._z_err ={key:value for key , value in zip (self.id, zz_err)}
 
@@ -330,7 +330,23 @@ class Edi_collection :
         return {stn :res_err[: , 1, 0] 
                 for stn, res_err in self._res_err.items()}
     
-    
+    ###TODO #######################
+    @property 
+    def res_xx (self): 
+        return {stn :res[: , 0, 0] for stn, res in self._res.items()}
+    @property 
+    def res_yy (self): 
+        return {stn :res[: , 1, 1] for stn, res in self._res.items()}
+
+    @property 
+    def res_err_xx (self): 
+        return {stn :res_err[: , 0, 0] 
+                for stn, res_err in self._res_err.items()}
+    @property 
+    def res_err_yy (self): 
+        return {stn :res_err[: , 1, 1] 
+                for stn, res_err in self._res_err.items()}
+    #################################################################
     @property 
     def z_xy (self): 
         return {stn :z[: , 0, 1] for stn, z in self._z.items()}
@@ -338,6 +354,18 @@ class Edi_collection :
     def z_yx (self): 
         return {stn :z[: , 1, 0] for stn, z in self._z.items()}
 
+    @property 
+    def z_xx (self): 
+        return {stn :z[: , 0, 0] for stn, z in self._z.items()}
+    @property 
+    def z_yy (self): 
+        return {stn :z[: , 1, 1] for stn, z in self._z.items()}
+    @property 
+    def z_err_xx (self): 
+        return {stn :z_err[: , 0, 0] for stn, z_err in self._z_err.items()}
+    @property 
+    def z_err_yy (self): 
+        return {stn :z_err[: , 1, 1] for stn, z_err in self._z_err.items()}
     
     @property 
     def z_err_xy (self): 
@@ -345,7 +373,6 @@ class Edi_collection :
     @property 
     def z_err_yx (self): 
         return {stn :z_err[: , 1, 0] for stn, z_err in self._z_err.items()}
-    
     
     @property 
     def phs_xy (self): 
@@ -363,8 +390,211 @@ class Edi_collection :
     def phs_err_yx (self): 
         return {stn :phs_err[: , 1, 0] 
                 for stn, phs_err in self._phs_err.items()}
-    
+    ### TODO #########################
+    @property 
+    def phs_xx (self): 
+        return {stn :phs[: , 0, 0] for stn, phs in self._phs.items()}
+    @property 
+    def phs_yy (self): 
+        return {stn :phs[: , 1, 1] for stn, phs in self._phs.items()}
 
+    
+    @property 
+    def phs_err_xx (self): 
+        return {stn :phs_err[: , 0, 0] 
+                for stn, phs_err in self._phs_err.items()}
+    @property 
+    def phs_err_yy (self): 
+        return {stn :phs_err[: , 1, 1] 
+                for stn, phs_err in self._phs_err.items()}
+   
+    
+    def rewrite_edis (self, ediObjs=None,  by = 'name' , prefix = None, 
+                      dataid =None, savepath = None, how='py', 
+                      correct_ll=True, make_coords =False, reflong=None, 
+                      reflat=None, step ='1km', edi_prefix =None, **kws): 
+        
+        """ Rewrite Edis. 
+        
+        Can rename the dataid,  customize sites and correct the positioning
+        latitudes and longitudes. 
+        
+        Parameters 
+        ------------
+  
+        ediObjs: list 
+            Collection of edi object from pycsamt.ff.core.edi.Edi 
+       
+        dataid: list 
+            list of ids to  rename the existing EDI-dataid from  
+            :class:`Head.dataid`. If given, it should match the length of 
+            the collections of `ediObjs`. A ValueError will occurs if the 
+            length of ids provided is out of the range of the number of EDis
+            objects 
+
+        by: str 
+            Rename according to the inner module Id. Can be ``name``, ``id``, 
+            ``number``. Default is ``name``. If :attr:`~.Edi_collection.survey_name`
+            is given, the whole survey name should be used. An other argument 
+            is ``ix`` out of number formating. 
+            
+        prefix: str
+            Prefix the number of the site. It could be the abbreviation   
+            of the survey area. 
+
+        correct_ll: bool,
+            Write the scaled positions( longitude and latitude). Default is
+            ``True``. 
+            
+        make_coords: bool 
+            Usefful to hide the real coordinates of the sites by generating 
+            a 'fake' coordinates for a specific purposes. When setting to ``True``
+            be sure to provide the `reflong` and `reflat` values otherwise and 
+            error will occurs. 
+            
+        reflong: float or string 
+            Reference longitude  in degree decimal or in DD:MM:SS for the  
+            site considered as the origin of the lamdmark.
+            
+        reflat: float or string 
+            Reference latitude in degree decimal or in DD:MM:SS for the reference  
+            site considered as the landmark origin.
+            
+        step: float or str 
+            Offset or the distance of seperation between different sites in meters. 
+            If the value is given as string type, except the ``km``, it should be 
+            considered as a ``m`` value. Only meters and kilometers are accepables.
+            Default value of seperation between the site is ``1km``. 
+             
+        savepath: str 
+            Full path of the save directory. If not given, EDIs  should be 
+            outputed in the created directory. 
+    
+        how: str 
+            The way to index the stations. Default is the Python indexing
+            i.e. the counting starts by 0. Any other value will start counting 
+            the site from 1.
+            
+        kws: dict 
+            Additionnal keyword arguments from `~Edi.write_edifile` and 
+            :func:`pycsamt.utils.func_utils.make_ll_coordinates`. 
+            
+        Examples
+        ---------
+        >>> from pycsamt.ff.core.edi import Edi_Collection
+        >>> edipath = r'/Users/Daniel/Desktop/edi'
+        >>> savepath =  r'/Users/Daniel/Desktop/ediout'
+        >>> cObjs = Edi_collection (edipath)
+        >>> cObjs.rewrite_edis(by='id', edi_prefix ='b1',
+        ...                       savepath =savepath)
+        
+        """
+        def replace_reflatlon (  olist , nval, kind ='reflat'):
+            """ Replace Definemeaseurement Reflat and Reflong by the interpolated
+            values.
+            
+            :param olist: Old list compoing the read EDI measurement infos.
+            :type olist: list 
+            :param nval: New reflat or reflong list. Mostly is the DD:MM:SS 
+                value interpolated. 
+            :param kind: Type of measurement to write. 
+            :type kind:str 
+            
+            :return: List of old element replaced. 
+            :rtype: list 
+            """
+            try : 
+                for ii, comp in enumerate (olist):
+                    if comp.strip().find(kind)>=0: 
+                        olist[ii]= f' {kind}={nval}\n'
+                        break 
+            except:
+                pass
+            return olist 
+        
+        regex = re.compile('\d+', re.IGNORECASE)
+        by = str(by).lower() 
+        if by.find('survey')>=0 :
+            by ='name'
+        
+        prefix = str(prefix) 
+        
+        if ediObjs is not None:
+           self.ediObjs = ediObjs
+           self.id = func.make_ids(self.ediObjs, prefix='S', how= how )
+           
+        if how !='py': 
+            self.id = func.make_ids(self.ediObjs, prefix='S',
+                                    cmode =None)  
+        if dataid is None: 
+            if prefix !='None' : 
+                dataid = list(map(lambda s: s.replace('S', prefix), self.id))
+                
+            elif by =='name': 
+                # get the first name of dataId of the EDI ediObjs  and filled
+                # the rename dataId. remove the trail'_'  
+                name = self.survey_name or  regex.sub(
+                    '', self.ediObjs[0].Head.dataid).replace('_', '') 
+                # remove prefix )'S' and keep only the digit 
+                dataid = list(map(lambda n: name + n, regex.findall(
+                    ''.join(self.id)) ))
+                
+            elif by.find('num')>=0: 
+               
+               dataid = regex.findall(''.join(self.id))  
+               
+            elif by =='id': 
+                dataid = self.id 
+                
+            elif by =='ix': 
+                dataid = list(map(
+                    lambda x: str(int(x)), regex.findall(''.join(self.id))))  
+            else :
+                dataid = list(map(lambda obj: obj.Head.dataid, self.ediObjs))
+
+        elif dataid is not None: 
+            if not np.iterable(dataid): 
+                raise ValueError('DataId parameter should be an iterable '
+                                 f'object, not {type(dataid).__name__!r}')
+            if len(dataid) != len(self.ediObjs): 
+                raise ValueError (
+                    'DataId length must have the same length with the number'
+                    ' of collected EDIs({0}). But {1} {2} given.'.format(
+                    len(self.ediObjs), len(dataid),
+                    f"{'is' if len(dataid)<=1 else 'are'}"))
+       
+    
+        if make_coords: 
+            if (reflong or reflat) is None: 
+                raise ValueError('Reflong and reflat params must not be None!')
+            self.longitude, self.latitude = func.make_ll_coordinates(
+               reflong = reflong, reflat= reflat, nsites= len(self.ediObjs),
+               step = step , **kws) 
+        # clean the old main Edi section info and 
+        # and get the new values
+        if correct_ll or make_coords:
+            londms,*_ = func.scale_position(self.longitude, todms=True)
+            latdms,*_ = func.scale_position(self.latitude, todms=True)
+  
+        for k, (obj, did) in enumerate(zip(self.ediObjs, dataid)): 
+            obj.Head.edi_header = None  
+            obj.Head.dataid = did 
+            
+            if correct_ll or make_coords:
+                obj.Head.long = float(self.longitude[k])
+                obj.Head.lat = float(self.latitude[k])
+                oc = obj.DefineMeasurement.define_measurement
+                oc= replace_reflatlon(oc, nval= latdms[k])
+                oc= replace_reflatlon(oc, nval= londms[k], kind='reflong')
+                obj.DefineMeasurement.define_measurement = oc 
+            # Empty the previous MTEMAP infos and 
+            # fetch the attribute values newly set.
+            obj.MTEMAP.mtemapsectinfo =None 
+            obj.MTEMAP.sectid= did 
+            obj.write_edifile(savepath = savepath ,
+                              new_edifilename = edi_prefix,  **kws)
+            
+        
 class Edi : 
     """
     Ediclass  is for especialy dedicated to .edi files, mainly reading 
@@ -448,6 +678,7 @@ class Edi :
         self.MTEMAP =MTEMAP()
         self.Z =MTz.Z()
         self.Tip =MTz.Tipper()
+
         self.verbose =verbose 
 
         self.block_size = 6 
@@ -471,17 +702,17 @@ class Edi :
        
         if self.edifile is not None : 
                 self.read_edi ()
-    
+            
     @property 
     def lon(self): 
-        return self.Head.lon
+        return self.Head.long or self.DefineMeasurement.reflong 
     @lon.setter 
     def lon (self, longitude): 
-        self.Head.lon =longitude 
+        self.Head.long =longitude  
     
     @property 
     def lat(self): 
-        return self.Head.lat 
+        return self.Head.lat or self.DefineMeasurement.reflat 
     @lat.setter 
     def lat (self, latitude): 
         self.Head.lat=latitude 
@@ -504,12 +735,13 @@ class Edi :
         """
         self._logging.info ("Reading <{0}> edifile.".format(edifile))
         
-        if edifile is not None :self.edifile = edifile 
+        if edifile is not None :
+            self.edifile = edifile 
         if self.edifile is None : 
             raise CSex.pyCSAMTError_EDI('NoneType can not read. '
                                         'Please provide at least an edifile.')
         if self.edifile is not None :
-            if  os.path.isfile(self.edifile) is False:
+            if  not os.path.isfile(self.edifile):
                 raise CSex.pyCSAMTError_EDI('Can not find edifile to read.'
                                             ' Please check your path.')
                 
@@ -618,8 +850,10 @@ class Edi :
         #if 1 mean is lower to highest 
         flag_freqOrder = 0          
         
-        if data_dict is not None : self.comp_dict = data_dict
-        elif data_dict is None :CSex.pyCSAMTError_EDI(
+        if data_dict is not None : 
+            self.comp_dict = data_dict
+        elif data_dict is None :
+            raise CSex.pyCSAMTError_EDI(
                 'None value found. Can not read data')
         
         # get frequency array and initialise z_array and Z_error 
@@ -730,7 +964,7 @@ class Edi :
         or from existing file. Can write also EMAP data are filled attribute 
         of EDI.
 
-        :param edifile: new edifile name .If None , will write edi using 
+        :new_edifilename: new edifile name .If None , will write edi using 
                         station_name plus type of survey (MT of EMAP) plus 
                         year of writing as< S00_emap.2021.edi> or 
                         <S00_mt.2021.edi>
@@ -780,16 +1014,19 @@ class Edi :
                           
         f=0
         verbose = kwargs.pop('verbose', None)
+   
         if verbose is not None: 
             self.verbose = verbose 
         if self.verbose is None: self.verbose =0 
+        
         if not hasattr(self, 'savepath'):
             self.savepath =None 
             
         if savepath is not None: 
             self.savepath =savepath 
         
-        if edi_fn is not None : self.edifile =edi_fn 
+        if edi_fn is not None : 
+            self.edifile =edi_fn 
         
         if new_edifilename is not None : 
             try: 
@@ -811,7 +1048,6 @@ class Edi :
             self.read_edi()
 
         # write info, definemeasurement and mtsection or emapsection 
-        
         edi_header_infolines = self.Head.write_head_info()
         edi_info_infolines =self.Info.write_edi_info()
         edi_definemeasurement_infolines =\
@@ -924,9 +1160,7 @@ class Edi :
                 edi_z_data_infolines.extend(zreal_datalines)
                 edi_z_data_infolines.extend(zimag_datalines)
                 edi_z_data_infolines.extend(zvariance_datalines)
-                
-       
-        #===============================================================
+
         # write EMAP  :
         #---------------------------------------------------------------                      
         if self.typefile =='emap':
@@ -988,8 +1222,6 @@ class Edi :
             # delete one more return                 
             edi_z_data_infolines = edi_z_data_infolines[:-1] 
 
-   
-        #===============================================================
         # write EMAP  pass :***TIPPER  *** 
         #---------------------------------------------------------------
         if np.all(self.Tip.tipper ==0 ) and self.Tip.tipper is not None :
@@ -1030,7 +1262,7 @@ class Edi :
             except : 
                 edi_tip_data_infolines , edi_tip_rot_infolines =[''], ['']
                 
-        #WRITE 
+        #WRITE EDI
         write_edilines = edi_header_infolines + edi_info_infolines +\
             edi_definemeasurement_infolines + edi_mtemap_infolines  
 
@@ -1050,41 +1282,16 @@ class Edi :
                 write_edilines +=ilines +['\n'] 
         
         write_edilines.append('>END')
-        # writenow file : 
+        # write file : 
         with open (new_edifilename , 'w+', encoding = 'utf8') as fw : 
             fw.writelines(write_edilines)
             
-        if self.savepath  is None : 
-            # create a folder in your current work directory
-            self.savepath = os.path.join(os.getcwd(), '_outputEDI_')
-            
-        if self.savepath is not None: 
-            try :
-                if not os.path.isdir(self.savepath):
-                    os.mkdir(self.savepath)
-                    self._logging.info (
-                        'New path <%s> created to save edifile'% self.savepath)    
-            except : 
-                if self.verbose > 0:
-                    warnings.warn(
-                        f"It seems the path {self.savepath!r} already exists!")
-                
-                new_path = 'new_edi.{0}.{1}'.format(
-                    'ff', datetime.datetime.now().month)
-                
-                self._logging.info (
-                    'Create another path <%s> to save edifiles'% os.path.join(
-                        os.path.realpath('.'), new_path))
-                
-                os.mkdir(new_path)    
-                self.savepath =os.path.join(
-                    os.path.realpath ('.'), new_path )
+        self.savepath = func.cpath(self.savepath, '_outputEDI_')
 
-            try : 
-                if os.path.isdir(self.savepath) : 
-                    shutil.move(os.path.join(os.getcwd(),new_edifilename), 
-                                self.savepath )
-            except : pass 
+        try : 
+            shutil.move(new_edifilename, self.savepath )
+        except : 
+            pass 
 
         write_edilines=[]
         
@@ -1096,10 +1303,8 @@ class Edi :
 
         return new_edifilename
             
-      
-            
-        
-    def _write_components_blocks (self, edi_datacomp , comp_key, datatype=None ): 
+    def _write_components_blocks (self, edi_datacomp , 
+                                  comp_key, datatype=None ): 
         """
         Method to write blocks  with data components keys . 
         
@@ -1127,11 +1332,6 @@ class Edi :
         if datatype is None : 
             datatype =self.typefile
         
-        # print(edi_datacomp)
-        # print(len(edi_datacomp))
-        # print(type(edi_datacomp))
-        # print(edi_datacomp.size)
-    
         if comp_key.lower() =='freq':
             comp_block_line=['>FREQ  //{0}\n'.format(edi_datacomp.size)]
         if datatype.lower() in ["mt", '>=mtsect', 'mtsect'] :
@@ -1164,7 +1364,6 @@ class Edi :
             
         else :#datatype.lower() not in ['mt' , '>=mtsect'] 
         #and datatype.lower() not in ['emap', '>=emapsect']: 
-            
             warnings.warn (
                 'Two Types of data can be read either  MTsection or EMAPsection.'
                 'The dataType provided <{0}> does not match any of them.'
@@ -1198,7 +1397,6 @@ class Edi :
     def station (self): 
         return self.Head.dataid 
 
-    
     @property 
     def processingsoftware (self): 
         return self.Info.Processing.ProcessingSoftware.name 
@@ -1217,8 +1415,167 @@ class Edi :
         self.Info.Processing.ProcessingSoftware.name = sofware_name
     
 
+    def interpolateZ(self, new_freq_array, interp_type='slinear',
+                    bounds_error=True, period_buffer=None):
+        """
+        Interpolate the impedance tensor onto different frequencies.
 
+        :param new_freq_array: a 1-d array of frequencies to interpolate on
+                               to.  Must be with in the bounds of the existing
+                               frequency range, anything outside and an error
+                               will occur.
+        :type new_freq_array: np.ndarray
+        :param period_buffer: maximum ratio of a data period and the closest
+                              interpolation period. Any points outside this
+                              ratio will be excluded from the interpolated
+                              impedance array.
+
+        :returns: a new impedance object with the corresponding
+                               frequencies and components.
+        :rtype: pycsamt.ff.core.z.Z
+
+        :Interpolate: ::
+
+            >>> import pycsamt.ff.core.edi as CSedi
+            >>> edi_fn = r"/home/edi_files/cs_01.edi"
+            >>> edi_obj = CSedi.Edi(edi_fn)
+            >>> # create a new frequency range to interpolate onto
+            >>> new_freq = np.logspace(-3, 3, 24)
+            >>> new_z_object= edi_obj.interpolate(new_freq)
+            >>> edi_obj.write_new_edifile(new_edi_fn=r"/home/edi_files/cs_01_interp.edi",
+            >>> ...                   new_Z_obj=new_z_object,
+            >>> ...                   )
+
+        """
         
+        # if the interpolation module has not been loaded return
+        if func.interp_import is False:
+            raise ImportError('could not interpolate, need to install scipy')
+
+        # make sure the input is a numpy array
+        if not isinstance(new_freq_array, np.ndarray):
+            new_freq_array = np.array(new_freq_array)
+            
+        new_freq_array = np.around (new_freq_array, 2)  
+        
+        if period_buffer is not None:
+            if 0. < period_buffer < 1.:
+                period_buffer += 1.
+                print("Warning: period buffer must be > 1. Updating to",
+                      period_buffer)
+
+        # check the bounds of the new frequency array
+        if bounds_error:
+            # logger.debug("new freq array %s", new_freq_array)
+            if self.Z.freq.min() > new_freq_array.min():
+                raise ValueError(
+                    'New frequency minimum of {0:.5g}'.format(new_freq_array.min()) + \
+                    ' is smaller than old frequency minimum of {0:.5g}'.format(
+                        self.Z.freq.min()) + \
+                    '.  The new frequency range needs to be within the ' +
+                    'bounds of the old one.')
+            if self.Z.freq.max() < new_freq_array.max():
+                
+                raise ValueError(
+                    'New frequency maximum of {0:.5g}'.format(new_freq_array.max()) + \
+                    ' is larger than old frequency maximum of {0:.5g}'.format(
+                        self.Z.freq.max()) + \
+                    '.  The new frequency range needs to be within the ' +
+                    'bounds of the old one.')
+
+        # make a new Z object
+        new_Z = MTz.Z(z_array=np.zeros((new_freq_array.shape[0], 2, 2),
+                                       dtype='complex'),
+                      z_err_array=np.zeros((new_freq_array.shape[0], 2, 2)),
+                      freq=new_freq_array)
+        # interpolate the impedance tensor
+        for ii in range(2):
+            for jj in range(2):
+                # need to look out for zeros in the impedance
+                # get the indicies of non-zero components
+                nz_index = np.nonzero(self.Z.z[:, ii, jj])
+
+                if len(nz_index[0]) == 0:
+                    continue
+                # get the non-zero components
+                z_real = self.Z.z[nz_index, ii, jj].real
+                z_imag = self.Z.z[nz_index, ii, jj].imag
+                z_err = self.Z.z_err[nz_index, ii, jj]
+
+                # get the frequencies of non-zero components
+                f = self.Z.freq[nz_index]
+
+                # get frequencies to interpolate on to, making sure the
+                # bounds are with in non-zero components
+                new_nz_index = np.where((new_freq_array >= f.min()) & 
+                                        (new_freq_array <= f.max()))[0]
+                new_f = new_freq_array[new_nz_index]
+                
+                # apply period buffer
+                if type(period_buffer) in [float, int]:
+                    new_f_update = []
+                    new_nz_index_update = []
+                    for ifidx,ifreq in enumerate(new_f):
+                        # find nearest data period
+                        difference = np.abs(np.log10(ifreq) - np.log10(f))
+                        fidx = np.where(difference == np.amin(difference))[0][0]
+                        if max(f[fidx] / ifreq, ifreq / f[fidx]) < period_buffer:
+                            new_f_update.append(ifreq)
+                            new_nz_index_update.append(new_nz_index[ifidx])
+                    new_f = np.array(new_f_update)
+                    new_nz_index = np.array(new_nz_index_update)
+
+                # create a function that does 1d interpolation
+                z_func_real = func.spi.interp1d(f, z_real, kind=interp_type)
+                z_func_imag = func.spi.interp1d(f, z_imag, kind=interp_type)
+                z_func_err = func.spi.interp1d(f, z_err, kind=interp_type)
+
+                # interpolate onto new frequency range
+                new_Z.z[new_nz_index, ii, jj] = z_func_real(
+                    new_f) + 1j * z_func_imag(new_f)
+                new_Z.z_err[new_nz_index, ii, jj] = z_func_err(new_f)
+                
+        # compute resistivity and phase for new Z object
+        new_Z.compute_resistivity_phase()
+
+        return new_Z 
+        
+    # --> write new edi file
+    def write_new_edifile(self, new_edi_fn=None, new_Z=None,**kws):
+        """
+        write a new edi file if things have changed.  Note if new_Z is not 
+        None, they are not changed in `Edi` object, you  need to change them 
+        manually if you want them to be changed. Similarly, the new function 
+        name does not change the `Edi` object `edi_filename` attribute but does
+        change Edi.edi_object.edi_filename attribute.
+
+        :param edi_fn: full path to new edi file
+        :type new_edi_fn: string
+
+        :param new_Z: new Z object
+        :type new_Z: pycsamt.core.z.Z
+
+        :param new_Tipper: new Tipper object
+        :type new_Tipper: pycsamt.core.z.Tipper
+
+        :returns edi_fn: full path to edi file written
+        :rtype edi_fn: string
+        """
+
+        # get header information, mostly from site
+        edi_obj = Edi(edi_filename=self.edifile) 
+        
+        if new_Z is not None:
+            edi_obj.Z = new_Z
+        else:
+            edi_obj.Z = self._Z
+
+        # --> write edi file
+        edi_fn = edi_obj.write_edifile(new_edifilename= new_edi_fn, **kws)
+
+        return edi_fn
+    
+     
 class Head (object): 
     """
     The edi head block contains a series of options which (1) identity the data  
@@ -1316,7 +1673,7 @@ class Head (object):
         self.loc =None 
         self.units ='m'
         self.stdvers='SEG 1.0'
-        self.progvers='pyCSAMT'
+        self.progvers=f'pyCSAMT {pycsamt.__version__}'[:-2]
         self.progdate =datetime.datetime.utcnow().strftime('%Y/%m/%d')
         self.coordsys ='Geomagnetic North'
         self.declination =None 
@@ -1340,12 +1697,14 @@ class Head (object):
         return self.Location.latitude 
     @lat.setter 
     def lat (self, lat):
-        try :float(lat)
+        try :
+            float(lat)
         except :
                 self.Location.latitude =gis.convert_position_str2float(lat) 
                 self.logging.info (
                     'Converted string "dms" input latitude  to decimal degree.')
-        else : self.Location.latitude =float(lat)
+        else : 
+            self.Location.latitude =float(lat)
 
 
     @property 
@@ -1393,20 +1752,25 @@ class Head (object):
             
             with open(edi_fn , 'r', encoding ='utf8') as fh : 
                 head_lines = fh.readlines()
-
                 for hh, headitems in enumerate (head_lines): 
                     
                     if '>HEAD' in headitems or \
                         re.match(r'>HEAD', headitems) is not None:
                         markhead = hh
    
-                    if '>INFO' in headitems or\
-                        re.match(r'>INFO', headitems) is not None :
+                    if ('>INFO' in headitems or\
+                        re.match(r'>INFO', headitems) is not None) or (
+                        ###BUG 
+                        # sometimes >INFO data are missing so for safety 
+                        # we try to use for stop the next EDI section which 
+                        # >=DEFINEMEAS'
+                        #re.match(r'>=DEFINEMEAS', headitems) is not None
+                        headitems.find('>=DEFINEMEAS')>=0 
+                        ):
                         
                         ediheadlist.extend(head_lines[markhead:hh])
 
                         break 
- 
             return cls(edi_header_list = ediheadlist)
 
     
@@ -1452,14 +1816,17 @@ class Head (object):
                             item_to_clean=item.lower().split('=')[0])[0] 
                         if keyi=='lon': keyi= 'long'
                         if keyi =='coordsys' :keyi =='coordinate_system'
-                        value = func._strip_item(
-                            item_to_clean=item.split('=')[1])[0]
-                        
+
+                        try :
+                            value = func._strip_item(
+                                item_to_clean=item.split('=')[1])[0]  
+                        except: value =''
                         self.__setattr__(keyi.lower(), value)
                         new_header.append(''.join([keyi.upper(), '=', value]))
 
         self.edi_header = new_header
-
+        
+        return self 
     
     def write_head_info (self , head_list_infos =None): 
         """
@@ -1487,10 +1854,10 @@ class Head (object):
         self.logging.info ('Writing Edifile info .')
 
         write_header =['>HEAD\n']
-        if head_list_infos is not None : self.edi_header = head_list_infos 
+        if head_list_infos is not None : 
+            self.edi_header = head_list_infos 
         
         if  self.edi_header is None:
-
             for key in self.head_keys : 
                 keyvalue =getattr(self, key)
                 if keyvalue == None :  continue#keyvalue=''
@@ -1687,9 +2054,10 @@ class Info :
                 listinfo.append(''.join([' {0}'.format(
                     item.upper()), '=', infovalue]))
         
-
         self.ediinfo = listinfo
-
+        
+        return self 
+    
             
     def write_edi_info (self, edi_info_list =None ): 
         """
@@ -1775,7 +2143,7 @@ class Info :
                 
                 if valueinf is None :continue   
                 else : write_info.append(''.join(
-                    ['  {0}'.format(infok.upper()), '=', valueinf, '\n']))
+                    ['  {0}'.format(infok.upper()), '=', str(valueinf), '\n']))
                 
             
             for value in self.ediinfo: #add others info from procesing files.
@@ -2081,6 +2449,8 @@ class DefineMeasurement:
         
    
         self.define_measurement = xmeas_list
+        
+        return self 
 
     def write_define_measurement(self, define_measurement_list = None): 
         """
@@ -2137,10 +2507,10 @@ class DefineMeasurement:
                 
                 self.logging.warn(
                     'Please check your definemeasurement '
-                    'list provided. Can not be write.')
+                    'list provided. Can not be written.')
                 raise CSex.pyCSAMTError_EDI(
                     "Can not write the items on the definemeasurement "
-                     "list provided. It seems no right parser if found.")
+                     "list provided. It seems no right parser is found.")
             
             for ii, itemkey in enumerate(self.define_measurement):
                 if not isinstance(itemkey, dict) :
@@ -2196,13 +2566,11 @@ class DefineMeasurement:
                         write_dfmeasurements.append('>emeas'.upper())
                         for eattr in Emeasurement.emeasurementkey :
                             try :tempattr =getattr(self, 'meas_{0}'.format(meastype))
-                            except :
-                                AttributeError 
-                                pass 
+                            except :pass 
                             else : 
                                 
                                 valuemeasxx = tempattr.__dict__["{0}".format(eattr)]
-
+    
                                 if valuemeasxx ==None : valuemeasxx=''
                                 write_dfmeasurements.append(''.join(
                                     ['  {0}'.format(eattr.upper()), '=',
@@ -2223,6 +2591,7 @@ class DefineMeasurement:
                                     ['  {0}'.format(hattr.upper()),
                                      '=', '{0:>10}'.format(str(valuemeasyy).upper())]))
                         write_dfmeasurements.append('\n')
+                        
         write_dfmeasurements.append('\n')
         
         return write_dfmeasurements
@@ -2548,6 +2917,9 @@ class MTEMAP (object):
         
         self.mtemapsectinfo =mtemapsectionlist
         
+        return self 
+    
+    
     def write_mtemap_section (self, mt_or_emap_section_list =None ,
                               nfreq=None):
         """

@@ -37,7 +37,17 @@ except ImportError:
 else :
     itqdm =True 
     
-  
+# auto intall numba  if not installed yet  
+inumba = False 
+ 
+try : 
+    import numba   
+except ImportError: 
+    from pycsamt.utils.func_utils import  subprocess_module_installation
+    inumba =subprocess_module_installation ('numba', DEVNULL =True)
+else :
+    inumba  =True 
+    
 epsg_dict = {
     28350: ['+proj=utm +zone=50 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs', 50],
     28351: ['+proj=utm +zone=51 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs', 51],

@@ -12,8 +12,9 @@ import os
 from pycsamt.viewer.plot import Plot1d
 
 #---path to logile if exists 
+occampath = r'C:\Users\Daniel\Desktop\Data\AMT\E1\oci_20m' #'data/occam2D'
 occam2dLogfile = 'LogFile.logfile'          # Occam2D logfile 
-logPath =os.path.join('data/occam2D', occam2dLogfile )
+logPath =os.path.join(occampath, occam2dLogfile )
 
 #R.M.S Target value 
 RMS_target = 1.

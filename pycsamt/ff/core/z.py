@@ -4,18 +4,18 @@
 #       Licence: GPL
 
 """
-.. module:: Z
-   :synopsis: Deal with MT responses Z and Tipper
-        Module belongs to  MTpy .see  https://mtpy2.readthedocs.io/en/develop/ 
-        CSAMT and MT are  very close geophysical methods
-        We slighty edited this module for CSAMT purpose. 
-        However we keep the Exception of MTpy for authorships.
-        If you use this module , please you may cite authors:
-        Kirkby, A.L., Zhang, F., Peacock, J., Hassan, R., Duan, J., 2019. 
+Module  Z
+==========
+.. _MTpy: https://github.com/MTgeophysics/mtpy.git
+
+Deal with magnetotelluric (MT) tensor responses Z and Tipper. 
+Module is copyrighted to  `MTpy`_ package. Refer to  https://mtpy2.readthedocs.io/en/develop/ 
+for additional details. If you use this module, please you may cite authors::
+    
+    * Kirkby, A.L., Zhang, F., Peacock, J., Hassan, R., Duan, J., 2019. 
         The MTPy software package for magnetotelluric data analysis and visualisation.
         Journal of Open Source Software, 4(37), 1358. https://doi.org/10.21105/joss.01358
-        ...
-
+   
 """
 
 import cmath
@@ -101,7 +101,8 @@ class ResPhase(object):
         if freq is not None:
             self.freq = freq
 
-        #if self._z is None or self._z_err is None or self.freq is None: #The _z_err can be None!!!
+        #if self._z is None or self._z_err is None or self.freq is None: 
+        #The _z_err can be None!!!
         if self._z is None or self.freq is None:
             raise MT_Z_Error('Values are None, check _z, _z_err, freq')
 
@@ -687,7 +688,8 @@ class Z(ResPhase):
                 return
 
         if len(lo_x_factors) != len(self.z):
-            self._logger.error('Wrong number Number of reduce_res_factor_x - need {0}'.format(len(self.z)))
+            self._logger.error('Wrong number Number of '
+                               'reduce_res_factor_x - need {0}'.format(len(self.z)))
             return
 
         # check for iterable list/set of reduce_res_factor_y - if so,

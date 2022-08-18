@@ -38,7 +38,7 @@ from pycsamt.geodrill import geocore  as geoD
 import pycsamt.utils.plotdecorator  as mdeco
 from pycsamt.utils._p import suit 
 from pycsamt.utils._csamtpylog import csamtpylog 
-from pycsamt.ff.processing.corr import shifting as Scor
+from pycsamt.ff.processing.corr import Processing
 
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
@@ -627,7 +627,7 @@ class Plot1d :
             
         #---> corrected data TMA , FLMA and AMA filters   ---------
         # if ADD_FILTER is not None : 
-        corr_obj = Scor(data_fn=data_fn , profile_fn=profile_fn,
+        corr_obj = Processing(data_fn=data_fn , profile_fn=profile_fn,
                         reference_freq=frequency_id )
         csamt_freq_obj=corr_obj.frequency
         csamt_res_obj= corr_obj.res_app_obj
@@ -994,7 +994,7 @@ class Plot1d :
         ff = dict_filter[filter_type ][0] 
 
         # Read original data 
-        sshiftObj = Scor(data_fn=data_fn , profile_fn=profile_fn,
+        sshiftObj = Processing(data_fn=data_fn , profile_fn=profile_fn,
                         reference_freq=refreq)
         
         measured_rho = sshiftObj.app_res_
@@ -2448,6 +2448,8 @@ class Plot2d (object):
         
         self._logging= csamtpylog.get_csamtpy_logger(self.__class__.__name__)
         
+        self.plot_comp = kws.pop('plot_comp', 'xy')
+        
         self.fs =kws.pop('fs', 0.7)
         self.fig_num = kws.pop('fig_num', 1)
         self.fig_size = kws.pop('fig_size', [7,7])
@@ -2493,14 +2495,14 @@ class Plot2d (object):
         self.markerfacecolor=kws.pop('markerfacecolor', 'k')
         self.ms = kws.pop('ms', 2)
         self.lw =kws.pop('lw', 2)
-        
+        #XXX TIP 
         #------ticks parameters ------------------
         self.fw =kws.pop('font_weight', 'bold')
         self.depth_scale=kws.pop('depth_scale', 'm')
         
         # set some figure properties to make plot occam 
         self.station_offsets = None
-        self.station_names = None
+        self.station_names = kws.pop('station_names', None)
         self.station_id =kws.pop('station_id', None)
   
         self.station_font_size = kws.pop('station_font_size', 8)
@@ -2767,128 +2769,86 @@ class Plot2d (object):
         :type savefig: str 
                 
         """
-        def controle_delineate_curve(res_deline =None , phase_deline =None ): 
-            """
-            Fonction to controle delineate value given  and return value ceilling . 
 
-            :param res_deline: resistivity value  to delineate.
-            :type res_deline: float, int, list  
-            
-            :param phase_deline:  phase value to  delineate.
-            :type phase_deline: float, int, list 
-            
-            """
-            fmt=['resistivity, phase']
- 
-            for ii, xx_deline in enumerate([res_deline , phase_deline]): 
-                if xx_deline is  not None  : 
-                    if isinstance(xx_deline, (float, int, str)):
-                        try :xx_deline= float(xx_deline)
-                        except : 
-                            raise CSex.pyCSAMTError_plot(
-                                'Value <{0}> to delineate <{1}> is unacceptable.'\
-                                 ' Please ckeck your value.'.format(
-                                     xx_deline, fmt[ii]))
-                        else :
-                            if ii ==0 : return [np.ceil(
-                                    np.log10(xx_deline))]
-                            if ii ==1 : return [np.ceil(xx_deline)]
-      
-                    if isinstance(xx_deline , (list, tuple, np.ndarray)):
-                        xx_deline =list(xx_deline)
-                        try :
-                            if ii == 0 :
-                                xx_deline = [np.ceil(np.log10(float(xx)))
-                                             for xx in xx_deline]
-                            elif  ii ==1 :
-                                xx_deline = [np.ceil(float(xx))
-                                             for xx in xx_deline]
-                                
-                        except : 
-                            raise CSex.pyCSAMTError_plot(
-                                'Value to delineate <{0}> is unacceptable.'\
-                                 ' Please ckeck your value.'.format(fmt[ii]))
-                        else : 
-                            return xx_deline
-        
         self._logging.info ('Construction of PseudocSection of Resistivity'\
                             ' and Phase from <{0}>'.format(os.path.basename(fn)))
         
         delineate_resistivity_curve =kws.pop('delineate_resistivity', None)
         #tolerance_value =kws.pop('atol', 0.2)
         delineate_phase_curve = kws.pop('delineate_phase', None)
-        mplcmap =kws.pop('cm', 'seismic')
         contourlines =kws.pop('contour_lines_style', '-')
         contourcolors =kws.pop('contour_lines_color', 'white')
-        
+
         #--create obj ----
-        csamt_obj =CSAMT(data_fn=fn , profile_fn=profile_fn)
+        csamt_obj =CSAMT(data_fn=fn , profile_fn=profile_fn, 
+                         component =self.plot_comp)
         csamt_phase_obj =csamt_obj.phase 
         csamt_res_obj =csamt_obj.resistivity 
         csamt_freq_obj =csamt_obj.freq
-        csamt_stnDis_obj =csamt_obj.station_distance
-        
+        csamt_stnDis_obj =csamt_obj.station_distance  #*1e3 if \
+            #distance =='km' else csamt_obj.station_distance
+            
         csamt_stn_obj = sorted(csamt_obj.station)
-        
-        #--- create matrix of Res and Phase 
-        csamt_RES_obj = func.concat_array_from_list(
-            list_of_array= [resvalues for keys ,
-                             resvalues  in sorted(
-                                 csamt_res_obj.items())], concat_axis=1)
-        csamt_PHS_obj = func.concat_array_from_list(
-            list_of_array = [phsvalues for 
-                             key, phsvalues in csamt_phase_obj.items() ], 
-                             concat_axis =1)
-        
-        
-        #convert Res and Phase values on logarithme scale .
-        
-        csamt_RES_obj ,csamt_freq_obj = np.log10( csamt_RES_obj),\
-            np.log10 (csamt_freq_obj ) 
+        if str(self.station_names).lower() =='edi': 
+            try : 
+                csamt_stn_obj = [
+                    e.replace('.edi', '') for e in csamt_obj.edinames]
+            except : 
+                pass
+         
+        ### Ignore the fact that arrays should have all the same 
+        # length and plot anyway. 
+        csamt_RES_obj = func.resize_resphase_values(
+            csamt_res_obj,c =csamt_freq_obj )
+        csamt_PHS_obj = func.resize_resphase_values(csamt_phase_obj,
+                                               c = csamt_freq_obj)
+        #convert Res and Phase values onto logarithm scale .
+        csamt_RES_obj  = np.log10( csamt_RES_obj)
+        csamt_freq_obj = np.log10 (csamt_freq_obj ) 
         
         #--> get delineate curve , if exist .
-    
         if delineate_phase_curve is not None : 
             delineate_phase_curve  = [ss%90 for ss in \
-                                      controle_delineate_curve(
+                                      mplotus.control_delineate_curve(
                                           phase_deline=delineate_phase_curve) ] 
         if delineate_resistivity_curve is not None : 
-            delineate_resistivity_curve = controle_delineate_curve(
+            delineate_resistivity_curve = mplotus.control_delineate_curve(
                 res_deline=delineate_resistivity_curve)
                                                       
         #-----------------------PLOT ---------------------------------------
-        if plot_style is None : plot_style = 'pcolormesh'
+        if plot_style is None : 
+            plot_style = 'pcolormesh'
         
         #--------------------figure params -----------
         
-        mpl.rcParams['figure.figsize']=[12,6]
+        mpl.rcParams['figure.figsize']=self.fig_size 
         fig =plt.figure()
         axe_res =plt.subplot2grid(shape=(2,1), loc=(0,0))
         axe_phase =plt.subplot2grid(shape=(2,1), loc=(1,0))
         
-        cmap = plt.get_cmap( mplcmap)
+        cmap = plt.get_cmap( self.cmap)
  
-
         if plot_style.lower() =='pcolormesh': 
-            xres_matrix , yres_matrix =np.meshgrid(
-                csamt_stnDis_obj, csamt_freq_obj) 
-            xphase_matrix , yphase_matrix = np.meshgrid(
-                csamt_stnDis_obj, csamt_freq_obj)
-            
+            yres_matrix, xres_matrix =np.meshgrid(
+                csamt_freq_obj, csamt_stnDis_obj ) 
+             
+            yphase_matrix , xphase_matrix = np.meshgrid(
+                 csamt_freq_obj, csamt_stnDis_obj) 
             #---res map 
             app_rho_axe = axe_res.pcolormesh (xres_matrix,
-                                              yres_matrix ,csamt_RES_obj,
-                                              vmax = csamt_RES_obj.max(), 
-                                              vmin = csamt_RES_obj.min(), 
-                                              shading= 'gouraud', 
-                                              cmap =cmap, 
+                                          yres_matrix ,
+                                          csamt_RES_obj,
+                                        vmax = csamt_RES_obj.max(), 
+                                        vmin = csamt_RES_obj.min(), 
+                                        shading= 'gouraud', 
+                                        cmap =cmap, 
                                               )
-         
             #---phase map 
             phase_axe = axe_phase.pcolormesh (xphase_matrix ,
-                                              yphase_matrix ,csamt_PHS_obj, 
-                                              vmax = csamt_PHS_obj .max(), 
-                                              vmin = csamt_PHS_obj .min(), 
+                                              yphase_matrix ,
+                                              csamt_PHS_obj, 
+                                               vmax = csamt_PHS_obj.max(), 
+                                               vmin = csamt_PHS_obj.min(), 
                                               shading= 'gouraud', 
                                               cmap =cmap, 
                                               )
@@ -2938,30 +2898,26 @@ class Plot2d (object):
                                                   )
                     
         if plot_style.lower() =='imshow': 
-            xres_matrix , yres_matrix =np.meshgrid(csamt_stnDis_obj,
-                                                   csamt_freq_obj) 
-            xphase_matrix , yphase_matrix = np.meshgrid(csamt_stnDis_obj,
-                                                        csamt_freq_obj)
-            
+      
             #---res map 
-            app_rho_axe = axe_res.imshow (csamt_RES_obj,
-                                          vmax = csamt_RES_obj.max(), 
-                                          vmin = csamt_RES_obj.min(), 
+            app_rho_axe = axe_res.imshow (csamt_RES_obj.T,
+                                          # vmax = csamt_RES_obj.max(), 
+                                          # vmin = csamt_RES_obj.min(), 
                                           interpolation = self.imshow_interp, 
                                           cmap =cmap,
                                           aspect = self.fig_aspect ,
                                           origin= 'upper', 
                                           extent=(csamt_stnDis_obj.min(),
-                                                        csamt_stnDis_obj.max(), 
-                                                        csamt_freq_obj.min(), 
-                                                        csamt_freq_obj.max())
+                                                    csamt_stnDis_obj.max(), 
+                                                    csamt_freq_obj.min(), 
+                                                    csamt_freq_obj.max())
                                               )
             axe_res.set_ylim(csamt_freq_obj.min(), csamt_freq_obj.max())
  
             #---phase map 
-            phase_axe = axe_phase.imshow ( csamt_PHS_obj, 
-                                              vmax = csamt_PHS_obj.max(), 
-                                              vmin = csamt_PHS_obj.min(), 
+            phase_axe = axe_phase.imshow ( np.flipud(csamt_PHS_obj.T), 
+                                              # vmax = csamt_PHS_obj.max(), 
+                                              # vmin = csamt_PHS_obj.min(), 
                                               interpolation = self.imshow_interp, 
                                               aspect =self.fig_aspect ,
                                               cmap =cmap,
@@ -2970,6 +2926,7 @@ class Plot2d (object):
                                                        csamt_stnDis_obj.max(), 
                                                        csamt_freq_obj.min(), 
                                                         csamt_freq_obj.max(), 
+                                                        
                                                        ),
                                               )
    
@@ -2982,7 +2939,7 @@ class Plot2d (object):
                     else : origin ='lower'
                     contps = axe.contour(MAT[ii], colors =contourcolors, 
                                           vmax=MAT[ii].max(),
-                                            vmin = MAT[ii].min(), 
+                                          vmin = MAT[ii].min(), 
                                             linestyles=contourlines, 
                                             extent =(csamt_stnDis_obj.min(),
                                                     csamt_stnDis_obj.max(), 
@@ -3000,7 +2957,6 @@ class Plot2d (object):
             
         
         #for twin axes 
-        
         for ii, ax in enumerate([axe_res, axe_phase]):
             
              if ii ==1 :
@@ -3054,7 +3010,8 @@ class Plot2d (object):
 
         fig.tight_layout()
 
-        fig.suptitle('Plot PseudocrossResistivity and Phase',
+        fig.suptitle(r'PseudocrossResistivity $\rho {0}$ '
+                     'and Phase $\phi {0}$'.format(csamt_obj.component),
                      ha='left',
                      fontsize= 15* self.fs, 
                      verticalalignment='center', 
@@ -3124,8 +3081,7 @@ class Plot2d (object):
         contourcolors =kwargs.pop('contour_lines_colors', 'white')
         delineate_resistivity_curve =kwargs.pop('delineate_rho', None)
         grid_alpha =kwargs.pop('alpha', 0.5)
-        show_report=kwargs.pop('show_report', False)
-        
+             
         set_station_label=kwargs.pop('show_station_id', True)
         
         for file , label in zip ( [iter_fn, mesh_fn , data_fn ], 
@@ -3154,7 +3110,7 @@ class Plot2d (object):
 
         #---> get delineate rho curve --- 
         if delineate_resistivity_curve is not None : 
-            delineate_resistivity_curve = mplotus.controle_delineate_curve(
+            delineate_resistivity_curve = mplotus.control_delineate_curve(
                 res_deline=delineate_resistivity_curve)
             #assert value to put on float rounded to 1 
             # note that value of resistivity for delineate MUST be
@@ -3170,7 +3126,6 @@ class Plot2d (object):
                 pass 
                 
         # -------------FIND OBJECTS ----------------------------
-
         # Read occam 2d model object 
         occam_model_obj = occam2d.Model(iter_fn=iter_fn , 
                                         model_fn = model_fn , mesh_fn =mesh_fn)
@@ -3186,7 +3141,7 @@ class Plot2d (object):
         self.xpad = (dl/2)/dz 
 
         occam_data_station_names =occam_data_obj.data_sites
-        
+    
         if change_station_id is not None :  # call fonction to build a nu
             occam_data_station_names , mess= mplotus.build_new_station_id(
                 station_id =occam_data_station_names ,
@@ -3196,7 +3151,6 @@ class Plot2d (object):
                                                 
         
         # --> get plot objects for model class 
-        
         plot_x_axis  =  occam_model_obj.model_station_offsets
         plot_z_axis  =  occam_model_obj.model_depth_offsets
         occam_model_resistiviy_obj = occam_model_obj.model_resistivity
@@ -3208,19 +3162,15 @@ class Plot2d (object):
         # --> check doi value provided , and convert to default unit {meters}  
         doi =mplotus.depth_of_investigation(doi=doi)
         
-   
-                
         # set boundaries of stations offsets and depth 
         spec_f = -(doi/5)/dz  
-                              
-
+                             
         #-25 +0 : 1300 +25 (xpad = 25 )                              
         self.xlimits=(occam_data_station_offsets.min()/dz -self.xpad  , 
                       occam_data_station_offsets.max()/dz + self.xpad )
 
         
         #then new_sation offset becomes 
-        
         self.ylimits =(spec_f, doi/dz) 
 
         # plot ---------------figure and properties  ---------------------
@@ -3244,7 +3194,7 @@ class Plot2d (object):
         self.fig_aspect ='auto'
         axm = self.fig.add_subplot(1, 1, 1, aspect=self.fig_aspect)
         
-        
+        #XXXFIXME 
         #-----PLOTS STATEMENTS -----------------------------
         
                 #fist option is "pcolormesh " 
@@ -3253,18 +3203,24 @@ class Plot2d (object):
         if plot_style =='pcolormesh':
             
             # if you keep plot_x_axis and plot_z_axis in meter ,
-            #  be sure to divided py dz meshes respectively 
+            #  be sure to divided py dz meshes respectively
+            #-----------------------------------
+            plot_x_axis = np.linspace(occam_data_station_offsets.min(),
+                                      occam_data_station_offsets.max(), 
+                                      occam_model_resistiviy_obj.shape[1])
+            
+            #print(occam_model_resistiviy_obj.shape)
             mesh_x  , mesh_z= np.meshgrid(plot_x_axis,  plot_z_axis )
-            rho_axm = axm.pcolormesh (mesh_x/dz  , 
-                                    mesh_z/dz ,
-                                    occam_model_resistiviy_obj,
-                                        vmin = self.climits[0],
-                                        vmax = self.climits[1],  
-                                        shading= 'auto', 
-                                        cmap =self.cmap, 
-                                        alpha = None, 
-                                              
-                                              )
+            axm.pcolormesh (mesh_x/dz  , 
+                            mesh_z/dz ,
+                            occam_model_resistiviy_obj,
+                            # vmin =occam_data_station_offsets.min(),  #self.climits[0],
+                            # vmax = occam_data_station_offsets.max(), #self.climits[1],  
+                            shading= 'auto', 
+                            cmap =self.cmap, 
+                            alpha = None, 
+                                      
+                                      )
 
             if show_contour is True :
                 contps = axm.contour(mesh_x/dz  , mesh_z /dz ,
@@ -3276,22 +3232,24 @@ class Plot2d (object):
                                     inline=True, fmt='%1.1f',
                                     fontsize =self.font_size,
                                       )
-
+            axm.set_xlim( [int(plot_x_axis.min()),  int(plot_x_axis.max())])
+            axm.set_ylim ([self.ylimits[1], self.ylimits[0]]) 
+            
         if plot_style.lower() =='imshow': 
 
-            mesh_x  , mesh_z= np.meshgrid(plot_x_axis  , plot_z_axis )
+            #mesh_x  , mesh_z= np.meshgrid(plot_x_axis  , plot_z_axis )
             # to get the origine =0 of the plot
             axm.imshow (occam_model_resistiviy_obj,
-                                vmax = self.climits[1], 
-                                vmin =self.climits[0], 
-                                interpolation = self.imshow_interp, 
-                                cmap =self.cmap,
-                                aspect = self.fig_aspect,
-                                origin= 'upper', 
-                                extent=( self.xlimits[0],
-                                        self.xlimits[1],
-                                        self.ylimits[1], 
-                                        self.ylimits[0] - spec_f),  
+                        vmax = self.climits[1], 
+                        vmin =self.climits[0], 
+                        interpolation = self.imshow_interp, 
+                        cmap =self.cmap,
+                        aspect = self.fig_aspect,
+                        origin= 'upper', 
+                        extent=( self.xlimits[0],
+                                self.xlimits[1],
+                                self.ylimits[1], 
+                                self.ylimits[0] - spec_f),  
 
                                     )
 
@@ -3302,13 +3260,13 @@ class Plot2d (object):
                                      colors =contourcolors, 
                                       vmax=self.climits[0],
                                       vmin = self.climits[1], 
-                                        linestyles=contourlines, 
-                                        extent =( self.xlimits[0],
-                                                  self.xlimits[1],
-                                                  self.ylimits[1], 
-                                                  self.ylimits[0]),
-                                        extend ='both',
-                                        origin= origin ,  
+                                    linestyles=contourlines, 
+                                    extent =( self.xlimits[0],
+                                              self.xlimits[1],
+                                              self.ylimits[1], 
+                                              self.ylimits[0]),
+                                    extend ='both',
+                                    origin= origin ,  
                                        )
                 axm.clabel(contps, delineate_resistivity_curve ,
                                 inline=True, 
@@ -3316,27 +3274,21 @@ class Plot2d (object):
                                 fontsize =self.font_size,
                                           )
         
-        
+            axm.set_xlim( [self.xlimits[0],  self.xlimits[1]])
+            axm.set_ylim ([self.ylimits[1], self.ylimits[0]]) 
         #-----------------------END PLOTS STATEMENTS---------------
             #set xlimits and y limits for model axes 
         # for making a color bar 
         if type(self.cmap) == str:
             self.cmap = cm.get_cmap(self.cmap)
-        
-        axm.set_xlim( [self.xlimits[0],  self.xlimits[1]])
-        axm.set_ylim ([self.ylimits[1], self.ylimits[0]]) 
-        
-       
-        
+     
         #-----SET TWIN axes for station ticks and labels ---------
-        
-        # create twin axis to set ticks to tehe top station
+        # create twin axis to set ticks to the top station
+        # let keep only the axe lines 
         axe2=axm.twiny()
-        axe2.xaxis.set_visible(False) # let keep only the axe lines 
-    
-
+        axe2.xaxis.set_visible(False) 
+  
         # show station maker points : 
-            
         for offset , names in zip (occam_data_station_offsets,
                                    occam_data_station_names):
             # plot the station marker ' black triangle down ' 
@@ -3352,7 +3304,8 @@ class Plot2d (object):
             
             if set_station_label is True :  # then plot label id 
                 axm.text(offset/dz ,
-                        self.ylimits[0]/5,  # get station name closest to station text.  
+                        # get station name closest to station text.
+                        self.ylimits[0]/5,    
                         s= names,
                         horizontalalignment='center',
                         verticalalignment='baseline',
@@ -3374,7 +3327,6 @@ class Plot2d (object):
                                   'weight': self.fw},
                         )
         
-       
         # put a grid on if set to True 
         if self.show_grid is True:
             # axm.grid(alpha=.3, which='major', lw=.35)
@@ -3405,26 +3357,7 @@ class Plot2d (object):
                       fontdict={'size': self.font_size + 2, 'weight': 'bold'})
         axm.set_ylabel('Depth ({0})'.format(self.depth_scale),
                       fontdict={'size': self.font_size + 2, 'weight': 'bold'})
-        if show_report is True : 
-            
-            # povided model offsets  slce matrix to keep the model value that we need 
-            occam_model_offsets = occam_model_obj.model_station_offsets
-            new_station_offsets,  new_depth_offsets,\
-                new_block_matrix= mplotus.slice_csamt_matrix(
-                             block_matrix =occam_model_resistiviy_obj  ,
-                            station_offsets = occam_model_offsets ,
-                            depth_offsets =occam_model_obj.model_depth_offsets,
-                            offset_MinMax=(occam_data_station_offsets[0], 
-                                           occam_data_station_offsets[-1]),
-                            doi='1km')
-            
-            # new_station_offsets,  new_depth_offsets, new_block_matrix
-            mplotus.get_conductive_and_resistive_zone (
-                data = new_block_matrix,
-                    site_names =occam_data_station_names, 
-                     model_offsets =  new_station_offsets, 
-                     site_offsets = occam_data_station_offsets)
-
+        
         self.fig.suptitle('Plot Resistivity Model :RMS={0}, Roughness={1}'.\
                           format(occam_model_obj.model_rms, 
                                 occam_model_obj.model_roughness),
@@ -3441,8 +3374,8 @@ class Plot2d (object):
         
         plt.show()
 
-    def plot_Response(self, data_fn =None ,
-                      response_fn =None , mode =None,   **kws ): 
+    def plot_Response(self, data_fn =None ,response_fn =None ,
+                      mode =None,   **kws ): 
         """
         Function to plot forward value, and residual value from Occam 2D 
         
@@ -3495,7 +3428,6 @@ class Plot2d (object):
         
         resp_occam_dtype_obj = resp_obj.occam_dtype
         
-        
         #---------MANAGE OCCAM PLOT MODE -------------------------
         # if mode is not provided , then take the first occam mode 
 
@@ -3525,7 +3457,7 @@ class Plot2d (object):
         #----MANAGE COUNTOUR PLOT ------------------------
          #---> get delineate rho curve --- 
         if delineate_resistivity_curve is not None : 
-            delineate_resistivity_curve = mplotus.controle_delineate_curve(
+            delineate_resistivity_curve = mplotus.control_delineate_curve(
                 res_deline=delineate_resistivity_curve)
             #assert value to put on float rounded to 1 
             # note that value of resistivity for delineate MUST 

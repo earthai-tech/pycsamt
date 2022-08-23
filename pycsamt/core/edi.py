@@ -3,7 +3,7 @@
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
 """
-.. _module-edi:: `pycsamt.ff.core.edi`
+.. _module-edi:: `pycsamt.core.edi`
    :synopsis: EDI module can read and write an .edi file as the 'standard '
              formatof magnetotellurics. Each sectionof the .edi file is given 
              its own class, so the elements of each section are attributes for 
@@ -21,9 +21,9 @@ import numpy as np
 
 import pycsamt
 import pycsamt.utils.func_utils as func
-import pycsamt.ff.core.z as MTz
+import pycsamt.core.z as MTz
 from pycsamt.utils. _p import suit 
-from pycsamt.ff.site import  Location
+from pycsamt.site import  Location
 from pycsamt.utils. _p import _sensitive as SB 
 from pycsamt.utils import gis_tools as gis 
 from pycsamt.utils import exceptions as CSex
@@ -88,7 +88,7 @@ class Edi_collection :
     
     :Example: 
         
-       >>> from pycsamt.ff.core.edi import Edi_collection 
+       >>> from pycsamt.core.edi import Edi_collection 
        >>> edilist = [os.path.join(path, edi)for edi in os.listdir 
                       (path) if edi.endswith('.edi')]
        ... edi_objs = Edi_collection(list_of_edifiles = edilist)
@@ -164,11 +164,11 @@ class Edi_collection :
         :type list_of_edifiles: list 
         
         :param ediobjs:  can provided from  class built.
-        :type ediobjs: pycsamt.ff.core.edi.Edi
+        :type ediobjs: pycsamt.core.edi.Edi
         
         :Example: 
             
-            >>> from pycsamt.ff.core.edi import Edi_collection 
+            >>> from pycsamt.core.edi import Edi_collection 
             >>> path =r'F:\__main__csamt__\paper2_data_old\
                 data_edifiles - numStations\K1_edi\new_EDI'
             >>> edilist = [os.path.join(path, edi)for
@@ -192,9 +192,9 @@ class Edi_collection :
             if not isinstance(self.ediObjs, (list, tuple)): 
                 self.ediObjs = [self.ediObjs] 
             self.ediObjs =list(self.ediObjs) 
-            if not isinstance(self.ediObjs[0], pycsamt.ff.core.edi.Edi):
+            if not isinstance(self.ediObjs[0], pycsamt.core.edi.Edi):
                 raise CSex.pyCSAMTError_EDI(
-                    "Given object does not match the `pycsamt.ff.core.edi.Edi`"
+                    "Given object does not match the `pycsamt.core.edi.Edi`"
                     " edi objects."
                     )
             rfiles = self.ediObjs
@@ -423,7 +423,7 @@ class Edi_collection :
         ------------
   
         ediObjs: list 
-            Collection of edi object from pycsamt.ff.core.edi.Edi 
+            Collection of edi object from pycsamt.core.edi.Edi 
        
         dataid: list 
             list of ids to  rename the existing EDI-dataid from  
@@ -481,7 +481,7 @@ class Edi_collection :
             
         Examples
         ---------
-        >>> from pycsamt.ff.core.edi import Edi_Collection
+        >>> from pycsamt.core.edi import Edi_Collection
         >>> edipath = r'/Users/Daniel/Desktop/edi'
         >>> savepath =  r'/Users/Daniel/Desktop/ediout'
         >>> cObjs = Edi_collection (edipath)
@@ -655,7 +655,7 @@ class Edi :
    
     :Example:  
          
-        >>> import pycsamt.ff.core.edi as csedi
+        >>> import pycsamt.core.edi as csedi
         >>> path =  os.path.join(os.environ["pyCSAMT"], 
         ...                        'data','edi', csa000.edi)
         >>> edihead= csedi.Head.get_header_list_from_edi(
@@ -1432,11 +1432,11 @@ class Edi :
 
         :returns: a new impedance object with the corresponding
                                frequencies and components.
-        :rtype: pycsamt.ff.core.z.Z
+        :rtype: pycsamt.core.z.Z
 
         :Interpolate: ::
 
-            >>> import pycsamt.ff.core.edi as CSedi
+            >>> import pycsamt.core.edi as CSedi
             >>> edi_fn = r"/home/edi_files/cs_01.edi"
             >>> edi_obj = CSedi.Edi(edi_fn)
             >>> # create a new frequency range to interpolate onto
@@ -1783,7 +1783,7 @@ class Head (object):
         
         :Example:
              
-            >>> from pycsamt.ff.core.edi import Head
+            >>> from pycsamt.core.edi import Head
             >>>> file_edi= 'S00_ss.edi'
             >>>> path =  os.path.join(os.environ["pyCSAMT"], 
             ...                      'pycsamt','data', file_edi)
@@ -1844,7 +1844,7 @@ class Head (object):
         
         :Example:
             
-            >>> from pycsamt.ff.core.edi import Head
+            >>> from pycsamt.core.edi import Head
             >>> path =  os.path.join(os.environ["pyCSAMT"],
             ...                         'pycsamt','data', S00_ss.edi)
             >>> edihead= Head.get_header_list_from_edi(edi_fn=path)
@@ -2074,7 +2074,7 @@ class Info :
             
         :Example:
             
-            >>> from pycsamt.ff.core.edi import Info 
+            >>> from pycsamt.core.edi import Info 
             >>> file_edi_2='SAMTEX.edi_2.edi'
             >>> file_edi= 'S00_ss.edi'
             >>> path =  os.path.join(os.environ["pyCSAMT"], 
@@ -2324,7 +2324,7 @@ class DefineMeasurement:
         
         :Example:
             
-            >>> from pycsamt.ff.core.edi import DefineMeasurement    
+            >>> from pycsamt.core.edi import DefineMeasurement    
             >>> file_edi= 'S00_ss.edi'
             >>> path =  os.path.join(os.environ["pyCSAMT"], 
             ...                         'pycsamt','data', file_edi_2)
@@ -2338,7 +2338,7 @@ class DefineMeasurement:
                     
         :Example:
             
-          >>> from pycsamt.ff.core.edi import DefineMeasurement 
+          >>> from pycsamt.core.edi import DefineMeasurement 
           >>> definemeas =DefineMeasurement.get_measurement_info(edi_fn=path)
           >>> print(definemeas.meas_ex.id) 
           ... 1004.
@@ -2621,7 +2621,7 @@ class Hmeasurement(object):
     
     :Example:
         
-        >>> import pycsamt.ff.core.edi as csedi
+        >>> import pycsamt.core.edi as csedi
         >>> hmeas_dict = {'id': '1000.3', 'chtype':'hx', 'x':0, 
         ...                  'y':0, 'azm':0, 'sensor':'None'}
         >>> hmeas = csedi.Hmeasurement(**hmeas_dict )
@@ -2675,7 +2675,7 @@ class Emeasurement(object):
     
     :Example: 
         
-        >>> import pycsamt.ff.core.edi as csedi
+        >>> import pycsamt.core.edi as csedi
         >>> emeas_dict = {'id': '1000.4', 'chtype':'ex', 'x':0,
         ...                  'y':0, 'azm':0, 'acqchan':'ex', }
         >>> emeas = csedi.Hmeasurement(**emeas_dict)
@@ -2860,7 +2860,7 @@ class MTEMAP (object):
             
         :Example:
             
-            >>> import pycsamt.ff.core.edi as csedi 
+            >>> import pycsamt.core.edi as csedi 
             >>> mtsection_obj= csedi.MTEMAP.get_mtemap_section_list(edi_fn =path)
             >>> info = mtsection_obj.read_mtemap_section()
             >>> print(mtsection_obj.sectid) 
@@ -2933,7 +2933,7 @@ class MTEMAP (object):
             
         :Example: 
             
-            >>> from pycsamt.ff.core.edi  import MTEMAP
+            >>> from pycsamt.core.edi  import MTEMAP
             >>> mtemapinfo ={'sectid':'yobkro','nfreq':18 , 'maxblks':100, 'hx':"1003.1",
             ...         'ex':'1005.4','hz':'1006.3', 'ey':1002.3 , 
             ...         'hy':'1000.2'}#'chksum':18, 'ndipole':47, 'type':'hann'
@@ -3023,7 +3023,7 @@ class References(object):
     
     :Example: 
         
-        >>> from pycsamt.ff.core.edi import References
+        >>> from pycsamt.core.edi import References
         >>> refobj = References(**{'volume':18, 'pages':'234--214', 
         ...                           'title':'pyCSAMT :python toolbox for CSAMT' ,
         ...                  'journal':'Computers and Geosciences', 
@@ -3061,7 +3061,7 @@ class Copyright(object):
     
     :Example:
         
-        >>> from pycsamt.ff.core.edi import Copyright 
+        >>> from pycsamt.core.edi import Copyright 
         >>> Copyright(**{'owner':'University of CSAMT',
         ...                  'contact':'Cagniard'})
     """
@@ -3108,7 +3108,7 @@ class Source(object):
     
     :Example:
         
-        >>> from pycsamt.ff.core.edi import Source
+        >>> from pycsamt.core.edi import Source
         >>> Source(**{'archive':'IRIS', 
         ...             'reprocessed_by':'grad_student'})
     """
@@ -3146,7 +3146,7 @@ class Person(object):
     
     :Example:
         
-        >>> from pycsamt.ff.core.edi import Person
+        >>> from pycsamt.core.edi import Person
         >>> person =Person(**{'name':'ABA', 'email':'aba@cagniard.res.org',
         ...                  'phone':'00225-0769980706', 
         ...          'organization':'CagniadRES'})
@@ -3217,7 +3217,7 @@ class Software(object):
     
     :Example:
         
-        >>> from pycsamt.ff.core.edi import Software
+        >>> from pycsamt.core.edi import Software
         >>> Software(**{'release':'0.11.23'})
     """
 
@@ -3243,7 +3243,7 @@ def minimum_parser_to_write_edi (edilines, parser =None ):
                 
     :Example:  
         
-        >>> from pycsamt.ff.core.edi  import DefineMeasurement 
+        >>> from pycsamt.core.edi  import DefineMeasurement 
         >>> file_edi= 'S00_ss.edi'
         >>> path =  os.path.join(os.environ["pyCSAMT"], 
         ...                         'pycsamt','data', file_edi_2)
@@ -3294,7 +3294,7 @@ def gather_measurement_key_value_with_str_parser (
     
     :Example: 
         
-        >>> from pycsamt.ff.core.edi import gather_measurement_key_value_with_str_parser
+        >>> from pycsamt.core.edi import gather_measurement_key_value_with_str_parser
         >>> measm = [ ['>HMEAS', 'ID=1001.001', 'CHTYPE=HX', 'X=', '0.0', 'Y=', 
         ...               '0.0', 'Z=', '0.0', 'AZM=', '0.0', 'TS='],
         ...                 ['>HMEAS', 'ID=1002.001', 'CHTYPE=HY', 'X=', '0.0', 

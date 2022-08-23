@@ -3,7 +3,7 @@
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
 """
-.. _module-cs:: `pycsamt.ff.core.cs` 
+.. _module-cs:: `pycsamt.core.cs` 
     
    :synopsis: Super class or CSAMT Far Field implementation 
                Deal with AVG file and EDI files 
@@ -14,13 +14,13 @@ import warnings
 import datetime
 import numpy as np
 
-import pycsamt.ff.core.avg as CSAMTavg 
-import pycsamt.ff.core.edi as CSAMTedi 
-import pycsamt.ff.core.z as CSAMTz 
+import pycsamt.core.avg as CSAMTavg 
+import pycsamt.core.edi as CSAMTedi 
+import pycsamt.core.z as CSAMTz 
 import pycsamt.utils.zcalculator as Zcc
 from pycsamt.utils import _p as inFO
-from  pycsamt.ff.core import j as CSAMTj 
-from pycsamt.ff.site import (Site, Location, Profile) 
+from  pycsamt.core import j as CSAMTj 
+from pycsamt.site import (Site, Location, Profile) 
 from pycsamt.utils import exceptions as CSex
 from pycsamt.utils import func_utils as func
 from pycsamt.utils._csamtpylog import csamtpylog
@@ -117,7 +117,7 @@ class CSAMT(object):
      
     :Example:
         
-        >>> from pycsamt.ff.core.cs import CSAMT
+        >>> from pycsamt.core.cs import CSAMT
         >>> profile_stn='K1.stn'
         >>> for ii in ['csi000.dat', 'testemap3.edi', 'K1.AVG']:
         >>> path =  os.path.join(os.environ["pyCSAMT"], 
@@ -274,7 +274,7 @@ class CSAMT(object):
         
         :Example:
   
-            >>> from pycsamt.ff.core.cs import CSAMT 
+            >>> from pycsamt.core.cs import CSAMT 
             >>> path = os.path.join(os.environ['pyCSAMT'], 
             ...                        'data', 'edi')
             >>> csamt_obj = CSAMT(
@@ -288,7 +288,7 @@ class CSAMT(object):
          
         :Example:
       
-            >>> from pycsamt.ff.core.cs import CSAMT 
+            >>> from pycsamt.core.cs import CSAMT 
             >>> csamt_obj = CSAMT( data_fn = edipath )
             ... print(csamt_obj.resistivity['S05'])
             ... print(csamt_obj.resistivity_err['S00'])
@@ -389,7 +389,7 @@ class CSAMT(object):
         
         :Example: 
  
-            >>> from pycsamt.ff.core.cs import CSAMT 
+            >>> from pycsamt.core.cs import CSAMT 
             >>> path = os.path.join(os.environ['pyCSAMT'], 
                                'data', 'j')
             >>> csamt_obj = CSAMT(
@@ -403,7 +403,7 @@ class CSAMT(object):
 
         :Example:
                      
-            >>> from pycsamt.ff.core.cs import CSAMT 
+            >>> from pycsamt.core.cs import CSAMT 
             >>> csamt_obj = CSAMT( data_fn = path )
             ... print(csamt_obj.resistivity['S05'])
             ... print(csamt_obj.lat)
@@ -505,7 +505,7 @@ class CSAMT(object):
             
             >>> path =  os.path.join(os.environ["pyCSAMT"], 
                               'pycsamt','data', file_stn)
-            >>> from csampty.ff.core.cs import CSAMT
+            >>> from csampty.core.cs import CSAMT
             >>> csamt_obj = CSAMT(fn = os.path.join(
                 os.path.dirname(path), file_1), profile_fn= path)
             ... print(csamt_obj.resistivity)
@@ -740,7 +740,7 @@ class CSAMT(object):
         
         :Example:
             
-            >>> from pycsamt.ff.core.j import J_collection as JObjs
+            >>> from pycsamt.core.j import J_collection as JObjs
             >>> path2j = 'data/j' 
             >>> jObjs= JObjs().j2edi(path2j)
             
@@ -999,7 +999,7 @@ class CSAMT(object):
                                      
         :Example:   
             
-            >>> from pycsamt.ff.core import avg 
+            >>> from pycsamt.core import avg 
             >>> avg_obj= avg.Avg()
             >>> avg_obj.avg_to_edifile(data_fn= os.path.join(
             ...    path_to_avgfile, avgfile) , 
@@ -1010,7 +1010,7 @@ class CSAMT(object):
         """
 
         #######################################################################
-        from pycsamt.ff.processing import corr 
+        from pycsamt.processing import corr 
         #######################################################################
 
         utm_zone = kwargs.pop('utm_zone', None)

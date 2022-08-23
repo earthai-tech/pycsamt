@@ -68,6 +68,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from copy import deepcopy
 
+import mtpy 
+import pycsamt 
 import pycsamt.utils.gis_tools as gis
 import pycsamt.utils.exceptions as CSex
 from pycsamt.utils.decorator import deprecated 
@@ -105,19 +107,21 @@ except ImportError:
     
     interp_import = False
 
-def fit_func (y ): 
-    """ Test fitining function """
-    def func (x, a, b, c): 
-        return a*x**2  + b*x + c 
-    degree = len(argrelextrema(y, np.less)[0]) +1 
-    coef = np.polyfit ( np.arange (len(y)), y , degree )
-    #func = np.poly1d (coef)
-    x= np.arange (len(y))
-    #print(*coef)
-    #print(func)
-    popt, pcov = curve_fit(func,  x, y) 
-    plt.plot(x, y, 'g--', x, func(x, *popt) , 'ok--' )
-    return func(x, *popt) 
+def _assert_edi_obj (obj)-> object: 
+    """Assert that the given argument is an EDI -object from modules 
+    EDi of pyCSAMT and MTpy packages. A TypeError will occurs otherwise.
+    
+    :param obj: Full path EDI file or `pyCSAMT`_ and `MTpy`_ object. 
+    :type obj: str or str or  pycsamt.core.edi.Edi or mtpy.core.edi.Edi 
+    
+    :return: Identical object after asserting.
+    
+    """
+    if isinstance(obj, str): 
+        obj = pycsamt.core.edi.Edi(obj) 
+    obj = _assert_all_types (obj, mtpy.core.edi.Edi, pycsamt.core.edi.Edi)
+    return  obj 
+
 
 def scale_values(y, x=None, deg= None,  func =None): 
     """ Scaling value using a fitting curve. 
@@ -136,10 +140,10 @@ def scale_values(y, x=None, deg= None,  func =None):
         function i.e  for ``f(x)= ax +b`` where `a` is slope and `b` is the 
         intercept value. It is recommended according to the `y` value 
         distribution to set up  a custom function for better fitting. If `func`
-        is given, the `deg` becomes an useless value.   
+        is given, the `deg` is not needed.   
         
     :param deg: polynomial degree. If  value is ``None``, it should  be 
-        computed using the length of  extrema (local + global).
+        computed using the length of extrema (local and/or global) values.
  
     :returns: 
         - y: array scaled - projected sample values got from `f`.
@@ -171,7 +175,6 @@ def scale_values(y, x=None, deg= None,  func =None):
     minl, = argrelextrema(y, np.less) 
     # get the number of degrees
     degree = len(minl) + 1
-
     if x is None: 
         x = np.arange(len(y)) # np.linspace(0, 4, len(y))
     if len(x) != len(y): 
@@ -184,8 +187,8 @@ def scale_values(y, x=None, deg= None,  func =None):
 
     return  yc, x ,  f  
 
-def reshape_array (arr , axis = None) :
-    """ Detect shape and reshape array accordingly back to the given axis. 
+def reshape(arr , axis = None) :
+    """ Detect the array shape and reshape it accordingly, back to the given axis. 
     
     :param array: array_like with number of dimension equals to 1 or 2 
     :param axis: axis to reshape back array. If 'axis' is None and 
@@ -196,22 +199,23 @@ def reshape_array (arr , axis = None) :
     
     :Example: 
         >>> import numpy as np 
-        >>> from pycsamt.utils.func_utils import reshape_array 
+        >>> from pycsamt.utils.func_utils import reshape 
         >>> array = np.random.randn(50 )
         >>> array.shape
         ... (50,)
-        >>> ar1 = reshape_array(array, 1) 
+        >>> ar1 = reshape(array, 1) 
         >>> ar1.shape 
         ... (1, 50)
-        >>> ar2 =reshape_array(ar1 , 0) 
+        >>> ar2 =reshape(ar1 , 0) 
         >>> ar2.shape 
         ... (50, 1)
-        >>> ar3 = reshape_array(ar2, axis = None)
+        >>> ar3 = reshape(ar2, axis = None)
         >>> ar3.shape # goes back to the original array  
         >>> ar3.shape 
         ... (50,)
         
     """
+    arr = np.array(arr)
     if arr.ndim > 2 : 
         raise ValueError('Expect an array with max dimension equals to 2' 
                          f' but {str(arr.ndim)!r} were given.')
@@ -365,7 +369,7 @@ def build_array_from_objattr(obj, attr):
     :type attr: str 
     
     :Example: 
-        >>> from pycsamt.ff.core.edi import Edi_Collection
+        >>> from pycsamt.core.edi import Edi_Collection
         >>> from pycsamt.utils.func_utils import 
         >>> edipath = r'/Users/Daniel/Desktop/ediout'
         >>> cObjs = Edi_collection (edipath)
@@ -396,9 +400,10 @@ def _assert_all_types (
     # if np.issubdtype(a1.dtype, np.integer): 
     if not isinstance( obj, expected_objtype): 
         raise TypeError (
-            f'Expected {smart_format(tuple (o.__name__ for o in expected_objtype))}'
-            f' type{"s" if len(expected_objtype)>1 else ""} object '
-            f'but {type(obj).__name__!r} is given.')
+            f'Expected type{"s" if len(expected_objtype)>1 else ""} '
+            f'{smart_format(tuple (o.__name__ for o in expected_objtype))}'
+            f' but {type(obj).__name__!r} is given.'
+            )
             
     return obj 
 
@@ -456,7 +461,7 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     Examples
     --------
     >>> from pycsamt.utils.func_utils  import scale_position 
-    >>> from pycsamt.ff.core.edi import Edi_collection 
+    >>> from pycsamt.core.edi import Edi_collection 
     >>> edipath = r'/Users/Daniel/Desktop/ediout'
     >>> cObjs = Edi_collection (edipath)
     >>> # correcting northing coordinates from latitude data 
@@ -547,12 +552,13 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     return ydata_new, popt, pcov 
 
 
-def make_ids(ediObjs, prefix =None, how ='py'): 
+def make_ids(arr, prefix =None, how ='py'): 
     """ Generate auto Id according to the number of given sites. 
     
-    :param ediObjs: list of EDI object , composed of a collection of 
-        pycsamt.ff.core.edi.Edi object
-    :type ediObjs: pycsamt.ff.core.edi.Edi_Collection 
+    :param arr: Iterable object to generate an id site . For instance it can be 
+        the array-like or list of EDI object that composed a collection of 
+        pycsamt.core.edi.Edi object. 
+    :type ediObjs: array-like, list or tuple 
     
     :param prefix: string value to add as prefix of given id. Prefix can be 
         the site name.
@@ -572,10 +578,10 @@ def make_ids(ediObjs, prefix =None, how ='py'):
         ... ['ix0', 'ix1', 'ix2']
         
     """ 
-    fm='{:0' +'{}'.format(int(np.log10(len(ediObjs))) + 1) +'}'
+    fm='{:0' +'{}'.format(int(np.log10(len(arr))) + 1) +'}'
     id_ =[str(prefix) + fm.format(i if how=='py'else i+ 1 ) if prefix is not 
           None else fm.format(i if how=='py'else i+ 1) 
-          for i in range(len(ediObjs))] 
+          for i in range(len(arr))] 
     return id_
 
 def fit_by_ll(ediObjs): 
@@ -587,15 +593,15 @@ def fit_by_ll(ediObjs):
     betwen site computing with a right position at each site.  
     
     :param ediObjs: list of EDI object , composed of a collection of 
-        pycsamt.ff.core.edi.Edi object 
-    :type ediObjs: pycsamt.ff.core.edi.Edi_Collection 
+        pycsamt.core.edi.Edi object 
+    :type ediObjs: pycsamt.core.edi.Edi_Collection 
     
     :returns: array splitted into ediObjs and Edifiles basenames 
     :rtyple: tuple 
     
     :Example: 
         >>> import numpy as np 
-        >>> from pycsamt.ff.core.edi import Edi_Collection 
+        >>> from pycsamt.core.edi import Edi_Collection 
         >>> from pycsamt.utils.func_utils import fit_by_ll
         >>> edipath ='data/edi_ss' 
         >>> cediObjs = Edi_Collection (edipath) 
@@ -623,7 +629,7 @@ def get_interpolate_freqs (ediObjs, to_log10 =False):
     frequency data. 
     
     :param ediObjs: list - Collections of EDI-objects 
-    :rtype: pycsamt.ff.core.edi.Edi 
+    :rtype: pycsamt.core.edi.Edi 
     
     :param to_log10: Put the interpolated min-max frequency to log10 values
     :type to_log10: bool 
@@ -632,7 +638,7 @@ def get_interpolate_freqs (ediObjs, to_log10 =False):
     :rtype: tuple
     
     :Example: 
-        >>> from pycsamt.ff.core.edi import Edi_collection 
+        >>> from pycsamt.core.edi import Edi_collection 
         >>> from pycsamt.utils.func_utils import find_interpolate_freq
         >>> edipath = r'/Users/Daniel/Desktop/edi'
         >>> cObjs = Edi_collection (edipath)
@@ -3110,6 +3116,7 @@ def ismissing(refarr, arr, fill_value = np.nan, return_index =False):
         
     """
     return_index = str(return_index).lower() 
+    fill_value = _assert_all_types(fill_value, float, int)
     if return_index in ('false', 'value', 'val') :
         return_index ='values' 
     elif return_index  in ('true', 'index', 'ix') :
@@ -3209,7 +3216,7 @@ def fillNaN(arr, method ='ff'):
     method= str(method).lower().strip() 
     
     if arr.ndim ==1: 
-        arr = reshape_array(arr, axis=1)  
+        arr = reshape(arr, axis=1)  
         
     if method  in ('backward', 'bf',  'bwd'):
         method = 'bf' 
@@ -3230,10 +3237,13 @@ def fillNaN(arr, method ='ff'):
             ) if method in ('bf', 'ff') else arr 
 
 
-            
-
-
     
+
+
+
+
+
+
 
     
     

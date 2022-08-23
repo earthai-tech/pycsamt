@@ -3,20 +3,22 @@
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
 """
-.. _module-Visualization:`pycsamt.viewer.plot`
+Module View
+============
+
+Some templates for plotting purposes. It gives a quick alternative for uses to 
+save their time for writting their own plot scripts. However to have full 
+control of the plot, it is recommended to write your own plot scripts. 
+
+Note that the package can not handle all the plots possibilty that offers the
+software. In the future, many plots should be removed and replaced by some  
+most efficient ones. 
  
-.. synopsis:From `viewer` subpackage. `plot` module is the visualization module of
-   pyCSAMT software. All analyses , processings , corrections  are vusualized  
-   thoughoutthis module. We decided this option so to avoid importing several time 
-   matplotlib and its properties into differents subpackages . Import Matplotlib 
-   packages into a special module allow a good visibility of scripts  and let 
-   the editor to easy customize the plots without knowning deeply the module 
-   itself. Special plot 1d, 2d and 3D.
-        ... 
 """
 
 import os 
 import re
+import copy
 import  warnings 
 import numpy as np
  
@@ -30,23 +32,28 @@ import pycsamt.utils.exceptions as CSex
 import pycsamt.utils.func_utils as func
 import pycsamt.utils.plot_utils as mplotus  
 import pycsamt.utils.zcalculator  as Zcc
-from pycsamt.ff.core import avg as CSMATavg 
-from pycsamt.ff.core.cs import CSAMT
-from pycsamt.ff.site import Profile
+from pycsamt.core import avg as CSMATavg 
+from pycsamt.core.cs import CSAMT
+from pycsamt.site import Profile
 from pycsamt.modeling import occam2d
 from pycsamt.geodrill import geocore  as geoD
 import pycsamt.utils.plotdecorator  as mdeco
 from pycsamt.utils._p import suit 
 from pycsamt.utils._csamtpylog import csamtpylog 
-from pycsamt.ff.processing.corr import Processing
+from pycsamt.processing.corr import Processing
 
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
-###############################################################################
- 
+warnings.warn("In the future release, many plots of the module 'view'"
+              " should be removed and replaced  by the most efficient ones.", 
+              FutureWarning
+              )
+
+
 class Plot1d :
     """
     plot 1d class
+    
     Deal with all 1D plots. 
 
     ==================  =======================================================
@@ -94,7 +101,7 @@ class Plot1d :
         self.fig_size = kwargs.pop('fig_size', [12,8])
         self.fig_dpi =kwargs.pop('fig_dpi', 300)
         
-        self.fig_title =kwargs.pop('title', None)
+        self.fig_title =kwargs.pop('fig_title', None)
         
         self.x_minorticks=kwargs.pop('xminorticks', 1)
         self.y_minorticks =kwargs.pop('yminorticks', 1)
@@ -107,8 +114,8 @@ class Plot1d :
         self.mstyle =kwargs.pop('maker_style', 'o')
         self.ms =kwargs.pop('ms', 3)
         self.mplfont =kwargs.pop('font','cursive')
-        self.markerfacecolor=kwargs.pop('markefacecolor', 'r')
-        self.markeredgecolor=kwargs.pop('markeredgecolor', 'gray')
+        self.markerfacecolor=kwargs.pop('markerfacecolor', 'k' )
+        self.markeredgecolor=kwargs.pop('markeredgecolor', 'k' )
         
         self.fontweight =kwargs.pop('font_weight', 'bold')
         self.ls= kwargs.pop('ls', '-')
@@ -117,6 +124,8 @@ class Plot1d :
         
         self.xlim =None 
         self.ylim=None 
+        self.xlabel = kwargs.pop('xlabel', None) 
+        self.ylabel = kwargs.pop('ylabel', None) 
         
         self.subplot_wspace = kwargs.pop('subplot_wspace', .3)
         self.subplot_hspace = kwargs.pop('subplot_hspace', .0)
@@ -124,6 +133,372 @@ class Plot1d :
         self.subplot_left = kwargs.pop('subplot_left', .08)
         self.subplot_top = kwargs.pop('subplot_top', .85)
         self.subplot_bottom = kwargs.pop('subplot_bottom', .1)
+        
+        self.savefig = kwargs.pop('savefig', None)
+        
+    
+    def plotf1d (self, *args,  leg =None, kind ='semilogy', 
+                      show_grid =False, distance =50., 
+                     stnlist =None, prefix ='S', how='py',  **kws ):
+        """ Plot 1D filtered plot template  stations Vs Rhoa filtered. 
+        
+        User can edit the template to customize its plot. 
+        
+        Parameters 
+        -----------
+        *args : args : list 
+            Matplotlib logs funtions plot arguments 
+            
+        x: array-like 
+            X-coordinates. It should have the length M, the same of the ``arr2d``; 
+            the columns of the 2D dimensional array.  Note that if `x` is 
+            given, the `distance is not needed. 
+            
+        kind: str 
+             Type of log plot. Can be ``loglog``, ``semilogx``, semilogy`` or 
+             merely a base plot function. Default is ``semilogy``.
+
+        distance: float 
+            The step between two stations. If given, it creates an array of  
+            position for plotting purpose. Default value is ``50`` meters. 
+            
+        stnlist: list of str 
+            List of stations names. If given,  it should have the same length of 
+            the columns M, of `arr2d`` 
+       
+        prefix: str 
+            string value to add as prefix of given id. Prefix can be the site 
+            name. Default is ``S``. 
+            
+        how: str 
+            Mode to index the station. Default is 'Python indexing' i.e. 
+            the counting of stations would starts by 0. Any other mode will 
+            start the counting by 1.
+            
+        kws : dict 
+            Additional keywords arguments of Matplotlib subsplots function  
+            :func:`plt.loglog` or :func:`plt.semilog`
+            
+        Examples 
+        --------
+        >>> import matplotlib.pyplot as plt 
+        >>> from pycsamt.view import Plot1d 
+        >>> from pycsamt.processing import get_ediObjs, make2d, get_full_frequency 
+        >>> from pycsamt.processing import ama , interpolate2d
+        >>> edipath = 'data/3edis'
+        >>> ediObjs = get_ediObjs(edipath) 
+        >>> res2d_raw = make2d (ediObjs, 'resyx')
+        >>> res2d = interpolate2d (make2d (ediObjs, 'resyx')) 
+        >>> freqs = get_full_frequency(ediObjs)
+        >>> filtered =ama(res2d =res2d, phs2d =phs2d, freqs= freqs , window_size=5)
+        >>> #Plot the resistivy value of the third frequency  at all stations 
+        >>> figtitle = 'Data filtered with Adapative moving average'
+        >>> leg= ['dirty data', 'filtered data'] 
+        >>> p1d = Plot1d (fig_size =(5, 3), xlabel = 'Stations',
+                  ylabel='$ Resistivity [ \Omega.m]$', fig_title= figtitle )
+        >>> p1d.plotf1d (x, res2d_raw[3, :] , '+:', x, res2d[3, :], 
+                         'ok--',x, filtered[3, :], 'ob--', kind ='semilogy',
+                         show_grid =False, leg=leg)
+        """
+        x, y, *_ =  args 
+        
+        fig, ax = plt.subplots(1,figsize = self.fig_size, num = self.fig_num,
+                                dpi = self.fig_dpi , 
+                    )
+        
+    
+        axplot = ax.plot 
+        if kind =='loglog' : 
+            axplot = ax.loglog 
+        elif kind =='semilogx': 
+            axplot = ax.semilogx 
+        elif kind =='semilogy': 
+            axplot = ax.semilogy 
+            
+        axplot(*args, **kws, 
+               markersize = self.ms, 
+               lw = self.lw 
+               )
+        
+        ax.legend( [] if leg is None else leg , loc ='best' , ncol = 4 )
+        
+        d= distance or 1.
+        x= x if x is not None else np.arange(len(x))  * d 
+        
+        if stnlist is not None: 
+            stnlist = func._assert_all_types(stnlist, tuple, list, np.ndarray)
+            if len(stnlist)!= len(x):
+                raise ValueError("Expect  the length of the list of station names"
+                                 f" to be the same like to position {len(x)}")
+                
+        stn = stnlist or func.make_ids ( x , prefix , how = how) 
+        
+        ax.set_xticks(ticks= x, minor=False )
+        ax.set_xticklabels(stn, rotation=90., 
+                           fontdict ={'style': self.font_style, 
+                          'size':  1.5 * self.font_size ,
+                          'weight': self.fontweight},  
+                                )
+     
+        #ax.set_xlabel ( self.xlabel or '$Log_{10} frequency [H_z]$')
+        ax.set_ylabel (self.ylabel  or '$ Rhoa [ \Omega.m]$') 
+        
+        ax.set_xlabel(self.xlabel or 'Stations', 
+                      fontdict ={'style': self.font_style, 
+                    'size': 1.5 * self.font_size ,
+                    'weight':  self.fontweight}, 
+                      )
+        
+        if show_grid :
+            ax.grid (visible =True , alpha =0.8, which ='both', color ='gray')
+            
+        plt.tight_layout()   
+        
+        if self.savefig is not None: 
+             plt.savefig(self.savefig , dpi = self.fig_dpi)
+             plt.close (fig =fig )
+             
+        return ax
+    
+        
+        
+    def plottensors (self,  resargs , phsargs , res_err=None, phs_err =None, 
+                     sharex= False, sharey =False, show_grid =True, 
+                     errorbar_kw = None, 
+                     leg= None, **kws): 
+        """ 
+        
+        Parameters 
+        ----------
+        resargs : list of array-like 
+            List of resistivity values to plot. Each resistivity value is an 
+            array-like composed of collected data at each tensor component. 
+            
+        phsargs: list of array-like 
+            List of phases values  in degree to plot. Each phase value is an 
+            array-like composed of collected data at each tensor component.
+        res_err : list of array-like 
+            List of resistivity errors values to plot. Each resistivity error is 
+            an  array-like at each tensor component. 
+            
+        phs_err: list of array-like 
+            List of phase errors values in degrees to plot. Each phase error is 
+            an  array-like at each tensor component.
+            
+        kind: str 
+             Type of log plot. Can be ``loglog``, ``semilogx``, semilogy`` or 
+             merely a base plot function. Default is ``semilogy``.
+             
+        show_grid: bool, 
+            Will show a grid once triggered i.e set to ``True``. Note that some 
+            argument are fixed and can not match the purpose of the users. 
+            Edit the part of gridding plot to match your custom plot. Default 
+            is ``False``.
+        sharex, shareyAxes, optional
+            Share the x or y axis with sharex and/or sharey. The axis will
+            have the same limits, ticks, and scale as the axis of the shared axes. 
+            Default is ``False``. 
+            
+        show_grid: bool, 
+            Will show a grid once triggered i.e set to ``True``. Note that some 
+            argument are fixed and can not match the purpose of the users. 
+            Edit the part of gridding plot to match your custom plot. Default 
+            is ``False``.
+        errorbar_kw: dict 
+            Error bar additional keyword arguments. Refer to
+            :func:`pycsamt.utils.plot_utils.plot_errobar` function. 
+ 
+        leg: list 
+            legend labels put into a list. IOt must match the number of given 
+            resistivity values. 
+            
+        kws : dict 
+            Matplotlib logs functions additional keywords arguments. 
+            
+        plt.xlabel ('$Log_{10} frequency [H_z]$') ; plt.ylabel('$ Resistivity [ \Omega.m]$')
+        
+        Returns 
+        ------- 
+        ax: Matplotlib.pyplot <AxesSubplot> 
+        
+        Examples 
+        ---------
+        >>> from pycsamt.view.plot import Plot1d 
+        >>> from pycsamt.processing import flma # filter to correct resistivity 
+        >>> edipath = 'data/3edis'
+        >>> ediObjs = get_ediObjs(edipath) 
+        >>> res2d = make2d (ediObjs, 'resyx')
+        >>> phs2d = make2d (ediObjs, 'phaseyx')
+        >>> freqs = get_full_frequency(ediObjs)
+        >>> edipath = 'data/3edis'
+        >>> # -----XX-----
+        >>> rhoxx = interpolate2d (make2d (ediObjs, 'resxx')) 
+        >>> phsxx = interpolate2d (make2d (ediObjs, 'phasexx'))
+        >>> rhoxx_err = interpolate2d (make2d (ediObjs, 'resxx_err')) 
+        >>> phsxx_err = interpolate2d (make2d (ediObjs, 'phasexx_err'))
+        >>> # -----XY-----
+        >>> rhoxy = interpolate2d (make2d (ediObjs, 'resxy')) 
+        >>> phsxy = interpolate2d (make2d (ediObjs, 'phasexy'))
+        >>> rhoxy_err = interpolate2d (make2d (ediObjs, 'resxy_err')) 
+        >>> phsxy_err = interpolate2d (make2d (ediObjs, 'phasexy_err'))
+        >>> # -----YX-----
+        >>> rhoyx = interpolate2d (make2d (ediObjs, 'resyx')) 
+        >>> phsyx = interpolate2d (make2d (ediObjs, 'phaseyx'))
+        >>> rhoyx_err = interpolate2d (make2d (ediObjs, 'resyx_err')) 
+        >>> phsyx_err = interpolate2d (make2d (ediObjs, 'phaseyx_err'))
+        >>> # -----YY-----
+        >>> rhoyy = interpolate2d (make2d (ediObjs, 'resyy'))
+        >>> phsyy = interpolate2d (make2d (ediObjs, 'phaseyy'))
+        >>> rhoyy_err = interpolate2d (make2d (ediObjs, 'resyy_err')) 
+        >>> phsyy_err = interpolate2d (make2d (ediObjs, 'phaseyy_err'))
+        >>> # frame phase to between 0 and 90 degree 
+        >>> def frame_phs (arr) : 
+                return np.abs(arr)%90 
+        >>> phsxy= frame_phs(phsxy);
+        >>> phsyx= frame_phs(phsyx);
+        >>> phsyy= frame_phs(phsyy); 
+        >>> phsxx= frame_phs(phsxx) 
+        >>> res_err= [rhoxy_err[:, 3] , rhoyx_err[:, 3] ] 
+        >>> phs_err = [phsxy_err[:, 3] , phsyx_err[:, 3] ] 
+        >>> res_args = [f, rhoxx [:, 3], 'tab:pink', f, rhoxy [:, 3],
+                        'ob-', f, rhoyx [:, 3], 'or-', f, rhoyy [:, 3], 'tab:cyan'] 
+        >>> phs_args = [ f, phsxx [:, 3], 'tab:pink', f, phsxy [:, 3], 
+                        'ob-', f, phsyx [:, 3], 'or-', f, phsyy [:, 3], 'tab:cyan'] 
+        >>> p1d = Plot1d (fig_size =(5, 4), markeredgecolor ='k', markersize = 2 )
+        >>> p1d.plottensors(res = res_args, phs =phs_args, leg=leg, 
+                            res_err =res_err, phs_err = phs_err)
+
+        References 
+        -----------
+        https://matplotlib.org/stable/gallery/color/named_colors.html
+        
+        """
+        errorbar_kw  = errorbar_kw or {}
+        res = func._assert_all_types(resargs, list, tuple)
+        phs = func._assert_all_types(phsargs, list, tuple)
+        
+        fig, ax = plt.subplots(2, sharex = sharex , sharey= sharey,
+                               figsize = self.fig_size, num = self.fig_num,
+                                dpi = self.fig_dpi , 
+                    )
+        
+        ax[0].loglog( *res, 
+                     markersize = self.ms , 
+                     markeredgecolor=self.markeredgecolor, 
+                     linewidth = self.lw, 
+                     **kws)
+        ax[1].semilogx( *phs,  
+                       markersize = self.ms, 
+                       markeredgecolor = self.markeredgecolor, 
+                       linewidth = self.lw, 
+                       **kws)
+
+        if res_err is not None  : 
+            res_err = func._assert_all_types(res_err, list, tuple, np.ndarray)
+            jj=0
+            for ii in  range(len(res_err)) : 
+                mplotus.plot_errorbar(ax[0], res[jj], res[jj+1],
+                                              y_error = res_err[ii], 
+                                              **errorbar_kw 
+                                              )
+         
+                jj +=3  # to jup to next value if 
+                
+        if phs_err is not None: 
+            phs_err = func._assert_all_types(phs_err, list, tuple, np.ndarray)
+            jj=0
+            for ii in range(len(phs_err)) : 
+                mplotus.plot_errorbar(ax[1], phs[jj], phs[jj+1],
+                                              y_error=phs_err[ii], 
+                                              **errorbar_kw 
+                                              )
+                jj +=3
+                
+        ax[0].set_xlabel ( self.xlabel or '$Log_{10} frequency [H_z]$')
+        ax[0].set_ylabel (self.ylabel  or '$ Rhoa [ \Omega.m]$') 
+        ax[1].set_xlabel ( self.xlabel or '$Log_{10} frequency [H_z]$')
+        ax[1].set_ylabel (self.ylabel  or '$ Phase[ deg^o]$') 
+        
+        ax[0].legend( [] if leg is None else leg , loc ='best' , ncol = 4 )
+        
+        if show_grid :
+            ax[0].grid (visible =True , alpha =0.8, which ='both', color ='gray')
+            ax[1].grid (visible =True , alpha =0.8, which ='both', color ='gray')
+ 
+        plt.tight_layout()   
+        
+        if self.savefig is not None: 
+             plt.savefig(self.savefig , dpi = self.fig_dpi)
+        
+        return ax
+    
+    def plotlogs (self, *args,  kind ='semilogy', leg=None, show_grid=False, 
+                  **kws): 
+        """ loglog or semilogs plots. 
+        
+        Template to quick visualize the 1D-log plots. 
+        
+        Parameters 
+        ----------
+        args : list 
+            Matplotlib logs funtions plot arguments 
+            
+        kind: str 
+             Type of log plot. Can be ``loglog``, ``semilogx``, semilogy`` or 
+             merely a base plot function. Default is ``semilogy``.
+             
+        show_grid: bool, 
+            Will show a grid once triggered i.e set to ``True``. Note that some 
+            argument are fixed and can not match the purpose of the users. 
+            Edit the part of gridding plot to match your custom plot. Default 
+            is ``False``.
+            
+        leg: list 
+            legend labels put into a list.
+        kws : dict 
+            Matplotlib logs functions additional keywords arguments. 
+        
+        Examples 
+        ---------
+        >>> from pycsamt.view.plot import Plot1d 
+        >>> from pycsamt.processing import flma # filter to correct resistivity 
+        >>> edipath = 'data/3edis'
+        >>> ediObjs = get_ediObjs(edipath) 
+        >>> res2d = make2d (ediObjs, 'resyx')
+        >>> phs2d = make2d (ediObjs, 'phaseyx')
+        >>> freqs = get_full_frequency(ediObjs)
+        >>> resf =flma(res2d =res2d, phs2d =phs2d, freqs= freqs, window_size=5)
+        >>> x= np.arange (0 , res2d.shape[1]*50 , 50) # step between station is 50 m 
+        >>> leg= ['uncorrected data', 'filtered data'] # legend labels .
+        >>> figtitle = 'Data filtered with fixed length moving average' 
+        >>> p1d = Plot1d (fig_size =(10, 5), xlabel = 'Stations',
+                          ylabel='$ Resistivity [ \Omega.m]$', fig_title= figtitle )
+        >>> p1d.plotlogs (x, res2d[3, :], 'b--',x, resf[3, :], 'ok--',
+                          kind ='semilogy', show_grid =True, leg=leg )
+      
+        """
+        
+        plt.figure ( figsize = self.fig_size, num = self.fig_num,
+                    dpi = self.fig_dpi)
+        
+        pplot = plt.plot 
+        if kind =='loglog' : 
+            pplot = plt.loglog 
+        elif kind =='semilogx': 
+            pplot = plt.semilogx 
+        elif kind =='semilogy': 
+            pplot = plt.semilogy 
+            
+        pplot(*args, **kws)
+        plt.xlabel(self.xlabel)
+        plt.ylabel(self.ylabel )
+        plt.legend ([] if leg is None else leg)
+        plt.title (self.fig_title)
+        if show_grid :
+            plt.grid (visible =True , alpha =0.8, which ='both', color ='gray')
+            
+        plt.tight_layout()
+        
         
     def plot_topo_sep_azim(self,fn = None , profile_fn=None  , 
                            savefig =None ,  **kwargs):
@@ -904,7 +1279,7 @@ class Plot1d :
         :type dipole_length: float, int
         
         :Example:
-            >>> from pycsamt.viewer.plot import Plot1d 
+            >>> from pycsamt.view.plot import Plot1d 
             >>> data='data/avg/K1.AVG'
             >>> viewfreq=[80, 1024,2000,  8192] # set `kind` to ``1``.
             >>> viewsite= ['S00', 's04', 's08', 'S12'] # set `kind` to ``2``
@@ -2477,6 +2852,7 @@ class Plot2d (object):
         self.cb_shrink = kws.pop('cb_shrink', .75)
         self.cb_position = kws.pop('cb_position', None)
         self.climits = kws.pop('climits', (0, 4))
+        self.clabel = kws.pop('clabel', None)
 
         #--> set text box parameters
         self.text_location = kws.pop('text_location', None)
@@ -2521,10 +2897,207 @@ class Plot2d (object):
         self.yminorticks = kws.pop('yminorticks', 1)
 
         self.cmap = kws.pop('cmap', 'jet_r')
-
+        
+        self.xlabel = kws.pop('xlabel' , None) 
+        self.ylabel = kws.pop('ylabel', None) 
+        
+        self.savefig = kws.pop('savefig', None)
         for keys in list(kws.keys()): 
             setattr(self, keys, kws[keys])
             
+    def plottemp2d (self, arr2d, y=None,  x =None, style ='pcolormesh', 
+                distance = 50., stnlist =None, prefix ='S', how= 'py',
+                **kws): 
+        """ 2D template for quick visualization. 
+        
+        Parameters 
+        -----------
+        arr2d : ndarray , shape (N, M) 
+            2D array for plotting. For instance, it can be a 2D resistivity 
+            collected at all stations (N) and all frequency (M) 
+        y: array-like 
+            Y-coordinates. It should have the length N, the same of the ``arr2d``.
+            the rows of the ``arr2d``.
+        x: array-like 
+            X-coordinates. It should have the length M, the same of the ``arr2d``; 
+            the columns of the 2D dimensional array.  Note that if `x` is 
+            given, the `distance is not needed. 
+            
+        style: str 
+            matplotlib plot style.  It could be ``imshow`` or ``pcolormesh``. The 
+            default is ``pcolormesh``. 
+            
+        distance: float 
+            The step between two stations. If given, it creates an array of  
+            position for plotting purpose. Default value is ``50`` meters. 
+            
+        stnlist: list of str 
+            List of stations names. If given,  it should have the same length of 
+            the columns M, of `arr2d`` 
+       
+        prefix: str 
+            string value to add as prefix of given id. Prefix can be the site 
+            name. Default is ``S``. 
+            
+        how: str 
+            Mode to index the station. Default is 'Python indexing' i.e. 
+            the counting of stations would starts by 0. Any other mode will 
+            start the counting by 1.
+            
+        kws : dict 
+            Additional keywords arguments of Matplotlib subsplots function  
+            :func:`plt.subplots`
+            
+        Examples 
+        -------- 
+        >>> import numpy as np
+        >>> from pycsamt.processing import make2d , get_ediObjs, interpolate2d 
+        >>> from pycsamt.processing import get_full_frequency 
+        >>> from pycsamt.view import Plot2d 
+        >>> # create a 2d grid of resistivity data from edipath 
+        >>> edipath = 'data/3edis'
+        >>> ediObjs = get_ediObjs (edipath)
+        >>> res2d_xy = make2d (ediObjs, 'resxy')
+        >>> # can interpolate to fix the missing data 
+        >>> # get the full frequency of survey area in the whole collection data 
+        >>> freqs = get_full_frequency(ediObjs) # plot station vs frequency 
+        >>> res2d_xy = interpolate2d (res2d_xy )
+        >>> # create a 2D plot objects 
+        >>> p2d = Plot2d(figsize =(6, 3), xlabel= '$Distance(m)$',
+                       ylabel = '$Log_{10}Frequency [Hz]$', 
+                       clabel = '$Log_{10}Rhoa[\Omega.m$')
+        >>> # we want to plotlog10 and log10 resistivity 
+        >>> res2d_xy = np.log10(res2d_xy); freqs = np.log10(freqs)
+        >>> p2d.plottemp2d (res2d_xy, y = freqs, distance = 50 ) # distance =50 m
+        
+        """
+        
+        fig, axe = plt.subplots(1, figsize = self.fig_size, num = self.fig_num,
+                                dpi = self.fig_dpi , **kws 
+                    )
+         
+        style = style or 'pcolormesh' 
+        sc = copy.deepcopy(style)
+        style = str (style).lower().strip() 
+        if style not in ('pcolormesh', 'imshow'): 
+            raise ValueError("Plot can be either 'pcolormesh' or "
+                             f"'imshow' not {sc!r} ")
+        
+        try : 
+            distance = float(distance) 
+        except : 
+            raise TypeError (f'Expect a float value not {type(distance).__name__!r}')
+            
+        if y is not None: 
+            if len(y) != arr2d.shape [0]: 
+                raise ValueError (" 'y' array must have an identical number " 
+                                  f" of row of 2D array: {arr2d.shape[0]}")
+                
+        if x is not None: 
+            if len(x) != arr2d.shape[1]: 
+                raise ValueError (" 'x' array must have the same number " 
+                                  f" of columns of 2D array: {arr2d.shape[1]}")
+
+        d= distance or 1. 
+        y = y if y is not None else arr2d.shape [0] 
+        x= x  or np.arange(arr2d.shape[1])  * d 
+        
+        if stnlist is not None: 
+            stnlist = func._assert_all_types(stnlist, tuple, list, np.ndarray)
+            if len(stnlist)!= len(x):
+                raise ValueError("Expect  the length of the list of station names"
+                                 f" to be the same like to position {len(x)}")
+                
+        stn = stnlist or func.make_ids ( x , prefix , how = how) 
+        
+        cmap = plt.get_cmap( self.cmap)
+        
+        if style =='pcolormesh': 
+            
+            Y , X = np.meshgrid (y , x)
+   
+            axr = axe.pcolormesh ( X, Y, arr2d,
+                            vmax = arr2d.max(), 
+                            vmin = arr2d.min(), 
+                            shading= 'gouraud', 
+                            cmap =cmap, 
+                                  )
+
+        if style =='imshow': 
+
+            axr= axe.imshow (arr2d.T,
+                            interpolation = self.imshow_interp, 
+                            cmap =cmap,
+                            aspect = self.fig_aspect ,
+                            origin= 'upper', 
+                            extent=(x.min(),
+                                      x.max(), 
+                                      y.min(), 
+                                      y.max())
+                                              )
+            axe.set_ylim(y.min(), y.max())
+        
+
+        axe.set_xlabel(self.xlabel or 'Distance(m)', 
+                     fontdict ={
+   
+                      'size': 1.5* self.font_size ,
+                      'weight': self.fw}
+                                            )
+      
+        axe.set_ylabel(self.ylabel or 'log10(Frequency)[Hz]',
+                 fontdict ={
+                         #'style': self.font_style, 
+                                  'size': 1.5* self.font_size ,
+                                  'weight': self.fw})
+        if self.show_grid is True : 
+            axe.minorticks_on()
+            axe.grid(color='k', ls=':', lw =0.25, alpha=0.7, 
+                         which ='major')
+ 
+        labex , cf = self.clabel or '$log10(App.Res)[Ω.m]$', axr
+
+        cb = fig.colorbar(cf , ax= axe)
+        cb.ax.yaxis.tick_left()
+        cb.ax.tick_params(axis='y', direction='in', pad=2.)
+        
+        cb.set_label(labex,fontdict={'size': 1.5* self.font_size ,
+                                 'style':self.font_style})
+                     
+        #--> set second axis 
+        axe2 = axe.twiny() 
+        axe2.set_xticks(ticks= x,
+                    minor=False )
+        axe2.set_xticklabels(stn, 
+                         rotation=self.station_label_rotation)
+     
+        axe2.set_xlabel('Stations', 
+                        fontdict ={'style': self.font_style, 
+                                   'size': 1.5* self.font_size ,
+                                   'weight': self.fw}, )
+      
+
+        fig.suptitle(self.fig_title,
+                     ha='left',
+                     fontsize= 15* self.fs, 
+                     verticalalignment='center', 
+                    style =self.font_style,
+                    bbox =dict(boxstyle='round',
+                               facecolor ='moccasin'))
+   
+        #plt.tight_layout(h_pad =1.8, w_pad =2*1.08)
+        
+        fig.tight_layout()  
+        
+        if self.savefig is not None :
+            fig.savefig(self.savefig, dpi = self.fig_dpi,
+                        orientation =self.orient)
+            #plt.close(fig =fig ) 
+        plt.show() if self.savefig is None else plt.close(fig=fig) 
+        
+        
+        
+        
     def penetration2D(self, fn=None , profile_fn =None, 
                       savefig =None, doi= '2km',  **kwargs): 
         """
@@ -3976,7 +4549,7 @@ class Plot2d (object):
                           'pseudostratigraphy log. Please provided a station'
                               ' location file. You can use Iter2Dat model ::', 
                           'from pycsamt.modeling.occam2d import Iter2Dat:: '
-                              'or Profile module ` from pycsamt.ff.core.cs ',
+                              'or Profile module ` from pycsamt.core.cs ',
                               'import Profile` to', 
                           'build a station location file.'])
                          warnings.warn(mess)
@@ -4570,7 +5143,7 @@ def plot_dataAndFits(data_fn =None, stations =None, **kws):
         sttion ='1'
         station =['s00', 13, 46]
     :param kws: keywords arguments. Please refer to 
-                :class:`pycsamt.ff.core.cs.CSAMT` for further details
+                :class:`pycsamt.core.cs.CSAMT` for further details
         
     :Returns: A list of:
         - z_lines: List of survey lines
@@ -4583,7 +5156,7 @@ def plot_dataAndFits(data_fn =None, stations =None, **kws):
         
     :Example:
         
-        >>> from pycsamt.viewer.plot import plot_dataAndFits
+        >>> from pycsamt.view.plot import plot_dataAndFits
         >>> path =r'F:\ThesisImp\avg'
         >>> pathData = [os.path.join(path, file) 
                 for file in ['K1.AVG',

@@ -7,7 +7,7 @@ Created on Sat Nov 27 16:40:47 2021
 import os 
  
 import argparse 
-from pycsamt.viewer.plot import Plot1d
+from pycsamt.view.plot import Plot1d
 PROG = os.path.basename (__file__).replace('.py', '')
 
 def main (): 

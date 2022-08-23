@@ -12,7 +12,7 @@ Created on Thu Nov 25 17:21:37 2021
 import os 
 import sys 
 import argparse 
-from pycsamt.ff.core.edi import Edi 
+from pycsamt.core.edi import Edi 
 
 PROG = os.path.basename (__file__).replace('.py', '')
 

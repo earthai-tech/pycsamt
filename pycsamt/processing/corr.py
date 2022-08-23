@@ -2,16 +2,7 @@
 #       Created on Sat Dec 12 13:55:47 2020
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
-""" 
-.. _module-Shifting::`pycsamt.ff.processing.corr` 
-        :synopsis: Deal with all data files. It corrects apparent resistivity
-                by shitibg value to rj static factor . Apply correction 
-                and filters. Some filters applied to correct apparent
-                 resistivities are TMA , AMA and FLMA. 
-        ...
-        
-Created on Sat Dec 12 13:55:47 2020
-"""
+
 import os 
 import copy 
 import warnings
@@ -25,9 +16,9 @@ try :
 except :
     pass 
 
-from pycsamt.ff.core.edi import Edi 
-from pycsamt.ff.core.cs import CSAMT
-from pycsamt.ff.core  import z as CSAMTz
+from pycsamt.core.edi import Edi 
+from pycsamt.core.cs import CSAMT
+from pycsamt.core  import z as CSAMTz
 from pycsamt.utils import zcalculator as Zcc
 from pycsamt.utils._csamtpylog import csamtpylog
 from pycsamt.utils.decorator import deprecated
@@ -107,7 +98,7 @@ class Processing(object):
     
    :Example:
        
-       >>> from pycsamt.ff.processing.corr import Processing
+       >>> from pycsamt.processing.corr import Processing
        >>> path =  os.path.join(os.environ["pyCSAMT"], 
        ...                       'pycsamt','data', LCS01.AVG)
        ... static_cor =Processing().TMA (data_fn=path,
@@ -357,7 +348,7 @@ class Processing(object):
                     # force to read only avg data from avg object
                     # without station profile file
                     ######################################################
-                    from pycsamt.ff.core  import avg as CSAMTavg
+                    from pycsamt.core  import avg as CSAMTavg
                     ######################################################
                     
                     csamt_obj =CSAMTavg.Avg(data_fn =self.data_fn)
@@ -452,7 +443,7 @@ class Processing(object):
         
         :Example:
             
-            >>> from pycsamt.ff.processing.corr import Shifting
+            >>> from pycsamt.processing.corr import Shifting
             >>> path =  os.path.join(os.environ["pyCSAMT"], 
             ...         'pycsamt','data', LCS01.AVG)
             ... static_cor =shifting().TMA (data_fn=path, 
@@ -463,8 +454,8 @@ class Processing(object):
         
         :Example:
             
-            >>> from pycsamt.ff.core.cs import CSAMT
-            >>> from pycsamt.ff.processing.corr import Processing
+            >>> from pycsamt.core.cs import CSAMT
+            >>> from pycsamt.processing.corr import Processing
             >>> edipath = r'C:/Users\Administrator\Desktop\test\edirewrite'
             >>> csamt_obj =CSAMT(edipath =edipath)
             >>> static_cor =Processing().TMA( reference_freq =256. ,
@@ -633,7 +624,7 @@ class Processing(object):
         
         :Example:
             
-            >>> from pycsamt.ff.processing.corr import shifting 
+            >>> from pycsamt.processing.corr import shifting 
             >>> edipath =os.path.join(os.environ['pyCSAMT'], 'data', 'edi')
             >>> corr_obj= shifting(data_fn =edipath)
             >>> corrapp  = corr_obj.FLMA(number_of_dipole=7,
@@ -645,7 +636,7 @@ class Processing(object):
          
         :Example:
             
-            >>> from pycsamt.ff.processing.corr import Processing
+            >>> from pycsamt.processing.corr import Processing
             >>> avg_path = os.path.join(os.environ['pyCSAMT'], 'data', 'avg')
             >>>  csamt_obj =CSAMT(data_fn =os.path.join(avg_path, 'K2.AVG'),
             ...                  profile_fn=os.path.join(avg_path, 'K2.stn'))
@@ -808,7 +799,7 @@ class Processing(object):
         
         :Example:
             
-            >>> from pycsamt.ff.processing.corr import shifting 
+            >>> from pycsamt.processing.corr import shifting 
             >>> edipath =os.path.join(os.environ['pyCSAMT'], 'data', 'edi')
             >>> corr_obj= shifting(data_fn =edipath)
             >>> corrapp  = corr_obj.AMA(number_of_points=7,
@@ -820,7 +811,7 @@ class Processing(object):
          
         :Example:
             
-            >>> from pycsamt.ff.processing.corr import shifting 
+            >>> from pycsamt.processing.corr import shifting 
             >>> avg_path = os.path.join(os.environ['pyCSAMT'], 'data', 'avg')
             >>>  csamt_obj =CSAMT(data_fn =os.path.join(avg_path, 'K2.AVG'),
             ...                  profile_fn=os.path.join(avg_path, 'K2.stn'))
@@ -848,8 +839,8 @@ class Processing(object):
 
         return self.ama
     
-    @deprecated('Deprecated method! use `pycsamt.ff.processing.Processing.AMA` '
-                ' or `pycsamt.ff.processing.Processing.FLMA` instead.')
+    @deprecated('Deprecated method! use `pycsamt.processing.Processing.AMA` '
+                ' or `pycsamt.processing.Processing.FLMA` instead.')
     def compute_fixed_and_adaptative_moving_average(self, filterfunc, 
                          data_fn =None, profile_fn =None ,
                          dipole_length =50., reference_freq=None, 
@@ -860,8 +851,8 @@ class Processing(object):
         set the param `filterfunc` to the filter we need. Avoid repetition 
         in the code Later.
         
-        .. _filter-AMA::`pycsamt.ff.core.processing.zcalculator.compute_AMA`
-        .. _filter-AMA::`pycsamt.ff.core.processing.zcalculator.compute_FLMA`
+        .. _filter-AMA::`pycsamt.core.processing.zcalculator.compute_AMA`
+        .. _filter-AMA::`pycsamt.core.processing.zcalculator.compute_FLMA`
         
         :param filterfunc: filter fonction , can be :ref:`filter-AMA` or 
                             :ref:`filter-FLMA`
@@ -884,7 +875,7 @@ class Processing(object):
         
         :Example:
             
-            >>> from pycsamt.ff.processing.corr import shifting 
+            >>> from pycsamt.processing.corr import shifting 
             >>> edipath =os.path.join(os.environ['pyCSAMT'], 'data', 'edi')
             >>> corr_obj= shifting(data_fn =edipath)
             >>> res_flma_obj  = corr_obj.compute_fixed_and_adaptative_moving_average(
@@ -897,7 +888,7 @@ class Processing(object):
         
         :Example:
             
-            >>> from pycsamt.ff.processing.corr import shifting 
+            >>> from pycsamt.processing.corr import shifting 
             >>> edipath =os.path.join(os.environ['pyCSAMT'], 'data', 'edi')
             >>> corr_obj= shifting(data_fn =edipath)
             >>> res_ama_obj   = corr_obj.compute_fixed_and_adaptative_moving_average(
@@ -1060,7 +1051,7 @@ class Processing(object):
                                 for ii , stn in enumerate(stnNames)}
         return self.flma_or_ama    
     
-    @deprecated ("Use 'pycsamt.ff.processing.Processing.correct_edi' instead."
+    @deprecated ("Use 'pycsamt.processing.Processing.correct_edi' instead."
                  " Faster and avoid circular reading.")
     def write_corrected_edi (self, 
                      data_fn =None,
@@ -1120,7 +1111,7 @@ class Processing(object):
         
         :Example: 
             
-            >>> from pycsamt.ff.processing import shifting
+            >>> from pycsamt.processing import shifting
             >>>  edifile =os.path.join(os.environ['pyCSAMT'], 'data', 
             ...                           'edi', 'new_csa000.edi' )
             >>> corr_obj= shifting()
@@ -1133,7 +1124,7 @@ class Processing(object):
         
         :Example: 
             
-            >>> from pycsamt.ff.processing import shifting
+            >>> from pycsamt.processing import shifting
             >>>  edipath =os.path.join(os.environ['pyCSAMT'], 'data', 'edi')
             >>> corr_obj= shifting()
             >>> corr_obj.write_corrected_edi(data_fn = edipath,
@@ -1143,7 +1134,7 @@ class Processing(object):
             
         """
         #######################################################################
-        from pycsamt.ff.core  import edi as CSAMTedi
+        from pycsamt.core  import edi as CSAMTedi
         #######################################################################
         new_edifilename =kwargs.pop('filename', None)
         number_of_points= kwargs.pop('number_of_points', 1)
@@ -1463,7 +1454,7 @@ class Processing(object):
         
         :Example: 
             
-            >>> from pycsamt.ff.processing import shifting
+            >>> from pycsamt.processing import shifting
             >>>  edifile =os.path.join(os.environ['pyCSAMT'], 'data', 
             ...                           'edi', 'new_csa000.edi' )
             >>> corr_obj= shifting()
@@ -1476,7 +1467,7 @@ class Processing(object):
         
         :Example: 
             
-            >>> from pycsamt.ff.processing import shifting
+            >>> from pycsamt.processing import shifting
             >>>  edipath =os.path.join(os.environ['pyCSAMT'], 'data', 'edi')
             >>> corr_obj= shifting()
             >>> corr_obj.write_corrected_edi(data_fn = edipath,
@@ -1731,7 +1722,7 @@ class Processing(object):
 
         :Remove Static Shift: ::
 
-            >>> import pycsamt.ff.processing as Processing 
+            >>> import pycsamt.processing as Processing 
             >>> edifile = '/Users/Daniel/Desktop/Data/AMT/E1/di_test/new_csa00.edi'
             >>> outputedi = 'rmss_csa00.edi'
             >>> Processing.remove_static_shift(
@@ -1763,7 +1754,7 @@ class Processing(object):
 
         :Remove distortion and write new .edi file: ::
 
-            >>> import pycsamt.ff.processing as Processing 
+            >>> import pycsamt.processing as Processing 
             >>> edifile = '/Users/Daniel/Desktop/Data/AMT/E1/di_test/new_csa00.edi'
             >>> outputedi = 'rmss_csa00.edi'
             >>> Processing.remove_distortion(edi_fn = edifile, new_edi_fn= outputedi
@@ -1782,7 +1773,7 @@ class Processing(object):
         either a `staticshift` , `distorsion` noises or other interferences. 
         
         For Electromagnetic Array Profiling (EMAP) data correction, may refer to 
-        :meth:`pycsamt.ff.processing.Processing.correct_edi`. The Remove 
+        :meth:`pycsamt.processing.Processing.correct_edi`. The Remove 
         distortion following Bibby et al. [2005]. Remove static shift from the 
         apparent resistivity assume the original observed tensor Z is built by
         a static shift S and an unperturbated 
@@ -1820,14 +1811,14 @@ class Processing(object):
             - new Z object with static shift removed
             - Distortion matrix
             
-        :rtype: pycsamt.ff.core.z.Z
+        :rtype: pycsamt.core.z.Z
         
         .. note:: The factors are in resistivity scale, so the
                   entries of  the matrix "S" need to be given by their
                   square-roots!
                   
         :Example:
-            >>> from pycsamt.ff.processing import Processing 
+            >>> from pycsamt.processing import Processing 
             >>> edipath = '/Users/Desktop/ediout/'
             >>> Processing.noiseRemoval(edi_fn =edipath)
             
@@ -1902,11 +1893,11 @@ class Processing(object):
         :type kws: dict 
         
         :returns: New Z impedance object with remove outliers. 
-        :rtype: pycsamt.ff.core.z.Z
+        :rtype: pycsamt.core.z.Z
         
         :Example: 
-        >>> from pycsamt.ff.processing import Processing 
-        >>> from pycsamt.ff.core.edi import Edi 
+        >>> from pycsamt.processing import Processing 
+        >>> from pycsamt.core.edi import Edi 
         >>> edifile = '/home/edi/m20.E000.edi'
         >>> newZ =Processing.pca_filter ( edifile, var =.80 ) 
         >>> #write a new corrected edifile 
@@ -1999,8 +1990,8 @@ class Processing(object):
         :param kws: additional keyword arguments for correct values 
         
         :Example: 
-        >>> from pycsamt.ff.processing import Processing 
-        >>> from pycsamt.ff.core.edi import Edi 
+        >>> from pycsamt.processing import Processing 
+        >>> from pycsamt.core.edi import Edi 
         >>> edifile = '/home/edi/m20.E000.edi'
         >>> newZ =Processing.simple_removal( edifile ) 
         >>> #write a new corrected edifile 
@@ -2033,11 +2024,11 @@ class Processing(object):
                     continue
                 # get the non_zeros components 
                 with np.errstate(all='ignore'):
-                    z_real = func.reshape_array(
+                    z_real = func.reshape(
                         ediObj.Z.z[nz_index, ii, jj].real)
-                    z_imag = func.reshape_array(
+                    z_imag = func.reshape(
                         ediObj.Z.z[nz_index, ii, jj].imag)
-                    z_err = func.reshape_array(
+                    z_err = func.reshape(
                         ediObj.Z.z_err[nz_index, ii, jj]) 
                     # correct the values 
                     z_real_c, *_ =func.scale_values (z_real,**kws) 
@@ -2045,9 +2036,9 @@ class Processing(object):
                     z_err_c, *_ = func.scale_values(z_err, **kws) 
                     
                # set the new Z object 
-                new_Z.z[nz_index, ii, jj] = func.reshape_array(
-                    z_real_c, 1)   + 1j * func.reshape_array(z_imag_c, 1) 
-                new_Z.z_err[nz_index, ii, jj] = func.reshape_array(z_err_c, 1)
+                new_Z.z[nz_index, ii, jj] = func.reshape(
+                    z_real_c, 1)   + 1j * func.reshape(z_imag_c, 1) 
+                new_Z.z_err[nz_index, ii, jj] = func.reshape(z_err_c, 1)
                 
         # compute resistivity and phase for new Z object
         new_Z.compute_resistivity_phase()

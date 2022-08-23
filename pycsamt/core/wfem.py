@@ -9,7 +9,7 @@ Created on Wed Aug 10 21:32:15 2022
 @author: Daniel
 """
 
-from pycsamt.ff.core.edi import Edi 
+from pycsamt.core.edi import Edi 
 
 
 

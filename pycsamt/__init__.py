@@ -4,12 +4,12 @@ __version__ = "1.1.2"
 
 # load pycsamt default logging config
 import sys 
-import os 
 import logging 
 import os
 import tempfile
 
 from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt.utils.func_utils import  subprocess_module_installation
 
 if __package__ is None or __name__ == '__main__': 
     sys.path.append( os.path.dirname(os.path.dirname(__file__)))
@@ -32,8 +32,9 @@ itqdm =False
 try : 
     import tqdm 
 except ImportError: 
-    from pycsamt.utils.func_utils import  subprocess_module_installation
-    itqdm =subprocess_module_installation ('tqdm', DEVNULL =True)
+    itqdm =subprocess_module_installation (
+        'tqdm',
+        DEVNULL =True)
 else :
     itqdm =True 
     
@@ -43,8 +44,9 @@ inumba = False
 try : 
     import numba   
 except ImportError: 
-    from pycsamt.utils.func_utils import  subprocess_module_installation
-    inumba =subprocess_module_installation ('numba', DEVNULL =True)
+    inumba =subprocess_module_installation (
+        'numba', 
+        DEVNULL =True)
 else :
     inumba  =True 
     
@@ -62,7 +64,7 @@ epsg_dict = {
     4326: ['+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs', 0]
 }
 
-# Get the repository dir like https://github.com/WEgeophysics/pyCSAMT /C:github.com/WEgeophysics/pyCSAMT  
+# Get the repository dir like https://github.com/WEgeophysics/pycsamt /C:github.com/WEgeophysics/pyCSAMT  
 PYCSAMT_ROOT = os.path.normpath(
     os.path.abspath(
         os.path.dirname(

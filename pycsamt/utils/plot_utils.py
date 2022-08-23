@@ -4,8 +4,13 @@
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
 """
-.. _module-Plot_Utils:: `pycsamt.utils.plot_utils` 
-    :synopsis: helpers functions for visualization 
+Plot-Utils 
+===========
+
+Some utilities for plotting purpose. 
+Most functions should be deprecated in the next release. 
+
+
 """
 # import re
 import os
@@ -16,7 +21,9 @@ import numpy as np
 # import matplotlib.pyplot as plt
 from pycsamt.utils._p import _sensitive as SB
 from pycsamt.utils import exceptions as CSex 
-from pycsamt.utils.decorator import (deprecated, deprecated_to)
+from pycsamt.utils.decorator import (
+    deprecated, deprecated_to
+    )
 
 def control_delineate_curve(res_deline =None , phase_deline =None ): 
     """
@@ -1812,8 +1819,24 @@ if __name__=='__main__':
     
 #     thickness, lnames = annotate_tip(layer_thickness=resprops, layer_names=rocks)
 
+# ax[0].errorbar( x= res[jj], y=res[jj+1], yerr = res_err[ii],
+#               # markersize = self.ms, 
+#               marker='x',
+#               ms=2.,
+#               mfc='None',
+#               mew=1.,
+#               mec='k',
+#               ls=":",
 
-    
+#               ecolor='k',
+#               color='k',
+#               picker=None,
+#               lw=1.,
+#               elinewidth=1.,
+#               capsize=.5,
+#               **errorbar_kw 
+#               )
+
 
     
 

@@ -3,7 +3,7 @@
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
 """
-.. _module-avg:: `pycsamt.ff.core.avg`  
+.. _module-avg:: `pycsamt.core.avg`  
 
     :synopsis: Module to deal with AVG file. each section of Avg file is a class 
     Avg file from Zonge Engeneering company is two types . module will read 
@@ -22,7 +22,7 @@ from  datetime import (datetime, timezone)
 
 from pycsamt.utils import _p as infOS
 from pycsamt.utils.decorator import deprecated
-from pycsamt.ff.site import Site 
+from pycsamt.site import Site 
 from pycsamt.utils import zcalculator as Zcc
 from pycsamt.utils._csamtpylog import csamtpylog
 from pycsamt.utils import avg_utils as cfunc
@@ -517,7 +517,7 @@ class Avg (object):
                         survey_area  
         """
         #################################################
-        from pycsamt.ff.core.j import J_collection 
+        from pycsamt.core.j import J_collection 
         ##################################################
         
         savepath =kws.pop('savepath', None)
@@ -733,7 +733,7 @@ class Avg (object):
               format(len(station_list), savepath))
         print('-'*77)
         
-    @deprecated("Use `pycsamt.ff.core.CSAMT.avg2edi ` instead.")    
+    @deprecated("Use `pycsamt.core.CSAMT.avg2edi ` instead.")    
     def avg_to_edifile (self, data_fn =None , profile_fn =None , 
                         savepath =None , apply_filter =None, 
                         reference_frequency =None, number_of_points=7.,
@@ -787,7 +787,7 @@ class Avg (object):
                                      
         :Example:   
             
-            >>> from pycsamt.ff.core import avg 
+            >>> from pycsamt.core import avg 
             >>> avg_obj= avg.Avg()
             >>> avg_obj.avg_to_edifile(data_fn= os.path.join(
             ...    path_to_avgfile, avgfile) , 
@@ -797,8 +797,8 @@ class Avg (object):
             ...           apply_filter=None ) 
         """
         #######################################################################
-        from pycsamt.ff.core.edi import (Edi, Hmeasurement, Emeasurement)
-        from pycsamt.ff.processing import corr 
+        from pycsamt.core.edi import (Edi, Hmeasurement, Emeasurement)
+        from pycsamt.processing import corr 
         #######################################################################
         
         utm_zone = kwargs.pop('utm_zone', None)
@@ -1212,7 +1212,7 @@ class Header (object):
     
     :Example:
         
-        >>> from pycsamt.ff.core.avg import Avg
+        >>> from pycsamt.core.avg import Avg
         >>> path=os.path.join(os.environ["pyCSAMT"], 
         ...          'pycsamt', "data", "LC101.avg")
         >>> avg_obj= Avg(data_fn=path) 
@@ -1254,7 +1254,7 @@ class Header (object):
             
         :Example:
             
-            >>> from pycsamt.ff.core.avg.Avg import Header
+            >>> from pycsamt.core.avg.Avg import Header
             >>> Header().write_header_log(data_fn=path,
             ...               )
             >>> he=Header()
@@ -1345,7 +1345,7 @@ class SurveyAnnotation (object) :
     
     :Example:
          
-        >>> from pycsamt.ff.core.avg import Avg 
+        >>> from pycsamt.core.avg import Avg 
         >>> avg_obj= Avg(data_fn=path) 
         >>> surv_area= avg_obj.Header.SurveyAnnotation.project_area 
         ... survey_area
@@ -1469,7 +1469,7 @@ class SurveyConfiguration(object) :
     
     :Example:
         
-        >>> from pycsamt.ff.core import Avg
+        >>> from pycsamt.core import Avg
         >>> avg_obj= Avg(data_fn=path) 
         >>> surv_nameLine= avg_obj.Header.SurveyConfiguration.lineName 
         ... surv_nameLine
@@ -1645,7 +1645,7 @@ class TransmitterProperties(object):
      
     :Example:
         
-        >>> from pycsamt.ff.core import Avg
+        >>> from pycsamt.core import Avg
         >>> path= os.path.join(os.environ['pyCSAMT'], 
         ...                         'pycsamt', data, 'LCS01.AVG')
         >>> avg_obj= Avg(data_fn=path) 
@@ -1743,7 +1743,7 @@ class ReceiverProperties(object):
      
     :Example:
          
-        >>> from pycsamt.ff.core import Avg
+        >>> from pycsamt.core import Avg
         >>> path= os.path.join(os.environ['pyCSAMT'], 
                                  'pycsamt', data, 'LCS01.AVG')
         >>> avg_obj= Avg(data_fn=path) 
@@ -1852,7 +1852,7 @@ class Skip_flag (object) :
  
     :Example:
             
-         >>> from pycsamt.ff.core import Avg
+         >>> from pycsamt.core import Avg
          >>> path= os.path.join(os.environ['pyCSAMT'], 
          ...                         'pycsamt', data, 'LCS01.AVG')
          >>> avg_obj= Avg(data_fn=path) 
@@ -1926,7 +1926,7 @@ class ZongeHardware(object):
     
     :Example:
          
-        >>> from pycsamt.ff.core import Avg
+        >>> from pycsamt.core import Avg
         >>> path= os.path.join(os.environ['pyCSAMT'], 
         ...                     'pycsamt', data, 'LCS01.AVG')
         >>> avg_obj= Avg(data_fn=path) 
@@ -2066,7 +2066,7 @@ class Data (object):
 
     :Example:
         
-        >>> from pycsamt.ff.core import Avg
+        >>> from pycsamt.core import Avg
         >>> DATA=Data(data_array=avg_data )
         >>> stn=DATA.Station.name 
         >>> freq=DATA.Frequency.value
@@ -2331,7 +2331,7 @@ class  Station(object):
 
     :Example: 
         
-        >>> from pycsamt.ff.core.avg import Station
+        >>> from pycsamt.core.avg import Station
         >>> path=os.path.join(os.environ["pyCSAMT"], 
         ...                      'pycsamt', "data", "K1.AVG")
         >>> station=Station(path)
@@ -2505,7 +2505,7 @@ class Frequency (object):
 
     :Example:
         
-        >>> from pycsamt.ff.core.avg import Avg
+        >>> from pycsamt.core.avg import Avg
         >>> path=os.path.join(os.environ["pyCSAMT"], 
               "data", "avg", "K1.AVG")
         >>> freq_obj=Avg(path)
@@ -2668,7 +2668,7 @@ class Comp (object):
     
     :Example:
         
-        >>> from pycsamt.ff.core.avg import Comp
+        >>> from pycsamt.core.avg import Comp
         >>> path=os.path.join(os.environ["pyCSAMT"], 
                           'pycsamt', "data", "K1.AVG")
         >>> component=Comp(path, component_name='EyHx')
@@ -2729,7 +2729,7 @@ class Amps (object):
     
     :Example:
          
-        >>> from pycsamt.ff.core.avg import Avg
+        >>> from pycsamt.core.avg import Avg
         >>> path=os.path.join(os.environ["pyCSAMT"], 
         ...      'pycsamt', "data", "K1.AVG")
         >>> avg_obj=Avg(path)
@@ -2839,7 +2839,7 @@ class Emag (object):
     
     :Example: 
         
-        >>> from pycsamt.ff.core.avg import Avg
+        >>> from pycsamt.core.avg import Avg
         >>> path=os.path.join(os.environ["pyCSAMT"], 
         ...      'pycsamt', "data", "K1.AVG")
         >>> avg_obj=Avg(path)
@@ -2949,7 +2949,7 @@ class Ephz (object):
     
     :Example:
         
-        >>> from pycsamt.ff.core.avg import Avg 
+        >>> from pycsamt.core.avg import Avg 
         >>> path=os.path.join(os.environ["pyCSAMT"], 
         ...      'pycsamt', "data", "K1.AVG")
         >>> avg_obj=Avg(path)
@@ -3071,7 +3071,7 @@ class Hmag (object):
     
     :Example: 
          
-        >>> from pycsamt.ff.core import Avg 
+        >>> from pycsamt.core import Avg 
         >>> path=os.path.join(os.environ["pyCSAMT"], 
         ...      'pycsamt', "data", "K1.AVG")
         >>> avg_obj=Avg(path)
@@ -3183,7 +3183,7 @@ class Hphz (object):
     
     :Example: 
         
-        >>> from pycsamt.ff.core.avg import Data_section 
+        >>> from pycsamt.core.avg import Data_section 
         >>> path=os.path.join(os.environ["pyCSAMT"], 
               'pycsamt', "data", "K1.AVG")
         >>> avg_obj=Avg(path)
@@ -3315,7 +3315,7 @@ class Resistivity (object):
     
     :Example:  
          
-        >>> from csammtpy.ff.core.avg import Avg 
+        >>> from csammtpy.core.avg import Avg 
         >>> path=os.path.join(os.environ["pyCSAMT"], 
         ...                  'pycsamt', "data", "K1.AVG")
         >>> avg_obj=Avg(path)
@@ -3458,7 +3458,7 @@ class Phase (object):
 
     :Example:
          
-        >>> from pycsamt.ff.core.avg import Avg 
+        >>> from pycsamt.core.avg import Avg 
         >>> path=os.path.join(os.environ["pyCSAMT"], 
         ...                  'pycsamt', "data", "K1.AVG")
         >>> avg_obj=Avg(path)
@@ -3596,7 +3596,7 @@ class Z_Tensor(object):
     
     :Example:
          
-        >>> from pycsamt.ff.core.avg impor Z_tensor
+        >>> from pycsamt.core.avg impor Z_tensor
         >>> path=os.path.join(os.environ["pyCSAMT"], 
         ...                  'pycsamt', "data", "K1.AVG")
         >>> z_obj=Z_Tensor(path)
@@ -3908,7 +3908,7 @@ class pcEmag (object):
     
     :Example:
         
-        >>> from pycsamt.ff.core.avg import Avg 
+        >>> from pycsamt.core.avg import Avg 
         >>> path=os.path.join(os.environ["pyCSAMT"], 
         ...      'pycsamt', "data", "K1.AVG")
         >>> avg_obj=Avg(path)
@@ -4020,7 +4020,7 @@ class sEphz(object) :
     
     :Example:
          
-        >>> from pycsamt.ff.core.avg import Avg 
+        >>> from pycsamt.core.avg import Avg 
         >>> path=os.path.join(os.environ["pyCSAMT"], 
               'pycsamt', "data", "K1.AVG")
         >>> avg_obj=Avg(path)
@@ -4154,7 +4154,7 @@ class pcHmag (object):
     
     :Example:
          
-        >>> from pycsamt.ff.core.avg import Avg 
+        >>> from pycsamt.core.avg import Avg 
         >>> path=os.path.join(os.environ["pyCSAMT"], 
         ...      'pycsamt', "data", "K1.AVG")
         >>> avg_obj=Avg(path)
@@ -4268,7 +4268,7 @@ class sHphz(object) :
     
     :Example: 
          
-        >>> from pycsamt.ff.core.avg impor Avg 
+        >>> from pycsamt.core.avg impor Avg 
         >>> path=os.path.join(os.environ["pyCSAMT"], 
         ...      'pycsamt', "data", "K1.AVG")
         >>> avg_obj=Avg(path)
@@ -4407,7 +4407,7 @@ class pcRho (object):
     
     :Example: 
          
-        >>> from pycsamt.ff.core.avg import Avg
+        >>> from pycsamt.core.avg import Avg
         >>> path=os.path.join(os.environ["pyCSAMT"], 
                           'pycsamt', "data", "K1.AVG")
         >>> avg_obj=Avg(path)
@@ -4530,7 +4530,7 @@ class sPhz(object) :
     
     :Example:
 
-        >>> from pycsamt.ff.core.avg impor Avg
+        >>> from pycsamt.core.avg impor Avg
         >>> path=os.path.join(os.environ["pyCSAMT"], 
         ...     'pycsamt', "data", "K1.AVG")
         >>> avg_obj=Avg(path)

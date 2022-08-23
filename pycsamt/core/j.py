@@ -3,7 +3,7 @@
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
 """
-.. _module-j:: `pycsamt.ff.core.j
+.. _module-j:: `pycsamt.core.j
 
    :synopsis: Deal with J files.  The J class can read and write an A.G.Jones file
              file, the 'standard format' of magnetotellurics.  Each section
@@ -19,9 +19,9 @@ import datetime
 import webbrowser
 import numpy as np 
 
-from pycsamt.ff.site import Site, Location, Profile 
+from pycsamt.site import Site, Location, Profile 
 from pycsamt.utils._p import notion
-from pycsamt.ff.core.edi import (Edi, Hmeasurement, Emeasurement) 
+from pycsamt.core.edi import (Edi, Hmeasurement, Emeasurement) 
 from pycsamt.utils._p import _sensitive as SB 
 from pycsamt.utils.decorator import deprecated
 import pycsamt.utils.func_utils as func
@@ -178,7 +178,7 @@ class J_collection :
                     ' of stations not <{0}>.'.format(type(jstnames)))
                 
     
-    @deprecated("Use `pycsamt.ff.core.CSAMT.j2edi ` instead.")
+    @deprecated("Use `pycsamt.core.CSAMT.j2edi ` instead.")
     def j2edi(self, jfn=None, savepath =None, **kwargs): 
         """
         Method to convert j-files to edi files. Method calls CSAMT 
@@ -192,13 +192,13 @@ class J_collection :
         
         :Example:
             
-            >>> from pycsamt.ff.core.j import J_collection as JObjs
+            >>> from pycsamt.core.j import J_collection as JObjs
             >>> path2j = 'data/j' 
             >>> jObjs= JObjs().j2edi(path2j)
   
         """
         #####################################################################
-        import pycsamt.ff.core.cs  as cs_obj
+        import pycsamt.core.cs  as cs_obj
         #####################################################################
         prospect =kwargs.pop('contractor_name', None)
         #hardwareInfos = kwargs.pop('hardware_name', None)
@@ -799,7 +799,7 @@ class J:
     
     :Example:
         
-        >>> from pycsamt.ff.core import J 
+        >>> from pycsamt.core import J 
         >>> j=J()
         >>> jmode = j.jMode(polarization_type='RXY')
         >>>  print(jmode)

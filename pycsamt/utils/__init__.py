@@ -62,7 +62,7 @@ except Exception as e:
 from .func_utils import ( 
     scale_position, 
     scale_values, 
-    reshape_array, 
+    reshape, 
     make_ll_coordinates, 
     fit_by_ll, 
     get_interpolate_freqs, 

@@ -1722,7 +1722,11 @@ class Processing(object):
 
         :Remove Static Shift: ::
 
+<<<<<<< HEAD:pycsamt/processing/corr.py
             >>> import pycsamt.processing as Processing 
+=======
+            >>> import pycsamt.ff.processing as Processing 
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/processing/corr.py
             >>> edifile = '/Users/Daniel/Desktop/Data/AMT/E1/di_test/new_csa00.edi'
             >>> outputedi = 'rmss_csa00.edi'
             >>> Processing.remove_static_shift(
@@ -1754,7 +1758,11 @@ class Processing(object):
 
         :Remove distortion and write new .edi file: ::
 
+<<<<<<< HEAD:pycsamt/processing/corr.py
             >>> import pycsamt.processing as Processing 
+=======
+            >>> import pycsamt.ff.processing as Processing 
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/processing/corr.py
             >>> edifile = '/Users/Daniel/Desktop/Data/AMT/E1/di_test/new_csa00.edi'
             >>> outputedi = 'rmss_csa00.edi'
             >>> Processing.remove_distortion(edi_fn = edifile, new_edi_fn= outputedi
@@ -1768,12 +1776,21 @@ class Processing(object):
         return D, new_z   
         
     @staticmethod 
+<<<<<<< HEAD:pycsamt/processing/corr.py
     def noiseRemoval(edi_fn = None, kind='sim', **kws): 
         """ Remove multiple noises in EDIs and save to new files. Noise can be 
         either a `staticshift` , `distorsion` noises or other interferences. 
         
         For Electromagnetic Array Profiling (EMAP) data correction, may refer to 
         :meth:`pycsamt.processing.Processing.correct_edi`. The Remove 
+=======
+    def noiseRemoval(edi_fn = None, kind='ss', **kws): 
+        """ Remove multiple noises in EDIs and save to new files. Noise can be 
+        either a `staticshift` or `distorsion` noises.
+        
+        For Electromagnetic Array Profiling (EMAP) data correction, may refer to 
+        :meth:`pycsamt.ff.processing.Processing.correct_edi`. The Remove 
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/processing/corr.py
         distortion following Bibby et al. [2005]. Remove static shift from the 
         apparent resistivity assume the original observed tensor Z is built by
         a static shift S and an unperturbated 
@@ -1788,10 +1805,14 @@ class Processing(object):
         :type edi_fn: str 
         
         :param kind: Type of noise to remove. Can be a static shift effect for 
+<<<<<<< HEAD:pycsamt/processing/corr.py
             ``ss``, distorsion for ``dist``. The human activites can be removed 
             using the `pca`` and the other interferences can be removed using 
             the simplier filters ``sim``. Default is ``sim``. 
             
+=======
+            ``ss`` and distorsion for ``dist``. Default is ``ss``. 
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/processing/corr.py
         :type kind: str 
         
         :param ss_x: correction factor for x component
@@ -1811,14 +1832,22 @@ class Processing(object):
             - new Z object with static shift removed
             - Distortion matrix
             
+<<<<<<< HEAD:pycsamt/processing/corr.py
         :rtype: pycsamt.core.z.Z
+=======
+        :rtype: pycsamt.ff.core.z.Z
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/processing/corr.py
         
         .. note:: The factors are in resistivity scale, so the
                   entries of  the matrix "S" need to be given by their
                   square-roots!
                   
         :Example:
+<<<<<<< HEAD:pycsamt/processing/corr.py
             >>> from pycsamt.processing import Processing 
+=======
+            >>> from pycsamt.ff.processing import Processing 
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/processing/corr.py
             >>> edipath = '/Users/Desktop/ediout/'
             >>> Processing.noiseRemoval(edi_fn =edipath)
             
@@ -1830,11 +1859,14 @@ class Processing(object):
         kind =str(kind).lower() 
         if kind in ('ss', 'staticshift'): kind =='ss'
         elif kind in ('dt', 'dist', 'distortion'): kind =='dt'
+<<<<<<< HEAD:pycsamt/processing/corr.py
         elif kind in  ('principal component analysis', 'pca', 'sklearn'): 
             kind ='pca'
         elif kind in ('simple', 's0', 'simplier', 'light', 'base'): 
             kind ='sim' 
             
+=======
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/processing/corr.py
         else : 
             raise ValueError(f"Wrong Param `kind`: {kind}. "
                              "Should be `ss` or `dist`"
@@ -1855,6 +1887,7 @@ class Processing(object):
             with warnings.catch_warnings(): # ignore multiple warnings 
                 warnings.simplefilter('ignore')
                 if kind =='ss': 
+<<<<<<< HEAD:pycsamt/processing/corr.py
                     new_z = Processing.remove_static_shift(edifile, **kws)
                 elif kind =='dt': 
                     D, new_z = Processing.remove_distortion (edifile, **kws)
@@ -1862,6 +1895,12 @@ class Processing(object):
                     new_z = Processing.pca_filter(edifile, **kws)
                 elif kind =='sim': 
                     new_z = Processing.simpler_filter(edifile, **kws)
+=======
+                    new_z = shifting.remove_static_shift(edifile, **kws)
+                elif kind =='dt': 
+                    D, new_z = shifting.remove_distortion (edifile, **kws)
+                    
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/processing/corr.py
             # show the progress bar ;
             if itqdm :
                 pbar.update(k)
@@ -1875,11 +1914,18 @@ class Processing(object):
     
     #XXX TODO 
     @staticmethod 
+<<<<<<< HEAD:pycsamt/processing/corr.py
     def pca_filter (edi_fn, var=.95 , **kws): 
         """ Sanitize EDIs data and remove the outliers using the principal 
         component analysis (PCA).
         
         In considering the human activity noises removal using the PCA
+=======
+    def remove_outliers (edi_fn, var=.95 , **kws): 
+        """ Sanitize EDIs data and remove the outliers using the principal 
+        component analysis.
+        
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/processing/corr.py
         
         :param edi_fn: Path-Like object. Full path to EDI-file. 
         :type edi_fn: str 
@@ -1893,6 +1939,7 @@ class Processing(object):
         :type kws: dict 
         
         :returns: New Z impedance object with remove outliers. 
+<<<<<<< HEAD:pycsamt/processing/corr.py
         :rtype: pycsamt.core.z.Z
         
         :Example: 
@@ -1900,6 +1947,15 @@ class Processing(object):
         >>> from pycsamt.core.edi import Edi 
         >>> edifile = '/home/edi/m20.E000.edi'
         >>> newZ =Processing.pca_filter ( edifile, var =.80 ) 
+=======
+        :rtype: pycsamt.ff.core.z.Z
+        
+        :Example: 
+        >>> from pycsamt.ff.processing import Processing 
+        >>> from pycsamt.ff.core.edi import Edi 
+        >>> edifile = '/home/edi/m20.E000.edi'
+        >>> newZ =Processing.remove_outliers( edifile, var =.80 ) 
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/processing/corr.py
         >>> #write a new corrected edifile 
         >>> _= Edi(edifile).write_new_edifile(new_Z= newZ, 
         ...               new_edi_fn ='m20.removeO.E000.edi')
@@ -1962,9 +2018,21 @@ class Processing(object):
                     z_imag_t = reshape_and_fit_z(z_imag) 
                     z_err_t = reshape_and_fit_z(z_err) 
                     
+<<<<<<< HEAD:pycsamt/processing/corr.py
                     z_real_b =reshape_and_fit_z(z_real_t,back=True,fit =None) 
                     z_imag_b = reshape_and_fit_z(z_imag_t,back=True,fit =None) 
                     z_err_b = reshape_and_fit_z(z_err_t,back=True,fit =None 
+=======
+                    z_real_b =reshape_and_fit_z(z_real_t,
+                                                back=True,
+                                                fit =None) 
+                    z_imag_b = reshape_and_fit_z(z_imag_t,
+                                                 back=True,
+                                                 fit =None) 
+                    z_err_b = reshape_and_fit_z(z_err_t,
+                                                back=True,
+                                                fit =None 
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/processing/corr.py
                                                 ) 
                # set the new Z object 
                 new_Z.z[nz_index, ii, jj] = z_real_b  + 1j * z_imag_b 
@@ -1975,6 +2043,7 @@ class Processing(object):
      
         return new_Z
     
+<<<<<<< HEAD:pycsamt/processing/corr.py
     @staticmethod 
     def simpler_filter (edi_fn, **kws): 
         """ Sanitize EDIs data and remove the outliers using simple 
@@ -2044,6 +2113,8 @@ class Processing(object):
         new_Z.compute_resistivity_phase()
      
         return new_Z
+=======
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/processing/corr.py
 
 def interp_to_reference_freq(freq_array, rho_array, 
                              reference_freq, plot=False): 

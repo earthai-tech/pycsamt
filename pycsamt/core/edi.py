@@ -163,8 +163,9 @@ class Edi_collection :
         :param list_of_edifiles: list of edifiles
         :type list_of_edifiles: list 
         
-        :param ediobjs:  can provided from  class built.
-        :type ediobjs: pycsamt.core.edi.Edi
+        :param ediObjs:  can provided from  class built.
+        :type ediObjs: pycsamt.core.edi.Edi
+
         
         :Example: 
             
@@ -423,7 +424,11 @@ class Edi_collection :
         ------------
   
         ediObjs: list 
+<<<<<<< HEAD:pycsamt/core/edi.py
             Collection of edi object from pycsamt.core.edi.Edi 
+=======
+            Collection of edi object from pycsamt.ff.core.edi.Edi 
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/core/edi.py
        
         dataid: list 
             list of ids to  rename the existing EDI-dataid from  
@@ -481,11 +486,19 @@ class Edi_collection :
             
         Examples
         ---------
+<<<<<<< HEAD:pycsamt/core/edi.py
         >>> from pycsamt.core.edi import Edi_Collection
         >>> edipath = r'/Users/Daniel/Desktop/edi'
         >>> savepath =  r'/Users/Daniel/Desktop/ediout'
         >>> cObjs = Edi_collection (edipath)
         >>> cObjs.rewrite_edis(by='id', edi_prefix ='b1',
+=======
+        >>> from pycsamt.ff.core.edi import Edi_Collection
+        >>> edipath = r'/Users/Daniel/Desktop/edi'
+        >>> savepath =  r'/Users/Daniel/Desktop/ediout'
+        >>> cObjs = Edi_collection (edipath)
+        >>> cObjs.rewrite_edis(by='id', new_edifilename ='b1',
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/core/edi.py
         ...                       savepath =savepath)
         
         """
@@ -511,7 +524,6 @@ class Edi_collection :
             except:
                 pass
             return olist 
-        
         regex = re.compile('\d+', re.IGNORECASE)
         by = str(by).lower() 
         if by.find('survey')>=0 :
@@ -1432,11 +1444,19 @@ class Edi :
 
         :returns: a new impedance object with the corresponding
                                frequencies and components.
+<<<<<<< HEAD:pycsamt/core/edi.py
         :rtype: pycsamt.core.z.Z
 
         :Interpolate: ::
 
             >>> import pycsamt.core.edi as CSedi
+=======
+        :rtype: pycsamt.ff.core.z.Z
+
+        :Interpolate: ::
+
+            >>> import pycsamt.ff.core.edi as CSedi
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/core/edi.py
             >>> edi_fn = r"/home/edi_files/cs_01.edi"
             >>> edi_obj = CSedi.Edi(edi_fn)
             >>> # create a new frequency range to interpolate onto

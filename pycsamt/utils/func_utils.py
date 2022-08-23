@@ -54,6 +54,7 @@
     * reshape_array 
     * fillNaN
     * ismissing 
+
 """
 
 import os 
@@ -67,6 +68,7 @@ import numpy as np
 import pandas as pd 
 import matplotlib.pyplot as plt
 from copy import deepcopy
+
 
 import mtpy 
 import pycsamt 
@@ -379,6 +381,7 @@ def build_array_from_objattr(obj, attr):
                0.00083333, 0.00083333])
     
     """
+
     if not isinstance( obj, (list, tuple, np.ndarray)): 
         if not hasattr (obj, '__dict__'): 
             raise ValueError ('Object should be an instance or a class'
@@ -388,6 +391,7 @@ def build_array_from_objattr(obj, attr):
     if not hasattr(obj[0], attr): 
         raise AttributeError (f'Object has no attribute {attr!r}')
     
+
     return np.array(list(map(lambda r: getattr(r, attr), obj )))
 
 
@@ -409,6 +413,7 @@ def _assert_all_types (
 
 def scale_position(ydata , xdata= None, func = None ,c_order= 0,
         show: bool =False, todms=False,**kws): 
+
     """ Correct data location or position and return new corrected location
     or data. 
     
@@ -461,7 +466,11 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     Examples
     --------
     >>> from pycsamt.utils.func_utils  import scale_position 
+<<<<<<< HEAD
     >>> from pycsamt.core.edi import Edi_collection 
+=======
+    >>> from pycsamt.ff.core.edi import Edi_Collection 
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6
     >>> edipath = r'/Users/Daniel/Desktop/ediout'
     >>> cObjs = Edi_collection (edipath)
     >>> # correcting northing coordinates from latitude data 
@@ -475,7 +484,11 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     ... array([-1.31766381e-04,  4.79150482e-05,  2.27596478e-04,  4.07277908e-04,
     ...        5.86959337e-04,  7.66640767e-04,  9.46322196e-04,  1.12600363e-03,
     ...        1.30568506e-03,  1.48536649e-03,  1.66504792e-03,  1.84472934e-03])
+<<<<<<< HEAD
     >>> lat_corrected_dms, *_= scale_position(ydata =cObjs.lat[:12], todms=True)
+=======
+    >>> lat_corrected_dms, *_= scalePosition(ydata =cObjs.lat[:12], todms=True)
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6
     ... array(['0:00:00.47', '0:00:00.17', '0:00:00.82', '0:00:01.47',
     ...       '0:00:02.11', '0:00:02.76', '0:00:03.41', '0:00:04.05',
     ...       '0:00:04.70', '0:00:05.35', '0:00:05.99', '0:00:06.64'],
@@ -532,7 +545,7 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     if len(xdata) != len(ydata): 
         raise ValueError(" `x` and `y` arrays must have the same length."
                         f"'{len(xdata)}' and '{len(ydata)}' are given.")
-        
+
     popt, pcov = curve_fit(func, xdata, ydata, **kws)
     ydata_new = func(xdata, *popt)
     
@@ -552,6 +565,7 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     return ydata_new, popt, pcov 
 
 
+
 def make_ids(arr, prefix =None, how ='py'): 
     """ Generate auto Id according to the number of given sites. 
     
@@ -559,7 +573,7 @@ def make_ids(arr, prefix =None, how ='py'):
         the array-like or list of EDI object that composed a collection of 
         pycsamt.core.edi.Edi object. 
     :type ediObjs: array-like, list or tuple 
-    
+
     :param prefix: string value to add as prefix of given id. Prefix can be 
         the site name.
     :type prefix: str 
@@ -589,12 +603,14 @@ def fit_by_ll(ediObjs):
     longitude and latitude coordinates. 
     
     EDIs data are mostly reading in an alphabetically order, so the reoganization  
+
     according to the location(longitude and latitude) is usefull for distance 
     betwen site computing with a right position at each site.  
     
     :param ediObjs: list of EDI object , composed of a collection of 
         pycsamt.core.edi.Edi object 
     :type ediObjs: pycsamt.core.edi.Edi_Collection 
+
     
     :returns: array splitted into ediObjs and Edifiles basenames 
     :rtyple: tuple 
@@ -629,16 +645,28 @@ def get_interpolate_freqs (ediObjs, to_log10 =False):
     frequency data. 
     
     :param ediObjs: list - Collections of EDI-objects 
+<<<<<<< HEAD
     :rtype: pycsamt.core.edi.Edi 
+=======
+    :rtype: pycsamt.ff.core.edi.Edi 
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6
     
     :param to_log10: Put the interpolated min-max frequency to log10 values
     :type to_log10: bool 
     
+<<<<<<< HEAD
     :returns: Array-like min max and auto-number of frequency for interpolating. 
     :rtype: tuple
     
     :Example: 
         >>> from pycsamt.core.edi import Edi_collection 
+=======
+    :returns: Array-like min max and number of frequency for interpolating. 
+    :rtype: tuple
+    
+    :Example: 
+        >>> from pycsamt.ff.core.edi import Edi_collection 
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6
         >>> from pycsamt.utils.func_utils import find_interpolate_freq
         >>> edipath = r'/Users/Daniel/Desktop/edi'
         >>> cObjs = Edi_collection (edipath)
@@ -1007,7 +1035,6 @@ def concat_array_from_list (list_of_array , concat_axis = 0) :
             list_of_array))
                 
     return np.concatenate(list_of_array, axis = concat_axis)
-
 
 def sort_array_data(data,  sort_order =0,
               concatenate=False, concat_axis_order=0 ):
@@ -2493,7 +2520,7 @@ def _nonevalue_checker (list_of_value, value_to_delete=None):
             start_point=0 # not necessary , just for secure the loop. 
             break           # be sure one case or onother , it will break
     return list_of_value 
- 
+
 def resize_resphase_values (dictobj: dict , fill_value: float = np.nan,
                             c =None,mask_nan:bool =True, return_array =True): 
     """ Get the resistivity and phases values from dictof items 
@@ -2574,7 +2601,7 @@ def _strip_item(item_to_clean, item=None, multi_space=12):
     if type(item_to_clean ) != list :#or type(item_to_clean ) !=np.ndarray:
         if type(item_to_clean ) !=np.ndarray:
             item_to_clean=[item_to_clean]
-    ###TIP
+    
     if item_to_clean in cleaner or item_to_clean ==['']:
         warnings.warn ('No data found for sanitization; returns None.')
         return None 

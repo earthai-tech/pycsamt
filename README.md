@@ -4,7 +4,7 @@
   ![GitHub](https://img.shields.io/github/license/WEgeophysics/pyCSAMT?color=blue&logo=GNU&logoColor=red) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/WEgeophysics/pyCSAMT?color=orange) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5674430.svg)](https://doi.org/10.5281/zenodo.5674430)
   [![PyPI version](https://badge.fury.io/py/pycsamt.svg)](https://badge.fury.io/py/pycsamt)
   ![GitHub repo size](https://img.shields.io/github/repo-size/WEgeophysics/pycsamt?color=0A4CEE&style=flat-square)
-  
+
 ## Overview 
 
   * **Purpose**
@@ -29,7 +29,6 @@
     drillings mostly occured due to their wrong locations after AMT geophysical surveys. It consists to minimize the use of supplement methods to AMT which commonly increases the operating budgets 
     to right locate  the drilling thereby reducing the misinterpretation of modeling results(e.g., demarcating well the fracture zones). More details can be found in the **Citations** section. 
     
-    
  * **Note**
  
     For long periods or MT methods (below 1Hz), it is recommended to visit other suitable softwares such as  [MTpy](https://github.com/MTgeophysics/mtpy.git), [FEMT2D](https://github.com/ruboerner/FEMT2D) or [razorback](https://github.com/BRGM/razorback) or visit the [MTnet](https://www.mtnet.info/main/source.html) website. Nonetheless, the sofware has a feature to generate outputs/objects for other external modeling softwares such as [MTpy](https://github.com/MTgeophysics/mtpy), [OasisMontaj](http://updates.geosoft.com/downloads/files/how-to-guides/Oasis_montaj_Gridding.pdf)
@@ -50,9 +49,10 @@ We use or link some third-party software (beside the usual tool stack: numba, nu
 * MTpy: https://github.com/MTgeophysics/mtpy.git
 * Occam2D: https://marineemlab.ucsd.edu/Projects/Occam/index.html
 * ModEM: https://sites.google.com/site/modularem/
+
 * Zonge Engineering softwares:
-    - AMTAVG: http://www.zonge.com/legacy/DatPro.html/
-    - ASTATIC: http://www.zonge.com/legacy/PDF_DatPro/Astatic.pdf
+    - [AMTAVG](http://www.zonge.com/legacy/DatPro.html/)
+    - [ASTATIC](http://www.zonge.com/legacy/PDF_DatPro/Astatic.pdf)
 
 ## System requirements 
 
@@ -60,12 +60,11 @@ We use or link some third-party software (beside the usual tool stack: numba, nu
 
 ## Citations 
 
-If you use pycsamt in any published work, you may consider as a contribution, citing [zenodo DOI](https://zenodo.org/record/5674430/export/hx#.YmpoXo9BxGo) or the paper below:
+ You may consider citing the software as a contribution if it is used in a published work:
 
 > *Kouadio, K.L., Liu, R., Mi, B., Liu, C., 2022. pyCSAMT: An alternative Python toolbox for groundwater exploration using controlled source audio-frequency magnetotelluric. J. Appl. Geophys. 201, 104647. https://doi.org/10.1016/j.jappgeo.2022.104647.*
 > 
 > *Kouadio, K.L., 2021. pyCSAMT: A Python open-source toolkit for controlled source audio-frequency magnetotelluric. https://doi.org/10.5281/zenodo.5674430.*
-
 
 ## Contributors
 
@@ -73,6 +72,3 @@ If you use pycsamt in any published work, you may consider as a contribution, ci
 2. Equipe de Recherche Géophysique Appliquée, Laboratoire de Geologie Ressources Minerales et Energetiques, UFR des Sciences de la Terre et des Ressources Minières, [Université Félix Houphouët-Boigny]( https://www.univ-fhb.edu.ci/index.php/ufr-strm/), Cote d'Ivoire.
 
 * Developer: 1, 2- Kouadio Laurent,  <etanoyau@gmail.com> / <lkk@csu.edu.cn>.
-
-
-

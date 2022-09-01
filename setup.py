@@ -136,10 +136,15 @@ setup(
  	license="GNU LESSER GENERAL PUBLIC LICENSE v3",
  	classifiers=[
         "Development Status :: 3 - Alpha",
-        "Intended Audience :: Developers",
+        "Intended Audience :: Science/Research",
         # "Topic :: Software Development :: Build Tools",
         #"License :: OSI Approved :: GNU License",
-        "Programming Language :: Python :: 3.8",
+        'Topic :: Scientific/Engineering :: Geophysics',
+        'Topic :: Scientific/Engineering :: Geosciences',
+        
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         "Operating System :: OS Independent",
         ],
     keywords="hydrogeophysic, groundwater, exploration, csamt",

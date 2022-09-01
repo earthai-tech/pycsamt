@@ -7,12 +7,12 @@
   
 ## Overview 
 
-    * **Purpose**
+  * **Purpose**
     
     Originally, the software was intended for controlled source audio-frequency magnetotelluric (CSAMT) data processing (hence the suffix CSAMT) and was mostly related
-    to the groundwater exploration. However, the developement has been advanced to encompass the audio-magnetotelluric(AMT) methods i.e the frequency above 1Hz ( such as the CSAMT, the natural 
+    to the groundwater exploration. However, the developement has been enhanced to encompass the audio-magnetotelluric(AMT) methods i.e the frequency above 1Hz ( such as the CSAMT, the natural 
     source AMT (NSAMT)). The software is used to broadly applied in diverse of exploration problems such as mineral, hydrocarbon,  groundwater resources, as well as the fault-zone mapping . 
-    It contains steps of AMT data processing and deals with [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) of [DeGroot-Hedlin, C. and Constable, S., 1990](https://doi.org/10.1190/1.1442303) , 
+    It contains steps of AMT data processing and deals with [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) of [DeGroot-Hedlin and Constable, 1990](https://doi.org/10.1190/1.1442303) , 
     the [MT2DInvMatlab](https://doi.org/10.1016/j.cageo.2008.10.010)  of [Lee et al., 2009](https://doi.org/10.1016/j.cageo.2008.10.010) and [ModEM](https://sites.google.com/site/modularem/download) of [Kelbert et al., 2014](https://doi.org/10.1016/j.cageo.2014.01.010)
     for the modeling part.
     
@@ -23,15 +23,16 @@
     upstream for a particular data where the interferences are very strong (e.g. intenses humman activities , power lines, ...). Moreover, the  "Savitzky-Golay" filter is also added to remove high-frequency noise from data since it 
      has the advantage of preserving the original shape and features of the signal better than other types of filtering approaches such as MA techniques (simple, exponential, cumulative, weight) . 
      
-    Besides the AMT processing, the software implements a special sub-package (geology + drilling ) referred  as `geodrill`, entirely dedicated to improve the groundwater exploration techniques. The aim is to reduce the numerous unsucessful 
+ * **A specific WE sub-package**
+ 
+    Besides the AMT processing, the software implements a special water exploration (WE) sub-package (geology + drilling ) referred  as `geodrill`, entirely dedicated to improve the groundwater exploration techniques. The aim is to reduce the numerous unsucessful 
     drillings mostly occured due to their wrong locations after AMT geophysical surveys. It consists to minimize the use of supplement methods to AMT which commonly increases the operating budgets 
     to right locate  the drilling thereby reducing the misinterpretation of modeling results(e.g., demarcating well the fracture zones). More details can be found in the **Citations** section. 
     
     
  * **Note**
  
-    For long periods or MT methods (below 1Hz), it is recommended to visit other suitable softwares such as  [MTpy](https://github.com/MTgeophysics/mtpy.git), [FEMT2D](https://github.com/ruboerner/FEMT2D) or [razorback](https://github.com/BRGM/razorback)   
-    or visit the [MTnet](https://www.mtnet.info/main/source.html) website. Nonetheless, the sofware has a feature to generate outputs/objects for other external modeling softwares such as [MTpy](https://github.com/MTgeophysics/mtpy), [OasisMontaj](http://updates.geosoft.com/downloads/files/how-to-guides/Oasis_montaj_Gridding.pdf)
+    For long periods or MT methods (below 1Hz), it is recommended to visit other suitable softwares such as  [MTpy](https://github.com/MTgeophysics/mtpy.git), [FEMT2D](https://github.com/ruboerner/FEMT2D) or [razorback](https://github.com/BRGM/razorback) or visit the [MTnet](https://www.mtnet.info/main/source.html) website. Nonetheless, the sofware has a feature to generate outputs/objects for other external modeling softwares such as [MTpy](https://github.com/MTgeophysics/mtpy), [OasisMontaj](http://updates.geosoft.com/downloads/files/how-to-guides/Oasis_montaj_Gridding.pdf)
     and [GoldenSoftware](https://www.goldensoftware.com/products/surfer).
 
 
@@ -66,13 +67,12 @@ If you use pycsamt in any published work, you may consider as a contribution, ci
 > *Kouadio, K.L., 2021. pyCSAMT: A Python open-source toolkit for controlled source audio-frequency magnetotelluric. https://doi.org/10.5281/zenodo.5674430.*
 
 
-## Contributor
+## Contributors
 
-1. Department of Geophysics, School of Geosciences and Info-physics, [Central South University](http://www.zju.edu.cn/english/), China.  
-2. Key Laboratory of Geosciences Big Data and Deep Resource of Zhejiang Province, School of Earth Sciences, [Zhejiang University](http://www.zju.edu.cn/english/), China.
-3. Equipe de Recherche Géophysique Appliquée, Laboratoire de Geologie Ressources Minerales et Energetiques, UFR des Sciences de la Terre et des Ressources Minières, [Université Félix Houphouët-Boigny]( https://www.univ-fhb.edu.ci/index.php/ufr-strm/), Cote d'Ivoire.
+1. Department of Geophysics, School of  Info-physics and Geomatics Engineering, [Central South University](http://www.zju.edu.cn/english/), China. 
+2. Equipe de Recherche Géophysique Appliquée, Laboratoire de Geologie Ressources Minerales et Energetiques, UFR des Sciences de la Terre et des Ressources Minières, [Université Félix Houphouët-Boigny]( https://www.univ-fhb.edu.ci/index.php/ufr-strm/), Cote d'Ivoire.
 
-* Developer: 1, 2, 3 - Kouadio Laurent a.k.a Daniel; <etanoyau@gmail.com>, <kkouao@zju.edu.cn>,
+* Developer: 1, 2- Kouadio Laurent,  <etanoyau@gmail.com> / <lkk@csu.edu.cn>.
 
 
 

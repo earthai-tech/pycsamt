@@ -16,7 +16,7 @@ the occam2d_rewrite module
     build occam 2D input files.  if 'MTpy' is not intalled 'pyCSAMT' will try tp 
     install mtpy with its dependancies. To avoid some packages conflits , better 
     approch is to create a virtual environnement to use 'pyCSAMT' . If automatic
-    downloading failed ,  you can download MTpy  floowing steps in MTpy wiki page : 
+    downloading failed ,  you can download MTpy  following steps in MTpy wiki page : 
         https://github.com/MTgeophysics/mtpy/wiki : see intallation
         guide and dependancies.
     

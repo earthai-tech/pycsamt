@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Sun Sep 13 09:24:00 2020
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
-#       Licence: LGPL
+#       Licence: GPL
 
 """
 .. _module-Func-utils::`pycsamt.utils.func_utils`  
@@ -21,7 +21,6 @@
     * interpol_scipy 
     * _set_depth_to_coeff 
     * broke_array_to_ 
-    *  _OlDFUNCNOUSEsearch_fill_data (deprecated)
     * _search_ToFill_Data 
     * straighten_out_list  
     * take_firstValue_offDepth 
@@ -48,10 +47,16 @@
     * make_ll_coordinates 
     * resize_resphase_values 
     * _assert_all_types 
-    * scalePosition 
+    * scale_position 
     * get_interpolate_freqs 
     * fit_by_ll 
     * build_array_from_objattr
+    * reshape_array 
+    * fillNaN
+    * ismissing 
+    * get_ediObjs
+    * load2array
+
 """
 
 import os 
@@ -66,8 +71,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from copy import deepcopy
 
+import pycsamt 
 import pycsamt.utils.gis_tools as gis
 import pycsamt.utils.exceptions as CSex
+from pycsamt.__init__ import imtpy 
 from pycsamt.utils.decorator import deprecated 
 from pycsamt.utils._csamtpylog import csamtpylog
 
@@ -92,6 +99,7 @@ try:
             
     import scipy.interpolate as spi
     from scipy.optimize import curve_fit
+    from scipy.signal import argrelextrema 
 
     interp_import = True
  # pragma: no cover
@@ -101,9 +109,237 @@ except ImportError:
     _logger.warning(_msg0)
     
     interp_import = False
+if imtpy:
+    import mtpy
+else:
+    warnings.warn("Module 'MTpy' is not detected! Install it mannualy.")
+    imtpy = False
+    
+def get_ediObjs (edipath, posix = None): 
+    """ Get the collections object from edipath. 
+    
+    Parameters 
+    ---------
+    edipath: str , Path-Like object 
+        Full path to EDI-files.Must be a valid path. 
+        
+    posix: int, 
+        Position to retrieve a specific EDI object into the collection list. 
+        Will raise and error if the position index is larger than the number 
+        of EDI-files read. Default is ``None`` , returns all the collection
+        of Edi-object. 
+        
+    Retuns 
+    -------
+    ediObjs : array-like object  
+        Collection of  EDI-objects from `pyCSAMT`_ and `MTpy`_ packages 
+        
+    Examples 
+    ----------
+    >>> from pycsamt.utils import get_ediObjs 
+    >>> edipath = 'data/3edis'
+    >>> ediObjs = get_ediObjs (edipath)
+    >>> ediObjs 
+    ... array([<pycsamt.core.edi.Edi object at 0x000001F74E8F7070>,
+           <pycsamt.core.edi.Edi object at 0x000001F74E8F30A0>,
+           <pycsamt.core.edi.Edi object at 0x000001F74BCBC2E0>], dtype=object)
+    """  
+    # assert that ediObjs is given rather than edipath 
+    try : ediObjs = list(map(lambda o: _assert_edi_obj(o), edipath)) 
+    except : edipath = _assert_all_types(edipath , str )
+    else : return ediObjs if posix is None else ediObjs [posix]
+    
+    if os.path.isfile (edipath): 
+        edipath = os.path.dirname(edipath)
+    cediObjs = pycsamt.core.edi.Edi_collection(edipath) 
+    if posix is not None: 
+        posix = _assert_all_types(posix, int)
+        if posix >= len(cediObjs.ediObjs):  
+            raise IndexError("Expect edi position to be less than "
+                             f"{ str(len(cediObjs.ediObjs))!r}.")
+            
+    return cediObjs.ediObjs if posix is None else cediObjs.ediObjs [posix]
 
-          
-def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
+def _assert_edi_obj (obj)-> object: 
+    """Assert that the given argument is an EDI -object from modules 
+    EDi of pyCSAMT and MTpy packages. A TypeError will occurs otherwise.
+    
+    :param obj: Full path EDI file or `pyCSAMT`_ and `MTpy`_ object. 
+    :type obj: str or str or  pycsamt.core.edi.Edi or mtpy.core.edi.Edi 
+    
+    :return: Identical object after asserting.
+    
+    """
+    if isinstance(obj, str): 
+        obj = pycsamt.core.edi.Edi(obj) 
+    obj = _assert_all_types (obj, mtpy.core.edi.Edi, pycsamt.core.edi.Edi)
+    return  obj 
+
+def load2array(file, comments='#', delimiter=None,
+              converters=None, skiprows=0, **kws): 
+    """ Load data to array. 
+    
+    Parameters
+    -----------
+    file: str, pathlib.Path, list of str, generator
+        File, filename, list, or generator to read. If the filename extension 
+        is .gz or .bz2, the file is first decompressed. Note that generators 
+        must return bytes or strings. The strings in a list or produced by
+        a generator are treated as lines.
+    
+    comments: str or sequence of str or None, optional
+        The characters or list of characters used to indicate the start of a 
+        comment. None implies no comments. For backwards compatibility, 
+        byte strings will be decoded as ‘latin1’. The default is ``#``.
+    
+    delimiters: tr, optional
+        The string used to separate values. For backwards compatibility, byte 
+        strings will be decoded as ``latin1``. The default is whitespace.
+    
+    converters: dict or callable, optional
+        A function to parse all columns strings into the desired value, or a
+        dictionary mapping column number to a parser function. E.g. if column
+        0 is a date string: converters = {0: datestr2num}. Converters can 
+        also be used to provide a default value for missing data, e.g. 
+        converters = lambda s: float(s.strip() or 0) will convert empty fields
+        to 0. Default: None.
+    
+    skiprows: int, optional
+        Skip the first skiprows lines, including comments; default: 0.
+    
+    kws: dict 
+        Additional keywords argument from :func:`np.load`. Refer to 
+        <https://numpy.org/doc/stable/reference/generated/numpy.load.html> 
+
+    """
+    return np.loadtxt(file, comments=comments, delimiter=delimiter, 
+                       converters=converters, skiprows=skiprows
+                       ) if os.path.splitext(file)[1]  =='.txt' else np.load(
+                           file, **kws)
+
+def scale_values(y, x=None, deg= None,  func =None): 
+    """ Scaling value using a fitting curve. 
+    
+    Create polyfit function from a specifc data points `x` to correct `y` 
+    values.  
+    
+    :param y: array-like of y-axis. Is the array of value to be scaled. 
+    
+    :param x: array-like of x-axis. If `x` is given, it should be the same 
+        length as `y`, otherwise and error will occurs. Default is ``None``. 
+    
+    :param func: callable - The model function, ``f(x, ...)``. It must take 
+        the independent variable as the first argument and the parameters
+        to fit as separate remaining arguments.  `func` can be a ``linear``
+        function i.e  for ``f(x)= ax +b`` where `a` is slope and `b` is the 
+        intercept value. It is recommended according to the `y` value 
+        distribution to set up  a custom function for better fitting. If `func`
+        is given, the `deg` is not needed.   
+        
+    :param deg: polynomial degree. If  value is ``None``, it should  be 
+        computed using the length of extrema (local and/or global) values.
+ 
+    :returns: 
+        - y: array scaled - projected sample values got from `f`.
+        - x: new x-axis - new axis  `x_new` generated from the samples.
+        - linear of polynomial function `f` 
+        
+    :references: 
+        Wikipedia, Curve fitting, https://en.wikipedia.org/wiki/Curve_fitting
+        Wikipedia, Polynomial interpolation, https://en.wikipedia.org/wiki/Polynomial_interpolation
+    :Example: 
+        >>> import numpy as np 
+        >>> import matplotlib.pyplot as plt 
+        >>> from pycsamt.utils.func_utils import scale_values 
+        >>> rdn = np.random.RandomState(42) 
+        >>> x0 =10 * rdn.rand(50)
+        >>> y = 2 * x0  +  rnd.randn(50) -1
+        >>> plt.scatter(x0, y)
+        >>> yc, x , f = scale_values(y) 
+        >>> plt.plot(x, y, x, yc) 
+        
+    """   
+
+    if str(func).lower() != 'none': 
+        if not hasattr(func, '__call__') or not inspect.isfunction (func): 
+            raise TypeError(
+                f'`func` argument is a callable not {type(func).__name__!r}')
+
+    # get the number of local minimum to approximate degree. 
+    minl, = argrelextrema(y, np.less) 
+    # get the number of degrees
+    degree = len(minl) + 1
+    if x is None: 
+        x = np.arange(len(y)) # np.linspace(0, 4, len(y))
+    if len(x) != len(y): 
+        raise ValueError(" `x` and `y` arrays must have the same length."
+                        f"'{len(x)}' and '{len(y)}' are given.")
+        
+    coeff = np.polyfit(x, y, int(deg) if deg is not None else degree)
+    f = np.poly1d(coeff) if func is  None else func 
+    yc = f (x ) # corrected value of y 
+
+    return  yc, x ,  f  
+
+def reshape(arr , axis = None) :
+    """ Detect the array shape and reshape it accordingly, back to the given axis. 
+    
+    :param array: array_like with number of dimension equals to 1 or 2 
+    :param axis: axis to reshape back array. If 'axis' is None and 
+        the number of dimension is greater than 1, it reshapes back array 
+        to array-like 
+    
+    :returns: New reshaped array 
+    
+    :Example: 
+        >>> import numpy as np 
+        >>> from pycsamt.utils.func_utils import reshape 
+        >>> array = np.random.randn(50 )
+        >>> array.shape
+        ... (50,)
+        >>> ar1 = reshape(array, 1) 
+        >>> ar1.shape 
+        ... (1, 50)
+        >>> ar2 =reshape(ar1 , 0) 
+        >>> ar2.shape 
+        ... (50, 1)
+        >>> ar3 = reshape(ar2, axis = None)
+        >>> ar3.shape # goes back to the original array  
+        >>> ar3.shape 
+        ... (50,)
+        
+    """
+    arr = np.array(arr)
+    if arr.ndim > 2 : 
+        raise ValueError('Expect an array with max dimension equals to 2' 
+                         f' but {str(arr.ndim)!r} were given.')
+        
+    if axis  not in (0 , 1, -1, None): 
+        raise ValueError(f'Wrong axis value: {str(axis)!r}')
+        
+    if axis ==-1:
+        axis =None 
+    if arr.ndim ==1 : 
+        # ie , axis is None , array is an array-like object
+        s0, s1= arr.shape [0], None 
+    else : 
+        s0, s1 = arr.shape 
+    if s1 is None: 
+        return  arr.reshape ((1, s0)) if axis == 1 else (arr.reshape (
+            (s0, 1)) if axis ==0 else arr )
+    try : 
+        arr = arr.reshape ((s0 if s1==1 else s1, )) if axis is None else (
+            arr.reshape ((1, s0)) if axis==1  else arr.reshape ((s1, 1 ))
+            )
+    except ValueError: 
+        # error raises when user mistakes to input the right axis. 
+        # (ValueError: cannot reshape array of size 54 into shape (1,1)) 
+        # then return to him the original array 
+        pass 
+
+    return arr    
+
+def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,  
                         step='1km', order= '+', todms=False): 
     """ Generate multiples stations coordinates (longitudes, latitudes)
     from a reference station/site.
@@ -116,13 +352,14 @@ def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
     
     Parameters 
     ----------
-    reflong: float or string 
+    reflong: float or string or list of [start, stop]
         Reference longitude  in degree decimal or in DD:MM:SS for the first 
         site considered as the origin of the landmark.
         
-    reflat: float or string 
+    reflat: float or string or list of [start, stop]
         Reference latitude in degree decimal or in DD:MM:SS for the reference  
-        site considered as the landmark origin.
+        site considered as the landmark origin. If value is given in a list, 
+        it can containt the start point and the stop point. 
         
     nsites: int or float 
         Number of site to generate the coordinates onto. 
@@ -174,8 +411,23 @@ def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
     >>> rlats 
     ... array(['26:03:05.00', '26:03:38.81', '26:04:12.62', '26:04:46.43',
            '26:05:20.23', '26:05:54.04', '26:06:27.85'], dtype='<U11')
+    >>> rlons, rlats = make_ll_coordinates ((336.7, 339.90) , (3144.2 , 3140.95),
+                                            nsites = 238, step =20. ,
+                                            order = '-', r= 125)
+    >>> rlons 
+    ... array(['339:54:00.00', '339:53:11.39', '339:52:22.78', '339:51:34.18',
+           '339:50:45.57', '339:49:56.96', '339:49:08.35', '339:48:19.75',
+           ...
+           '336:46:03.04', '336:45:14.43', '336:44:25.82', '336:43:37.22',
+           '336:42:48.61', '336:42:00.00'], dtype='<U12')
+    >>> rlats 
+    ... array(['3140:57:00.00', '3140:57:49.37', '3140:58:38.73', '3140:59:28.10',
+           '3141:00:17.47', '3141:01:06.84', '3141:01:56.20', '3141:02:45.57',
+           ...
+       '3144:07:53.16', '3144:08:42.53', '3144:09:31.90', '3144:10:21.27',
+       '3144:11:10.63', '3144:12:00.00'], dtype='<U13')
     
-    """ 
+    """  
     def assert_ll(coord):
         """ Assert coordinate when the type of the value is string."""
         try: coord= float(coord)
@@ -186,21 +438,28 @@ def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
                 coord = gis.convert_position_str2float(coord)
         return coord
     
+    xinf, yinf = None, None 
+    
     nsites = int(_assert_all_types(nsites,int, float)) 
-
+    if isinstance (reflong, (list, tuple, np.ndarray)): 
+        reflong , xinf, *_ = reflong 
+    if isinstance (reflat, (list, tuple, np.ndarray)): 
+        reflat , yinf, *_ = reflat 
     step=str(step).lower() 
     if step.find('km')>=0: # convert to meter 
         step = float(step.replace('km', '')) *1e3 
     elif step.find('m')>=0: step = float(step.replace('m', '')) 
     step = float(step) # for consistency 
     
-    if order in ('descending', 'down', '-'): order = '-'
+    if str(order).lower() in ('descending', 'down', '-'): order = '-'
     else: order ='+'
     # compute length of line using the reflong and reflat
     # the origin of the landmark is x0, y0= reflong, reflat
     x0= assert_ll(reflong) ; y0= assert_ll(reflat) 
-    xinf = x0  + (np.sin(np.deg2rad(r)) * step * nsites) / (364e3 *.3048) 
-    yinf = y0 + np.cos(np.deg2rad(r)) * step * nsites /(2882e2 *.3048)
+    xinf = xinf or x0  + (np.sin(np.deg2rad(r)) * step * nsites
+                          ) / (364e3 *.3048) 
+    yinf = yinf or y0 + (np.cos(np.deg2rad(r)) * step * nsites
+                         ) /(2882e2 *.3048)
     
     reflon_ar = np.linspace(x0 , xinf, nsites ) 
     reflat_ar = np.linspace(y0, yinf, nsites)
@@ -227,7 +486,7 @@ def build_array_from_objattr(obj, attr):
     :type attr: str 
     
     :Example: 
-        >>> from pycsamt.ff.core.edi import Edi_Collection
+        >>> from pycsamt.core.edi import Edi_Collection
         >>> from pycsamt.utils.func_utils import 
         >>> edipath = r'/Users/Daniel/Desktop/ediout'
         >>> cObjs = Edi_collection (edipath)
@@ -237,6 +496,17 @@ def build_array_from_objattr(obj, attr):
                0.00083333, 0.00083333])
     
     """
+
+    if not isinstance( obj, (list, tuple, np.ndarray)): 
+        if not hasattr (obj, '__dict__'): 
+            raise ValueError ('Object should be an instance or a class'
+                              f' not: {type(obj).__name__!r}')
+        obj =[obj]
+        
+    if not hasattr(obj[0], attr): 
+        raise AttributeError (f'Object has no attribute {attr!r}')
+    
+
     return np.array(list(map(lambda r: getattr(r, attr), obj )))
 
 
@@ -249,15 +519,16 @@ def _assert_all_types (
     # if np.issubdtype(a1.dtype, np.integer): 
     if not isinstance( obj, expected_objtype): 
         raise TypeError (
-            f'Expected {smart_format(tuple (o.__name__ for o in expected_objtype))}'
-            f' type{"s" if len(expected_objtype)>1 else ""} '
-            f'but `{type(obj).__name__}` is given.')
+            f'Expected type{"s" if len(expected_objtype)>1 else ""} '
+            f'{smart_format(tuple (o.__name__ for o in expected_objtype))}'
+            f' but {type(obj).__name__!r} is given.'
+            )
             
     return obj 
 
 def scale_position(ydata , xdata= None, func = None ,c_order= 0,
-        show: bool =False, todms=False,
-        **kws): 
+        show: bool =False, todms=False,**kws): 
+
     """ Correct data location or position and return new corrected location
     or data. 
     
@@ -310,7 +581,7 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     Examples
     --------
     >>> from pycsamt.utils.func_utils  import scale_position 
-    >>> from pycsamt.ff.core.edi import Edi_Collection 
+    >>> from pycsamt.core.edi import Edi_collection 
     >>> edipath = r'/Users/Daniel/Desktop/ediout'
     >>> cObjs = Edi_collection (edipath)
     >>> # correcting northing coordinates from latitude data 
@@ -324,7 +595,7 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     ... array([-1.31766381e-04,  4.79150482e-05,  2.27596478e-04,  4.07277908e-04,
     ...        5.86959337e-04,  7.66640767e-04,  9.46322196e-04,  1.12600363e-03,
     ...        1.30568506e-03,  1.48536649e-03,  1.66504792e-03,  1.84472934e-03])
-    >>> lat_corrected_dms, *_= scalePosition(ydata =cObjs.lat[:12], todms=True)
+    >>> lat_corrected_dms, *_= scale_position(ydata =cObjs.lat[:12], todms=True)
     ... array(['0:00:00.47', '0:00:00.17', '0:00:00.82', '0:00:01.47',
     ...       '0:00:02.11', '0:00:02.76', '0:00:03.41', '0:00:04.05',
     ...       '0:00:04.70', '0:00:05.35', '0:00:05.99', '0:00:06.64'],
@@ -380,8 +651,8 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
         xdata = np.linspace(0, 4, len(ydata))
     if len(xdata) != len(ydata): 
         raise ValueError(" `x` and `y` arrays must have the same length."
-                        "'{len(xdata)}' and '{len(ydata)}' are given.")
-        
+                        f"'{len(xdata)}' and '{len(ydata)}' are given.")
+
     popt, pcov = curve_fit(func, xdata, ydata, **kws)
     ydata_new = func(xdata, *popt)
     
@@ -401,13 +672,15 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     return ydata_new, popt, pcov 
 
 
-def make_ids(ediObjs, prefix =None, how ='py'): 
+
+def make_ids(arr, prefix =None, how ='py'): 
     """ Generate auto Id according to the number of given sites. 
     
-    :param ediObjs: list of EDI object , composed of a collection of 
-        pycsamt.ff.core.edi.Edi object
-    :type ediObjs: pycsamt.ff.core.edi.Edi_Collection 
-    
+    :param arr: Iterable object to generate an id site . For instance it can be 
+        the array-like or list of EDI object that composed a collection of 
+        pycsamt.core.edi.Edi object. 
+    :type ediObjs: array-like, list or tuple 
+
     :param prefix: string value to add as prefix of given id. Prefix can be 
         the site name.
     :type prefix: str 
@@ -426,30 +699,32 @@ def make_ids(ediObjs, prefix =None, how ='py'):
         ... ['ix0', 'ix1', 'ix2']
         
     """ 
-    fm='{:0' +'{}'.format(int(np.log10(len(ediObjs))) + 1) +'}'
+    fm='{:0' +'{}'.format(int(np.log10(len(arr))) + 1) +'}'
     id_ =[str(prefix) + fm.format(i if how=='py'else i+ 1 ) if prefix is not 
           None else fm.format(i if how=='py'else i+ 1) 
-          for i in range(len(ediObjs))] 
+          for i in range(len(arr))] 
     return id_
 
 def fit_by_ll(ediObjs): 
-    """ Fit edi by location reorganize edi according to the site longitude and 
-    latitude. 
+    """ Fit edi by location and reorganize EDI (sort EDI) according to the site  
+    longitude and latitude coordinates. 
     
-    Edis data are mostly reading an alphabetically order, so the reoganization  
+    EDIs data are mostly reading in an alphabetically order, so the reoganization  
+
     according to the location(longitude and latitude) is usefull for distance 
     betwen site computing with a right position at each site.  
     
     :param ediObjs: list of EDI object , composed of a collection of 
-        pycsamt.ff.core.edi.Edi object 
-    :type ediObjs: pycsamt.ff.core.edi.Edi_Collection 
+        pycsamt.core.edi.Edi object 
+    :type ediObjs: pycsamt.core.edi.Edi_Collection 
+
     
     :returns: array splitted into ediObjs and Edifiles basenames 
     :rtyple: tuple 
     
     :Example: 
         >>> import numpy as np 
-        >>> from pycsamt.ff.core.edi import Edi_Collection 
+        >>> from pycsamt.core.edi import Edi_Collection 
         >>> from pycsamt.utils.func_utils import fit_by_ll
         >>> edipath ='data/edi_ss' 
         >>> cediObjs = Edi_Collection (edipath) 
@@ -477,16 +752,16 @@ def get_interpolate_freqs (ediObjs, to_log10 =False):
     frequency data. 
     
     :param ediObjs: list - Collections of EDI-objects 
-    :rtype: pycsamt.ff.core.edi.Edi 
+    :type ediobjs : pycsamt.core.edi.Edi 
     
     :param to_log10: Put the interpolated min-max frequency to log10 values
-    :type to_log10: bool 
     
-    :returns: Array-like min max and number of frequency for interpolating. 
+    :type to_log10: bool 
+    :returns: Array-like min max and auto-number of frequency for interpolating. 
     :rtype: tuple
     
     :Example: 
-        >>> from pycsamt.ff.core.edi import Edi_collection 
+        >>> from pycsamt.core.edi import Edi_collection 
         >>> from pycsamt.utils.func_utils import find_interpolate_freq
         >>> edipath = r'/Users/Daniel/Desktop/edi'
         >>> cObjs = Edi_collection (edipath)
@@ -636,9 +911,11 @@ def subprocess_module_installation (module, upgrade =True , DEVNULL=False,
         
     return MOD_IMP 
         
-def smart_format(iter_obj): 
+def smart_format(iter_obj, choice ='and'): 
     """ Smart format iterable obj 
     :param iter_obj: iterable obj 
+    :param choice: str - whether the element in `iter_obj` are  compulsory or 
+        not. If not ,`choice` can be set to ``or``. 
     
     :Example: 
         >>> from pycsamt.utils.func_utils import smart_format
@@ -654,7 +931,7 @@ def smart_format(iter_obj):
         str_litteral= ','.join([f"{i!r}" for i in iter_obj ])
     elif len(iter_obj)>1: 
         str_litteral = ','.join([f"{i!r}" for i in iter_obj[:-1]])
-        str_litteral += f" and {iter_obj[-1]!r}"
+        str_litteral += f" {choice} {iter_obj[-1]!r}"
     return str_litteral
 
 def make_introspection(Obj , subObj): 
@@ -854,86 +1131,6 @@ def concat_array_from_list (list_of_array , concat_axis = 0) :
                 
     return np.concatenate(list_of_array, axis = concat_axis)
 
-
-# @deprecated("Should be removed ")
-# def concat_array_from_list2(list_of_array, concat_axis=0):
-#     """
-#     Small function to concatenate a list with array contents 
-    
-#     Parameters 
-#     -----------
-#         * list_of_array : list 
-#                 contains a list for array data. the concatenation is possible 
-#                 if an index array have the same size 
-        
-#     Returns 
-#     -------
-#         array_like 
-#             numpy concatenated data 
-        
-#     :Example: 
-        
-#         >>> import numpy as np 
-#         >>> np.random.seed(0)
-#         >>> ass=np.random.randn(10)
-#         >>> ass2=np.linspace(0,15,12)
-#         >>> ass=ass.reshape((ass.shape[0],1))
-#         >>>  ass2=ass2.reshape((ass2.shape[0],1))
-#         >>> or_list=[ass,ass2]
-#         >>> ss_check_error=concat_array_from_list(list_of_array=or_list,
-#         ...                                          concat_axis=0)
-#         >>>  secont test :
-#         >>> ass=np.linspace(0,15,14)
-#         >>> ass2=np.random.randn(14)
-#         >>> ass=ass.reshape((ass.shape[0],1))
-#         >>> ass2=ass2.reshape((ass2.shape[0],1))
-#         >>> or_list=[ass,ass2]
-#         >>>  ss=concat_array_from_list(list_of_array=or_list, concat_axis=0)
-#         >>> ss=concat_array_from_list(list_of_array=or_list, concat_axis=1)
-#         >>> ss
-#         >>> ss.shape 
-#     """
-#     #first attemp when the len of list is ==1 :
-    
-#     if len(list_of_array)==1:
-#         if type(list_of_array[0])==np.ndarray:
-#             output_array=list_of_array[0]
-#             if output_array.ndim==1:
-#                 if concat_axis==0 :
-#                     output_array=output_array.reshape((1,output_array.shape[0]))
-#                 else :
-#                     output_array=output_array.reshape((output_array.shape[0],1))
-#             return output_array
-        
-#         elif type(list_of_array[0])==list:
-#             output_array=np.array(list_of_array[0])
-#             if concat_axis==0 :
-#                 output_array=output_array.reshape((1,output_array.shape[0]))
-#             else :
-#                 output_array=output_array.reshape((output_array.shape[0],1))
-#             return output_array
-    
-#     # check the size of array in the liste when the len of list is >=2
-    
-#     for ii,elt in enumerate(list_of_array) :
-#         if type(elt)==list:
-#             elt=np.array(elt)
-#         if elt is None :
-#             pass
-#         elif elt.ndim ==1 :
-#             if concat_axis==0 :
-#                 elt=elt.reshape((1,elt.shape[0]))
-#             else :
-#                 elt=elt.reshape((elt.shape[0],1))
-#         list_of_array[ii]=elt
- 
-#     output_array=list_of_array[0]
-#     for ii in list_of_array[1:]:
-#         output_array=np.concatenate((output_array,ii), axis=concat_axis)
-        
-#     return output_array
-
-
 def sort_array_data(data,  sort_order =0,
               concatenate=False, concat_axis_order=0 ):
     """
@@ -987,121 +1184,7 @@ def sort_array_data(data,  sort_order =0,
         
     return data 
         
-@deprecated ("Function replaced to another {_search_ToFill_Data}")
-def transfer_array_(data, index_key,start_value_depth, end_value_depth, 
-                    column_order_selection=0, axis=0): 
-    """
-    Parameters
-    ----------
-        * data : dict
-                Dictionnary of numpy ndarray .
-            
-        * index_key : float 
-                key of the dictionnary . 
-                Must be a number of the first column of offset .
-            
-        * start_value_depth : float 
-                If the depth is not reach must add depth of the closest point.
-                give the start value which match to the maxi depth of the data :
-                The *default* is -214.
-                
-        * end_value_depth : float
-                Maximum depth of the survey. The default is -904.
-            
-        * column_order_selection : int,
-                the index of depth column. The default is 0.
-                
-        * axis : int , optional
-                numpy.ndarray axis . The default is 0.
 
-    Returns
-    -------
-        numpy.ndarray
-            return the array data we want to top to .
-    
-    :Example: 
-        
-        >>> import numpy as np 
-        >>> sos=abs(np.random.randn(4,3)*4)
-        >>> sos2=abs(np.random.randn(4,3)*10.8)
-        >>>  print(sos2)
-        >>> sis1=sort_array_data(data=sos,sort_order =1,
-        ...                    concatenate=False, concat_axis_order=0)
-        >>> sis2=sort_array_data(data=sos2,sort_order =1,
-        ...                    concatenate=False, concat_axis_order=0)
-        >>> dico={"18.4":sis1,
-        ...      "21.4":sis2}
-        >>> test=transfer_array_(data=dico, index_key=11.4, 
-        ...                      start_value_depth=-14, end_value_depth=23,
-        ...                      column_order_selection=1)
-        >>> print("sis1:",sis1)
-        >>> print("sis2:",sis2)
-        >>> print("Finaltest", test)
-    """
-
-    start_value_depth=abs(start_value_depth)
-    end_value_depth=abs(end_value_depth)
-    comp, flag,iter_,translist_=0,-1,0,[]
-    
-   # chef the depth colum if negative before enter in loop :  
-
-    if type (data)==dict :
-        for key, value in data.items(): # scroll the dictionary 
-            if float(key)> float(index_key):   # check the key of dictionnary
-                                        #before using its value 
-                maxi_depth=abs(value[:,column_order_selection]).max() # if yes
-                    # calculate the max depth of the value :
-                comp=0
-                for rowline in value : # scroll the row of the array dict value
-                
-                    if abs(rowline[column_order_selection])>start_value_depth : # check its
-                        # print(abs(rowline[column_order_selection]))
-
-                        # value and compare it to section we must start extract (start)
-                        if end_value_depth > maxi_depth:
-                            transData_=value[comp:,:] # if yes transfer data :
-                            # print(transData_)
-                            translist_.append(transData_)
-                            
-                            start_value_depth=abs(transData_[:,column_order_selection]).max()
-                            # start_value_depth=maxi_depth
-                            
-                            comp,iter_=0,iter_+1
-                            flag=1
-                            
-                        elif end_value_depth<=maxi_depth:
-                            indix =abs(value[:,column_order_selection]).tolist().index(end_value_depth)
-                            if iter_==0 : 
-                                transData_=value[comp:indix,::] 
-                                flag=0
-                                break 
-                            else :
-                                transData_=value[comp:indix,::]
-                                translist_.append(transData_)
-                                flag=1
-                                
-                        if start_value_depth >= end_value_depth:
-                            flag=1
-                            break
-                    else :
-                        comp +=1 
-                        
-    if flag ==0 : 
-        return transData_
-    if flag==1 : 
-        trans_array=concat_array_from_list(list_of_array=translist_, concat_axis=axis)
-        return trans_array 
-
-            
-    if type(data)==list: # create a dictionnary of array value 
-        dico={}
-        for ss, value  in enumerate( data) :
-            dico["{0}".format(value[0,0])]=value
-        # call recursive function 
-        transfer_array_(data=dico,index_key=index_key,start_value_depth=start_value_depth,
-                        end_value_depth=end_value_depth,column_order_selection=column_order_selection, axis=0)
-        
-            
 def interpol_scipy (x_value, y_value,x_new,
                     kind="linear",plot=False, fill="extrapolate"):
     
@@ -1200,8 +1283,6 @@ def _set_depth_to_coeff(data, depth_column_index,coeff=1, depth_axis=0):
 
     return data
             
-
-
 def broke_array_to_(arrayData, keyIndex=0, broken_type="dict"):
     """
     broke data array into different value with their same key 
@@ -1222,11 +1303,9 @@ def broke_array_to_(arrayData, keyIndex=0, broken_type="dict"):
     
     # find the max_counts
     
-    vcounts_temp,counts_temp=np.unique(arrayData[:,keyIndex], return_counts=True)
+    vcounts_temp,counts_temp=np.unique(arrayData[:,keyIndex],
+                                       return_counts=True)
     vcounts_temp_max=vcounts_temp.max()
-    # print(vcounts_temp)
-    # print(vcounts_temp_max)
-    # print(vcounts_temp.min())
 
     dico_brok={}
     lis_brok=[]
@@ -1254,221 +1333,7 @@ def broke_array_to_(arrayData, keyIndex=0, broken_type="dict"):
     elif broken_type=="list":
         return lis_brok
     
-
-@deprecated('this function is replaced by [_search_ToFill_Data] ')
-def _OlDFUNCNOUSEsearch_fill_data(dicoReal, arrayTemp , 
-                      max_value, index_of_depth,axis=0):
-    """
-    Deprecated function , very expensive.
-    
-    Parameters
-    ----------
-        * data : dict
-                Dictionnary of numpy ndarray .
-            
-        * dataReal : dict
-                 dictionnary . must be a dictionnary of real of offset .
-            
-        * arrayTemp : np.ndarray 
-                 must be a numpy array of reserve data , the one , we want to 
-                 extract the depth data to fill array 
-    
-        * max_value : float
-                Maximum depth of the survey. 
-            
-        * index_of_depth : int,
-                the index of depth column. The *default* is 0.
-                
-        * axis : int , optional
-            numpy.ndarray axis . The default is 0.
-    
-    Returns
-    -------
-        array_like 
-            the array data we want to top to .
-    
-    :Example: 
-        
-         >>> import numpy as np 
-         >>>  np.random.seed(0)
-         >>>  sos=abs(np.random.randn(4,3)*4)
-         >>>  sos2=abs(np.random.randn(4,3)*10.8)
-         >>>  sos3=abs(np.randon.rand(8,3)*12.4)
-         >>>  # print(sos2)
-         >>>  sis1=sort_array_data(data=sos,sort_order =1,
-         ...                    concatenate=False, concat_axis_order=0)
-         >>>  sis2=sort_array_data(data=sos2,sort_order =1,
-         ...                    concatenate=False, concat_axis_order=0)
-         >>>  sis3=sort_array_data(data=sos3,sort_order =1,
-         ...                    concatenate=False, concat_axis_order=0)
-         >>>  dico={"18.4":sis1,
-         ...      "21.4":sis2}
-         >>>  test=_search_fill_data(dicoReal=dico, index_key=11.4, 
-         ...                      start_value=10, max_value=23,
-         ...                      index_of_depth=1)
-         >>> print("sis1\n:",sis1)
-         >>> print("sis2\n:",sis2)
-         >>> print("Finaltest\n", test)
-    """
-    
-    # arange a dictionany : 
-    #from keys : for k in sorted(dico.keys()):
-    #   print(%s: %s",%(k,names[k]))
-    # from values : for k , v  in sorted(dico.items(),key=lambda x:x[1]):
-    #   print(%s: %s",%(k,v))
-    
-    _all_checker,keyToSkip=[],[]
-    litemp= broke_array_to_(arrayData=arrayTemp,keyIndex=0,
-                            broken_type="list")
-    itemp,real,realTem=[],[],[]
-    for ii in litemp:
-        temp=sort_array_data(data=ii,sort_order=1,
-                             concatenate=False)
-        itemp.append(temp)
-    # print(itemp)
-        
-    for key , value in sorted(dicoReal.items()):
-        # print(sorted(dicoReal.items()))
-        # for ii, rowline in enumerate(value)  :
-        rowmax=value[:,index_of_depth].max()
-        real.append((float(key),rowmax))
-        _all_checker.append(rowmax)
-        
-    
-    #chek if all elements are reach the depth max  
-    # if all(_all_checker)==True : # if one of the depth is the same 
-    #     return dicoReal
-    realTem=real.copy()
-    for ii , value in enumerate(realTem):
-        if value[1] == max_value:
-            del realTem[ii]
-            #real.pop(ii)
-            
-    if realTem ==[]:
-        return dicoReal
-    
-    
-    print("Real : \n",real)
-    idx,flag=0,0
-    comp,sp=0,-1
-    fin_list,endList=[],[]
-    
-    while idx < len(realTem):
-        
-        indexKey=realTem[idx][0] #11,4
-        maxKey=realTem[idx][1] #214        
-        # if real[idx][1]==max_value : # case where thedepth  value of realdico is get  
-        #     flag=3
-        # # elif real[idx][1]==max_value : # case where thedepth  value of realdico is get  
-        # #     flag=3
-        # else :
-        if idx==len(realTem)-1:
-            indic=real.index(realTem[idx])
-            # check whether there is data after a delete the offset with depth value reach 
-            if realTem[idx][0]==real[-1][0]:
-                nexIndex=itemp[-1][0][0]
-            else :
-                nexIndex=real[indic+1][0]
-        else :
-            nexIndex=realTem[idx+1][0]#61.4
-        # loop the reserve list :
-        for ii, array in enumerate (itemp): #itemp is the  list of reserve broken list
-        
-            # if array[0][0]> indexKey and array[0][0]> nexIndex:
-            #     keyToSkip.append(realTem[idx])
-            #     continue 
-            if array[0][0]> indexKey and array[0][0]<nexIndex : #check offset and next offset , if True :
-                
-                for index, rowline in enumerate(array) : # loop the array now 
-                    # tem_depth=rowline[1] # take the value of depth of reserve array for the first row 
-                    if rowline[1] > maxKey :# maxKey=214, rowline[1]= :# (max_value=904) if True :
-                        sp=sp+1
-                        if sp==0 :
-                            add_array=array[index:,:]
-                            # num=index
-                            # print("True:\n",add_array)
-                            flag=4
-                        else :
-                            sp=-1
-                            pass
-                        # print(maxtem)
-            if flag==4:
-                # maxtem=array[-1][1]       # take the maximum depth of the reserve array , last row
-                if array[-1][1]  < max_value : # if the maximum depth not reach 
-                    comp=comp+1
-                    if array[0][0]<nexIndex :
-                        endList.append(add_array)
-                    else :
-                        fin_list.append(add_array) # keep the array in temporary list 
-                    # maxKey = maxtem   # set up new maximum depth 
-                    # flag=1
-                    maxKey = array[-1][1] 
-                    # print("flag4,comp>1")
-                    # if maxKey < 
-                elif array[-1][1]  ==max_value : # the maximum depth is reached
-                    flag=5
-    
-            if flag==5 :
-                
-                if comp==0 : # first check is ok 
-                    # add_array=array[num:,:] # cut the array 
-                    endList.append(add_array)
-                    flag=0
-                    # print("flag5,comp=0")
-                else :
-                  add_array=array[index:,:] #  
-                  fin_list.append(add_array) # list to create one ar
-
-                  flag=1
-                      
-        # if flag==3 : # in that case is true , save the value of the offset 
-        #     # for key , value in dicoReal.items() :
-        #     #     if float(key) == real[idx][0]:
-        #     #         endList.append(value)
-        #     keyToSkip.append(array[0][0])
-            
-                    
-        if flag==1 :
-            arT=concat_array_from_list(list_of_array=fin_list,concat_axis=axis)
-            endList.append(arT)
-        if flag==0 :
-            endList=endList
-        
-        idx=idx+1
-            
-    print("keyToSkip\n:",keyToSkip)       
-        
-    
-    #delete the the offset which are full depth on the list 
-    # print(keyToSkip)
-    # print(real,"\n")
-    for ii , value in enumerate(realTem):
-        if value[0] in keyToSkip:
-            del realTem[ii]
-            #real.pop(ii)
-    
-    # now we are the list of recoverd depth 
-    # build dictionnary
-    print("Realtem\n",realTem,)
-
-    print("endlist : \n",endList)
-    # print(keyToSkip)
-    
-    for ii , tuple_ in enumerate (realTem) : #take the realkey from dico
-        realKey, maxValue=tuple_
-        print(realKey,maxValue)
-        
-        add_array=endList[ii]       # take the add_value generated
-        # print(endList)
-        for key , value in dicoReal.items(): # search in dictionnary the key
-            if float(key)==realKey: # and compare it to the key from tuple ...
-                        #... just to have certitude then concatenate 
-                val=np.concatenate((value,add_array),axis=0)
-                dicoReal[key]=val
-        # print(ii)
-    return dicoReal 
-
-
+@deprecated('Amateurism function. Should remove soon !')
 def _search_ToFill_Data (dicoReal, arrayTemp , 
                       max_value, index_of_depth,axis=0): 
     """
@@ -1533,18 +1398,7 @@ def _search_ToFill_Data (dicoReal, arrayTemp ,
         ...              max_value=904, index_of_depth=1,axis=0)
         >>>  print(sis02)
     """ 
-    #Notes :
-    # arange a dictionany : 
-    #from keys : for k in sorted(dico.keys()):
-    #   print(%s: %s",%(k,names[k]))
-    # from values : for k , v  in sorted(dico.items(),key=lambda x:x[1]):
-    #   print(%s: %s",%(k,v)
-    # for ii , value in enumerate(realTem):
-    # if value[0] in keyToSkip:
-    #     del realTem[ii]
-    #     #real.pop(ii)
-    #------------------------------------
-    # _all_checker,keyToSkip=[],[]
+
     litemp= broke_array_to_(arrayData=arrayTemp,keyIndex=0,
                             broken_type="list")
     itemp,real=[],[],
@@ -1594,8 +1448,9 @@ def _search_ToFill_Data (dicoReal, arrayTemp ,
                             if iter_==0 and maxDepth<=max_value :
                                 for key, value in dicoReal.items() :
                                     if float(key) ==offs :
-                                        new_value=concat_array_from_list(list_of_array=[value,add_array],
-                                                                     concat_axis=axis)
+                                        new_value=concat_array_from_list(
+                                            list_of_array=[value,add_array],
+                                            concat_axis=axis)
                                         dicoReal[key]=new_value
                                         iter_=-1
                                         # break
@@ -1672,32 +1527,14 @@ def straighten_out_list (main_list , list_to_straigh):
     tempi=deepcopy(tempi)
 
     tempi.sort(reverse =False)
-    # print("mainlist:\n",main_list)
-    # print("tempiSorted:\n",tempi)
-    # print("missoff:\n",misoffs)
-    # print("lisofStraight_max:\n",max_X)
-    # # print(len(misoffs))
 
-    # sp=-1
     for jj, off in enumerate(tempi): #scroll the create temporary list
         for ss, ofi in enumerate(misoffs):  # scroll the miss offset list and compare it 
-                            # to the temportary list 
+        # to the temportary list 
             if off==ofi:
                 # print(off,ss)
-                indexof =main_list.index(off) # find the index of "off" value in the mainlist
-                        # in order to calculate the distance between the value to its next value 
-                        # or forward value ex :off=3 , backward =0.724 , forward =3.445
-                        
-                # if main_list[indexof]==main_list[-1]: # that's mean the "off" value reaches the end of mainlist
-                #     if tempi[-1]>main_list[indexof]: # 
-                #         deltaMain=main_list[indexof]-tempi[-1] # take the diff between
-                #         vamin.append(tempi[-1])
-                #     else :
-                #         deltaMain=main_list[indexof]-tempi[-2]
-                # else :
-                #     deltaMain=main_list[indexof]-main_list[indexof+1]
-                    
-                # if main_list[indexof+1] != tempi[jj+1] :
+                indexof =main_list.index(off)
+
                 if off==tempi[-1]:
                     # deltaOffneg=abs(off-tempi[jj-1])
                     vamin.append(tempi[jj-1])
@@ -1725,9 +1562,7 @@ def straighten_out_list (main_list , list_to_straigh):
         for ss, of in enumerate(vamin):
             if val==of :
                 list_to_straigh[ii]=misoffs[ss]
-                
-    # if list_to_straigh[-1] !=max_X :
-        
+                   
     return list_to_straigh
 
 def take_firstValue_offDepth(data_array,
@@ -2777,7 +2612,6 @@ def _nonevalue_checker (list_of_value, value_to_delete=None):
             break           # be sure one case or onother , it will break
     return list_of_value 
 
-###OPTIMIZE  
 def resize_resphase_values (dictobj: dict , fill_value: float = np.nan,
                             c =None,mask_nan:bool =True, return_array =True): 
     """ Get the resistivity and phases values from dictof items 
@@ -2858,7 +2692,7 @@ def _strip_item(item_to_clean, item=None, multi_space=12):
     if type(item_to_clean ) != list :#or type(item_to_clean ) !=np.ndarray:
         if type(item_to_clean ) !=np.ndarray:
             item_to_clean=[item_to_clean]
-    ###TIP
+    
     if item_to_clean in cleaner or item_to_clean ==['']:
         warnings.warn ('No data found for sanitization; returns None.')
         return None 
@@ -3354,31 +3188,180 @@ def convert_csvdata_from_fr_to_en(csv_fn, pf, destfile = 'pme.en.csv',
     
     return new_csv_list
 
-# if __name__=="__main__" :
-
-    # parse_=parse_wellData(filename='shimenDH.csv',
-    # include_azimuth=True,utm_zone='49N')
+def ismissing(refarr, arr, fill_value = np.nan, return_index =False): 
+    """ Get the missing values in array-like and fill it  to match the length
+    of the reference array. 
     
-    # print("NameOflocation:\n",parse_[0])
-    # print("WellData:\n",parse_[1])
-    # print("GeoData:\n",parse_[2])
-    # print("Sample:\n",parse_[3])
-    # data =['Z.mwgt','Z.pwgt','Freq',' Tx.Amp','E.mag','   E.phz',
-    #         '   B.mag','   B.phz','   Z.mag', '   Zphz  ']
+    The function makes sense especially for frequency interpollation in the 
+    'attenuation band' when using the audio-frequency magnetotelluric methods. 
     
-    # data2=[' B.phz',' Z.mag',]
-    # # cleaner =[(''+ ii*'*') for ii in range(7)]
-    # print(_cross_eraser(data=data2, to_del=data))
-    # print(_cross_eraser(data=data, to_del=data2))
-    # # print(_strip_item(item_to_clean=data, item=' '))
-    # # # print(cleaner)
-    # ts ='50.0'
-    # ch ='AMTAVG 7.76: "K1.fld", Dated 99-01-01,AMTAVG, Processed 11 Jul 17 AMTAVG'
-    # ss=_remove_str_word(char=ts, word_to_remove='m', deep_remove=False)
-            
+    :param arr: array-like- Array to extended with fill value. It should be  
+        shorter than the `refarr`. Otherwise it returns the same array `arr` 
+    :param refarr: array-like- the reference array. It should have a greater 
+        length than the array 
+    :param fill_value: float - Value to fill the `arr` to match the length of 
+        the `refarr`. 
+    :param return_index: bool or str - array-like, index of the elements element 
+        in `arr`. Default is ``False``. Any other value should returns the 
+        mask of existing element in reference array
+        
+    :returns: array and values missings or indexes in reference array. 
+    
+    :Example: 
+        
+    >>> import numpy as np 
+    >>> from pycsamt.utils.func_utils import ismissing
+    >>> refreq = np.linspace(7e7, 1e0, 20) # 20 frequencies as reference
+    >>> # remove the value between index 7 to 12 and stack again
+    >>> freq = np.hstack ((refreq.copy()[:7], refreq.copy()[12:] ))  
+    >>> f, m  = ismissing (refreq, freq)
+    >>> f, m  
+    ...array([7.00000000e+07, 6.63157895e+07, 6.26315791e+07, 5.89473686e+07,
+           5.52631581e+07, 5.15789476e+07, 4.78947372e+07,            nan,
+                      nan,            nan,            nan,            nan,
+           2.57894743e+07, 2.21052638e+07, 1.84210534e+07, 1.47368429e+07,
+           1.10526324e+07, 7.36842195e+06, 3.68421147e+06, 1.00000000e+00])
+    >>> m # missing values 
+    ... array([44210526.68421052, 40526316.21052632, 36842105.73684211,
+           33157895.2631579 , 29473684.78947368])
+    >>>  _, m_ix  = ismissing (refreq, freq, return_index =True)
+    >>> m_ix 
+    ... array([ 7,  8,  9, 10, 11], dtype=int64)
+    >>> # assert the missing values from reference values 
+    >>> refreq[m_ix ] # is equal to m 
+    ... array([44210526.68421052, 40526316.21052632, 36842105.73684211,
+           33157895.2631579 , 29473684.78947368]) 
+        
+    """
+    return_index = str(return_index).lower() 
+    fill_value = _assert_all_types(fill_value, float, int)
+    if return_index in ('false', 'value', 'val') :
+        return_index ='values' 
+    elif return_index  in ('true', 'index', 'ix') :
+        return_index = 'index' 
+    else : 
+        return_index = 'mask'
+    
+    ref = refarr.copy() ; mask = np.isin(ref, arr)
+    miss_values = ref [~np.isin(ref, arr)] 
+    miss_val_or_ix  = (ref [:, None] == miss_values).argmax(axis=0
+                         ) if return_index =='index' else ref [~np.isin(ref, arr)] 
+    
+    miss_val_or_ix = mask if return_index =='mask' else miss_val_or_ix 
+    # if return_missing_values: 
+    ref [~np.isin(ref, arr)] = fill_value 
+    #arr= np.hstack ((arr , np.repeat(fill_value, 0 if m <=0 else m  ))) 
+    #refarr[refarr ==arr] if return_index else arr 
+    return  ref , miss_val_or_ix   
+
+
+def fillNaN(arr, method ='ff'): 
+    """ Most efficient way to back/forward-fill NaN values in numpy array. 
+    
+    Parameters 
+    ---------- 
+    arr : ndarray 
+        Array containing NaN values to be filled 
+    method: str 
+        Method for filling. Can be forward fill ``ff`` or backward fill `bf``. 
+        or ``both`` for the two methods. Default is `ff`. 
+        
+    Returns
+    -------
+    new array filled. 
+    
+    Notes 
+    -----
+    When NaN value is framed between two valid numbers, ``ff`` and `bf` performs 
+    well the filling operations. However, when the array is ended by multiple 
+    NaN values, the ``ff`` is recommended. At the opposite the ``bf`` is  the 
+    method suggested. The ``both``argument does the both tasks at the expense of 
+    the computation cost. 
+    
+    Examples 
+    --------- 
+        
+    >>> import numpy as np 
+    >>> from pycsamt.utils.func_utils import fillNaN 
+    >>> arr2d = np.random.randn(7, 3)
+    >>> # change some value into NaN 
+    >>> arr2d[[0, 2, 3, 3 ],[0, 2,1, 2]]= np.nan
+    >>> arr2d 
+    ... array([[        nan, -0.74636104,  1.12731613],
+           [ 0.48178017, -0.18593812, -0.67673698],
+           [ 0.17143421, -2.15184895,         nan],
+           [-0.6839212 ,         nan,         nan]])
+    >>> fillNaN (arr2d) 
+    ... array([[        nan, -0.74636104,  1.12731613],
+           [ 0.48178017, -0.18593812, -0.67673698],
+           [ 0.17143421, -2.15184895, -2.15184895],
+           [-0.6839212 , -0.6839212 , -0.6839212 ]])
+    >>> fillNaN(arr2d, 'bf')
+    ... array([[-0.74636104, -0.74636104,  1.12731613],
+           [ 0.48178017, -0.18593812, -0.67673698],
+           [ 0.17143421, -2.15184895,         nan],
+           [-0.6839212 ,         nan,         nan]])
+    >>> fillNaN (arr2d, 'both')
+    ... array([[-0.74636104, -0.74636104,  1.12731613],
+           [ 0.48178017, -0.18593812, -0.67673698],
+           [ 0.17143421, -2.15184895, -2.15184895],
+           [-0.6839212 , -0.6839212 , -0.6839212 ]])
+    
+    References 
+    ----------
+    Some function below are edited by the authors in pyQuestion.com website. 
+    There are other way more efficient to perform this task by calling the module 
+    `Numba` to accelerate the computation time. However, at the time this script 
+    is writen (August 17th, 2022) , `Numba` works with `Numpy` version 1.21. The
+    latter  is older than the one used in for writting this package (1.22.3 ). 
+    
+    For furher details, one can refer to the following link: 
+    https://pyquestions.com/most-efficient-way-to-forward-fill-nan-values-in-numpy-array
+    
+    """
+    def ffill (arr): 
+        """ Forward fill."""
+        idx = np.where (~mask, np.arange(mask.shape[1]), 0)
+        np.maximum.accumulate (idx, axis =1 , out =idx )
+        return arr[np.arange(idx.shape[0])[:, None], idx ]
+    
+    def bfill (arr): 
+        """ Backward fill """
+        idx = np.where (~mask, np.arange(mask.shape[1]) , mask.shape[1]-1)
+        idx = np.minimum.accumulate(idx[:, ::-1], axis =1)[:, ::-1]
+        return arr [np.arange(idx.shape [0])[:, None], idx ]
+    
+    method= str(method).lower().strip() 
+    
+    if arr.ndim ==1: 
+        arr = reshape(arr, axis=1)  
+        
+    if method  in ('backward', 'bf',  'bwd'):
+        method = 'bf' 
+    elif method in ('forward', 'ff', 'fwd'): 
+        method= 'ff' 
+    elif method in ('both', 'ffbf', 'fbwf', 'bff'): 
+        method ='both'
+    if method not in ('bf', 'ff', 'both'): 
+        raise ValueError ("Expect a backward <'bf'>, forward <'ff'> fill "
+                          f" or both <'bff'> not {method!r}")
+    mask = np.isnan (arr)  
+    if method =='both': 
+        arr = ffill(arr) ;
+        #mask = np.isnan (arr)  
+        arr = bfill(arr) 
+    
+    return (ffill(arr) if method =='ff' else bfill(arr)
+            ) if method in ('bf', 'ff') else arr 
 
 
     
+
+
+
+
+
+
 
     
     

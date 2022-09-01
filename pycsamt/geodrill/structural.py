@@ -726,9 +726,9 @@ def get_color_palette (RGB_color_palette):
         if cp >255. : 
             warnings.warn(' !RGB value is range 0 to 255 pixels , '
                           'not beyond !. Your input values is = {0}.'.format(cp))
-            raise CSex.pyCSAMTError_parameter_number('Error color RGBA value ! '
-                                                     'RGB value  provided is = {0}.'
-                                                     ' It is larger than 255 pixels.'.format(cp))
+            raise CSex.pyCSAMTError_parameter_number(
+                'Error color RGBA value ! RGB value  provided is = {0}.'
+                 ' It is larger than 255 pixels.'.format(cp))
         return cp
     if isinstance(RGB_color_palette,(float, int, str)): 
         try : 
@@ -741,7 +741,8 @@ def get_color_palette (RGB_color_palette):
     rgba = np.zeros((3,))
     
     if 'r' in RGB_color_palette : 
-        knae = RGB_color_palette .replace('r', '').replace('g', '/').replace('b', '/').split('/')
+        knae = RGB_color_palette .replace('r', '').replace(
+            'g', '/').replace('b', '/').split('/')
         try :
             _knae = ascertain_cp(float(knae[0]))
         except : 
@@ -749,7 +750,8 @@ def get_color_palette (RGB_color_palette):
         else : rgba [0] = _knae /255.
         
     if 'g' in RGB_color_palette : 
-        knae = RGB_color_palette .replace('g', '/').replace('b', '/').split('/')
+        knae = RGB_color_palette .replace('g', '/').replace(
+            'b', '/').split('/')
         try : 
             _knae =ascertain_cp(float(knae[1]))
         except : 

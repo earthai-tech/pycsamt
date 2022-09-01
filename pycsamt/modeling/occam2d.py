@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 #       Created on Fri Jan 22 20:31:14 2021
 """
-.. _module-Occam2D :: `pycsamt.modeling.occam2d`
-    :synopsis:: The Occam 2D MT inversion code (v3.0) presented here is an
-                implementation of the general Occam procedure of  Constable, 
-                et al. (1987)extended to  2D by deGroot-Hedlin and Constable (1990).
-                The 2D MT forward  calculations are carried out with codeprovided
-                 by Wannamaker, et al (1987)  using reciprocity to calculate the
-                Jacobian (de Lugao and Wannamaker, 1996).
-                ...
+Module Occam2D 
+================
+
+The Occam 2D MT inversion code (v3.0) presented here is an implementation of 
+the general Occam procedure of  Constable, et al. (1987)extended to  2D by 
+deGroot-Hedlin and Constable (1990). The 2D MT forward  calculations are 
+carried out with codeprovided by Wannamaker, et al (1987)  using reciprocity
+to calculate the Jacobian (de Lugao and Wannamaker, 1996).
 
 .. seealso::
-        - http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html 
-        - https://marineemlab.ucsd.edu/~kkey/Software.php
-        - https://github.com/MTgeophysics/mtpy.git>`
-        ...
+    - http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html 
+    - https://marineemlab.ucsd.edu/~kkey/Software.php
+    - https://github.com/MTgeophysics/mtpy.git>`
+    ...
 
 """
 import os
@@ -23,7 +23,7 @@ import datetime
 import numpy as np 
 
 import pycsamt.utils.exceptions as CSex
-from pycsamt.modeling.__init__ import  SUCCESS_IMPORT_MTPY
+from pycsamt.__init__ import  imtpy 
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
 from pycsamt.utils import  plotdecorator  as mdeco
@@ -32,25 +32,22 @@ from pycsamt.utils._csamtpylog import csamtpylog
 
 _logger =csamtpylog.get_csamtpy_logger(__name__)
 
-if  SUCCESS_IMPORT_MTPY :
-
+if imtpy:
     _logger.info('`MTpy` successfull loaded!')
     try : 
         from mtpy.modeling import occam2d as MToccam2d
         _logger.info('`occam2d` module sucessfully imported  from `MTpy`.')
-        
     except :
-        _logger.info('loading  `occam2d` module from '
-                     '`MTpy`packages  failed')
+        _logger.info('loading  `occam2d` module from `MTpy`packages  failed')
         warnings.warn('Loading occam2d module from "MTpy" '
                       'package failed! Please try again')
         
-        SUCCESS_IMPORT_MTPY  =False 
+        imtpy=False 
     
-if not SUCCESS_IMPORT_MTPY:
+if not imtpy:
     _logger.info('Unable to import `MTpy`packages. Loading failed!')
-    warnings.warn('Try to import `MTpy` module failed! You can get "MTPY"'
-                  ' from <https://github.com/MTgeophysics/mtpy.git>`.')
+    warnings.warn("Import MTpy failted! You can get MTPY from "
+                  " <https://github.com/MTgeophysics/mtpy.git>`.")
      
 
 class occamLog (object) : 
@@ -2521,13 +2518,10 @@ class occam2d_write(object):
   
     """
     verbose = 0 
-    if SUCCESS_IMPORT_MTPY is False :
-        
-            mess = ''.join([
-                'Failed to import MTpy module ! '
-                'Could not build inputOccam2D files.', 
-                            ' Please try to install :ref:`MTpy` manually !'])
-            print('---> '+ mess)
+    if not imtpy :
+        mess = ''.join(['!!! Failed to import MTpy module ! You can get MTpy ', 
+                        'at <https://github.com/MTgeophysics/mtpy.git>`.!'])
+        print('---> '+ mess)
     
    
     @staticmethod 
@@ -2556,7 +2550,7 @@ class occam2d_write(object):
    
         """
         
-        if SUCCESS_IMPORT_MTPY is False : return 
+        if not imtpy: return 
            
         freq_logspace =kwargs.pop('intp_freq_logspace', None)
         startup_basename =kwargs.pop('startup_basename', 'Startup')
@@ -2777,6 +2771,8 @@ def getMisfit(resp_fn =None, data_fn =None, kind='rho', **kwargs) :
     oclogfile =kwargs.pop('logfile', None)
     
     useResiValue= kwargs.pop('residual', False)
+    verbose = kwargs.pop('verbose', 0)
+    
     if kind.lower().find('rho')>=0 or \
         kind.lower().find('res')>=0  or kind==1: 
         kind='rho'
@@ -2880,13 +2876,14 @@ def getMisfit(resp_fn =None, data_fn =None, kind='rho', **kwargs) :
         # resp_misfit =phase_resi
         resp_misfit = ((phase_data - fw_phase)/phase_resi)%90/100
         
-    print('{0:=^77}'.format('Misfit Infos : Kind = {}'.format(kind.upper()))) 
-
-    print('** {0:<37} {1} {2} {3}'.format('Misfit max ','=',
-                                          resp_misfit.max(), '%' ))
-    print('** {0:<37} {1} {2} {3}'.format('Misfit min','=',
-                                          resp_misfit.min(), '%' ))
-    print('-'*77)
+    if verbose > 0: 
+        print('{0:=^77}'.format('Misfit Infos : Kind = {}'.format(kind.upper()))) 
+    
+        print('** {0:<37} {1} {2} {3}'.format('Misfit max ','=',
+                                              resp_misfit.max(), '%' ))
+        print('** {0:<37} {1} {2} {3}'.format('Misfit min','=',
+                                              resp_misfit.min(), '%' ))
+        print('-'*77)
     
     return (resp_misfit, resp_sites_names,
             resp_sites_offsets, resp_freq, model_rms, 
@@ -3028,117 +3025,7 @@ def plotResponse(data_fn =None, resp_fn =None, stations =None, **kws):
                 f"length. But {len(data_fn)} and {len(station_list)} "
                 "were given respectively.")
             
-    def read_singleDataResponse( stn_INDEX, dfn , respfn): 
-        """ Read single occam response file and datafile 
-        Collect attribute for plots. Note `Response` inherits 
-        of `Data` class.  
-            
-        :param stn_INDEX: station index for plotting 
-        :param dfn: Data file to get data properties 
-        :param resp_fn: Response file to retrieve main properties 
-        
-        :returns:
-            - line: line name 
-            - stn: station to plot 
-            - frequencies 
-            - raw tm/te data and phase te/tm  on tuple 
-            - forward te/tm data and phase te/tm data on tuple 
-            - error te/tm 
-            -error phase 
-        """
-         
-        # line name id from response file
-        ln_id = os.path.basename(os.path.splitext(respfn)[0])
     
-        respObj = Response(response_fn = respfn , data_fn =dfn )
-        # get the name of site data
-        try : 
-            stnN = respObj.data_sites[stn_INDEX]
-        except: 
-            len_stnobj =len(respObj.data_sites) 
-            _logger.debug(
-            f" Too {'large' if stnN >len_stnobj else 'small'}."
-            "values. Default station should be `S00`.")
-            stnN  = 'S00'
-        
-        #--> Get occam mode and main response properties # tm_log10, tm_phase
-        oc_mode, oc_phs_mode = respObj.occam_dtype [0], respObj.occam_dtype[1]
-        # Get frequency in decrease order and remove the last freq 
-        freq = respObj.data_frequencies  # array 
-        if freq [0] > freq[-1]:  # frequeny ranged in decrease order
-            freq = freq [:-1]
-            # 
-        else : freq =freq [1:]
-        
-        #--- for resistivity tm data and forward 
-
-        # flag to read occamtype 'log_te_tm'
-        cflag=False
-    
-        if respObj.occam_dtype_ =='log_te_tm': 
-            cflag=True 
-            
-        if cflag is True or respObj.occam_dtype_ =='log_te': 
-            tm_data = respObj.te_appRho
-            te_error_appRho =respObj.te_error_appRho 
-            te_error_phase =respObj.te_error_phase 
-    
-        if cflag is True or respObj.occam_dtype_ =='log_tm': 
-            # Plot as default TM mode when `occam_dtype` is 'log_te_tm
-            tm_error_appRho =respObj.tm_error_appRho 
-            tm_error_phase =respObj.tm_error_phase 
-            tm_data =respObj.tm_appRho 
-        # errors from forward
-    
-        fw_data = getattr(respObj, 'resp_{}_forward'.format(oc_mode ))
-        
-        # --for phase data tm_phase and forward phase 
-        phase_data = getattr(respObj, 'resp_{}'.format(oc_phs_mode ))
-        fw_phase = getattr(respObj, 'resp_{}_forward_phase'.format(oc_mode ))
-        # 
-         # get residual errors  (input data - foward data)/ RESI 
-        fw_residual_rho = getattr(respObj,
-                                  'resp_{0}_residual'.format(oc_mode) )
-        c_= getattr(respObj, 'resp_{0}_residual'.format(oc_phs_mode) )
-        fw_phase_residual =c_
-        
-        # Raw error from occam data 
-        if error_type ==1 : 
-            misfit_rho = .01 * np.sqrt((tm_data -fw_data)**2/(tm_data**2) )
-            misfit_rho *= 100 # we plot in percentage 
-            misfit_phase = .01 * np.sqrt(
-                (phase_data -fw_phase)**2/(phase_data**2) )
-            misfit_phase = (misfit_phase*100)%90 # we plot in percentage 
-        elif error_type ==2: 
-            if cflag is True or respObj.occam_dtype_ =='log_tm': 
-                misfit_rho = tm_error_appRho
-                misfit_phase = tm_error_phase
-                
-            elif respObj.occam_dtype_ =='log_te': 
-                misfit_rho = te_error_appRho
-                misfit_phase = te_error_phase
-
-        elif error_type ==3: 
-            misfit_rho = (tm_data - fw_data)/fw_residual_rho
-            misfit_phase = np.abs((phase_data - fw_phase)/fw_phase_residual)%90
-            
-        elif error_type ==4: # plot only residual 
-        
-            misfit_rho = fw_residual_rho
-            misfit_phase=fw_phase_residual 
-            
-        # replace all nan value by 0 if exists. 
-        misfit_rho[np.isnan(misfit_rho)]=0.
-        misfit_phase[np.isnan(misfit_phase)]=0.
-        # put frequency on ohm.m not in log 10 
-        tm_data = np.power(10, tm_data)
-        fw_data = np.power(10, fw_data)
-        
-        return (ln_id, stnN, freq , (tm_data[:,stn_INDEX ], 
-                                     fw_data[:, stn_INDEX]),
-            (phase_data[:, stn_INDEX],fw_phase[:, stn_INDEX] ),\
-                misfit_rho[:, stn_INDEX], misfit_phase[:, stn_INDEX])
-
     # Initialise list # read the data and collect data 
     resp_lines, resp_stations, resp_freq, resp_appRHO, resp_phase,\
         resp_appRho_err, resp_phase_err=[[]for i in range(7)]
@@ -3166,7 +3053,116 @@ def plotResponse(data_fn =None, resp_fn =None, stations =None, **kws):
         resp_appRho_err, resp_phase_err, model_rms)
         
 
+def read_singleDataResponse( stn_INDEX, dfn , respfn, error_type): 
+    """ Read single occam response file and datafile 
+    Collect attribute for plots. Note `Response` inherits 
+    of `Data` class.  
+        
+    :param stn_INDEX: station index for plotting 
+    :param dfn: Data file to get data properties 
+    :param resp_fn: Response file to retrieve main properties 
+    
+    :returns:
+        - line: line name 
+        - stn: station to plot 
+        - frequencies 
+        - raw tm/te data and phase te/tm  on tuple 
+        - forward te/tm data and phase te/tm data on tuple 
+        - error te/tm 
+        -error phase 
+    """
+     
+    # line name id from response file
+    ln_id = os.path.basename(os.path.splitext(respfn)[0])
 
+    respObj = Response(response_fn = respfn , data_fn =dfn )
+    # get the name of site data
+    try : 
+        stnN = respObj.data_sites[stn_INDEX]
+    except: 
+        len_stnobj =len(respObj.data_sites) 
+        _logger.debug(
+        f" Too {'large' if stnN >len_stnobj else 'small'}."
+        "values. Default station should be `S00`.")
+        stnN  = 'S00'
+    
+    #--> Get occam mode and main response properties # tm_log10, tm_phase
+    oc_mode, oc_phs_mode = respObj.occam_dtype [0], respObj.occam_dtype[1]
+    # Get frequency in decrease order and remove the last freq 
+    freq = respObj.data_frequencies  # array 
+    if freq [0] > freq[-1]:  # frequeny ranged in decrease order
+        freq = freq [:-1]
+        # 
+    else : freq =freq [1:]
+    
+    #--- for resistivity tm data and forward 
+
+    # flag to read occamtype 'log_te_tm'
+    cflag=False
+
+    if respObj.occam_dtype_ =='log_te_tm': 
+        cflag=True 
+        
+    if cflag is True or respObj.occam_dtype_ =='log_te': 
+        tm_data = respObj.te_appRho
+        te_error_appRho =respObj.te_error_appRho 
+        te_error_phase =respObj.te_error_phase 
+
+    if cflag is True or respObj.occam_dtype_ =='log_tm': 
+        # Plot as default TM mode when `occam_dtype` is 'log_te_tm
+        tm_error_appRho =respObj.tm_error_appRho 
+        tm_error_phase =respObj.tm_error_phase 
+        tm_data =respObj.tm_appRho 
+    # errors from forward
+
+    fw_data = getattr(respObj, 'resp_{}_forward'.format(oc_mode ))
+    
+    # --for phase data tm_phase and forward phase 
+    phase_data = getattr(respObj, 'resp_{}'.format(oc_phs_mode ))
+    fw_phase = getattr(respObj, 'resp_{}_forward_phase'.format(oc_mode ))
+    # 
+     # get residual errors  (input data - foward data)/ RESI 
+    fw_residual_rho = getattr(respObj,
+                              'resp_{0}_residual'.format(oc_mode) )
+    c_= getattr(respObj, 'resp_{0}_residual'.format(oc_phs_mode) )
+    fw_phase_residual =c_
+    
+    # Raw error from occam data 
+    if error_type ==1 : 
+        misfit_rho = .01 * np.sqrt((tm_data -fw_data)**2/(tm_data**2) )
+        misfit_rho *= 100 # we plot in percentage 
+        misfit_phase = .01 * np.sqrt(
+            (phase_data -fw_phase)**2/(phase_data**2) )
+        misfit_phase = (misfit_phase*100)%90 # we plot in percentage 
+    elif error_type ==2: 
+        if cflag is True or respObj.occam_dtype_ =='log_tm': 
+            misfit_rho = tm_error_appRho
+            misfit_phase = tm_error_phase
+            
+        elif respObj.occam_dtype_ =='log_te': 
+            misfit_rho = te_error_appRho
+            misfit_phase = te_error_phase
+
+    elif error_type ==3: 
+        misfit_rho = (tm_data - fw_data)/fw_residual_rho
+        misfit_phase = np.abs((phase_data - fw_phase)/fw_phase_residual)%90
+        
+    elif error_type ==4: # plot only residual 
+    
+        misfit_rho = fw_residual_rho
+        misfit_phase=fw_phase_residual 
+        
+    # replace all nan value by 0 if exists. 
+    misfit_rho[np.isnan(misfit_rho)]=0.
+    misfit_phase[np.isnan(misfit_phase)]=0.
+    # put frequency on ohm.m not in log 10 
+    tm_data = np.power(10, tm_data)
+    fw_data = np.power(10, fw_data)
+    
+    return (ln_id, stnN, freq , (tm_data[:,stn_INDEX ], 
+                                 fw_data[:, stn_INDEX]),
+        (phase_data[:, stn_INDEX],fw_phase[:, stn_INDEX] ),\
+            misfit_rho[:, stn_INDEX], misfit_phase[:, stn_INDEX])
 
 
 

@@ -11,7 +11,7 @@ import os
 import sys 
 import argparse 
 from pycsamt.utils.func_utils import smart_format 
-from pycsamt.viewer.plot import Plot1d
+from pycsamt.view.plot import Plot1d
 
 PROG = os.path.basename (__file__).replace('.py', '')
 

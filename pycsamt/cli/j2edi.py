@@ -12,7 +12,7 @@ import sys
 import argparse 
 
 # import pycsamt
-from pycsamt.ff.core import CSAMT
+from pycsamt.core import CSAMT
 PROG = os.path.basename (__file__).replace('.py', '')
 
 def main(): 

@@ -1,189 +1,79 @@
 ===============================================================================
     Copyright ? 2021  Kouadio K. Laurent
     
-    This file is part of pyCSAMT.
+    This file is part of pycsamt.
     
-    pyCSAMT is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
+    pycsmat is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
     
-    pyCSAMT is distributed in the hope that it will be useful,
+    pycsamt is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+    GNU General Public License for more details.
     
-    You should have received a copy of the GNU Lesser General Public License
+    You should have received a copy of the GNU  General Public License
     along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
 
 =============================================================================== 
-Contact :Kouadio KLaurent alias  @Daniel03 
-+225 0707054290 /+86 166 571 29786
-etanoyau@gmail.com /kkouao@zju.edu.cn 
-	@twitter @k_kouao
-	@facebook : Daniel Marie 
-Felix Houphouet-Boigny University (Cote d＊Ivoire) /
-National Zhejiang university (China)
 
-1. Introduction 
+References: 
 
-﹛﹛﹛pyCSAMT is open source sotfware under GNU Lesser General Public License, it 
-can  freely redistributed and modify as the terms of licence statements. The software is  
-geophysic software and 'crossroad' between geophysic and geology. It is written in   
-Python and mainly focused on Controlled source audio-frequency magnetotelluric 
-(CSAMT) as  its acronym name  shows. its code is open source and developed as a flexible 
-toolbox, which would be dynamically extend in future within the academic geophysics＊ 
-community.
-﹛﹛﹛CSAMT method in geophysic community is well-established resistivity exploration 
-tool and used for the detection in deep geological structure and has sprung up in recent 
-years. it's broadly applied in a diversity of exploration problems Sandberg and Hohmann, 
-1982; Bartel and Jacobson, 1984; Bromley, 1993; Wannamaker, 1997a, 1997b;  Susilawati 
-and Mustopa, 2019), mineral (e.g., Kellett et al., 1993; Thurlow, 1993, An and Di, 2010; 
-Chen et al., 2010; Guo et al., 2019; Hu et al., 2013), and hydrocarbon (e.g., Zonge and 
-Hughes, 1991) . Some companies have also applied this method in exploring the 
-groundwater resources (e.g., Bernard and Vachette, 1990; Fu et al., 2013;  Ghorbani et al., 
-2018; Giroux, B., M. Chouteau, 1997) as well as mapping the fault-zones  (e.g., Asch and 
-Sweetkind, 2011; Kouadio et al., 2020) with promising results.
- 
-2. Why this software ? 
-Despite the fame of CSAMT method, the data processing is relatively few in literature  
-and typically software is not available for academic use. Most of the data processing  
-software in the field of CSAMT is paid for by private companies (eg : Zonge International 
-Engineering  http://zonge.com/etc ). there is no unified software as open source software 
-for CSAMT data processing and interpretation in the academic community. We, therefore, 
-introduce pyCSAMT toolbox that allows handling, processing and imaging of CSAMT data 
-sets. Furthermore, besides CSAMT standard data processing we introduce a novelty 
-though incorporating a special sub-package called ＆geodrill＊ which mainly deals with 
-geological informations, existing wells logs as well as borehole data obtained from field 
-and/or special firms to improve geophysical interpretation. 
-
-3. Purpose of software
-Firstly , pyCSAMT is intended to solve the problem of unified open source software 
-leakage , consequently  we create a different packages to overcome the data processing 
-and the lack of open souce software to convert  raw data collected on the field (*avg 
-format from Zonge International Company , *.j format from AG jones (Jones, 1980) to 
-conventional Electrical Data Interchange(SEG) (*edi format) most convenient and 
-recommended by geophysics  community for widely use and officiously process by other 
-softwares. As well as the project ongoing, pyCSAMT included the geological, 
-hydrogeological framework to enhance geophysical interpretation. Through its own 
-database (geoDataBase), pyCSAMT can use true resistivity values, well data as well the 
-true layer names into a calculated model from inversion software to give a better accuracy 
-in geophysical interpretations rather than interpretations based only on 2D lateral 
-resistivity distribution so to predict the layer thickness encountered during survey area, 
-the layer name as well as their electrical properties.   we intend for next release to add 
-"star gain" tool as intelligent drill predictor.
-
- 
-4. Who takes advantage of that software? 
-As we introduced the software, the first persons to take advantage of this software are 
-the scientific geophysics community, this is why we encourage their suggestions and 
-comment to improve the software. Secondly our regards point out to. the community of 
-developers and users of that software.  We intend to build interactive graphical interface 
-to let freely unfamiliar people with python to easily handle the software. 
-
-
-5. Synopsis of pyCSAMT sub-packages 
-
-pyCSAMT toolbox is structured in three (03) main sub packages with different roles:  
-csamtpy, geodrill and viewer sub-packages. csamtpy sub-packages is mainly focused about 
-CSAMT data
- processing and inversion while the geodrill sub-package dealt with geology formations as 
-well as  boreholes and wells data. The viewer sub-package only dealt about visualization 
-(1D and 2D).
- Overall, the number of sub-packages is estimated at seven (7) which brings basic features 
-in classes, methods and functions. pyCSAMT sub_package organization is already 
-considering its future extension and the implementation of future projects such as data 
-processing in near-field and transition zone where penetration depth does not depend on 
-frequency but rather on geometry.
-	1.Core sub-package : 
-	contains the modules for handling the most basic structures within CSAMT data 
-processing (analysis and imaging)
-	2. Processing:
-	allows for more details inspections of phase tensor ? (Caldwell et al., 1953) as 
-impedance tensor Z, the filter application. It is composed of data analysis and imaging as 
-well as data correction	 and deal with MTpy open source software(Krieger  and Peacob, 
-2014; Kirkby et al, 2019)
-3. Utils :   bears scripts and modules, which provide general tips and specific 
-functionalities.
-4. Modeling  : reads, writes models output files and keeps resistivities data of each 
-station as a  function of depth and deals directly with the geoCore sub-package . 
-	5. geoCore mainly deals with geological formations (nature of rocks and its 
-electrical properties). geoCore is intended to rebuild and plot drilling data obtained from 
-investigation area  and it also used to build borehole 
-6. geoDB or geodatabase sub-package considers geological data obtained from field and 
-integrates information into its own SQL database. geoDB considers different geological 
-layer names, layers stations locations, and different 2D inversions results with their 
-corresponding parameters.
-
-6. Conclusions 
-pyCSAMT provides to the academic geophysics＊ community   basic functionalities for data 
-handling, data processing, and interpretation of controlled source magnetotelluric within 
-an extensible framework. It is basic tool and at the time paper the ※readme file is written 
-＆  the software does not  contain all data processing and analysis form CSAMT method. . 
-At the time this paper is written, pyCSAMT source codes are freely available on GIT 
-repository. We hope that the overview of this toolbox will bring helps to many people 
-working with CSAMT method. 
-
-
-7. References: 
-An, Z., Di, Q., 2010. Application of the CSAMT Method for Exploring Deep Coal Mines in 
-Fujian Province , Southeastern China. J. Environ. Eng. Geophys. 15, 243每249. 
-https://doi.org/10 .2113/JEEG15.4.243
-Asch, T.H., Sweetkind, D.S., 2011. Case History Audiomagnetotelluric characterization of 
-range-front faults , Snake Range , Nevada. Geophysics 76, 1每7.
-Bartel, L.C., Jacobson, R.D., 1984. Results of a CSAMT survey at the Puhimau Thermal 
-Area, Kilauea Volcano, Hawaii. 1984 SEG Annu. Meet. SEG 1984 52, 104每107. 
-https://doi.org/10.1190/1.1894115
-Bernard, J., Vachette, C., 1990. Deep Groundwater Survey with Audio-Magnetotelluric 
-Soundings. Annu. Meet. Abstr. Soc. Explor. Geophys. 2, 528每531.
-Bromley, C., 1993. Tensor CSAMT study of fault zone between Waikite and TeKopia 
-geothermal fields. J. Geomagn. Geoelectr. 45, 887每896. 
-https://doi.org/10.5636/jgg.45.887
-Chen, W., Liu, H., Liu, J., Sun, X., Zeng, Q., 2010. Integrated geophysical exploration for the 
-Longtoushan Ag-Pb-Zn deposit in the southeast of the Da Xing ＊ an Ling mountains , 
-Inner Mongolia , northern China. Explor. Geophys. 41, 279每288.
+An, Z., Di, Q., 2010. Application of the CSAMT Method for Exploring Deep Coal Mines in Fujian Province , Southeastern China. J. Environ. Eng. Geophys. 15, 243每249. https://doi.org/10 .2113/JEEG15.4.243
+Asch, T.H., Sweetkind, D.S., 2011. Case History Audiomagnetotelluric characterization of range-front faults , Snake Range , Nevada. Geophysics 76, 1每7.
+Bartel, L.C., Jacobson, R.D., 1984. Results of a CSAMT survey at the Puhimau Thermal Area, Kilauea Volcano, Hawaii. 1984 SEG Annu. Meet. SEG 1984 52, 104每107. https://doi.org/10.1190/1.1894115
+Bernard, J., Vachette, C., 1990. Deep Groundwater Survey with Audio-Magnetotelluric Soundings. Annu. Meet. Abstr. Soc. Explor. Geophys. 2, 528每531.
+Bromley, C., 1993. Tensor CSAMT study of fault zone between Waikite and TeKopia geothermal fields. J. Geomagn. Geoelectr. 45, 887每896. https://doi.org/10.5636/jgg.45.887
+Chen, W., Liu, H., Liu, J., Sun, X., Zeng, Q., 2010. Integrated geophysical exploration for the Longtoushan Ag-Pb-Zn deposit in the southeast of the Da Xing ＊ an Ling mountains , Inner Mongolia , northern China. Explor. Geophys. 41, 279每288.
 Ghorbani, A., Revil, A., Coperey, A., Soueid Ahmed, A., Roque, S., Heap, M.J., Grandis, H., 
-Viveiros, F., 2018. Complex conductivity of volcanic rocks and the geophysical 
-mapping of alteration in volcanoes. J. Volcanol. Geotherm. Res. 357, 106每127. 
-https://doi.org/10.1016/j.jvolgeores.2018.04.014
-Giroux, B., M. Chouteau, M.D. and M.R., 1997. Use of the magnetotelluric method in the 
-study of the deep Maestrichtian aquifer in Senegal. J. Appl. Geophys. 38, 77每96.
-Guo, Z., Hu, L., Liu, C., Cao, C., Liu, J., 2019. Application of the CSAMT Method to Pb 每 Zn 
-Mineral. Minerals 9, 2每12. https://doi.org/https://doi.org/10.3390/min9120726
-Hu, X., Peng, R., Wu, G., Wang, W., Huo, G., Han, B., 2013. Mineral exploration using 
-CSAMT data: Application to Longmen region metallogenic belt, Guangdong Province, 
-China. Geophysics 78, B111每B119. https://doi.org/10.1190/geo2012-0115.1
+Viveiros, F., 2018. Complex conductivity of volcanic rocks and the geophysical mapping of alteration in volcanoes. J. Volcanol. Geotherm. Res. 357, 106每127. https://doi.org/10.1016/j.jvolgeores.2018.04.014
+Giroux, B., M. Chouteau, M.D. and M.R., 1997. Use of the magnetotelluric method in the study of the deep Maestrichtian aquifer in Senegal. J. Appl. Geophys. 38, 77每96.
+Guo, Z., Hu, L., Liu, C., Cao, C., Liu, J., 2019. Application of the CSAMT Method to Pb 每 Zn Mineral. Minerals 9, 2每12. https://doi.org/https://doi.org/10.3390/min9120726
+Hu, X., Peng, R., Wu, G., Wang, W., Huo, G., Han, B., 2013. Mineral exploration using CSAMT data: Application to Longmen region metallogenic belt, Guangdong Province, China. Geophysics 78, B111每B119. https://doi.org/10.1190/geo2012-0115.1
 Jones, A.G., 1980. Geomagnetic induction studies in Scandinavia. J. Geophys 48, 181每194.
-Kellett, R., Bishops, J., Reed, E. Van, 1993. The effects of source polarization in CSAMT 
-data over two massive sulfide deposits in Australia. Geophysics 59, 1764每1772.
-Kirkby, A., Zhang, F., Peacock, J., Hassan, R., Duan, J., 2019. The MTPy software package 
-for magnetotelluric data analysis and visualisation. J. Open Source Softw. 4, 1358. 
-https://doi.org/10.21105/joss.01358
-Kouadio, K.L., Xu, Y., Liu, C., Boukhalfa, Z., 2020. Two-dimensional inversion of CSAMT 
-data and three-dimensional geological mapping for groundwater exploration in 
-Tongkeng Area, Hunan Province, China. J. Appl. Geophys. 183, 104204. 
-https://doi.org/10.1016/j.jappgeo.2020.104204
-Krieger, L., Peacock, J.R., 2014. MTpy: A Python toolbox for magnetotellurics. Comput. 
-Geosci. 72, 167每175. https://doi.org/10.1016/j.cageo.2014.07.013.
-Sandberg, S.K., Hohmann, G.W., 1982. Controlled-source audiomagnetotellurics in 
-geothermal exploration. Geophysics 47, 100每116. 
-https://doi.org/10.1190/1.1441272
-Susilawati, Mustopa, E.J., 2019. 2D Interpretation of Controlled Source Audio 
-Magnetotelluric (CSAMT) Data Integrated with Borehole Data in Kamojang 
-Geothermal Field West Java, Indonesia. J. Phys. Conf. Ser. 1127, 1每6. 
-https://doi.org/10.1088/1742-6596/1127/1/012021
-Thurlow, G., 1993. Tensor CSAMT studies at the Buchans Mine in central Newfoundland. 
-Geophysics 58, 12每19.
-Wannamaker, P.E., 1997a. Tensor CSAMT survey over the Sulphur Springs thermal area, 
-Valles Caldera, New Mexico, U.S.A, Part II: Implications for CSAMT methodology. 
-Geophysics 62, 466每476.
-Wannamaker, P.E., 1997b. Tensor CSAMT survey over the Sulphur Springs thermal area, 
-Valles Caldera, New Mexico, U.S.A., Part I: Implications for structure of the western 
-caldera. Geophysics 62, 451每465.
-Zonge, L., Hughes, L.J., 1991. Controlled Source Audio-Frequency Magnetotellurics. Soc. 
-Explor. Geophys. 2, 713每809.
+Kellett, R., Bishops, J., Reed, E. Van, 1993. The effects of source polarization in CSAMT data over two massive sulfide deposits in Australia. Geophysics 59, 1764每1772.
+Kirkby, A., Zhang, F., Peacock, J., Hassan, R., Duan, J., 2019. The MTPy software package for magnetotelluric data analysis and visualisation. J. Open Source Softw. 4, 1358. https://doi.org/10.21105/joss.01358
+Kouadio, K.L., Xu, Y., Liu, C., Boukhalfa, Z., 2020. Two-dimensional inversion of CSAMT data and three-dimensional geological mapping for groundwater exploration in Tongkeng Area, Hunan Province, China. J. Appl. Geophys. 183, 104204. https://doi.org/10.1016/j.jappgeo.2020.104204
+Krieger, L., Peacock, J.R., 2014. MTpy: A Python toolbox for magnetotellurics. Comput. Geosci. 72, 167每175. https://doi.org/10.1016/j.cageo.2014.07.013.
+Sandberg, S.K., Hohmann, G.W., 1982. Controlled-source audiomagnetotellurics in geothermal exploration. Geophysics 47, 100每116. https://doi.org/10.1190/1.1441272
+Susilawati, Mustopa, E.J., 2019. 2D Interpretation of Controlled Source Audio Magnetotelluric (CSAMT) Data Integrated with Borehole Data in Kamojang Geothermal Field West Java, Indonesia. J. Phys. Conf. Ser. 1127, 1每6. https://doi.org/10.1088/1742-6596/1127/1/012021 
+Thurlow, G., 1993. Tensor CSAMT studies at the Buchans Mine in central Newfoundland. Geophysics 58, 12每19.
+Wannamaker, P.E., 1997a. Tensor CSAMT survey over the Sulphur Springs thermal area, Valles Caldera, New Mexico, U.S.A, Part II: Implications for CSAMT methodology. Geophysics 62, 466每476.
+Wannamaker, P.E., 1997b. Tensor CSAMT survey over the Sulphur Springs thermal area, Valles Caldera, New Mexico, U.S.A., Part I: Implications for structure of the western caldera. Geophysics 62, 451每465.
+Zonge, L., Hughes, L.J., 1991. Controlled Source Audio-Frequency Magnetotellurics. Soc. Explor. Geophys. 2, 713每809.
+Alyousuf, T., Li, Y., 2022. Inversion using adaptive physics-based neural network?: Application to magnetotelluric inversion. Geophys. Prospect. 1–21. https://doi.org/10.1111/1365-2478.13215
+Barcelona, H., Favetto, A., Peri, V.G., Pomposiello, C., Ungarelli, C., 2013. The potential of audiomagnetotellurics in the study of geothermal fields: A case study from the northern segment of the La Candelaria Range, northwestern Argentina. J. Appl. Geophys. 88, 83–93. https://doi.org/10.1016/j.jappgeo.2012.10.004
+Berdichevskiy, M.., Dimitriev, V.I., 1976. Distortion of magnetic and electrical fields by near-surface lateral inhomogeneities. Acta Geod. Geophys. Montan. Hungarica 11, 447–483.
+Buitinck, L., Louppe, G., Blondel, M., Pedregosa, F., Mueller, A., Grisel, O., Niculae, V., Prettenhofer, P., Gramfort, A., Grobler, J., Layton, R., VanderPlas, J., Joly, A., Holt, B., Varoquaux, G., 2013. API design for machine learning software: experiences from the scikit-learn project, in: ECML PKDD Workshop: Languages for Data Mining and Machine Learning. pp. 108–122.
+Buitinck, L., Louppe, G., Blondel, M., Pedregosa, F., Mueller, A., Grisel, O., Niculae, V., Prettenhofer, P., Gramfort, A., Grobler, J., Layton, R., VanderPlas, J., Joly, A., Holt, B., Varoquaux, G., 2011. scikit-learn: API reference and user guide [WWW Document]. scikit-learn Mach. Learn. Python. URL https://scikit-learn.org/stable/modules/classes.html
+Chave, A.D., Smith, J.T., 1994. On electric and magnetic galvanic distortion tensor decompositions. J. Geophys. Res. 99, 4669–4682. https://doi.org/10.1029/93JB03368
+DeGroot-Hedlin, C., Constable, S., 1990. Occam’s inversion to generate smooth, two-dimensional models from magnetotelluric data. Geophysics 55, 1613–1624.
+Goldak, D.K., Olson, R.W., 2015. New developments in audio-magnetotelluric exploration?: Case study from Darnley Bay. CSEG Rec. 22–27.
+Hu, X., Peng, R., Wu, G., Wang, W., Huo, G., Han, B., 2013. Mineral exploration using CSAMT data: Application to Longmen region metallogenic belt, Guangdong Province, China. Geophysics 78, B111–B119. https://doi.org/10.1190/geo2012-0115.1
+Jiracek, G.R., 1990. Near-surface and topographic distortions in electromagnetic induction. Surv. Geophys. 11, 163–203. https://doi.org/10 .1007/BF01901659
+Kouadio, K.L., Liu, R., Mi, B., Liu, C., 2022. pyCSAMT: An alternative Python toolbox for groundwater exploration using controlled source audio-frequency magnetotelluric. J. Appl. Geophys. 201, 104647. https://doi.org/10.1016/j.jappgeo.2022.104647
+Lee, S.K., Kim, H.J., Song, Y., Lee, C.K., 2009. MT2DInvMatlab-A program in MATLAB and FORTRAN for two-dimensional magnetotelluric inversion. Comput. Geosci. 35, 1722–1734. https://doi.org/10.1016/j.cageo.2008.10.010
+Lei, D., Fayemi, B., Yang, L., Meng, X., 2017. The non-static effect of near-surface inhomogeneity on CSAMT data. J. Appl. Geophys. 139, 306–315. https://doi.org/10.1016/j.jappgeo.2017.03.003
+Murphy, K.P., 2012. Machine Learning: A Probabilistic Perspective, 1rst ed. MIT Press, Cambridge, Massachsetts.
+Mykle, R., 1996. AMTAVG documentation: CSAMT data averaging program [WWW Document]. Zo. Eng. Res. Organ. Inc. URL http://www.zonge.com/legacy/PDF_DatPro/AmtAvg.pdf
+Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O., Blondel, M., Prettenhofer, P., Weiss, R., Dubourg, V., others, 2011. Scikit-learn: Machine learning in Python. J. Mach. Learn. Res. 12, 2825–2830.
+Raschka, S., Mirjalili, V., 2019. Python Machine Learning, 3rd ed. Packt.
+Rodi, W., Mackie, R.L., 2001. Nonlinear conjugate gradients algorithm for 2-D magnetotelluric inversion. Geophysics 66, 174–187. https://doi.org/10.1190/1.1444893
+Rodi, W.L., 1976. A Technique for Improving the Accuracy of Finite Element Solutions for Magnetotelluric Data. Geophys. J. R. Astron. Soc. 44, 483–506. https://doi.org/10.1111/j.1365-246X.1976.tb03669.x
+Sanders, B., Raymond, M., Rykala, J., 2006. ASTATIC Documentation [WWW Document]. Zo. Eng. Res. Organ. Inc. URL http://www.zonge.com/legacy/PDF_DatPro/Astatic.pdf
+Singer, B.S., 1992. Correction for distortion of magnetotelluric fields: Limits of validity of the static approach. Surv. Geophys. 13, 309–340. https://doi.org/10.1007/BF01903482
+Torres-verdin, C., Bostick, F.X., 1992. Principles of spatial surface electric field filtering in magnetotellurics?: Electromagnetic array profiling ( EMAP ). Geophysics 57, 25–34. https://doi.org/10.1190/1.2400625
+Tournerie, B., Chouteau, M., Marcotte, D., 2007. Magnetotelluric static shift?: Estimation and removal using the cokriging method Magnetotelluric static shift?: Estimation and removal using the cokriging method. Geophysics 72, 25–34. https://doi.org/10.1190/1.2400625
+VanderPlas, J., 2016. Python data science handbook, 1rst ed. O’Reilly Media, Inc.
+Wang, K., Tan, H., 2017. Research on the forward modeling of controlled-source audio-frequency magnetotellurics in three-dimensional axial anisotropic media. J. Appl. Geophys. 146, 27–36. https://doi.org/10.1016/j.jappgeo.2017.08.007
+Wight, D.E., Drive, B., 1988. MT/EMAP Data Interchange Standard, 1rt ed. Society of Exploration Geophysicists, Texas 7831, USA.
+Zheng, G., 2010. Introduction to NSAMT, Zonge International.
+Zonge, I., 2000. Natural Source Audio-frequency Magnetotelluric Imaging. 3322 East Fort Lowell Road, Tucson, AZ 85716 USA.
+Zonge, L., Hughes, L.J., 1991. Controlled Source Audio-Frequency Magnetotellurics. Soc. Explor. Geophys. 2, 713–809.
 
-8. Additional resources  (more useful to learn more about programming language , 
+
+Additional resources  (more useful to learn more about programming language , 
 geophysical method )
 ﹛﹛﹛- https://repo.continuum.io/pkgs/ (python packages -conda forge )
 	- https://repo.anaconda.com/pkgs/main/win-64
@@ -246,5 +136,4 @@ https://docs.scipy.org/doc/numpy/refe...
 
 Written 25 February 2021, at Hanghou , China 20:08:52 
 
-1 | Page
 

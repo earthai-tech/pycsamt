@@ -4,14 +4,19 @@
 #       Licence: LGPL
 
 """
+Module PlotDecorator 
+=====================
+
+ Decorator module to plot 2d and 1d inversion of geostrata model. 
+``reason parameter specify the kind of plot and can be for::
+    - `model` : plot model inversion or geomodel 
+    - `misfit` :plot error between NM and occam inversion results. 
+    - `zonge` or `avg`: plot typical resistivity and phase values 
+    - `response`: plot fitting curves of inversion rho and phase
+    
+
 Created on Sat Aug 21 15:55:48 2021
 
-.. sypnosis:: Decorator module to plot 2d and 1d inversion of geostrata model. 
-            ``reason parameter specify the kind of plot and can be for::
-                - `model` : plot model inversion or geomodel 
-                - `misfit` :plot error between NM and occam inversion results. 
-                - `zonge` or `avg`: plot typical resistivity and phase values 
-                - `response`: plot fitting curves of inversion rho and phase
 """
 import warnings
 import functools 

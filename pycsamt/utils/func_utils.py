@@ -54,6 +54,7 @@
     * reshape_array 
     * fillNaN
     * ismissing 
+
 """
 
 import os 
@@ -68,6 +69,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from copy import deepcopy
 
+import mtpy 
+import pycsamt 
 import pycsamt.utils.gis_tools as gis
 import pycsamt.utils.exceptions as CSex
 from pycsamt.utils.decorator import deprecated 
@@ -105,19 +108,109 @@ except ImportError:
     
     interp_import = False
 
-def fit_func (y ): 
-    """ Test fitining function """
-    def func (x, a, b, c): 
-        return a*x**2  + b*x + c 
-    degree = len(argrelextrema(y, np.less)[0]) +1 
-    coef = np.polyfit ( np.arange (len(y)), y , degree )
-    #func = np.poly1d (coef)
-    x= np.arange (len(y))
-    #print(*coef)
-    #print(func)
-    popt, pcov = curve_fit(func,  x, y) 
-    plt.plot(x, y, 'g--', x, func(x, *popt) , 'ok--' )
-    return func(x, *popt) 
+   
+def get_ediObjs (edipath, posix = None): 
+    """ Get the collections object from edipath. 
+    
+    Parameters 
+    ---------
+    edipath: str , Path-Like object 
+        Full path to EDI-files.Must be a valid path. 
+        
+    posix: int, 
+        Position to retrieve a specific EDI object into the collection list. 
+        Will raise and error if the position index is larger than the number 
+        of EDI-files read. Default is ``None`` , returns all the collection
+        of Edi-object. 
+        
+    Retuns 
+    -------
+    ediObjs : array-like object  
+        Collection of  EDI-objects from `pyCSAMT`_ and `MTpy`_ packages 
+        
+    Examples 
+    ----------
+    >>> from pycsamt.utils import get_ediObjs 
+    >>> edipath = 'data/3edis'
+    >>> ediObjs = get_ediObjs (edipath)
+    >>> ediObjs 
+    ... array([<pycsamt.core.edi.Edi object at 0x000001F74E8F7070>,
+           <pycsamt.core.edi.Edi object at 0x000001F74E8F30A0>,
+           <pycsamt.core.edi.Edi object at 0x000001F74BCBC2E0>], dtype=object)
+    """  
+    # assert that ediObjs is given rather than edipath 
+    try : ediObjs = list(map(lambda o: _assert_edi_obj(o), edipath)) 
+    except : edipath = _assert_all_types(edipath , str )
+    else : return ediObjs if posix is None else ediObjs [posix]
+    
+    if os.path.isfile (edipath): 
+        edipath = os.path.dirname(edipath)
+    cediObjs = pycsamt.core.edi.Edi_collection(edipath) 
+    if posix is not None: 
+        posix = _assert_all_types(posix, int)
+        if posix >= len(cediObjs.ediObjs):  
+            raise IndexError("Expect edi position to be less than "
+                             f"{ str(len(cediObjs.ediObjs))!r}.")
+            
+    return cediObjs.ediObjs if posix is None else cediObjs.ediObjs [posix]
+
+def _assert_edi_obj (obj)-> object: 
+    """Assert that the given argument is an EDI -object from modules 
+    EDi of pyCSAMT and MTpy packages. A TypeError will occurs otherwise.
+    
+    :param obj: Full path EDI file or `pyCSAMT`_ and `MTpy`_ object. 
+    :type obj: str or str or  pycsamt.core.edi.Edi or mtpy.core.edi.Edi 
+    
+    :return: Identical object after asserting.
+    
+    """
+    if isinstance(obj, str): 
+        obj = pycsamt.core.edi.Edi(obj) 
+    obj = _assert_all_types (obj, mtpy.core.edi.Edi, pycsamt.core.edi.Edi)
+
+    return  obj 
+
+def file2array(file, comments='#', delimiter=None,
+              converters=None, skiprows=0, **kws): 
+    """ Load data to array. 
+    
+    Parameters
+    -----------
+    file: str, pathlib.Path, list of str, generator
+        File, filename, list, or generator to read. If the filename extension 
+        is .gz or .bz2, the file is first decompressed. Note that generators 
+        must return bytes or strings. The strings in a list or produced by
+        a generator are treated as lines.
+    
+    comments: str or sequence of str or None, optional
+        The characters or list of characters used to indicate the start of a 
+        comment. None implies no comments. For backwards compatibility, 
+        byte strings will be decoded as ‘latin1’. The default is ``#``.
+    
+    delimiters: tr, optional
+        The string used to separate values. For backwards compatibility, byte 
+        strings will be decoded as ``latin1``. The default is whitespace.
+    
+    converters: dict or callable, optional
+        A function to parse all columns strings into the desired value, or a
+        dictionary mapping column number to a parser function. E.g. if column
+        0 is a date string: converters = {0: datestr2num}. Converters can 
+        also be used to provide a default value for missing data, e.g. 
+        converters = lambda s: float(s.strip() or 0) will convert empty fields
+        to 0. Default: None.
+    
+    skiprows: int, optional
+        Skip the first skiprows lines, including comments; default: 0.
+    
+    kws: dict 
+        Additional keywords argument from :func:`np.load`. Refer to 
+        <https://numpy.org/doc/stable/reference/generated/numpy.load.html> 
+
+    """
+    return np.loadtxt(file, comments=comments, delimiter=delimiter, 
+                       converters=converters, skiprows=skiprows
+                       ) if os.path.splitext(file)[1]  =='.txt' else np.load(
+                           file, **kws)
 
 def scale_values(y, x=None, deg= None,  func =None): 
     """ Scaling value using a fitting curve. 
@@ -136,10 +229,10 @@ def scale_values(y, x=None, deg= None,  func =None):
         function i.e  for ``f(x)= ax +b`` where `a` is slope and `b` is the 
         intercept value. It is recommended according to the `y` value 
         distribution to set up  a custom function for better fitting. If `func`
-        is given, the `deg` becomes an useless value.   
+        is given, the `deg` is not needed.   
         
     :param deg: polynomial degree. If  value is ``None``, it should  be 
-        computed using the length of  extrema (local + global).
+        computed using the length of extrema (local and/or global) values.
  
     :returns: 
         - y: array scaled - projected sample values got from `f`.
@@ -171,7 +264,6 @@ def scale_values(y, x=None, deg= None,  func =None):
     minl, = argrelextrema(y, np.less) 
     # get the number of degrees
     degree = len(minl) + 1
-
     if x is None: 
         x = np.arange(len(y)) # np.linspace(0, 4, len(y))
     if len(x) != len(y): 
@@ -184,34 +276,35 @@ def scale_values(y, x=None, deg= None,  func =None):
 
     return  yc, x ,  f  
 
-def reshape_array (arr , axis = None) :
-    """ Detect shape and reshape array accordingly back to the given axis. 
+def reshape(arr , axis = None) :
+    """ Detect the array shape and reshape it accordingly, back to the given axis. 
     
     :param array: array_like with number of dimension equals to 1 or 2 
     :param axis: axis to reshape back array. If 'axis' is None and 
-        the number of dimension is greater than 1, it reshape back array 
+        the number of dimension is greater than 1, it reshapes back array 
         to array-like 
     
     :returns: New reshaped array 
     
     :Example: 
         >>> import numpy as np 
-        >>> from pycsamt.utils.func_utils import reshape_array 
+        >>> from pycsamt.utils.func_utils import reshape 
         >>> array = np.random.randn(50 )
         >>> array.shape
         ... (50,)
-        >>> ar1 = reshape_array(array, 1) 
+        >>> ar1 = reshape(array, 1) 
         >>> ar1.shape 
         ... (1, 50)
-        >>> ar2 =reshape_array(ar1 , 0) 
+        >>> ar2 =reshape(ar1 , 0) 
         >>> ar2.shape 
         ... (50, 1)
-        >>> ar3 = reshape_array(ar2, axis = None)
+        >>> ar3 = reshape(ar2, axis = None)
         >>> ar3.shape # goes back to the original array  
         >>> ar3.shape 
         ... (50,)
         
     """
+    arr = np.array(arr)
     if arr.ndim > 2 : 
         raise ValueError('Expect an array with max dimension equals to 2' 
                          f' but {str(arr.ndim)!r} were given.')
@@ -241,7 +334,7 @@ def reshape_array (arr , axis = None) :
 
     return arr    
 
-def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
+def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,  
                         step='1km', order= '+', todms=False): 
     """ Generate multiples stations coordinates (longitudes, latitudes)
     from a reference station/site.
@@ -254,13 +347,14 @@ def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
     
     Parameters 
     ----------
-    reflong: float or string 
+    reflong: float or string or list of [start, stop]
         Reference longitude  in degree decimal or in DD:MM:SS for the first 
         site considered as the origin of the landmark.
         
-    reflat: float or string 
+    reflat: float or string or list of [start, stop]
         Reference latitude in degree decimal or in DD:MM:SS for the reference  
-        site considered as the landmark origin.
+        site considered as the landmark origin. If value is given in a list, 
+        it can containt the start point and the stop point. 
         
     nsites: int or float 
         Number of site to generate the coordinates onto. 
@@ -312,8 +406,23 @@ def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
     >>> rlats 
     ... array(['26:03:05.00', '26:03:38.81', '26:04:12.62', '26:04:46.43',
            '26:05:20.23', '26:05:54.04', '26:06:27.85'], dtype='<U11')
+    >>> rlons, rlats = make_ll_coordinates ((336.7, 339.90) , (3144.2 , 3140.95),
+                                            nsites = 238, step =20. ,
+                                            order = '-', r= 125)
+    >>> rlons 
+    ... array(['339:54:00.00', '339:53:11.39', '339:52:22.78', '339:51:34.18',
+           '339:50:45.57', '339:49:56.96', '339:49:08.35', '339:48:19.75',
+           ...
+           '336:46:03.04', '336:45:14.43', '336:44:25.82', '336:43:37.22',
+           '336:42:48.61', '336:42:00.00'], dtype='<U12')
+    >>> rlats 
+    ... array(['3140:57:00.00', '3140:57:49.37', '3140:58:38.73', '3140:59:28.10',
+           '3141:00:17.47', '3141:01:06.84', '3141:01:56.20', '3141:02:45.57',
+           ...
+       '3144:07:53.16', '3144:08:42.53', '3144:09:31.90', '3144:10:21.27',
+       '3144:11:10.63', '3144:12:00.00'], dtype='<U13')
     
-    """ 
+    """  
     def assert_ll(coord):
         """ Assert coordinate when the type of the value is string."""
         try: coord= float(coord)
@@ -324,8 +433,13 @@ def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
                 coord = gis.convert_position_str2float(coord)
         return coord
     
+    xinf, yinf = None, None 
+    
     nsites = int(_assert_all_types(nsites,int, float)) 
-
+    if isinstance (reflong, (list, tuple, np.ndarray)): 
+        reflong , xinf, *_ = reflong 
+    if isinstance (reflat, (list, tuple, np.ndarray)): 
+        reflat , yinf, *_ = reflat 
     step=str(step).lower() 
     if step.find('km')>=0: # convert to meter 
         step = float(step.replace('km', '')) *1e3 
@@ -337,8 +451,10 @@ def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
     # compute length of line using the reflong and reflat
     # the origin of the landmark is x0, y0= reflong, reflat
     x0= assert_ll(reflong) ; y0= assert_ll(reflat) 
-    xinf = x0  + (np.sin(np.deg2rad(r)) * step * nsites) / (364e3 *.3048) 
-    yinf = y0 + np.cos(np.deg2rad(r)) * step * nsites /(2882e2 *.3048)
+    xinf = xinf or x0  + (np.sin(np.deg2rad(r)) * step * nsites
+                          ) / (364e3 *.3048) 
+    yinf = yinf or y0 + (np.cos(np.deg2rad(r)) * step * nsites
+                         ) /(2882e2 *.3048)
     
     reflon_ar = np.linspace(x0 , xinf, nsites ) 
     reflat_ar = np.linspace(y0, yinf, nsites)
@@ -365,7 +481,7 @@ def build_array_from_objattr(obj, attr):
     :type attr: str 
     
     :Example: 
-        >>> from pycsamt.ff.core.edi import Edi_Collection
+        >>> from pycsamt.core.edi import Edi_Collection
         >>> from pycsamt.utils.func_utils import 
         >>> edipath = r'/Users/Daniel/Desktop/ediout'
         >>> cObjs = Edi_collection (edipath)
@@ -375,6 +491,7 @@ def build_array_from_objattr(obj, attr):
                0.00083333, 0.00083333])
     
     """
+
     if not isinstance( obj, (list, tuple, np.ndarray)): 
         if not hasattr (obj, '__dict__'): 
             raise ValueError ('Object should be an instance or a class'
@@ -384,6 +501,7 @@ def build_array_from_objattr(obj, attr):
     if not hasattr(obj[0], attr): 
         raise AttributeError (f'Object has no attribute {attr!r}')
     
+
     return np.array(list(map(lambda r: getattr(r, attr), obj )))
 
 
@@ -396,14 +514,16 @@ def _assert_all_types (
     # if np.issubdtype(a1.dtype, np.integer): 
     if not isinstance( obj, expected_objtype): 
         raise TypeError (
-            f'Expected {smart_format(tuple (o.__name__ for o in expected_objtype))}'
-            f' type{"s" if len(expected_objtype)>1 else ""} object '
-            f'but {type(obj).__name__!r} is given.')
+            f'Expected type{"s" if len(expected_objtype)>1 else ""} '
+            f'{smart_format(tuple (o.__name__ for o in expected_objtype))}'
+            f' but {type(obj).__name__!r} is given.'
+            )
             
     return obj 
 
 def scale_position(ydata , xdata= None, func = None ,c_order= 0,
         show: bool =False, todms=False,**kws): 
+
     """ Correct data location or position and return new corrected location
     or data. 
     
@@ -456,7 +576,11 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     Examples
     --------
     >>> from pycsamt.utils.func_utils  import scale_position 
-    >>> from pycsamt.ff.core.edi import Edi_collection 
+<<<<<<< HEAD
+    >>> from pycsamt.core.edi import Edi_collection 
+=======
+    >>> from pycsamt.ff.core.edi import Edi_Collection 
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6
     >>> edipath = r'/Users/Daniel/Desktop/ediout'
     >>> cObjs = Edi_collection (edipath)
     >>> # correcting northing coordinates from latitude data 
@@ -470,7 +594,11 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     ... array([-1.31766381e-04,  4.79150482e-05,  2.27596478e-04,  4.07277908e-04,
     ...        5.86959337e-04,  7.66640767e-04,  9.46322196e-04,  1.12600363e-03,
     ...        1.30568506e-03,  1.48536649e-03,  1.66504792e-03,  1.84472934e-03])
+<<<<<<< HEAD
     >>> lat_corrected_dms, *_= scale_position(ydata =cObjs.lat[:12], todms=True)
+=======
+    >>> lat_corrected_dms, *_= scalePosition(ydata =cObjs.lat[:12], todms=True)
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6
     ... array(['0:00:00.47', '0:00:00.17', '0:00:00.82', '0:00:01.47',
     ...       '0:00:02.11', '0:00:02.76', '0:00:03.41', '0:00:04.05',
     ...       '0:00:04.70', '0:00:05.35', '0:00:05.99', '0:00:06.64'],
@@ -527,7 +655,7 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     if len(xdata) != len(ydata): 
         raise ValueError(" `x` and `y` arrays must have the same length."
                         f"'{len(xdata)}' and '{len(ydata)}' are given.")
-        
+
     popt, pcov = curve_fit(func, xdata, ydata, **kws)
     ydata_new = func(xdata, *popt)
     
@@ -547,13 +675,15 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     return ydata_new, popt, pcov 
 
 
-def make_ids(ediObjs, prefix =None, how ='py'): 
+
+def make_ids(arr, prefix =None, how ='py'): 
     """ Generate auto Id according to the number of given sites. 
     
-    :param ediObjs: list of EDI object , composed of a collection of 
-        pycsamt.ff.core.edi.Edi object
-    :type ediObjs: pycsamt.ff.core.edi.Edi_Collection 
-    
+    :param arr: Iterable object to generate an id site . For instance it can be 
+        the array-like or list of EDI object that composed a collection of 
+        pycsamt.core.edi.Edi object. 
+    :type ediObjs: array-like, list or tuple 
+
     :param prefix: string value to add as prefix of given id. Prefix can be 
         the site name.
     :type prefix: str 
@@ -572,10 +702,10 @@ def make_ids(ediObjs, prefix =None, how ='py'):
         ... ['ix0', 'ix1', 'ix2']
         
     """ 
-    fm='{:0' +'{}'.format(int(np.log10(len(ediObjs))) + 1) +'}'
+    fm='{:0' +'{}'.format(int(np.log10(len(arr))) + 1) +'}'
     id_ =[str(prefix) + fm.format(i if how=='py'else i+ 1 ) if prefix is not 
           None else fm.format(i if how=='py'else i+ 1) 
-          for i in range(len(ediObjs))] 
+          for i in range(len(arr))] 
     return id_
 
 def fit_by_ll(ediObjs): 
@@ -583,19 +713,21 @@ def fit_by_ll(ediObjs):
     longitude and latitude coordinates. 
     
     EDIs data are mostly reading in an alphabetically order, so the reoganization  
+
     according to the location(longitude and latitude) is usefull for distance 
     betwen site computing with a right position at each site.  
     
     :param ediObjs: list of EDI object , composed of a collection of 
-        pycsamt.ff.core.edi.Edi object 
-    :type ediObjs: pycsamt.ff.core.edi.Edi_Collection 
+        pycsamt.core.edi.Edi object 
+    :type ediObjs: pycsamt.core.edi.Edi_Collection 
+
     
     :returns: array splitted into ediObjs and Edifiles basenames 
     :rtyple: tuple 
     
     :Example: 
         >>> import numpy as np 
-        >>> from pycsamt.ff.core.edi import Edi_Collection 
+        >>> from pycsamt.core.edi import Edi_Collection 
         >>> from pycsamt.utils.func_utils import fit_by_ll
         >>> edipath ='data/edi_ss' 
         >>> cediObjs = Edi_Collection (edipath) 
@@ -623,16 +755,28 @@ def get_interpolate_freqs (ediObjs, to_log10 =False):
     frequency data. 
     
     :param ediObjs: list - Collections of EDI-objects 
+<<<<<<< HEAD
+    :rtype: pycsamt.core.edi.Edi 
+=======
     :rtype: pycsamt.ff.core.edi.Edi 
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6
     
     :param to_log10: Put the interpolated min-max frequency to log10 values
     :type to_log10: bool 
     
+<<<<<<< HEAD
     :returns: Array-like min max and auto-number of frequency for interpolating. 
     :rtype: tuple
     
     :Example: 
+        >>> from pycsamt.core.edi import Edi_collection 
+=======
+    :returns: Array-like min max and number of frequency for interpolating. 
+    :rtype: tuple
+    
+    :Example: 
         >>> from pycsamt.ff.core.edi import Edi_collection 
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6
         >>> from pycsamt.utils.func_utils import find_interpolate_freq
         >>> edipath = r'/Users/Daniel/Desktop/edi'
         >>> cObjs = Edi_collection (edipath)
@@ -1002,7 +1146,6 @@ def concat_array_from_list (list_of_array , concat_axis = 0) :
                 
     return np.concatenate(list_of_array, axis = concat_axis)
 
-
 def sort_array_data(data,  sort_order =0,
               concatenate=False, concat_axis_order=0 ):
     """
@@ -1155,8 +1298,6 @@ def _set_depth_to_coeff(data, depth_column_index,coeff=1, depth_axis=0):
 
     return data
             
-
-
 def broke_array_to_(arrayData, keyIndex=0, broken_type="dict"):
     """
     broke data array into different value with their same key 
@@ -1177,11 +1318,9 @@ def broke_array_to_(arrayData, keyIndex=0, broken_type="dict"):
     
     # find the max_counts
     
-    vcounts_temp,counts_temp=np.unique(arrayData[:,keyIndex], return_counts=True)
+    vcounts_temp,counts_temp=np.unique(arrayData[:,keyIndex],
+                                       return_counts=True)
     vcounts_temp_max=vcounts_temp.max()
-    # print(vcounts_temp)
-    # print(vcounts_temp_max)
-    # print(vcounts_temp.min())
 
     dico_brok={}
     lis_brok=[]
@@ -2487,7 +2626,7 @@ def _nonevalue_checker (list_of_value, value_to_delete=None):
             start_point=0 # not necessary , just for secure the loop. 
             break           # be sure one case or onother , it will break
     return list_of_value 
- 
+
 def resize_resphase_values (dictobj: dict , fill_value: float = np.nan,
                             c =None,mask_nan:bool =True, return_array =True): 
     """ Get the resistivity and phases values from dictof items 
@@ -2568,7 +2707,7 @@ def _strip_item(item_to_clean, item=None, multi_space=12):
     if type(item_to_clean ) != list :#or type(item_to_clean ) !=np.ndarray:
         if type(item_to_clean ) !=np.ndarray:
             item_to_clean=[item_to_clean]
-    ###TIP
+    
     if item_to_clean in cleaner or item_to_clean ==['']:
         warnings.warn ('No data found for sanitization; returns None.')
         return None 
@@ -3110,6 +3249,7 @@ def ismissing(refarr, arr, fill_value = np.nan, return_index =False):
         
     """
     return_index = str(return_index).lower() 
+    fill_value = _assert_all_types(fill_value, float, int)
     if return_index in ('false', 'value', 'val') :
         return_index ='values' 
     elif return_index  in ('true', 'index', 'ix') :
@@ -3209,7 +3349,7 @@ def fillNaN(arr, method ='ff'):
     method= str(method).lower().strip() 
     
     if arr.ndim ==1: 
-        arr = reshape_array(arr, axis=1)  
+        arr = reshape(arr, axis=1)  
         
     if method  in ('backward', 'bf',  'bwd'):
         method = 'bf' 
@@ -3230,10 +3370,13 @@ def fillNaN(arr, method ='ff'):
             ) if method in ('bf', 'ff') else arr 
 
 
-            
-
-
     
+
+
+
+
+
+
 
     
     

@@ -9,7 +9,7 @@ Created on Thu Nov 25 16:08:01 2021
 
 import os  
 import argparse 
-from pycsamt.ff.core import CSAMT
+from pycsamt.core import CSAMT
 
 PROG = os.path.basename (__file__).replace('.py', '')
 

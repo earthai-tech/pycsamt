@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 #       Created on Fri Jan 22 20:31:14 2021
 """
-.. _module-Occam2D :: `pycsamt.modeling.occam2d`
-    :synopsis:: The Occam 2D MT inversion code (v3.0) presented here is an
-                implementation of the general Occam procedure of  Constable, 
-                et al. (1987)extended to  2D by deGroot-Hedlin and Constable (1990).
-                The 2D MT forward  calculations are carried out with codeprovided
-                 by Wannamaker, et al (1987)  using reciprocity to calculate the
-                Jacobian (de Lugao and Wannamaker, 1996).
-                ...
+Module Occam2D 
+================
+
+The Occam 2D MT inversion code (v3.0) presented here is an implementation of 
+the general Occam procedure of  Constable, et al. (1987)extended to  2D by 
+deGroot-Hedlin and Constable (1990). The 2D MT forward  calculations are 
+carried out with codeprovided by Wannamaker, et al (1987)  using reciprocity
+to calculate the Jacobian (de Lugao and Wannamaker, 1996).
 
 .. seealso::
-        - http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html 
-        - https://marineemlab.ucsd.edu/~kkey/Software.php
-        - https://github.com/MTgeophysics/mtpy.git>`
-        ...
+    - http://marineemlab.ucsd.edu/Projects/Occam/sharp/index.html 
+    - https://marineemlab.ucsd.edu/~kkey/Software.php
+    - https://github.com/MTgeophysics/mtpy.git>`
+    ...
 
 """
 import os
@@ -23,7 +23,7 @@ import datetime
 import numpy as np 
 
 import pycsamt.utils.exceptions as CSex
-from pycsamt.modeling.__init__ import  SUCCESS_IMPORT_MTPY
+from pycsamt.__init__ import  imtpy 
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
 from pycsamt.utils import  plotdecorator  as mdeco
@@ -32,25 +32,22 @@ from pycsamt.utils._csamtpylog import csamtpylog
 
 _logger =csamtpylog.get_csamtpy_logger(__name__)
 
-if  SUCCESS_IMPORT_MTPY :
-
+if imtpy:
     _logger.info('`MTpy` successfull loaded!')
     try : 
         from mtpy.modeling import occam2d as MToccam2d
         _logger.info('`occam2d` module sucessfully imported  from `MTpy`.')
-        
     except :
-        _logger.info('loading  `occam2d` module from '
-                     '`MTpy`packages  failed')
+        _logger.info('loading  `occam2d` module from `MTpy`packages  failed')
         warnings.warn('Loading occam2d module from "MTpy" '
                       'package failed! Please try again')
         
-        SUCCESS_IMPORT_MTPY  =False 
+        imtpy=False 
     
-if not SUCCESS_IMPORT_MTPY:
+if not imtpy:
     _logger.info('Unable to import `MTpy`packages. Loading failed!')
-    warnings.warn('Try to import `MTpy` module failed! You can get "MTPY"'
-                  ' from <https://github.com/MTgeophysics/mtpy.git>`.')
+    warnings.warn("Import MTpy failted! You can get MTPY from "
+                  " <https://github.com/MTgeophysics/mtpy.git>`.")
      
 
 class occamLog (object) : 
@@ -2521,13 +2518,10 @@ class occam2d_write(object):
   
     """
     verbose = 0 
-    if SUCCESS_IMPORT_MTPY is False :
-        
-            mess = ''.join([
-                'Failed to import MTpy module ! '
-                'Could not build inputOccam2D files.', 
-                            ' Please try to install :ref:`MTpy` manually !'])
-            print('---> '+ mess)
+    if not imtpy :
+        mess = ''.join(['!!! Failed to import MTpy module ! You can get MTpy ', 
+                        'at <https://github.com/MTgeophysics/mtpy.git>`.!'])
+        print('---> '+ mess)
     
    
     @staticmethod 
@@ -2556,7 +2550,7 @@ class occam2d_write(object):
    
         """
         
-        if SUCCESS_IMPORT_MTPY is False : return 
+        if not imtpy: return 
            
         freq_logspace =kwargs.pop('intp_freq_logspace', None)
         startup_basename =kwargs.pop('startup_basename', 'Startup')

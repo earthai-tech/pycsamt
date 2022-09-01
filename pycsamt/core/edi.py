@@ -3,7 +3,7 @@
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
 """
-.. _module-edi:: `pycsamt.ff.core.edi`
+.. _module-edi:: `pycsamt.core.edi`
    :synopsis: EDI module can read and write an .edi file as the 'standard '
              formatof magnetotellurics. Each sectionof the .edi file is given 
              its own class, so the elements of each section are attributes for 
@@ -21,9 +21,9 @@ import numpy as np
 
 import pycsamt
 import pycsamt.utils.func_utils as func
-import pycsamt.ff.core.z as MTz
+import pycsamt.core.z as MTz
 from pycsamt.utils. _p import suit 
-from pycsamt.ff.site import  Location
+from pycsamt.site import  Location
 from pycsamt.utils. _p import _sensitive as SB 
 from pycsamt.utils import gis_tools as gis 
 from pycsamt.utils import exceptions as CSex
@@ -88,7 +88,7 @@ class Edi_collection :
     
     :Example: 
         
-       >>> from pycsamt.ff.core.edi import Edi_collection 
+       >>> from pycsamt.core.edi import Edi_collection 
        >>> edilist = [os.path.join(path, edi)for edi in os.listdir 
                       (path) if edi.endswith('.edi')]
        ... edi_objs = Edi_collection(list_of_edifiles = edilist)
@@ -98,30 +98,36 @@ class Edi_collection :
        
        
     """
-    
-    def __init__(self, list_of_edifiles=None, ediObjs =None , 
-                 survey_name =None ): 
+    _keys = ['_latitude',
+            '_longitude', 
+            '_azimuth', 
+            '_elevation', 
+            '_station_names',
+            '_z', 
+            '_z_err',
+            '_z_det',
+            '_res',
+            '_res_err',
+            '_res_det',
+            '_phs',
+            '_phs_det',
+            '_phs_det_err'
+                  ] 
+        
+    def __init__(self, list_of_edifiles=None, ediObjs =None, survey_name =None ): 
         self._logging= csamtpylog.get_csamtpy_logger(self.__class__.__name__)
         self.edifiles =list_of_edifiles
         self.ediObjs = ediObjs 
         self.Location =Location ()
         self.survey_name =survey_name
+        
+        #---> inititalize key attributes :
+        for k in self._keys: 
+            self.__setattr__(k, None )
 
-        #---> construction of georeference attributes :
-        for _key in ['_latitude', '_longitude', '_azimuth', 
-                     '_elevation', 'station_names']: 
-            self.__setattr__(_key, None )
-
-        # construction of impedances , resistivities and
-        #phasetensor attributes and set all to None value.
-        for tensor  in ['_z', '_z_err', '_z_det','_res', '_res_err',
-                        '_res_det','_phs', '_phs_det', '_phs_det_err'
-                         ] :  self.__setattr__( tensor, None) 
-                                 
-        if (self.edifiles or self.ediObjs) is not None : 
+        if (self.edifiles is not None ) or (self.ediObjs is not None)  : 
             self._collect_edifiles()
 
-        
     @property 
     def latitude(self): 
         return self.Location.latitude
@@ -148,13 +154,17 @@ class Edi_collection :
         return self._station_names
     @stnames.setter 
     def stnames (self, edi_stations):
-        if isinstance(edi_stations, np.ndarray ) :
-            edi_stations = edi_stations.tolist()
-        if isinstance(edi_stations, list) :
-            if len(self.edifiles) != len(edi_stations): 
-                self._station_names =self.id  # use station id to work 
-            else :self._station_names =edi_stations
+        try : func._assert_all_types(edi_stations, list, tuple, np.ndarray)
+        except : self._station_names = self.id_ 
+        else : self._station_names = list(map(lambda n: n.replace('.edi', ''), 
+                                       edi_stations))
+        if len(set (self._station_names)) ==1 : 
+            self._station_names = self.id 
             
+        if len(self._station_names) != len(self.ediObjs): 
+            self._station_names = self.id  
+        
+ 
       
     def _collect_edifiles(self, list_of_edifiles =None, *,  ediObjs =None):
         """
@@ -163,12 +173,13 @@ class Edi_collection :
         :param list_of_edifiles: list of edifiles
         :type list_of_edifiles: list 
         
-        :param ediobjs:  can provided from  class built.
-        :type ediobjs: pycsamt.ff.core.edi.Edi
+        :param ediObjs:  can provided from  class built.
+        :type ediObjs: pycsamt.core.edi.Edi
+
         
         :Example: 
             
-            >>> from pycsamt.ff.core.edi import Edi_collection 
+            >>> from pycsamt.core.edi import Edi_collection 
             >>> path =r'F:\__main__csamt__\paper2_data_old\
                 data_edifiles - numStations\K1_edi\new_EDI'
             >>> edilist = [os.path.join(path, edi)for
@@ -180,107 +191,85 @@ class Edi_collection :
             ... print(edi_objs.freq_array)
             
         """
-        rfiles =[]
+        def _fetch_headinfos (cobj,  attr): 
+            """ Set attribute `attr` from collection object `cobj`."""
+            return list(map (lambda o: getattr(o, attr), cobj))
+        
+        self._logging.info (
+            'Collectiong edilfiles from <%s>'% self.__class__.__name__)
+        
+        rfiles =[] # count number of reading files.
+        #--------------------------------------
         if list_of_edifiles is not None: 
-            self.edifiles = list_of_edifiles 
+            self.edifiles = list_of_edifiles   
         if ediObjs is not None: 
             self.ediObjs = ediObjs 
             
-        #################
-        # data can be a single file or a full path  to edifiles
-        if self.ediObjs is not None: 
-            if not isinstance(self.ediObjs, (list, tuple)): 
-                self.ediObjs = [self.ediObjs] 
-            self.ediObjs =list(self.ediObjs) 
-            if not isinstance(self.ediObjs[0], pycsamt.ff.core.edi.Edi):
-                raise CSex.pyCSAMTError_EDI(
-                    "Given object does not match the `pycsamt.ff.core.edi.Edi`"
-                    " edi objects."
-                    )
-            rfiles = self.ediObjs
-            
-        elif isinstance(self.edifiles, str): 
+        if isinstance(self.edifiles, str): 
             # single edi and get the path 
             if os.path.isfile (self.edifiles): 
                 edipath = os.path.dirname (self.edifiles) 
             elif os.path.dirname (self.edifiles): 
                 # path is given and read  
-                edipath = self.edifiles 
-            else : 
-                raise CSex.pyCSAMTError_EDI(f"Wrong path: {self.edifiles}."
-                                            " Please provide the rigth path."
-                    )
+                edipath = self.edifiles
+            else : raise CSex.pyCSAMTError_EDI(
+                f"Path to {self.edifiles!r} is wrong!")
+                
             rfiles = os.listdir (edipath)
-            self.edifiles= sorted ([ os.path.join(edipath, edi ) for edi in 
-                               rfiles if edi.endswith ('.edi')])  
-  
+            self.edifiles= sorted ([ os.path.join(edipath, edi ) 
+                               for edi in rfiles if edi.endswith ('.edi')])  
+            
         elif isinstance(self.edifiles, (tuple, list)): 
-            try : 
-                self.edifiles= sorted(self.edifiles)
-            except TypeError: 
-                raise CSex.pyCSAMTError_EDI(
-                    "It seems argument for `ediObjs`" 
-                    " is passed to the `list_of_edifiles`" 
-                    " param and vice versa!")
+            self.edifiles= sorted(self.edifiles)
             rfiles = self.edifiles.copy() 
+
+        if self.edifiles is not None:
+            try :
+                self.ediObjs = list(map(
+                    lambda o: func._assert_edi_obj(o), self.edifiles)) 
+            except TypeError : 
+                # in the case a single object is given at the param
+                # the list-of edifiles rather than ediObjs 
+                self.ediObjs = list(map(
+                    lambda o: func._assert_edi_obj(o), [self.edifiles])) 
+                
+        # for consistency 
+        if self.ediObjs is not None:
+            if not isinstance (self.ediObjs,(list,tuple, np.ndarray)): 
+                 self.ediObjs = [self.ediObjs]
+        
+            rfiles = self.ediObjs
+                
+            try:
+                self.ediObjs = list(map(
+                    lambda o: func._assert_edi_obj(o), self.ediObjs)) 
+            except CSex.pyCSAMTError_EDI: 
+                raise ValueError ("Expect a list of EDI objects not "
+                                  f"{type(self.ediObjs[0]).__name__!r}")
             
-        if self.edifiles is not None: 
-            self.ediObjs = [Edi(edi_filename= ediobj) 
-                            for  ediobj in self.edifiles]
-            
+                
         if self.ediObjs is None: 
             raise CSex.pyCSAMTError_EDI("None EDI object detected!")
             
-        # OPTIMIZE 
-        self.ediObjs , self.edinames = func.fit_by_ll(self.ediObjs) 
-        
-        # self.ediObjs =list(self.ediObjs) 
-        # self.edinames= list(self.edinames)
-    
-        self._logging.info (
-            'Collectiong edilfiles from <%s>'% self.__class__.__name__)
+        # sorted ediObjs from latlong  
+        self.ediObjs , self.edinames = func.fit_by_ll(self.ediObjs)
+        # reorganize  edis in lon lat order. 
+        self.edifiles = list(map(lambda o: o.edifile , self.ediObjs))
+
         try:
             func.show_quick_edi_stats(rfiles, self.ediObjs)
         except: pass 
-    
-        sta , lat,lon, elev , freq , zz, zz_err, rho,\
-            rho_err, phs , phs_err =[[] for ii in range (11)]
-            
-        #--> set gereference attributes 
-        for  edi_obj in self.ediObjs :
-            sta.append(edi_obj.Head.dataid ) 
-            if edi_obj.Head.long is None : 
-                edi_obj.Head.long= edi_obj.DefineMeasurement.reflong 
-                self._logging.info (
-                    'Longitude of Headid <{0}> has'
-                    ' been set from Edi.DefineMeasurenement'.
-                        format(edi_obj.Head.dataid))
-                
-            lon.append(edi_obj.Head.long)
-            
-            if edi_obj.Head.lat is None : 
-                edi_obj.Head.lat= edi_obj.DefineMeasurement.reflat 
-                self._logging.info ('Latitude of Headid <{0}> has been '
-                                    'set from Edi.DefineMeasurenement'.\
-                                        format(edi_obj.Head.dataid))
-            lat.append(edi_obj.Head.lat)
-            if edi_obj.Head.elev is None : 
-                edi_obj.Head.elev = edi_obj.DefineMeasurement.refelev 
-                self._logging.info('Elevation of Headid <{0}> has been '
-                                   'set from Edi.DefineMeasurenement'.\
-                                       format(edi_obj.Head.dataid))
-            elev.append(edi_obj.Head.elev)
-            freq.append(edi_obj.Z.freq) 
-        #-----------------------------    
-        # correct_lon_lat 
-        lon,*_ = func.scale_position(lon)
-        lat,*_ = func.scale_position(lat)
-        #------------------------------
-        # ---> get impednaces , phase tensor and
-        # resistivities values form ediobject
-        self._logging.debug('Setting impedances tensor , phases tensor and '
-                            ' resisvitivities values from ediobjs.')
         
+        #-----get coordinates values and correct lon_lat ------------------
+        lat  = _fetch_headinfos(self.ediObjs, 'lat')
+        lon  = _fetch_headinfos(self.ediObjs, 'lon')
+        elev = _fetch_headinfos(self.ediObjs, 'elev')
+        lon,*_ = func.scale_position(lon) if len(self.ediObjs)> 1 else lon 
+        lat,*_ = func.scale_position(lat) if len(self.ediObjs)> 1 else lat
+        # ---> get impednaces, phase tensor and
+        # resistivities values form ediobject
+        self._logging.info('Setting impedances and phases tensors and'
+                           'resisvitivity values from a collection ediobj.')
         zz= [edi_obj.Z.z for edi_obj in self.ediObjs]
         zz_err= [edi_obj.Z.z_err for edi_obj in self.ediObjs]
 
@@ -292,17 +281,15 @@ class Edi_collection :
         
         # Create the station ids 
         self.id = func.make_ids(self.ediObjs, prefix='S')
-        #self.id = ['S{0:03}'.format(ii) for ii in range(len(self.ediObjs))]
-
-        self.longitude, self.latitude, self.elevation = lon , lat, elev
+    
+        self.longitude= lon 
+        self.latitude= lat  
+        self.elevation= elev
         
         # get frequency array from the first value of edifiles.
-        self.freq_array = freq[0] 
+        self.freq_array = self.ediObjs[0].Z.freq
 
         #---> set ino dictionnary the impdance and phase Tensor 
-        self._logging.debug('Setting impedances, resistivities and'
-                            ' phase tensors into dictionnaries.')
-        #---> set attribute on dictionnary
         self._z = {key:value for key , value in zip (self.id, zz)}
         self._z_err ={key:value for key , value in zip (self.id, zz_err)}
 
@@ -312,102 +299,7 @@ class Edi_collection :
         self._phs ={key:value for key , value in zip (self.id, phs)}
         self._phs_err ={key:value for key , value in zip (self.id, phs_err)}
         
-    #---> set a few pertinent atttributes thought components xy and yx 
-    
-    @property 
-    def res_xy (self): 
-        return {stn :res[: , 0, 1] for stn, res in self._res.items()}
-    @property 
-    def res_yx (self): 
-        return {stn :res[: , 1, 0] for stn, res in self._res.items()}
-
-    @property 
-    def res_err_xy (self): 
-        return {stn :res_err[: , 0, 1] 
-                for stn, res_err in self._res_err.items()}
-    @property 
-    def res_err_yx (self): 
-        return {stn :res_err[: , 1, 0] 
-                for stn, res_err in self._res_err.items()}
-    
-    ###TODO #######################
-    @property 
-    def res_xx (self): 
-        return {stn :res[: , 0, 0] for stn, res in self._res.items()}
-    @property 
-    def res_yy (self): 
-        return {stn :res[: , 1, 1] for stn, res in self._res.items()}
-
-    @property 
-    def res_err_xx (self): 
-        return {stn :res_err[: , 0, 0] 
-                for stn, res_err in self._res_err.items()}
-    @property 
-    def res_err_yy (self): 
-        return {stn :res_err[: , 1, 1] 
-                for stn, res_err in self._res_err.items()}
-    #################################################################
-    @property 
-    def z_xy (self): 
-        return {stn :z[: , 0, 1] for stn, z in self._z.items()}
-    @property 
-    def z_yx (self): 
-        return {stn :z[: , 1, 0] for stn, z in self._z.items()}
-
-    @property 
-    def z_xx (self): 
-        return {stn :z[: , 0, 0] for stn, z in self._z.items()}
-    @property 
-    def z_yy (self): 
-        return {stn :z[: , 1, 1] for stn, z in self._z.items()}
-    @property 
-    def z_err_xx (self): 
-        return {stn :z_err[: , 0, 0] for stn, z_err in self._z_err.items()}
-    @property 
-    def z_err_yy (self): 
-        return {stn :z_err[: , 1, 1] for stn, z_err in self._z_err.items()}
-    
-    @property 
-    def z_err_xy (self): 
-        return {stn :z_err[: , 0, 1] for stn, z_err in self._z_err.items()}
-    @property 
-    def z_err_yx (self): 
-        return {stn :z_err[: , 1, 0] for stn, z_err in self._z_err.items()}
-    
-    @property 
-    def phs_xy (self): 
-        return {stn :phs[: , 0, 1] for stn, phs in self._phs.items()}
-    @property 
-    def phs_yx (self): 
-        return {stn :phs[: , 1, 0] for stn, phs in self._phs.items()}
-
-    
-    @property 
-    def phs_err_xy (self): 
-        return {stn :phs_err[: , 0, 1] 
-                for stn, phs_err in self._phs_err.items()}
-    @property 
-    def phs_err_yx (self): 
-        return {stn :phs_err[: , 1, 0] 
-                for stn, phs_err in self._phs_err.items()}
-    ### TODO #########################
-    @property 
-    def phs_xx (self): 
-        return {stn :phs[: , 0, 0] for stn, phs in self._phs.items()}
-    @property 
-    def phs_yy (self): 
-        return {stn :phs[: , 1, 1] for stn, phs in self._phs.items()}
-
-    
-    @property 
-    def phs_err_xx (self): 
-        return {stn :phs_err[: , 0, 0] 
-                for stn, phs_err in self._phs_err.items()}
-    @property 
-    def phs_err_yy (self): 
-        return {stn :phs_err[: , 1, 1] 
-                for stn, phs_err in self._phs_err.items()}
-   
+        self.stnames = self.edinames 
     
     def rewrite_edis (self, ediObjs=None,  by = 'name' , prefix = None, 
                       dataid =None, savepath = None, how='py', 
@@ -423,8 +315,7 @@ class Edi_collection :
         ------------
   
         ediObjs: list 
-            Collection of edi object from pycsamt.ff.core.edi.Edi 
-       
+            Collection of edi object from pycsamt.core.edi.Edi 
         dataid: list 
             list of ids to  rename the existing EDI-dataid from  
             :class:`Head.dataid`. If given, it should match the length of 
@@ -481,7 +372,7 @@ class Edi_collection :
             
         Examples
         ---------
-        >>> from pycsamt.ff.core.edi import Edi_Collection
+        >>> from pycsamt.core.edi import Edi_Collection
         >>> edipath = r'/Users/Daniel/Desktop/edi'
         >>> savepath =  r'/Users/Daniel/Desktop/ediout'
         >>> cObjs = Edi_collection (edipath)
@@ -579,13 +470,17 @@ class Edi_collection :
         for k, (obj, did) in enumerate(zip(self.ediObjs, dataid)): 
             obj.Head.edi_header = None  
             obj.Head.dataid = did 
+            obj.Info.ediinfo = None 
             
             if correct_ll or make_coords:
                 obj.Head.long = float(self.longitude[k])
                 obj.Head.lat = float(self.latitude[k])
+                obj.Head.elev = float(self.elevation[k])
                 oc = obj.DefineMeasurement.define_measurement
                 oc= replace_reflatlon(oc, nval= latdms[k])
                 oc= replace_reflatlon(oc, nval= londms[k], kind='reflong')
+                oc = replace_reflatlon(oc, nval= self.elevation[k], 
+                                       kind='refelev')
                 obj.DefineMeasurement.define_measurement = oc 
             # Empty the previous MTEMAP infos and 
             # fetch the attribute values newly set.
@@ -593,8 +488,116 @@ class Edi_collection :
             obj.MTEMAP.sectid= did 
             obj.write_edifile(savepath = savepath ,
                               new_edifilename = edi_prefix,  **kws)
-            
-        
+
+    
+    @property 
+    def res_xy (self): 
+        return {stn :res[: , 0, 1] 
+                for stn, res in self._res.items()}
+    @property 
+    def res_yx (self): 
+        return {stn :res[: , 1, 0]
+                for stn, res in self._res.items()}
+
+    @property 
+    def res_err_xy (self): 
+        return {stn :res_err[: , 0, 1] 
+                for stn, res_err in self._res_err.items()}
+    @property 
+    def res_err_yx (self): 
+        return {stn :res_err[: , 1, 0] 
+                for stn, res_err in self._res_err.items()}
+    
+    @property 
+    def res_xx (self): 
+        return {stn :res[: , 0, 0] 
+                for stn, res in self._res.items()}
+    @property 
+    def res_yy (self): 
+        return {stn :res[: , 1, 1] 
+                for stn, res in self._res.items()}
+
+    @property 
+    def res_err_xx (self): 
+        return {stn :res_err[: , 0, 0] 
+                for stn, res_err in self._res_err.items()}
+    @property 
+    def res_err_yy (self): 
+        return {stn :res_err[: , 1, 1] 
+                for stn, res_err in self._res_err.items()}
+
+    @property 
+    def z_xy (self): 
+        return {stn :z[: , 0, 1] 
+                for stn, z in self._z.items()}
+    @property 
+    def z_yx (self): 
+        return {stn :z[: , 1, 0] 
+                for stn, z in self._z.items()}
+
+    @property 
+    def z_xx (self): 
+        return {stn :z[: , 0, 0]
+                for stn, z in self._z.items()}
+    @property 
+    def z_yy (self): 
+        return {stn :z[: , 1, 1] 
+                for stn, z in self._z.items()}
+    @property 
+    def z_err_xx (self): 
+        return {stn :z_err[: , 0, 0] 
+                for stn, z_err in self._z_err.items()}
+    @property 
+    def z_err_yy (self): 
+        return {stn :z_err[: , 1, 1] 
+                for stn, z_err in self._z_err.items()}
+    
+    @property 
+    def z_err_xy (self): 
+        return {stn :z_err[: , 0, 1] 
+                for stn, z_err in self._z_err.items()}
+    @property 
+    def z_err_yx (self): 
+        return {stn :z_err[: , 1, 0] 
+                for stn, z_err in self._z_err.items()}
+    
+    @property 
+    def phs_xy (self): 
+        return {stn :phs[: , 0, 1] 
+                for stn, phs in self._phs.items()}
+    @property 
+    def phs_yx (self): 
+        return {stn :phs[: , 1, 0] 
+                for stn, phs in self._phs.items()}
+
+    @property 
+    def phs_err_xy (self): 
+        return {stn :phs_err[: , 0, 1] 
+                for stn, phs_err in self._phs_err.items()}
+    @property 
+    def phs_err_yx (self): 
+        return {stn :phs_err[: , 1, 0] 
+                for stn, phs_err in self._phs_err.items()}
+    @property 
+    def phs_xx (self): 
+        return {stn :phs[: , 0, 0] 
+                for stn, phs in self._phs.items()}
+    @property 
+    def phs_yy (self): 
+        return {stn :phs[: , 1, 1]
+                for stn, phs in self._phs.items()}
+
+    
+    @property 
+    def phs_err_xx (self): 
+        return {stn :phs_err[: , 0, 0] 
+                for stn, phs_err in self._phs_err.items()}
+    @property 
+    def phs_err_yy (self): 
+        return {stn :phs_err[: , 1, 1] 
+                for stn, phs_err in self._phs_err.items()}
+           
+       
 class Edi : 
     """
     Ediclass  is for especialy dedicated to .edi files, mainly reading 
@@ -655,7 +658,7 @@ class Edi :
    
     :Example:  
          
-        >>> import pycsamt.ff.core.edi as csedi
+        >>> import pycsamt.core.edi as csedi
         >>> path =  os.path.join(os.environ["pyCSAMT"], 
         ...                        'data','edi', csa000.edi)
         >>> edihead= csedi.Head.get_header_list_from_edi(
@@ -702,7 +705,14 @@ class Edi :
        
         if self.edifile is not None : 
                 self.read_edi ()
-            
+         
+    @property 
+    def dataid (self) : 
+        return self.Head.dataid 
+    @dataid.setter 
+    def dataid (self, did): 
+        self.Head.dataid = did 
+        
     @property 
     def lon(self): 
         return self.Head.long or self.DefineMeasurement.reflong 
@@ -719,7 +729,7 @@ class Edi :
         
     @property 
     def elev(self): 
-        return self.Head.elev 
+        return self.Head.elev or self.DefineMeasurement.refelev 
     @elev.setter 
     def elev (self, elevation): 
         self.Head.elev =elevation
@@ -1432,11 +1442,19 @@ class Edi :
 
         :returns: a new impedance object with the corresponding
                                frequencies and components.
+<<<<<<< HEAD:pycsamt/core/edi.py
+        :rtype: pycsamt.core.z.Z
+
+        :Interpolate: ::
+
+            >>> import pycsamt.core.edi as CSedi
+=======
         :rtype: pycsamt.ff.core.z.Z
 
         :Interpolate: ::
 
             >>> import pycsamt.ff.core.edi as CSedi
+>>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/core/edi.py
             >>> edi_fn = r"/home/edi_files/cs_01.edi"
             >>> edi_obj = CSedi.Edi(edi_fn)
             >>> # create a new frequency range to interpolate onto
@@ -1783,7 +1801,7 @@ class Head (object):
         
         :Example:
              
-            >>> from pycsamt.ff.core.edi import Head
+            >>> from pycsamt.core.edi import Head
             >>>> file_edi= 'S00_ss.edi'
             >>>> path =  os.path.join(os.environ["pyCSAMT"], 
             ...                      'pycsamt','data', file_edi)
@@ -1844,7 +1862,7 @@ class Head (object):
         
         :Example:
             
-            >>> from pycsamt.ff.core.edi import Head
+            >>> from pycsamt.core.edi import Head
             >>> path =  os.path.join(os.environ["pyCSAMT"],
             ...                         'pycsamt','data', S00_ss.edi)
             >>> edihead= Head.get_header_list_from_edi(edi_fn=path)
@@ -2074,7 +2092,7 @@ class Info :
             
         :Example:
             
-            >>> from pycsamt.ff.core.edi import Info 
+            >>> from pycsamt.core.edi import Info 
             >>> file_edi_2='SAMTEX.edi_2.edi'
             >>> file_edi= 'S00_ss.edi'
             >>> path =  os.path.join(os.environ["pyCSAMT"], 
@@ -2324,7 +2342,7 @@ class DefineMeasurement:
         
         :Example:
             
-            >>> from pycsamt.ff.core.edi import DefineMeasurement    
+            >>> from pycsamt.core.edi import DefineMeasurement    
             >>> file_edi= 'S00_ss.edi'
             >>> path =  os.path.join(os.environ["pyCSAMT"], 
             ...                         'pycsamt','data', file_edi_2)
@@ -2338,7 +2356,7 @@ class DefineMeasurement:
                     
         :Example:
             
-          >>> from pycsamt.ff.core.edi import DefineMeasurement 
+          >>> from pycsamt.core.edi import DefineMeasurement 
           >>> definemeas =DefineMeasurement.get_measurement_info(edi_fn=path)
           >>> print(definemeas.meas_ex.id) 
           ... 1004.
@@ -2621,7 +2639,7 @@ class Hmeasurement(object):
     
     :Example:
         
-        >>> import pycsamt.ff.core.edi as csedi
+        >>> import pycsamt.core.edi as csedi
         >>> hmeas_dict = {'id': '1000.3', 'chtype':'hx', 'x':0, 
         ...                  'y':0, 'azm':0, 'sensor':'None'}
         >>> hmeas = csedi.Hmeasurement(**hmeas_dict )
@@ -2675,7 +2693,7 @@ class Emeasurement(object):
     
     :Example: 
         
-        >>> import pycsamt.ff.core.edi as csedi
+        >>> import pycsamt.core.edi as csedi
         >>> emeas_dict = {'id': '1000.4', 'chtype':'ex', 'x':0,
         ...                  'y':0, 'azm':0, 'acqchan':'ex', }
         >>> emeas = csedi.Hmeasurement(**emeas_dict)
@@ -2860,7 +2878,7 @@ class MTEMAP (object):
             
         :Example:
             
-            >>> import pycsamt.ff.core.edi as csedi 
+            >>> import pycsamt.core.edi as csedi 
             >>> mtsection_obj= csedi.MTEMAP.get_mtemap_section_list(edi_fn =path)
             >>> info = mtsection_obj.read_mtemap_section()
             >>> print(mtsection_obj.sectid) 
@@ -2933,7 +2951,7 @@ class MTEMAP (object):
             
         :Example: 
             
-            >>> from pycsamt.ff.core.edi  import MTEMAP
+            >>> from pycsamt.core.edi  import MTEMAP
             >>> mtemapinfo ={'sectid':'yobkro','nfreq':18 , 'maxblks':100, 'hx':"1003.1",
             ...         'ex':'1005.4','hz':'1006.3', 'ey':1002.3 , 
             ...         'hy':'1000.2'}#'chksum':18, 'ndipole':47, 'type':'hann'
@@ -3023,7 +3041,7 @@ class References(object):
     
     :Example: 
         
-        >>> from pycsamt.ff.core.edi import References
+        >>> from pycsamt.core.edi import References
         >>> refobj = References(**{'volume':18, 'pages':'234--214', 
         ...                           'title':'pyCSAMT :python toolbox for CSAMT' ,
         ...                  'journal':'Computers and Geosciences', 
@@ -3061,7 +3079,7 @@ class Copyright(object):
     
     :Example:
         
-        >>> from pycsamt.ff.core.edi import Copyright 
+        >>> from pycsamt.core.edi import Copyright 
         >>> Copyright(**{'owner':'University of CSAMT',
         ...                  'contact':'Cagniard'})
     """
@@ -3108,7 +3126,7 @@ class Source(object):
     
     :Example:
         
-        >>> from pycsamt.ff.core.edi import Source
+        >>> from pycsamt.core.edi import Source
         >>> Source(**{'archive':'IRIS', 
         ...             'reprocessed_by':'grad_student'})
     """
@@ -3146,7 +3164,7 @@ class Person(object):
     
     :Example:
         
-        >>> from pycsamt.ff.core.edi import Person
+        >>> from pycsamt.core.edi import Person
         >>> person =Person(**{'name':'ABA', 'email':'aba@cagniard.res.org',
         ...                  'phone':'00225-0769980706', 
         ...          'organization':'CagniadRES'})
@@ -3217,7 +3235,7 @@ class Software(object):
     
     :Example:
         
-        >>> from pycsamt.ff.core.edi import Software
+        >>> from pycsamt.core.edi import Software
         >>> Software(**{'release':'0.11.23'})
     """
 
@@ -3243,7 +3261,7 @@ def minimum_parser_to_write_edi (edilines, parser =None ):
                 
     :Example:  
         
-        >>> from pycsamt.ff.core.edi  import DefineMeasurement 
+        >>> from pycsamt.core.edi  import DefineMeasurement 
         >>> file_edi= 'S00_ss.edi'
         >>> path =  os.path.join(os.environ["pyCSAMT"], 
         ...                         'pycsamt','data', file_edi_2)
@@ -3294,7 +3312,7 @@ def gather_measurement_key_value_with_str_parser (
     
     :Example: 
         
-        >>> from pycsamt.ff.core.edi import gather_measurement_key_value_with_str_parser
+        >>> from pycsamt.core.edi import gather_measurement_key_value_with_str_parser
         >>> measm = [ ['>HMEAS', 'ID=1001.001', 'CHTYPE=HX', 'X=', '0.0', 'Y=', 
         ...               '0.0', 'Z=', '0.0', 'AZM=', '0.0', 'TS='],
         ...                 ['>HMEAS', 'ID=1002.001', 'CHTYPE=HY', 'X=', '0.0', 

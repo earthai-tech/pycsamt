@@ -3,25 +3,27 @@
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
 """
-.. _module-Visualization:`pycsamt.viewer.plot`
+Module View
+============
+
+Some templates for plotting purposes. It gives a quick alternative for uses to 
+save their time for writting their own plot scripts. However to have full 
+control of the plot, it is recommended to write your own plot scripts. 
+
+Note that the package can not handle all the plots possibilty that offers the
+software. In the future, many plots should be removed and replaced by some  
+most efficient ones. 
  
-.. synopsis:From `viewer` subpackage. `plot` module is the visualization module of
-   pyCSAMT software. All analyses , processings , corrections  are vusualized  
-   thoughoutthis module. We decided this option so to avoid importing several time 
-   matplotlib and its properties into differents subpackages . Import Matplotlib 
-   packages into a special module allow a good visibility of scripts  and let 
-   the editor to easy customize the plots without knowning deeply the module 
-   itself. Special plot 1d, 2d and 3D.
-        ... 
 """
 
 import os 
 import re
-import  warnings 
+import copy
+import warnings 
 import numpy as np
- 
+
 import matplotlib as mpl 
-import  matplotlib.pyplot  as plt
+import matplotlib.pyplot  as plt
 import matplotlib.cm as cm 
 import matplotlib.colorbar as mplcb
 import matplotlib.gridspec as gspec
@@ -30,24 +32,48 @@ import pycsamt.utils.exceptions as CSex
 import pycsamt.utils.func_utils as func
 import pycsamt.utils.plot_utils as mplotus  
 import pycsamt.utils.zcalculator  as Zcc
-from pycsamt.ff.core import avg as CSMATavg 
-from pycsamt.ff.core.cs import CSAMT
-from pycsamt.ff.site import Profile
+from pycsamt.core import avg as CSMATavg 
+from pycsamt.core.cs import CSAMT
+from pycsamt.site import Profile
 from pycsamt.modeling import occam2d
 from pycsamt.geodrill import geocore  as geoD
-import pycsamt.utils.plotdecorator  as mdeco
+from  pycsamt.utils.plotdecorator import geoplot1d 
 from pycsamt.utils._p import suit 
 from pycsamt.utils._csamtpylog import csamtpylog 
-from pycsamt.ff.processing.corr import Processing
+from pycsamt.processing import Processing 
+
+try : 
+    from pycsamt.__init__ import imtpy  
+    if imtpy : 
+        from mtpy.imaging.phase_tensor_pseudosection import (
+            PlotPhaseTensorPseudoSection ) 
+        from mtpy.modeling.modem import ( 
+            plot_response, 
+            plot_rms_maps, 
+            plot_slices, 
+            phase_tensor_maps
+            
+        )
+        
+except:
+    imtpy = False 
 
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
-###############################################################################
- 
+warnings.warn("In the future, many plots of the module 'view' should be"
+              " removed and replaced by the most efficient ones.", 
+              FutureWarning
+              )
+
+
 class Plot1d :
     """
-    plot 1d class
-    Deal with all 1D plots. 
+    Plot One-dimensional. It offers a quick visualisation of one-dimensional plot. 
+    
+    The methods functions are some templates for plotting puposes. They  are not 
+    exhaustive. Users can edit and customize each plot according its will.
+    
+    Hold other informations of attributes: 
 
     ==================  =======================================================
     Key Words           Description        
@@ -62,27 +88,31 @@ class Plot1d :
                         fs+2. *default* is 6 
     ls                  [ '-' | '.' | ':' ] line style of mesh lines
                         *default* is '-'
-    marker              marker of stations 
-                        *default* is r"$\blacktriangledown$"
-    ms                  size of marker in points. *default* is 5
+    marker              marker. *default* is ``o``.
+    ms                  size of marker in points. *default* is 3.
+    x_minorticks        minorticks in x-abscissa. default is ``1``. 
+    y_minorticks        minortick in y-coordinates . *default* is ``1`` 
+    font_size           text font size. Default is ``3``
+    font_style          text font style. *default* is ``italic``
+    fs                  value for adjusting all `size`in plot. 
+                        *default* is ``2``
+    mplfont             matplotlib font for rcparameters. *default* is``cursive``
+    markerfacecolor     facecolor of the marker.*default* is ``k``. 
+    markeredgecolor     edge color of the marker point. *default* is ``k``. 
+    fontweight          weight type of the font. *default* is ``italic``.
+    lw                  width of the plot line. *default* is ``1.5``.
+    alpha               control the transparency of grid or line. 
+                        *default* is ``.5``.
+    xlim                Bound of x -coordinates (abscissa). Should be a tuple 
+                        of e.g.(0, 4 ) where 0 is the start and the end points 
+                        respectively. 
+    ylim                Bound of y -coordinates (up). Should be a tuple 
+                        of e.g.(0, 4 ) where 0 is the start and the end points 
+                        respectively.  
+    xlabel              label name along the x-coordinates. 
+    ylabel              label name along the x-coordinates.
+    savefig             figure name or path-like object for saving. 
     ==================  =======================================================
-    
-    ==========================  ===============================================
-    Methods                     Description
-    ==========================  ===============================================
-    plot_topo_sep_azim          plot_topography , station separation and 
-                                azimuth  profile can plot individually or 
-                                grouped by.
-    penetrated1D                skindepth plot. penetration depth at different
-                                frequencies 
-    plot_static_correction      plot rho and rho corrected by different filter
-                                defalut filter is TMA.
-    plot_freqVSRhoPhase         Resistivity and phase plot. 
-    plot_curves                 plot data curves : specific for 
-                                Zonge Engineering AVG file. 
-    plot_RhoPhase errors        plot errors bar of resistivities in ohm.m and 
-                                phase in degree. 
-    ==========================  ===============================================
     
     """
     
@@ -94,7 +124,7 @@ class Plot1d :
         self.fig_size = kwargs.pop('fig_size', [12,8])
         self.fig_dpi =kwargs.pop('fig_dpi', 300)
         
-        self.fig_title =kwargs.pop('title', None)
+        self.fig_title =kwargs.pop('fig_title', None)
         
         self.x_minorticks=kwargs.pop('xminorticks', 1)
         self.y_minorticks =kwargs.pop('yminorticks', 1)
@@ -103,20 +133,21 @@ class Plot1d :
         self.font_style=kwargs.pop('font_style', 'italic')
         self.fs =kwargs.pop('fs', 2.)
         
-        
-        self.mstyle =kwargs.pop('maker_style', 'o')
+        self.marker =kwargs.pop('maker', 'o')
         self.ms =kwargs.pop('ms', 3)
         self.mplfont =kwargs.pop('font','cursive')
-        self.markerfacecolor=kwargs.pop('markefacecolor', 'r')
-        self.markeredgecolor=kwargs.pop('markeredgecolor', 'gray')
+        self.markerfacecolor=kwargs.pop('markerfacecolor', 'k' )
+        self.markeredgecolor=kwargs.pop('markeredgecolor', 'k' )
         
         self.fontweight =kwargs.pop('font_weight', 'bold')
         self.ls= kwargs.pop('ls', '-')
         self.lw =kwargs.pop('lw', 1.5)
-        self.alpha = kwargs.pop('alpha', 0.5)
+        self.alpha = kwargs.pop('alpha', .5)
         
         self.xlim =None 
         self.ylim=None 
+        self.xlabel = kwargs.pop('xlabel', None) 
+        self.ylabel = kwargs.pop('ylabel', None) 
         
         self.subplot_wspace = kwargs.pop('subplot_wspace', .3)
         self.subplot_hspace = kwargs.pop('subplot_hspace', .0)
@@ -124,6 +155,499 @@ class Plot1d :
         self.subplot_left = kwargs.pop('subplot_left', .08)
         self.subplot_top = kwargs.pop('subplot_top', .85)
         self.subplot_bottom = kwargs.pop('subplot_bottom', .1)
+        
+        self.savefig = kwargs.pop('savefig', None)
+        
+    
+    def plotoverlay1d (self, arr, freqs,  ns= 0, leg = None,
+                      show_grid =False, **kws ) : 
+        """ Plot the data at each station above to one to another. 
+        
+        This is useful to see the missing value in the data at each frequency. 
+        For |AMT| survey, the plot can show the weak frequency and also the 
+        dead band data. 
+        
+        Parameters 
+        -----------
+        arr : ndarray , shape (N, M) 
+            2D array for plotting. For instance, it can be a 2D resistivity 
+            collected at all stations (N) and all frequency (M) 
+        freqs: array-like 
+            Frequency values to designate the X-coordinates. It should have 
+            the length N, the same of the ``arr2d`` i.e. the rows of the 
+            ``arr``. Can be a frequency 
+        ns: list of int  
+            The list of indices of each stations. Start index at 0. 
+        leg: list 
+            legend labels put into a list. IOt must match the number of given 
+            resistivity values. 
+        show_grid: bool, 
+            Draw a grid space for the plot. User can customize the grid plot 
+            by him/herself.
+        kws : dict 
+            Matplotlib logs functions additional keywords arguments. 
+
+        Returns 
+        ------- 
+        ax: Matplotlib.pyplot <AxesSubplot> 
+        
+        Examples 
+        --------
+        >>> from pycsamt.processing import make2d, get_ediObjs 
+        >>> from pycsamt.processing import get_full_frequency 
+        >>> from pycsamt.view import Plot1d 
+        >>> edipath = 'data/3edis' 
+        >>> ediObjs = get_ediObjs(edipath)
+        >>> f =get_full_frequency(ediObjs) 
+        >>> zxy = make2d (ediObjs, 'zxy', kind ='modulus')
+        >>> p1d= Plot1d (fig_size =(5, 4), fig_title ='$Modulus |Z_{xy}|$')
+        >>> p1d.xlabel ='$Log_{10}Frequency [Hz]$'
+        >>> p1d.ylabel = '$|Z_{xy}|$'
+        >>> ns =[2, 16, 28, 40]
+        >>> leg =[f'S{int(ii):02}' for ii in ns]
+        >>> p1d.plotoverlay1d(zxy, freqs=f)
+       
+        """
+        
+        arr = np.array(arr) 
+        
+        if len(freqs) != len(arr) : 
+            raise ValueError ("Frequency and number of rows in array must have"
+                              f" the same length. {len(freqs)} and {len(arr)}" 
+                              " were given respectively.")
+        
+        if arr.ndim ==1: 
+           arr = arr[: , np.newaxis]
+           ns= [0]
+            
+        mask = np.isnan (arr) 
+        # replace each nan if exist by 0 before cumsum 
+        ar = arr.copy() 
+        ar[ mask] = 0. 
+        ar = np.cumsum(ar, axis =1 )
+        # now reverse input the NaN in the array 
+        ar [mask] = np.nan 
+
+        fig, ax = plt.subplots(1,figsize = self.fig_size, num = self.fig_num,
+                                dpi = self.fig_dpi , 
+                    )
+
+        if not isinstance(ns, (list, tuple, np.ndarray)):
+            ns =[ns]
+
+        try : 
+            ns = list(map(int, ns))
+        except : 
+            raise TypeError ("Could not convert station numbers to integer." 
+                             f" Got {type(ns).__name__!r}")
+            
+        if max(ns) >= len(ar): 
+            raise ValueError(f"Too many station numbers {max(ns)}. Expect a "
+                             f"maximum station indice equals to {len(ar)-1}")
+        for ii in ns: 
+            ax.loglog (freqs , ar[:, ii] , 
+                        ls = self.ls ,
+                        marker = self.marker, 
+                        markersize = self.ms ,
+                        markeredgecolor = self.markeredgecolor,
+                        markerfacecolor = self.markerfacecolor ,
+                       linewidth = self.lw, 
+                       **kws)
+        
+        ax.legend( list(map(str, ns)) if leg is None else leg , 
+                  loc ='best' , ncol = len(ns))
+        
+        ax.set_ylabel (self.ylabel  or '$ Rhoa [ \Omega.m]$', 
+                        ) 
+        ax.set_xlabel(self.xlabel or '$Log10Frequency[Hz]$', 
+                      )
+        if show_grid :
+            ax.grid (visible =True , alpha =self.alpha,
+                     which ='both', color ='gray')
+            
+        plt.tight_layout()   
+        
+        if self.savefig is not None: 
+             plt.savefig(self.savefig , dpi = self.fig_dpi)
+             plt.close (fig =fig ) 
+            
+        return ax
+    
+    def plotf1d (self, *args,  leg =None, kind ='semilogy', 
+                      show_grid =False, distance =50., 
+                     stnlist =None, prefix ='S', how='py',  **kws ):
+        """ Plot 1D filtered plot template  stations Vs Rhoa filtered. 
+        
+        User can edit the template to customize its plot. 
+        
+        Parameters 
+        -----------
+        *args : args : list 
+            Matplotlib logs funtions plot arguments 
+            
+        x: array-like 
+            X-coordinates. It should have the length M, the same of the ``arr2d``; 
+            the columns of the 2D dimensional array.  Note that if `x` is 
+            given, the `distance is not needed. 
+            
+        kind: str 
+             Type of log plot. Can be ``loglog``, ``semilogx``, semilogy`` or 
+             merely a base plot function. Default is ``semilogy``.
+
+        distance: float 
+            The step between two stations. If given, it creates an array of  
+            position for plotting purpose. Default value is ``50`` meters. 
+            
+        stnlist: list of str 
+            List of stations names. If given,  it should have the same length of 
+            the columns M, of `arr2d`` 
+       
+        prefix: str 
+            string value to add as prefix of given id. Prefix can be the site 
+            name. Default is ``S``. 
+            
+        show_grid: bool, 
+            Draw a grid space for the plot. User can customize the grid plot 
+            by him/herself. 
+            
+        how: str 
+            Mode to index the station. Default is 'Python indexing' i.e. 
+            the counting of stations would starts by 0. Any other mode will 
+            start the counting by 1.
+            
+        kws : dict 
+            Additional keywords arguments of Matplotlib subsplots function  
+            :func:`plt.loglog` or :func:`plt.semilog`
+        
+        Returns 
+        ------- 
+        ax: Matplotlib.pyplot <AxesSubplot> 
+            
+        Examples 
+        --------
+        >>> import matplotlib.pyplot as plt 
+        >>> from pycsamt.view import Plot1d 
+        >>> from pycsamt.processing import get_ediObjs, make2d, get_full_frequency 
+        >>> from pycsamt.processing import ama , interpolate2d
+        >>> edipath = 'data/3edis'
+        >>> ediObjs = get_ediObjs(edipath) 
+        >>> res2d_raw = make2d (ediObjs, 'resyx')
+        >>> res2d = interpolate2d (make2d (ediObjs, 'resyx')) 
+        >>> freqs = get_full_frequency(ediObjs)
+        >>> filtered =ama(res2d =res2d, phs2d =phs2d, freqs= freqs , window_size=5)
+        >>> #Plot the resistivy value of the third frequency  at all stations 
+        >>> figtitle = 'Data filtered with Adapative moving average'
+        >>> leg= ['dirty data', 'filtered data'] 
+        >>> p1d = Plot1d (fig_size =(5, 3), xlabel = 'Stations',
+                  ylabel='$ Resistivity [ \Omega.m]$', fig_title= figtitle )
+        >>> p1d.plotf1d (x, res2d_raw[3, :] , '+:', x, res2d[3, :], 
+                         'ok--',x, filtered[3, :], 'ob--', kind ='semilogy',
+                         show_grid =False, leg=leg)
+        """
+        x, y, *_ =  args 
+        
+        fig, ax = plt.subplots(1,figsize = self.fig_size, num = self.fig_num,
+                                dpi = self.fig_dpi , 
+                    )
+        
+    
+        axplot = ax.plot 
+        if kind =='loglog' : 
+            axplot = ax.loglog 
+        elif kind =='semilogx': 
+            axplot = ax.semilogx 
+        elif kind =='semilogy': 
+            axplot = ax.semilogy 
+            
+        axplot(*args, **kws, 
+               markersize = self.ms, 
+               lw = self.lw 
+               )
+        
+        ax.legend( [] if leg is None else leg , loc ='best' , ncol = 4 )
+        
+        d= distance or 1.
+        x= x if x is not None else np.arange(len(x))  * d 
+        
+        if stnlist is not None: 
+            stnlist = func._assert_all_types(stnlist, tuple, list, np.ndarray)
+            if len(stnlist)!= len(x):
+                raise ValueError("Expect  the length of the list of station names"
+                                 f" to be the same like to position {len(x)}")
+                
+        stn = stnlist or func.make_ids ( x , prefix , how = how) 
+        
+        ax.set_xticks(ticks= x, minor=False )
+        ax.set_xticklabels(stn, rotation=90., 
+                           fontdict ={'style': self.font_style, 
+                          'size':  1.5 * self.font_size ,
+                          'weight': self.fontweight},  
+                                )
+     
+        ax.set_ylabel (self.ylabel  or '$ Rhoa [ \Omega.m]$') 
+        
+        ax.set_xlabel(self.xlabel or 'Stations', 
+                    #   fontdict ={'style': self.font_style, 
+                    # 'size': 1.5 * self.font_size ,
+                    # 'weight':  self.fontweight}, 
+                      )
+        
+        if show_grid :
+            ax.grid (visible =True , alpha =0.8, which ='both', color ='gray')
+            
+        plt.tight_layout()   
+        
+        if self.savefig is not None: 
+             plt.savefig(self.savefig , dpi = self.fig_dpi)
+             plt.close (fig =fig )
+             
+        return ax
+    
+
+    def plottensors (self,  resargs , phsargs , res_err=None, phs_err =None, 
+                     sharex= False,  show_grid =True, errorbar_kw = None, 
+                     leg= None, **kws): 
+        """ 
+        
+        Parameters 
+        ----------
+        resargs : list of array-like 
+            List of resistivity values to plot. Each resistivity value is an 
+            array-like composed of collected data at each tensor component. 
+            
+        phsargs: list of array-like 
+            List of phases values  in degree to plot. Each phase value is an 
+            array-like composed of collected data at each tensor component.
+        res_err : list of array-like 
+            List of resistivity errors values to plot. Each resistivity error is 
+            an  array-like at each tensor component. 
+            
+        phs_err: list of array-like 
+            List of phase errors values in degrees to plot. Each phase error is 
+            an  array-like at each tensor component.
+            
+        kind: str 
+             Type of log plot. Can be ``loglog``, ``semilogx``, semilogy`` or 
+             merely a base plot function. Default is ``semilogy``.
+             
+        show_grid: bool, 
+            Will show a grid once triggered i.e set to ``True``. Note that some 
+            argument are fixed and can not match the purpose of the users. 
+            Edit the part of gridding plot to match your custom plot. Default 
+            is ``False``.
+        sharex, shareyAxes, optional
+            Share the x or y axis with sharex and/or sharey. The axis will
+            have the same limits, ticks, and scale as the axis of the shared axes. 
+            Default is ``False``. 
+            
+        show_grid: bool, 
+            Will show a grid once triggered i.e set to ``True``. Note that some 
+            argument are fixed and can not match the purpose of the users. 
+            Edit the part of gridding plot to match your custom plot. Default 
+            is ``False``.
+        errorbar_kw: dict 
+            Error bar additional keyword arguments. Refer to
+            :func:`pycsamt.utils.plot_utils.plot_errobar` function. 
+ 
+        leg: list 
+            legend labels put into a list. IOt must match the number of given 
+            resistivity values. 
+            
+        kws : dict 
+            Matplotlib logs functions additional keywords arguments. 
+            
+        plt.xlabel ('$Log_{10} frequency [H_z]$') ; plt.ylabel('$ Resistivity [ \Omega.m]$')
+        
+        Returns 
+        ------- 
+        ax: Matplotlib.pyplot <AxesSubplot> 
+        
+        Examples 
+        ---------
+        >>> from pycsamt.view.plot import Plot1d 
+        >>> from pycsamt.processing import flma # filter to correct resistivity 
+        >>> edipath = 'data/3edis'
+        >>> ediObjs = get_ediObjs(edipath) 
+        >>> res2d = make2d (ediObjs, 'resyx')
+        >>> phs2d = make2d (ediObjs, 'phaseyx')
+        >>> freqs = get_full_frequency(ediObjs)
+        >>> edipath = 'data/3edis'
+        >>> # -----XX-----
+        >>> rhoxx = interpolate2d (make2d (ediObjs, 'resxx')) 
+        >>> phsxx = interpolate2d (make2d (ediObjs, 'phasexx'))
+        >>> rhoxx_err = interpolate2d (make2d (ediObjs, 'resxx_err')) 
+        >>> phsxx_err = interpolate2d (make2d (ediObjs, 'phasexx_err'))
+        >>> # -----XY-----
+        >>> rhoxy = interpolate2d (make2d (ediObjs, 'resxy')) 
+        >>> phsxy = interpolate2d (make2d (ediObjs, 'phasexy'))
+        >>> rhoxy_err = interpolate2d (make2d (ediObjs, 'resxy_err')) 
+        >>> phsxy_err = interpolate2d (make2d (ediObjs, 'phasexy_err'))
+        >>> # -----YX-----
+        >>> rhoyx = interpolate2d (make2d (ediObjs, 'resyx')) 
+        >>> phsyx = interpolate2d (make2d (ediObjs, 'phaseyx'))
+        >>> rhoyx_err = interpolate2d (make2d (ediObjs, 'resyx_err')) 
+        >>> phsyx_err = interpolate2d (make2d (ediObjs, 'phaseyx_err'))
+        >>> # -----YY-----
+        >>> rhoyy = interpolate2d (make2d (ediObjs, 'resyy'))
+        >>> phsyy = interpolate2d (make2d (ediObjs, 'phaseyy'))
+        >>> rhoyy_err = interpolate2d (make2d (ediObjs, 'resyy_err')) 
+        >>> phsyy_err = interpolate2d (make2d (ediObjs, 'phaseyy_err'))
+        >>> # frame phase to between 0 and 90 degree 
+        >>> def frame_phs (arr) : 
+                return np.abs(arr)%90 
+        >>> phsxy= frame_phs(phsxy);
+        >>> phsyx= frame_phs(phsyx);
+        >>> phsyy= frame_phs(phsyy); 
+        >>> phsxx= frame_phs(phsxx) 
+        >>> leg =['XX', 'XY', 'YX', 'YY']
+        >>> res_err= [rhoxy_err[:, 3] , rhoyx_err[:, 3] ] 
+        >>> phs_err = [phsxy_err[:, 3] , phsyx_err[:, 3] ] 
+        >>> res_args = [f, rhoxx [:, 3], 'tab:pink', f, rhoxy [:, 3],
+                        'ob-', f, rhoyx [:, 3], 'or-', f, rhoyy [:, 3], 'tab:cyan'] 
+        >>> phs_args = [ f, phsxx [:, 3], 'tab:pink', f, phsxy [:, 3], 
+                        'ob-', f, phsyx [:, 3], 'or-', f, phsyy [:, 3], 'tab:cyan'] 
+        >>> p1d = Plot1d (fig_size =(5, 4), markeredgecolor ='k', markersize = 2 )
+        >>> p1d.xlabel ='$Log_{10}Frequency [HZ]$'; p1d.ylabel ='$Rhoa (\Omega.m)$'
+        >>> p1d.plottensors(resargs = res_args, phsargs =phs_args, leg=leg, 
+                            res_err =res_err, phs_err = phs_err)
+
+        References 
+        -----------
+        https://matplotlib.org/stable/gallery/color/named_colors.html
+        
+        """
+        errorbar_kw  = errorbar_kw or {}
+        res = func._assert_all_types(resargs, list, tuple)
+        phs = func._assert_all_types(phsargs, list, tuple)
+        
+        fig, ax = plt.subplots(2, sharex = sharex , figsize = self.fig_size, 
+                               num = self.fig_num, dpi = self.fig_dpi , 
+                    )
+        
+        ax[0].loglog( *res, 
+                     markersize = self.ms , 
+                     linewidth = self.lw, 
+                     **kws)
+        ax[1].semilogx( *phs,  
+                       markersize = self.ms, 
+                       linewidth = self.lw, 
+                       **kws)
+
+        if res_err is not None  : 
+            res_err = func._assert_all_types(res_err, list, tuple, np.ndarray)
+            jj=0
+            for ii in  range(len(res_err)) : 
+                mplotus.plot_errorbar(ax[0], res[jj], res[jj+1],
+                                              y_error = res_err[ii], 
+                                              **errorbar_kw 
+                                              )
+         
+                jj +=3  # to jup to next value if 
+                
+        if phs_err is not None: 
+            phs_err = func._assert_all_types(phs_err, list, tuple, np.ndarray)
+            jj=0
+            for ii in range(len(phs_err)) : 
+                mplotus.plot_errorbar(ax[1], phs[jj], phs[jj+1],
+                                              y_error=phs_err[ii], 
+                                              **errorbar_kw 
+                                              )
+                jj +=3
+                
+        ax[0].set_xlabel ( self.xlabel or '$Log_{10} frequency [H_z]$' 
+                          if not sharex else None )
+        ax[0].set_ylabel (self.ylabel  or '$ Rhoa [ \Omega.m]$') 
+        ax[1].set_xlabel ( self.xlabel or '$Log_{10} frequency [H_z]$')
+        ax[1].set_ylabel (self.ylabel  or '$ Phase[ deg^o]$') 
+        
+        ax[0].legend( [] if leg is None else leg , loc ='best' , ncol = 4 )
+        
+        if show_grid :
+            ax[0].grid (visible =True , alpha =0.8, which ='both', color ='gray')
+            ax[1].grid (visible =True , alpha =0.8, which ='both', color ='gray')
+ 
+        plt.tight_layout()   
+        
+        if self.savefig is not None: 
+             plt.savefig(self.savefig , dpi = self.fig_dpi)
+        
+        return ax
+    
+    def plotlogs (self, *args,  kind ='semilogy', leg=None, show_grid=False, 
+                  **kws): 
+        """ loglog or semilogs plots. 
+        
+        Template to quick visualize the 1D-log plots. 
+        
+        Parameters 
+        ----------
+        args : list 
+            Matplotlib logs funtions plot arguments 
+            
+        kind: str 
+             Type of log plot. Can be ``loglog``, ``semilogx``, semilogy`` or 
+             merely a base plot function. Default is ``semilogy``.
+             
+        show_grid: bool, 
+            Will show a grid once triggered i.e set to ``True``. Note that some 
+            argument are fixed and can not match the purpose of the users. 
+            Edit the part of gridding plot to match your custom plot. Default 
+            is ``False``.
+            
+        leg: list 
+            legend labels put into a list.
+        kws : dict 
+            Matplotlib logs functions additional keywords arguments. 
+        
+        Examples 
+        ---------
+        >>> from pycsamt.view.plot import Plot1d 
+        >>> from pycsamt.processing import flma # filter to correct resistivity 
+        >>> edipath = 'data/3edis'
+        >>> ediObjs = get_ediObjs(edipath) 
+        >>> res2d = make2d (ediObjs, 'resyx')
+        >>> phs2d = make2d (ediObjs, 'phaseyx')
+        >>> freqs = get_full_frequency(ediObjs)
+        >>> resf =flma(res2d =res2d, phs2d =phs2d, freqs= freqs, window_size=5)
+        >>> x= np.arange (0 , res2d.shape[1]*50 , 50) # step between station is 50 m 
+        >>> leg= ['uncorrected data', 'filtered data'] # legend labels .
+        >>> figtitle = 'Data filtered with fixed length moving average' 
+        >>> p1d = Plot1d (fig_size =(10, 5), xlabel = 'Stations',
+                          ylabel='$ Resistivity [ \Omega.m]$', fig_title= figtitle )
+        >>> p1d.plotlogs (x, res2d[3, :], 'b--',x, resf[3, :], 'ok--',
+                          kind ='semilogy', show_grid =True, leg=leg )
+      
+        """
+        
+        plt.figure ( figsize = self.fig_size, num = self.fig_num,
+                    dpi = self.fig_dpi)
+        
+        pplot = plt.plot 
+        if kind =='loglog' : 
+            pplot = plt.loglog 
+        elif kind =='semilogx': 
+            pplot = plt.semilogx 
+        elif kind =='semilogy': 
+            pplot = plt.semilogy 
+            
+        pplot(*args, 
+              markersize = self.ms , 
+              linewidth = self.lw,
+              # if markerface and edge are uncommented, all maker 
+              # should hold the same view.
+              # markerfacecolor = self.markerfacecolor ,
+              # markeredgecolor=self.markeredgecolor, 
+                **kws
+                )
+        plt.xlabel(self.xlabel)
+        plt.ylabel(self.ylabel )
+        plt.legend ([] if leg is None else leg, ncol = len(args)//3)
+        plt.title (self.fig_title)
+        if show_grid :
+            plt.grid (visible =True , alpha =self.alpha, which ='both', color ='gray')
+            
+        plt.tight_layout()
+        
         
     def plot_topo_sep_azim(self,fn = None , profile_fn=None  , 
                            savefig =None ,  **kwargs):
@@ -691,7 +1215,7 @@ class Plot1d :
             
             mark,  = axe.semilogy (csamt_stn_num_obj,RES_UNCOR ,
                                    c= 'white', 
-                                   marker =self.mstyle,
+                                   marker =self.marker,
                                   markersize = self.ms*2*self.fs ,
                                   markeredgecolor= self.markeredgecolor 
                                   )
@@ -869,7 +1393,7 @@ class Plot1d :
                             dpi=self.fig_dpi,
                             orientation =orient)
         plt.show()
-    @mdeco.geoplot1d(reason = 'staticshift', mtmm='s', ctmm=(.8, 0.2, .9),
+    @geoplot1d(reason = 'staticshift', mtmm='s', ctmm=(.8, 0.2, .9),
                       color_mode='color', ms_r=1.,lw_r=.7, 
                       )                   
     def plot_multiple_corrections(self,  data_fn, profile_fn =None , 
@@ -904,7 +1428,7 @@ class Plot1d :
         :type dipole_length: float, int
         
         :Example:
-            >>> from pycsamt.viewer.plot import Plot1d 
+            >>> from pycsamt.view.plot import Plot1d 
             >>> data='data/avg/K1.AVG'
             >>> viewfreq=[80, 1024,2000,  8192] # set `kind` to ``1``.
             >>> viewsite= ['S00', 's04', 's08', 'S12'] # set `kind` to ``2``
@@ -1210,7 +1734,7 @@ class Plot1d :
             
             mark,  = axe1.loglog (csamt_freq_obj ,csamt_res_obj[stn], 
                                   c= 'white',
-                                  marker =self.mstyle,
+                                  marker =self.marker,
                                   markersize = self.ms* self.fs ,
                                   markeredgecolor= self.markeredgecolor)
             
@@ -2454,6 +2978,7 @@ class Plot2d (object):
         self.fig_num = kws.pop('fig_num', 1)
         self.fig_size = kws.pop('fig_size', [7,7])
         self.fig_aspect = kws.pop('fig_aspect','auto')
+        self.fig_title = kws.pop('fig_title', None)
         
         self.fig_dpi =kws.pop('fig_dpi', 300)
         self.font_size = kws.pop('font_size', 7)
@@ -2468,6 +2993,7 @@ class Plot2d (object):
         #--> set plot limits
         self.res_limits = kws.pop('res_limits', (0, 4))
         self.phase_limits = kws.pop('phase_limits', (0, 90))
+        
         for key in ['fig_title', 'xlimits', 'ylimits']:
             self.__setattr__(key, None )
         
@@ -2477,6 +3003,7 @@ class Plot2d (object):
         self.cb_shrink = kws.pop('cb_shrink', .75)
         self.cb_position = kws.pop('cb_position', None)
         self.climits = kws.pop('climits', (0, 4))
+        self.clabel = kws.pop('clabel', None)
 
         #--> set text box parameters
         self.text_location = kws.pop('text_location', None)
@@ -2495,7 +3022,7 @@ class Plot2d (object):
         self.markerfacecolor=kws.pop('markerfacecolor', 'k')
         self.ms = kws.pop('ms', 2)
         self.lw =kws.pop('lw', 2)
-        #XXX TIP 
+        
         #------ticks parameters ------------------
         self.fw =kws.pop('font_weight', 'bold')
         self.depth_scale=kws.pop('depth_scale', 'm')
@@ -2521,10 +3048,351 @@ class Plot2d (object):
         self.yminorticks = kws.pop('yminorticks', 1)
 
         self.cmap = kws.pop('cmap', 'jet_r')
-
+        
+        self.xlabel = kws.pop('xlabel' , None) 
+        self.ylabel = kws.pop('ylabel', None) 
+        
+        self.savefig = kws.pop('savefig', None)
+        self.show = kws.pop('show', True) 
+        
         for keys in list(kws.keys()): 
             setattr(self, keys, kws[keys])
             
+    #XXX TODO     
+    def plotphasetensorpseudosection (self, ediObjs, ellip_dict = None, 
+                                      stretch = (7000, 20 ), mode ='frequency',
+                                      linedir ='ns', **kws): 
+        """ Plot phase tensor pseudosection. 
+        
+        Method plots the phase tensor ellipses in a pseudo section format. Inherits
+        from :class:pycsamt.imaging.phase_tensor_pseudosection.PlotPhaseTensorPseudoSection`
+        
+        Parameters 
+        -----------
+        ediObjs: list  of  pycsamt.core.edi.Edi or pycsamt.core.edi.Edi objects 
+            Collections of EDI-objects from `pyCSAMT`_ and `MTpy`_ packages 
+
+        mode: str ['frequency' | 'period']
+              temporal scale of y-axis ('frequency' | 'period').
+              Default is ``frequency``. 
+              
+        stretch : float or tuple (xstretch, ystretch)
+            is a factor that scales the distance from one station to the next 
+            to make the plot readable. It determines (x,y) aspect ratio of plot.
+            *Default* is 200
+
+        linedir: str [ 'ns' | 'ew' ]
+            predominant direction of profile line
+            * 'ns' -> North-South Line or line is closer to north-south)
+            * 'ew' -> East-West line or line is closer to east-west
+            *Default* is 'ns'
+
+        station_id: tuple or list
+            start and stop of station name indicies. ex: for MT01dr 
+            station_id=(0,4) will be MT01.
+
+        ellipse_dict: dictionary
+                dictionary of parameters for the phase tensor ellipses with keys:
+                * 'size' -> size of ellipse in points
+                           *default* is 2
+
+                * 'colorby' : [ 'phimin' | 'phimax' | 'skew' |
+                                'skew_seg' | 'phidet' |
+                                'ellipticity' ]
+
+                          - 'phimin' -> colors by minimum phase
+                          - 'phimax' -> colors by maximum phase
+                          - 'skew' -> colors by skew
+                          - 'skew_seg' -> colors by skew in
+                                         discrete segments
+                                         defined by the range
+                          - 'normalized_skew' -> colors by skew
+                                  see [Booker, 2014]
+                          - 'normalized_skew_seg' -> colors by
+                                         normalized skew in
+                                         discrete segments
+                                         defined by the range
+                          - 'phidet' -> colors by determinant of
+                                       the phase tensor
+                          - 'ellipticity' -> colors by ellipticity
+                          *default* is 'phimin'
+
+                 * 'range' : tuple (min, max, step)
+                       Need to input at least the min and max
+                       and if using 'skew_seg' to plot
+                       discrete values input step as well
+                       *default* depends on 'colorby'
+
+            * 'cmap' : [ 'mt_yl2rd' | 'mt_bl2yl2rd' |
+                        'mt_wh2bl' | 'mt_rd2bl' |
+                        'mt_bl2wh2rd' | 'mt_seg_bl2wh2rd' |
+                        'mt_rd2gr2bl' ]
+
+                     - 'mt_yl2rd' -> yellow to red
+                     - 'mt_bl2yl2rd' -> blue to yellow to red
+                     - 'mt_wh2bl' -> white to blue
+                     - 'mt_rd2bl' -> red to blue
+                     - 'mt_bl2wh2rd' -> blue to white to red
+                     - 'mt_bl2gr2rd' -> blue to green to red
+                     - 'mt_rd2gr2bl' -> red to green to blue
+                     - 'mt_seg_bl2wh2rd' -> discrete blue to
+                                           white to red
+        kws: dict 
+            Additional keywords arguments from :class:`~.PlotPhaseTensorPseudoSection` 
+            of `MTpy`_ package. 
+                              
+        Returns 
+        --------
+        ptsection: `~.PlotPhaseTensorPseudoSection` object 
+        
+        Examples
+        ---------
+        >>> from pycsamt.utils import get_ediObjs 
+        >>> ediObjs = get_ediObjs('data/edis') 
+        >>> p2d= Plot2d (fig_size =(7, 7))
+        >>> p2d.plotphasetensorpseudosection(ediObjs) 
+        
+        """
+        if not imtpy: 
+            raise ImportError ("Can't plot Phase Tensor Pseudosection. Please "
+                               " install `mtpy` manually. ")
+             
+        ediObjs = func.get_ediObjs(ediObjs)
+        edi_list= np.array (list (map (lambda o: o.edifile , ediObjs)))
+        ellipse_dict = ellip_dict or  {
+            'ellipse_colorby':'phimin', # phimin, phimax, skew,
+            # skew_seg
+            'ellipse_range':[0,90], # Color limits. If plotting
+            'ellip_size': 2, 
+            'ellipse_cmap':'mt_bl2wh2rd'
+        } 
+        # skew_seg need to provide
+        # 3 numbers, the 3rd indicates
+        # interval, e.g. [-12,12,3]
+        # create a plot object
+        ptsection = PlotPhaseTensorPseudoSection(
+                        fn_list = edi_list,
+                        fig_size = self.fig_size, 
+                        tscale = mode, #'frequency', 
+                        plot_num = self.fig_num, 
+                        plot_title = self.fig_title, 
+                        xlimits = self.xlimits, 
+                        ylimits = self.ylimits,
+                        linedir= linedir ,  
+                        #(25, 10), # (17,8) determines (x,y) aspect ratio of plot
+                        stretch= stretch , #(7000, 20 ), for fig = (5, 5)#20 000, 10
+                        station_id=(0,len(ediObjs)), 
+                        font_size=self.font_size ,
+                        lw=self.lw,
+                        **ellipse_dict , 
+                        **kws,
+        )
+        if self.show :
+            ptsection.plot()
+        
+        if self.savefig is not None: 
+            ptsection.save_figure(save_fn =self.savefig, 
+                                  fig_dpi=self.fig_dpi)
+            ptsection.close() 
+            
+        return ptsection 
+    
+        
+        
+    def plottemp2d (self, arr2d, y=None,  x =None, style ='pcolormesh', 
+                distance = 50., stnlist =None, prefix ='S', how= 'py',
+                **kws): 
+        """ 2D template for quick visualization. 
+        
+        Parameters 
+        -----------
+        arr2d : ndarray , shape (N, M) 
+            2D array for plotting. For instance, it can be a 2D resistivity 
+            collected at all stations (N) and all frequency (M) 
+        y: array-like 
+            Y-coordinates. It should have the length N, the same of the ``arr2d``.
+            the rows of the ``arr2d``.
+        x: array-like 
+            X-coordinates. It should have the length M, the same of the ``arr2d``; 
+            the columns of the 2D dimensional array.  Note that if `x` is 
+            given, the `distance is not needed. 
+            
+        style: str 
+            matplotlib plot style.  It could be ``imshow`` or ``pcolormesh``. The 
+            default is ``pcolormesh``. 
+            
+        distance: float 
+            The step between two stations. If given, it creates an array of  
+            position for plotting purpose. Default value is ``50`` meters. 
+            
+        stnlist: list of str 
+            List of stations names. If given,  it should have the same length of 
+            the columns M, of `arr2d`` 
+       
+        prefix: str 
+            string value to add as prefix of given id. Prefix can be the site 
+            name. Default is ``S``. 
+            
+        how: str 
+            Mode to index the station. Default is 'Python indexing' i.e. 
+            the counting of stations would starts by 0. Any other mode will 
+            start the counting by 1.
+            
+        kws : dict 
+            Additional keywords arguments of Matplotlib subsplots function  
+            :func:`plt.subplots`
+            
+        Examples 
+        -------- 
+        >>> import numpy as np
+        >>> from pycsamt.processing import make2d , get_ediObjs, interpolate2d 
+        >>> from pycsamt.processing import get_full_frequency 
+        >>> from pycsamt.view import Plot2d 
+        >>> # create a 2d grid of resistivity data from edipath 
+        >>> edipath = 'data/3edis'
+        >>> ediObjs = get_ediObjs (edipath)
+        >>> res2d_xy = make2d (ediObjs, 'resxy')
+        >>> # can interpolate to fix the missing data 
+        >>> # get the full frequency of survey area in the whole collection data 
+        >>> freqs = get_full_frequency(ediObjs) # plot station vs frequency 
+        >>> res2d_xy = interpolate2d (res2d_xy )
+        >>> # create a 2D plot objects 
+        >>> p2d = Plot2d(figsize =(6, 3), xlabel= '$Distance(m)$',
+                       ylabel = '$Log_{10}Frequency [Hz]$', 
+                       clabel = '$Log_{10}Rhoa[\Omega.m$')
+        >>> # we want to plotlog10 and log10 resistivity 
+        >>> res2d_xy = np.log10(res2d_xy); freqs = np.log10(freqs)
+        >>> p2d.plottemp2d (res2d_xy, y = freqs, distance = 50 ) # distance =50 m
+        
+        """
+        
+        fig, axe = plt.subplots(1, figsize = self.fig_size, num = self.fig_num,
+                                dpi = self.fig_dpi , **kws 
+                    )
+         
+        style = style or 'pcolormesh' 
+        sc = copy.deepcopy(style)
+        style = str (style).lower().strip() 
+        if style not in ('pcolormesh', 'imshow'): 
+            raise ValueError("Plot can be either 'pcolormesh' or "
+                             f"'imshow' not {sc!r} ")
+        
+        try : 
+            distance = float(distance) 
+        except : 
+            raise TypeError (f'Expect a float value not {type(distance).__name__!r}')
+            
+        if y is not None: 
+            if len(y) != arr2d.shape [0]: 
+                raise ValueError (" 'y' array must have an identical number " 
+                                  f" of row of 2D array: {arr2d.shape[0]}")
+                
+        if x is not None: 
+            if len(x) != arr2d.shape[1]: 
+                raise ValueError (" 'x' array must have the same number " 
+                                  f" of columns of 2D array: {arr2d.shape[1]}")
+
+        d= distance or 1. 
+        y = np.arange(arr2d.shape [0]) if y is None else y 
+        x= x  or np.arange(arr2d.shape[1])  * d 
+   
+        if stnlist is not None: 
+            stnlist = func._assert_all_types(stnlist, tuple, list, np.ndarray)
+            if len(stnlist)!= len(x):
+                raise ValueError("Expect  the length of the list of station names"
+                                 f" to be the same like to position {len(x)}")
+                
+        stn = stnlist or func.make_ids ( x , prefix , how = how) 
+        
+        cmap = plt.get_cmap( self.cmap)
+        
+        if style =='pcolormesh': 
+            
+            X, Y = np.meshgrid (x, y)
+            axr = axe.pcolormesh ( X, Y, arr2d,
+                            # for consistency check whether array does not 
+                            # contain any NaN values 
+                            vmax = arr2d[ ~np.isnan(arr2d)].max(), 
+                            vmin = arr2d[ ~np.isnan(arr2d)].min(), 
+                            shading= 'gouraud', 
+                            cmap =cmap, 
+                                  )
+
+        if style =='imshow': 
+
+            axr= axe.imshow (arr2d,
+                            interpolation = self.imshow_interp, 
+                            cmap =cmap,
+                            aspect = self.fig_aspect ,
+                            origin= 'upper', 
+                            extent=( x[~np.isnan(x)].min(),
+                                      x[~np.isnan(x)].max(), 
+                                      y[~np.isnan(y)].min(), 
+                                      y[~np.isnan(y)].max())
+                                              )
+            axe.set_ylim(y[~np.isnan(y)].min(), y[~np.isnan(y)].max())
+        
+
+        axe.set_xlabel(self.xlabel or 'Distance(m)', 
+                     fontdict ={
+   
+                      'size': 1.5* self.font_size ,
+                      'weight': self.fw}
+                                            )
+      
+        axe.set_ylabel(self.ylabel or 'log10(Frequency)[Hz]',
+                 fontdict ={
+                         #'style': self.font_style, 
+                                  'size': 1.5* self.font_size ,
+                                  'weight': self.fw})
+        if self.show_grid is True : 
+            axe.minorticks_on()
+            axe.grid(color='k', ls=':', lw =0.25, alpha=0.7, 
+                         which ='major')
+ 
+        labex , cf = self.clabel or '$log10(App.Res)[Ω.m]$', axr
+
+        cb = fig.colorbar(cf , ax= axe)
+        cb.ax.yaxis.tick_left()
+        cb.ax.tick_params(axis='y', direction='in', pad=2.)
+        
+        cb.set_label(labex,fontdict={'size': 1.5* self.font_size ,
+                                  'style':self.font_style})
+
+        #--> set second axis 
+        axe2 = axe.twiny() 
+        axe2.set_xticks(ticks= x,
+                    minor=False )
+        axe2.set_xticklabels(stn, 
+                         rotation=self.station_label_rotation)
+     
+        axe2.set_xlabel('Stations', 
+                        fontdict ={'style': self.font_style, 
+                                   'size': 1.5* self.font_size ,
+                                   'weight': self.fw}, )
+      
+
+        fig.suptitle(self.fig_title,
+                     ha='left',
+                     fontsize= 15* self.fs, 
+                     verticalalignment='center', 
+                    style =self.font_style,
+                    bbox =dict(boxstyle='round',
+                               facecolor ='moccasin'))
+   
+        #plt.tight_layout(h_pad =1.8, w_pad =2*1.08)
+
+        plt.tight_layout()  
+        
+        if self.savefig is not None :
+            fig.savefig(self.savefig, dpi = self.fig_dpi,
+                        orientation =self.orient)
+            #plt.close(fig =fig ) 
+        plt.show() if self.savefig is None else plt.close(fig=fig) 
+        
+        
+        
+        
     def penetration2D(self, fn=None , profile_fn =None, 
                       savefig =None, doi= '2km',  **kwargs): 
         """
@@ -3194,7 +4062,6 @@ class Plot2d (object):
         self.fig_aspect ='auto'
         axm = self.fig.add_subplot(1, 1, 1, aspect=self.fig_aspect)
         
-        #XXXFIXME 
         #-----PLOTS STATEMENTS -----------------------------
         
                 #fist option is "pcolormesh " 
@@ -3976,7 +4843,7 @@ class Plot2d (object):
                           'pseudostratigraphy log. Please provided a station'
                               ' location file. You can use Iter2Dat model ::', 
                           'from pycsamt.modeling.occam2d import Iter2Dat:: '
-                              'or Profile module ` from pycsamt.ff.core.cs ',
+                              'or Profile module ` from pycsamt.core.cs ',
                               'import Profile` to', 
                           'build a station location file.'])
                          warnings.warn(mess)
@@ -4551,7 +5418,7 @@ class Plot2d (object):
                 plt.savefig(savefig , dpi = self.fig_dpi)
 
      
-@mdeco.geoplot1d(reason = 'zonge_engineering', color_mode='bw', 
+@geoplot1d(reason = 'zonge_engineering', color_mode='bw', 
            linebbox_kws={'boxstyle':'square','facecolor':
                          'whitesmoke', 
                           'color':'white'
@@ -4570,7 +5437,7 @@ def plot_dataAndFits(data_fn =None, stations =None, **kws):
         sttion ='1'
         station =['s00', 13, 46]
     :param kws: keywords arguments. Please refer to 
-                :class:`pycsamt.ff.core.cs.CSAMT` for further details
+                :class:`pycsamt.core.cs.CSAMT` for further details
         
     :Returns: A list of:
         - z_lines: List of survey lines
@@ -4583,7 +5450,7 @@ def plot_dataAndFits(data_fn =None, stations =None, **kws):
         
     :Example:
         
-        >>> from pycsamt.viewer.plot import plot_dataAndFits
+        >>> from pycsamt.view.plot import plot_dataAndFits
         >>> path =r'F:\ThesisImp\avg'
         >>> pathData = [os.path.join(path, file) 
                 for file in ['K1.AVG',
@@ -4681,24 +5548,444 @@ def plot_dataAndFits(data_fn =None, stations =None, **kws):
             z_appRHO, z_phase,z_appRho_err, z_phase_err)
                                                           
             
-        
-# if __name__ == '__main__':
-#     data = '/data/avg/K1.AVG'
-#     data =r'F:\repositories\pyCSAMT\data\avg\K1.AVG'
-#     data2= r'C:\Users\Administrator\OneDrive\Python\pyCSAMT\data\avg\K1.AVG'
-#     data3=r'F:\ThesisImp\avg\K9.AVG'
-#     path =r'F:\ThesisImp\avg'
-#     pathData = [os.path.join(path, file) 
-#                 for file in ['K1.AVG',
-#                               'K4.AVG', 'K6.AVG', 'K8.AVG'
-#                               ]]
-    
-#     z_lines, z_stations, z_freq,  z_appRHO, z_phase,z_appRho_err,\
-#             z_phase_err=plot_dataAndFits(data_fn = pathData, 
-#                                           stations=['S00', 'S04', 's08', 'S12']
-#                                           # , 'S04', 's06', 's10']
-#                                           )
+         
+class PlotResponse(plot_response.PlotResponse):
+    """
+    plot data and response
 
+    Plots the real and imaginary impedance and induction vector if present.
+
+    :Example: ::
+
+        >>> import pycsamt.modeling.modem as modem
+        >>> dfn = r"/home/MT/ModEM/Inv1/DataFile.dat"
+        >>> rfn = r"/home/MT/ModEM/Inv1/Test_resp_000.dat"
+        >>> mrp = modem.PlotResponse(data_fn=dfn, resp_fn=rfn)
+        >>> # plot only the TE and TM modes
+        >>> mrp.plot_component = 2
+        >>> mrp.redraw_plot()
+
+    ======================== ==================================================
+    Attributes               Description
+    ======================== ==================================================
+    color_mode               [ 'color' | 'bw' ] color or black and white plots
+    cted                     color for data Z_XX and Z_XY mode
+    ctem                     color for model Z_XX and Z_XY mode
+    ctmd                     color for data Z_YX and Z_YY mode
+    ctmm                     color for model Z_YX and Z_YY mode
+    data_fn                  full path to data file
+    data_object              WSResponse instance
+    e_capsize                cap size of error bars in points (*default* is .5)
+    e_capthick               cap thickness of error bars in points (*default*
+                             is 1)
+    fig_dpi                  resolution of figure in dots-per-inch (300)
+    fig_list                 list of matplotlib.figure instances for plots
+    fig_size                 size of figure in inches (*default* is [6, 6])
+    font_size                size of font for tick labels, axes labels are
+                             font_size+2 (*default* is 7)
+    legend_border_axes_pad   padding between legend box and axes
+    legend_border_pad        padding between border of legend and symbols
+    legend_handle_text_pad   padding between text labels and symbols of legend
+    legend_label_spacing     padding between labels
+    legend_loc               location of legend
+    legend_marker_scale      scale of symbols in legend
+    lw                       line width data curves (*default* is .5)
+    ms                       size of markers (*default* is 1.5)
+    lw_r                     line width response curves (*default* is .5)
+    ms_r                     size of markers response curves (*default* is 1.5)
+    mted                     marker for data Z_XX and Z_XY mode
+    mtem                     marker for model Z_XX and Z_XY mode
+    mtmd                     marker for data Z_YX and Z_YY mode
+    mtmm                     marker for model Z_YX and Z_YY mode
+    phase_limits             limits of phase
+    plot_component           [ 2 | 4 ] 2 for TE and TM or 4 for all components
+    plot_style               [ 1 | 2 ] 1 to plot each mode in a seperate
+                             subplot and 2 to plot xx, xy and yx, yy in same
+                             plots
+    plot_type                [ '1' | list of station name ] '1' to plot all
+                             stations in data file or input a list of station
+                             names to plot if station_fn is input, otherwise
+                             input a list of integers associated with the
+                             index with in the data file, ie 2 for 2nd station
+    plot_z                   [ True | False ] *default* is True to plot
+                             impedance, False for plotting resistivity and
+                             phase
+    plot_yn                  [ 'n' | 'y' ] to plot on instantiation
+    res_limits               limits of resistivity in linear scale
+    resp_fn                  full path to response file
+    resp_object              WSResponse object for resp_fn, or list of
+                             WSResponse objects if resp_fn is a list of
+                             response files
+    station_fn               full path to station file written by WSStation
+    subplot_bottom           space between axes and bottom of figure
+    subplot_hspace           space between subplots in vertical direction
+    subplot_left             space between axes and left of figure
+    subplot_right            space between axes and right of figure
+    subplot_top              space between axes and top of figure
+    subplot_wspace           space between subplots in horizontal direction
+    ======================== ==================================================
+    """
+
+    def __init__(self, data_fn=None, resp_fn=None, **kws):
+        super ().__init__(data_fn= data_fn , resp_fn= resp_fn , **kws) 
+        self._logging=csamtpylog.get_csamtpy_logger(self.__class__.__name__)
+        
+        for key in list(kws.keys()): 
+            setattr(self, key, kws[key])
+            
+class PlotRMSMaps(plot_rms_maps.PlotRMSMaps):
+    """
+    plots the RMS as (data-model)/(error) in map view for all components
+    of the data file.  Gets this infomration from the .res file output
+    by ModEM.
+
+    .. author: `MTpy`_ of Alison Kirkby avd Jared R. Peacock (
+            https://github.com/MTgeophysics/pycsamt.git)
+      
+      
+    Arguments:
+    ----------
+        **residual_fn** : string
+                          full path to .res file
+
+    =================== =======================================================
+    Attributes                   Description
+    =================== =======================================================
+    fig                 matplotlib.figure instance for a single plot
+    fig_dpi             dots-per-inch resolution of figure *default* is 200
+    fig_num             number of fig instance *default* is 1
+    fig_size            size of figure in inches [width, height]
+                        *default* is [7,6]
+    font_size           font size of tick labels, axis labels are +2
+                        *default* is 8
+    marker              marker style for station rms,
+                        see matplotlib.line for options,
+                        *default* is 's' --> square
+    marker_size         size of marker in points. *default* is 10
+    pad_x               padding in map units from edge of the axis to stations
+                        at the extremeties in longitude.
+                        *default* is 1/2 tick_locator
+    pad_y               padding in map units from edge of the axis to stations
+                        at the extremeties in latitude.
+                        *default* is 1/2 tick_locator
+    period_index        index of the period you want to plot according to
+                        self.residual.period_list. *default* is 1
+    plot_yn             [ 'y' | 'n' ] default is 'y' to plot on instantiation
+    plot_z_list         internal variable for plotting
+    residual            modem.Data instance that holds all the information
+                        from the residual_fn given
+    residual_fn         full path to .res file
+    rms_cmap            matplotlib.cm object for coloring the markers
+    rms_cmap_dict       dictionary of color values for rms_cmap
+    rms_max             maximum rms to plot. *default* is 5.0
+    rms_min             minimum rms to plot. *default* is 1.0
+    save_path           path to save figures to. *default* is directory of
+                        residual_fn
+    subplot_bottom      spacing from axis to bottom of figure canvas.
+                        *default* is .1
+    subplot_hspace      horizontal spacing between subplots.
+                        *default* is .1
+    subplot_left        spacing from axis to left of figure canvas.
+                        *default* is .1
+    subplot_right       spacing from axis to right of figure canvas.
+                        *default* is .9
+    subplot_top         spacing from axis to top of figure canvas.
+                        *default* is .95
+    subplot_vspace      vertical spacing between subplots.
+                        *default* is .01
+    tick_locator        increment for x and y major ticks. *default* is
+                        limits/5
+    bimg                path to a geotiff to display as background of
+                        plotted maps
+    bimg_band           band of bimg to plot. *default* is None, which 
+                        will plot all available bands
+    bimg_cmap           cmap for bimg. *default* is 'viridis'. Ignored 
+                        if bimg is RBG/A
+    =================== =======================================================
+
+    =================== =======================================================
+    Methods             Description
+    =================== =======================================================
+    plot                plot rms maps for a single period
+    plot_loop           loop over all frequencies and save figures to save_path
+    read_residual_fn    read in residual_fn
+    redraw_plot         after updating attributes call redraw_plot to
+                        well redraw the plot
+    save_figure         save the figure to a file
+    =================== =======================================================
+
+
+    :Example: ::
+
+        >>> import pycsamt.modeling.modem as modem
+        >>> rms_plot = PlotRMSMaps(r"/home/ModEM/Inv1/mb_NLCG_030.res")
+        >>> # change some attributes
+        >>> rms_plot.fig_size = [6, 4]
+        >>> rms_plot.rms_max = 3
+        >>> rms_plot.redraw_plot()
+        >>> # happy with the look now loop over all periods
+        >>> rms_plot.plot_loop()
+    """
+    def __init__(self, residual_fn, **kws):
+        super ().__init__(residual_fn = residual_fn, **kws)
+        self._logging=csamtpylog.get_csamtpy_logger(self.__class__.__name__)
+        
+        for key in list(kws.keys()): 
+            setattr(self, key, kws[key])
+ 
+class PlotPTMaps(phase_tensor_maps.PlotPTMaps):
+    """
+    Plot phase tensor maps including residual pt if response file is input.
+
+      .. author: `MTpy`_ of Alison Kirkby avd Jared R. Peacock (
+              https://github.com/MTgeophysics/pycsamt.git)
+
+    :Plot only data for one period: ::
+
+        >>> import pycsamt.modeling.ws3dinv as ws
+        >>> dfn = r"/home/MT/ws3dinv/Inv1/WSDataFile.dat"
+        >>> ptm = ws.PlotPTMaps(data_fn=dfn, plot_period_list=[0])
+
+    :Plot data and model response: ::
+
+        >>> import pycsamt.modeling.ws3dinv as ws
+        >>> dfn = r"/home/MT/ws3dinv/Inv1/WSDataFile.dat"
+        >>> rfn = r"/home/MT/ws3dinv/Inv1/Test_resp.00"
+        >>> mfn = r"/home/MT/ws3dinv/Inv1/Test_model.00"
+        >>> ptm = ws.PlotPTMaps(data_fn=dfn, resp_fn=rfn, model_fn=mfn,
+        >>> ...                 plot_period_list=[0])
+        >>> # adjust colorbar
+        >>> ptm.cb_res_pad = 1.25
+        >>> ptm.redraw_plot()
+
+
+    ========================== ================================================
+    Attributes                 Description
+    ========================== ================================================
+    cb_pt_pad                  percentage from top of axes to place pt
+                               color bar. *default* is 1.2
+    cb_res_pad                 percentage from bottom of axes to place
+                               resistivity color bar. *default* is 0.5
+    cb_residual_tick_step      tick step for residual pt. *default* is 3
+    cb_tick_step               tick step for phase tensor color bar,
+                               *default* is 45
+    data_obj                   data object (read in from ModEM data file)
+    data_fn                    full path to data fle
+    dscale                     scaling parameter depending on map_scale
+    ellipse_cmap               color map for pt ellipses. *default* is
+                               mt_bl2gr2rd
+    ellipse_colorby            [ 'skew' | 'skew_seg' | 'phimin' | 'phimax'|
+                                 'phidet' | 'ellipticity' ] parameter to color
+                                 ellipses by. *default* is 'phimin'
+    ellipse_range              (min, max, step) min and max of colormap, need
+                               to input step if plotting skew_seg
+    ellipse_size               relative size of ellipses in map_scale
+    ew_limits                  limits of plot in e-w direction in map_scale
+                               units.  *default* is None, scales to station
+                               area
+    fig_aspect                 aspect of figure. *default* is 1
+    fig_dpi                    resolution in dots-per-inch. *default* is 300
+    fig_list                   list of matplotlib.figure instances for each
+                               figure plotted.
+    fig_size                   [width, height] in inches of figure window
+                               *default* is [6, 6]
+    font_size                  font size of ticklabels, axes labels are
+                               font_size+2. *default* is 7
+    grid_east                  relative location of grid nodes in e-w direction
+                               in map_scale units
+    grid_north                 relative location of grid nodes in n-s direction
+                               in map_scale units
+    grid_z                     relative location of grid nodes in z direction
+                               in map_scale units
+    model_fn                 full path to initial file
+    map_scale                  [ 'km' | 'm' ] distance units of map.
+                               *default* is km
+    mesh_east                  np.meshgrid(grid_east, grid_north, indexing='ij')
+    mesh_north                 np.meshgrid(grid_east, grid_north, indexing='ij')
+    model_fn                   full path to model file
+    nodes_east                 relative distance betwen nodes in e-w direction
+                               in map_scale units
+    nodes_north                relative distance betwen nodes in n-s direction
+                               in map_scale units
+    nodes_z                    relative distance betwen nodes in z direction
+                               in map_scale units
+    ns_limits                  (min, max) limits of plot in n-s direction
+                               *default* is None, viewing area is station area
+    pad_east                   padding from extreme stations in east direction
+    pad_north                  padding from extreme stations in north direction
+    period_list                list of periods from data
+    plot_grid                  [ 'y' | 'n' ] 'y' to plot grid lines
+                               *default* is 'n'
+    plot_period_list           list of period index values to plot
+                               *default* is None
+    plot_yn                    ['y' | 'n' ] 'y' to plot on instantiation
+                               *default* is 'y'
+    res_cmap                   colormap for resisitivity values.
+                               *default* is 'jet_r'
+    res_limits                 (min, max) resistivity limits in log scale
+                               *default* is (0, 4)
+    res_model                  np.ndarray(n_north, n_east, n_vertical) of
+                               model resistivity values in linear scale
+    residual_cmap              color map for pt residuals.
+                               *default* is 'mt_wh2or'
+    resp                       np.ndarray(n_stations, n_periods, 2, 2)
+                               impedance tensors for model response
+    resp_fn                    full path to response file
+    save_path                  directory to save figures to
+    save_plots                 [ 'y' | 'n' ] 'y' to save plots to save_path
+    station_east               location of stations in east direction in
+                               map_scale units
+    station_fn                 full path to station locations file
+    station_names              station names
+    station_north              location of station in north direction in
+                               map_scale units
+    subplot_bottom             distance between axes and bottom of figure window
+    subplot_left               distance between axes and left of figure window
+    subplot_right              distance between axes and right of figure window
+    subplot_top                distance between axes and top of figure window
+    title                      titiel of plot *default* is depth of slice
+    xminorticks                location of xminorticks
+    yminorticks                location of yminorticks
+    ========================== ================================================
+    """ 
+    def __init__(self, data_fn=None, resp_fn=None, model_fn=None, **kws):
+        super ().__init__( data_fn=data_fn, resp_fn=resp_fn, model_fn=model_fn,
+                          **kws)
+        self._logging=csamtpylog.get_csamtpy_logger(self.__class__.__name__)
+        
+        for key in list(kws.keys()): 
+            setattr(self, key, kws[key])
+            
+class PlotSlices(plot_slices.PlotSlices):
+    """
+    * Plot all cartesian axis-aligned slices and be able to scroll through the model
+    * Extract arbitrary profiles (e.g. along a seismic line) from a model
+
+    .. author: `MTpy`_ of Alison Kirkby avd Jared R. Peacock (
+            https://github.com/MTgeophysics/pycsamt.git)
+    
+    :Example: ::
+
+        >>> import pycsamt.modeling.modem as modem
+        >>> mfn = r"/home/modem/Inv1/Modular_NLCG_100.rho"
+        >>> dfn = r"/home/modem/Inv1/ModEM_data.dat"
+        >>> pds = ws.PlotSlices(model_fn=mfn, data_fn=dfn)
+
+    ======================= ===================================================
+    Buttons                  Description
+    ======================= ===================================================
+    'e'                     moves n-s slice east by one model block
+    'w'                     moves n-s slice west by one model block
+    'n'                     moves e-w slice north by one model block
+    'm'                     moves e-w slice south by one model block
+    'd'                     moves depth slice down by one model block
+    'u'                     moves depth slice up by one model block
+    ======================= ===================================================
+
+
+    ======================= ===================================================
+    Attributes              Description
+    ======================= ===================================================
+    ax_en                   matplotlib.axes instance for depth slice  map view
+    ax_ez                   matplotlib.axes instance for e-w slice
+    ax_map                  matplotlib.axes instance for location map
+    ax_nz                   matplotlib.axes instance for n-s slice
+    climits                 (min , max) color limits on resistivity in log
+                            scale. *default* is (0, 4)
+    cmap                    name of color map for resisitiviy.
+                            *default* is 'jet_r'
+    data_fn                 full path to data file name
+    draw_colorbar           show colorbar on exported plot; default True
+    dscale                  scaling parameter depending on map_scale
+    east_line_xlist         list of line nodes of east grid for faster plotting
+    east_line_ylist         list of line nodes of east grid for faster plotting
+    ew_limits               (min, max) limits of e-w in map_scale units
+                            *default* is None and scales to station area
+    fig                     matplotlib.figure instance for figure
+    fig_aspect              aspect ratio of plots. *default* is 1
+    fig_dpi                 resolution of figure in dots-per-inch
+                            *default* is 300
+    fig_num                 figure instance number
+    fig_size                [width, height] of figure window.
+                            *default* is [6,6]
+    font_dict               dictionary of font keywords, internally created
+    font_size               size of ticklables in points, axes labes are
+                            font_size+2. *default* is 4
+    grid_east               relative location of grid nodes in e-w direction
+                            in map_scale units
+    grid_north              relative location of grid nodes in n-s direction
+                            in map_scale units
+    grid_z                  relative location of grid nodes in z direction
+                            in map_scale units
+    index_east              index value of grid_east being plotted
+    index_north             index value of grid_north being plotted
+    index_vertical          index value of grid_z being plotted
+    initial_fn              full path to initial file
+    key_press               matplotlib.canvas.connect instance
+    map_scale               [ 'm' | 'km' ] scale of map. *default* is km
+    mesh_east               np.meshgrid(grid_east, grid_north)[0]
+    mesh_en_east            np.meshgrid(grid_east, grid_north)[0]
+    mesh_en_north           np.meshgrid(grid_east, grid_north)[1]
+    mesh_ez_east            np.meshgrid(grid_east, grid_z)[0]
+    mesh_ez_vertical        np.meshgrid(grid_east, grid_z)[1]
+    mesh_north              np.meshgrid(grid_east, grid_north)[1]
+    mesh_nz_north           np.meshgrid(grid_north, grid_z)[0]
+    mesh_nz_vertical        np.meshgrid(grid_north, grid_z)[1]
+    model_fn                full path to model file
+    ms                      size of station markers in points. *default* is 2
+    nodes_east              relative distance betwen nodes in e-w direction
+                            in map_scale units
+    nodes_north             relative distance betwen nodes in n-s direction
+                            in map_scale units
+    nodes_z                 relative distance betwen nodes in z direction
+                            in map_scale units
+    north_line_xlist        list of line nodes north grid for faster plotting
+    north_line_ylist        list of line nodes north grid for faster plotting
+    ns_limits               (min, max) limits of plots in n-s direction
+                            *default* is None, set veiwing area to station area
+    plot_yn                 [ 'y' | 'n' ] 'y' to plot on instantiation
+                            *default* is 'y'
+    plot_stations           default False
+    plot_grid               show grid on exported plot; default False
+    res_model               np.ndarray(n_north, n_east, n_vertical) of
+                            model resistivity values in linear scale
+    save_format             exported format; default png
+    save_path               path to save exported plots to; default current working folder
+    station_color           color of station marker. *default* is black
+    station_dict_east       location of stations for each east grid row
+    station_dict_north      location of stations for each north grid row
+    station_east            location of stations in east direction
+    station_fn              full path to station file
+    station_font_color      color of station label
+    station_font_pad        padding between station marker and label
+    station_font_rotation   angle of station label
+    station_font_size       font size of station label
+    station_font_weight     weight of font for station label
+    station_id              [min, max] index values for station labels
+    station_marker          station marker
+    station_names           name of stations
+    station_north           location of stations in north direction
+    subplot_bottom          distance between axes and bottom of figure window
+    subplot_hspace          distance between subplots in vertical direction
+    subplot_left            distance between axes and left of figure window
+    subplot_right           distance between axes and right of figure window
+    subplot_top             distance between axes and top of figure window
+    subplot_wspace          distance between subplots in horizontal direction
+    title                   title of plot
+    xminorticks             location of xminorticks
+    yminorticks             location of yminorticks
+    z_limits                (min, max) limits in vertical direction,
+    ======================= ===================================================
+
+    """
+
+    def __init__(self, model_fn, data_fn=None, **kws):     
+        super ().__init__( model_fn=model_fn, data_fn=data_fn, **kws)
+        self._logging=csamtpylog.get_csamtpy_logger(self.__class__.__name__)
+        
+        for key in list(kws.keys()): 
+            setattr(self, key, kws[key])
+                 
 
     
     

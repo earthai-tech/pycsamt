@@ -14,7 +14,7 @@ import os
 import sys 
 import argparse 
 from pycsamt.utils.func_utils import smart_format 
-from pycsamt.ff.processing import Processing, corr
+from pycsamt.processing import Processing, corr
 
 PROG = os.path.basename (__file__).replace('.py', '')
 

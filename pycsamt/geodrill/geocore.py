@@ -3,16 +3,17 @@
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: LGPL
 """  
-.. _module-geocore::`pycsamt.geodrill.geocore`
-    
-:synopsis:  Module deals with Occam2D inversion files, the geological data, 
-            the geological structural infos and borehole data. Can plot the 
-            stratigraphy model and pseudostratigraphic logs under each station.
-            Module can also build borehole data from drillings data collected 
-            in exploration area or to create a report of survey location 
-            with strata in oder to includes them combined with a conventional
-            geological codes < USGS(US Geological Survey ), pattern and colors
-            for plotting purposes or else.
+Module Geocore 
+===============
+Module deals with Occam2D inversion files, the geological data, the geological 
+structural infos and borehole data. Can plot the stratigraphy model and 
+pseudostratigraphic logs under each station. Module can also build borehole
+data collected in exploration area. It also generates a report of each geological 
+structure colllected on survey area and compare it with its corresponding 
+into a conventional geological codes < USGS(US Geological Survey ), pattern and colors
+for plotting purposes or else. This is usefull for module `GeoStratigraphic_`
+for topping 'fake' or 'unknow' structures into a pseudostratigraphic model.
+  
             ...
 """
 from __future__ import division 
@@ -28,7 +29,7 @@ import pycsamt.utils.exceptions as CSex
 import pycsamt.utils.geo_utils as GU
 import pycsamt.geodrill.structural as STRL
 from pycsamt.modeling import occam2d
-from pycsamt.ff.site import Profile
+from pycsamt.site import Profile
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
 from pycsamt.utils.plotdecorator  import geoplot2d
@@ -388,7 +389,7 @@ class Geodrill (object):
                                '<from pycsamt.modeling.occam2d import Iter2Dat>',
                                ' : to write a *bln file ', 
                                ' use a Profile module :',
-                               ' < from pycsamt.ff.core.cs import Profile > .', 
+                               ' < from pycsamt.core.cs import Profile > .', 
                                ' You can also use occam2D output files ',
                                'like model, mesh, data, and iteration files.'])
                 warnings.warn('! Error reading *.bln flile !' + mess)
@@ -1577,7 +1578,6 @@ class Geodrill (object):
                          filename=None,
                          savepath =None,
                          **kwargs) : 
-        
         """
         write output to oasis montaj when station loocation and profile 
         coordinates are provided . We assune before using this method , you are
@@ -4636,10 +4636,9 @@ def _ps_memory_management(obj=None, option='set'):
     """ Manage the running times for stratigraphic model construction.
     
     The script allows to avoid running several times the GeoStratigraphy model
-    construction to retrieve the pseudostratigraphic log at each station.  
-    It memories the model data for the first run and used it when calling it
-    to  visualize the pseudostratigrahic log at each station. Be aware to edit 
-    this script.
+    construction to retrieve the pseudostratigraphic (PS) log at each station.  
+    It memorizes the model data for the first run and used it when calling it
+    to  visualize the PS log at each station. Be aware to edit this script.
     """
     memory, memorypath='__memory.pkl', 'pycsamt/geodrill/_geocodes'
     mkeys= ('set', 'get', 'recover', 'fetch', set)

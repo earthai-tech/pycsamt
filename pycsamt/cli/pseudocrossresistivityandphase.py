@@ -14,7 +14,7 @@ Created on Tue Apr 12 10:17:58 2022
 import os 
 import sys 
 import argparse 
-from pycsamt.viewer.plot import Plot2d 
+from pycsamt.view.plot import Plot2d 
 
 PROG = os.path.basename (__file__).replace('.py', '')
 mpl_ls ='https://matplotlib.org/stable/gallery/lines_bars_and_markers/linestyles.html'

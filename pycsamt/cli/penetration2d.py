@@ -7,7 +7,7 @@ Created on Sat Nov 27 16:25:59 2021
 import os 
 import sys 
 import argparse 
-from pycsamt.viewer.plot import Plot2d 
+from pycsamt.view.plot import Plot2d 
 
 PROG = os.path.basename (__file__).replace('.py', '')
 

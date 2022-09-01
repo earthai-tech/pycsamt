@@ -292,7 +292,7 @@ def grouped_items( items, dindexes, force =True ):
 
 def fit_stratum_property (fittedrocks , z , site_tres):
     """ Separated whole blocks into different stratum and fit their
-    corresponding property like depth and values of resistivities
+    corresponding property like depth and value of resistivities
     
     :param fittedrocks: array_like of layers fitted from the TRES 
     :param z: array like of the depth 

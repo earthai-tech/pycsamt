@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Sat Dec 12 13:55:47 2020
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
-#       Licence: LGPL
+#       Licence: GPL
 
 import os 
 import copy 
@@ -1723,6 +1723,7 @@ class Processing(object):
         :Remove Static Shift: ::
 
             >>> import pycsamt.processing as Processing 
+            >>> import pycsamt.processing as Processing 
             >>> edifile = '/Users/Daniel/Desktop/Data/AMT/E1/di_test/new_csa00.edi'
             >>> outputedi = 'rmss_csa00.edi'
             >>> Processing.remove_static_shift(
@@ -1755,6 +1756,7 @@ class Processing(object):
         :Remove distortion and write new .edi file: ::
 
             >>> import pycsamt.processing as Processing 
+            >>> import pycsamt.ff.processing as Processing 
             >>> edifile = '/Users/Daniel/Desktop/Data/AMT/E1/di_test/new_csa00.edi'
             >>> outputedi = 'rmss_csa00.edi'
             >>> Processing.remove_distortion(edi_fn = edifile, new_edi_fn= outputedi
@@ -1791,7 +1793,6 @@ class Processing(object):
             ``ss``, distorsion for ``dist``. The human activites can be removed 
             using the `pca`` and the other interferences can be removed using 
             the simplier filters ``sim``. Default is ``sim``. 
-
         :type kind: str 
         
         :param ss_x: correction factor for x component
@@ -1891,6 +1892,7 @@ class Processing(object):
         :type kws: dict 
         
         :returns: New Z impedance object with remove outliers. 
+
         :rtype: pycsamt.core.z.Z
         
         :Example: 
@@ -1958,10 +1960,11 @@ class Processing(object):
     
                     z_real_t =reshape_and_fit_z(z_real) 
                     z_imag_t = reshape_and_fit_z(z_imag) 
-                    z_err_t = reshape_and_fit_z(z_err) 
+                    z_err_t = reshape_and_fit_z(z_err)               
                     z_real_b =reshape_and_fit_z(z_real_t,back=True,fit =None) 
                     z_imag_b = reshape_and_fit_z(z_imag_t,back=True,fit =None) 
                     z_err_b = reshape_and_fit_z(z_err_t,back=True,fit =None 
+
                                                 ) 
                # set the new Z object 
                 new_Z.z[nz_index, ii, jj] = z_real_b  + 1j * z_imag_b 

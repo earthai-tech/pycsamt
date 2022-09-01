@@ -2,13 +2,14 @@
 #       contact: < https://github.com/MTgeophysics/mtpy.git>
 #       Licence: GPL
 
-# Check for gdal availability at module level so we don't have to
-# do this every time a function in gis_tools is being called.
-from .decorator import gdal_data_check
 import os
 import re
 import sys
 import numpy as np
+from .decorator import gdal_data_check
+
+# Check for gdal availability at module level so we don't have to
+# do this every time a function in gis_tools is being called.
 
 HAS_GDAL = gdal_data_check(None)._gdal_data_found
 
@@ -69,6 +70,7 @@ from .func_utils import (
     get_interpolate_freqs, 
     ismissing, 
     fillNaN, 
-    get_ediObjs 
+    get_ediObjs, 
+    load2array
    
     )

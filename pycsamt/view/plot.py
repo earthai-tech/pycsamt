@@ -383,7 +383,6 @@ class Plot1d :
                           'size':  1.5 * self.font_size ,
                           'weight': self.fontweight},  
                                 )
-     
         ax.set_ylabel (self.ylabel  or '$ Rhoa [ \Omega.m]$') 
         
         ax.set_xlabel(self.xlabel or 'Stations', 
@@ -402,7 +401,6 @@ class Plot1d :
              plt.close (fig =fig )
              
         return ax
-    
 
     def plottensors (self,  resargs , phsargs , res_err=None, phs_err =None, 
                      sharex= False,  show_grid =True, errorbar_kw = None, 
@@ -3198,7 +3196,6 @@ class Plot2d (object):
         return ptsection 
     
         
-        
     def plottemp2d (self, arr2d, y=None,  x =None, style ='pcolormesh', 
                 distance = 50., stnlist =None, prefix ='S', how= 'py',
                 **kws): 
@@ -3295,7 +3292,6 @@ class Plot2d (object):
         d= distance or 1. 
         y = np.arange(arr2d.shape [0]) if y is None else y 
         x= x  or np.arange(arr2d.shape[1])  * d 
-   
         if stnlist is not None: 
             stnlist = func._assert_all_types(stnlist, tuple, list, np.ndarray)
             if len(stnlist)!= len(x):
@@ -3358,7 +3354,6 @@ class Plot2d (object):
         
         cb.set_label(labex,fontdict={'size': 1.5* self.font_size ,
                                   'style':self.font_style})
-
         #--> set second axis 
         axe2 = axe.twiny() 
         axe2.set_xticks(ticks= x,

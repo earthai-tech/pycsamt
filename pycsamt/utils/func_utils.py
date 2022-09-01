@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Sun Sep 13 09:24:00 2020
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
-#       Licence: LGPL
+#       Licence: GPL
 
 """
 .. _module-Func-utils::`pycsamt.utils.func_utils`  
@@ -54,6 +54,8 @@
     * reshape_array 
     * fillNaN
     * ismissing 
+    * get_ediObjs
+    * load2array
 
 """
 
@@ -69,10 +71,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from copy import deepcopy
 
-import mtpy 
 import pycsamt 
 import pycsamt.utils.gis_tools as gis
 import pycsamt.utils.exceptions as CSex
+from pycsamt.__init__ import imtpy 
 from pycsamt.utils.decorator import deprecated 
 from pycsamt.utils._csamtpylog import csamtpylog
 
@@ -107,8 +109,12 @@ except ImportError:
     _logger.warning(_msg0)
     
     interp_import = False
-
-   
+if imtpy:
+    import mtpy
+else:
+    warnings.warn("Module 'MTpy' is not detected! Install it mannualy.")
+    imtpy = False
+    
 def get_ediObjs (edipath, posix = None): 
     """ Get the collections object from edipath. 
     
@@ -167,10 +173,9 @@ def _assert_edi_obj (obj)-> object:
     if isinstance(obj, str): 
         obj = pycsamt.core.edi.Edi(obj) 
     obj = _assert_all_types (obj, mtpy.core.edi.Edi, pycsamt.core.edi.Edi)
-
     return  obj 
 
-def file2array(file, comments='#', delimiter=None,
+def load2array(file, comments='#', delimiter=None,
               converters=None, skiprows=0, **kws): 
     """ Load data to array. 
     
@@ -576,11 +581,7 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     Examples
     --------
     >>> from pycsamt.utils.func_utils  import scale_position 
-<<<<<<< HEAD
     >>> from pycsamt.core.edi import Edi_collection 
-=======
-    >>> from pycsamt.ff.core.edi import Edi_Collection 
->>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6
     >>> edipath = r'/Users/Daniel/Desktop/ediout'
     >>> cObjs = Edi_collection (edipath)
     >>> # correcting northing coordinates from latitude data 
@@ -594,11 +595,7 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
     ... array([-1.31766381e-04,  4.79150482e-05,  2.27596478e-04,  4.07277908e-04,
     ...        5.86959337e-04,  7.66640767e-04,  9.46322196e-04,  1.12600363e-03,
     ...        1.30568506e-03,  1.48536649e-03,  1.66504792e-03,  1.84472934e-03])
-<<<<<<< HEAD
     >>> lat_corrected_dms, *_= scale_position(ydata =cObjs.lat[:12], todms=True)
-=======
-    >>> lat_corrected_dms, *_= scalePosition(ydata =cObjs.lat[:12], todms=True)
->>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6
     ... array(['0:00:00.47', '0:00:00.17', '0:00:00.82', '0:00:01.47',
     ...       '0:00:02.11', '0:00:02.76', '0:00:03.41', '0:00:04.05',
     ...       '0:00:04.70', '0:00:05.35', '0:00:05.99', '0:00:06.64'],
@@ -755,28 +752,16 @@ def get_interpolate_freqs (ediObjs, to_log10 =False):
     frequency data. 
     
     :param ediObjs: list - Collections of EDI-objects 
-<<<<<<< HEAD
-    :rtype: pycsamt.core.edi.Edi 
-=======
-    :rtype: pycsamt.ff.core.edi.Edi 
->>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6
+    :type ediobjs : pycsamt.core.edi.Edi 
     
     :param to_log10: Put the interpolated min-max frequency to log10 values
-    :type to_log10: bool 
     
-<<<<<<< HEAD
+    :type to_log10: bool 
     :returns: Array-like min max and auto-number of frequency for interpolating. 
     :rtype: tuple
     
     :Example: 
         >>> from pycsamt.core.edi import Edi_collection 
-=======
-    :returns: Array-like min max and number of frequency for interpolating. 
-    :rtype: tuple
-    
-    :Example: 
-        >>> from pycsamt.ff.core.edi import Edi_collection 
->>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6
         >>> from pycsamt.utils.func_utils import find_interpolate_freq
         >>> edipath = r'/Users/Daniel/Desktop/edi'
         >>> cObjs = Edi_collection (edipath)

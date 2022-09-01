@@ -402,7 +402,6 @@ class Edi_collection :
             except:
                 pass
             return olist 
-        
         regex = re.compile('\d+', re.IGNORECASE)
         by = str(by).lower() 
         if by.find('survey')>=0 :
@@ -1442,19 +1441,11 @@ class Edi :
 
         :returns: a new impedance object with the corresponding
                                frequencies and components.
-<<<<<<< HEAD:pycsamt/core/edi.py
         :rtype: pycsamt.core.z.Z
 
         :Interpolate: ::
 
             >>> import pycsamt.core.edi as CSedi
-=======
-        :rtype: pycsamt.ff.core.z.Z
-
-        :Interpolate: ::
-
-            >>> import pycsamt.ff.core.edi as CSedi
->>>>>>> 2aea52b8ebd6f38998f8f163f53d60affe3e00d6:pycsamt/ff/core/edi.py
             >>> edi_fn = r"/home/edi_files/cs_01.edi"
             >>> edi_obj = CSedi.Edi(edi_fn)
             >>> # create a new frequency range to interpolate onto

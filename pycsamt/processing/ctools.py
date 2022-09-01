@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Sat Dec 12 13:55:47 2020
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
-#       Licence: LGPL
+#       Licence: GPL
 
 """
 Processing correction tools 
@@ -28,7 +28,7 @@ import numpy as np
 import pandas as pd 
 from scipy.signal import fftconvolve
 from scipy.integrate import quad 
- 
+
 from pycsamt.core.edi import Edi 
 import pycsamt.core.z as MTz
 from pycsamt.utils.decorator import donothing  
@@ -60,6 +60,7 @@ else:
     warnings.warn("Module 'MTpy' is not detected! Install it mannualy.")
     imtpy = False
 
+
 try: 
     from sklearn.decomposition import PCA 
 except : 
@@ -67,7 +68,7 @@ except :
     if not is_success : 
         raise ImportError( 'Could not import module `sklearn`. Please '
                           'install scikit-learn manually.')
-       
+
 mu0 = 4 * np.pi * 1e-7 
 
 """ `d_hanning_window`
@@ -207,6 +208,7 @@ def get_reference_frequency (ediObjs= None, arr2d=None, freqs=None,
         freqs= get_full_frequency(ediObjs)
         # fit z and find all missing data from complete frequency f 
         # we take only the componet xy for fitting.
+
         zxy = [fit_tensor(freqs, ediObj.Z._freq, ediObj.Z.z[:, 0, 1].real)
               for ediObj in ediObjs
               ]
@@ -772,6 +774,7 @@ def ama (ediObjs=None, res2d=None, phs2d=None, freqs= None, c=2, window_size =5,
         (EMAP), Geophysics, v57, p603-622.https://doi.org/10.1190/1.2400625
         
     """
+
     # assert filter arguments 
     res2d , phs2d , freqs, c, window_size, component, out = \
         _assert_emap_filter_args (ediObjs, res2d , phs2d , freqs, c,
@@ -823,7 +826,6 @@ def ama (ediObjs=None, res2d=None, phs2d=None, freqs= None, c=2, window_size =5,
  
     zjc = zjr + 1j * zji 
     rc = z2rhoa(zjc, freqs)  #np.abs(zjc)**2 / (omega0[:, None] * mu0 )
-    
     if mode =='same': 
         rc[:, 0] = res2d[:, 0]
         zjc[:, 0] = zj [:, 0]
@@ -954,6 +956,7 @@ def flma (ediObjs=None, res2d=None, phs2d=None, freqs= None, c=None, window_size
     .. [1] http://www.zonge.com/legacy/PDF_DatPro/Astatic.pdf
     
     """
+
     # assert filter arguments 
     res2d , phs2d , freqs, c, window_size, component, out = \
         _assert_emap_filter_args (ediObjs, res2d , phs2d , freqs, c,
@@ -1130,7 +1133,6 @@ def savitzky_golay1d (y, window_size, order, deriv=0, rate=1, mode='same'):
          mode of the border prepending. Should be ``valid`` or ``same``. 
          ``same`` is used for prepending or appending the first value of
          array for smoothing.Default is ``same``.  
-         
     Returns
     -------
     ys : ndarray, shape (N)
@@ -1648,7 +1650,6 @@ def simpler_filter (edi_fn, **kws):
     new_Z.compute_resistivity_phase()
  
     return new_Z   
-    
 
 def export2newEdi (ediObj, new_Z , savepath =None, **kws):
     """ Export new EDI file from the former object with  a given new impedance 
@@ -1800,7 +1801,7 @@ def restoreZinDeadBand(ediObjs, *, buffer = None, kind='slinear',
     >>> colObjs = Edi_collection (path2edi)
     >>> ediObjs = colObjs.ediObjs 
     >>> # One can specify the frequency buffer like the example below, However 
-    >>> # it is not necessaray at least there is a purpose to fix  the frequencies
+    >>> # it is not necessaray at least there is a purpose to fix  the frequencies5
     >>> # at a spefic reason.
     >>> buffer = [1.45000e+04,1.11500e+01]
     >>> zobjs_b = restoreZinDeadBand(ediObjs, buffer = buffer) # with buffer 
@@ -2337,7 +2338,6 @@ def qplot ( *args, leglabels =None, **kwargs):
      plt.ylabel('Impedance tensor Z (ohm.m)')
      plt.legend (leglabels , loc ='best')
 
-
 def savitzky_golay2d ( z, window_size, order, derivative=None, mode = 'same'):
     """
     Two dimensional data smoothing and least-square gradient estimate. 
@@ -2501,7 +2501,6 @@ def savitzky_golay2d ( z, window_size, order, derivative=None, mode = 'same'):
     elif derivative == 'both':
         c = np.linalg.pinv(A)[1].reshape((window_size, -1))
         r = np.linalg.pinv(A)[2].reshape((window_size, -1))
-        
         return (fftconvolve(Z, -r, mode=mode),
                 fftconvolve(Z, -c, mode=mode) )
     
@@ -2710,6 +2709,7 @@ def _assert_emap_filter_args (*args):
                           f" {str(res2d.shape [1])!r}")
     
     return res2d , phs2d , freqs, c, window_size, component, out   
+
     
     
     

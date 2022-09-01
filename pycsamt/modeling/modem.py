@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Mon Jan 11 11:37:51 2021
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
-#       Licence: LGPL
+#       Licence: GPL
 
 """
 Module ModEM 

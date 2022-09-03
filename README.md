@@ -50,7 +50,7 @@ We use or link some third-party software (beside the usual tool stack: [Numba](h
 
 ## Citations 
 
- You may consider citing the software as a contribution if it is used in a published work:
+ We'd much appreciate if you consider citing the toolbox as a contribution in a published work:
 
 > *Kouadio, K.L., Liu, R., Mi, B., Liu, C., 2022. pyCSAMT: An alternative Python toolbox for groundwater exploration using controlled source audio-frequency magnetotelluric. J. Appl. Geophys. 201, 104647. https://doi.org/10.1016/j.jappgeo.2022.104647.*
 > 

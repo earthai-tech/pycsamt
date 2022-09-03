@@ -1,15 +1,22 @@
 # -*- coding: utf-8 -*-
 #       Created on Mon Jan 11 11:37:51 2021
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
-#       Licence: LGPL
+#       Licence: GPL
 """
-.. _module-edi:: `pycsamt.core.edi`
-   :synopsis: EDI module can read and write an .edi file as the 'standard '
-             formatof magnetotellurics. Each sectionof the .edi file is given 
-             its own class, so the elements of each section are attributes for 
-             easy access.Edi file will write following the SEG document
-             instructions of  EMAP (Electromagnetic  Array Profiling)
-             ...
+Module EDI 
+==========
+
+EDI stands for Electrical Data Interchange module can read and write an *.edi 
+file as the 'standard ' format of magnetotellurics. Each section of the .edi 
+file belongs to a class object, thus the elements of each section are attributes 
+for easy access. Edi is outputted  following the SEG documentation and rules  
+of EMAP (Electromagnetic  Array Profiling) and MT sections. 
+
+References 
+----------
+.. [1] Wight, D.E., Drive, B., 1988. MT/EMAP Data Interchange Standard, 1rt ed.
+     Society of Exploration Geophysicists, Texas 7831, USA.
+             
 """
 import os
 import re
@@ -34,9 +41,12 @@ _logger = csamtpylog.get_csamtpy_logger(__name__)
     
 class Edi_collection : 
     """
-    Super class to deal with Edifiles .Collect edifiles and set important 
-    properties form Controled Source audiofrequency magnetotelluRic  ,
-   two(2) components XY and YX will be set and calculated .
+    Collection class to deal with Edifiles.
+    
+    Collect edifiles and set important properties from audio magnetotelluric,
+    two(2) components XY and YX will be set and calculated. Can read MT data 
+    instead, However the full handling transfer function like Tipper and Spectra
+    is not completed. Use `MTpy`_ or other MT softwares for a long periods data. 
     
     Arguments 
     ---------
@@ -300,13 +310,15 @@ class Edi_collection :
         self._phs_err ={key:value for key , value in zip (self.id, phs_err)}
         
         self.stnames = self.edinames 
+        
+        return self 
     
     def rewrite_edis (self, ediObjs=None,  by = 'name' , prefix = None, 
-                      dataid =None, savepath = None, how='py', 
-                      correct_ll=True, make_coords =False, reflong=None, 
-                      reflat=None, step ='1km', edi_prefix =None, **kws): 
+                      dataid =None, savepath = None, how='py', correct_ll=True, 
+                      make_coords =False, reflong=None, reflat=None, step ='1km',
+                      edi_prefix =None, export =True, **kws): 
         
-        """ Rewrite Edis. 
+        """ Rewrite Edis, correct station coordinates and dipole length. 
         
         Can rename the dataid,  customize sites and correct the positioning
         latitudes and longitudes. 
@@ -366,9 +378,17 @@ class Edi_collection :
             i.e. the counting starts by 0. Any other value will start counting 
             the site from 1.
             
+        export: bool, 
+            Export new edi-files 
+            
         kws: dict 
             Additionnal keyword arguments from `~Edi.write_edifile` and 
             :func:`pycsamt.utils.func_utils.make_ll_coordinates`. 
+            
+        Returns 
+        --------
+            cobjs: array-like, Shape (N, ) 
+            A collection of new ediObjs 
             
         Examples
         ---------
@@ -376,15 +396,14 @@ class Edi_collection :
         >>> edipath = r'/Users/Daniel/Desktop/edi'
         >>> savepath =  r'/Users/Daniel/Desktop/ediout'
         >>> cObjs = Edi_collection (edipath)
-        >>> cObjs.rewrite_edis(by='id', edi_prefix ='b1',
-        ...                       savepath =savepath)
+        >>> cObjs.rewrite_edis(by='id', edi_prefix ='b1',savepath =savepath)
         
         """
         def replace_reflatlon (  olist , nval, kind ='reflat'):
             """ Replace Definemeaseurement Reflat and Reflong by the interpolated
             values.
             
-            :param olist: Old list compoing the read EDI measurement infos.
+            :param olist: old list composing the read EDI measurement infos.
             :type olist: list 
             :param nval: New reflat or reflong list. Mostly is the DD:MM:SS 
                 value interpolated. 
@@ -465,7 +484,10 @@ class Edi_collection :
         if correct_ll or make_coords:
             londms,*_ = func.scale_position(self.longitude, todms=True)
             latdms,*_ = func.scale_position(self.latitude, todms=True)
-  
+            
+        # collect new ediObjs 
+        cobjs = np.zeros_like (self.ediObjs, dtype=object ) 
+        
         for k, (obj, did) in enumerate(zip(self.ediObjs, dataid)): 
             obj.Head.edi_header = None  
             obj.Head.dataid = did 
@@ -484,10 +506,16 @@ class Edi_collection :
             # Empty the previous MTEMAP infos and 
             # fetch the attribute values newly set.
             obj.MTEMAP.mtemapsectinfo =None 
-            obj.MTEMAP.sectid= did 
-            obj.write_edifile(savepath = savepath ,
-                              new_edifilename = edi_prefix,  **kws)
-
+            obj.MTEMAP.sectid= did
+            
+            if export: 
+                obj.write_edifile(
+                    savepath = savepath ,new_edifilename = edi_prefix,  **kws)
+            cobjs[k] = obj 
+        
+        self.ediObjs = cobjs 
+        
+        return self   
     
     @property 
     def res_xy (self): 

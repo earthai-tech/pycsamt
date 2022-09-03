@@ -1651,8 +1651,8 @@ def simpler_filter (edi_fn, **kws):
  
     return new_Z   
 
-def export2newEdi (ediObj, new_Z , savepath =None, **kws):
-    """ Export new EDI file from the former object with  a given new impedance 
+def export2newedis (ediObj, new_Z , savepath =None, **kws):
+    """ Export new EDI files from the former object with  a given new impedance 
     tensors. 
     
     The export is assumed a new output EDI resulting from multiples corrections 
@@ -1681,9 +1681,9 @@ def export2newEdi (ediObj, new_Z , savepath =None, **kws):
 
 @nb.njit if inumba else donothing("Skip numba when the latter doesn't work "
                                   "with the current numpy.__version__")  
-def restoreZinDeadBand(ediObjs, *, buffer = None, kind='slinear',
+def restoreZ(ediObjs, *, buffer = None, kind='slinear',
                           method ='pd', **kws ): 
-    """ Fix the weak of missing frequencies at the 'dead-band`-  and recover the 
+    """ Fix the weak and missing signal at the 'dead-band`- and recover the 
     missing impedance tensor values. 
     
     The function uses the complete frequency (frequency with clean data) collected 
@@ -1740,7 +1740,7 @@ def restoreZinDeadBand(ediObjs, *, buffer = None, kind='slinear',
         not deal with all NaN at the begining or at the end of the array. Default 
         is ``pd``.
         
-    fill_value: array-like or (array-like, array_like) or ``extrapolate``, optional
+    fill_value: array-like or ``extrapolate``, optional
         If a ndarray (or float), this value will be used to fill in for requested
         points outside of the data range. If not provided, then the default is
         NaN. The array-like must broadcast properly to the dimensions of the 
@@ -1792,20 +1792,19 @@ def restoreZinDeadBand(ediObjs, *, buffer = None, kind='slinear',
     --------
     >>> import numpy as np 
     >>> import matplotlib.pyplot as plt 
-    >>> from pycsamt.core.edi import Edi_collection 
-    >>> from pycsamt.utils.func_utils import reshape, moving_average
-    >>> from pycsamt.processing.ctools import restoreZinDeadBand
-    >>> from pycsamt.processing.ctools import fit_tensor
-    >>> from pycsamt.processing.ctools import control_freq_buffer 
+    >>> from pycsamt.core import Edi_collection 
+    >>> from pycsamt.utils import reshape 
+    >>> from pycsamt.processing import restoreZ
+    >>> from pycsamt.processing import fit_tensor, moving_average
+    >>> from pycsamt.processing import control_freq_buffer , export2newedis 
     >>> path2edi = 'data/3edis'
     >>> colObjs = Edi_collection (path2edi)
     >>> ediObjs = colObjs.ediObjs 
     >>> # One can specify the frequency buffer like the example below, However 
-    >>> # it is not necessaray at least there is a purpose to fix  the frequencies5
-    >>> # at a spefic reason.
+    >>> # it is not necessaray at least there is a a specific reason to fix the frequencies 
     >>> buffer = [1.45000e+04,1.11500e+01]
-    >>> zobjs_b = restoreZinDeadBand(ediObjs, buffer = buffer) # with buffer 
-    >>> zobjs = restoreZinDeadBand(ediObjs ) # with no buffer 
+    >>> zobjs_b = restoreZ(ediObjs, buffer = buffer) # with buffer 
+    >>> zobjs = restoreZ(ediObjs ) # with no buffer 
     >>> # Now the idea is to compare the first raw z tensor object with its 
     >>> # corresponding restored ( the component |XY| for illustration)
     >>> # export the first restored  |Zxy| object for comparison
@@ -1848,6 +1847,8 @@ def restoreZinDeadBand(ediObjs, *, buffer = None, kind='slinear',
     >>> plt.grid (visible =True , alpha =0.8, which ='both', color ='k')
     >>> plt.tight_layout()
     >>> # As the user can see, Zxy is restored at  freq < 10^1 and  >10^4 Hz 
+    >>> # write a z restored object in new Edi-files 
+    >>> export2newedis (new_Z = zxy_restored, new_edi_fn = '')
 
     """
     def z_transform (z , rfq, fq,  slice_= None): 
@@ -2071,7 +2072,6 @@ def interpolate1d (arr, kind = 'slinear', method='mean', order = None,
     
     Parameters 
     ----------
-    
     arr: array_like 
         Array to interpolate containg invalid values. The invalid value here 
         is `NaN`. 
@@ -2505,7 +2505,7 @@ def savitzky_golay2d ( z, window_size, order, derivative=None, mode = 'same'):
                 fftconvolve(Z, -c, mode=mode) )
     
 
-def exportFilteredEdis (
+def exportfilterededis (
         ediObjs=None,
         window_size =5,
         c=2,
@@ -2558,10 +2558,10 @@ def exportFilteredEdis (
     
     Examples 
     --------
-    >>> from pycsamt.processimg import exportFilteredEdis
+    >>> from pycsamt.processimg import exportfilterededis 
     >>> edipath = 'data/edis' 
     >>> savepath= 'out/edi'
-    >>> exportFilteredEdis (edipath, savepath = savepath3edis,
+    >>> exportfilterededis (edipath, savepath = savepath3edis,
                             new_edi_fn ='f') # new ediname as prefix 
     
     """    
@@ -2650,7 +2650,7 @@ def exportFilteredEdis (
         
         Z.compute_resistivity_phase()
         
-        export2newEdi(ediObj=ediObjs[kk] , new_Z=Z, 
+        export2newedis(ediObj=ediObjs[kk] , new_Z=Z, 
                       savepath = savepath,  **kws)
         
     return ediObjs     

@@ -3,7 +3,7 @@ from .ctools import (
     removeNoise, 
     remove_distortion, 
     remove_static_shift, 
-    restoreZinDeadBand, 
+    restoreZ, 
     make_griddata, 
     skew, 
     pca_filter, 
@@ -12,7 +12,7 @@ from .ctools import (
     fit_tensor, 
     interpolate1d, 
     interpolate2d,
-    export2newEdi, 
+    export2newedis, 
     savitzky_golay1d, 
     savitzky_golay2d, 
     moving_average, 
@@ -23,7 +23,7 @@ from .ctools import (
     make2d, 
     get_full_frequency,
     betaj, 
-    exportFilteredEdis, 
+    exportfilterededis, 
     rhoa2z, 
     z2rhoa 
 

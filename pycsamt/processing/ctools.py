@@ -29,25 +29,27 @@ import pandas as pd
 from scipy.signal import fftconvolve
 from scipy.integrate import quad 
 
-from pycsamt.core.edi import Edi 
+from pycsamt.__init__ import (
+    itqdm, 
+    inumba, 
+    imtpy, 
+    is_installing,
+    ) 
+from pycsamt.core import (
+    _assert_edi_obj, 
+    get_ediObjs, 
+    Edi, 
+    )
 import pycsamt.core.z as MTz
 from pycsamt.utils.decorator import donothing  
 from pycsamt.utils.func_utils import (
     _assert_all_types, 
-    _assert_edi_obj,
-    subprocess_module_installation, 
     reshape, 
     scale_values, 
     ismissing, 
     spi,
     smart_format, 
     fillNaN, 
-    get_ediObjs 
-    )
-from pycsamt.__init__ import (
-    itqdm, 
-    inumba, 
-    imtpy 
     )
 
 if itqdm: 
@@ -64,7 +66,7 @@ else:
 try: 
     from sklearn.decomposition import PCA 
 except : 
-    is_success = subprocess_module_installation('sklearn')
+    is_success = is_installing ('sklearn')
     if not is_success : 
         raise ImportError( 'Could not import module `sklearn`. Please '
                           'install scikit-learn manually.')
@@ -805,6 +807,7 @@ def ama (ediObjs=None, res2d=None, phs2d=None, freqs= None, c=2, window_size =5,
         for wind_k  in w_exp : 
             w= np.array([betaj (xj = jj, L= 1, W= wind_k) for jj in range(wind_k)
                          ])
+            # block mode to same to keep the same dimensions
             zcr.append(np.convolve(zj[ii, :].real, w[::-1], 'same'))
             zci.append(np.convolve(zj[ii, :].imag, w[::-1], 'same'))
         # and take the average 
@@ -839,9 +842,9 @@ def betaj (xj, L, W, **kws):
     The function deals with the discrete hanning window based on ideas presented 
     in Torres-Verdin and Bostick, 1992, https://doi.org/10.1190/1.2400625.
     
-    :param xj: int, position of the point to compute its weight
+    :param xj: int, position of the point to compute its weight. 
     :param W: int, window size, presumes to be the number of dipole. 
-    :param L: int : length of dipole  
+    :param L: int : length of dipole in meters 
     :param kws: dict , additional :func:`scipy.intergate.quad` functions.
     
     :return: Weight value at th eposition `xj`, prefix-`x`is used to specify  
@@ -979,6 +982,7 @@ def flma (ediObjs=None, res2d=None, phs2d=None, freqs= None, c=None, window_size
     zjr = np.zeros_like(res2d) 
     zji = zjr.copy() 
     for ii in range(len(zjr)) :
+        # block mode to same to keep the same array dimensions
         zjr[ii, :] = np.convolve(zj[ii, :].real, w[::-1], 'same')
         zji[ii, :] = np.convolve(zj[ii, :].imag, w[::-1], 'same')
     # recover the static apparent resistivity from reference freq 
@@ -1651,8 +1655,8 @@ def simpler_filter (edi_fn, **kws):
  
     return new_Z   
 
-def export2newEdi (ediObj, new_Z , savepath =None, **kws):
-    """ Export new EDI file from the former object with  a given new impedance 
+def export2newedis (ediObj, new_Z , savepath =None, **kws):
+    """ Export new EDI files from the former object with  a given new impedance 
     tensors. 
     
     The export is assumed a new output EDI resulting from multiples corrections 
@@ -1679,11 +1683,10 @@ def export2newEdi (ediObj, new_Z , savepath =None, **kws):
     return ediObj 
 
 
-@nb.njit if inumba else donothing("Skip numba when the latter doesn't work "
+@nb.njit if inumba else donothing("skip numba when the latter doesn't work "
                                   "with the current numpy.__version__")  
-def restoreZinDeadBand(ediObjs, *, buffer = None, kind='slinear',
-                          method ='pd', **kws ): 
-    """ Fix the weak of missing frequencies at the 'dead-band`-  and recover the 
+def restoreZ(ediObjs, *, buffer = None, method ='pd', **kws ): 
+    """ Fix the weak and missing signal at the 'dead-band`- and recover the 
     missing impedance tensor values. 
     
     The function uses the complete frequency (frequency with clean data) collected 
@@ -1703,22 +1706,7 @@ def restoreZinDeadBand(ediObjs, *, buffer = None, kind='slinear',
         the [min, max] frequency should not compulsory fit the frequency range in 
         the data. The given frequency can be interpolated to match the best 
         closest frequencies in the data. 
-    
-    kind: str or int, optional
-        Specifies the kind of interpolation as a string or as an integer 
-        specifying the order of the spline interpolator to use. The string 
-        has to be one of ``linear``, ``nearest``, ``nearest-up``, ``zero``, 
-        ``slinear``,``quadratic``, ``cubic``, ``previous``, or ``next``. 
-        ``zero``, ``slinear``, ``quadratic``and ``cubic`` refer to a spline 
-        interpolation of zeroth, first, second or third order; ``previous`` 
-        and ``next`` simply return the previous or next value of the point; 
-        ``nearest-up`` and ``nearest`` differ when interpolating half-integers 
-        (e.g. 0.5, 1.5) in that ``nearest-up`` rounds up and ``nearest`` rounds 
-        down. If `method` param is set to ``pd`` which refers to pd.interpolate 
-        method , `kind` can be set to ``polynomial`` or ``pad`` interpolation. 
-        Note that the polynomial requires you to specify an `order` while 
-        ``pad`` requires to specify the `limit`. Default is ``slinear``.
-        
+  
     method: str, optional  
         Method of interpolation. Can be ``base`` for `scipy.interpolate.interp1d`
         ``mean`` or ``bff`` for scaling methods and ``pd``for pandas interpolation 
@@ -1733,14 +1721,14 @@ def restoreZinDeadBand(ediObjs, *, buffer = None, kind='slinear',
         corresponding values in the fit results. The same approach is used for
         ``bff`` method. Conversely, rather than averaging the nonzeros values, 
         it uses the backward and forward strategy  to fill the NaN before scaling.
-        ``mean`` and ``bff`` are more efficient when the data are composed of 
+        ``mean`` and ``bff`` are more efficient when the data are composed of a
         lot of missing values. When the interpolation `method` is set to `pd`, 
         function uses the pandas interpolation but ended the interpolation with 
         forward/backward NaN filling since the interpolation with pandas does
         not deal with all NaN at the begining or at the end of the array. Default 
         is ``pd``.
         
-    fill_value: array-like or (array-like, array_like) or ``extrapolate``, optional
+    fill_value: array-like or ``extrapolate``, optional
         If a ndarray (or float), this value will be used to fill in for requested
         points outside of the data range. If not provided, then the default is
         NaN. The array-like must broadcast properly to the dimensions of the 
@@ -1792,20 +1780,19 @@ def restoreZinDeadBand(ediObjs, *, buffer = None, kind='slinear',
     --------
     >>> import numpy as np 
     >>> import matplotlib.pyplot as plt 
-    >>> from pycsamt.core.edi import Edi_collection 
-    >>> from pycsamt.utils.func_utils import reshape, moving_average
-    >>> from pycsamt.processing.ctools import restoreZinDeadBand
-    >>> from pycsamt.processing.ctools import fit_tensor
-    >>> from pycsamt.processing.ctools import control_freq_buffer 
+    >>> from pycsamt.core import Edi_collection 
+    >>> from pycsamt.utils import reshape 
+    >>> from pycsamt.processing import restoreZ
+    >>> from pycsamt.processing import fit_tensor, moving_average
+    >>> from pycsamt.processing import control_freq_buffer , export2newedis 
     >>> path2edi = 'data/3edis'
     >>> colObjs = Edi_collection (path2edi)
     >>> ediObjs = colObjs.ediObjs 
     >>> # One can specify the frequency buffer like the example below, However 
-    >>> # it is not necessaray at least there is a purpose to fix  the frequencies5
-    >>> # at a spefic reason.
+    >>> # it is not necessaray at least there is a a specific reason to fix the frequencies 
     >>> buffer = [1.45000e+04,1.11500e+01]
-    >>> zobjs_b = restoreZinDeadBand(ediObjs, buffer = buffer) # with buffer 
-    >>> zobjs = restoreZinDeadBand(ediObjs ) # with no buffer 
+    >>> zobjs_b = restoreZ(ediObjs, buffer = buffer) # with buffer 
+    >>> zobjs = restoreZ(ediObjs ) # with no buffer 
     >>> # Now the idea is to compare the first raw z tensor object with its 
     >>> # corresponding restored ( the component |XY| for illustration)
     >>> # export the first restored  |Zxy| object for comparison
@@ -1823,7 +1810,7 @@ def restoreZinDeadBand(ediObjs, *, buffer = None, kind='slinear',
     >>> # if one uses a buffer, we can check the interpolated frequency buffer 
     >>> # in the reference frequency 
     >>> control_freq_buffer (reffreq, buffer) 
-    ...  array([1.470e+04, 1.125e+01])
+    ... array([1.470e+04, 1.125e+01])
     >>> # now we can set buffer to  [1.470e+04, 1.125e+01] and use the value 
     >>> # to find the index in raw zxy for plotting purpose to between in the frequency range 
     >>> # mask the z value out of the buffer frequency range
@@ -1835,7 +1822,7 @@ def restoreZinDeadBand(ediObjs, *, buffer = None, kind='slinear',
     >>> zxy_restored_buf = np.ma.masked_where (mask ,zxy_restored)   
     >>> zfit_buf = np.ma.masked_where (mask ,zfit)  
     >>> # not necessary, one can corrected z to get a smooth resistivity distribution 
-    >>> zcorrected , *_ = moving_average (zxy_restored)                     
+    >>> zcorrected = moving_average (zxy_restored)                     
     >>> # plot the two figures 
     >>> plt.figure(figsize =(10, 5))
     >>> plt.loglog(reffreq, zfit, '^r', reffreq, zxy_restored, 'ok--')
@@ -1843,25 +1830,30 @@ def restoreZinDeadBand(ediObjs, *, buffer = None, kind='slinear',
     >>> plt.loglog( reffreq, zcorrected, '1-.')
     >>> plt.legend (['fit data', 'restored', 'Buffered fit data',
                      'Buffered restored', 'Corrected data' ], loc ='best')
-    >>> plt.xlabel ('$Log_{10} frequency [H_z]$') ; plt.ylabel('$ Resistivity [ \Omega.m]$')
+    >>> plt.xlabel ('$Frequency [H_z]$') ; plt.ylabel('$ Resistivity_{xy} [ \Omega.m]$')
     >>> plt.title ('Recovered tensor $|Z_{xy}|$')
     >>> plt.grid (visible =True , alpha =0.8, which ='both', color ='k')
     >>> plt.tight_layout()
     >>> # As the user can see, Zxy is restored at  freq < 10^1 and  >10^4 Hz 
-
+    >>> # write a z restored object of the first station in new Edi-file 
+    >>> export2newedis (ediObjs[0] , new_Z = zobjs[0], new_edi_fn = 'edi_00')
+    ... <pycsamt.core.edi.Edi at 0x2458dcbe220>
     """
     def z_transform (z , rfq, fq,  slice_= None): 
         """ Route to do the same task for real, imaginary and error """
         with np.errstate(all='ignore'):
             z = reshape(z) 
             z = fit_tensor(compfreq= fq, refreq =rfq, z = z  ) 
-            z = interpolate1d(arr=z , kind = kind, method = method, **kws )
+            z = interpolate1d(arr=z , method = method, **kws )
         return z [slice_] 
         
-    #buffer = control_freq_buffer(freq_, buffer =[5.70e7, 2e1])
+    # Read instead if ediObjs is given as a Path-like object 
+    if isinstance(ediObjs, str):
+        ediObjs = get_ediObjs(ediObjs) 
+
     if not isinstance( ediObjs, (list, tuple, np.ndarray)): 
         if not hasattr (ediObjs, '__dict__'): 
-            raise ValueError ('Object should be an instance or a class'
+            raise ValueError ('Object should be an instance of EDI-class'
                               f' not: {type(ediObjs).__name__!r}')
         ediObjs =np.array([ediObjs],dtype =object) 
         
@@ -2071,7 +2063,6 @@ def interpolate1d (arr, kind = 'slinear', method='mean', order = None,
     
     Parameters 
     ----------
-    
     arr: array_like 
         Array to interpolate containg invalid values. The invalid value here 
         is `NaN`. 
@@ -2505,7 +2496,7 @@ def savitzky_golay2d ( z, window_size, order, derivative=None, mode = 'same'):
                 fftconvolve(Z, -c, mode=mode) )
     
 
-def exportFilteredEdis (
+def exportfilterededis (
         ediObjs=None,
         window_size =5,
         c=2,
@@ -2558,10 +2549,10 @@ def exportFilteredEdis (
     
     Examples 
     --------
-    >>> from pycsamt.processimg import exportFilteredEdis
+    >>> from pycsamt.processimg import exportfilterededis 
     >>> edipath = 'data/edis' 
     >>> savepath= 'out/edi'
-    >>> exportFilteredEdis (edipath, savepath = savepath3edis,
+    >>> exportfilterededis (edipath, savepath = savepath3edis,
                             new_edi_fn ='f') # new ediname as prefix 
     
     """    
@@ -2650,7 +2641,7 @@ def exportFilteredEdis (
         
         Z.compute_resistivity_phase()
         
-        export2newEdi(ediObj=ediObjs[kk] , new_Z=Z, 
+        export2newedis(ediObj=ediObjs[kk] , new_Z=Z, 
                       savepath = savepath,  **kws)
         
     return ediObjs     

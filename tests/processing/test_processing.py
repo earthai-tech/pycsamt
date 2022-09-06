@@ -19,7 +19,7 @@ Created on Wed Apr 14 13:15:19 2021
 import os
 import  unittest 
 
-from pycsamt.ff.processing import corr
+from pycsamt.processing import corr
 
 from tests import  (make_temp_dir,
                     TEST_TEMP_DIR,
@@ -77,11 +77,10 @@ class TestEDICOR(unittest.TestCase):
             'Ready to enter %s filter and parameters '
             'in processing module'% FILTER)
         try :
-            corr.shifting().write_corrected_edi(
-                                                data_fn = edi_path, 
-                                                FILTER=FILTER,
-                                                filename=filename, 
-                                                savepath =save_path ,
+            corr.Processing().write_corrected_edi(data_fn = edi_path, 
+                                            FILTER=FILTER,
+                                            filename=filename, 
+                                            savepath =save_path ,
                                          number_of_points =kws['number_of_points'],
                                          number_of_skin_depth=kws['number_of_skin_depth'], 
                                          dipole_length =kws['dipole_length'], 

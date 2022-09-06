@@ -1,6 +1,3 @@
-#       Authors: Lars Krieger, Jared R. Peacock & Alison Louise Kirkby
-#       contact: < https://github.com/MTgeophysics/mtpy.git>
-#       Licence: GPL
 
 import os
 import re
@@ -70,7 +67,6 @@ from .func_utils import (
     get_interpolate_freqs, 
     ismissing, 
     fillNaN, 
-    get_ediObjs, 
     load2array
    
     )

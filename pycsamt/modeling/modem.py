@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#       Created on Mon Jan 11 11:37:51 2021
+#       Created on Tue Aug 30 14:47:01 2022
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
 #       Licence: GPL
 
@@ -12,7 +12,7 @@ A |ModEM| geophysical data module . It used  `MTpy`_ module of Lars Krieger and
 Jared R. Peacock ( https://github.com/MTgeophysics/pycsamt.git) modem module as 
 dependancy. You may cite the authors when you use these codes. For a deep 
 implementation, it is recommended to use full `MTpy` package especially when 
-the data is an MT. 
+the data is  an MT composed of Tipper and Spectra. 
 
 References 
 -----------
@@ -33,12 +33,11 @@ Created on Tue Aug 30 14:47:01 2022
 """
 import warnings 
 
-from pycsamt.__init__ import imtpy 
-from pycsamt.utils._csamtpylog import csamtpylog 
-from pycsamt.utils.func_utils import ( 
-    get_ediObjs,
-    subprocess_module_installation
+from pycsamt.__init__ import ( 
+    imtpy, 
+    is_installing, 
     )
+from pycsamt.utils._csamtpylog import csamtpylog 
 from pycsamt.core.edi import Edi_collection 
 
 _logger =csamtpylog.get_csamtpy_logger(__name__)
@@ -56,13 +55,12 @@ if imtpy:
     )
 else:
     _logger.info('Unable to import `MTpy`packages. Loading failed!')
-    warnings.warn("Import MTpy failted! You can get MTPY from "
+    warnings.warn("Auto setting up MTpy failed! you can get MTpy at "
                   " <https://github.com/MTgeophysics/pycsamt.git>`.")
 try : 
     import geopandas 
 except ImportError : 
-    success = subprocess_module_installation(
-        'geopandas', DEVNULL= True )
+    success = is_installing('geopandas', DEVNULL= True )
     if not success: 
         warnings.warn("Import 'geopandas' failed. Install it mannually and "
                        " preferably use anaconda!")

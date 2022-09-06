@@ -1,16 +1,24 @@
 # -*- coding: utf-8 -*-
 #       Created on Mon Jan 11 11:37:51 2021
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
-#       Licence: LGPL
+#       Licence: GPL
 """
-.. _module-edi:: `pycsamt.core.edi`
-   :synopsis: EDI module can read and write an .edi file as the 'standard '
-             formatof magnetotellurics. Each sectionof the .edi file is given 
-             its own class, so the elements of each section are attributes for 
-             easy access.Edi file will write following the SEG document
-             instructions of  EMAP (Electromagnetic  Array Profiling)
-             ...
+Module EDI 
+==========
+
+EDI stands for Electrical Data Interchange module can read and write an *.edi 
+file as the 'standard ' format of magnetotellurics. Each section of the .edi 
+file belongs to a class object, thus the elements of each section are attributes 
+for easy access. Edi is outputted  following the SEG documentation and rules  
+of EMAP (Electromagnetic  Array Profiling) and MT sections. 
+
+References 
+----------
+.. [1] Wight, D.E., Drive, B., 1988. MT/EMAP Data Interchange Standard, 1rt ed.
+     Society of Exploration Geophysicists, Texas 7831, USA.
+             
 """
+from __future__ import annotations 
 import os
 import re
 import warnings
@@ -20,6 +28,7 @@ import time
 import numpy as np 
 
 import pycsamt
+from pycsamt.__init__ import imtpy  
 import pycsamt.utils.func_utils as func
 import pycsamt.core.z as MTz
 from pycsamt.utils. _p import suit 
@@ -29,14 +38,25 @@ from pycsamt.utils import gis_tools as gis
 from pycsamt.utils import exceptions as CSex
 from pycsamt.utils._csamtpylog import csamtpylog
 
+if imtpy:
+    import mtpy
+else:
+    warnings.warn("Module 'MTpy' is not detected! Install it mannualy.")
+    imtpy = False
+    
+    
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 
     
+
 class Edi_collection : 
     """
-    Super class to deal with Edifiles .Collect edifiles and set important 
-    properties form Controled Source audiofrequency magnetotelluRic  ,
-   two(2) components XY and YX will be set and calculated .
+    Collection class to deal with Edifiles.
+    
+    Collect edifiles and set important properties from audio magnetotelluric,
+    two(2) components XY and YX will be set and calculated. Can read MT data 
+    instead, However the full handling transfer function like Tipper and Spectra
+    is not completed. Use `MTpy`_ or other MT softwares for a long periods data. 
     
     Arguments 
     ---------
@@ -226,12 +246,12 @@ class Edi_collection :
         if self.edifiles is not None:
             try :
                 self.ediObjs = list(map(
-                    lambda o: func._assert_edi_obj(o), self.edifiles)) 
+                    lambda o: _assert_edi_obj(o), self.edifiles)) 
             except TypeError : 
                 # in the case a single object is given at the param
                 # the list-of edifiles rather than ediObjs 
                 self.ediObjs = list(map(
-                    lambda o: func._assert_edi_obj(o), [self.edifiles])) 
+                    lambda o: _assert_edi_obj(o), [self.edifiles])) 
                 
         # for consistency 
         if self.ediObjs is not None:
@@ -242,7 +262,7 @@ class Edi_collection :
                 
             try:
                 self.ediObjs = list(map(
-                    lambda o: func._assert_edi_obj(o), self.ediObjs)) 
+                    lambda o: _assert_edi_obj(o), self.ediObjs)) 
             except CSex.pyCSAMTError_EDI: 
                 raise ValueError ("Expect a list of EDI objects not "
                                   f"{type(self.ediObjs[0]).__name__!r}")
@@ -300,13 +320,15 @@ class Edi_collection :
         self._phs_err ={key:value for key , value in zip (self.id, phs_err)}
         
         self.stnames = self.edinames 
+        
+        return self 
     
     def rewrite_edis (self, ediObjs=None,  by = 'name' , prefix = None, 
-                      dataid =None, savepath = None, how='py', 
-                      correct_ll=True, make_coords =False, reflong=None, 
-                      reflat=None, step ='1km', edi_prefix =None, **kws): 
+                      dataid =None, savepath = None, how='py', correct_ll=True, 
+                      make_coords =False, reflong=None, reflat=None, step ='1km',
+                      edi_prefix =None, export =True, **kws): 
         
-        """ Rewrite Edis. 
+        """ Rewrite Edis, correct station coordinates and dipole length. 
         
         Can rename the dataid,  customize sites and correct the positioning
         latitudes and longitudes. 
@@ -338,7 +360,7 @@ class Edi_collection :
             ``True``. 
             
         make_coords: bool 
-            Usefful to hide the real coordinates of the sites by generating 
+            Useful to hide the real coordinates of the sites by generating 
             a 'fake' coordinates for a specific purposes. When setting to ``True``
             be sure to provide the `reflong` and `reflat` values otherwise and 
             error will occurs. 
@@ -366,9 +388,17 @@ class Edi_collection :
             i.e. the counting starts by 0. Any other value will start counting 
             the site from 1.
             
+        export: bool, 
+            Export new edi-files 
+            
         kws: dict 
             Additionnal keyword arguments from `~Edi.write_edifile` and 
             :func:`pycsamt.utils.func_utils.make_ll_coordinates`. 
+            
+        Returns 
+        --------
+            cobjs: array-like, Shape (N, ) 
+            A collection of new ediObjs 
             
         Examples
         ---------
@@ -376,15 +406,14 @@ class Edi_collection :
         >>> edipath = r'/Users/Daniel/Desktop/edi'
         >>> savepath =  r'/Users/Daniel/Desktop/ediout'
         >>> cObjs = Edi_collection (edipath)
-        >>> cObjs.rewrite_edis(by='id', edi_prefix ='b1',
-        ...                       savepath =savepath)
+        >>> cObjs.rewrite_edis(by='id', edi_prefix ='b1',savepath =savepath)
         
         """
         def replace_reflatlon (  olist , nval, kind ='reflat'):
             """ Replace Definemeaseurement Reflat and Reflong by the interpolated
             values.
             
-            :param olist: Old list compoing the read EDI measurement infos.
+            :param olist: old list composing the read EDI measurement infos.
             :type olist: list 
             :param nval: New reflat or reflong list. Mostly is the DD:MM:SS 
                 value interpolated. 
@@ -465,7 +494,10 @@ class Edi_collection :
         if correct_ll or make_coords:
             londms,*_ = func.scale_position(self.longitude, todms=True)
             latdms,*_ = func.scale_position(self.latitude, todms=True)
-  
+
+        # collect new ediObjs 
+        cobjs = np.zeros_like (self.ediObjs, dtype=object ) 
+        
         for k, (obj, did) in enumerate(zip(self.ediObjs, dataid)): 
             obj.Head.edi_header = None  
             obj.Head.dataid = did 
@@ -484,10 +516,16 @@ class Edi_collection :
             # Empty the previous MTEMAP infos and 
             # fetch the attribute values newly set.
             obj.MTEMAP.mtemapsectinfo =None 
-            obj.MTEMAP.sectid= did 
-            obj.write_edifile(savepath = savepath ,
-                              new_edifilename = edi_prefix,  **kws)
-
+            obj.MTEMAP.sectid= did
+            
+            if export: 
+                obj.write_edifile(
+                    savepath = savepath ,new_edifilename = edi_prefix,  **kws)
+            cobjs[k] = obj 
+        
+        self.ediObjs = cobjs 
+        
+        return self   
     
     @property 
     def res_xy (self): 
@@ -596,6 +634,29 @@ class Edi_collection :
         return {stn :phs_err[: , 1, 1] 
                 for stn, phs_err in self._phs_err.items()}
            
+def _assert_edi_obj (
+        obj: str | pycsamt.core.edi | mtpy.core.edi  
+        )-> pycsamt.core.edi | mtpy.core.edi : 
+    """Assert that the given argument is an EDI -object from modules 
+    EDi of pyCSAMT and MTpy packages. A TypeError will occurs otherwise.
+    
+    :param obj: Full path EDI file or `pyCSAMT`_ and `MTpy`_ object. 
+    :type obj: str or str or  pycsamt.core.edi.Edi or mtpy.core.edi.Edi 
+    
+    :return: Identical object after asserting.
+    
+    """
+    if isinstance(obj, str): 
+        obj = Edi(obj) 
+    try : 
+        obj = func._assert_all_types (
+            obj, mtpy.core.edi.Edi, pycsamt.core.edi.Edi)
+    except AttributeError: 
+        # force checking instead
+        from pycsamt.core import edi 
+        obj = func._assert_all_types (obj, edi.Edi)
+    return  obj 
+
        
 class Edi : 
     """
@@ -3341,7 +3402,52 @@ def gather_measurement_key_value_with_str_parser (
 
     return new_list
                         
-
+def get_ediObjs (
+    edipath: str | object  ,
+    posix: int | None  = None
+)-> pycsamt.core.edi | mtpy.core.edi  : 
+    """ Get the collections object from edipath. 
+    
+    Parameters 
+    ---------
+    edipath: str , Path-Like object 
+        Full path to EDI-files.Must be a valid path. 
+        
+    posix: int, 
+        Position to retrieve a specific EDI object into the collection list. 
+        Will raise and error if the position index is larger than the number 
+        of EDI-files read. Default is ``None`` , returns all the collection
+        of Edi-object. 
+        
+    Retuns 
+    -------
+    ediObjs : array-like object  
+        Collection of  EDI-objects from `pyCSAMT`_ and `MTpy`_ packages 
+        
+    Examples 
+    ----------
+    >>> from pycsamt.core import get_ediObjs 
+    >>> edipath = 'data/3edis'
+    >>> ediObjs = get_ediObjs (edipath)
+    >>> ediObjs 
+    ... array([<pycsamt.core.edi.Edi object at 0x000001F74E8F7070>,
+           <pycsamt.core.edi.Edi object at 0x000001F74E8F30A0>,
+           <pycsamt.core.edi.Edi object at 0x000001F74BCBC2E0>], dtype=object)
+    """  
+    # assert that ediObjs is given rather than edipath 
+    try : ediObjs = list(map(lambda o: _assert_edi_obj(o), edipath)) 
+    except : edipath = func._assert_all_types(edipath , str )
+    else : return ediObjs if posix is None else ediObjs [posix]
+    
+    if os.path.isfile (edipath): 
+        edipath = os.path.dirname(edipath)
+    cediObjs = Edi_collection(edipath) 
+    if posix is not None: 
+        posix = func._assert_all_types(posix, int)
+        if posix >= len(cediObjs.ediObjs):  
+            raise IndexError("Expect edi position to be less than "
+                             f"{ str(len(cediObjs.ediObjs))!r}.")
+    return cediObjs.ediObjs if posix is None else cediObjs.ediObjs [posix]
                  
 
 # if __name__== '__main__': 

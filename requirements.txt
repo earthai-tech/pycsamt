@@ -13,4 +13,5 @@ pyproj>=1.9.6
 pandas
 python-coveralls
 tqdm
+mtpy
 

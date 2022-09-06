@@ -61,7 +61,7 @@ Commonly the amplitude of natural electromagnetic fields shows a minimum in the 
 and decays with increasing frequency. The fields from discharges and thunderstorms propagate in the earth’s 
 ionosphere cavity [@GoldsteinandStrangway1975] and become the main natural signals at frequencies above 1 
 Hz. Indeed, the amplitude of man-made noise (human activities, existence of factories near the survey sites, 
-power lines,etc) increases considerably and can dominate the natural source fields at higher frequencies [@Bastaniet al2011]. 
+power lines,etc) increases considerably and can dominate the natural source fields at higher frequencies [@Bastanietal2011]. 
 As a result, the raised noise degrades the quality of standard NSAMT data. Therefore, the NSAMT 
 signal at a frequency range above 1 kHz is unpredictable and may not be utilized for regular MT measurements 
 [@SmithandJenkins1998; @Vozoff1991]. Most notably, the NSAMT dead-band is between approximately 1 kHz and 

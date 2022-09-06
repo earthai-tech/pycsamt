@@ -21,7 +21,7 @@ bibliography: paper.bib
 
 # Summary 
 
-Formerly the _pycsamt_ was devoted to solving relevant problems of the CSAMT such as the correction of near-field 
+Audio-frequency magnetotelluric (AMT) is a geophysical method widely used to map geologic contacts and structures and to detect deep geological structures in a few kilometers because of its good vertical resolution and wide range of exploration depth [@GoldakandOlson2015; @SandbergandHohmann1982; @ZongeandHughes1991]. Formerly the _pycsamt_ was devoted to solving relevant problems of the controlled source audio-frequency magnetotellurics(CSAMT)such as the correction of near-field 
 data, transition zone, and especially the static shift effect [@Berdichevskyetal1998; @Huetal2013; @Jiracek1990; @Kouadioetal2022])
 hence the suffix of CSAMT. The recent development is extended to  all AMT methods 
 (i.e., above 1Hz) such as the natural source AMT (NSAMT) method. The latter has some advantages compared to 

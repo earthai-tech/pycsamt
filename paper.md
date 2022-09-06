@@ -50,12 +50,12 @@ missing data at all weak and missing signals in the dead-band.
 
 # Statement of need  
 
-In short, _pycsamt_ follows the modular approach of software like MTpy [@Krieger2014] and GMT [@Wessel1998] and contains 
+In short, _pycsamt_ follows the modular approach of software like MTpy [@Kriegeretal2014] and GMT [@Wessel1998] and contains 
 an inner handler to calibrate and to scale the raw data from different hardware into the appropriate units (SI)
 . It also recomputes the deviation errors before processing [@Mykle1996]. It is composed of six main sub-packages 
 as displayed in [Figure 1]. 
 
-![Brief illustration of the main sub-packages: core (key functions and methods), modeling (deals with the inversion softwares such Occam2D of @deGrootetal:1990, ModEM of @Kelbertetal:2014),  utils, processing and geodrill (for geology and drilling)](examples/paper_figures/fig.packages.png){width="5.260416666666667in" }
+![Brief illustration of the main sub-packages: core (key functions and methods), modeling (deals with the inversion softwares such Occam2D of @deGrootetal1990, ModEM of @Kelbertetal2014),  utils, processing and geodrill (for geology and drilling)](examples/paper_figures/fig.packages.png){width="5.260416666666667in" }
 
 Commonly the amplitude of natural electromagnetic fields shows a minimum in the frequency range of 1–2 kHz 
 and decays with increasing frequency. The fields from discharges and thunderstorms propagate in the earth’s 
@@ -79,7 +79,7 @@ for filtering.
 ![A missing data recovery at the missing and attenuation signal at two randomly selected stations E12 and E27](examples/paper_figures/recovered_tensors.PNG){width="5.260416666666667in" }
 
 Furthermore, the skew analysis can also be performed at the 50 stations to show the dimensionality 
-(1D, 2D or 3D) of the structures [e.g. Figure 3] [@Bahr1991; @Swift1969; @weaveretal2000].  The script ("_~.ctools.restoreZ_") for recovering lost data is located in the *processing* sub*-*packages*.  It accepts as input a list of raw standard Electrical Data Interchange (EDI) files [@Wightetal1988] or a collection of 
+(1D, 2D or 3D) of the structures [e.g. Figure 3] [@Bahr1991; @Swift1969; @Weaver2000].  The script ("_~.ctools.restoreZ_") for recovering lost data is located in the *processing* sub-packages.  It accepts as input a list of raw standard Electrical Data Interchange (EDI) files [@Wightetal1988] or a collection of 
 EDI-object from *.edi* module or  MTpy Edi-objects [@Kirkbyetal2019]. It returns a Z object composed of a 2×2 matrix known as the complex impedance tensor which can be exported to EDI-file for other purpose. 
  
 ![An example of dimensionality analysis. Skew value greater than 5 degrees shows 3D dimensional structures and 2D or 1D otherwise](examples/paper_figures/fig.skew.PNG){width="5.260416666666667in" }

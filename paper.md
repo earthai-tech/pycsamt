@@ -1,5 +1,5 @@
 ---
-title: "*pycsamt*: A package for robust AMT data processing"
+title: "pycsamt: A package for robust AMT data processing"
 tags:
   - Python
   - pycsamt

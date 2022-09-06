@@ -6,9 +6,9 @@ Package Processing
 	
 **Module Processing**
 =========================
-.. automodule:: pycsamt.ff.processing.corr
+.. automodule:: pycsamt.processing.corr
 	:members:
 	
-.. automodule:: pycsamt.ff.processing.ctools
+.. automodule:: pycsamt.processing.ctools
 	:members:
 

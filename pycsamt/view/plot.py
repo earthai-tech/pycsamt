@@ -13,7 +13,7 @@ control of the plot, it is recommended to write your own plot scripts.
 Note that the package can not handle all the plots possibilty that offers the
 software. In the future, many plots should be removed and replaced by some  
 most efficient ones. 
- 
+
 """
 
 import os 
@@ -28,11 +28,14 @@ import matplotlib.cm as cm
 import matplotlib.colorbar as mplcb
 import matplotlib.gridspec as gspec
 
+from pycsamt.core import ( 
+    avg as CSMATavg , 
+    get_ediObjs 
+    )
 import pycsamt.utils.exceptions as CSex
 import pycsamt.utils.func_utils as func
 import pycsamt.utils.plot_utils as mplotus  
 import pycsamt.utils.zcalculator  as Zcc
-from pycsamt.core import avg as CSMATavg 
 from pycsamt.core.cs import CSAMT
 from pycsamt.site import Profile
 from pycsamt.modeling import occam2d
@@ -54,14 +57,17 @@ try :
             phase_tensor_maps
             
         )
-        
+    else : warnings.warn("Module 'MTpy' is not detected! Install it mannualy.")
 except:
+    warnings.warn("Can't automatically setup 'MTpy'. You can get 'MTpy' at" 
+                  " `https://github.com/MTgeophysics/pycsamt.git`_ and "
+                  " install it manually!.")
     imtpy = False 
 
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
 warnings.warn("In the future, many plots of the module 'view' should be"
-              " removed and replaced by the most efficient ones.", 
+              " removed and replaced by the fast and most efficient ones.", 
               FutureWarning
               )
 
@@ -156,8 +162,114 @@ class Plot1d :
         self.subplot_top = kwargs.pop('subplot_top', .85)
         self.subplot_bottom = kwargs.pop('subplot_bottom', .1)
         
+        self.label_rotation = kwargs.pop('label_rotation', 90)
+        self.show_grid = kwargs.pop('show_grid', False)
+        self.grid_color = kwargs.pop('grid_color', 'k')
+        self.grid_alpha = kwargs.pop('grid_alpha', .8 )
+        self.grid_which = kwargs.pop('grid_which', 'both')
         self.savefig = kwargs.pop('savefig', None)
         
+    
+    def plotrecovery (self,*args,  fit_args = None, leg= None,  **kws ): 
+        """" Template to plot two station with signal recovery 
+        
+        Parameters 
+        -----------
+        *args : args : list 
+            Matplotlib logs funtions plot arguments 
+            
+        fit_args : list or tuple 
+            Matplotlib logs funtions plot arguments put on list. It used to 
+            visualize the fitting curve after apply anay correction to the data.
+            
+            X-coordinates. It should have the length M, the same of the ``arr2d``; 
+            the columns of the 2D dimensional array.  Note that if `x` is 
+            given, the `distance is not needed. 
+            
+        leg: list 
+            legend labels put into a list. It must fit the number of given 
+            plots. 
+             
+        kws : dict 
+            Additional keywords arguments of Matplotlib subsplots function  
+            :func:`plt.loglog` or :func:`plt.semilog`
+        
+        Returns 
+        ------- 
+        ax: Matplotlib.pyplot <AxesSubplot>  
+        
+        Examples
+        --------
+        >>> from pycsamt.view import Plot1d 
+        >>> from pycsamt.core import get_ediObjs 
+        >>> from pycsamt.processing import (restoreZ, moving_average , 
+                                            get_full_frequency, make2d )
+        >>> rawpath  = r'F:\\repositories\\edis' 
+        >>> ediobj_r = get_ediObjs (rawpath)
+        >>> res2d_r = make2d (ediobj_r, 'resxy') # read the component XY 
+        >>> z_xy_rest = restoreZ(ediobj_r) # no buffered data 
+        >>> # extracted the station at index 12, 27 for instance. 
+        >>> z12 = zobjs[12].resistivity[:, 0, 1]
+        >>> z27 = zobjs[27].resistivity[:, 0, 1]
+        >>> # generate a fiting curve with moving average 
+        >>> ma12 = moving_average (res2d_r[:, 12])
+        >>> ma27 = moving_average (res2d_r[:, 27])
+        >>> # get the complete frequency for the survey 
+        >>> f= get_full_frequency(ediobj_r)
+        >>> # ---> make a plot and color 
+        >>> #  make a fitting args 
+        >>> fitargs = [f, ma12, 'c-.', f,ma27, 'c-.']
+        >>> # make a legend 
+        >>> leg = ['restored data' , 'raw data ', 'recovery trend ']
+        >>> p1d=Plot1d (fig_size =(5, 3))
+        >>> p1d.plotrecovery(f, z12,  'ob--', f, res2d_r[:, 12], 'ok', 
+                             f, z27,  'ob--', f, res2d_r[:, 27], 'ok',
+                             fit_args = fitargs, leg =leg)
+        ... 
+        
+        """
+        fig, ax = plt.subplots(1,figsize = self.fig_size, num = self.fig_num,
+                                dpi = self.fig_dpi , 
+                    )
+        p1,*_ = ax.loglog(*args,  
+                  markersize = self.ms ,
+                  linewidth = self.lw ,
+                  **kws 
+                  )
+            
+        if fit_args  is not None: 
+            fit_args  = func._assert_all_types(fit_args , list, tuple)  
+            p2,*_ = ax.loglog(*fit_args,
+                      markersize = self.ms ,
+                      linewidth = self.lw 
+                      )
+
+
+        ax.set_xlabel (self.xlabel or '$Frequency [H_z]$',
+                    fontsize =1.5 * self.font_size ) 
+        ax.set_ylabel(self.ylabel or '$ App.resistivity \quad xy \quad [ \Omega.m]$',
+                   fontsize =1.5*self.font_size)
+        
+        ax.legend (handles = [p1, p1,  p2] ,
+                   labels= ['restored data' , 'raw data ', 'recovery trend '] 
+                   if leg is  None else leg,
+                   loc ='best', 
+                   ncol =len(args)//3 if fit_args  is None else (
+                        len(args)+len(fit_args ))//3  ,
+                    fontsize =self.font_size
+                    )
+        plt.title (self.fig_title or  'Recovered tensor $|Z_{xy}|$',
+                   fontsize =1.5*self.font_size)
+        
+        if self.show_grid :
+            ax.grid (visible =True , alpha =self.grid_alpha,
+                     which =self.grid_which, color =self.grid_color)
+            
+        if self.savefig is not None: 
+             plt.savefig(self.savefig , dpi = self.fig_dpi)
+             plt.close (fig =fig ) 
+
+        return ax  
     
     def plotoverlay1d (self, arr, freqs,  ns= 0, leg = None,
                       show_grid =False, **kws ) : 
@@ -262,8 +374,8 @@ class Plot1d :
         ax.set_xlabel(self.xlabel or '$Log10Frequency[Hz]$', 
                       )
         if show_grid :
-            ax.grid (visible =True , alpha =self.alpha,
-                     which ='both', color ='gray')
+            ax.grid (visible =True , alpha =self.grid_alpha,
+                     which =self.grid_which, color =self.grid_color)
             
         plt.tight_layout()   
         
@@ -392,7 +504,11 @@ class Plot1d :
                       )
         
         if show_grid :
-            ax.grid (visible =True , alpha =0.8, which ='both', color ='gray')
+            ax.grid (visible =True ,
+                     alpha =self.grid_alpha, 
+                     which =self.grid_which,
+                     color =self.grid_color
+                     )
             
         plt.tight_layout()   
         
@@ -561,8 +677,16 @@ class Plot1d :
         ax[0].legend( [] if leg is None else leg , loc ='best' , ncol = 4 )
         
         if show_grid :
-            ax[0].grid (visible =True , alpha =0.8, which ='both', color ='gray')
-            ax[1].grid (visible =True , alpha =0.8, which ='both', color ='gray')
+            ax[0].grid (visible =True ,
+                     alpha =self.grid_alpha, 
+                     which =self.grid_which,
+                     color =self.grid_color
+                     )
+            ax[1].grid (visible =True ,
+                     alpha =self.grid_alpha, 
+                     which =self.grid_which,
+                     color =self.grid_color
+                     )
  
         plt.tight_layout()   
         
@@ -596,6 +720,10 @@ class Plot1d :
             legend labels put into a list.
         kws : dict 
             Matplotlib logs functions additional keywords arguments. 
+        
+        Returns 
+        -------
+        pplot: logplot object 
         
         Examples 
         ---------
@@ -645,6 +773,8 @@ class Plot1d :
             plt.grid (visible =True , alpha =self.alpha, which ='both', color ='gray')
             
         plt.tight_layout()
+        
+        return pplot 
         
         
     def plot_topo_sep_azim(self,fn = None , profile_fn=None  , 
@@ -3055,11 +3185,16 @@ class Plot2d (object):
         
         for keys in list(kws.keys()): 
             setattr(self, keys, kws[keys])
-            
-    #XXX TODO     
-    def plotphasetensorpseudosection (self, ediObjs, ellip_dict = None, 
-                                      stretch = (7000, 20 ), mode ='frequency',
-                                      linedir ='ns', **kws): 
+               
+    def plotphasetensorpseudosection (
+        self,
+        ediObjs,
+        ellip_dict = None, 
+        stretch = (7000, 20 ),
+        mode ='frequency',
+        linedir ='ns',
+        **kws
+        ): 
         """ Plot phase tensor pseudosection. 
         
         Method plots the phase tensor ellipses in a pseudo section format. Inherits
@@ -3155,7 +3290,7 @@ class Plot2d (object):
             raise ImportError ("Can't plot Phase Tensor Pseudosection. Please "
                                " install `mtpy` manually. ")
              
-        ediObjs = func.get_ediObjs(ediObjs)
+        ediObjs = get_ediObjs(ediObjs)
         edi_list= np.array (list (map (lambda o: o.edifile , ediObjs)))
         ellipse_dict = ellip_dict or  {
             'ellipse_colorby':'phimin', # phimin, phimax, skew,
@@ -3199,7 +3334,7 @@ class Plot2d (object):
     def plottemp2d (self, arr2d, y=None,  x =None, style ='pcolormesh', 
                 distance = 50., stnlist =None, prefix ='S', how= 'py',
                 **kws): 
-        """ 2D template for quick visualization. 
+        """ 2D templates for quick visualization. 
         
         Parameters 
         -----------
@@ -3239,6 +3374,10 @@ class Plot2d (object):
             Additional keywords arguments of Matplotlib subsplots function  
             :func:`plt.subplots`
             
+        Returns 
+        -------
+        axe: <AxesSubplot> object 
+        
         Examples 
         -------- 
         >>> import numpy as np
@@ -3249,7 +3388,7 @@ class Plot2d (object):
         >>> edipath = 'data/3edis'
         >>> ediObjs = get_ediObjs (edipath)
         >>> res2d_xy = make2d (ediObjs, 'resxy')
-        >>> # can interpolate to fix the missing data 
+        >>> # interpolate to fix the missing data 
         >>> # get the full frequency of survey area in the whole collection data 
         >>> freqs = get_full_frequency(ediObjs) # plot station vs frequency 
         >>> res2d_xy = interpolate2d (res2d_xy )
@@ -3386,7 +3525,8 @@ class Plot2d (object):
         plt.show() if self.savefig is None else plt.close(fig=fig) 
         
         
-        
+        return axe 
+
         
     def penetration2D(self, fn=None , profile_fn =None, 
                       savefig =None, doi= '2km',  **kwargs): 

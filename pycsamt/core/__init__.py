@@ -1,5 +1,6 @@
 from .cs import CSAMT
 from .edi import (
+    _assert_edi_obj, 
     Edi, 
     Edi_collection, 
     Software, 
@@ -7,7 +8,8 @@ from .edi import (
     Source, 
     Person, 
     References, 
-    MTEMAP 
+    MTEMAP, 
+    get_ediObjs, 
 )
 
 from .avg import (

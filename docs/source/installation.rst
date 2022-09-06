@@ -61,7 +61,7 @@ In order to plot results from the model as shown in :doc:`quick start <../quick_
 
 Additional Resources
 --------------------
-The `pyCSAMT UserGuide <https://github.com/WEgeophysics/pyCSAMT/blob/master/docs/pyCSAMT%20User%20Guide.pdf>`_ contains recipes that can help you get start up with pyCSAMT.
+The `pyCSAMT User Guide <https://github.com/WEgeophysics/pyCSAMT/blob/master/docs/pyCSAMT%20User%20Guide.pdf>`_ contains recipes that can help you get start up with pyCSAMT.
 Moreover, to go through step by step installation, one may refer to `Step by Step Installation Guide <https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux>`_.
 
 

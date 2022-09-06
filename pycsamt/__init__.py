@@ -1,6 +1,38 @@
+# -*- coding: utf-8 -*-
+#  Author: Kouadio Laurent alias Daniel <etanoyau@gmail.com> 
+#  GNU Licence: GPL version 3
+  
+"""
+`pycsamt`_ : A Python Toolbox for audio-magnetotellurics 
+=========================================================
+
+The toolbox is designed to bring a piece of solution by providing fast & robust 
+data processing and signal recovering of the audio-magnetotelluric(AMT) methods 
+i.e the frequency above 1Hz. It also provides processing tools for filtering 
+data and restoring amplitudes at weak frequency (tensor or or scalar values) 
+in the "dead-dand" especially for the natural source AMT where the signals are  
+not under our control and suffer from frequency ranges with little or no signal.
+Originally, the software was focused on `CSAMT`_ data processing, hereinafter 
+the suffix CSAMT. The development, currently encompasses all the AMT methods.
+Futhermore, it also implements a special subpackage named `geodrill` for reducing
+the numerous unsucessful drillings mostly occurred due to their wrong locations
+after AMT geophysical surveys. 
+
+.. |CSAMT| replace :: controlled source audio-frequency magnetotelluric
+.. _documentation: https://pycsamt.readthedocs.io/en/latest/
+.. _pycsamt: https://github.com/WEgeophysics/pycsamt
+
+"""
+# +---------------------------------------------------------------------------+
+# | Module will take a while to install the dependencies the first time it is |
+# | launched. This won't occur if the package  is installed via PyPI since the|
+# | latter will take in charge the dependencies installation during the       |
+# | setting up progress.                                                      |
+# +---------------------------------------------------------------------------+
 # define pycamt release version below
 # see https://packaging.python.org/guides/single-sourcing-package-version/ 
-__version__ = "1.1.2"
+
+__version__ = "1.2.0"
 
 # load pycsamt default logging config
 import sys 
@@ -9,13 +41,14 @@ import logging
 import os
 import tempfile
 
-from pycsamt.utils._csamtpylog import csamtpylog
+# setup the package 
 if __package__ is None or __name__ == '__main__': 
     sys.path.append( os.path.dirname(os.path.dirname(__file__)))
     sys.path.insert(0, os.path.dirname(__file__))
-    __package__= 'pycsamt'
+    __package__= 'pycsamt' 
     
-
+# configure the logger 
+from pycsamt.utils._csamtpylog import csamtpylog
 try: 
     csamtpylog.load_configure(os.path.join(
         os.path.abspath('.'),'pycsamt', 'utils', "p.configlog.yml"))
@@ -34,18 +67,18 @@ epsg_dict = {
     28354: ['+proj=utm +zone=54 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs', 54],
     28355: ['+proj=utm +zone=55 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs', 55],
     28356: ['+proj=utm +zone=56 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs', 56],
-    3112: [
+    3112:  [
         '+proj=lcc +lat_1=-18 +lat_2=-36 +lat_0=0 +lon_0=134 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs',
-        0],
+        0 ],
     4326: ['+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs', 0]
 }
 
 def is_installing (
     module:str ,
-    upgrade:bool  =True ,
+    upgrade:bool =True ,
     DEVNULL:bool =False, 
     action:bool =True,
-    verbose:int  =0,
+    verbose:int =0,
     **subpkws
  )-> bool : 
     """ Install or uninstall a module using the subprocess under the hood.
@@ -65,7 +98,7 @@ def is_installing (
     
     :Example --> install and uninstall the `tqdm` packages: :: 
         
-        >>> from pycsamt.__init__ import is_installing
+        >>> from pycsamt import is_installing
         >>> is_installing(
             'tqdm', action ='install', DEVNULL=True, verbose =1)
         >>> is_installing(
@@ -130,8 +163,7 @@ def is_installing (
                       "and dependancies was successfully done!") 
         
     return success
-
-# intall basic module tqdm 
+# install basic dependencies 
 itqdm =False 
 try : 
     import tqdm 
@@ -142,7 +174,9 @@ except ImportError:
 else :
     itqdm =True 
     
-# auto intall numba  if not installed yet  
+# auto intall numba and the suitable version.
+# make sure that numby work at the present date (09/22)
+# with numpy version 1.12 or less   
 inumba = False 
  
 try : 
@@ -154,7 +188,7 @@ except ImportError:
 else :
     inumba  =True 
     
-# auto install mtpy 
+#Install MTpy if not install yet. 
 imtpy =False 
 try : 
     import mtpy  
@@ -165,7 +199,9 @@ except ImportError:
 else :
     imtpy =True 
     
-# Get the repository dir like https://github.com/WEgeophysics/pycsamt /C:github.com/WEgeophysics/pyCSAMT  
+# set path for demo and testing module
+# Get the repository dir like https://github.com/WEgeophysics/pycsamt /
+#C:github.com/WEgeophysics/pyCSAMT  
 PYCSAMT_ROOT = os.path.normpath(
     os.path.abspath(
         os.path.dirname(
@@ -189,8 +225,13 @@ STN_DATA_DIR = os.path.normpath(
 CONFIG_DATA_DIR = os.path.normpath(
     os.path.join(PYCSAMT_ROOT , 'data/_conffiles'))
 
-
-
 SYSTEM_TEMP_DIR = tempfile.gettempdir()
-
 NEW_TEMP_DIR=tempfile.mkdtemp(prefix="pycsamt_tmpdir_")
+
+
+
+
+
+
+
+

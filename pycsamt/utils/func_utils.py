@@ -4,9 +4,9 @@
 #       Licence: GPL
 
 """
-.. _module-Func-utils::`pycsamt.utils.func_utils`  
-    :synopsis: helpers functions 
-    
+Module Utils 
+============= 
+Utilities and helpers functions: 
     * check_dimensionality
     * subprocess_module_installation
     * cpath
@@ -54,7 +54,6 @@
     * reshape_array 
     * fillNaN
     * ismissing 
-    * get_ediObjs
     * load2array
 
 """
@@ -66,15 +65,14 @@ import shutil
 import warnings
 import inspect
 import csv
+from copy import deepcopy
 import numpy as np 
 import pandas as pd 
 import matplotlib.pyplot as plt
-from copy import deepcopy
 
-import pycsamt 
+from . import HAS_GDAL 
 import pycsamt.utils.gis_tools as gis
 import pycsamt.utils.exceptions as CSex
-from pycsamt.__init__ import imtpy 
 from pycsamt.utils.decorator import deprecated 
 from pycsamt.utils._csamtpylog import csamtpylog
 
@@ -109,71 +107,7 @@ except ImportError:
     _logger.warning(_msg0)
     
     interp_import = False
-if imtpy:
-    import mtpy
-else:
-    warnings.warn("Module 'MTpy' is not detected! Install it mannualy.")
-    imtpy = False
-    
-def get_ediObjs (edipath, posix = None): 
-    """ Get the collections object from edipath. 
-    
-    Parameters 
-    ---------
-    edipath: str , Path-Like object 
-        Full path to EDI-files.Must be a valid path. 
-        
-    posix: int, 
-        Position to retrieve a specific EDI object into the collection list. 
-        Will raise and error if the position index is larger than the number 
-        of EDI-files read. Default is ``None`` , returns all the collection
-        of Edi-object. 
-        
-    Retuns 
-    -------
-    ediObjs : array-like object  
-        Collection of  EDI-objects from `pyCSAMT`_ and `MTpy`_ packages 
-        
-    Examples 
-    ----------
-    >>> from pycsamt.utils import get_ediObjs 
-    >>> edipath = 'data/3edis'
-    >>> ediObjs = get_ediObjs (edipath)
-    >>> ediObjs 
-    ... array([<pycsamt.core.edi.Edi object at 0x000001F74E8F7070>,
-           <pycsamt.core.edi.Edi object at 0x000001F74E8F30A0>,
-           <pycsamt.core.edi.Edi object at 0x000001F74BCBC2E0>], dtype=object)
-    """  
-    # assert that ediObjs is given rather than edipath 
-    try : ediObjs = list(map(lambda o: _assert_edi_obj(o), edipath)) 
-    except : edipath = _assert_all_types(edipath , str )
-    else : return ediObjs if posix is None else ediObjs [posix]
-    
-    if os.path.isfile (edipath): 
-        edipath = os.path.dirname(edipath)
-    cediObjs = pycsamt.core.edi.Edi_collection(edipath) 
-    if posix is not None: 
-        posix = _assert_all_types(posix, int)
-        if posix >= len(cediObjs.ediObjs):  
-            raise IndexError("Expect edi position to be less than "
-                             f"{ str(len(cediObjs.ediObjs))!r}.")
-            
-    return cediObjs.ediObjs if posix is None else cediObjs.ediObjs [posix]
 
-def _assert_edi_obj (obj)-> object: 
-    """Assert that the given argument is an EDI -object from modules 
-    EDi of pyCSAMT and MTpy packages. A TypeError will occurs otherwise.
-    
-    :param obj: Full path EDI file or `pyCSAMT`_ and `MTpy`_ object. 
-    :type obj: str or str or  pycsamt.core.edi.Edi or mtpy.core.edi.Edi 
-    
-    :return: Identical object after asserting.
-    
-    """
-    if isinstance(obj, str): 
-        obj = pycsamt.core.edi.Edi(obj) 
-    obj = _assert_all_types (obj, mtpy.core.edi.Edi, pycsamt.core.edi.Edi)
-    return  obj 
 
 def load2array(file, comments='#', delimiter=None,
               converters=None, skiprows=0, **kws): 
@@ -190,7 +124,7 @@ def load2array(file, comments='#', delimiter=None,
     comments: str or sequence of str or None, optional
         The characters or list of characters used to indicate the start of a 
         comment. None implies no comments. For backwards compatibility, 
-        byte strings will be decoded as ‘latin1’. The default is ``#``.
+        byte strings will be decoded as `latin1`. The default is ``#``.
     
     delimiters: tr, optional
         The string used to separate values. For backwards compatibility, byte 
@@ -339,8 +273,9 @@ def reshape(arr , axis = None) :
 
     return arr    
 
-def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,  
-                        step='1km', order= '+', todms=False): 
+def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45., utm_zone =None,   
+                        step='1km', order= '+', todms=False, is_utm =False,
+                        **kws): 
     """ Generate multiples stations coordinates (longitudes, latitudes)
     from a reference station/site.
     
@@ -379,15 +314,27 @@ def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
         degrees. Could be ``-`` for descending order. Any other value should 
         be in ascending order. 
     
+    is_utm: bool, 
+        Consider the first two positional arguments as UTM coordinate values. 
+        This is an alternative way to assume `reflong` and `reflat` are UTM 
+        coordinates 'easting'and 'northing` by default. If `utm2deg` is ``False``, 
+        any value greater than 180 degrees for longitude and 90 degrees for 
+        latitude will raise an error. Default is ``False``.
+        
+    utm_zone: string (##N or ##S)
+        utm zone in the form of number and North or South hemisphere, 10S or 03N
+        Must be given if `utm2deg` is set to ``True``. 
+                      
     todms: bool 
         Convert the degree decimal values into the DD:MM:SS. Default is ``False``. 
         
+    kws: dict, 
+        Additional keywords of :func:`.gis_tools.gis.project_point_utm2ll`. 
         
     Returns 
     -------
         Tuple of  generated projected coordinates longitudes and latitudes
         either in degree decimals or DD:MM:SS
-        
         
     Notes 
     ------
@@ -411,21 +358,21 @@ def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
     >>> rlats 
     ... array(['26:03:05.00', '26:03:38.81', '26:04:12.62', '26:04:46.43',
            '26:05:20.23', '26:05:54.04', '26:06:27.85'], dtype='<U11')
-    >>> rlons, rlats = make_ll_coordinates ((336.7, 339.90) , (3144.2 , 3140.95),
+    >>> rlons, rlats = make_ll_coordinates ((116.7, 119.90) , (44.2 , 40.95),
                                             nsites = 238, step =20. ,
                                             order = '-', r= 125)
     >>> rlons 
-    ... array(['339:54:00.00', '339:53:11.39', '339:52:22.78', '339:51:34.18',
-           '339:50:45.57', '339:49:56.96', '339:49:08.35', '339:48:19.75',
+    ... array(['119:54:00.00', '119:53:11.39', '119:52:22.78', '119:51:34.18',
+           '119:50:45.57', '119:49:56.96', '119:49:08.35', '119:48:19.75',
            ...
-           '336:46:03.04', '336:45:14.43', '336:44:25.82', '336:43:37.22',
-           '336:42:48.61', '336:42:00.00'], dtype='<U12')
+           '116:46:03.04', '116:45:14.43', '116:44:25.82', '116:43:37.22',
+           '116:42:48.61', '116:42:00.00'], dtype='<U12')
     >>> rlats 
-    ... array(['3140:57:00.00', '3140:57:49.37', '3140:58:38.73', '3140:59:28.10',
-           '3141:00:17.47', '3141:01:06.84', '3141:01:56.20', '3141:02:45.57',
+    ... array(['40:57:00.00', '40:57:49.37', '40:58:38.73', '40:59:28.10',
+           '41:00:17.47', '41:01:06.84', '41:01:56.20', '41:02:45.57',
            ...
-       '3144:07:53.16', '3144:08:42.53', '3144:09:31.90', '3144:10:21.27',
-       '3144:11:10.63', '3144:12:00.00'], dtype='<U13')
+       '44:07:53.16', '44:08:42.53', '44:09:31.90', '44:10:21.27',
+       '44:11:10.63', '44:12:00.00'], dtype='<U11')
     
     """  
     def assert_ll(coord):
@@ -455,7 +402,11 @@ def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
     else: order ='+'
     # compute length of line using the reflong and reflat
     # the origin of the landmark is x0, y0= reflong, reflat
-    x0= assert_ll(reflong) ; y0= assert_ll(reflat) 
+    x0= assert_ll(reflong) if is_utm else assert_ll(
+        gis.assert_lon_value(reflong))
+    y0= assert_ll(reflat) if is_utm else assert_ll(
+        gis.assert_lat_value(reflat))
+    
     xinf = xinf or x0  + (np.sin(np.deg2rad(r)) * step * nsites
                           ) / (364e3 *.3048) 
     yinf = yinf or y0 + (np.cos(np.deg2rad(r)) * step * nsites
@@ -467,14 +418,41 @@ def make_ll_coordinates(reflong, reflat, nsites,  *,  r=45.,
     # r0 = np.sqrt(((x0-xinf)*364e3 *.3048)**2 + ((y0 -yinf)*2882e2 *.3048)**2)
     # print('recover distance = ', r0/nsites )
     #--------------------------------------------------------------------------
-    if todms:
-        reflat_ar = np.array(list(
-            map(lambda l: gis.convert_position_float2str(float(l)), reflat_ar)))
-        reflon_ar = np.array(list(
-            map(lambda l: gis.convert_position_float2str(float(l)), reflon_ar)))
+    if is_utm : 
+        if utm_zone is None: 
+            raise TypeError("Please provide your UTM zone e.g.'10S' or '03N' !")
+        lon = np.zeros_like(reflon_ar) 
+        lat = lon.copy() 
+        
+        for kk , (lo, la) in enumerate (zip(reflat_ar, reflon_ar)): 
+            try : 
+                with warnings.catch_warnings(): # ignore multiple warnings 
+                    warnings.simplefilter('ignore')
+                    lat[kk], lon[kk] = gis.project_point_utm2ll(
+                        easting= lo, northing=la, utm_zone=utm_zone, **kws)
+            except : 
+                lat[kk], lon[kk] = gis.utm_to_ll(
+                    23, northing=la, easting=lo, zone=utm_zone)
+                
+        if not HAS_GDAL : 
+            warnings.warn("It seems GDAL is not set! will use the equations"
+                          "from USGS Bulletin 1532. Be aware, the positionning" 
+                          " is less accurate than using GDAL.")
+            
+        warnings.warn("By default 'easting' and 'northing' are presumed to match"
+                      " the first and second argument respectively.") 
+        
+        reflat_ar, reflon_ar = lat , lon 
     
+    if todms:
+       reflat_ar = np.array(list(
+           map(lambda l: gis.convert_position_float2str(float(l)), reflat_ar)))
+       reflon_ar = np.array(list(
+           map(lambda l: gis.convert_position_float2str(float(l)), reflon_ar)))
+       
     return (reflon_ar , reflat_ar ) if order =='+' else (
         reflon_ar[::-1] , reflat_ar[::-1] )
+
 
 def build_array_from_objattr(obj, attr): 
     """ Quick build array of object attributes value from collections object.
@@ -496,7 +474,6 @@ def build_array_from_objattr(obj, attr):
                0.00083333, 0.00083333])
     
     """
-
     if not isinstance( obj, (list, tuple, np.ndarray)): 
         if not hasattr (obj, '__dict__'): 
             raise ValueError ('Object should be an instance or a class'
@@ -506,7 +483,6 @@ def build_array_from_objattr(obj, attr):
     if not hasattr(obj[0], attr): 
         raise AttributeError (f'Object has no attribute {attr!r}')
     
-
     return np.array(list(map(lambda r: getattr(r, attr), obj )))
 
 
@@ -670,7 +646,6 @@ def scale_position(ydata , xdata= None, func = None ,c_order= 0,
             float(l)), ydata_new)))
         
     return ydata_new, popt, pcov 
-
 
 
 def make_ids(arr, prefix =None, how ='py'): 

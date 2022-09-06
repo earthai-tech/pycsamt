@@ -16,6 +16,7 @@ try :
 except :
     pass 
 
+from pycsamt.__init__ import is_installing 
 from pycsamt.core.edi import Edi 
 from pycsamt.core.cs import CSAMT
 from pycsamt.core  import z as CSAMTz
@@ -33,7 +34,7 @@ except: itqdm = False
 try: 
     from sklearn.decomposition import PCA 
 except : 
-    is_success = func.subprocess_module_installation('sklearn')
+    is_success = is_installing ('sklearn')
     if not is_success : 
         raise ImportError( 'Could not import module `sklearn`. Please '
                           'install scikit-learn manually.')

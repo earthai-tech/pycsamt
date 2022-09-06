@@ -1,41 +1,54 @@
 # -*- coding: utf-8 -*-
-#       Authors: Lars Krieger, Jared R. Peacock & Alison Louise Kirkby
-#       contact: < https://github.com/MTgeophysics/mtpy.git>
-#       Licence: GPL
-"""
-   
-Created on Fri Apr 14 14:47:48 2017
 
 """
+GIS_TOOLS
+=========
 
-# ==============================================================================
-# Imports
-# ==============================================================================
-
-
-from pycsamt.utils.decorator import  deprecated #gdal_data_check,
-import numpy as np
-from pycsamt.utils._csamtpylog import csamtpylog
-try : 
+This module contains tools to help project between coordinate systems. The 
+module will first use GDAL if installed.  If GDAL is not installed then 
+pyproj is used. Main functions are:
     
-    import HAS_GDAL, EPSG_DICT
-    if HAS_GDAL:
-        from osgeo import osr
-        from osgeo.ogr import OGRERR_NONE
-    else:
-        import pyproj
-# end if
-except : pass 
+    * project_point_ll2utm
+    * project_point_utm2ll
+    
+These can take in a point or an array or list of points to project.
 
+latitude and longitude can be input as:
+    * 'DD:mm:ss.ms'
+    * 'DD.decimal_degrees'
+    * float(DD.decimal_degrees)
 
+created on Fri Apr 14 14:47:48 2017 by  Jared R. Peacock 
+#       contact: < https://github.com/MTgeophysics/mtpy.git>  
+Revised: 5/2020 JP 
+
+Edited on Fri Apr 14 14:47:48 2019 by @Daniel 
+
+"""
+import numpy as np
+
+from pycsamt.utils.decorator import  deprecated 
+from pycsamt.utils._csamtpylog import csamtpylog
+
+from pycsamt.utils.__init__ import (
+    HAS_GDAL,
+    EPSG_DICT
+)
+    
+if HAS_GDAL:
+    from osgeo import osr
+    from osgeo.ogr import OGRERR_NONE
+else:
+    import pyproj
+ 
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 
 
 class GIS_ERROR(Exception):
     pass
-#==============================================================================
+#===============================================
 # Make sure lat and lon are in decimal degrees
-#==============================================================================
+#===============================================
 def _assert_minutes(minutes):
     assert 0 <= minutes < 60., \
         'minutes needs to be <60 and >0, currently {0:.0f}'.format(minutes)
@@ -48,6 +61,16 @@ def _assert_seconds(seconds):
         'seconds needs to be <60 and >0, currently {0:.3f}'.format(seconds)
     return seconds
 
+def _countdown_resume(deg_or_min, value):
+    """ resume the countdown and  add one if seconds or degree is equal to 60.  
+
+    Commonly seconds and minutes should not end by 60, otherwise one 
+    min or  hour is topped. Thus the second and minute restart counting. 
+    This is useful to skip the assertion error when second and minutes are 
+    equal to 60. Conversion is done instead. 
+    """
+    return ( deg_or_min + value//60, value%60 )  if float (value) >=60. else (
+        deg_or_min, value )  
 
 def convert_position_str2float(position_str):
     """
@@ -68,7 +91,7 @@ def convert_position_str2float(position_str):
         >>> import mtpy.utils.gis_tools as gis_tools
         >>> gis_tools.convert_position_str2float('-118:34:56.3')
     """
-
+    
     if position_str in [None, 'None']:
         return None
     
@@ -76,9 +99,12 @@ def convert_position_str2float(position_str):
     if len(p_list) != 3:
         raise ValueError('{0} not correct format, should be DD:MM:SS'.format(position_str))
 
-    deg = float(p_list[0])
-    minutes = _assert_minutes(float(p_list[1]))
-    sec = _assert_seconds(float(p_list[2]))
+    deg = float(p_list[0]) 
+    minutes = float(p_list[1])
+    sec = float(p_list[2])
+    
+    minutes, sec = _countdown_resume(minutes, sec) 
+    deg, minutes =  _countdown_resume(deg, minutes) 
 
     # get the sign of the position so that when all are added together the
     # position is in the correct place
@@ -95,8 +121,8 @@ def assert_lat_value(latitude):
     """
     make sure latitude is in decimal degrees
     """
-    # if latitude in [None, 'None']:
-    #     return None
+    if latitude in [None, 'None']:
+        return None
     try:
         lat_value = float(latitude)
 
@@ -108,7 +134,7 @@ def assert_lat_value(latitude):
 
     if abs(lat_value) >= 90:
         print("==> The lat_value =", lat_value)
-        raise ValueError('|Latitude| > 90, unacceptable!')
+        raise ValueError(f'|Latitude| > 90, unacceptable!: {str(lat_value)!r}')
 
     return lat_value
 
@@ -130,7 +156,7 @@ def assert_lon_value(longitude):
         lon_value = convert_position_str2float(longitude)
 
     if abs(lon_value) >= 180:
-        raise ValueError('|Longitude| > 180, unacceptable!')
+        raise ValueError(f'|Longitude| > 180, unacceptable!: {str(lon_value)!r}')
 
     return lon_value
 

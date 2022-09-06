@@ -8,15 +8,14 @@ class donothing :
     """ Decorator to do nothing. Just return the func as it was. 
     The `param` reason is just used to specify the skipping reason. """
     def __init__(self, reason = None ):
-        ...
+        self.reason = reason 
         
-    def __call__(self, *args, **kwargs) :
-        
-        @functools.wraps 
-        def new_func (func): 
-            return func (*args, **kwargs)
+    def __call__(self, cls_or_func) :
+        @functools.wraps (cls_or_func)
+        def new_func (*args, **kwargs): 
+            return cls_or_func (*args, **kwargs)
         return new_func 
-
+    
 class deprecated(object):
     """
         Description:

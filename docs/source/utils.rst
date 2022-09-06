@@ -15,13 +15,13 @@ Package Utils
 	:members:
 	
 	
-**Module Func-utils**
+**Module FuncUtils**
 =====================
 .. automodule:: pycsamt.utils.func_utils
     :members:
 	
 	
-**Module Geo-utils**
+**Module GeoUtils**
 =====================
 .. automodule:: pycsamt.utils.geo_utils
     :members:
@@ -40,13 +40,13 @@ Package Utils
     :private-members:
 
 
-**Module Plot-utils**
+**Module PlotUtils**
 =====================
 .. automodule:: pycsamt.utils.plot_utils
     :members:
 
 
-**Module Z-Calculator**
+**Module ZCalculator**
 ========================
 .. automodule:: pycsamt.utils.zcalculator
     :members:

@@ -26,7 +26,7 @@ Package CORE
     :members:
 
 
-**Module z**
+**Module Z**
 ====================
 .. automodule:: pycsamt.core.z
     :members:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #       created on Fri Oct 29 12:31:01 2021
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
-#       Licence: LGPL
+#       Licence: GPL
 import os
 import json 
 import yaml
@@ -577,7 +577,7 @@ def get_config_fname_from_varname(data: Union[T, list, tuple],
                 raise # and go to except  
         except: 
             #using fstring 
-            config_fname= f'{data=}'.split('=')[0]
+            config_fname= f'{data}'.split('=')[0]
             
     elif config_fname is not None: 
         config_fname= config_fname.replace(

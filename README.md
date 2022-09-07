@@ -1,6 +1,6 @@
-# _pycsamt_: A Python toolbox for audio-frequency magnetotellurics
+# _pycsamt_: A package for audio-frequency magnetotellurics
 
-[![Documentation Status](https://readthedocs.org/projects/pycsamt/badge/?version=latest)](https://pycsamt.readthedocs.io/en/latest/?badge=latest) [![Build Status](https://travis-ci.com/WEgeophysics/pyCSAMT.svg?branch=master)](https://travis-ci.com/WEgeophysics/pyCSAMT) [![Requirements Status](https://requires.io/github/WEgeophysics/pyCSAMT/requirements.svg?branch=master)](https://requires.io/github/WEgeophysics/pyCSAMT/requirements/?branch=master)
+[![Documentation Status](https://readthedocs.org/projects/pycsamt/badge/?version=latest)](https://pycsamt.readthedocs.io/en/latest/?badge=latest) [![Build Status](https://travis-ci.com/WEgeophysics/pyCSAMT.svg?branch=master)](https://travis-ci.com/WEgeophysics/pyCSAMT) [![Requirements Status](https://requires.io/github/WEgeophysics/pycsamt/requirements.svg?branch=master)](https://requires.io/github/WEgeophysics/pycsamt/requirements/?branch=master)
   ![GitHub](https://img.shields.io/github/license/WEgeophysics/pycsamt?color=blue&label=licence&logo=GNU&logoColor=red) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/WEgeophysics/pyCSAMT?color=orange) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5674430.svg)](https://doi.org/10.5281/zenodo.5674430)
   [![PyPI version](https://badge.fury.io/py/pycsamt.svg)](https://badge.fury.io/py/pycsamt)
   ![GitHub repo size](https://img.shields.io/github/repo-size/WEgeophysics/pycsamt?color=0A4CEE&style=flat-square)
@@ -9,8 +9,8 @@
 
   * **Purpose**
     
-    Originally, the software was intended for controlled source audio-frequency magnetotelluric (CSAMT) data processing (hereinafter the suffix CSAMT) and mostly related
-    to the groundwater exploration. Currently, the development is focused on the audio-magnetotelluric(AMT) methods i.e the frequency above 1Hz. It encompasses the CSAMT, the natural source AMT (NSAMT) and later the radio AMT. Indeed, the AMT methods are used broadly in diverse of exploration problems such as mineral, hydrocarbon,  groundwater resources, as well as the fault-zone mapping above the 1km depth. 
+    Previously, the software was intended for controlled source audio-frequency magnetotelluric (CSAMT) data processing (hereinafter the suffix CSAMT) and mostly related
+    to the groundwater exploration. The recent development is focused on the audio-magnetotelluric(AMT) methods i.e the frequency above 1Hz. It encompasses the CSAMT, the natural source AMT (NSAMT) and later the radio AMT. Indeed, the AMT methods are used broadly in diverse of exploration problems such as mineral, hydrocarbon,  groundwater resources, as well as the fault-zone mapping above the 1km depth. 
     _pycsamt_ is designed to bring a piece of solution to the problems encountered by using AMT methods. It contains steps of AMT data processing and deals with [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) of [DeGroot-Hedlin and Constable, 1990](https://doi.org/10.1190/1.1442303) , 
     the [MT2DInvMatlab](https://doi.org/10.1016/j.cageo.2008.10.010)  of [Lee et al., 2009](https://doi.org/10.1016/j.cageo.2008.10.010) and [ModEM](https://sites.google.com/site/modularem/download) of [Kelbert et al., 2014](https://doi.org/10.1016/j.cageo.2014.01.010)
     for the modeling purpose.

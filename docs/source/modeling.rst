@@ -13,4 +13,3 @@ Package Modeling
 ===================
 .. automodule:: pycsamt.modeling.modem
 	:members:
-

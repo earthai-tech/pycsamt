@@ -852,8 +852,8 @@ class Processing(object):
         set the param `filterfunc` to the filter we need. Avoid repetition 
         in the code Later.
         
-        .. _filter-AMA::`pycsamt.core.processing.zcalculator.compute_AMA`
-        .. _filter-AMA::`pycsamt.core.processing.zcalculator.compute_FLMA`
+        * :meth:`pycsamt.core.processing.zcalculator.compute_AMA`
+        * :meth:`pycsamt.core.processing.zcalculator.compute_FLMA`
         
         :param filterfunc: filter fonction , can be :ref:`filter-AMA` or 
                             :ref:`filter-FLMA`

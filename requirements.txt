@@ -14,4 +14,5 @@ pandas
 python-coveralls
 tqdm
 mtpy
+geopandas 
 

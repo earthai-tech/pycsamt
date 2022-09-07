@@ -4,10 +4,12 @@
 #       Licence: GPL
 
 """
-Processing correction tools 
-Created on Mon Aug 15 13:46:33 2022
+Processing tools
+================= 
+Fast process EMAP and AMT data. Tools are used for data sanitizing, removing 
+noises and filtering. 
 
-@author: Daniel
+Created on Mon Aug 15 13:46:33 2022
 
 .. _pyCSAMT: https://github.com/WEgeophysics/pycsamt
 .. _MTpy: https://github.com/MTgeophysics/mtpy
@@ -19,6 +21,7 @@ Created on Mon Aug 15 13:46:33 2022
 .. |EMAP| replace:: |EM| array profiling
 
 """
+from __future__ import annotations 
 import os 
 import re 
 import warnings 
@@ -996,7 +999,7 @@ def flma (ediObjs=None, res2d=None, phs2d=None, freqs= None, c=None, window_size
     return zjc if out =='z' else rc 
     
      
-def moving_average (y, /, window_size = 3 , method ='sma',
+def moving_average (y, *, window_size = 3 , method ='sma',
                     mode ='same', alpha =.5 ): 
     """ A moving average is  used with time series data to smooth out
     short-term fluctuations and highlight longer-term trends or cycles.

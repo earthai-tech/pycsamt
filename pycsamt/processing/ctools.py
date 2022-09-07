@@ -1252,7 +1252,7 @@ def skew(ediObj, method='swift'):
     :math:`C_2` and the corresponding amplitude  products are now abbreviated 
     by the commutators:
         
-    ..math:: 
+    .. math:: 
       
         [C_1, C_2] & = & Im (C_2 C_1 ^{*})
                    & = & R_e(C_1) Im(C_2) - R_e(C_2) Im(C_1)
@@ -1709,7 +1709,7 @@ def restoreZ(ediObjs, *, buffer = None, method ='pd', **kws ):
   
     method: str, optional  
         Method of interpolation. Can be ``base`` for `scipy.interpolate.interp1d`
-        ``mean`` or ``bff`` for scaling methods and ``pd``for pandas interpolation 
+        ``mean`` or ``bff`` for scaling methods and ``pd`` for pandas interpolation 
         methods. Note that the first method is fast and efficient when the number 
         of NaN in the array if relatively few. It is less accurate to use the 
         `base` interpolation when the data is composed of many missing values.

@@ -1,0 +1,12 @@
+
+.. _pycsamt: https://github.com/WEgeophysics/pycsamt
+.. _MTpy: https://github.com/MTgeophysics/mtpy
+
+.. |MT| replace:: Magnetetolluric 
+.. |AMT| replace:: Audio-Magnetotellurics 
+.. |CSAMT| replace:: Controlled Source |AMT| 
+.. |NSAMT| replace:: Natural Source |AMT| 
+.. |EM| replace:: electromagnetic
+.. |EMAP| replace:: |EM| array profiling
+
+.. include:: macros.hrst

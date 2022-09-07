@@ -14,7 +14,7 @@
 #
 import os
 import sys
-import sphinx_rtd_theme
+import guzzle_sphinx_theme #, sphinx_rtd_theme
 
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
@@ -22,14 +22,14 @@ sys.path.insert(0, os.path.abspath('../..'))
 
 # -- Project information -----------------------------------------------------
 
-project = u'pyCSAMT'
+project = u'pycsamt'
 copyright = u'2021, Kouadio K. Laurent'
 author = u'Kouadio K. Laurent'
 
 # The short X.Y version
-version = u'1.0'
+version = u'1.1'
 # The full version, including alpha/beta/rc tags
-release = u'v1.0.03'
+release = u'v1.1.7'
 
 
 # -- General configuration ---------------------------------------------------
@@ -50,13 +50,14 @@ extensions = [
     #'numpydoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
-     "sphinx_rtd_theme",
+     #"sphinx_rtd_theme",
+     #"guzzle_sphinx_theme", 
     'sphinx.ext.githubpages',
 ]
 
 #Configuring Napoleon
-#napoleon_google_docstring = False
-#napoleon_numpy_docstring = True
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -74,7 +75,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -91,7 +92,7 @@ pygments_style = 'sphinx'
 # a list of builtin themes.
 #
 #html_theme = 'classic'
-html_theme = 'sphinx_rtd_theme'
+html_theme ='bizstyle'#'guzzle_sphinx_theme' #'sphinx_rtd_theme', #bizstyle
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -118,7 +119,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'pyCSAMTdoc'
+htmlhelp_basename = 'pycsamtdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -145,7 +146,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'pyCSAMT.tex', u'pyCSAMT Documentation',
+    (master_doc, 'pycsamt.tex', u'pycsamt Documentation',
      u'Kouadio K. Laurent', 'manual'),
 ]
 
@@ -155,7 +156,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'pycsamt', u'pyCSAMT Documentation',
+    (master_doc, 'pycsamt', u'pycsamt Documentation',
      [author], 1)
 ]
 
@@ -166,8 +167,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'pyCSAMT', u'pyCSAMT Documentation',
-     author, 'pyCSAMT', 'An open source Python toolbox for controlled source audio-frequency magnetotellurics.',
+    (master_doc, 'pycsamt', u'pycsamt Documentation',
+     author, 'pycsamt', 'A package for audio-frequency magnetotellurics',
      'Miscellaneous'),
 ]
 
@@ -192,7 +193,12 @@ epub_copyright = copyright
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ['search.html']
 
-
+#--- Intersphinx ----------------------
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/', None),
+    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+    'mtpy': ('https://mtpy2.readthedocs.io/en/develop/', None)
+}
 
 # -- Extension configuration -------------------------------------------------
 MOCK_MODULES = [

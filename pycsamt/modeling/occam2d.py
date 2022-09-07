@@ -2440,7 +2440,7 @@ class Iter2Dat (object):
                 
 class occam2d_write(object):
     """
-    Special class to build occam2d imput files with :ref:`MTpy` module .
+    Special class to build occam2d imput files with `MTpy` module .
     
     Arguments
     --------
@@ -2529,8 +2529,8 @@ class occam2d_write(object):
                                interpolate_freq =False, 
                                geoelectric_strike =None , **kwargs): 
         """
-        Method to build Occam2D inputfiles. Deal with :ref:`MTpy` module. 
-        Try to install :ref:`MTpy` is not installed yet.
+        Method to build Occam2D inputfiles. Deal with `MTpy`_ module. 
+        Try to install `MTpy`_ is not installed yet.
         
         :param edi_fn: full path to edifiles 
         :type edi_fn: str 

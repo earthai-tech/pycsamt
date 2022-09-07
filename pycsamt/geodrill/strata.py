@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
-#       Licence: LGPL
+#       Licence: GPL
 """
-.. _module-Strata::
-    
-    :synopsis:Metaclasses of geostrata . Takes conventional strata geocodes 
-            look in _geocodes folder . will be deprecated soon
+Strata
+==========
+
+Metaclasses of geostrata .Takes conventional strata geocodes 
+look in _geocodes folder . will be deprecated soon
+
 """
 from pycsamt.utils.geo_utils import mapping_stratum as setdico
 try : 

@@ -1,5 +1,5 @@
 #sphinx>=2.4.0
-sphinx >=3.5
+sphinx==5.0.2
 matplotlib>=3.3.0
 numpy
 scipy
@@ -15,4 +15,5 @@ python-coveralls
 tqdm
 mtpy
 geopandas 
-
+joblib
+gdal

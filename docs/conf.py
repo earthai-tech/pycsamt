@@ -27,9 +27,9 @@ copyright = u'2021, Kouadio K. Laurent'
 author = u'Kouadio K. Laurent'
 
 # The short X.Y version
-version = u'1.2'
+version = u'1.1'
 # The full version, including alpha/beta/rc tags
-release = u'v1.2.0'
+release = u'v1.1.7'
 
 
 # -- General configuration ---------------------------------------------------

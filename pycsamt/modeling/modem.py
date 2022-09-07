@@ -654,7 +654,7 @@ class Stations(station.Stations):
     """
     station locations class
 
-    ..note:: If the survey steps across multiple UTM zones, then a
+    .. note:: If the survey steps across multiple UTM zones, then a
              distance will be added to the stations to place them in
              the correct location.  This distance is
              _utm_grid_size_north and _utm_grid_size_east.  You should

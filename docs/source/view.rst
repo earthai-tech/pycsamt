@@ -4,7 +4,7 @@ Package Visualization
 ====================================
 
 
-**Module ViewTemplates**
+**Module PlotTemplates**
 =========================
 .. automodule:: pycsamt.view.plot
 	:members:

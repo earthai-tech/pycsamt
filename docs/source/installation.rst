@@ -3,7 +3,7 @@ Installation
 
 Installing via pip 
 ------------------
-To install the pycsamt package from the Python package index into an established
+To install the `pycsamt` package from the Python package index into an established
 Python environment, use the pip command:
 
 .. code-block:: bash
@@ -32,9 +32,9 @@ In the source directory use the command
    
 Required Dependencies
 ---------------------
-pycsamt was originally built on python 3.6. However, the last version requires at least **python 3.8**.
+`pycsamt` was originally built on python 3.6. However, the last version requires at least **python 3.8**.
 
-pycsamt calls on the core Python data analytics stack, and a third party parsing library:
+It calls on the core Python data analytics stack, and a third party parsing library:
 
 * Numpy
 * Scipy
@@ -58,10 +58,11 @@ Optional Dependencies
 In order to plot results from the model as shown in :doc:`quick start <../quick_start>`:
 
 * Matplotlib
+* Numba 
 
 Additional Resources
 --------------------
-The `pycsamt User Guide <https://github.com/WEgeophysics/pycsamt/blob/master/docs/pyCSAMT%20User%20Guide.pdf>`_ contains recipes that can help you get start up with pycsamt.
+The `pycsamt user guide <https://github.com/WEgeophysics/pyCSAMT/blob/master/docs/user_guide.pdf>`_ contains recipes that can help you get start up with pycsamt.
 Moreover, to go through step by step installation, one may refer to `Step by Step Installation Guide <https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux>`_.
 
 

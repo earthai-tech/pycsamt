@@ -1,20 +1,14 @@
 # -*- coding: utf-8 -*-
 #       Created on Sat Dec 12 16:21:10 2020
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
-#       Licence: LGPL
+#       Licence: GPL
 """
+Module Infos 
+============== 
+Module contains various parameters  of files handling and the definition of 
+some technical words. It parses , asserts and controls  the  different inputs formats 
+recognized  by the software.
  
-.. _module-Infos::`csamtpy.etc.infos`
-
-    :synopsis: Module contains various parameters  of files handling and 
-        the definition of some technical words.
-
-.. warnings:: `_sensible` class is parser class. It parses and controls  the  
-                different inputs formats recognized  by the software.
-                class could affect how the software could run.
-                However, improving the code to become less expensive 
-                is welcome.
-                ...
 """
 import os
 import warnings

@@ -1,5 +1,5 @@
 #sphinx>=2.4.0
-sphinx==5.0.2
+sphinx >=3.8
 matplotlib>=3.3.0
 numpy
 scipy

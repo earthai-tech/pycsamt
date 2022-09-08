@@ -31,7 +31,7 @@ geology and can provide significant details.(ii) second, it includes a backpack 
 for use in difficult terrain. (iii) Third, the technique requires no high-voltage electrodes, and logistics 
 are relatively easy to support in the field. Stations can be acquired almost anywhere and can be placed any 
 distance apart. This allows for large-scale regional reconnaissance exploration or detailed surveys of local 
-geology and has no environmental impact [@Carlsonetal2005; @Zonge2000]. Unfortunately, this advantage also 
+geology and has no environmental impact [@Zonge2000]. Unfortunately, this advantage also 
 requires careful processing because the natural signals are not under our control and suffer from frequency 
 ranges with little or no signal. This is one of the main problems in collecting NSAMT data is the signal level 
 in the "attenuation band" also known as the "dead-band" [@Wangetal2017; @Zongeetal1991].  In this 
@@ -55,7 +55,7 @@ an inner handler to calibrate and to scale the raw data from different hardware 
 . It also recomputes the deviation errors before processing [@Mykle1996]. Its recent development is composed of six main sub-packages 
 as displayed in [Figure 1]. 
 
-![Brief illustration of the main sub-packages: core (key functions and methods), modeling (deals with the inversion softwares such Occam2D of @deGrootetal1990, ModEM of @Kelbertetal2014),  utils, processing and geodrill (for geology and drilling)](examples/paper_figures/fig.packages.png){width="5.260416666666667in" }
+![Brieve illustration of the main sub-packages: core (key functions and methods), modeling (deals with the inversion softwares such Occam2D of @deGrootetal1990, ModEM of @Kelbertetal2014),  utils, processing and geodrill (for geology and drilling)](examples/paper_figures/fig.packages.png){width="5.260416666666667in" }
 
 Commonly the amplitude of natural electromagnetic fields shows a minimum in the frequency range of 1–2 kHz 
 and decays with increasing frequency. The fields from discharges and thunderstorms propagate in the earth’s 

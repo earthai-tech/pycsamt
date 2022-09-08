@@ -1,5 +1,5 @@
 ---
-title: "pycsamt: A package for robust AMT data processing"
+title: "New, improved version of pycsamt package for robust AMT data processing"
 tags:
   - Python
   - pycsamt
@@ -78,7 +78,7 @@ at the missing frequency signals. Note that the recovery tensor is used to (re)c
 ![A missing data recovery at the missing and attenuation signal at two randomly selected stations E12 and E27](examples/paper_figures/recovered_tensors.PNG){width="5.260416666666667in" }
 
 Furthermore, the skew analysis can also be performed at the 50 stations to show the dimensionality 
-(1D, 2D or 3D) of the structures [e.g. Figure 3] [@Bahr1991; @Swift1969; @Weaver2000].  The script ("_~.ctools.restoreZ_") for recovering lost data is located in the *processing* sub-packages.  It accepts as input a list of raw standard Electrical Data Interchange (EDI) files [@Wightetal1988], a collection of 
+(1D, 2D or 3D) of the structures [e.g. Figure 3] [@Bahr1991; @Swift1969; @Weaveretal2000].  The script ("_~.ctools.restoreZ_") for recovering lost data is located in the *processing* sub-packages.  It accepts as input a list of raw standard Electrical Data Interchange (EDI) files [@Wightetal1988], a collection of 
 EDI-object from *.edi* module or  MTpy Edi-objects [@Kirkbyetal2019]. It returns a Z object composed of a 2×2 matrix known as the complex impedance tensor which can be exported to EDI-file for other purpose. 
  
 ![An example of dimensionality analysis. Skew value greater than 5 degrees shows 3D dimensional structures and 2D or 1D otherwise](examples/paper_figures/fig.skew.PNG){width="5.260416666666667in" }

@@ -37,7 +37,7 @@ ranges with little or no signal. This is one of the main problems in collecting 
 in the "attenuation band" also known as the "dead-band" [@Wangetal2017; @Zongeetal1991].  In this 
 work, I exhibited the result of a simple and fast code application as a new feature in the _pycsamt_ package 
 to recover the frequencies lost in the attenuation band. In practice, the recovery technique is not new since 
-it has been applied with Zonge International engineering [@Zheng2010]. However, in addition to recovering 
+it has been applied with Zonge International company [@Zheng2010]. However, in addition to recovering 
 signals from dead-band frequencies, I added a capability to strengthen amplitude signals (improve signal 
 noise-to ratio) in the subsequent processing of NSAMT data by using filters such as trimming moving-average 
 (MA), fixed-length MA [@Sandersetal2006], adaptative MA [@Torres-verdìnetal1992] (mostly used 

@@ -3,7 +3,6 @@ from .ctools import (
     removeNoise, 
     remove_distortion, 
     remove_static_shift, 
-    restoreZ, 
     make_griddata, 
     skew, 
     pca_filter, 
@@ -25,6 +24,9 @@ from .ctools import (
     betaj, 
     exportfilterededis, 
     rhoa2z, 
-    z2rhoa 
-
+    z2rhoa, 
+    restoreZ, 
+    qc,
+    get_valid_data,
 )
+

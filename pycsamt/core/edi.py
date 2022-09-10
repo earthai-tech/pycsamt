@@ -1089,12 +1089,12 @@ class Edi :
             self.verbose = verbose 
         if self.verbose is None: self.verbose =0 
         
+        if savepath is not None: 
+            self.savepath =savepath 
+            
         if not hasattr(self, 'savepath'):
             self.savepath =None 
             
-        if savepath is not None: 
-            self.savepath =savepath 
-        
         if edi_fn is not None : 
             self.edifile =edi_fn 
         
@@ -1611,7 +1611,7 @@ class Edi :
         return new_Z 
         
     # --> write new edi file
-    def write_new_edifile(self, new_edi_fn=None, new_Z=None,**kws):
+    def write_new_edifile(self, new_edi_fn=None, new_Z=None,  **kws):
         """
         write a new edi file if things have changed.  Note if new_Z is not 
         None, they are not changed in `Edi` object, you  need to change them 

@@ -12,7 +12,7 @@ authors:
 affiliations:
   - name: Department of Geophysics, School of Geosciences and Info-physics, Central South University, China
     index: 1
-  - name: Equipe de Recherche Géophysique Appliquée, Laboratoire de Geologie Ressources Minerales et Energetiques, UFR des Sciences de la Terre et des Ressources Minières, Université Félix Houphouët-Boigny, Cote d'Ivoire
+  - name: Laboratoire de Geologie Ressources Minerales et Energetiques, UFR des Sciences de la Terre et des Ressources Minières, Université Félix Houphouët-Boigny, Cote d'Ivoire
     index: 2
 date: 02 September 2022
 bibliography: paper.bib

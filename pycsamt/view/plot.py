@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Mon Dec 28 14:28:06 2020
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
-#       Licence: LGPL
+#       Licence: GPL
 """
 Module View
 ============

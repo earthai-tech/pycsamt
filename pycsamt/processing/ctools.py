@@ -11,7 +11,7 @@ noises and filtering.
 
 Created on Mon Aug 15 13:46:33 2022
 
-.. _pyCSAMT: https://github.com/WEgeophysics/pycsamt
+.. _pycsamt: https://github.com/WEgeophysics/pycsamt
 .. _MTpy: https://github.com/MTgeophysics/mtpy
 .. |MT| replace:: Magnetetolluric 
 .. |AMT| replace:: Audio-Magnetotellurics 
@@ -155,7 +155,7 @@ def z2rhoa (z, freq):
 
     if len(freq) != len(z): 
         raise ValueError("frequency and tensor z must have the same length."
-                         "{len(freq} & {len(z)} are given.")
+                         f"{len(freq)} & {len(z)} are given.")
  
     return np.abs(z)**2 / (2 * np.pi * freq[:, None] * mu0 )
 
@@ -169,7 +169,7 @@ def get_reference_frequency (ediObjs= None, arr2d=None, freqs=None,
     Parameters 
     ---------- 
     ediObjs: list  of  pycsamt.core.edi.Edi or mtpy.core.edi.Edi objects 
-        Collections of EDI-objects from `pyCSAMT`_ and `MTpy`_ packages 
+        Collections of EDI-objects from `pycsamt`_ and `MTpy`_ packages 
         
     arr2d: np.ndarray (N, M)
         2D dimensional array of number of frequency x number of stations/sites, 
@@ -187,6 +187,7 @@ def get_reference_frequency (ediObjs= None, arr2d=None, freqs=None,
     -------
     rf : float 
         the reference frequency at the clean data in Hz 
+        
     Examples 
     ---------
     >>> from pycsamt.processimg import make2d, get_reference_frequency 
@@ -209,7 +210,7 @@ def get_reference_frequency (ediObjs= None, arr2d=None, freqs=None,
         ediObjs = get_ediObjs(ediObjs)
     
     if ediObjs is None and arr2d is None: 
-        raise ValueError('NoneType can not be read!')
+        raise TypeError('NoneType can not be read!')
     if ediObjs is not None: 
         freqs= get_full_frequency(ediObjs)
         # fit z and find all missing data from complete frequency f 
@@ -221,7 +222,7 @@ def get_reference_frequency (ediObjs= None, arr2d=None, freqs=None,
         # stacked the z values alomx axis=1. 
         arr2d = np.hstack ([ reshape (o, axis=0) for o in zxy])
     if freqs is None:
-        raise ValueError("Array of all frequencies is missing.")
+        raise TypeError("Array of all frequencies is missing.")
         
     freqs = np.array(freqs) # for consistency 
     if len(freqs) != len(arr2d): 
@@ -297,7 +298,6 @@ def interpolate2d (arr2d , method = 'slinear', **kws):
                          for ii in  range (arr2d.shape[1])])
     return arr2d 
 
-
 def get_full_frequency (ediObjs, to_log10 =False ): 
     """ Get the frequency with clean data. 
     
@@ -306,7 +306,7 @@ def get_full_frequency (ediObjs, to_log10 =False ):
     due to the weak of missing frequency at certain band especially in the 
     attenuation band. 
     
-    :param ediObjs: Collections of EDI-objects from `pyCSAMT`_ and `MTpy`_ 
+    :param ediObjs: Collections of EDI-objects from `pycsamt`_ and `MTpy`_ 
         packages or full path to EDI files. 
     :type ediObjs: str or :mod:`~.core.edi.Edi_collection` object 
     
@@ -351,7 +351,7 @@ def make2d (ediObjs, out = 'resxy', *, kind = 'complex' , **kws ):
     Parameters 
     ----------- 
     ediObjs: str or :mod:`~.core.edi.Edi_collection` object 
-        Collections of EDI-objects from `pyCSAMT`_ and `MTpy`_ packages 
+        Collections of EDI-objects from `pycsamt`_ and `MTpy`_ packages 
         or full path to EDI files.
     out: str 
         kind of data to output. Be sure to provide the component to retrieve 
@@ -528,7 +528,7 @@ def tma (ediObjs=None, res2d=None, phs2d=None, freqs= None,  window_size =5,
     Parameters 
     ----------
     ediObjs: list  of  pycsamt.core.edi.Edi or mtpy.core.edi.Edi objects 
-        Collections of EDI-objects from `pyCSAMT`_ and `MTpy`_ packages
+        Collections of EDI-objects from `pycsamt`_ and `MTpy`_ packages
         
     res2d : np.ndarray, shape  (N, M)
         2D dimensional resistivity data. N for number of frequency and 
@@ -698,7 +698,7 @@ def ama (ediObjs=None, res2d=None, phs2d=None, freqs= None, c=2, window_size =5,
     Parameters 
     ----------
     ediObjs: list  of  pycsamt.core.edi.Edi or mtpy.core.edi.Edi objects 
-        Collections of EDI-objects from `pyCSAMT`_ and `MTpy`_ packages
+        Collections of EDI-objects from `pycsamt`_ and `MTpy`_ packages
         
     res2d : np.ndarray, shape  (N, M)
         2D dimensional resistivity data. N for number of frequency and 
@@ -851,7 +851,7 @@ def betaj (xj, L, W, **kws):
     :param L: int : length of dipole in meters 
     :param kws: dict , additional :func:`scipy.intergate.quad` functions.
     
-    :return: Weight value at th eposition `xj`, prefix-`x`is used to specify  
+    :return: Weight value at the position `xj`, prefix-`x`is used to specify  
         the direction. Commonly the survey direction is considered as `x`.
         
     :example: 
@@ -882,7 +882,7 @@ def flma (ediObjs=None, res2d=None, phs2d=None, freqs= None, c=None, window_size
     Parameters 
     ----------
     ediObjs: list  of  pycsamt.core.edi.Edi or mtpy.core.edi.Edi objects 
-        Collections of EDI-objects from `pyCSAMT`_ and `MTpy`_ packages
+        Collections of EDI-objects from `pycsamt`_ and `MTpy`_ packages
         
     res2d : np.ndarray, shape  (N, M)
         2D dimensional resistivity data. N for number of frequency and 
@@ -1608,7 +1608,7 @@ def simpler_filter (edi_fn, **kws):
     >>> from pycsamt.processing import simpler_filter
     >>> from pycsamt.core.edi import Edi 
     >>> edifile = '/home/edi/m20.E000.edi'
-    >>> newZ =simple_removal( edifile ) 
+    >>> newZ =simpler_filter( edifile ) 
     >>> #write a new corrected edifile 
     >>> _= Edi(edifile).write_new_edifile(new_Z= newZ, 
     ...               new_edi_fn ='m20.removeSR.E000.edi')
@@ -1670,7 +1670,7 @@ def export2newedis (ediObj, new_Z , savepath =None, **kws):
     Parameters 
     -----------
     ediObj: str or  pycsamt.core.edi.Edi or mtpy.core.edi.Edi 
-        Full path to Edi file or object from `pyCSAMT`_ and `MTpy`_ packages 
+        Full path to Edi file or object from `pycsamt`_ and `MTpy`_ packages 
     
     new_Z: ndarray (nfreq, 2, 2) 
         Ndarray of impendance tensors Z. The tensor Z is 3D array composed of 
@@ -1703,7 +1703,7 @@ def restoreZ(ediObjs, *, buffer = None, method ='pd', **kws ):
     Parameters 
     ---------- 
     ediObjs: list  of  pycsamt.core.edi.Edi or mtpy.core.edi.Edi objects 
-        Collections of EDI-objects from `pyCSAMT`_ and `MTpy`_ packages 
+        Collections of EDI-objects from `pycsamt`_ and `MTpy`_ packages 
         
     buffer: list [max, min] frequency in Hz
         list of maximum and minimum frequencies. It must contain only two values.
@@ -1815,7 +1815,7 @@ def restoreZ(ediObjs, *, buffer = None, method ='pd', **kws ):
     >>> # if one uses a buffer, we can check the interpolated frequency buffer 
     >>> # in the reference frequency 
     >>> control_freq_buffer (reffreq, buffer) 
-    ... array([1.470e+04, 1.125e+01])
+    ... [1.470e+04, 1.125e+01]
     >>> # now we can set buffer to  [1.470e+04, 1.125e+01] and use the value 
     >>> # to find the index in raw zxy for plotting purpose to between in the frequency range 
     >>> # mask the z value out of the buffer frequency range
@@ -2052,9 +2052,9 @@ def fit_tensor(refreq, compfreq , z , fill_value = np.nan):
     """ Fit each tensor component to the complete frequency range. 
     
     The complete frequency is the frequency with clean data. It contain all the 
-    frequency range on the site. During the survey since, the missing frequencies 
-    lead to missing tensor data. So the function will indicate when the tensor 
-    data is missing before any interpolation. 
+    frequency range on the site. During the survey, the missing frequencies 
+    lead to missing tensor data. So the function will indicate where the tensor 
+    data is missing and fit to the prior frequencies. 
     
     :param refreq: Reference frequency - Should be the complete frequency 
         collected in the field. 
@@ -2363,8 +2363,8 @@ def make_griddata (Zcol, method ='cubic' , compute_err =False ):
     return z, err, method 
 
 def qplot ( *args, leglabels =None, **kwargs): 
-     """ Quick plot 
-     :param args: list 
+    """ Quick plot 
+    :param args: list 
          List of  [x, y, c] plot 
     :param leglabels: list 
         List of list of legend labels. The number of labels must have
@@ -2379,13 +2379,13 @@ def qplot ( *args, leglabels =None, **kwargs):
                   np.arange(len(z0)), ynew, 'ok-')
        >>> qplot(np.arange(len(z0)), znewc , 'g+',
                  np.arange(len(z0)), znew_corr, 'b:')
-     """
-     import matplotlib.pyplot as plt 
+    """
+    import matplotlib.pyplot as plt 
      
-     plt.plot(*args, **kwargs)
-     plt.xlabel('Log10 Frequency (Hz)')
-     plt.ylabel('Impedance tensor Z (ohm.m)')
-     plt.legend (leglabels , loc ='best')
+    plt.plot(*args, **kwargs)
+    plt.xlabel('Log10 Frequency (Hz)')
+    plt.ylabel('Impedance tensor Z (ohm.m)')
+    plt.legend (leglabels , loc ='best')
    
 class update_Z: 
     """ A decorator for impedance tensor updating. 
@@ -2413,7 +2413,7 @@ class update_Z:
             
             (ediObjs , freq,  z_dict), kwargs = func (*args, **kws)
             
-            # remove the option if user
+            # pop the option argument if user provides it 
             option = kwargs.pop('option', None)
             self.option  = option  or self.option 
             # create an empty array to collect each new Z object 
@@ -2653,7 +2653,7 @@ def exportfilterededis (
     Parameters 
     ----------
     ediObjs: list  of  pycsamt.core.edi.Edi or mtpy.core.edi.Edi objects 
-        Collections of EDI-objects from `pyCSAMT`_ and `MTpy`_ packages
+        Collections of EDI-objects from `pycsamt`_ and `MTpy`_ packages
         
     window_size : int
         the length of the window. It is known as the filter width. Must be 
@@ -2682,7 +2682,7 @@ def exportfilterededis (
     Returns 
     -------
     ediObjs :  :class:`pycsamt.core.z.Z`
-       Collection of  Z objects from `pyCSAMT`_ and `MTpy`_ packages 
+       Collection of  Z objects from `pycsamt`_ and `MTpy`_ packages 
     
     
     Examples 
@@ -2820,7 +2820,7 @@ def qc (ediObjs, * ,  tol = .5 , return_freq =False ):
     It indicate how percentage are the data to be representative.
    
     :param ediObjs: list  of  pycsamt.core.edi.Edi or mtpy.core.edi.Edi objects 
-            Collections of EDI-objects from `pyCSAMT`_ and `MTpy`_ packages
+            Collections of EDI-objects from `pycsamt`_ and `MTpy`_ packages
     :param tol: float, 
         the tolerance parameter. The value indicates the rate from which the 
         data can be consider as meaningful. Preferably it should be less than
@@ -2918,7 +2918,7 @@ def get_valid_data(ediObjs , tol = .5 ,  **kws ):
     Parameters 
     ----------
     ediObjs: list  of  :class:`pycsamt.core.edi.Edi` or :class:`mtpy.core.edi.Edi` 
-        collections of EDI-objects from `pyCSAMT`_ and `MTpy`_ packages
+        collections of EDI-objects from `pycsamt`_ and `MTpy`_ packages
             
     tol : float, 
         tolerance parameter. The value indicates the rate from which the data 
@@ -2932,8 +2932,7 @@ def get_valid_data(ediObjs , tol = .5 ,  **kws ):
         
     Returns 
     -------
-    Zc:class:`pycsamt.core.z.Z` impedance tensor 
-        objects.
+    Zc:class:`pycsamt.core.z.Z` impedance tensor objects.
         
     Examples 
     --------
@@ -2943,12 +2942,12 @@ def get_valid_data(ediObjs , tol = .5 ,  **kws ):
     >>> f= get_full_frequency(ediObjs)
     >>> len(f) 
     ... 55
-    >>> zObjs_soft = get_valid_data (ediObjs, threshold = 0.3, 
+    >>> zObjs_soft = get_valid_data (ediObjs, tol= 0.3, 
                                      option='None' ) # None doesn't export EDI-file
     >>> len(zObjs_soft[0]._freq) # suppress 3 tensor data 
     ... 52 
-    >>> zObjs_hard  = get_valid_data (ediObjs, threshold = 0.6 )
-    >>> len(zObjs_hard[0]._freq)  # suppress two 
+    >>> zObjs_hard  = get_valid_data (ediObjs, tol = 0.6 )
+    >>> len(zObjs_hard[0]._freq)  # suppress only two 
     ... 53
     
     """
@@ -2956,7 +2955,10 @@ def get_valid_data(ediObjs , tol = .5 ,  **kws ):
     def delete_useless_tensor (z ,  index , axis = 0):
         """Remove meningless tensor data"""
         return np.delete (z, index , axis )
-   
+    def set_null(freq, objs): 
+        """Set null in the case the component doesn't exist"""
+        return np.zeros ((len(f), len(objs)), dtype = np.float32)
+    
     ediObjs = get_ediObjs(ediObjs) 
     _, no_ix = qc(ediObjs , tol= tol  ) 
     f = get_full_frequency(ediObjs ) 
@@ -2965,35 +2967,59 @@ def get_valid_data(ediObjs , tol = .5 ,  **kws ):
     # interpolate frequency 
     new_f  = freq_interpolation (reshape (ff)) 
     
-    # gatherthe 2D z objects 
-    zxx = delete_useless_tensor(
-        make2d (ediObjs, 'zxx'), no_ix) 
-    zxx = interpolate2d(zxx)
-    zxx_err = delete_useless_tensor(
-        make2d (ediObjs, 'zxx_err') , no_ix ) 
-    zxx_err = interpolate2d (zxx_err )
-    # -XY--
-    zxy = delete_useless_tensor(
-        make2d (ediObjs, 'zxy'), no_ix )  
-    zxy= interpolate2d( zxy)
-    zxy_err = delete_useless_tensor( 
-        make2d (ediObjs, 'zxy_err') , no_ix )
-    zxy_err = interpolate2d(zxy_err)
-    # -YX--
-    zyx = delete_useless_tensor( 
-        make2d (ediObjs, 'zyx') , no_ix ) 
-    zyx = interpolate2d(zyx)
-    zyx_err = delete_useless_tensor(
-        make2d (ediObjs, 'zyx_err') , no_ix ) 
-    zyx_err = interpolate2d( zyx_err )
-    # -YY--
-    zyy = delete_useless_tensor(
-        make2d (ediObjs, 'zyy'), no_ix ) 
-    zyy = interpolate2d(zyy)
-    zyy_err = delete_useless_tensor(
-        make2d (ediObjs, 'zyy_err') , no_ix ) 
-    zyy_err = interpolate2d(zyy_err)
+    # gather the 2D z objects
     
+    # -XX--
+    try : 
+        zxx = delete_useless_tensor(
+            make2d (ediObjs, 'zxx'), no_ix) 
+        zxx = interpolate2d(zxx)
+        zxx_err = delete_useless_tensor(
+            make2d (ediObjs, 'zxx_err') , no_ix ) 
+        zxx_err = interpolate2d (zxx_err )
+    except :
+        zxx = set_null(new_f, ediObjs)
+        zxx_err= zxx.copy() 
+        
+    # -XY--    
+    try :
+        zxy = delete_useless_tensor(
+            make2d (ediObjs, 'zxy'), no_ix )  
+        zxy= interpolate2d( zxy)
+        zxy_err = delete_useless_tensor( 
+            make2d (ediObjs, 'zxy_err') , no_ix )
+        zxy_err = interpolate2d(zxy_err)
+    except: 
+        zxy = set_null(new_f, ediObjs)
+        zxy_err= zxy.copy() 
+
+    # -YX--
+    try:
+    
+        zyx = delete_useless_tensor( 
+            make2d (ediObjs, 'zyx') , no_ix ) 
+        zyx = interpolate2d(zyx)
+        zyx_err = delete_useless_tensor(
+            make2d (ediObjs, 'zyx_err') , no_ix ) 
+        zyx_err = interpolate2d( zyx_err )
+    except: 
+        zyx = set_null(new_f, ediObjs)
+        zyx_err= zyx.copy() 
+        
+    # -YY--
+    try:
+        zyy = delete_useless_tensor(
+            make2d (ediObjs, 'zyy'), no_ix ) 
+        zyy = interpolate2d(zyy)
+        zyy_err = delete_useless_tensor(
+            make2d (ediObjs, 'zyy_err') , no_ix ) 
+        zyy_err = interpolate2d(zyy_err)
+        
+    except :  
+        zyy = set_null(new_f, ediObjs)
+        zyy_err= zyy.copy() 
+        
+  
     z_dict = { 'zxx': zxx ,'zxy': zxy ,
                 'zyx': zyx,'zyy': zyy, 
                 'zxx_err': zxx_err ,'zxy_err': zxy_err ,

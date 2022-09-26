@@ -51,7 +51,7 @@ Utilities and helpers functions:
     * get_interpolate_freqs 
     * fit_by_ll 
     * build_array_from_objattr
-    * reshape_array 
+    * reshape
     * fillNaN
     * ismissing 
     * load2array

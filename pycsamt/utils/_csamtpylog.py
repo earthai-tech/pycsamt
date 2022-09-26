@@ -162,11 +162,10 @@ class csamtpylog:
         
         """
         
-        ownUserLogger="main_logging_configfile.yml"
+        ownUserLogger="p.configlog.yml"
         if path2configfile is None :
-            env_var=os.environ['pyCSAMT']
-            path2configfile =os.path.join( env_var, 'csamtpy','geoDrill','_logfiles',
-                ownUserLogger)
+            env_var=os.environ['pycsamt']
+            path2configfile =os.path.join( env_var, 'pycsamt','utils', ownUserLogger)
             
 
         elif path2configfile is not None :

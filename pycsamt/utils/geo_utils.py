@@ -1009,7 +1009,7 @@ def get_agso_properties(config_file =None, orient ='series'):
         
     :Example: 
         >>> import pycsamt.utils.geo_utils as GU
-        >>> data=GU.('pycsamt/geodrill/_geocodes/AGSO_STCODES.csv')
+        >>> data=GU.get_agso_properties('pycsamt/geodrill/_geocodes/AGSO_STCODES.csv')
         >>> code_descr={key:value for key , value in zip (data["CODE"],
                                                        data['__DESCRIPTION'])}
     """

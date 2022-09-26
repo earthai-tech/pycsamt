@@ -3150,7 +3150,7 @@ class Plot2d (object):
         self.markerfacecolor=kws.pop('markerfacecolor', 'k')
         self.ms = kws.pop('ms', 2)
         self.lw =kws.pop('lw', 2)
-        
+        self.plot_style = kws.pop('style', 'pcolormesh')
         #------ticks parameters ------------------
         self.fw =kws.pop('font_weight', 'bold')
         self.depth_scale=kws.pop('depth_scale', 'm')
@@ -3331,7 +3331,7 @@ class Plot2d (object):
         return ptsection 
     
         
-    def plottemp2d (self, arr2d, y=None,  x =None, style ='pcolormesh', 
+    def plottemp2d (self, arr2d, y=None,  x =None, style =None, 
                 distance = 50., stnlist =None, prefix ='S', how= 'py',
                 **kws): 
         """ 2D templates for quick visualization. 
@@ -3381,7 +3381,8 @@ class Plot2d (object):
         Examples 
         -------- 
         >>> import numpy as np
-        >>> from pycsamt.processing import make2d , get_ediObjs, interpolate2d 
+        >>> from pycsamt.processing import make2d ,interpolate2d 
+        >>> from pycsamt.core import get_ediObjs 
         >>> from pycsamt.processing import get_full_frequency 
         >>> from pycsamt.view import Plot2d 
         >>> # create a 2d grid of resistivity data from edipath 
@@ -3406,7 +3407,7 @@ class Plot2d (object):
                                 dpi = self.fig_dpi , **kws 
                     )
          
-        style = style or 'pcolormesh' 
+        style = style or self.plot_style  
         sc = copy.deepcopy(style)
         style = str (style).lower().strip() 
         if style not in ('pcolormesh', 'imshow'): 

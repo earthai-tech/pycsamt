@@ -290,9 +290,7 @@ class Avg (object):
             raise CSex.pyCSAMTError_avg_file(
                 'The number provided doesnt not match Avgfile.')
             
-            
-            
-            
+
     def avg_write_2_to_1 (self, data_fn=None , savepath =None ):
         """ 
         Method to rewrite avg Astatic file (F2) to main file F1 .

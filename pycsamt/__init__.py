@@ -39,7 +39,7 @@ import sys
 import subprocess 
 import logging 
 import os
-import tempfile
+
 
 # setup the package 
 if __package__ is None or __name__ == '__main__': 
@@ -49,15 +49,14 @@ if __package__ is None or __name__ == '__main__':
     
 # configure the logger 
 from pycsamt.utils._csamtpylog import csamtpylog
-try: 
-    csamtpylog.load_configure(os.path.join(
-        os.path.abspath('.'),'pycsamt', 'utils', "p.configlog.yml"))
-except: 
-    csamtpylog.load_configure(os.path.join(
-        os.path.abspath('.'),'utils', "p.configlog.yml"))
+
+
+conffile = os.path.join(
+    os.path.dirname(__file__),  "p.configlog.yml")
+csamtpylog.load_configure(conffile) 
 
 # set loging Level
-logging.getLogger('matplotlib').setLevel(logging.WARNING)
+logging.getLogger('matplotlib.font_manager').setLevel(logging.WARNING)
 
 epsg_dict = {
     28350: ['+proj=utm +zone=50 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs', 50],
@@ -199,37 +198,9 @@ except ImportError:
 else :
     imtpy =True 
     
-# set path for demo and testing module
-# Get the repository dir like https://github.com/WEgeophysics/pycsamt /
-#C:github.com/WEgeophysics/pyCSAMT  
-PYCSAMT_ROOT = os.path.normpath(
-    os.path.abspath(
-        os.path.dirname(
-            os.path.dirname(__file__)
-        )
-    )
-)
-
-EDI_DATA_DIR = os.path.normpath(
-    os.path.join(PYCSAMT_ROOT , 'data/edi'))
-AVG_DATA_DIR = os.path.normpath(
-    os.path.join(PYCSAMT_ROOT , 'data/avg'))
-J_DATA_DIR = os.path.normpath(
-    os.path.join(PYCSAMT_ROOT , 'data/j'))
-DRILL_DATA_DIR = os.path.normpath(
-    os.path.join(PYCSAMT_ROOT , 'data/drill_examples_files'))
-OCCAM2D_DATA_DIR = os.path.normpath(
-    os.path.join(PYCSAMT_ROOT , 'data/occam2d'))
-STN_DATA_DIR = os.path.normpath(
-    os.path.join(PYCSAMT_ROOT , 'data/stn_profiles'))
-CONFIG_DATA_DIR = os.path.normpath(
-    os.path.join(PYCSAMT_ROOT , 'data/_conffiles'))
-
-SYSTEM_TEMP_DIR = tempfile.gettempdir()
-NEW_TEMP_DIR=tempfile.mkdtemp(prefix="pycsamt_tmpdir_")
 
 
-
+__all__=['tqdm', 'mtpy', 'numba', 'is_installing'] 
 
 
 

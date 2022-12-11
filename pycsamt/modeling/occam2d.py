@@ -28,7 +28,7 @@ from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
 from pycsamt.utils import  plotdecorator  as mdeco
 from pycsamt.utils._p import _sensitive as SB 
-from pycsamt.utils._csamtpylog import csamtpylog 
+from pycsamt._csamtpylog import csamtpylog 
 
 _logger =csamtpylog.get_csamtpy_logger(__name__)
 

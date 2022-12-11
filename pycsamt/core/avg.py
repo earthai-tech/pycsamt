@@ -20,11 +20,11 @@ import numpy as np
 import pandas as pd
 from  datetime import (datetime, timezone)
 
+from pycsamt._csamtpylog import csamtpylog
 from pycsamt.utils import _p as infOS
 from pycsamt.utils.decorator import deprecated
 from pycsamt.site import Site 
 from pycsamt.utils import zcalculator as Zcc
-from pycsamt.utils._csamtpylog import csamtpylog
 from pycsamt.utils import avg_utils as cfunc
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import exceptions as CSex

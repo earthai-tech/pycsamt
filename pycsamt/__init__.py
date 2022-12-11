@@ -48,7 +48,7 @@ if __package__ is None or __name__ == '__main__':
     __package__= 'pycsamt' 
     
 # configure the logger 
-from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt._csamtpylog import csamtpylog
 
 
 conffile = os.path.join(

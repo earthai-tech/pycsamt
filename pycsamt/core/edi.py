@@ -36,7 +36,7 @@ from pycsamt.site import  Location
 from pycsamt.utils. _p import _sensitive as SB 
 from pycsamt.utils import gis_tools as gis 
 from pycsamt.utils import exceptions as CSex
-from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt._csamtpylog import csamtpylog
 
 if imtpy:
     import mtpy

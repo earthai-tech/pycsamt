@@ -15,7 +15,7 @@ import numpy as np
 
 from pycsamt.utils.geo_utils import mapping_stratum as strato
 from pycsamt.utils  import exceptions as CSex
-from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt._csamtpylog import csamtpylog
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
 

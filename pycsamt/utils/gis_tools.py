@@ -28,7 +28,7 @@ Edited on Fri Apr 14 14:47:48 2019 by @Daniel
 import numpy as np
 
 from pycsamt.utils.decorator import  deprecated 
-from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt._csamtpylog import csamtpylog
 
 from pycsamt.utils.__init__ import (
     HAS_GDAL,

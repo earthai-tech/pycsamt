@@ -6,11 +6,11 @@
 Module View
 ============
 
-Some templates for plotting purposes. It gives a quick alternative for uses to 
-save their time for writting their own plot scripts. However to have full 
+Some templates for plotting purposes. It gives a quick alternative to 
+save time writting their own plot scripts. However to have full 
 control of the plot, it is recommended to write your own plot scripts. 
 
-Note that the package can not handle all the plots possibilty that offers the
+Note that the package can not handle all the possible plots that offers the
 software. In the future, many plots should be removed and replaced by some  
 most efficient ones. 
 
@@ -42,8 +42,8 @@ from pycsamt.modeling import occam2d
 from pycsamt.geodrill import geocore  as geoD
 from  pycsamt.utils.plotdecorator import geoplot1d 
 from pycsamt.utils._p import suit 
-from pycsamt.utils._csamtpylog import csamtpylog 
 from pycsamt.processing import Processing 
+from pycsamt._csamtpylog import csamtpylog 
 
 try : 
     from pycsamt.__init__ import imtpy  
@@ -656,7 +656,7 @@ class Plot1d :
                                               **errorbar_kw 
                                               )
          
-                jj +=3  # to jup to next value if 
+                jj +=3  # to jump to next value if 
                 
         if phs_err is not None: 
             phs_err = func._assert_all_types(phs_err, list, tuple, np.ndarray)
@@ -893,13 +893,13 @@ class Plot1d :
                     xtick_label_size= kwargs.pop('xtick_labelsize', 12), 
                     ytick_label_size= kwargs.pop('ytick_labelsize', 12)
                                           )
-        lw ,ls, color, alpha =kws['lw'],kws ['ls'], kws['color'], kws['alpha']
+        # lw ,ls, color, alpha =kws['lw'],kws ['ls'], kws['color'], kws['alpha']
+        lw ,ls, color=kws['lw'],kws ['ls'], kws['color']
         
-        x_ticklabel_rotation, x_ticks_labelsize ,\
-            y_ticks_labelsize = kws['xtick_label_rotation'], \
-                                    kws['xtick_label_size'],\
-                                    kws['ytick_label_size']
-            
+        x_ticklabel_rotation=kws['xtick_label_rotation']
+        x_ticks_labelsize= kws['xtick_label_size']
+        #y_ticks_labelsize=kws['ytick_label_size']
+
         marker_style, markerfacecolor, markeredgecolor =\
             kws['marker'], kws['markerfacecolor'], kws['markeredgecolor']
 

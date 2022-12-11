@@ -15,7 +15,7 @@ import pycsamt.utils._p as infos
 from pycsamt.utils import exceptions as CSex
 from pycsamt.utils import func_utils as func
 from pycsamt.utils.decorator import (deprecated, deprecated_to)
-from pycsamt.utils._csamtpylog import csamtpylog 
+from pycsamt._csamtpylog import csamtpylog 
 
 _logger =csamtpylog.get_csamtpy_logger(__name__)
 try:

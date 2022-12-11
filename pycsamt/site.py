@@ -9,11 +9,11 @@ import shutil
 import warnings 
 import numpy as np 
 
+from pycsamt._csamtpylog import csamtpylog
 from pycsamt.utils import _p as inFO
 from pycsamt.utils import exceptions as CSex
 from pycsamt.utils import gis_tools as gis 
 from pycsamt.utils import avg_utils as cfunc
-from pycsamt.utils._csamtpylog import csamtpylog
 from pycsamt.utils import func_utils  as func
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 

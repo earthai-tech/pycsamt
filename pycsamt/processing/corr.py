@@ -21,10 +21,10 @@ from pycsamt.core.edi import Edi
 from pycsamt.core.cs import CSAMT
 from pycsamt.core  import z as CSAMTz
 from pycsamt.utils import zcalculator as Zcc
-from pycsamt.utils._csamtpylog import csamtpylog
 from pycsamt.utils.decorator import deprecated
 from pycsamt.utils import exceptions as CSex
 from pycsamt.utils import func_utils as func 
+from pycsamt._csamtpylog import csamtpylog
 try : 
     from pycsamt.__init__ import itqdm 
     if itqdm : 

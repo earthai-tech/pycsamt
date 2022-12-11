@@ -36,7 +36,7 @@ from pycsamt.utils.plotdecorator  import geoplot2d
 from pycsamt.geodrill.geodatabase import GeoDataBase 
 
 try : 
-    from pycsamt.utils._csamtpylog import csamtpylog
+    from pycsamt._csamtpylog import csamtpylog
     _logger=csamtpylog.get_csamtpy_logger(__name__)
 except :
     pass

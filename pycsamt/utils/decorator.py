@@ -2,7 +2,7 @@ import functools
 import inspect
 import os
 import warnings 
-from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt._csamtpylog import csamtpylog
 
 class donothing : 
     """ Decorator to do nothing. Just return the func as it was. 

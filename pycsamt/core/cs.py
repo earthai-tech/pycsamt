@@ -23,7 +23,7 @@ from  pycsamt.core import j as CSAMTj
 from pycsamt.site import (Site, Location, Profile) 
 from pycsamt.utils import exceptions as CSex
 from pycsamt.utils import func_utils as func
-from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt._csamtpylog import csamtpylog
 
 try : 
     from pycsamt.__init__ import itqdm 

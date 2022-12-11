@@ -26,7 +26,7 @@ import numpy as np
 
 import pycsamt.utils.mtcalculator as MTcc
 import pycsamt.utils.exceptions as MTex
-from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt._csamtpylog import csamtpylog
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 
 

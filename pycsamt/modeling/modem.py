@@ -37,7 +37,7 @@ from pycsamt.__init__ import (
     imtpy, 
     is_installing, 
     )
-from pycsamt.utils._csamtpylog import csamtpylog 
+from pycsamt._csamtpylog import csamtpylog 
 from pycsamt.core.edi import Edi_collection 
 
 _logger =csamtpylog.get_csamtpy_logger(__name__)

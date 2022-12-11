@@ -25,7 +25,7 @@ from pycsamt.geodrill.structural import Geo_formation
 from pycsamt.geodrill._dictapp import Glob
 from pycsamt.geodrill.requestmanager import ManageDB
 from  pycsamt.utils.decorator import deprecated_to
-from pycsamt.utils._csamtpylog import csamtpylog 
+from pycsamt._csamtpylog import csamtpylog 
 #set LogInfos
 try :
     _logger=csamtpylog.get_csamtpy_logger(__name__)

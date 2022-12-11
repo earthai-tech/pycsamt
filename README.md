@@ -61,4 +61,4 @@ We use or link some third-party software (beside the usual tool stack: [Numba](h
 1. Department of Geophysics, School of  Info-physics and Geomatics Engineering, [Central South University](https://en.csu.edu.cn/), China. 
 2. Equipe de Recherche Géophysique Appliquée, Laboratoire de Geologie Ressources Minerales et Energetiques, UFR des Sciences de la Terre et des Ressources Minières, [Université Félix Houphouët-Boigny]( https://www.univ-fhb.edu.ci/index.php/ufr-strm/), Cote d'Ivoire.
 
-* Developer: 1, 2- Kouadio Laurent,  <etanoyau@gmail.com> / <lkk@csu.edu.cn>.
+* Developer: 1, 2- Kouadio Laurent,  <etanoyau@gmail.com> / <lkouao@csu.edu.cn>.

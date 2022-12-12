@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #       Created on Thu Dec  3 16:44:29 2020
 #       Author: Kouadio K.Laurent<etanoyau@gmail.com>
-#       Licence: LGPL
+#       Licence: GPL
 
 """
 .. _module-ZCalculator::`pycsamt.utils.zcalculator`
@@ -12,11 +12,18 @@ import warnings
 import numpy as np 
 
 import pycsamt.utils._p as infos
-from pycsamt.utils import exceptions as CSex
 from pycsamt.utils import func_utils as func
 from pycsamt.utils.decorator import (deprecated, deprecated_to)
 from pycsamt._csamtpylog import csamtpylog 
-
+from pycsamt.utils.exceptions import (
+	ZError , 
+	EmagError, 
+	FrequencyError, 
+	ProcessingError, 
+	ParamNumberError, 
+	AVGError, 
+	StationError
+	)
 _logger =csamtpylog.get_csamtpy_logger(__name__)
 try:
     import scipy
@@ -62,7 +69,7 @@ def mag_avg (mag_array , A_spacing, Txcur):
     try : 
         mag_avg =np.array([float(ii) for ii in mag_array])
     except : 
-        raise CSex.pyCSAMTError_inputarguments(
+        raise TypeError(
             "Input first arguments is wrong. must"
              "be a list of ndarray of numbers.")
         
@@ -89,7 +96,7 @@ def phz_avg (phz_array, to_degree):
     try : 
         phz_array =[float(kk) for kk in phz_array ]
     except : 
-        raise CSex.pyCSAMTError_inputarguments(
+        raise TypeError(
             "input argument must be a number in array or list.")
     
     if to_degree :
@@ -108,7 +115,7 @@ def param_rho (rho_array):
     try : 
         phz_array =np.array([float(kk) for kk in rho_array ])
     except : 
-        raise CSex.pyCSAMTError_inputarguments(
+        raise TypeError(
             'Error inputs arguments . must be list or ndarray of numbers.')
     return  phz_array.mean()
 
@@ -126,7 +133,7 @@ def param_phz (pphz_array, to_degree =False):
     try : 
         pphz_array =np.array([float(kk) for kk in pphz_array ])
     except : 
-        raise CSex.pyCSAMTError_inputarguments(
+        raise TypeError(
             'Error inputs arguments. must be list or ndarray of numbers.')
     if to_degree : 
         return (pphz_array.mean()/1000) *180/np.pi, (pphz_array/1000) *180/np.pi
@@ -164,12 +171,12 @@ def comp_rho (mag_E_field, mag_H_field, freq_array, A_spacing, Txcurr ):
             try :
                 a_args =np.array([ float(ss) for ss in a_args ])
             except : 
-                raise CSex.pyCSAMTError_inputarguments(
+                raise TypeError(
                     "Elemts composed of each array must be a number.")
         
     # if comp_rho.__code__.co_argcount ==5 : 
     #     if mag_E_field.ndim !=1 or  mag_H_field.ndim !=1 or freq_array.ndim !=1 : 
-    #         raise CSex.pyCSAMTError_inputarguments 
+    #         raise TypeError 
     #       ("dimension of Input arguments must me equal to 1.")
     
     Emag =mag_E_field /(A_spacing * Txcurr)
@@ -204,13 +211,13 @@ def comp_phz (comphz_array, units ='deg'):
     if type(comphz_array) is list : comphz_array=np.array(comphz_array)
     
     if comphz_array.dtype not in ["float", "int"] : 
-        raise CSex.pyCSAMTError_inputarguments(
+        raise TypeError(
             "Type provided is wrong ! number must be float")  
 
     try : 
         comphz_array=np.array([float(kk) for kk in comphz_array ])
     except : 
-        raise CSex.pyCSAMTError_inputarguments(
+        raise TypeError(
             'Error inputs arguments. must be list or ndarray of numbers.')
     
             
@@ -250,7 +257,7 @@ def compute_components_Z_Phz(magn_E_field , magn_H_field, phz_E_field,
         
     Raises
     ------
-        CSex.pyCSAMTError_z(), 
+        ZError(), 
             Exceptions if units entered by the user doesnt match or are messy.
 
     Returns
@@ -319,14 +326,14 @@ def compute_components_Z_Phz(magn_E_field , magn_H_field, phz_E_field,
             if keys.lower() in values.keys():
                 magn_E_field = magn_E_field * values[keys.lower()]
             else : 
-                raise CSex.pyCSAMTError_Emag(
+                raise EmagError(
                     "Input units is not valid. try : {0}".format(
                         list(values.keys())))
         if keys.lower() ==units_H_field.lower() : 
             if keys.lower() in values.keys():
                 magn_H_field= magn_H_field* values[keys.lower()]
             else : 
-                raise CSex.pyCSAMTError_Emag(
+                raise EmagError(
                     "Input units is not valid. try : {0}".format(
                         list(values.keys()))) 
                     
@@ -336,14 +343,14 @@ def compute_components_Z_Phz(magn_E_field , magn_H_field, phz_E_field,
                 phz_E_field = phz_E_field* values[keys.lower()]
                 phz_H_field = phz_H_field  * values[keys.lower()]
             else : 
-                raise CSex.pyCSAMTError_Emag(
+                raise EmagError(
                     "Input units is not valid. try : {0}".format(
                         list(values.keys()))) 
         if keys.lower() ==unit_freq.lower(): 
             if keys.lower() in values.keys():
                 freq_value= freq_value * values[keys.lower()]
             else : 
-                raise CSex.pyCSAMTError_Emag(
+                raise EmagError(
                     "Input units is not valid. try : {0}".format(
                         list(values.keys()))) 
         
@@ -477,7 +484,7 @@ def get_reffreq_index(freq_array, reffreq_value):
     """
     freq_array=np.array([float(ss) for ss in freq_array])
     if float(reffreq_value) not in freq_array : 
-        raise CSex.pyCSAMTError_frequency(
+        raise FrequencyError(
             'Reference frequency must be a value of frequency array.')
 
     for ii, freq in enumerate(freq_array): 
@@ -594,7 +601,7 @@ def find_reference_frequency(freq_array =None, reffreq_value =None ,
     if type(reffreq_value) is not int or type(reffreq_value) is not float: 
         try : reffreq_value= np.int(reffreq_value)
         except: 
-            raise CSex.pyCSAMTError_frequency(
+            raise FrequencyError(
                 "Reference frequency must be either float value or integer.")
         
     if freq_array.min() > reffreq_value > freq_array.max():
@@ -602,7 +609,7 @@ def find_reference_frequency(freq_array =None, reffreq_value =None ,
                       'range. see more infos about reference'
                       ' frequency.|{0}|'.format(
                           infos.notion.reference_frequency))
-        raise CSex.pyCSAMTError_frequency (
+        raise FrequencyError (
             "Input reference frequency is out the frequency range. "
              "Please put value between the frequency range. "
              "Frequency range is [{0} Hz to {1} Hz].".format(
@@ -692,7 +699,7 @@ def get_data_from_reference_frequency(array_loc, freq_array, reffreq_value):
     if type(reffreq_value) is str : 
         try: reffreq_value=np.float(reffreq_value)
         except:
-            raise CSex.pyCSAMTError_frequency(
+            raise FrequencyError(
                 "Reference value must be float or int value, not str!")
     #find the size of array loc : seem to be the size of stationsNames .
     stn_size =np.array(list(array_loc.keys())).size
@@ -717,7 +724,7 @@ def get_data_from_reference_frequency(array_loc, freq_array, reffreq_value):
                             reffreq_value=reffreq_value,
                             stnNames=sorted(array_loc.keys()))
         if reffreq_array is None :
-            raise CSex.pyCSAMTError_frequency(
+            raise FrequencyError(
                 'Something wrong happened during reference array computing.'
                  ' Please check the your inputs data size, and your station size.')
         return reffreq_array
@@ -789,7 +796,7 @@ def hanning (dipole_length=50., number_of_points=7, large_band=False):
             dipole_length = np.float(dipole_length)
             number_of_points = np.int(np.floor(number_of_points))
         except :
-            raise CSex.pyCSAMTError_processing('Dipole length and number of'\
+            raise ProcessingError('Dipole length and number of'\
                                            ' points must be a float number.')
         
     window_width = number_of_points * dipole_length
@@ -849,7 +856,7 @@ def weight_beta (dipole_length =50. , number_of_points = 7, window_width=None):
             warnings.warn('Please see more '
                           'info about coeff.Beta :<{0}>'.format(infos.notion.weighted_Beta))
 
-            raise CSex.pyCSAMTError_processing('Window width type must be float number.')
+            raise ProcessingError('Window width type must be float number.')
     
     xk = window_width / 2 
     num_pk =np.arange(dipole_length/2, window_width , dipole_length)
@@ -877,16 +884,16 @@ def compute_adaptative_moving_average ( z_array =None  , weighted_window=None ,
     """
      
     if z_array is None :
-        raise CSex.pyCSAMTError_Z('NoneType Impedance can not be computed.')
+        raise ZError('NoneType Impedance can not be computed.')
     if weighted_window is None : 
         if dipole_length is None or number_of_points is None :
-            raise CSex.pyCSAMTError_inputarguments('Please check '
+            raise TypeError('Please check '
                 'your Inputs values ! NoneType values of dipole length '
                 ' or number_of_stations can not be computed.!')
         try : 
             dipole_length , number_of_points  = np.float(dipole_length) , np.int(number_of_points)
         except : 
-            raise CSex.pyCSAMTError_float(
+            raise TypeError(
                 'Dipole length, number of points must be a float, and '
                  ' int  number respectively.!')
 
@@ -1015,7 +1022,7 @@ def hanning_x (x_point_value, dipole_length =50.,  number_of_points=7,
         return np.array(hv)
         
     if (x_point_value - dipole_length/2 < 0 or x_point_value +dipole_length/2 > window_width):
-        raise CSex.pyCSAMTError_processing('Hanning x point value is outside the window.')
+        raise ProcessingError('Hanning x point value is outside the window.')
     
     if bandwidth_values is True : 
         if on_half :return see_extraband(apply_on_half=True)
@@ -1184,10 +1191,10 @@ def compute_FLMA ( z_array =None  , weighted_window=None ,
     #reference_freq= kwargs.pop('reference_freq', 8192.)
     
     if z_array is None : 
-        raise CSex.pyCSAMTError_Z('NoneType Impedance can not be computed.')
+        raise ZError('NoneType Impedance can not be computed.')
     if weighted_window is None : 
         if dipole_length is None or number_of_points is None :
-            raise CSex.pyCSAMTError_inputarguments('Please check '
+            raise TypeError('Please check '
                 'your Inputs values ! NoneType values of dipole length '
                 ' or number_of_stations can not be computed.!')
         try : 
@@ -1195,7 +1202,7 @@ def compute_FLMA ( z_array =None  , weighted_window=None ,
             number_of_points= np.int(number_of_points)
             
         except :
-            raise CSex.pyCSAMTError_float(
+            raise TypeError(
                 'Dipole length, number of points must be a float, and '
                     ' int  number respectively.!')
 
@@ -1287,19 +1294,19 @@ def compute_TMA (data_array=None, number_of_TMApoints=5. ):
     """
     
     if data_array is None :
-        raise CSex.pyCSAMTError_processing(
+        raise ProcessingError(
             'NoneType arguments can not be computed!.')
     
     if data_array.dtype not in ['float', 'int']: 
         try :data_array=np.array([float(dd) for dd in data_array])
         except : 
-            raise CSex.pyCSAMTError_float(
+            raise TypeError(
                 'Data must be on array_like float number.!')
     if type(number_of_TMApoints) is not int :
         try : 
             number_of_TMApoints=np.int(number_of_TMApoints)
         except : 
-            raise CSex.pyCSAMTError_parameter_number(
+            raise ParamNumberError(
                 'TMA filter point must be integer.')
     
     roll_TMA =[]
@@ -1422,18 +1429,18 @@ def compute_trimming_moving_average (data_array=None, number_of_TMApoints=None )
     """
     
     if data_array is None or number_of_TMApoints is None :
-        raise CSex.pyCSAMTError_processing(
+        raise ProcessingError(
             'NoneType arguments can not be computed!.')
         
     if data_array.dtype not in ['float', 'int']: 
         try :data_array=np.array([float(dd) for dd in data_array])
         except :
-            raise CSex.pyCSAMTError_AvgData(
+            raise AVGError(
                 'Data must be on array_like float number.!')
     if type(number_of_TMApoints) is not int :
         try : number_of_TMApoints=np.int(number_of_TMApoints)
         except : 
-            raise CSex.pyCSAMTError_parameter_number(
+            raise ParamNumberError(
                 'TMA filter point must be integer.')
     
     roll_TMA,window  =[], np.int(np.trunc(number_of_TMApoints/2)),
@@ -1524,7 +1531,7 @@ def compute_AMA(reference_freq=None, z_array =None,
     """
     
     if reference_freq is None : 
-        raise CSex.pyCSAMTError_frequency(
+        raise FrequencyError(
             'Please add your reference frequency!')
         
     mu0 = 4* np.pi * 1e-7 
@@ -1538,7 +1545,7 @@ def compute_AMA(reference_freq=None, z_array =None,
         if  z_array is None :
             warnings.warn('`Impedance` is None. could not compute'
                           ' `apparent resistivities`')
-            raise CSex.pyCSAMTError_processing('`Impedance`  is None.'
+            raise ProcessingError('`Impedance`  is None.'
                 'Could not compute `resistivities`.'
                 ' Please provided at least an `impedance array`.')
     
@@ -1549,7 +1556,7 @@ def compute_AMA(reference_freq=None, z_array =None,
         if phase is None  and reference_freq is None:
             warnings.warn('Could not compute `impedance` without phase values'
                           ' and reference frequency!')
-            raise CSex.pyCSAMTError_processing(
+            raise ProcessingError(
                 'None Type could not be computed. '
                 'Please provided phase values |reference frequency')
             
@@ -1743,7 +1750,7 @@ def get_array_from_reffreq ( array_loc, freq_array,reffreq_value,
     
     """
     if stnNames is None : 
-        raise CSex.pyCSAMTError_station('You may at least specify '
+        raise StationError('You may at least specify '
                         'the array or list of stations-Names or station id.')
     
     arrayObj,freqObj=array_loc ,freq_array
@@ -1791,13 +1798,13 @@ def relocate_on_dict_arrays(data_array, number_of_frequency,
     if station_names is not None : 
         if type(station_names) is list :
             assert len(station_names) == (data_array.size / number_of_frequency),\
-                CSex.pyCSAMTError_station(
+                StationError(
                     'Number of Station provided must be <{0}> not'
                     ' <{1}>'.format(np.int(data_array.size / number_of_frequency), 
                                             len(station_names)))
         else :
             assert station_names.size == data_array.size / number_of_frequency, \
-            CSex.pyCSAMTError_station(
+            StationError(
                 'Number of Station provided must be <{0}>'
                 ' not <{1}>'.format(np.int(data_array.size / number_of_frequency), 
                                             station_names.size))
@@ -1830,10 +1837,10 @@ def dipole_center_position (dipole_position=None):
     
     """
     if dipole_position is None : 
-        raise CSex.pyCSAMTError_inputarguments(
+        raise TypeError(
             'NoneType can not be compute. Please provide the right values.')
     try : dipole_position= np.array([float(pp) for pp in dipole_position])
-    except : raise CSex.pyCSAMTError_float(
+    except : raise TypeError(
             'Cannot convert position values. Position must be a'
             ' number not str.Please check your data!.')
     # temp_pospp =[(dipole_position[pp]+dipole_position[pp-1])/2 for \
@@ -1877,7 +1884,7 @@ def get_matrix_from_dict(dict_array, flip_freq =False ,
     """
     
     if not isinstance(dict_array, dict): 
-        raise CSex.pyCSAMTError_processing('Main argument `dict array`'
+        raise ProcessingError('Main argument `dict array`'
                                            ' should be dictionnary'
                                            ', not {0}'.type(dict_array))
         
@@ -1887,7 +1894,7 @@ def get_matrix_from_dict(dict_array, flip_freq =False ,
             try :
                 freq_array=freq_array.astype('float')
             except :
-                raise CSex.pyCSAMTError_float(
+                raise TypeError(
                     'Could not convert array to value !')
         # now check the order 
         if freq_array[0] < freq_array[-1]: 

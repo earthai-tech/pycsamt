@@ -22,13 +22,15 @@ import warnings
 import datetime
 import numpy as np 
 
-import pycsamt.utils.exceptions as CSex
 from pycsamt.__init__ import  imtpy 
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
 from pycsamt.utils import  plotdecorator  as mdeco
 from pycsamt.utils._p import _sensitive as SB 
 from pycsamt._csamtpylog import csamtpylog 
+from pycsamt.utils.exceptions import ( 
+    OccamError, I2datError, AVGError
+    )
 
 _logger =csamtpylog.get_csamtpy_logger(__name__)
 
@@ -100,7 +102,7 @@ class occamLog (object) :
             self._fn = logpath
         else :
             warnings.warn('No occam 2d logfile detected. Please check your path.')
-            raise CSex.pyCSAMTError_occam2d(
+            raise OccamError(
                 'Doesnt not recognize the Logfile <{0}>'\
                 ' provided.'.format(os.path.basename(logpath)))
             
@@ -126,7 +128,7 @@ class occamLog (object) :
             'Reading and setting OccamLog  attributes'
             ' from logfiles <%s>.'% self.fn )
         if self.fn is None : 
-            raise CSex.pyCSAMTError_occam2d(
+            raise OccamError(
                 'None occam2dlog file detected. Please check your right path .')
 
         with open(self.fn , 'r', encoding ='utf8') as focc: 
@@ -778,11 +780,11 @@ class Model (object):
             if ifile is None : 
                 self._logging.error(mess)
                 warnings.warn(mess)
-                raise CSex.pyCSAMTError_occam2d(mess)
+                raise OccamError(mess)
                 
                 
         if self.iter_fn is None :
-            raise CSex.py
+            raise I2datError("NoneType can not be read ")
         
         if SB.which_file(filename =self.model_fn )=='model':
             with open(self.model_fn , 'r', encoding='utf8')as fmod : 
@@ -844,7 +846,7 @@ class Model (object):
                                                                           
             warnings.warn (mess)
             self._logging.error(mess)
-            raise CSex.pyCSAMTError_occam2d(mess)
+            raise OccamError(mess)
         
         #---> loop the model rows suppose the number of models layer 
         occm=0
@@ -1614,7 +1616,7 @@ class Mesh(object):
                 mess ='No Mesh file detected. Please provide the'\
                     ' right occam2d mesh files.'
                 warnings.warn(mess), self._logging.error(mess)
-                raise CSex.pyCSAMTError_occam2d(mess)
+                raise OccamError(mess)
          # characteristic of the mesh (nblocks +1)
         mesh_char = occam_mesh_lines[1].strip().split()  
         # horizontal nodes , verticales nodes (nlayers+1)
@@ -2018,7 +2020,7 @@ class Iter2Dat (object):
             if isinstance(self.elevation , (list, tuple)) :
                 self.elevation  = np.array(self.elevation )
             assert len(self.elevation) == len(self.station_location) ,\
-                CSex.pyCSAMTError_occam2d(
+                OccamError(
                     'Elevation provided must be the same with offsets :'\
                       ' length|size ={0}.'.format(self.station_location.size))
         
@@ -2156,7 +2158,7 @@ class Iter2Dat (object):
             warnings.warn('---> Iter2Dat file is generally converted into km.'
                   ' so provided the specify unit of yourf file.')
                 
-            raise CSex.pyCSAMTError_occam2d_iter2dat(
+            raise I2datError(
                 'Wrong scale ! . Might be "m" or "km".')
             
         elev =kws.pop('elevation', None)
@@ -2173,7 +2175,7 @@ class Iter2Dat (object):
                 self._logging.error(mess)
                 warnings.warn(mess)
                 
-                raise CSex.pyCSAMTError_occam2d_iter2dat(mess)
+                raise I2datError(mess)
             else : 
                 with open(iter2dat_fn, 'r') as fi2d: 
                     iter2dat_readlines =fi2d.readlines()
@@ -2185,7 +2187,7 @@ class Iter2Dat (object):
                             ' Please provide the right iterartion file.'
                         warnings.warn(mess)
                         self._logging.error(mess)
-                        raise CSex.pyCSAMTError_occam2d_iter2dat(mess)
+                        raise I2datError(mess)
                     else :    
                         newf.append(item)
             return func.concat_array_from_list(list_of_array=newf)
@@ -2222,7 +2224,7 @@ class Iter2Dat (object):
                     'and data file  or provided model obj.'])
                      warnings.warn(mess)
                      self._logging.error(mess)
-                     raise CSex.pyCSAMTError_occam2d_iter2dat(mess)
+                     raise I2datError(mess)
                     
                 self.OccamModel = Model(model_fn = self.model_fn ,
                                         iter_fn =self.iter_fn , 
@@ -2236,7 +2238,7 @@ class Iter2Dat (object):
                     ' data file or occam model obj .'])
                 warnings.warn(mess)
                 self._logging.error(mess)
-                raise CSex.pyCSAMTError_occam2d_iter2dat(mess)
+                raise I2datError(mess)
             elif self.OccamModel is not None :
                 # try to get an spacific attribute from Model 
                 try : 
@@ -2249,7 +2251,7 @@ class Iter2Dat (object):
                     
                     warnings.warn(mess)
                     self._logging.error(mess)
-                    raise CSex.pyCSAMTError_occam2d_iter2dat(
+                    raise I2datError(
                         'Object provided is not a Model class object.'\
                         ' Please provide a right model obj. ')
             # thin now everything is fine then :    
@@ -2410,7 +2412,7 @@ class Iter2Dat (object):
                                 mess =" It seem all data from station and elevation "\
                                     "can not be convert into float value."\
                                         " Please check your data."
-                                raise CSex.pyCSAMTError_occam2d_iter2dat(mess)
+                                raise I2datError(mess)
             
             if self.verbose > 0:
                 print('{0:-^77}'.format('Iter2Dat *Station* info'))  
@@ -2779,7 +2781,7 @@ def getMisfit(resp_fn =None, data_fn =None, kind='rho', **kwargs) :
     elif kind.lower().find('ph')>=0 or kind==2: 
         kind = 'phase'
     else :
-        raise CSex.pyCSAMTError_occam2d(
+        raise OccamError(
             f'Wrong argument kind {kind!r}.'
             'Should be `rho` or `phase`')
 
@@ -2807,10 +2809,10 @@ def getMisfit(resp_fn =None, data_fn =None, kind='rho', **kwargs) :
                            'Please select the right mode.'])
             warnings.warn(mess)
             _logger().error (mess)                     
-            raise CSex.pyCSAMTError_occam2d(f' Mode `{mode}` is wrong!'
+            raise OccamError(f' Mode `{mode}` is wrong!'
                          'Do you mean {0}{1}?'.format(*resp_occam_dtype_obj))
         elif mode not in resp_occam_dtype_obj: 
-            raise CSex.pyCSAMTError_occam2d(f' Mode `{mode}` is wrong!'
+            raise OccamError(f' Mode `{mode}` is wrong!'
                          'Do you mean {0}{1}?'.format(*resp_occam_dtype_obj))
 
     # check the mode provided , can be str 
@@ -2972,13 +2974,13 @@ def plotResponse(data_fn =None, resp_fn =None, stations =None, **kws):
                      if file.find('.resp')>=0]
         
     if data_fn is None: 
-        raise CSex.pyCSAMTError_AVG(
+        raise AVGError(
             'No `Data` file detected. Please provide an occam data file.')
     elif isinstance(data_fn, str): 
         data_fn = [data_fn]
         
     if resp_fn is None: 
-        raise CSex.pyCSAMTError_occam2d(
+        raise OccamError(
             'No OccamResponse file detected.'
             ' Please provided an occcam Response file')
         
@@ -2987,7 +2989,7 @@ def plotResponse(data_fn =None, resp_fn =None, stations =None, **kws):
     
     if len(data_fn) != len(resp_fn):
         a_, b_= len(data_fn) , len(resp_fn) 
-        raise CSex.pyCSAMTError_inputarguments('Number of Occam datafiles and'
+        raise ValueError('Number of Occam datafiles and'
                         'responses files must be the same length.'
                         f' `{a_}` and `{b_}` are given respectively.')
     
@@ -3020,7 +3022,7 @@ def plotResponse(data_fn =None, resp_fn =None, stations =None, **kws):
                 f" the number of line ={len(data_fn)}.")
             station_list =station_list [:len(data_fn)]
         else:
-            raise CSex.pyCSAMTError_value(
+            raise ValueError(
                 "Data and stations to visualize must have the same "
                 f"length. But {len(data_fn)} and {len(station_list)} "
                 "were given respectively.")

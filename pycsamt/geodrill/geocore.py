@@ -25,16 +25,19 @@ import numpy as np
 import pandas as pd 
 
 import pycsamt.bases as BS
-import pycsamt.utils.exceptions as CSex
 import pycsamt.utils.geo_utils as GU
 import pycsamt.geodrill.structural as STRL
+from pycsamt.geodrill.geodatabase import GeoDataBase 
 from pycsamt.modeling import occam2d
 from pycsamt.site import Profile
 from pycsamt.utils import func_utils as func
 from pycsamt.utils import plot_utils as punc
-from pycsamt.utils.plotdecorator  import geoplot2d
-from pycsamt.geodrill.geodatabase import GeoDataBase 
-
+from pycsamt.utils.plotdecorator import geoplot2d
+from  pycsamt.utils.exceptions import ( 
+	GeoError, 
+	FileHanglingError, 
+	GeoMemoryError
+) 
 try : 
     from pycsamt._csamtpylog import csamtpylog
     _logger=csamtpylog.get_csamtpy_logger(__name__)
@@ -394,7 +397,7 @@ class Geodrill (object):
                                'like model, mesh, data, and iteration files.'])
                 warnings.warn('! Error reading *.bln flile !' + mess)
                 self._logging.error(mess)
-                raise CSex.pyCSAMTError_geodrill_inputarguments(
+                raise GeoError(
                     '! Error reading *.bln flile ! No (*bln) station file found.'
                      ' Need sites names and sites locations.')
             i2d_obj = occam2d.Iter2Dat(iter2dat_fn=self.iter2dat_fn,
@@ -418,7 +421,7 @@ class Geodrill (object):
                         format(str(attr).replace('_fn', ''))
                     self._logging.error(msg)
                     warnings.warn(msg)
-                    raise CSex.pyCSAMTError_plot_geoinputargument(msg)
+                    raise GeoError(msg)
                 
             # Recreate object and get ncessaries attributes 
             model_obj= occam2d.Model(model_fn =self.model_fn,
@@ -575,7 +578,7 @@ class Geodrill (object):
             try : 
                 value_range= np.array([float(ss) for ss in value_range])
             except : 
-                raise CSex.pyCSAMTError_geodrill_inputarguments(
+                raise GeoError(
                     'Value provided as resistivity '
                     'range must be an array of float number.')
                                                                 
@@ -683,7 +686,7 @@ class Geodrill (object):
             try : 
                 self.input_resistivities = float(self.input_resistivities )
             except : 
-                raise CSex.pyCSAMTError_plot_geoinputargument(
+                raise GeoError(
                     'Can not converted value <%s> into float number.'\
                     ' Please provide a float number.'%self.input_resistivities )
                 
@@ -752,7 +755,7 @@ class Geodrill (object):
             try : 
                 resistivities_range=[float(resistivities_range)]
             except : 
-                raise CSex.pyCSAMTError_geodrill_inputarguments(
+                raise GeoError(
                     'Can not convert <%s> to float number !Input resistivity '
                      'must be a float number not <%s>!'% (resistivities_range,
                                                           type(resistivities_range)))
@@ -761,7 +764,7 @@ class Geodrill (object):
             try :  resistivities_range =np.array(
                 [float(ss) for ss in resistivities_range])
             except : 
-                raise CSex.pyCSAMTError_geodrill_inputarguments(
+                raise GeoError(
                     'Input argument provided is wrong. '
                     'Please check your resistivities '
                     ' range, values must be a float number.')
@@ -805,7 +808,7 @@ class Geodrill (object):
             except : 
                 warnings.warn("It seems somethings wrong"
                               " happened during data conversion to float values.")
-                raise CSex.pyCSAMTError_inputarguments(
+                raise GeoError(
                     'Could not convert value'
                     ' to float numbers , Please check your data!')
             
@@ -935,17 +938,17 @@ class Geodrill (object):
                 try : 
                     step_in_deep =float(step_in_deep)
                 except : 
-                    raise CSex.pyCSAMTError_plot_geoinputargument(
+                    raise GeoError(
                         'Could not convert depth value ={} to float.'
                         ' Please check your value.'.format(step_in_deep))
 
             if step_in_deep< dep_array.min(): 
-                raise CSex.pyCSAMTError_plot_geoinputargument(
+                raise GeoError(
                     'Value provided ={0} m is less than the minimum'
                     ' depth ={1} m.'.format(step_in_deep, dep_array.min()))
             
             if step_in_deep > dep_array.max(): 
-                raise CSex.pyCSAMTError_plot_geoinputargument(
+                raise GeoError(
                     'Value provided is = {0} m is greater than '
                     'maximum depth ={1}m.'.format(step_in_deep, dep_array.max()))
                 
@@ -1467,7 +1470,7 @@ class Geodrill (object):
             
             warnings.warn(mess)
             self._logging.error(mess)
-            raise CSex.pyCSAMTError_plot_geoinputargument(
+            raise GeoError(
                 "Can not write details sequences log files "
                 "! Please provided at least one"
                 " truth layer resistivity.")
@@ -1973,7 +1976,7 @@ class Geodrill (object):
                 ' Support only *.xlsx and *.csv format'
             self._logging.error (mess)
             warnings.warn (mess)
-            raise CSex.pyCSAMTError_geodrill_inputarguments(
+            raise GeoError(
                 'wrong format ={0} !'\
                 ' Could not write geo file to oasis.'\
                     ' Support only *.xlsx or *.csv format ')
@@ -2151,10 +2154,10 @@ class Geosurface :
                         ' right path to oasis models files.'
                     warnings.warn(mess)
                     self._logging.error(mess)
-                    raise CSex.pyCSAMTError_inputarguments(mess)
+                    raise GeoError(mess)
       
         elif self.path is None :
-            raise CSex.pyCSAMTError_inputarguments(
+            raise GeoError(
                 'No path found ! Please provided a right path.')
         
         # get extension file 
@@ -2165,7 +2168,7 @@ class Geosurface :
             mess = 'Unacceptable format = {0}. Could read format ={1}'.\
                 format(self.extension_file, tuple(self.geo_surface_format))
             self._logging.warning(mess)
-            raise CSex.pyCSAMTError_file_handling(mess)
+            raise FileHanglingError(mess)
         
         
     @property 
@@ -2345,7 +2348,7 @@ class Geosurface :
         if depth_values is not None : self.depth_values= depth_values    
 
         if self.depth_values is None : 
-            raise CSex.pyCSAMTError_plot_geoinputargument(
+            raise GeoError(
                 'NoneType could not be computed. Please provided'
                 '  right values !')
         
@@ -2353,7 +2356,7 @@ class Geosurface :
             try : 
                 self.depth_values = float(self.depth_values)
             except : 
-                raise CSex.pyCSAMTError_float('Could not convert {0} to float'.\
+                raise TypeError('Could not convert {0} to float'.\
                                               format(self.depth_values))
             else : self.depth_values =np.array([self.depth_values])
   
@@ -2361,7 +2364,7 @@ class Geosurface :
             self.depth_values = np.array(self.depth_values)
             try : 
                 self.depth_values = self.depth_values.astype('float')
-            except : raise CSex.pyCSAMTError_float(
+            except : raise TypeError(
                     'Could not convert values to float!')
 
         def get_single_surface_from_one_line(site_name , depth_value)  : 
@@ -2465,7 +2468,7 @@ class Geosurface :
                     ' Please provide the rigth format !'])
             self._logging.error(mess.format(self.export_format))
             warnings.warn(mess.format(self.export_format))
-            raise CSex.pyCSAMTError_file_handling(
+            raise FileHanglingError(
                 'Format provided = {0} is wrong ! '
                 'Could output only `csv` or `xlsx`.'.
                     format(self.export_format))
@@ -2476,14 +2479,14 @@ class Geosurface :
                 'Need to specify the value of depth for imaging !')
             self._logging.warn(
                 'Need to specify the value of depth for imaging !')
-            raise CSex.pyCSAMTError_inputarguments(
+            raise GeoError(
                 'Need to specify the depth value for imaging.')
         if self.path is None : 
             warnings.warn(
                 'Need to provide the rigth path `geodrill` model output files.')
             self._logging.warning(
                 'Need to provide the rigth path `geodrill` model output files.')
-            raise CSex.pyCSAMTError_inputarguments(
+            raise GeoError(
                 'No path detected! Please provide a right path to `geodrill`\
                     oasis montaj outputfiles ')
   
@@ -2575,7 +2578,7 @@ class geostrike :
         _logger.info(
             'Computing  profile angle from Easting and Nothing coordinates.')
         if easting is None or northing is None : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise GeoError(
                 'NoneType can not be computed !')
             
             # use the one with the lower standard deviation
@@ -2583,7 +2586,7 @@ class geostrike :
             easting = easting.astype('float')
             northing = northing.astype('float')
         except : 
-            raise CSex.pyCSAMTError_float(
+            raise TypeError(
                 'Could not convert input argument to float!')
         
         if stats_import is True : 
@@ -2660,7 +2663,7 @@ class geostrike :
                 
                 _logger.warning(
                     'NoneType found.Could not compute geo-electrike strike!')
-                raise CSex.pyCSAMTError_inputarguments(
+                raise GeoError(
                     'NoneType found. Could not compute geo-electrike strike!')
         
         if profile_angle is None : 
@@ -4662,7 +4665,7 @@ def _ps_memory_management(obj=None, option='set'):
                           'beforehand to create your first model.')
             warnings.warn("No memory found. You need to build your "
                           " GeoStratigraphy model by running the class first.")
-            raise CSex.pyCSAMTError_memory(
+            raise GeoMemoryError(
                 "Memory not found. Use the GeoStratigraphy class to "
                 "create your model first.")
         psobj_token, data_ = BS.load_serialized_data(

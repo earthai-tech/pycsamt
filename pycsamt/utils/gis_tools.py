@@ -44,7 +44,7 @@ else:
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 
 
-class GIS_ERROR(Exception):
+class GISError(Exception):
     pass
 #===============================================
 # Make sure lat and lon are in decimal degrees
@@ -329,13 +329,13 @@ def project_point_ll2utm(lat, lon, datum='WGS84', utm_zone=None, epsg=None):
         if isinstance(datum, int):
             ogrerr = ll_cs.ImportFromEPSG(datum)
             if ogrerr != OGRERR_NONE:
-                raise GIS_ERROR("GDAL/osgeo ogr error code: {}".format(ogrerr))
+                raise GISError("GDAL/osgeo ogr error code: {}".format(ogrerr))
         elif isinstance(datum, str):
             ogrerr = ll_cs.SetWellKnownGeogCS(datum)
             if ogrerr != OGRERR_NONE:
-                raise GIS_ERROR("GDAL/osgeo ogr error code: {}".format(ogrerr))
+                raise GISError("GDAL/osgeo ogr error code: {}".format(ogrerr))
         else:
-            raise GIS_ERROR("""datum {0} not understood, needs to be EPSG as int
+            raise GISError("""datum {0} not understood, needs to be EPSG as int
                                or a well known datum as a string""".format(datum))
 
         # set utm coordinate system
@@ -347,7 +347,7 @@ def project_point_ll2utm(lat, lon, datum='WGS84', utm_zone=None, epsg=None):
         if HAS_GDAL:
             ogrerr = utm_cs.ImportFromEPSG(epsg)
             if ogrerr != OGRERR_NONE:
-                raise GIS_ERROR("GDAL/osgeo ogr error code: {}".format(ogrerr))
+                raise GISError("GDAL/osgeo ogr error code: {}".format(ogrerr))
         else:
             pp = pyproj.Proj('+init=EPSG:%d'%(epsg))
         # end if
@@ -356,7 +356,7 @@ def project_point_ll2utm(lat, lon, datum='WGS84', utm_zone=None, epsg=None):
         if HAS_GDAL:
             ogrerr = utm_cs.CopyGeogCSFrom(ll_cs)
             if ogrerr != OGRERR_NONE:
-                raise GIS_ERROR("GDAL/osgeo ogr error code: {}".format(ogrerr))
+                raise GISError("GDAL/osgeo ogr error code: {}".format(ogrerr))
         # end if
         if utm_zone is None or not isinstance(None, str) or utm_zone.lower() == 'none':
             # get the UTM zone in the datum coordinate system, otherwise
@@ -435,11 +435,11 @@ def project_point_utm2ll(easting, northing, utm_zone, datum='WGS84', epsg=3149):
     try:
         easting = float(easting)
     except ValueError:
-        raise GIS_ERROR("easting is not a float")
+        raise GISError("easting is not a float")
     try:
         northing = float(northing)
     except ValueError:
-        raise GIS_ERROR("northing is not a float")
+        raise GISError("northing is not a float")
 
     if HAS_GDAL:
         # set utm coordinate system

@@ -31,18 +31,14 @@ Created on Tue Aug 30 14:47:01 2022
 @author: Daniel
 
 """
-import warnings 
 
-from pycsamt.__init__ import ( 
-    imtpy, 
-    is_installing, 
-    )
 from pycsamt._csamtpylog import csamtpylog 
 from pycsamt.core.edi import Edi_collection 
+from pycsamt.utils.exceptions import ModEMError
 
 _logger =csamtpylog.get_csamtpy_logger(__name__)
 
-if imtpy: 
+try:
     from mtpy.modeling.modem import ( 
         data , 
         model ,
@@ -53,18 +49,17 @@ if imtpy:
         control_inv,  
         station
     )
-else:
-    _logger.info('Unable to import `MTpy`packages. Loading failed!')
-    warnings.warn("Auto setting up MTpy failed! you can get MTpy at "
-                  " <https://github.com/MTgeophysics/pycsamt.git>`.")
-try : 
-    import geopandas 
-except ImportError : 
-    success = is_installing('geopandas', DEVNULL= True )
-    if not success: 
-        warnings.warn("Import 'geopandas' failed. Install it mannually and "
-                       " preferably use anaconda!")
-
+except  ModuleNotFoundError as e:
+    msg=("This error happens because {}. You try to import some ModEM"
+         " utilities while some dependencies are not installed. Prior"
+         " intall 'MTpy' for dealing with all dependencies at once or"
+         " install the related missing module.")
+    raise ModEMError (msg.format(str(e).lower()))
+except : 
+    raise ImportError(
+        "Loading failed. Unable to import `MTpy` package. You can get"
+        " 'MTpy' at <https://github.com/MTgeophysics/pycsamt.git>`.")
+    
 __all__= ['DataModelAnalysis', 
           'Data', 
           'Model', 
@@ -79,7 +74,6 @@ class Residual(residual.Residual):
     class to contain residuals for each data point, and rms values for each
     station
     
- 
     ====================== ====================================================
     Attributes/Key Words   Description
     ====================== ====================================================

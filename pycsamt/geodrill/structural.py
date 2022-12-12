@@ -14,7 +14,9 @@ import warnings
 import numpy as np 
 
 from pycsamt.utils.geo_utils import mapping_stratum as strato
-from pycsamt.utils  import exceptions as CSex
+from pycsamt.utils.exceptions  import ( 
+    StructuralError, ParamNumberError
+    )
 from pycsamt._csamtpylog import csamtpylog
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
@@ -625,7 +627,7 @@ class Geo_formation (object):
                     if _secags0 != self.codef :
                         warnings.warn(
                             ' !Trouble occurs while decoding the geostructures!')
-                        raise CSex.pyCSAMTError_structural(
+                        raise StructuralError(
                             'Geostructures files provided is wrong !')
             else : 
                 
@@ -633,7 +635,7 @@ class Geo_formation (object):
                     'No Geostructure file detected.It seems the file'
                     ' is moved or deleted from its home folder'
                     ' <pycsamt/geodrill/_geocodes>')
-                raise CSex.pyCSAMTError_structural(
+                raise StructuralError(
                     'pyCSAMT inner geocodes not found '
                     'in <pycsamt/geodrill/_geocodes> folder.'
                      ' Please provide the right structures codes.')
@@ -726,7 +728,7 @@ def get_color_palette (RGB_color_palette):
         if cp >255. : 
             warnings.warn(' !RGB value is range 0 to 255 pixels , '
                           'not beyond !. Your input values is = {0}.'.format(cp))
-            raise CSex.pyCSAMTError_parameter_number(
+            raise ParamNumberError(
                 'Error color RGBA value ! RGB value  provided is = {0}.'
                  ' It is larger than 255 pixels.'.format(cp))
         return cp

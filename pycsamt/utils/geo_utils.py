@@ -16,7 +16,9 @@ import matplotlib.gridspec as GridSpec
 
 import pycsamt.utils.func_utils as FU
 import pycsamt.utils.plot_utils as PU
-import pycsamt.utils.exceptions as CSex
+from pycsamt.utils.exceptions import ( 
+    FileHanglingError, StrataError 
+    )
 from pycsamt.utils._csamtpylog import csamtpylog
 
 _logger=csamtpylog.get_csamtpy_logger(__name__)
@@ -870,7 +872,7 @@ def set_agso_properties (download_files = True ):
                 warnings.warn(f"Geological structure file {file_r} "
                               f"is missing. {msg_}") 
                 _logger.warn( msg_)
-                raise CSex.pyCSAMTError_file_handling(
+                raise FileHanglingError(
                     f"No property file {os.path.basename(file_r)!r}"
                     f" is found. {msg}.")
     for f in __agso:
@@ -1482,7 +1484,7 @@ def _assert_model_type(kind):
     if kind  in ['crm', 'resmodel', 'occam', 'rawmodel', '1']: 
         kind= 'crm'
     if kind not in ('nm', 'crm'): 
-        raise CSex.pyCSAMTError_strata(
+        raise StrataError(
             f"Argument kind={kind!r} is wrong! Should be `nm`"
             "for stratigraphyic model and `crm` for occam2d model. ")
     return kind 

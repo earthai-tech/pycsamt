@@ -35,9 +35,10 @@ import os
 import numpy as np 
 import pandas as pd 
 
+from pycsamt._csamtpylog import csamtpylog
+
 from pycsamt.utils import gis_tools as gis 
 from pycsamt.utils import exceptions as CSex
-from pycsamt.utils._csamtpylog import csamtpylog
 from pycsamt.utils import func_utils as func
 from scipy.interpolate import interp1d
 _logger=csamtpylog.get_csamtpy_logger(__name__)

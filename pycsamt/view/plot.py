@@ -6,11 +6,11 @@
 Module View
 ============
 
-Some templates for plotting purposes. It gives a quick alternative for uses to 
-save their time for writting their own plot scripts. However to have full 
+Some templates for plotting purposes. It gives a quick alternative to 
+save time writting their own plot scripts. However to have full 
 control of the plot, it is recommended to write your own plot scripts. 
 
-Note that the package can not handle all the plots possibilty that offers the
+Note that the package can not handle all the possible plots that offers the
 software. In the future, many plots should be removed and replaced by some  
 most efficient ones. 
 
@@ -32,7 +32,6 @@ from pycsamt.core import (
     avg as CSMATavg , 
     get_ediObjs 
     )
-import pycsamt.utils.exceptions as CSex
 import pycsamt.utils.func_utils as func
 import pycsamt.utils.plot_utils as mplotus  
 import pycsamt.utils.zcalculator  as Zcc
@@ -42,9 +41,9 @@ from pycsamt.modeling import occam2d
 from pycsamt.geodrill import geocore  as geoD
 from  pycsamt.utils.plotdecorator import geoplot1d 
 from pycsamt.utils._p import suit 
-from pycsamt.utils._csamtpylog import csamtpylog 
 from pycsamt.processing import Processing 
-
+from pycsamt._csamtpylog import csamtpylog 
+from pycsamt.utils.exceptions import PlotError
 try : 
     from pycsamt.__init__ import imtpy  
     if imtpy : 
@@ -656,7 +655,7 @@ class Plot1d :
                                               **errorbar_kw 
                                               )
          
-                jj +=3  # to jup to next value if 
+                jj +=3  # to jump to next value if 
                 
         if phs_err is not None: 
             phs_err = func._assert_all_types(phs_err, list, tuple, np.ndarray)
@@ -893,13 +892,13 @@ class Plot1d :
                     xtick_label_size= kwargs.pop('xtick_labelsize', 12), 
                     ytick_label_size= kwargs.pop('ytick_labelsize', 12)
                                           )
-        lw ,ls, color, alpha =kws['lw'],kws ['ls'], kws['color'], kws['alpha']
+        # lw ,ls, color, alpha =kws['lw'],kws ['ls'], kws['color'], kws['alpha']
+        lw ,ls, color=kws['lw'],kws ['ls'], kws['color']
         
-        x_ticklabel_rotation, x_ticks_labelsize ,\
-            y_ticks_labelsize = kws['xtick_label_rotation'], \
-                                    kws['xtick_label_size'],\
-                                    kws['ytick_label_size']
-            
+        x_ticklabel_rotation=kws['xtick_label_rotation']
+        x_ticks_labelsize= kws['xtick_label_size']
+        #y_ticks_labelsize=kws['ytick_label_size']
+
         marker_style, markerfacecolor, markeredgecolor =\
             kws['marker'], kws['markerfacecolor'], kws['markeredgecolor']
 
@@ -938,7 +937,7 @@ class Plot1d :
             
                 
         elif profile_fn is None and fn is None  :
-            raise CSex.pyCSAMTError_plot(
+            raise PlotError(
                 'None path is found. Please spceify you data path.')
             
         
@@ -1055,7 +1054,7 @@ class Plot1d :
                 if  suit.topography[0].find(plot_type.lower())< 0 : 
                     if suit.azimuth[0].find(plot_type.lower()) < 0 : 
                         if plot_type.lower() not in ['1','2','3','123','*']:
-                            raise CSex.pyCSAMTError_plot(
+                            raise PlotError(
                         'Argument provided for  plot_type is not acceptable.'
                             ' Please use  1,2,3 or the first '
                              'two letter of "Topography, Separation|Station '
@@ -1063,7 +1062,7 @@ class Plot1d :
             
         elif isinstance(plot_type, int):
             if plot_type not in [1,2,3,123]: 
-                raise CSex.pyCSAMTError_plot(
+                raise PlotError(
                     'Only 1|2|3 is need to plot. Try again !')
             plot_type=str(plot_type)
 
@@ -1091,7 +1090,7 @@ class Plot1d :
             if set_stnnames ==True : 
                 if add_stnnames  is not None : 
                     if len (add_stnnames) != station_pk.size :
-                        raise CSex.pyCSAMTError_station(
+                        raise PlotError(
                             'Stations names provided must'
                               ' be the same length as survey points.'
                               ' Number of survey points are'
@@ -1141,7 +1140,7 @@ class Plot1d :
             if set_stnnames : 
                 if add_stnnames  is not None : 
                     if len (add_stnnames) != station_pk.size : 
-                        raise CSex.pyCSAMTError_station(
+                        raise PlotError(
                             'Stations names provided must'
                                 ' be the same length as survey points.'
                                 ' Number of survey points are'
@@ -1262,7 +1261,7 @@ class Plot1d :
                                       'trimming moving-average (TMA).'
                                       ' and  fixed-length-moving-average(FLMA)'
                                       'Please Try to use the availabe filters.')
-                        raise CSex.pyCSAMTError_plot(
+                        raise PlotError(
                             'Input filter <{0}> is not available.'
                               ' Please use `tma` or `flma` filters!')
                         
@@ -1702,7 +1701,7 @@ class Plot1d :
                                   f'frequency range ={freq_array}.')
                     self._logging.debug(
                         f'{stnOrFreq} not found in frequency range.')
-                    raise CSex.pyCSAMTError_frequency(
+                    raise TypeError(
                         'frequency must be a float '
                         'number not `{}`.'.format(type(stnOrFreq)))
                 else: 
@@ -1807,11 +1806,11 @@ class Plot1d :
         csamt_obj = CSAMT(data_fn = fn , profile_fn = profile_fn   )
     
         if csamt_obj.freq is None :
-            raise CSex.pyCSAMTError_plot('Need absolutely frequency'
+            raise PlotError('Need absolutely frequency'
                                          ' value before plotting.'
                                          'Please add your frequency data.')
         if csamt_obj.resistivity  is None :
-            raise CSex.pyCSAMTError_plot(
+            raise PlotError(
                 'Error plotting.Provide your resistivity values.')
         
         #--- assert stations length ------ 
@@ -1823,7 +1822,7 @@ class Plot1d :
                               ' Please provided new stations '
                               'list with the same length.'.format(
                                   len(rename_stations), len(stations)))
-                raise CSex.pyCSAMTError_station(
+                raise PlotError(
                     'New stations provided '
                     'must have the same length with default stations. ')
             stations = rename_stations
@@ -2068,7 +2067,7 @@ class Plot1d :
         axis2.set_xticks(ticks= csamt_stndis_obj, minor=False )
         if rename_station is not None : 
             assert len(rename_station)==len(csamt_stn_num_obj),\
-                CSex.pyCSAMTError_plot("Error plot !rename_station and station"
+                PlotError("Error plot !rename_station and station"
                                        " name must have the same lenght.")
         
             csamt_stn_num_obj= rename_station 
@@ -2507,7 +2506,7 @@ class Plot1d :
                         ' Can not plot "None" value.')
                 self._logging.warn(
                     'Error plotting R.M.S VS Iteration. Can not plot "None" value.')
-                raise CSex.pyCSAMTError_plot(
+                raise PlotError(
                     'Error Plot R.M.S . '
                     'Compulsory need R.M.S value and '
                         'Iteration value. Please check your value. ')
@@ -2825,7 +2824,7 @@ class Plot1d :
                 
                 warnings.warn(mess.format(len(self.Y),len(self.Y)))
                 self._logging.error(mess.format(len(self.Y),len(self.Y)))
-                raise CSex.pyCSAMTError_plot(mess.format(len(self.Y),
+                raise PlotError(mess.format(len(self.Y),
                                                          len(self.Y)))
             if isinstance(self.X, np.ndarray) and isinstance(self.Y, np.ndarray): 
                 #case where user profide only one line with easting and northings 
@@ -2857,7 +2856,7 @@ class Plot1d :
                     'or provide  X and Y as lists of coordinates values.'])
                 self._logging.error(msg)
                 warnings.warn(msg)
-                raise CSex.pyCSAMTError_profile(msg)
+                raise PlotError(msg)
                 
             print('---> {0:02} *station profiles* detected !'.format(
                                             len(profiles_path)))
@@ -3593,7 +3592,7 @@ class Plot2d (object):
             
         if stnnames is not None : 
             assert len(stnnames ) ==len(csamt_stn_obj),\
-                CSex.pyCSAMTError_station('Station provided must have the '
+                PlotError('Station provided must have the '
                                           'same lenght with default stations.')
             csamt_stn_obj = stnnames 
             
@@ -4094,7 +4093,7 @@ class Plot2d (object):
                 warnings.warn(
                     'Iteration, mesh , data files are essential for plotting.'+ mess)
                 self._logging.error 
-                raise CSex.pyCSAMTError_occam2d_plot(mess) 
+                raise PlotError(mess) 
                 
         # scaled data and x values plots 
         if depth_scale is not None : self.depth_scale= str(depth_scale).lower() 
@@ -5006,7 +5005,7 @@ class Plot2d (object):
                 warnings.warn(mess)
                 self._logging.error(mess)
         
-            raise CSex.pyCSAMTError_plot_geoinputargument(mess)
+            raise PlotError(mess)
         #----Finish ascertainement then build object and read ----
         elif p==2 or f==4 :    
             if f==4 :                       # priority to Occam2D data files 
@@ -5599,7 +5598,7 @@ def plot_dataAndFits(data_fn =None, stations =None, **kws):
  
     # manage station and create duplicate list
     if data_fn is None: 
-        raise CSex.pyCSAMTError_AVG(
+        raise TypeError(
             'No `avg` file detected. Please provide a file.')
     elif isinstance(data_fn, str): 
         data_fn = [data_fn]

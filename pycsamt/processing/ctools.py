@@ -188,7 +188,7 @@ def get_reference_frequency (ediObjs= None, arr2d=None, freqs=None,
         the reference frequency at the clean data in Hz 
     Examples 
     ---------
-    >>> from pycsamt.processimg import make2d, get_reference_frequency 
+    >>> from pycsamt.processing import make2d, get_reference_frequency 
     >>> edipath ='data/3edis'
     >>> ediObjs = get_ediObjs (edipath)
     >>> cfs= get_full_frequency(ediObjs)
@@ -388,7 +388,7 @@ def make2d (ediObjs, out = 'resxy', *, kind = 'complex' , **kws ):
            [         nan,          nan,  44.04498791]])
     >>> phyx.shape 
     ... (55, 3)
-    >>> # get the real number of the yy componet of tensor z 
+    >>> # get the real number of the yy component of tensor z 
     >>> zyy_r = make2d (ediObjs, 'zyx', kind ='real')
     ... array([[ 4165.6   ,  8665.64  ,  5285.47  ],
            [ 7072.81  , 11663.1   ,  6900.33  ],
@@ -1062,9 +1062,9 @@ def moving_average (y, *, window_size = 3 , method ='sma',
     
     References 
     ----------
-    .. * [1] https://en.wikipedia.org/wiki/Moving_average
-    .. * [2] https://www.sciencedirect.com/topics/engineering/hanning-window
-    .. * [3] https://stackoverflow.com/questions/12816011/weighted-moving-average-with-numpy-convolve
+    .. [1] https://en.wikipedia.org/wiki/Moving_average
+    .. [2] https://www.sciencedirect.com/topics/engineering/hanning-window
+    .. [3] https://stackoverflow.com/questions/12816011/weighted-moving-average-with-numpy-convolve
     
     """
     y = np.array(y)

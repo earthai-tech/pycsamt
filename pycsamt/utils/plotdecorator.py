@@ -31,7 +31,7 @@ import matplotlib.gridspec as gspec
 # from matplotlib.ticker import MultipleLocator, NullLocator
 
 from pycsamt.utils import plot_utils as mplotus  
-from pycsamt.utils._csamtpylog import csamtpylog 
+from pycsamt._csamtpylog import csamtpylog 
 
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 

@@ -74,7 +74,7 @@ from . import HAS_GDAL
 import pycsamt.utils.gis_tools as gis
 import pycsamt.utils.exceptions as CSex
 from pycsamt.utils.decorator import deprecated 
-from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt._csamtpylog import csamtpylog
 
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 

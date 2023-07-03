@@ -435,8 +435,7 @@ class Data(object):
                               return_counts= True)
         sites.astype('int32')
         freq.astype('int32')
-    
-
+ 
         # get mode and create model array 
         k_=None 
         m_= [int(s) for s in datum]
@@ -448,8 +447,8 @@ class Data(object):
                 self.occam_dtype_ =k_
                 self.occam_dtype_value = values
                 break 
-            
         cf =False 
+    
         if self.occam_dtype_ =='log_te_tm': 
             self.te_appRho =np.zeros((len(freq), len(sites)))
             self.te_phase = np.zeros((len(freq), len(sites)))
@@ -471,7 +470,11 @@ class Data(object):
             self.tm_phase = np.zeros((len(freq), len(sites)))
             self.tm_error_appRho = np.zeros((len(freq), len(sites)))
             self.tm_error_phase = np.zeros((len(freq), len(sites))) 
-       
+        else: 
+            raise CSex.pyCSAMTError_occam2d(
+                "Three dimensional and Tipper are not implemented yet."
+                " Please use MTpy (https://github.com/MTgeophysics/mtpy.git)"
+                " or ModEM (http://www.coas.oregonstate.edu) instead.")
         # create for each mode id datablocks 
   
         for kk, rowlines in enumerate(self.data): 
@@ -925,9 +928,6 @@ class Model (object):
                                               occam_iter_obj.iter_target_misfit))
             print('** {0:<27} {1} {2}'.format('Occam Roughness params', '=',
                                               self.model_roughness))
-
-        
-
 
 class Startup(object): 
     """
@@ -1559,8 +1559,6 @@ class Response (Data):
                     getattr(self, 'resp_{0}_{1}'.format(
                         occ, fwo.lower())).shape))
     
-    
-          
 class Mesh(object): 
     """
     Read Occam read mesh file 

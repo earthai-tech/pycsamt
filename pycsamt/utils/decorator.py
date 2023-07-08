@@ -2,7 +2,7 @@ import functools
 import inspect
 import os
 import warnings 
-from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt._csamtpylog import csamtpylog
 
 class donothing : 
     """ Decorator to do nothing. Just return the func as it was. 
@@ -18,15 +18,15 @@ class donothing :
     
 class deprecated(object):
     """
-        Description:
-            used to mark functions, methods and classes deprecated,
-            and prints warning message when it called
-            decorators based on https://stackoverflow.com/a/40301488
+    Description:
+        used to mark functions, methods and classes deprecated,
+        and prints warning message when it called
+        decorators based on https://stackoverflow.com/a/40301488
 
-        Usage:
-            todo: write usage
+    Usage:
+        todo: write usage
 
-        Date: 20/06/2017
+    Date: 20/06/2017
     """
     def __init__(self, reason):  # pragma: no cover
         if inspect.isclass(reason) or inspect.isfunction(reason):
@@ -148,17 +148,17 @@ class gdal_data_check(object):
 
 class deprecated_to(object) :
     """
-        Description:
-            used to replace deprecated functions or classes. 
-            Deprecated functions or class 
-            should be called others functions or classes.
-            
-        Usage:
-            .. todo:: use new function or class 
-            to replace old function method or class
-                with multiple parameters.
+    Description:
+        used to replace deprecated functions or classes. 
+        Deprecated functions or class 
+        should be called others functions or classes.
+        
+    Usage:
+        .. todo:: use new function or class 
+        to replace old function method or class
+            with multiple parameters.
 
-        Date: 18/10/2020
+    Date: 18/10/2020
     """
     
     _logger = csamtpylog.get_csamtpy_logger(__name__)

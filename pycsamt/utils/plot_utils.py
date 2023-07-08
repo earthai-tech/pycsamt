@@ -20,7 +20,10 @@ import numpy as np
 # import matplotlib.cm as cm 
 # import matplotlib.pyplot as plt
 from pycsamt.utils._p import _sensitive as SB
-from pycsamt.utils import exceptions as CSex 
+from pycsamt.utils.exceptions import ( 
+    PlotError , StationError, PlotTipError, 
+    FrequencyError, ParamNumberError
+    ) 
 from pycsamt.utils.decorator import (
     deprecated, deprecated_to
     )
@@ -32,7 +35,7 @@ def control_delineate_curve(res_deline =None , phase_deline =None ):
     :param res_deline: resistivity value  to delineate.
     :type res_deline: float, int, list  
     
-    :param phase_deline:  phase value to  delineate.
+    :param phase_deline:  phase value to  delineate.s
     :type phase_deline: float, int, list 
     
     """
@@ -43,7 +46,7 @@ def control_delineate_curve(res_deline =None , phase_deline =None ):
             if isinstance(xx_deline, (float, int, str)):
                 try :xx_deline= float(xx_deline)
                 except : 
-                    raise CSex.pyCSAMTError_plot(
+                    raise PlotError(
                         'Value <{0}> to delineate <{1}> is unacceptable.'\
                          ' Please ckeck your value.'.format(
                              xx_deline, fmt[ii]))
@@ -63,7 +66,7 @@ def control_delineate_curve(res_deline =None , phase_deline =None ):
                                      for xx in xx_deline]
                         
                 except : 
-                    raise CSex.pyCSAMTError_plot(
+                    raise PlotError(
                         'Value to delineate <{0}> is unacceptable.'\
                          ' Please ckeck your value.'.format(fmt[ii]))
                 else : 
@@ -174,7 +177,7 @@ def find_path (path =None, ptol =0.7):
     :returns: specific path 
     :rtype: str 
     """
-    if path is None : raise CSex.pyCSAMTError_plot_tip(
+    if path is None : raise PlotTipError(
             'Can not find path to read.please provided a datapath . ')
     if path is not None : 
         if os.path.isfile (path) is True : return 'isfile'
@@ -214,7 +217,7 @@ def station_id (id_):
                     try : 
                         n_=int(n_) 
                     except: 
-                        raise CSex.pyCSAMTError_station(
+                        raise StationError(
                             f'Station `{n_}` is wrong! Please provided '
                             'the right id.')
         return n_
@@ -228,7 +231,7 @@ def station_id (id_):
         try: 
             iter(id_)
         except: 
-            raise CSex.pyCSAMTError_station(
+            raise StationError(
                 f'No iterable station `{id_}` found.')
         else: 
             id_= tuple([_sid (iid ) for iid in id_])
@@ -267,7 +270,7 @@ def get_stationid (stations ,  station_id) :
                if iid.lower()  ==stn.lower() : sid.append(stn)
         if isinstance(iid, (int, float)): 
             if int(iid) > len(stations): 
-                raise CSex.pyCSAMTError_plot_tip(
+                raise PlotTipError(
                     'maximum station number is <{0}>.'
                 'Can not plot beyond this limit.'
                 ' Your stations go to <{1},...,{2}>'.\
@@ -299,7 +302,7 @@ def get_frequency_id (freq_array , frequency_id ):
     for freqid in frequency_id:
         if isinstance(freqid ,str) :
             try : freqid =np.float(freqid)
-            except : raise CSex.pyCSAMTError_plot_tip(
+            except : raise PlotTipError(
                     'Frequency value must be an integer of float not str ' )
         if freq_array.min() > freqid > freq_array.max() : 
             warnings.warn ('Can not find the id <{0}>. '
@@ -309,7 +312,7 @@ def get_frequency_id (freq_array , frequency_id ):
                                 freq_array==freq_array.min()),freq_array.min(),
                                    np.where(freq_array==freq_array.max()),
                                    freq_array.max()))
-            raise CSex.pyCSAMTError_plot_tip(
+            raise PlotTipError(
                 'frequency value <{0}Hz> is out of the range'.format(freqid))
         freqID.append(freqid)
         
@@ -321,7 +324,7 @@ def getcloser_frequency(freq_array, frequency_id):
     try : 
         frequency_id= float(frequency_id)
     except: 
-        raise CSex.pyCSAMTError_frequency(
+        raise FrequencyError(
             f'Frequency must be a float value not {frequency_id}.')
     else: 
         indexf = np.where(freq_array == frequency_id )[0]     
@@ -366,7 +369,7 @@ def slice_matrix (base_matrix , freq_array, doi=2000):
                 warnings.warn ('Can not convert <{0}> into float number. '\
                                'Depth of investigation value must'
                                ' be float number.'.format(doi))
-                raise CSex.pyCSAMTError_plot_tip(
+                raise PlotTipError(
                     'Value provided <{0}> must be float'
                     ' number not <{1}>'.format(doi, type(doi)))
             else :
@@ -412,7 +415,7 @@ def delineate_curve ( dict_loc , value , atol=0.2, replace_value = np.nan):
         except: 
             warnings.warn('Delineation value is float '
                           'number not <{0}>'.format(type(value)))
-            raise CSex.pyCSAMTError_plot_tip(
+            raise PlotTipError(
                 'Input delineation value is unacceptable.'
                 ' Please enter a float number.')
         else : value =[value]
@@ -424,7 +427,7 @@ def delineate_curve ( dict_loc , value , atol=0.2, replace_value = np.nan):
         except : 
             warnings.warn('Delineation value is'
                           ' float number not <{0}>'.format(type(value)))
-            raise CSex.pyCSAMTError_plot_tip(
+            raise PlotTipError(
                 'Input delineation value is '
                 'unacceptable. Please enter a float number.')
     try : 
@@ -432,14 +435,14 @@ def delineate_curve ( dict_loc , value , atol=0.2, replace_value = np.nan):
         if atol > 1  or atol <0: 
             warnings.warn ('Tolerance value is <=1 (less or egal than 1). '
                            'Please enter again a new value.')
-            raise CSex.pyCSAMTError_plot_tip(
+            raise PlotTipError(
                 'Tolerance value is assumed to be'
                 ' 0<= atol <=1 .Please check your value.')
     except : 
         warnings.warn('Tolerance value <{0}> provided is wrong.'
                       ' Must be a float number 0<= atol <=1 '
                       ' not a <{1}>'.format(atol, type(value)))
-        raise CSex.pyCSAMTError_plot_tip(
+        raise PlotTipError(
             'Unacceptable type tolerance value.'
             ' Please enter a float number 0<= atol <=1.')
     
@@ -519,7 +522,7 @@ def resetting_ticks ( get_xyticks,  number_of_ticks=None ):
     if not isinstance(get_xyticks, (list, np.ndarray) ): 
         warnings.warn ('Arguments get_xyticks must be a list'
                        ' not <{0}>.'.format(type(get_xyticks)))
-        raise CSex.pyCSAMTError_plot_tip(
+        raise PlotTipError(
             '<{0}> found. "get_xyticks" must be a list'
             ' or (nd.array,1).'.format(type(get_xyticks)))
     
@@ -535,7 +538,7 @@ def resetting_ticks ( get_xyticks,  number_of_ticks=None ):
                           ' is the times to see the ticks on x|y axis.'\
                           ' Must be integer not <{0}>.'.format(
                               type(number_of_ticks)))
-            raise CSex.pyCSAMTError_plot_tip(
+            raise PlotTipError(
                 '<{0}> detected. Must be integer.')
         
     number_of_ticks=int(number_of_ticks)
@@ -591,7 +594,7 @@ def resetting_colorbar_bound(cbmax , cbmin, number_of_ticks = 5,
                           ' is the times to see the ticks on x|y axis.'\
                           ' Must be integer not <{0}>.'.format(
                               type(number_of_ticks)))
-            raise CSex.pyCSAMTError_plot_tip(
+            raise PlotTipError(
                 '<{0}> detected. Must be integer.')
         
     number_of_ticks=int(number_of_ticks)
@@ -669,7 +672,7 @@ def slice_csamt_matrix ( block_matrix , station_offsets,
                     warnings.warn ('Can not convert <{0}> into float number. '
                                    'Depth of investigation '
                                    'value must be float number.'.format(doi))
-                    raise CSex.pyCSAMTError_plot_tip(
+                    raise PlotTipError(
                         'Value provided <{0}> must be float'
                         ' number not <{1}>'.format(doi, type(doi)))
                 else :
@@ -696,13 +699,13 @@ def slice_csamt_matrix ( block_matrix , station_offsets,
         warnings.warn ('Provide minimal offset is out of the range '
                        '!Offset minimal for plottig is ={0}'.format(
                            offset_start))
-        raise CSex.pyCSAMTError_plot_tip(
+        raise PlotTipError(
             'Povided minimal offset out'' of the range '
             '!Offset minimal for plottig is ={0}'.format(offset_start))
     if offset_max > offset_end  : 
         warnings.warn ('Povided maximal offset is out of the range '
                 '!Offset maximal for plottig is ={0}'.format(offset_end))
-        raise CSex.pyCSAMTError_plot_tip(
+        raise PlotTipError(
             'Povided maximal offset is out of the range !Offset'
             ' maximal for plottig is ={0}'.format(offset_end))
     
@@ -710,7 +713,7 @@ def slice_csamt_matrix ( block_matrix , station_offsets,
         mess ='depth <{0}> is out of depth range. Maximum depth for'\
             '  is={1}.'.format(doi, depth_offsets.max())
         warnings.warn(mess)
-        raise CSex.pyCSAMTError_plot_tip(mess)
+        raise PlotTipError(mess)
     # make sure that station offset and and depth are not  in decrease oder
     sflip,dflip=0,0
     if depth_offsets[0] > depth_offsets[-1] : 
@@ -829,7 +832,7 @@ def controle_delineate_curve(res_deline =None , phase_deline =None ):
         if xx_deline is  not None  : 
             if isinstance(xx_deline, (float, int, str)):
                 try :xx_deline= float(xx_deline)
-                except : raise CSex.pyCSAMTError_plot_tip(
+                except : raise PlotTipError(
                         'Value <{0}> to delineate <{1}> is unacceptable.'
                          ' Please ckeck your value.'.format(xx_deline, 
                                                             fmt[ii]))
@@ -845,7 +848,7 @@ def controle_delineate_curve(res_deline =None , phase_deline =None ):
                     elif  ii ==1 : xx_deline = [np.ceil(float(xx))
                                                 for xx in xx_deline]
                         
-                except : raise CSex.pyCSAMTError_plot_tip(
+                except : raise PlotTipError(
                         'Value to delineate <{0}> is unacceptable.'
                          ' Please ckeck your value.'.format(fmt[ii]))
                 else : return xx_deline
@@ -874,7 +877,7 @@ def depth_of_investigation(doi):
                 warnings.warn ('Can not convert <{0}> into float number. '
                                'Depth of investigation value must be float'
                                ' number.'.format(doi))
-                raise CSex.pyCSAMTError_plot_tip(
+                raise PlotTipError(
                     'Value provided <{0}> must be float number'
                     ' not <{1}>'.format(doi, type(doi)))
             else :
@@ -1259,12 +1262,12 @@ def find_local_maxima_minima (array):
                 ' minmum and maximum must be an aray of float numbers.'
     if isinstance(array, (list, tuple)): # put on list 
         try :  array=np.array([float(ss) for ss in array])
-        except : raise CSex.pyCSAMTError_parameter_number(error_mess)
+        except : raise ParamNumberError(error_mess)
             
     if isinstance(array, (float, str, int)):
         try :
             array =np.array([float(array)])
-        except : CSex.pyCSAMTError_inputarguments(error_mess)
+        except : raise TypeError(error_mess)
     
     if len(array) == 1 : 
         return (np.array([0]), array )
@@ -1462,18 +1465,18 @@ def average_rho_in_deep (dep_array, rho_array, step_descent)   :
         try : 
             step_descent =float(step_descent)
         except : 
-            raise CSex.pyCSAMTError_plot_geoinputargument(
+            raise TypeError(
                 'Could not convert depth value ={} to float.'
                 ' Please check your value.'.format(step_descent))
     
     
     if step_descent < dep_array.min(): 
-        raise CSex.pyCSAMTError_inputarguments(
+        raise TypeError(
             'Value provided ={0} m is less than the minimum depth'
             ' ={1} m.'.format(step_descent, dep_array.min()))
     
     if step_descent > dep_array.max(): 
-        raise CSex.pyCSAMTError_inputarguments(
+        raise TypeError(
             'Value provided is = {0} m is greater than maximum'
             ' depth ={1}m.'.format(step_descent, dep_array.max()))
         
@@ -1531,13 +1534,13 @@ def get_station_id_input_resistivities(station_rho_value,
         try : 
             number_of_layer =int(number_of_layer[0])
         except : 
-            raise CSex.pyCSAMTError_plot_tip(
+            raise PlotTipError(
                 'Could not convert number of  layer ={0} value'
                 ' into integer.'.format(tuple(number_of_layer)))
             
     if isinstance(number_of_layer, (float, str)): 
         try : int(number_of_layer)
-        except : CSex.pyCSAMTError_plot_tip(
+        except : PlotTipError(
                 'Could not convert number of layer ={} '
                 'to integer.'.format(number_of_layer))
         else : number_of_layer=int(number_of_layer)
@@ -1548,7 +1551,7 @@ def get_station_id_input_resistivities(station_rho_value,
             if station_rho_value.dtype not in ['float', 'int']: 
                 station_rho_value= station_rho_value.astype('float64')
                 
-        except : raise CSex.pyCSAMTError_plot_geoinputargument(
+        except : raise TypeError(
                 'Could not convert resistivities values '
                 'to float number. Please provide a right values.')
                   
@@ -1587,7 +1590,7 @@ def build_resistivity_barplot(depth_values , res_values):
                     ])
     if len(depth_values) !=len(res_values) : 
         warnings.warn(mess)
-        raise CSex.pyCSAMTError_geodrill_inputarguments(
+        raise TypeError(
             'Error size. Depth and resistivity must have the same length.')
     
     # lop the resistivities array 
@@ -1669,7 +1672,7 @@ def annotate_tip(layer_thickness , layer_names):
         mess = 'None value is provided, Please specify at least '\
             'the thickness of one truth layer.'
         warnings.warn(mess)
-        raise CSex.pyCSAMTError_plot_tip(mess)
+        raise PlotTipError(mess)
     
     top = layer_thickness[0]
     bottom = layer_thickness[1]

@@ -35,8 +35,11 @@ from pycsamt.utils. _p import suit
 from pycsamt.site import  Location
 from pycsamt.utils. _p import _sensitive as SB 
 from pycsamt.utils import gis_tools as gis 
-from pycsamt.utils import exceptions as CSex
-from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt.utils.exceptions import ( 
+	EDIError, 
+	HeaderError 
+	)
+from pycsamt._csamtpylog import csamtpylog
 
 if imtpy:
     import mtpy
@@ -232,7 +235,7 @@ class Edi_collection :
             elif os.path.dirname (self.edifiles): 
                 # path is given and read  
                 edipath = self.edifiles
-            else : raise CSex.pyCSAMTError_EDI(
+            else : raise EDIError(
                 f"Path to {self.edifiles!r} is wrong!")
                 
             rfiles = os.listdir (edipath)
@@ -263,13 +266,13 @@ class Edi_collection :
             try:
                 self.ediObjs = list(map(
                     lambda o: _assert_edi_obj(o), self.ediObjs)) 
-            except CSex.pyCSAMTError_EDI: 
+            except EDIError: 
                 raise ValueError ("Expect a list of EDI objects not "
                                   f"{type(self.ediObjs[0]).__name__!r}")
             
                 
         if self.ediObjs is None: 
-            raise CSex.pyCSAMTError_EDI("None EDI object detected!")
+            raise EDIError("None EDI object detected!")
             
         # sorted ediObjs from latlong  
         self.ediObjs , self.edinames = func.fit_by_ll(self.ediObjs)
@@ -808,11 +811,11 @@ class Edi :
         if edifile is not None :
             self.edifile = edifile 
         if self.edifile is None : 
-            raise CSex.pyCSAMTError_EDI('NoneType can not read. '
+            raise EDIError('NoneType can not read. '
                                         'Please provide at least an edifile.')
         if self.edifile is not None :
             if  not os.path.isfile(self.edifile):
-                raise CSex.pyCSAMTError_EDI('Can not find edifile to read.'
+                raise EDIError('Can not find edifile to read.'
                                             ' Please check your path.')
                 
         #---> read each section and populate attribute 
@@ -855,12 +858,12 @@ class Edi :
                            ' section :edifile :{0}.'.format( edifile))
         
         if edifile is not None : self.edifile = edifile 
-        else :raise CSex.pyCSAMTError_EDI(
+        else :raise EDIError(
             'Can not find edifile to read.'
              ' NoneType can not be read. Check, your rigth path.')
         if self.edifile is not None :
             if os.path.isfile(self.edifile) is False :
-                raise CSex.pyCSAMTError_EDI(
+                raise EDIError(
                     'No edifile file .Please check your edipath.')
                 
         # we assume that the file will check above , 
@@ -923,7 +926,7 @@ class Edi :
         if data_dict is not None : 
             self.comp_dict = data_dict
         elif data_dict is None :
-            raise CSex.pyCSAMTError_EDI(
+            raise EDIError(
                 'None value found. Can not read data')
         
         # get frequency array and initialise z_array and Z_error 
@@ -1138,7 +1141,7 @@ class Edi :
                     'Currently <pyCSAMT> can write ">=MTSECT" or '
                      ' ">=EMAPSECT". The only acceptables datatype keys '
                      ' are either "mt" or "emap".')
-                raise CSex.pyCSAMTError_EDI(
+                raise EDIError(
                     'Datatype provided is not acceptable .'
                     'Please try "mt" or "emap".')
 
@@ -1421,7 +1424,7 @@ class Edi :
                                                                                                     
             else :
                 if comp_key.lower()!='freq':
-                    raise CSex.pyCSAMTError_EDI(
+                    raise EDIError(
                         'Could not write the component key <%s>'% comp_key)
             
         elif datatype in ['emap', '>=emapsect','emapsect']: 
@@ -1429,7 +1432,7 @@ class Edi :
                 comp_block_line = ['>{0} {1}  //{2}\n'.format(
                     comp_key.upper(), block_rot[2],edi_datacomp.size)]
                                          
-            # else : raise CSex.pyCSAMTError_EDI(
+            # else : raise EDIError(
             #'Could not write the component key <%s>'% comp_key)
             
         else :#datatype.lower() not in ['mt' , '>=mtsect'] 
@@ -1440,7 +1443,7 @@ class Edi :
                  ' We suggest to use "mt" or "emap".as datatype key, if not '
                  'please refer to SEG-Edile ''write principles.'.format(datatype)) 
       
-            raise CSex.pyCSAMTError_EDI(
+            raise EDIError(
                 'DataType <{0}> provided is wrong!'
                  ' please use "MT"or "EMAP".'.format(datatype))
         
@@ -1810,12 +1813,12 @@ class Head (object):
         """
         _logger.info ('Geting <%s> Head info'% edi_fn)
         
-        if edi_fn is None : raise CSex.pyCSAMTError_EDI(
+        if edi_fn is None : raise EDIError(
                 'Edile file not found ! Please check your right path.')
         markhead , ediheadlist=0,[]
         if SB.which_file(filename= edi_fn, deep=False ) =='edi': 
             if SB.which_file(filename= edi_fn, deep=True) !='edi': 
-                raise CSex.pyCSAMTError_Header(
+                raise HeaderError(
                     'Edifile <{0}> - Header is not correct.'
                     'Please check your edifile'.format(
                         os.apth.basename(edi_fn)))
@@ -1868,7 +1871,7 @@ class Head (object):
         if edi_header_list is not None :
             self.edi_header = edi_header_list
         if self.edi_header is None :
-            raise CSex.pyCSAMTError_Header('None items found to read.')
+            raise HeaderError('None items found to read.')
         new_header =[]
         if self.edi_header is not None :
             for ii, item in enumerate(self.edi_header) :
@@ -2045,7 +2048,7 @@ class Info :
         
         info_mark=0
         if edi_fn is None : 
-            raise CSex.pyCSAMTError_EDI(
+            raise EDIError(
                 'None infos to read! Please provide the right path .')
         # we do this simultaneous assement to get a ms of computation .
         if SB.which_file(filename =edi_fn, deep=False)=='edi': 
@@ -2080,7 +2083,7 @@ class Info :
         
         if edi_info_list is not None : self.ediinfo =edi_info_list 
         if self.ediinfo is None :
-            raise CSex.pyCSAMTError_EDI('None list found. can not read.')
+            raise EDIError('None list found. can not read.')
         
         for ii , iteminfo in enumerate(self.ediinfo ):
             iteminfo=iteminfo.replace('"','')
@@ -2359,7 +2362,7 @@ class DefineMeasurement:
         
         _flagmeas =0
         dfmeasurementlist = [] 
-        if edi_fn is None : raise CSex.pyCSAMTError_EDI(
+        if edi_fn is None : raise EDIError(
                 'Can not read edifile .None value is found.')
         if SB.which_file(filename = edi_fn) =='edi': 
             with open(edi_fn , 'r', encoding= 'utf8') as fdefm : 
@@ -2421,7 +2424,7 @@ class DefineMeasurement:
         if define_measurement_list is not None :
             self.define_measurement= define_measurement_list
         if self.define_measurement is None :
-            raise CSex.pyCSAMTError_EDI(
+            raise EDIError(
                 'Can not find DefineMeasurment list to read.'
                 'Please provide the list of definemeasurment.'
                 ' e:g:[key_01=value_01 , ..., key_xx = value_xx] ')
@@ -2578,7 +2581,7 @@ class DefineMeasurement:
                 self.logging.warn(
                     'Please check your definemeasurement '
                     'list provided. Can not be written.')
-                raise CSex.pyCSAMTError_EDI(
+                raise EDIError(
                     "Can not write the items on the definemeasurement "
                      "list provided. It seems no right parser is found.")
             
@@ -2880,7 +2883,8 @@ class MTEMAP (object):
         _logger.info (
             "Read MT Section on edifile <%s>: %s" % (
                 os.path.basename(edi_fn),cls.__name__))
-        if edi_fn is None :CSex.pyCSAMTError_EDI(
+        if edi_fn is None :
+            raise EDIError(
                 'NoneType can not be read. Please provide your right edipath.')
         mtflag,  mtsection = 0, []
         gmtsectmeasurement=[]
@@ -2946,7 +2950,7 @@ class MTEMAP (object):
             warnings.warn(
                 'Nonelist can not be read. Please '
                 'provide the right MT section list info.')
-            raise CSex.pyCSAMTError_EDI(
+            raise EDIError(
                 'Nonelist found. cannot read MTsection info.'
                 ' Please provide the riht path.')
         

@@ -32,14 +32,13 @@ after AMT geophysical surveys.
 # define pycamt release version below
 # see https://packaging.python.org/guides/single-sourcing-package-version/ 
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 # load pycsamt default logging config
 import sys 
 import subprocess 
 import logging 
 import os
-
 
 # setup the package 
 if __package__ is None or __name__ == '__main__': 
@@ -49,8 +48,10 @@ if __package__ is None or __name__ == '__main__':
     
 # configure the logger 
 from pycsamt._csamtpylog import csamtpylog
-
-
+# check whether the file exists. 
+# if not create folder
+if not os.path.isdir( 'pycsamt/_loggerfiles'): 
+    os.mkdir("pycsamt/_loggerfiles") 
 conffile = os.path.join(
     os.path.dirname(__file__),  "p.configlog.yml")
 csamtpylog.load_configure(conffile) 
@@ -197,9 +198,7 @@ except ImportError:
         DEVNULL =True)
 else :
     imtpy =True 
-    
-
-
+ 
 __all__=['tqdm', 'mtpy', 'numba', 'is_installing'] 
 
 

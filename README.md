@@ -48,7 +48,11 @@ We use or link some third-party software (beside the usual tool stack: [Numba](h
 
 > *Kouadio, K.L., Liu, R., Mi, B., Liu, C., 2022. pyCSAMT: An alternative Python toolbox for groundwater exploration using controlled source audio-frequency magnetotelluric. J. Appl. Geophys. 201, 104647. https://doi.org/10.1016/j.jappgeo.2022.104647.*
 > 
-> *Kouadio, K.L., 2021. pyCSAMT: A Python open-source toolkit for controlled source audio-frequency magnetotelluric. https://doi.org/10.5281/zenodo.5674430.*
+
+A case study using the software can also be found  in the paper below: 
+
+> *Kouadio, L. K., Liu, R., Malory, A. O., Liu, W., Liu, C., (2023). A novel approach for water reservoir mapping using controlled source audio - frequency magnetotelluric in Xingning area , Hunan Province, China. Geophys. Prospect., https://doi.org/10.1111/1365-2478.13385*
+>
 
 ## Contributors
 

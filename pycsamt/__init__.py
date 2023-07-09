@@ -48,7 +48,7 @@ if __package__ is None or __name__ == '__main__':
     
 # configure the logger 
 from pycsamt._csamtpylog import csamtpylog
-# check wether the file exists. 
+# check whether the file exists. 
 # if not create folder
 if not os.path.isdir( 'pycsamt/_loggerfiles'): 
     os.mkdir("pycsamt/_loggerfiles") 

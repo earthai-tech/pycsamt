@@ -68,8 +68,6 @@ setup_kwargs['entry_points'] = {
                      ]
      }
                      
-                        
-
 # But many people will not have setuptools installed, so we need to handle
 # the default Python installation, which only has Distutils:
 
@@ -120,7 +118,7 @@ setup(
     author_email='kkouao@zju.edu.cn',
     maintainer="Kouadio K. Laurent",
     maintainer_email='etanoyau@gmail.com',
- 	description="A Python open-source toolkit for Controlled Source Audio-frequency Magnetotelluric ",
+ 	description="A Python open-source toolkit Audio-frequency Magnetotelluric ",
  	long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",
     url="https://github.com/WEgeophysics/pyCSAMT",

@@ -4,7 +4,6 @@
 # https://packaging.python.org/guides/distributing-packages-using-setuptools/
 # https://github.com/pypa/sampleproject
 
-# import pycsamt
 import os 
 # Check for setuptools package:
 try:
@@ -14,11 +13,11 @@ except ImportError:
     from distutils.core import setup
 else:
     setuptools = True
-
-   
 # LONG_DESCRIPTION = """
-# pyCSAMT is a far field basic  open source software of controlled source audio-frequency magnetotellurics 
-# for standard data processing , modeling and geophysical interpretation  enhancement.  
+# pyCSAMT is a far field basic  open source software of controlled 
+# source audio-frequency magnetotellurics 
+# for standard data processing , modeling and geophysical interpretation 
+# enhancement.  
 # """
 with open(os.path.join(os.path.abspath('.'), 'README.md'), 'r') as fm:
     # LONG_DESCRIPTION ="""{}""".format(
@@ -40,37 +39,35 @@ except: VERSION ='1.2.1'
 setup_kwargs = {}
 setup_kwargs['entry_points'] = {
                     'console_scripts':[
-                             'occam2d_build_in = pycsamt.gui.oc2d_bdin:main',
-                             'write_avg2edi= pycsamt.gui.wa2edi:main',
-                             'write_avg2j= pycsamt.gui.wa2j:main',
-                             'corrected_edi = pycsamt.gui.corrected_edi:main',
-                             'plot_model_oc2d = pycsamt.gui.p_moc2d:main',
-                             'plot_pseudolog = pycsamt.gui.p2log:main',
-                             'write_occam2oasis= pycsamt.gui.oas2f:main',
-                             'write_occam2golden= pycsamt.gui.gs2f:main',
-                             'write_iter2dat = pycsamt.gui.wi2d:main',
-                             'write_drillhole= pycsamt.gui.cmake_dh:main', 
-                             'correctedi = pycsamt.cli.correctedi:main', 
-                             'avg2edi= pycsamt.cli.avg2edi:main', 
-                             'j2edi=pycsamt.cli.j2edi:main', 
-                             'misfit2d=pycsamt.cli.misfit2d:main', 
-                             'nm=pycsamt.cli.nm:main', 
-                             'penetration1d=pycsamt.cli.penetration1d:main', 
-                             'penetration2d=pycsamt.cli.penetration2d:main', 
-                             'pseudostratigraphic=pycsamt.cli.pseudostratigraphic:main', 
-                             'rewriteedi=pycsamt.cli.rewriteedi:main', 
-                             'rms=pycsamt.cli.rms:main',
-                             'myconfigfile=pycsamt.cli.myconfigfile:main', 
-                             'pseudocrossresistivityandphase=pycsamt.cli.pseudocrossresistivityandphase:main', 
-                             'staticshift=pycsamt.cli.staticshift:main', 
-                             'fitforward=pycsamt.cli.fitforward:main', 
-                             'occambuildinputs=pycsamt.cli.occambuildinputs:main'
-                     ]
-     }
-                     
+    'occam2d_build_in = pycsamt.gui.oc2d_bdin:main',
+    'write_avg2edi= pycsamt.gui.wa2edi:main',
+    'write_avg2j= pycsamt.gui.wa2j:main',
+    'corrected_edi = pycsamt.gui.corrected_edi:main',
+    'plot_model_oc2d = pycsamt.gui.p_moc2d:main',
+    'plot_pseudolog = pycsamt.gui.p2log:main',
+    'write_occam2oasis= pycsamt.gui.oas2f:main',
+    'write_occam2golden= pycsamt.gui.gs2f:main',
+    'write_iter2dat = pycsamt.gui.wi2d:main',
+    'write_drillhole= pycsamt.gui.cmake_dh:main', 
+    'correctedi = pycsamt.cli.correctedi:main', 
+    'avg2edi= pycsamt.cli.avg2edi:main', 
+    'j2edi=pycsamt.cli.j2edi:main', 
+    'misfit2d=pycsamt.cli.misfit2d:main', 
+    'nm=pycsamt.cli.nm:main', 
+    'penetration1d=pycsamt.cli.penetration1d:main', 
+    'penetration2d=pycsamt.cli.penetration2d:main', 
+    'pseudostratigraphic=pycsamt.cli.pseudostratigraphic:main', 
+    'rewriteedi=pycsamt.cli.rewriteedi:main', 
+    'rms=pycsamt.cli.rms:main',
+    'myconfigfile=pycsamt.cli.myconfigfile:main', 
+    'pseudocrossresistivityandphase=pycsamt.cli.pseudocrossresistivityandphase:main', 
+    'staticshift=pycsamt.cli.staticshift:main', 
+    'fitforward=pycsamt.cli.fitforward:main', 
+    'occambuildinputs=pycsamt.cli.occambuildinputs:main'
+    ]
+}                
 # But many people will not have setuptools installed, so we need to handle
 # the default Python installation, which only has Distutils:
-
 if setuptools is False:
     # Different script specification style for ordinary Distutils:
     setup_kwargs['scripts'] = [
@@ -81,32 +78,32 @@ if setuptools is False:
     # "You must explicitly list all packages in packages: the Distutils will not
     # recursively scan your source tree looking for any directory with an
     # __init__.py file"
-
 setup_kwargs['packages'] = [ 
-                            'pycsamt',
-                            'pycsamt.core',
-                            'pycsamt.gui',
-                            'pycsamt.cli',
-                            'pycsamt.processing',
-                            'pycsamt.geodrill',
-                            'pycsamt.view',
-                            'pycsamt.modeling',
-                            'pycsamt.utils',
-                            ]
+    'pycsamt',
+    'pycsamt.core',
+    'pycsamt.gui',
+    'pycsamt.cli',
+    'pycsamt.processing',
+    'pycsamt.geodrill',
+    'pycsamt.view',
+    'pycsamt.modeling',
+    'pycsamt.utils',
+]
 # force install pycsamt. Once pycsamt is installed , pyyaml and pyproj 
 # should already installed too. 
      
-setup_kwargs['install_requires'] = ['numpy>=1.8.1',
-                                     'scipy>=0.14.0',
-                                     'matplotlib',
-                                     'mtpy >=1.1.0',
-                                     'pyyaml',
-                                     'pyproj',
-                                     'configparser', 
-                                     'tqdm']
+setup_kwargs['install_requires'] = [
+    'numpy>=1.8.1',
+    'scipy>=0.14.0',
+    'matplotlib',
+    'mtpy >=1.1.0',
+    'pyyaml',
+    'pyproj',
+    'configparser', 
+    'tqdm'
+]
                                      
 setup_kwargs['python_requires'] ='>=3.7'
-
 authors =["Kouadio K. Laurent, ", 'Rong Liu, ', 
           'Binbin Mi, ','Chum-ning Liu, ', 'Albert O. Malory.']
 authors_emails =['etanoyau@gmail.com,', 'liurongkaoyang@126.com,',

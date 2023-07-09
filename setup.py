@@ -4,11 +4,9 @@
 # https://packaging.python.org/guides/distributing-packages-using-setuptools/
 # https://github.com/pypa/sampleproject
 
-import pycsamt
+# import pycsamt
 import os 
-
 # Check for setuptools package:
-
 try:
     from setuptools import setup
 except ImportError:
@@ -17,16 +15,19 @@ except ImportError:
 else:
     setuptools = True
 
+   
 # LONG_DESCRIPTION = """
 # pyCSAMT is a far field basic  open source software of controlled source audio-frequency magnetotellurics 
 # for standard data processing , modeling and geophysical interpretation  enhancement.  
 # """
-with open(os.path.join(os.path.abspath('.'), 
-                       'project_description.md'), 'r') as fm:
+with open(os.path.join(os.path.abspath('.'), 'README.md'), 'r') as fm:
     # LONG_DESCRIPTION ="""{}""".format(
     #     ' '.join([descp for descp in fm.readlines() ]))
     LONG_DESCRIPTION =fm.read()
-
+try: 
+    import pycsamt  # noqa
+    VERSION = pycsamt.__version__
+except: VERSION ='1.2.1'
 # The advantage of setuptools is that EXE wrappers are created on Windows,
 # which allows Tab-completion for the script names from the system Scripts
 # folder.
@@ -46,7 +47,7 @@ setup_kwargs['entry_points'] = {
                              'plot_model_oc2d = pycsamt.gui.p_moc2d:main',
                              'plot_pseudolog = pycsamt.gui.p2log:main',
                              'write_occam2oasis= pycsamt.gui.oas2f:main',
-                             'write_occam2golden= pycsamt.gui.gs2f:main'
+                             'write_occam2golden= pycsamt.gui.gs2f:main',
                              'write_iter2dat = pycsamt.gui.wi2d:main',
                              'write_drillhole= pycsamt.gui.cmake_dh:main', 
                              'correctedi = pycsamt.cli.correctedi:main', 
@@ -85,13 +86,12 @@ if setuptools is False:
 
 setup_kwargs['packages'] = [ 
                             'pycsamt',
-                            'pycsamt.ff',
-                            'pycsamt.ff.core',
+                            'pycsamt.core',
                             'pycsamt.gui',
                             'pycsamt.cli',
-                            'pycsamt.ff.processing',
+                            'pycsamt.processing',
                             'pycsamt.geodrill',
-                            'pycsamt.viewer',
+                            'pycsamt.view',
                             'pycsamt.modeling',
                             'pycsamt.utils',
                             ]
@@ -115,7 +115,7 @@ authors_emails =['etanoyau@gmail.com,', 'liurongkaoyang@126.com,',
                 'mibinbin@zju.edu.cn,', 'lifuming001@163.com,','amalory@zju.edu.cn']
 setup(
  	name="pycsamt",
- 	version=pycsamt.__version__,
+ 	version=VERSION,
  	author=' '.join([aa for aa in authors]),
     author_email='kkouao@zju.edu.cn',
     maintainer="Kouadio K. Laurent",
@@ -139,9 +139,8 @@ setup(
         "Intended Audience :: Science/Research",
         # "Topic :: Software Development :: Build Tools",
         #"License :: OSI Approved :: GNU License",
-        'Topic :: Scientific/Engineering :: Geophysics',
-        'Topic :: Scientific/Engineering :: Geosciences',
-        
+        "Topic :: Software Development",
+        'Topic :: Scientific/Engineering',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
@@ -167,6 +166,7 @@ setup(
                         'data/avg/K1.stn', 
                         'data/avg/K2.avg', 
                         'data/avg/K2.stn',
+                        'project_description.md',
                         ]
                   },
     

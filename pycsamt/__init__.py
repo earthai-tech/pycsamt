@@ -40,7 +40,6 @@ import subprocess
 import logging 
 import os
 
-
 # setup the package 
 if __package__ is None or __name__ == '__main__': 
     sys.path.append( os.path.dirname(os.path.dirname(__file__)))
@@ -49,7 +48,6 @@ if __package__ is None or __name__ == '__main__':
     
 # configure the logger 
 from pycsamt._csamtpylog import csamtpylog
-
 
 conffile = os.path.join(
     os.path.dirname(__file__),  "p.configlog.yml")
@@ -197,9 +195,7 @@ except ImportError:
         DEVNULL =True)
 else :
     imtpy =True 
-    
-
-
+ 
 __all__=['tqdm', 'mtpy', 'numba', 'is_installing'] 
 
 

@@ -144,27 +144,25 @@ setup(
     keywords="hydrogeophysic, groundwater, exploration, csamt",
     #package_dir={"": "pyCSAMT"},  # Optional
     package_data={'pycsamt': [
-                            'utils/p.configlog.yml', 
-                            'utils/espg.npy',
-                            'geodrill/_geocodes/*.csv', 
-                            'geodrill/_geocodes/__memory.pkl', 
-                            'geodrill/_geomemo/*.sq3', 
-                            'metadata/e.g.data.json', 
-                            'metadata/e.g.data.yml', 
-                            '_loggerfiles/*.txt',
-                            
-                            ], 
-                    "":[
-                        'data/occam2d/*', 
-                        'data/drill_example_files/*', 
-                        'data/avg/K1.avg', 
-                        'data/avg/K1.stn', 
-                        'data/avg/K2.avg', 
-                        'data/avg/K2.stn',
-                        'project_description.md',
-                        ]
-                  },
-    
+        'utils/p.configlog.yml', 
+        'utils/espg.npy',
+        'geodrill/_geocodes/*.csv', 
+        'geodrill/_geocodes/__memory.pkl', 
+        'geodrill/_geomemo/*.sq3', 
+        'metadata/e.g.data.json', 
+        'metadata/e.g.data.yml', 
+        '_loggerfiles/*.txt',
+         ], 
+                "":[
+        'data/occam2d/*', 
+        'data/drill_example_files/*', 
+        'data/avg/K1.avg', 
+        'data/avg/K1.stn', 
+        'data/avg/K2.avg', 
+        'data/avg/K2.stn',
+        'project_description.md',
+        ]
+     },
  	**setup_kwargs
 )
 

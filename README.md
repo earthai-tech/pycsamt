@@ -51,7 +51,7 @@ We use or link some third-party software (beside the usual tool stack: [Numba](h
 
 A case study using the software can also be found  in the paper below: 
 
-> *Kouadio, L. K., Liu, R., Malory, A. O., Liu, W., Liu, C., A novel approach for water reservoir mapping using controlled source audio - frequency magnetotelluric in Xingning area , Hunan Province, China. Geophys. Prospect., https://doi.org/10.1111/1365-2478.13385*
+> *Kouadio, L. K., Liu, R., Malory, A. O., Liu, W., Liu, C., (2023). A novel approach for water reservoir mapping using controlled source audio - frequency magnetotelluric in Xingning area , Hunan Province, China. Geophys. Prospect., https://doi.org/10.1111/1365-2478.13385*
 >
 
 ## Contributors

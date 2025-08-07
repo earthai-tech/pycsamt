@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#       Author: Kouadio K.Laurent<etanoyau@gmail.com>
+#       Author: LKouadio <etanoyau@gmail.com>
 #       Licence: LGPL
 """
 Created on Tue Aug  4 16:03:30 2020
@@ -30,7 +30,7 @@ Function utils :
     : convert_phase_from_pdSeries : 
         return  a specified pd.Series :df[columns]
 """
-#==============================================================================
+# ---- This is the version 1.xxx 
 import os 
 import numpy as np 
 import pandas as pd 
@@ -41,8 +41,27 @@ from pycsamt.utils._csamtpylog import csamtpylog
 from pycsamt.utils import func_utils as func
 from scipy.interpolate import interp1d
 _logger=csamtpylog.get_csamtpy_logger(__name__)
-#==============================================================================
-#--------------- special functions -----------------
+
+# in versiion v2.xxx 
+
+import os 
+import numpy as np 
+import pandas as pd 
+
+from ..gis.utils import ll_to_utm
+from ..exceptions import AvgDataError, AvgFileError 
+from ..log.logger import get_logger 
+from ..utils.generic import strip_item 
+
+logger = get_logger(__name__) 
+
+# from pycsamt.utils import gis_tools as gis 
+# from pycsamt.utils import exceptions as CSex
+# from pycsamt.utils._csamtpylog import csamtpylog
+# from pycsamt.utils import func_utils as func
+from scipy.interpolate import interp1d
+
+
 
 def _validate_stnprofile(profile_lines, spliting=None): 
     """ 

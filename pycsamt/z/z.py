@@ -1,0 +1,1012 @@
+# -*- coding: utf-8 -*-
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
+
+"""
+Impedance tensor (:class:`Z`) built on top of :class:`ResPhase`.
+
+This module defines the high-level :class:`Z` class, which
+**inherits** from :class:`~pycsamt.z.resphase.ResPhase`. It adds
+conveniences around construction, input validation, storage of
+the rotation history, and property setters for the impedance
+tensor and the frequency vector.
+
+Notes
+-----
+- ``Z`` stores the complex impedance tensor with shape
+  ``(n_freq, 2, 2)`` using the index convention:
+
+  - ``Zxx`` -> ``[:, 0, 0]``
+  - ``Zxy`` -> ``[:, 0, 1]``
+  - ``Zyx`` -> ``[:, 1, 0]``
+  - ``Zyy`` -> ``[:, 1, 1]``
+
+- Uncertainties (if provided) are **absolute** errors on the
+  complex Z, of the same shape.
+
+- Apparent resistivity (ρ) and phase (φ) are managed by the
+  parent class and are recomputed when Z or frequency changes.
+
+Examples
+--------
+Create from a single 2×2 tensor at one frequency:
+
+>>> import numpy as np
+>>> from pycsamt.z.z import Z
+>>> z_2x2 = np.array([[0+0j, 1+1j], [-1-1j, 0+0j]])
+>>> Z(z_array=z_2x2, freq=[1.0]).resistivity.shape
+(1, 2, 2)
+
+Create from a full stack of tensors:
+
+>>> z_stack = np.zeros((3, 2, 2), dtype=complex)
+>>> freqs = np.array([10., 1., 0.1])
+>>> zobj = Z(z_array=z_stack, freq=freqs)
+>>> zobj.phase.shape
+(3, 2, 2)
+
+References
+----------
+.. seealso::
+   :class:`pycsamt.z.resphase.ResPhase` for the computation of
+   resistivity and phase, and associated uncertainties.
+   
+"""
+
+from __future__ import annotations
+
+from typing import Optional, Sequence, Tuple
+
+import numpy as np
+
+from .resphase import ResPhase
+from ..exceptions import ZError
+from ..log.logger import get_logger
+
+from ..utils.zmath import (
+    rotatematrix_incl_errors,
+    invertmatrix_incl_errors,  # used when z_err present
+)
+from .base import BaseEM 
+
+logger = get_logger(__name__)
+
+
+class Z(ResPhase, BaseEM):
+    """
+    Impedance tensor container with convenience I/O and validation.
+
+    Parameters
+    ----------
+    z_array : ndarray, shape (n_freq, 2, 2) or (2, 2), optional
+        Complex impedance tensor(s). If a single ``(2, 2)`` matrix is
+        provided, it is promoted to a stack with ``n_freq = 1``.
+    z_err_array : ndarray, optional
+        Absolute errors on Z, same shape as ``z_array`` after any
+        promotion to a stack.
+    freq : array-like of float, optional
+        Frequency vector in Hz. Length must match ``n_freq`` when
+        provided.
+
+    Attributes
+    ----------
+    z : ndarray, shape (n_freq, 2, 2)
+        Complex impedance tensor(s).
+    z_err : ndarray or None
+        Absolute errors on Z, if provided.
+    freq : ndarray or None
+        Frequency vector (Hz).
+    rotation_angle : float or ndarray
+        Rotation history (degrees). ``0.0`` if not rotated; when
+        multiple frequencies are present, stored as a vector of
+        length ``n_freq``.
+
+    Notes
+    -----
+    Setting :pyattr:`z` or :pyattr:`freq` triggers a recomputation of
+    apparent resistivity and phase through the parent class
+    :class:`ResPhase`. Errors on Z are optional; when present, error
+    propagation is applied.
+
+    See Also
+    --------
+    pycsamt.z.resphase.ResPhase :
+        Provides (ρ, φ) computation and error propagation.
+    """
+
+    def __init__(
+        self,
+        z_array: Optional[np.ndarray] = None,
+        z_err_array: Optional[np.ndarray] = None,
+        freq: Optional[np.ndarray] = None,
+    ) -> None:
+        # Initialize parent w/o data; we'll set properties below.
+        super().__init__()
+
+        self._z: Optional[np.ndarray] = None
+        self._z_err: Optional[np.ndarray] = None
+        self._freq: Optional[np.ndarray] = None
+
+        # Rotation bookkeeping (degrees). Keep either a scalar or a
+        # vector of length n_freq for convenience.
+        self.rotation_angle: float | np.ndarray = 0.0
+
+        # Normalize and set initial arrays.
+        if z_array is not None:
+            self.z = z_array  # goes through setter
+
+        if z_err_array is not None:
+            # Accept either (2, 2) to promote or full (n, 2, 2).
+            z_err = np.asarray(z_err_array)
+            if z_err.ndim == 2 and z_err.shape == (2, 2):
+                z_err = z_err[None, ...]
+            self._check_tensor_shape(z_err, name="z_err")
+            self._z_err = z_err.astype(float, copy=False)
+
+        if freq is not None:
+            self.freq = freq  # goes through setter
+
+        # If we have Z and frequency, derive ρ and φ immediately.
+        if (self._z is not None) and (self._freq is not None):
+            try:
+                self.compute_resistivity_phase()
+            except Exception as exc:  # pragma: no cover
+                logger.error("Failed to compute ρ/φ at init: %s", exc)
+
+    @property
+    def freq(self) -> Optional[np.ndarray]:
+        """
+        Frequency vector in Hz.
+
+        Returns
+        -------
+        ndarray or None
+            ``(n_freq,)`` vector if set; otherwise ``None``.
+        """
+        return self._freq
+
+    @freq.setter
+    def freq(self, freq_arr: Optional[np.ndarray]) -> None:
+        """
+        Set the frequency vector and recompute (ρ, φ) if possible.
+
+        Parameters
+        ----------
+        freq_arr : array-like or None
+            Frequency vector (Hz). If ``None``, the stored frequency
+            is cleared.
+
+        Raises
+        ------
+        ZError
+            If the length does not match the number of impedance
+            samples already stored.
+        """
+        if freq_arr is None:
+            self._freq = None
+            return
+
+        f = np.asarray(freq_arr, dtype=float)
+        if f.ndim != 1:
+            raise ZError("Frequency must be a 1-D array.")
+        if np.any(f <= 0.0):
+            raise ZError("Frequencies must be strictly positive.")
+
+        # Check length w.r.t. Z stack if present.
+        if self._z is not None and f.size != self._z.shape[0]:
+            raise ZError(
+                "Length of 'freq' does not match Z: "
+                f"{f.size} vs {self._z.shape[0]}."
+            )
+
+        self._freq = f
+
+        # Keep rotation bookkeeping consistent with number of samples.
+        if isinstance(self.rotation_angle, float) and self._z is not None:
+            self.rotation_angle = np.repeat(
+                self.rotation_angle, self._z.shape[0]
+            )
+
+        # Recompute derived quantities if Z is present.
+        if self._z is not None:
+            self.compute_resistivity_phase()
+
+
+    @property
+    def z(self) -> Optional[np.ndarray]:
+        """
+        Complex impedance tensor(s).
+
+        Returns
+        -------
+        ndarray or None
+            Complex array of shape ``(n_freq, 2, 2)`` if set; else
+            ``None``.
+        """
+        return self._z
+
+    @z.setter
+    def z(self, z_array: np.ndarray) -> None:
+        """
+        Set the impedance tensor and recompute (ρ, φ) if possible.
+
+        Parameters
+        ----------
+        z_array : ndarray
+            Complex array with shape ``(n_freq, 2, 2)`` or a single
+            ``(2, 2)`` matrix (promoted to ``n_freq = 1``).
+
+        Raises
+        ------
+        ZError
+            If the provided tensor does not have a valid shape.
+        """
+        z = np.asarray(z_array)
+
+        # Promote single 2×2 to a stack.
+        if z.ndim == 2 and z.shape == (2, 2):
+            z = z[None, ...]
+
+        self._check_tensor_shape(z, name="z")
+        # Coerce to complex for downstream calculations.
+        self._z = z.astype(complex, copy=False)
+
+        # Initialize rotation angles to zero for each sample if needed.
+        if isinstance(self.rotation_angle, float):
+            self.rotation_angle = np.zeros(self._z.shape[0], dtype=float)
+
+        # If frequency was already set, recompute derived quantities.
+        if self._freq is not None:
+            try:
+                self.compute_resistivity_phase()
+            except Exception as exc:  # pragma: no cover
+                logger.error("Failed to compute ρ/φ after setting Z: %s", exc)
+
+
+    @staticmethod
+    def _check_tensor_shape(arr: np.ndarray, *, name: str) -> None:
+        """
+        Validate tensor has shape ``(n, 2, 2)``.
+
+        Parameters
+        ----------
+        arr : ndarray
+            Array to validate.
+        name : str
+            Name used in error messages.
+
+        Raises
+        ------
+        ZError
+            If ``arr`` does not conform to the expected shape.
+        """
+        if arr.ndim != 3 or arr.shape[1:] != (2, 2):
+            raise ZError(
+                f"'{name}' must have shape (n_freq, 2, 2); got "
+                f"{arr.shape!r}."
+            )
+
+
+    @property
+    def z_err(self) -> Optional[np.ndarray]:
+        """
+        Absolute errors on the complex impedance tensor.
+
+        Returns
+        -------
+        ndarray or None
+            If set, an array with shape ``(n_freq, 2, 2)`` containing
+            **absolute** errors on complex Z. Otherwise ``None``.
+        """
+        return self._z_err
+
+    @z_err.setter
+    def z_err(self, z_err_array: Optional[np.ndarray]) -> None:
+        """
+        Set absolute errors on Z and recompute (ρ, φ) if possible.
+
+        Parameters
+        ----------
+        z_err_array : ndarray or None
+            Error array. Accepts shape ``(2, 2)`` (promoted to a
+            single-frequency stack) or ``(n_freq, 2, 2)``. Use
+            ``None`` to clear errors.
+
+        Raises
+        ------
+        ZError
+            If shape is incompatible with the stored Z.
+        """
+        if z_err_array is None:
+            self._z_err = None
+            # Derivatives can still be computed without errors.
+            if self._z is not None and self._freq is not None:
+                self.compute_resistivity_phase()
+            return
+
+        zerr = np.asarray(z_err_array)
+        # Promote single 2×2 to a stack
+        if zerr.ndim == 2 and zerr.shape == (2, 2):
+            zerr = zerr[None, ...]
+
+        self._check_tensor_shape(zerr, name="z_err")
+
+        if self._z is not None and zerr.shape != self._z.shape:
+            raise ZError(
+                "'z_err' shape must match 'z': "
+                f"{zerr.shape!r} vs {self._z.shape!r}."
+            )
+
+        self._z_err = zerr.astype(float, copy=False)
+
+        # For consistency, recompute derived quantities if possible.
+        if (self._z is not None) and (self._freq is not None):
+            self.compute_resistivity_phase()
+
+
+    @property
+    def inverse(self) -> np.ndarray:
+        """
+        Inverse of the impedance tensor for each frequency.
+
+        When errors are present (``z_err``), the inversion uses
+        :func:`invertmatrix_incl_errors` to propagate errors. The
+        returned value is **only** the inverted tensor (errors are
+        not returned to preserve the original API).
+
+        Returns
+        -------
+        ndarray
+            Array with shape ``(n_freq, 2, 2)`` containing
+            :math:`Z^{-1}` for each frequency.
+
+        Raises
+        ------
+        ZError
+            If Z is missing or a tensor is singular.
+        """
+        if self._z is None:
+            raise ZError("Z is not set; cannot invert.")
+
+        inv = np.empty_like(self._z, dtype=complex)
+        if self._z_err is None:
+            # Fast path: no error propagation
+            for k in range(self._z.shape[0]):
+                try:
+                    inv[k] = np.linalg.inv(self._z[k])
+                except np.linalg.LinAlgError:
+                    raise ZError(
+                        f"Impedance tensor at index {k} is singular."
+                    )
+        else:
+            # Use helper that propagates errors; discard the error
+            # return to keep compatibility with legacy API.
+            for k in range(self._z.shape[0]):
+                try:
+                    inv_k, _err = invertmatrix_incl_errors(
+                        self._z[k], self._z_err[k]
+                    )
+                    inv[k] = inv_k
+                except Exception as exc:
+                    raise ZError(
+                        f"Failed to invert tensor at index {k}: {exc}"
+                    ) from exc
+
+        return inv
+
+
+    def rotate(self, alpha: Sequence[float] | float) -> None:
+        """
+        Rotate Z by angle(s) ``alpha`` (degrees, CW positive).
+
+        Angles are referenced to geographic North (X→North, Y→East).
+        Positive rotation is clockwise. You can supply a single angle
+        applied to all frequencies, or one angle per frequency.
+
+        Parameters
+        ----------
+        alpha : float or sequence of float
+            Rotation angle(s) in degrees. If a sequence is provided,
+            its length must equal ``n_freq`` or be 1.
+
+        Raises
+        ------
+        ZError
+            If Z is missing or the number of angles is invalid.
+
+        Notes
+        -----
+        The following fields are updated:
+
+        - :pyattr:`z`
+        - :pyattr:`z_err` (if present)
+        - :pyattr:`rotation_angle`
+        - Derived ρ/φ and their uncertainties
+        """
+        if self._z is None:
+            raise ZError("Z is not set; cannot rotate.")
+
+        n = self._z.shape[0]
+
+        # Normalize alpha to a vector of length n, modulo 360.
+        if np.isscalar(alpha) or (
+                isinstance(alpha, (list, tuple)) and len(alpha) == 1):
+            ang = float(np.asarray(alpha).ravel()[0]) % 360.0
+            alphas = np.full(n, ang, dtype=float)
+        else:
+            a = np.asarray(alpha, dtype=float).ravel()
+            if a.size not in (1, n):
+                raise ZError(
+                    f"Expected 1 angle or {n} angles; got {a.size}."
+                )
+            alphas = (a % 360.0) if a.size == n else np.full(n, a[0] % 360.0)
+
+        # Update rotation history (mod 360).
+        if isinstance(self.rotation_angle, float):
+            self.rotation_angle = np.zeros(n, dtype=float)
+        self.rotation_angle = (self.rotation_angle + alphas) % 360.0
+
+        # Rotate each frequency slice, propagating errors when present.
+        z_rot = np.empty_like(self._z, dtype=complex)
+        zerr_rot = None if self._z_err is None else np.empty_like(self._z_err)
+
+        for k in range(n):
+            ang = 0.0 if np.isnan(alphas[k]) else float(alphas[k])
+            if self._z_err is None:
+                z_rot[k], _ = rotatematrix_incl_errors(self._z[k], ang)
+            else:
+                z_rot[k], zerr_rot[k] = rotatematrix_incl_errors(
+                    self._z[k], ang, self._z_err[k]
+                )
+
+        # Assign back and recompute derived quantities.
+        self.z = z_rot
+        if zerr_rot is not None:
+            self.z_err = zerr_rot
+        # compute_resistivity_phase is called by setters when possible.
+
+    def remove_static_shift(
+        self,
+        reduce_res_factor_x: float | Sequence[float] = 1.0,
+        reduce_res_factor_y: float | Sequence[float] = 1.0,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Remove static shift using resistivity-scale correction factors.
+
+        Assumes the observed tensor is :math:`Z = S \\cdot Z_0`, with:
+
+        .. math::
+
+           S = \\begin{bmatrix}
+                 \\sqrt{f_x} & 0 \\\\
+                 0           & \\sqrt{f_y}
+               \\end{bmatrix}
+
+        where ``f_x`` and ``f_y`` are **resistivity-scale** factors.
+        The corrected tensor is then:
+
+        .. math::
+
+           Z_0 = S^{-1} \\cdot Z
+
+        Parameters
+        ----------
+        reduce_res_factor_x : float or sequence, default=1.0
+            Factor(s) for X components (resistivity scale). Either a
+            single value or one per frequency.
+        reduce_res_factor_y : float or sequence, default=1.0
+            Factor(s) for Y components (resistivity scale). Either a
+            single value or one per frequency.
+
+        Returns
+        -------
+        static_shift : ndarray, shape (n_freq, 2, 2)
+            Static-shift matrices applied at each frequency.
+        z_corrected : ndarray, shape (n_freq, 2, 2)
+            Corrected impedance tensor :math:`Z_0`.
+
+        Raises
+        ------
+        ZError
+            If Z is missing or factor lengths are invalid.
+
+        Notes
+        -----
+        Factors are in **ρ scale**; the matrix entries use their
+        square roots. No uncertainty propagation is applied here.
+        """
+        if self._z is None:
+            raise ZError("Z is not set; cannot remove static shift.")
+
+        n = self._z.shape[0]
+
+        # Normalize factors to vectors of length n.
+        def _normalize_factor(v: float | Sequence[float], name: str) -> np.ndarray:
+            vv = np.asarray(v, dtype=float).ravel()
+            if vv.size == 1:
+                out = np.full(n, vv[0], dtype=float)
+            elif vv.size == n:
+                out = vv
+            else:
+                raise ZError(
+                    f"'{name}' must be a scalar or length-{n} sequence; "
+                    f"got length {vv.size}."
+                )
+            if np.any(out <= 0.0):
+                raise ZError(f"'{name}' must contain positive values.")
+            return out
+
+        fx = _normalize_factor(reduce_res_factor_x, "reduce_res_factor_x")
+        fy = _normalize_factor(reduce_res_factor_y, "reduce_res_factor_y")
+
+        # Build per-frequency S and apply S^{-1} * Z.
+        zcorr = np.empty_like(self._z, dtype=complex)
+        S = np.zeros((n, 2, 2), dtype=float)
+        S[:, 0, 0] = np.sqrt(fx)
+        S[:, 1, 1] = np.sqrt(fy)
+
+        Sinv = np.zeros_like(S)
+        # Since S is diagonal, inverse is simple.
+        Sinv[:, 0, 0] = 1.0 / S[:, 0, 0]
+        Sinv[:, 1, 1] = 1.0 / S[:, 1, 1]
+
+        # Apply Sinv @ Z for each frequency.
+        for k in range(n):
+            zcorr[k] = Sinv[k].dot(self._z[k])
+
+        return S, zcorr
+    
+    def remove_distortion(
+        self,
+        distortion_tensor: np.ndarray,
+        distortion_err_tensor: Optional[np.ndarray] = None,
+    ) -> tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
+        """
+        Remove galvanic distortion ``D`` from the observed impedance
+        tensor :math:`Z` to obtain the undistorted tensor
+        :math:`Z_0 = D^{-1} Z`.
+    
+        Uncertainty propagation is included (first-order, 1-norm). If
+        either ``z_err`` or ``distortion_err_tensor`` is missing, zeros
+        are assumed for the corresponding errors.
+    
+        Parameters
+        ----------
+        distortion_tensor : ndarray, shape (2, 2) or (n, 2, 2)
+            Real 2×2 galvanic distortion matrix ``D``. If a stack is
+            provided, only the first slice is used (distortion is assumed
+            time-invariant).
+        distortion_err_tensor : ndarray, shape (2, 2) or (n, 2, 2), \
+                optional
+            Absolute errors on ``D``. If omitted, zeros are assumed.
+            If a stack is provided, only the first slice is used.
+    
+        Returns
+        -------
+        D : ndarray, shape (2, 2)
+            The (real) distortion tensor used.
+        Z0 : ndarray, shape (n_freq, 2, 2)
+            Corrected impedance tensor :math:`Z_0 = D^{-1} Z`.
+        Z0_err : ndarray or None, shape (n_freq, 2, 2)
+            Propagated absolute errors on :math:`Z_0`. ``None`` if
+            both input errors were ``None``.
+    
+        Raises
+        ------
+        ZError
+            If ``Z`` is missing, distortion shapes are invalid, or the
+            distortion matrix is singular.
+    
+        Notes
+        -----
+        Error propagation for a component
+        :math:`(Z_0)_{ij} = \\sum_k (D^{-1})_{ik} Z_{kj}` uses the
+        simple 1-norm bound:
+    
+        .. math::
+    
+            \\Delta (Z_0)_{ij} \\approx
+            \\sum_k \\big(
+              |\\Delta (D^{-1})_{ik}| \\cdot |Z_{kj}| +
+              |(D^{-1})_{ik}| \\cdot |\\Delta Z_{kj}|
+            \\big).
+    
+        Examples
+        --------
+        >>> D = np.array([[1.2, 0.5], [0.35, 2.1]])
+        >>> D_used, Z0, Z0_err = zobj.remove_distortion(D)
+        """
+        if self._z is None:
+            raise ZError("Z is not set; cannot remove distortion.")
+    
+        # --- Normalize distortion tensors to single 2×2 real arrays --------
+        D = np.asarray(distortion_tensor, dtype=float)
+        if D.ndim == 3:
+            logger.info(
+                "Distortion provided as a stack; using the first slice."
+            )
+            D = D[0]
+        if D.shape != (2, 2):
+            raise ZError(
+                "distortion_tensor must have shape (2, 2) or (n, 2, 2); "
+                f"got {D.shape!r}."
+            )
+    
+        if distortion_err_tensor is None:
+            D_err = np.zeros((2, 2), dtype=float)
+        else:
+            D_err = np.asarray(distortion_err_tensor, dtype=float)
+            if D_err.ndim == 3:
+                logger.info(
+                    "Distortion error provided as a stack; using first slice."
+                )
+                D_err = D_err[0]
+            if D_err.shape != (2, 2):
+                raise ZError(
+                    "distortion_err_tensor must have shape (2, 2) or "
+                    f"(n, 2, 2); got {D_err.shape!r}."
+                )
+    
+        # --- Invert D with error propagation (errors of DI ignored later) ---
+        try:
+            DI, DI_err = invertmatrix_incl_errors(D, D_err)
+        except np.linalg.LinAlgError as exc:
+            raise ZError("Distortion tensor is singular; cannot invert.") from exc
+        except Exception as exc:  # pragma: no cover
+            raise ZError(f"Failed to invert distortion tensor: {exc}") from exc
+    
+        # --- Build corrected Z0 = DI @ Z, with propagated errors ------------
+        n = self._z.shape[0]
+        Z0 = np.empty_like(self._z, dtype=complex)
+    
+        # If no error info anywhere, we can return None for Z0_err.
+        z_err_in = self._z_err
+        if z_err_in is None and not np.any(D_err):
+            Z0[:] = DI @ self._z.transpose(0, 2, 1)
+            Z0 = Z0.transpose(0, 2, 1)  # back to (n, 2, 2)
+            return D, Z0, None
+    
+        # Otherwise, prepare zero arrays for missing inputs.
+        if z_err_in is None:
+            z_err = np.zeros_like(self._z, dtype=float)
+        else:
+            z_err = np.asarray(z_err_in, dtype=float)
+            if z_err.shape != self._z.shape:
+                raise ZError(
+                    f"'z_err' must match 'z' shape: {z_err.shape!r} vs "
+                    f"{self._z.shape!r}."
+                )
+    
+        Z0_err = np.zeros_like(self._z, dtype=float)
+    
+        # Compute per-frequency corrections with 1-norm error bound.
+        for k in range(n):
+            Zk = self._z[k]
+            Z0[k] = DI @ Zk
+    
+            # error on each (i, j) uses k-sum over input 2×2:
+            # sum_k |DI_err[i,k] * Z[k,j]| + |DI[i,k] * Z_err[k,j]|
+            for i in range(2):
+                for j in range(2):
+                    term = (
+                        np.abs(DI_err[i, 0] * Zk[0, j])
+                        + np.abs(DI[i, 0] * z_err[k, 0, j])
+                        + np.abs(DI_err[i, 1] * Zk[1, j])
+                        + np.abs(DI[i, 1] * z_err[k, 1, j])
+                    )
+                    Z0_err[k, i, j] = term
+    
+        return D, Z0, Z0_err
+
+
+    def _compute_det_variance(self) -> Optional[np.ndarray]:
+        """
+        Approximate variance of :math:`\\det(Z)` from Z and ``z_err``.
+
+        Uses a simple central-difference style perturbation:
+
+        .. math::
+
+           \\sigma_{\\det} \\approx
+           \\tfrac{1}{2}\\,\\big|\\det(Z+\\Delta Z) -
+           \\det(Z-\\Delta Z)\\big|
+
+        and returns :math:`\\sigma_{\\det}^2` as a crude variance
+        proxy. If no error is available the method returns ``None``.
+
+        Returns
+        -------
+        ndarray or None
+            Array of shape ``(n_freq,)`` with the approximate
+            variance of the determinant, or ``None`` if no error
+            information is available.
+        """
+        if self._z_err is None or self._z is None:
+            return None
+
+        det_plus = np.linalg.det(self._z + self._z_err)
+        det_minus = np.linalg.det(self._z - self._z_err)
+        sigma_det = 0.5 * np.abs(det_plus - det_minus)
+
+        return sigma_det**2
+
+    # 1-D / 2-D projections
+    @property
+    def only_1d(self) -> np.ndarray:
+        """
+        Return a **1-D**-like version of :math:`Z`.
+
+        The diagonal entries are set to zero. The off-diagonal
+        entries retain their complex signs, but their magnitudes are
+        set to the mean of the **original off-diagonal magnitudes**
+        at each frequency:
+
+        .. code-block:: text
+
+           |Z01|, |Z10| → m = 0.5 (|Z01| + |Z10|)
+           Z01 := sign(Z01) * m
+           Z10 := sign(Z10) * m
+
+        Returns
+        -------
+        ndarray
+            New tensor with shape ``(n_freq, 2, 2)``.
+        """
+        if self._z is None:
+            raise ZError("Z is not set; cannot build 1-D projection.")
+
+        z1d = self._z.copy()
+        for k in range(z1d.shape[0]):
+            z1d[k, 0, 0] = 0.0
+            z1d[k, 1, 1] = 0.0
+            z01 = z1d[k, 0, 1]
+            z10 = z1d[k, 1, 0]
+            mean_abs = 0.5 * (np.abs(z01) + np.abs(z10))
+            # preserve complex sign (phase) of each entry
+            z1d[k, 0, 1] = np.exp(1j * np.angle(z01)) * mean_abs
+            z1d[k, 1, 0] = np.exp(1j * np.angle(z10)) * mean_abs
+        return z1d
+
+    @property
+    def only_2d(self) -> np.ndarray:
+        """
+        Return a **2-D**-like version of :math:`Z`.
+
+        The diagonal entries are set to zero; off-diagonal terms are
+        kept unchanged.
+
+        Returns
+        -------
+        ndarray
+            New tensor with shape ``(n_freq, 2, 2)``.
+        """
+        if self._z is None:
+            raise ZError("Z is not set; cannot build 2-D projection.")
+
+        z2d = self._z.copy()
+        z2d[:, 0, 0] = 0.0
+        z2d[:, 1, 1] = 0.0
+        return z2d
+
+
+    # Basic algebraic invariants
+    @property
+    def trace(self) -> np.ndarray:
+        """
+        Trace of :math:`Z` at each frequency.
+
+        Returns
+        -------
+        ndarray
+            Array of shape ``(n_freq,)`` with
+            :math:`\\operatorname{tr}(Z)`.
+        """
+        if self._z is None:
+            raise ZError("Z is not set; cannot compute trace.")
+        return np.einsum("kii->k", self._z)
+
+    @property
+    def trace_err(self) -> Optional[np.ndarray]:
+        """
+        Approximate error on :math:`\\operatorname{tr}(Z)`.
+
+        Returns
+        -------
+        ndarray or None
+            If ``z_err`` is available, returns an array with
+            shape ``(n_freq,)`` computed by summing the diagonal
+            errors :math:`\\Delta Z_{00} + \\Delta Z_{11}`. Otherwise
+            ``None``.
+        """
+        if self._z_err is None:
+            return None
+        return self._z_err[:, 0, 0] + self._z_err[:, 1, 1]
+
+    @property
+    def skew(self) -> np.ndarray:
+        """
+        Linear-algebra skew :math:`Z_{01} - Z_{10}`.
+
+        .. note::
+           This is *not* the MT skew used in dimensionality
+           analysis; it is the simple matrix skew.
+
+        Returns
+        -------
+        ndarray
+            Array of shape ``(n_freq,)`` with
+            :math:`Z_{01} - Z_{10}`.
+        """
+        if self._z is None:
+            raise ZError("Z is not set; cannot compute skew.")
+        return self._z[:, 0, 1] - self._z[:, 1, 0]
+
+    @property
+    def skew_err(self) -> Optional[np.ndarray]:
+        """
+        Approximate error on the linear-algebra skew.
+
+        Returns
+        -------
+        ndarray or None
+            If ``z_err`` is available, returns an array with
+            shape ``(n_freq,)`` computed as
+            :math:`\\Delta Z_{01} + \\Delta Z_{10}` (1-norm bound).
+            Otherwise ``None``.
+        """
+        if self._z_err is None:
+            return None
+        return self._z_err[:, 0, 1] + self._z_err[:, 1, 0]
+
+    @property
+    def det(self) -> np.ndarray:
+        """
+        Determinant of :math:`Z` at each frequency.
+
+        Returns
+        -------
+        ndarray
+            Array of shape ``(n_freq,)`` with :math:`\\det(Z)`.
+        """
+        if self._z is None:
+            raise ZError("Z is not set; cannot compute determinant.")
+        return np.linalg.det(self._z)
+
+    @property
+    def det_err(self) -> Optional[np.ndarray]:
+        """
+        Approximate error on :math:`\\det(Z)`.
+
+        Uses a central-difference style perturbation:
+
+        .. math::
+
+           \\Delta \\det(Z) \\approx
+           \\tfrac{1}{2}\\,\\big|\\det(Z+\\Delta Z) -
+           \\det(Z-\\Delta Z)\\big|.
+
+        Returns
+        -------
+        ndarray or None
+            Array of shape ``(n_freq,)`` with an error proxy, or
+            ``None`` if ``z_err`` is not available.
+        """
+        if self._z_err is None or self._z is None:
+            return None
+        det_plus = np.linalg.det(self._z + self._z_err)
+        det_minus = np.linalg.det(self._z - self._z_err)
+        return 0.5 * np.abs(det_plus - det_minus)
+
+    @property
+    def norm(self) -> np.ndarray:
+        """
+        Frobenius norm :math:`\\lVert Z \\rVert_F` at each frequency.
+
+        Returns
+        -------
+        ndarray
+            Array of shape ``(n_freq,)`` with Frobenius norms.
+        """
+        if self._z is None:
+            raise ZError("Z is not set; cannot compute norm.")
+        return np.linalg.norm(self._z, axis=(1, 2))
+
+    @property
+    def norm_err(self) -> Optional[np.ndarray]:
+        """
+        Approximate error on the Frobenius norm.
+
+        Uses a first-order bound combining real and imaginary parts.
+
+        Returns
+        -------
+        ndarray or None
+            Array of shape ``(n_freq,)`` or ``None`` if ``z_err`` is
+            not available.
+        """
+        if self._z_err is None or self._z is None:
+            return None
+
+        nrm = self.norm
+        out = np.zeros_like(nrm, dtype=float)
+
+        for k in range(self._z.shape[0]):
+            zk = self._z[k]
+            ek = self._z_err[k]
+            # derivative of sqrt(sum x_i^2) ~ (1/||z||) * sum |e_i * x_i|
+            # applied to real and imag parts
+            rad = 0.0
+            for i in range(2):
+                for j in range(2):
+                    rad += (ek[i, j] * np.real(zk[i, j])) ** 2
+                    rad += (ek[i, j] * np.imag(zk[i, j])) ** 2
+            out[k] = (0.0 if nrm[k] == 0.0 else np.sqrt(rad) / nrm[k])
+
+        return out
+
+    @property
+    def invariants(self) -> dict[str, np.ndarray]:
+        """
+        Compute several algebraic invariants of :math:`Z`.
+
+        Returns
+        -------
+        dict
+            Dictionary with keys:
+
+            - ``'z1'`` :math:`= (Z_{01} - Z_{10}) / 2`
+            - ``'det'`` determinant of :math:`Z`
+            - ``'det_real'`` determinant of :math:`\\Re(Z)`
+            - ``'det_imag'`` determinant of :math:`\\Im(Z)`
+            - ``'trace'`` trace of :math:`Z`
+            - ``'skew'`` linear-algebra skew
+            - ``'norm'`` Frobenius norm
+            - ``'lambda_plus'``, ``'lambda_minus'`` :
+              :math:`z_1 \\pm \\sqrt{z_1^2 / \\det(Z)}`
+            - ``'sigma_plus'``, ``'sigma_minus'`` :
+              scalar combinations of norm and determinant magnitudes.
+
+        Notes
+        -----
+        ``lambda_±`` are simple combinations frequently used in
+        analytic manipulations of 2×2 matrices. ``sigma_±`` follow the
+        historical form found in legacy code; they reduce to simple
+        combinations of :math:`\\lVert Z \\rVert_F` and :math:`|\\det|`.
+        """
+        if self._z is None:
+            raise ZError("Z is not set; cannot compute invariants.")
+
+        inv: dict[str, np.ndarray] = {}
+
+        z1 = (self._z[:, 0, 1] - self._z[:, 1, 0]) / 2.0
+        inv["z1"] = z1
+
+        detz = self.det
+        inv["det"] = detz
+
+        inv["det_real"] = np.linalg.det(np.real(self._z))
+        inv["det_imag"] = np.linalg.det(np.imag(self._z))
+
+        inv["trace"] = self.trace
+        inv["skew"] = self.skew
+        nrm = self.norm
+        inv["norm"] = nrm
+
+        with np.errstate(divide="ignore", invalid="ignore"):
+            sqrt_term = np.sqrt((z1 * z1) / detz)
+        inv["lambda_plus"] = z1 + sqrt_term
+        inv["lambda_minus"] = z1 - sqrt_term
+
+        # Keep the historical form as in legacy implementation.
+        inv["sigma_plus"] = (
+            0.5 * nrm**2 + np.sqrt(0.25 * nrm**4) + np.abs(detz**2)
+        )
+        inv["sigma_minus"] = (
+            0.5 * nrm**2 - np.sqrt(0.25 * nrm**4) + np.abs(detz**2)
+        )
+
+        return inv
+
+
+    # Backward-compat alias
+    remove_ss = remove_static_shift

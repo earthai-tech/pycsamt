@@ -291,8 +291,6 @@ def propagate_error_polar2rect(r,r_error,phi, phi_error):
     return xerr, yerr
 
 
-
-
 def propagate_error_rect2polar(x,x_error,y, y_error):
     
     # x_error, y_error define a  rectangular uncertainty box  

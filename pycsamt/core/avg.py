@@ -31,7 +31,39 @@ from pycsamt.utils import exceptions as CSex
 
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
+__all__=[
+    # 'sPhz',
+    # 'sHphz', 
 
+    # 'sEphz', 
+    # 'pcEmag',
+    # 'pcRho',
+    # 'pcHmag', 
+    # 'pcHmag', 
+    
+    
+    
+    'Z_Tensor', 
+    'Phase',
+    'Resistivity',
+    # 'Hphz',
+    # 'Hmag', 
+    # 'Ephz', 
+    # 'Emag', 
+    'Amps', 
+    'Comp', 
+    'Frequency',
+    'Station', 
+    'Data',
+    # 'ZongeHardware',
+    # 'Skip_flag', 
+    # 'ReceiverProperties',
+    # 'TransmitterProperties',
+    # 'SurveyConfiguration', 
+    # 'SurveyConfiguration',
+    # 'Header', 
+    'Avg'
+ ]
 
 class Avg (object):
     """
@@ -2071,7 +2103,7 @@ class Data (object):
         >>> stn=DATA.Station.name 
         >>> freq=DATA.Frequency.value
     """
-    
+# XXX TODO
     def __init__(self, data_array=None , **kwargs):
         self._logging =csamtpylog.get_csamtpy_logger(self.__class__.__name__)
         self._data_array = data_array 
@@ -2301,6 +2333,8 @@ class Data (object):
                          number_of_stations=self._number_of_stations )   
     
        
+
+
 
 class  Station(object):
     """
@@ -3284,7 +3318,7 @@ class Hphz (object):
         self.loc ={ key:value for key, value in zip(name, truncated_h_phz )}
         
         
-        
+# use ResistivityError from ..exceptions ,       
 class Resistivity (object):
     """
     based on Cagniard Resistivity (Ohm-Meters) calculation 
@@ -3560,8 +3594,18 @@ class Phase (object):
         
         self.loc ={ key:value for key, value in zip(name, truncated_phz )}
             
-        
-class Z_Tensor(object):
+# This is pycsamt/zonge/z.py 
+# import exceptions ZError or else from ..exceptions import ... 
+# from ..utils.zmath import ... # what you need 
+# from .utils import chunck_by_frequency (has replaced truncated_data) and number_stations (
+#  has replaced _numbering_station in new version)
+# and other modules that can be  imported. 
+
+# Z class is a big tricky so be carefull, focus on that class to refactor 
+# Dont rush to write a class, check step by step to write the class 
+# 
+class Z_Tensor(object): # rename to Z 
+
     """
     Impedance Tensor Z Calculation :  
        class can recompute the apparent resistity rho base on impedance Tensor Z.
@@ -3689,7 +3733,6 @@ class Z_Tensor(object):
         else : self._z= zz_array
     
                 
-    
     def z_and_zerr_2rhophi(self, z_array=None , freq=None):
         """
         Method to compute resistivity and phase phase 
@@ -3725,7 +3768,6 @@ class Z_Tensor(object):
             lambda valz : np.abs(valz)**2 * (0.2 / self.freq), 0, self.z)
         
         #-- z is complex number , can be compute using np.angle
-
         self.phase= np.rad2deg(np.angle(self.z))
             
         return self.rho , self.phase

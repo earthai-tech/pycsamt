@@ -1,0 +1,72 @@
+# pycsamt/log/p.configlog.yml
+version: 1
+disable_existing_loggers: False
+
+formatters:
+  detailed:
+    format: "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
+    datefmt: "%Y-%m-%dT %H:%M:%S %z"
+  simple:
+    format: "%(levelname)-8s %(message)s"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: simple
+    stream: ext://sys.stdout
+
+  info_file_handler:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: detailed
+    filename: logs/infos.log
+    maxBytes: 7_000_000   # ~7 MB
+    backupCount: 3
+    encoding: utf-8
+
+  warning_file_handler:
+    class: logging.handlers.RotatingFileHandler
+    level: WARNING
+    formatter: detailed
+    filename: logs/warnings.log
+    maxBytes: 2_000_000   # ~2 MB
+    backupCount: 3
+    encoding: utf-8
+
+  error_file_handler:
+    class: logging.handlers.RotatingFileHandler
+    level: ERROR
+    formatter: detailed
+    filename: logs/errors.log
+    maxBytes: 1_000_000   # ~1 MB
+    backupCount: 5
+    encoding: utf-8
+
+loggers:
+  pycsamt:
+    level: DEBUG
+    handlers:
+      - console
+      - info_file_handler
+      - warning_file_handler
+      - error_file_handler
+    propagate: no
+
+  __main__:
+    level: DEBUG
+    handlers:
+      - console
+      - info_file_handler
+      - warning_file_handler
+      - error_file_handler
+    propagate: no
+
+root:
+  level: INFO
+  handlers:
+    - console
+    - info_file_handler
+    - warning_file_handler
+    - error_file_handler
+  propagate: no

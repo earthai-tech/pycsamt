@@ -3392,6 +3392,8 @@ class Plot2d (object):
         >>> # interpolate to fix the missing data 
         >>> # get the full frequency of survey area in the whole collection data 
         >>> freqs = get_full_frequency(ediObjs) # plot station vs frequency 
+        >>> p2d.plottemp2d (np.log10(res2d_xy), y = np.log10(freqs), distance = 50 ) 
+        >>> # fix the missing data 
         >>> res2d_xy = interpolate2d (res2d_xy )
         >>> # create a 2D plot objects 
         >>> p2d = Plot2d(figsize =(6, 3), xlabel= '$Distance(m)$',

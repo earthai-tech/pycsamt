@@ -2686,6 +2686,7 @@ def _strip_item(item_to_clean, item=None, multi_space=12):
                 item_to_clean[jj]=new_ss
     
     return item_to_clean
+
     
 def _cross_eraser (data , to_del, deep_cleaner =False):
     """

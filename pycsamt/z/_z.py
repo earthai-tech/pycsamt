@@ -18,21 +18,45 @@ for additional details. If you use this module, please you may cite authors::
    
 """
 
+# This is version v1.xxx 
+
 import cmath
 import copy
 import math
 import numpy as np
-# =================================================================
 
 import pycsamt.utils.mtcalculator as MTcc
 import pycsamt.utils.exceptions as MTex
 from pycsamt.utils._csamtpylog import csamtpylog
+
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 
+#============================
+# new version v2.xx 
+
+import cmath 
+import copy 
+import math 
+import numpy as np 
+
+from ..exceptions import ZError, PhaseError, ResistivityError 
+from ..utils.zmath import (  # zmath replace mtcalculator 
+    propagate_error_polar2rect, 
+    z_error2r_phi_error, 
+    rotatematrix_incl_errors, 
+    rotatevector_incl_errors,
+    invertmatrix_incl_errors
+    propagate_error_rect2polar, 
+    # ...
+)
+
+from ..log.logger import get_logger 
+logger = get_logger(__name__) # use logger to replace , _logger 
 
 # ==============================================================================
 # Resistivity and phase object
 # ==============================================================================
+# add verbose in each class 
 class ResPhase(object):
     """
     resistivity and phase container

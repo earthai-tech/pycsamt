@@ -141,11 +141,12 @@ setup(
         #"License :: OSI Approved :: GNU License",
         'Topic :: Scientific/Engineering :: Geophysics',
         'Topic :: Scientific/Engineering :: Geosciences',
-        
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         "Operating System :: OS Independent",
+        "Operating System :: Microsoft :: Windows",
+        "Operating System :: Unix",
         ],
     keywords="hydrogeophysic, groundwater, exploration, csamt",
     #package_dir={"": "pyCSAMT"},  # Optional

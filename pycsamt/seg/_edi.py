@@ -18,6 +18,7 @@ References
      Society of Exploration Geophysicists, Texas 7831, USA.
              
 """
+#    previous versions import v1.xxx ------------
 from __future__ import annotations 
 import os
 import re
@@ -29,11 +30,14 @@ import numpy as np
 
 import pycsamt
 from pycsamt.__init__ import imtpy  
-import pycsamt.utils.func_utils as func
-import pycsamt.core.z as MTz
+import pycsamt.utils.func_utils as func # this previous ly is func._strip_items, now 
+# strip_items is  iimported from pycsamt.seg.utils
+import pycsamt.core.z as MTz # now is from pycsamt.z.z import Z rather than MTz 
 from pycsamt.utils. _p import suit 
 from pycsamt.site import  Location
-from pycsamt.utils. _p import _sensitive as SB 
+# in previous version, the sensitive class is used for assert the EDI -file. 
+from pycsamt.utils. _p import _sensitive as SB # and is replace by IsEdi 
+
 from pycsamt.utils import gis_tools as gis 
 from pycsamt.utils import exceptions as CSex
 from pycsamt.utils._csamtpylog import csamtpylog
@@ -45,9 +49,10 @@ else:
     imtpy = False
     
     
+    
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 
-    
+
 
 class Edi_collection : 
     """
@@ -633,7 +638,12 @@ class Edi_collection :
     def phs_err_yy (self): 
         return {stn :phs_err[: , 1, 1] 
                 for stn, phs_err in self._phs_err.items()}
-           
+        
+# This function is deprecated and should be removed orchanged 
+from ..decorators import Deprecated 
+@Deprecated (...) # add a reason , the reson is that pycsamt module has changed as 
+# well as Edi file from mtpy 
+
 def _assert_edi_obj (
         obj: str | pycsamt.core.edi | mtpy.core.edi  
         )-> pycsamt.core.edi | mtpy.core.edi : 
@@ -1058,6 +1068,8 @@ class Edi :
         :rtype: str 
         
         """
+        #####################################
+        # this global variable seems already exists in properties 
         z_rho_phs_labels =[
             [['zxxr', 'zxxi', 'zxx.var'],
               ['zxyr', 'zxyi', 'zxy.var'],
@@ -1080,8 +1092,7 @@ class Edi :
         ]
                                                             
         tip_labels =[['txr.exp', 'txi.exp', 'txvar.exp'],
-                     ['tyr.exp', 'tyi.exp', 'tyvar.exp']]
-                          
+                     ['tyr.exp', 'tyi.exp', 'tyvar.exp']]            
         f=0
         verbose = kwargs.pop('verbose', None)
    
@@ -1645,7 +1656,8 @@ class Edi :
 
         return edi_fn
     
-     
+# XXX TODO 
+
 class Head (object): 
     """
     The edi head block contains a series of options which (1) identity the data  
@@ -1975,6 +1987,10 @@ class Head (object):
 
         return write_header
     
+ # if Info could inherit from EdiComponentBase, then use it , if it cannot then
+ # keep Info dont inherit it. 
+ # each rename the method that start with 'read_xxx , by short 'read(self, ...) 
+ # and write_xxx to write (self, ...) for consistent API. 
  
 class Info :
     """
@@ -3401,7 +3417,8 @@ def gather_measurement_key_value_with_str_parser (
                 else : new_list.append(''.join([item, str(addvalue)]))
 
     return new_list
-                        
+    
+               
 def get_ediObjs (
     edipath: str | object  ,
     posix: int | None  = None

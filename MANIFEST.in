@@ -8,7 +8,6 @@ include COPYING.LESSER
 include README.md
 
 exclude .travis.yml .readthedocs.yml 
-exclude pycsamt/utils/epsg.npy
 exclude project_description.md
 exclude _demo_user_guide.py
 exclude pycsamt_user_guide/*

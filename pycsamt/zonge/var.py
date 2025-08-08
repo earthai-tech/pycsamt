@@ -49,7 +49,6 @@ class VariationBase(AVGComponentBase):
     def __init__(
             self,
             data:       Sequence[float] | np.ndarray | None = None,
-            *,
             n_freq:     int  | None = None,
             n_stations: int  | None = None,
             to_degree:  bool        = False,

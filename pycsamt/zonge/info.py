@@ -40,7 +40,7 @@ from .var import (
     SHphz, 
     SEphz
 )
-from .properties import FieldAliases 
+from .base import FieldAliases 
 from .resphase   import Phase, Resistivity
 from .utils import load_avg
 from .z import Z

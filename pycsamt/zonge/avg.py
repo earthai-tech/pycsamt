@@ -202,7 +202,7 @@ class AVG(BaseAVG):
         meta: dict[str, str] | None = None,
         verbose: bool = False
     ) -> None:
-
+  
         # 1) create *all* component shells – they stay empty until
         #    _populate_components() fills them
         self.Head   = Head()
@@ -219,10 +219,10 @@ class AVG(BaseAVG):
         self.Station     = Station()
         self.Frequency   = Frequency()
         self.Amps        = Amps()
-        self.Emag        = CompMeas("emag")
-        self.Ephz        = CompMeas("ephz")
-        self.Hmag        = CompMeas("hmag")
-        self.Hphz        = CompMeas("hphz")
+        self.Emag        = CompMeas("ExHy")
+        self.Ephz        = CompMeas("ExHy")
+        self.Hmag        = CompMeas("ExHy")
+        self.Hphz        = CompMeas("ExHy")
 
         # variations & QC
         self.PcEmag      = PcEmag()
@@ -243,13 +243,12 @@ class AVG(BaseAVG):
         self.DataInfo    = DataInfo()
 
         # 2) base initialisation (empty frame for now)
-  
         super().__init__(pd.DataFrame(), meta or {}, None)
         self.verbose = verbose
         self.obj_or_path = obj_or_path 
         self.meta = meta 
-        
 
+        
     def read(
         self,
         obj_or_path: str | Path | pd.DataFrame |None,

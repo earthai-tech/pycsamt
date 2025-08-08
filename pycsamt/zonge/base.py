@@ -46,7 +46,7 @@ __all__ = [
     "OpsBase"]
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True)
 class BaseAVG:  # noqa: D101 – documented above.
     data: pd.DataFrame
     meta: Dict[str, str] = field(default_factory=dict)
@@ -194,7 +194,7 @@ class AvgProperties:
 class AVGComponentBase(ABC):
     """Abstract base for a single AVG data component."""
 
-    __slots__ = ("_data", "_meta")
+    # __slots__ = ("_data", "_meta")
 
     def __init__(self,
                  data: np.ndarray | None = None,

@@ -13,25 +13,40 @@ import os
 from .logger import configure_logging
 
 
-def init_logging(config_path: str = None, use_default: bool = False) -> None:
+def init_logging(
+    config_path: str = None,
+    use_default: bool = False
+) -> None:
     """
     Initialize pycsamt logging configuration.
 
     Parameters
     ----------
     config_path : str, optional
-        Path to the YAML logging configuration file. If not provided, defaults
-        to `p.configlog.yml` in this directory.
+        Explicit path to the YAML logging configuration file.
+        If ``None``, the code will look at the
+        ``PYCSAMT_LOG_CONFIG`` environment variable; if that
+        is unset, falls back to the bundled
+        ``p.configlog.yml`` in this package directory.
     use_default : bool, default False
-        If True, ignore the YAML file and configure logging using basicConfig.
+        If True, ignore the YAML file and configure
+        logging using basicConfig.
     """
-    # Determine config file location
+    # Determine which config file to load
     if not config_path or not config_path.strip():
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(base_dir, 'p.configlog.yml')
+        # allow override via environment
+        env_path = os.environ.get("PYCSAMT_LOG_CONFIG")
+        if env_path and env_path.strip():
+            config_path = env_path
+        else:
+            # bundled default
+            pkg_dir = os.path.dirname(os.path.abspath(__file__))
+            config_path = os.path.join(pkg_dir, 'p.configlog.yml')
 
-    # Delegate to logger module
-    configure_logging(config_path=config_path, use_default=use_default)
+    configure_logging(
+        config_path=config_path,
+        use_default=use_default
+    )
 
 
 # Auto-configure on import

@@ -16,7 +16,7 @@ import numpy as np
 
 from ..constants import MU_0
 from ..exceptions import ZDataError, ZError
-from ..utils.zmath   import z_error_to_rho_phi 
+from ..utils.zmath   import z_err_to_rphi_err 
 
 from .base   import AVGComponentBase
 from .tensor import ImpedanceTensor, TensorFactory 
@@ -180,7 +180,7 @@ class Z(AVGComponentBase):
         if self.z_err is None:
             raise ZError("Set `z_err` before requesting `rho_err`")
         if not hasattr(self, "_rho_err_cache"):
-            rel, _phi = z_error_to_rho_phi(self._z.real,
+            rel, _phi = z_err_to_rphi_err(self._z.real,
                                            self._z.imag,
                                            self.z_err)
             self._rho_err_cache = rel.reshape(self._z.shape)
@@ -192,9 +192,9 @@ class Z(AVGComponentBase):
         if self.z_err is None:
             raise ZError("Set `z_err` before requesting `phase_err`")
         if not hasattr(self, "_phi_err_cache"):
-            _rel, phi = z_error_to_rho_phi(self._z.real,
-                                           self._z.imag,
-                                           self.z_err)
+            _rel, phi = z_err_to_rphi_err(
+                self._z.real, self._z.imag, self.z_err
+                )
             self._phi_err_cache = phi.reshape(self._z.shape)
         return self._phi_err_cache                           # type: ignore[attr-defined]
 

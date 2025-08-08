@@ -20,7 +20,7 @@ handlers:
     class: logging.handlers.RotatingFileHandler
     level: INFO
     formatter: detailed
-    filename: logs/infos.log
+    filename: infos.log  
     maxBytes: 7_000_000   # ~7 MB
     backupCount: 3
     encoding: utf-8
@@ -29,7 +29,7 @@ handlers:
     class: logging.handlers.RotatingFileHandler
     level: WARNING
     formatter: detailed
-    filename: logs/warnings.log
+    filename: warnings.log
     maxBytes: 2_000_000   # ~2 MB
     backupCount: 3
     encoding: utf-8
@@ -38,7 +38,7 @@ handlers:
     class: logging.handlers.RotatingFileHandler
     level: ERROR
     formatter: detailed
-    filename: logs/errors.log
+    filename: errors.log
     maxBytes: 1_000_000   # ~1 MB
     backupCount: 5
     encoding: utf-8
@@ -70,3 +70,4 @@ root:
     - warning_file_handler
     - error_file_handler
   propagate: no
+

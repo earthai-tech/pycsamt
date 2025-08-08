@@ -101,8 +101,8 @@ class Hardware:
 class Receiver:
     """Receiver electrode / coil (Rx) metadata."""
 
-    station:         int                       # client station number
-    length_m:        float                     # dipole length or loop width
+    station:         int   | None=None                    # client station number
+    length_m:        float  | None =None                   # dipole length or loop width
     gdp_station:     int    | None = None      # Rx.GdpStn
     hpr:             tuple[float, float,
                            float] | None = None  # heading-pitch-roll
@@ -130,7 +130,7 @@ class Receiver:
 class Transmitter:
     """Transmitter (Tx) loop / bipole metadata."""
 
-    station:         int
+    station:         int    | None = None  
     length_m:        float | None = None       # bipole length / loop width
     gdp_station:     int    | None = None      # Tx.GdpStn
     tx_type:         str   | None = None       # Natural, Bipole, Loop …

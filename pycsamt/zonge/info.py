@@ -30,7 +30,6 @@ import pandas as pd
 from ..exceptions  import AvgDataError
 from ..log.logger import get_logger
 
-# from .utils import chunk_by_frequency, number_stations
 from .meas  import CompMeas, Amps, Frequency
 from .survey import Station
 from .var import (
@@ -60,7 +59,6 @@ class DataInfo:
         to_degree: bool = False
         ) -> None:
 
-        # placeholders – filled by _populate_from_frame()
         self.station     : Station      | None = None
         self.frequency   : Frequency    | None = None
         self.amps        : Amps         | None = None
@@ -178,21 +176,24 @@ class DataInfo:
         logger.info("AVG loaded (%d rows) – building DataInfo …", len(df))
         return cls(df, to_degree=to_degree)
 
-
     @staticmethod
-    def _col(alias: str) -> str:
-        """Return the first concrete column name matching *alias*."""
-        for cand in getattr(FieldAliases, alias):
-            return cand  # we only alias once during load_avg()
-        raise AttributeError(alias)
-
+    def _col(df: pd.DataFrame, alias: str) -> str:
+        """
+        Return the first concrete column name that exists in *df* and
+        matches the FieldAliases entry for *alias*.
+        """
+        for cand in getattr(FieldAliases, alias, ()):
+            if cand in df.columns:            # ← check presence
+                return cand
+        raise KeyError(f"No column found for alias '{alias}'")
+    
     @staticmethod
     def _maybe(df: pd.DataFrame, alias: str) -> str | None:
-        """Return a resolved column name or *None*."""
         for cand in getattr(FieldAliases, alias, ()):
             if cand in df.columns:
                 return cand
         return None
+
 
     def _set_metric(
         self,

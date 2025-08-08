@@ -16,6 +16,7 @@ case schema (``station, freq, emag, rho, phase, …``).
 """
 from __future__ import annotations
 
+from datetime import datetime 
 from numbers import Integral
 from pathlib import Path
 import re
@@ -59,6 +60,49 @@ _RX_K2_HEADER      = re.compile(r"^Z\.mwgt\s*,", re.I)
 _RX_K1_HEADER      = re.compile(r"^skp\s+Station", re.I)
 _NUMERIC_REPLACE   = {"*": np.nan, "nan": np.nan, "NaN": np.nan,
                       "": np.nan}
+_COL_MAP = {
+    'Station': 'station', 'Stn': 'station', 'skp': 'station',
+    'Freq': 'freq', 'Freq.': 'freq',
+    'Comp': 'comp',
+    'Tx.Amp': 'amps', 'Amps': 'amps',
+    'E.mag': 'emag', 'Emag': 'emag',
+    'E.phz': 'ephz', 'Ephz': 'ephz',
+    'H.mag': 'hmag', 'B.mag': 'hmag',
+    'Hphz':  'hphz', 'B.phz': 'hphz',
+    'Resistivity': 'rho', 'ARes.mag': 'rho',
+    'Phase': 'phase', 'Z.phz': 'phase',
+}
+
+
+_CANON2K2: dict[str, str] = {
+    # survey logistics
+    "station": "Station",
+    "freq":    "Freq",
+    "comp":    "Comp",
+    # transmitter / field data
+    "amps":  "Tx.Amp",
+    "emag":  "E.mag",
+    "ephz":  "E.phz",
+    "hmag":  "B.mag",
+    "hphz":  "B.phz",
+    "zmag":  "Z.mag",
+    "phase": "Z.phz",
+    "rho":   "ARes.mag",
+    # quality metrics
+    "e.%err":   "E.%err",
+    "e.perr":   "E.perr",
+    "h.%err":   "B.%err",
+    "h.perr":   "B.perr",
+    "rho.%err": "ARes.%err",
+    "phase.%err": "Z.perr",
+    "z.%err":   "Z.%err",
+    "z.perr":   "Z.perr",
+    # ASTATIC weights (keep canonical labels)
+    "z.mwgt": "Z.mwgt",
+    "z.pwgt": "Z.pwgt",
+    "e.wgt":  "E.wgt",
+    "b.wgt":  "B.wgt",
+}
 
 
 def _to_float(val: str | float | int) -> float | np.floating:
@@ -76,7 +120,6 @@ def _to_float(val: str | float | int) -> float | np.floating:
         return float(txt)
     except ValueError:
         return np.nan
-
 
 def classify_avg_format(lines: Sequence[str]) -> int:
     """Return **1** or **2** depending on AVG flavour.
@@ -151,20 +194,68 @@ def _parse_kind2(
     return _standardise_columns(df), meta
 
 
+def write_avg(
+    core:  pd.DataFrame,
+    extra: pd.DataFrame | None,
+    meta:  dict[str, str] | None,
+    path:  str | Path | None = None,     # ← path now optional
+    *,
+    stamp: bool = True,
+    float_fmt: str = "%.6g",
+    na_rep: str = "",
+) -> Path:
+    """
+    Serialise *core* + *extra* to **kind-2 CSV**.
 
-_COL_MAP = {
-    'Station': 'station', 'Stn': 'station', 'skp': 'station',
-    'Freq': 'freq', 'Freq.': 'freq',
-    'Comp': 'comp',
-    'Tx.Amp': 'amps', 'Amps': 'amps',
-    'E.mag': 'emag', 'Emag': 'emag',
-    'E.phz': 'ephz', 'Ephz': 'ephz',
-    'H.mag': 'hmag', 'B.mag': 'hmag',
-    'Hphz':  'hphz', 'B.phz': 'hphz',
-    'Resistivity': 'rho', 'ARes.mag': 'rho',
-    'Phase': 'phase', 'Z.phz': 'phase',
-}
+    Parameters
+    ----------
+    core, extra
+        Frames returned by :func:`extract_core_columns`.
+    meta
+        Header ``$key = value`` pairs.
+    path
+        Destination.  When *None* a file called
+        ``exported_kind2.avg`` is created in the **current working
+        directory**.
+    stamp
+        Append a ``$Written`` UTC time-stamp.
+    float_fmt, na_rep
+        Forwarded to :pymeth:`pandas.DataFrame.to_csv`.
 
+    Returns
+    -------
+    pathlib.Path
+        Absolute path to the written file.
+    """
+
+    # 1) Resolve destination
+    if path is None:
+        path = Path.cwd() / "exported_kind2.avg"
+    path = Path(path).expanduser().resolve()
+
+    # 2) Build header block
+    header: list[str] = []
+    if meta:
+        header.extend(f"${k} = {v}" for k, v in meta.items())
+    if stamp:
+        utc = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+        header.append(f"$Written = {utc}")
+    header.append("")                       # blank line before table
+
+    # 3) Assemble dataframe
+    block = pd.concat([core, extra], axis=1) if extra is not None else core
+    block = block.copy()
+
+    # restore canonical → kind-2 column case
+    rename_map = {c: _CANON2K2.get(c.lower(), c) for c in block.columns}
+    block.rename(columns=rename_map, inplace=True)
+
+    # 4) Dump to disk
+    csv_txt = block.to_csv(index=False, float_format=float_fmt, na_rep=na_rep)
+    path.write_text("\n".join(header) + csv_txt, encoding="utf8")
+
+    logger.info("AVG written → %s", path)
+    return path
 
 def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df.rename(columns={c: _COL_MAP.get(c, c.lower()) for c in df.columns})

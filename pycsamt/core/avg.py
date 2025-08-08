@@ -2117,7 +2117,7 @@ class Data (object):
         self.Hphz=Hphz()
         self.Resistivity=Resistivity()
         self.Phase =Phase()
-        self.Z =Z_Tensor()
+        self.Z =Z_Tensor() # rename 
         self.pcEmag=pcEmag()
         self.sEphz=sEphz()
         self.pcHmag=pcHmag()

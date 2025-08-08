@@ -37,6 +37,7 @@ from .var      import (
     SEphz,
 )
 from .z import Z
+from .info import DataInfo 
 
 __all__ = [
     # header & metadata
@@ -68,4 +69,7 @@ __all__ = [
 
     # full impedance tensor stack
     "Z",
+    
+    # Info 
+    "DataInfo"
 ]

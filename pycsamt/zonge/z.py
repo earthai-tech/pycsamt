@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
+
 """
 Lightweight container for the complex impedance tensor *Z*.
 
@@ -13,14 +14,14 @@ from __future__ import annotations
 from typing import Sequence, Dict, List, Any
 import numpy as np
 
-from .base   import AVGComponentBase
-from .utils  import chunk_by_frequency, number_stations
-from ..exceptions import ZDataError, ZError
-
-from .tensor import ImpedanceTensor, TensorFactory 
-
-from ..utils.zmath   import z_error_to_rho_phi  
 from ..constants import MU_0
+from ..exceptions import ZDataError, ZError
+from ..utils.zmath   import z_error_to_rho_phi 
+
+from .base   import AVGComponentBase
+from .tensor import ImpedanceTensor, TensorFactory 
+from .utils  import chunk_by_frequency, number_stations
+
 
 __all__ = ["Z"]
 
@@ -118,20 +119,6 @@ class Z(AVGComponentBase):
                 for row in flat]
 
 
-    def __getitem__(self, station: str) -> np.ndarray:
-        """Quick access: ``Z['S05']`` -> ``(n_freq, 2, 2)`` tensor stack."""
-        return self.loc[station]
-
-    def __len__(self) -> int:
-        return 0 if self._z is None else self._z.shape[1]  # station count
-
-    def __repr__(self) -> str:                              # noqa: D401
-        if self._z is None:
-            return "Z(empty)"
-        n_freq, n_station = self._z.shape[:2]
-        return f"Z(n_freq={n_freq}, n_station={n_station})"
-
-
     @property
     def mag(self) -> np.ndarray:
         """Absolute value ``|Z|`` – shape *(n_freq, n_station, 2, 2)*."""
@@ -225,11 +212,6 @@ class Z(AVGComponentBase):
         """
         return (self.rho_err > max_rho_err) | (self.phase_err > max_phi_err)
     
-    # I guess since we are dealing with only Z class we, need on tensor z and zerror if exist 
-    # and not rho and phase. 
-    # therefore we need to mofify the function method TensorFactory.build. 
-    # because We wILL ADD thsis two classes on Resistivy class, Phase Class also 
-    # so the TensorFactory.build should be more flexible and versatile. 
 
     def as_tensor(self) -> "ImpedanceTensor":
         """Return the current Z-stack as a 3-D
@@ -283,3 +265,17 @@ class Z(AVGComponentBase):
         if tensor.z_err is not None:
             z_obj.z_err = tensor.z_err
         return z_obj
+
+    def __getitem__(self, station: str) -> np.ndarray:
+        """Quick access: ``Z['S05']`` -> ``(n_freq, 2, 2)`` tensor stack."""
+        return self.loc[station]
+
+    def __len__(self) -> int:
+        return 0 if self._z is None else self._z.shape[1]  # station count
+
+    def __repr__(self) -> str:                              # noqa: D401
+        if self._z is None:
+            return "Z(empty)"
+        n_freq, n_station = self._z.shape[:2]
+        return f"Z(n_freq={n_freq}, n_station={n_station})"
+

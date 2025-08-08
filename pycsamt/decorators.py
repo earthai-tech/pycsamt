@@ -5,18 +5,25 @@
 """
 pycsamt.decorators
 """
+from __future__ import annotations
 import functools
 import os
 import inspect 
 import warnings
 import subprocess
-from typing import Any, Callable, Optional, TypeVar, Union
+from typing import( 
+    Literal, 
+    Any, 
+    Callable,
+    Optional, 
+    TypeVar, 
+    Union, 
+)
 
 import pandas as pd 
 from .log.logger import get_logger
 
 logger = get_logger(__name__)
-F = TypeVar('F', bound=Callable[..., Any])
 
 
 __all__ = [
@@ -25,8 +32,114 @@ __all__ = [
     'GdalDataCheck',
     'ReplaceBy',
     'isdf', 
-    'check_empty'
+    'check_empty', 
+    'has_fit', 
 ]
+
+_T = TypeVar("_T", bound=type)
+F = TypeVar('F', bound=Callable[..., Any])
+
+
+def has_fit(
+        error: Literal["raise", "warn", "ignore"] = "raise"
+    ) -> Callable[[_T], _T]:
+    """
+    Ensure a class exposes a ``fit`` method.
+
+    The decorator inspects the *target* class at import-time and
+    applies the following logic:
+
+    1. **If** the class already defines :pymeth:`fit`, nothing is
+       changed (the decorator is a no-op).
+
+    2. **Else if** a :pymeth:`read` method exists, a thin shim is
+       injected so that::
+
+           obj.fit(*args, **kw)
+
+       transparently forwards the call to
+       ``obj.read(*args, **kw)``.
+
+    3. **Else** neither *fit* nor *read* are present.  
+       The *error* policy determines the outcome:
+
+       ``"raise"``  
+           Raise :class:`AttributeError`
+           (default – safest behaviour).
+
+       ``"warn"``  
+           Emit :class:`RuntimeWarning` **and** install a silent
+           no-op ``fit`` placeholder.
+
+       ``"ignore"``  
+           Silently add the no-op alias without warnings.
+
+    Notes
+    -----
+    * The decorator is *idempotent* — applying it several times to
+      the same class leaves the public API intact.
+    * The original :pymeth:`read` signature & docstring are preserved
+      on the auto-generated *fit* alias (via
+      :func:`functools.wraps`).
+
+    Examples
+    --------
+    >>> @has_fit("warn")
+    ... class Loader:
+    ...     def read(self, src, **kw):
+    ...         print(f"reading {src!r}")
+    ...
+    >>> loader = Loader()
+    >>> loader.fit("dataset.avg")
+    reading 'dataset.avg'
+
+    Attempting to decorate a class that lacks both *read* **and**
+    *fit* while ``error="raise"``::
+
+        @has_fit()                # default is "raise"
+        class Empty:
+            pass
+
+    … raises ``AttributeError: Empty defines neither 'fit' nor 'read'``.
+    """
+    def _decorator(cls: _T) -> _T:                     # type: ignore[valid-type]
+        # Prevent double-patching
+        if getattr(cls, "_has_fit_alias", False):
+            return cls
+
+        # Native .fit already there → nothing to do
+        if "fit" in cls.__dict__:
+            return cls
+
+        read_fn = getattr(cls, "read", None)
+        if inspect.isfunction(read_fn):
+            # Build a thin wrapper re-exporting .read as .fit
+            @functools.wraps(read_fn)
+            def _fit(self, *a: Any, **k: Any):
+                return read_fn(self, *a, **k)          # type: ignore[arg-type]
+
+            cls.fit = _fit                             # type: ignore[attr-defined]
+            cls._has_fit_alias = True
+            return cls
+
+        # No suitable candidate found — decide according to *error*
+        msg = f"{cls.__name__} defines neither 'fit' nor 'read'"
+        if error == "raise":
+            raise AttributeError(msg)
+        if error == "warn":
+            warnings.warn(msg, RuntimeWarning, stacklevel=2)
+
+        # Silent (or warned) no-op fallback
+        def _noop(self, *a: Any, **k: Any) -> None:
+            return None
+
+        cls.fit = _noop                                # type: ignore[attr-defined]
+        cls._has_fit_alias = True
+        return cls
+
+    return _decorator
+
+
 
 def noop(reason: Optional[str] = None) -> Callable[[F], F]:
     """
@@ -453,3 +566,59 @@ def check_empty(
     else:
         return decorator_with_args
 
+
+def ensure_fit( 
+    error: Literal["raise", "warn", "ignore"] = "raise"
+    ) -> Callable[[_T], _T]:
+    """
+    Class decorator that guarantees an alias **fit → read** when the
+    target class does **not** already define *fit*.
+
+    Behaviour
+    ---------
+    * If the class **already** implements ``fit()``, the decorator is a
+      no-op.
+    * If the class lacks ``fit()`` **but** implements ``read()``, an
+      alias is injected so that calls to ``obj.fit(…)`` are transparently
+      forwarded to ``obj.read(…)``.
+    * If the class implements **neither** method the response depends on
+      *error*:
+
+      ``"raise"``   → :class:`AttributeError`  
+      ``"warn"``    → a *RuntimeWarning* is emitted and ``fit()`` becomes
+                      a silent no-op.  
+      ``"ignore"``  → silent no-op.
+
+    Examples
+    --------
+    ```python
+    @ensure_fit("warn")
+    class MyLoader:
+        def read(self, src, **kw): ...
+    ```
+    """
+    def _decorator(cls: _T) -> _T:                         # type: ignore[valid-type]
+        # nothing to do if the class already exposes `.fit`
+        if hasattr(cls, "fit"):
+            return cls
+
+        # fallback to `.read`
+        if hasattr(cls, "read"):
+            @functools.wraps(getattr(cls, "read"))
+            def _fit(self, *args, **kwargs):               # type: ignore[no-self-use]
+                return self.read(*args, **kwargs)          # pyright: ignore[reportGeneralTypeIssues]
+            cls.fit = _fit                                 # type: ignore[attr-defined]
+            return cls
+
+        # no suitable method found — decide how to react
+        msg = f"{cls.__name__} defines neither 'fit' nor 'read'"
+        if error == "raise":
+            raise AttributeError(msg)
+        if error == "warn":
+            warnings.warn(msg, RuntimeWarning, stacklevel=2)
+        def _noop(self, *a, **k):                          # type: ignore[no-self-use]
+            return None
+        cls.fit = _noop                                    # type: ignore[attr-defined]
+        return cls
+
+    return _decorator

@@ -42,7 +42,8 @@ logger = get_logger(__name__)
 
 
 __all__ = [
-    "FieldAliases", "AvgProperties", "BaseAVG" , "AVGComponentBase"]
+    "FieldAliases", "AvgProperties", "BaseAVG" , "AVGComponentBase", 
+    "OpsBase"]
 
 
 @dataclass(slots=True, frozen=True)
@@ -243,7 +244,89 @@ class AVGComponentBase(ABC):
         return pd.DataFrame({self.__class__.__name__.lower(): self._data})
 
 
-# ------------------------------------------------------------------
+class OpsBase:                                     # pylint: disable=too-few-public-methods
+    """
+    Generic *mixin* that gives **operation classes** a thin,
+    uniform façade — **regardless** of the concrete data source.
+
+    The constructor merely *records* the incoming *obj* and derives a
+    couple of convenience views that downstream algorithms may, or may
+    not, rely on.  **No heavy parsing** is attempted here.
+
+    -------- ----------------------------------------------------------
+    ``self.obj``   *Whatever* object the caller provided.
+    ``self.frame`` :class:`pandas.DataFrame` or *None*  
+                    – resolved when *obj* **is** a DataFrame **or**
+                    exposes a ``.data`` attribute that *looks* like
+                    one.  **Never** mutated by *OpsBase* itself.
+    ``self.raw``   The *unchanged* object when it could **not** be
+                    sensibly mapped to ``self.frame``.
+    -------- ----------------------------------------------------------
+
+    Parameters
+    ----------
+    obj : Any
+        The payload this operator should wrap — can be anything
+        (file-path, DataFrame, an already parsed domain object, …).
+    verbose : bool, default *False*
+        Emit an INFO-level message confirming the class initialisation
+        – helpful during interactive prototyping.
+    **kw
+        Placeholder for future extensions.  Currently unused.
+    """
+
+    def __init__(
+        self,
+        obj:      Any | None = None,
+        *,
+        verbose:  bool = False,
+        **kw:     Any,                # noqa: D401  – kept for symmetry
+    ) -> None:
+
+        self.verbose: bool = verbose
+        self.obj:     Any  | None = obj
+
+        # try to pull a DataFrame view out of the object ----------------
+        self.frame: pd.DataFrame | None
+        if isinstance(obj, pd.DataFrame):
+            self.frame = obj
+            self.raw   = None
+            src_info   = f"DataFrame[{len(obj)}×{obj.shape[1]}]"
+        # an object with a `.data` attribute that **is** a DataFrame
+        elif hasattr(obj, "data") and isinstance(
+                getattr(obj, "data"), pd.DataFrame):  # type: ignore[attr-defined]
+            self.frame = getattr(obj, "data")            # type: ignore[assignment]
+            self.raw   = obj
+            src_info   = f"{type(obj).__name__}.data[{len(self.frame)} rows]"  # type: ignore[arg-type]
+        else:
+            self.frame = None
+            self.raw   = obj
+            src_info   = f"raw<{type(obj).__name__}>"
+
+        if self.verbose:
+            logger.info("%s initialised from %s",
+                        self.__class__.__name__, src_info)
+
+
+    @property
+    def has_frame(self) -> bool:
+        """``True`` when :pyattr:`frame` has been resolved."""
+        return self.frame is not None
+
+
+    def __str__(self) -> str:                            # noqa: D401
+        parts: list[str] = [self.__class__.__name__]
+        if self.has_frame:
+            parts.append(f"DF[{len(self.frame)} rows]")  # type: ignore[arg-type]
+        else:
+            parts.append(f"raw<{type(self.raw).__name__}>")
+        return " | ".join(parts)
+
+    def __repr__(self) -> str:
+        typ = type(self.raw).__name__ if self.raw is not None else "None"
+        return (f"{self.__class__.__name__}(has_frame={self.has_frame}, "
+                f"raw_type={typ}, verbose={self.verbose})")
+
 # Canonical → kind-2 column label
 _CANON2K2: dict[str, str] = {}
 

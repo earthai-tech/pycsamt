@@ -1,283 +1,349 @@
 # -*- coding: utf-8 -*-
-#  Author : LKouadio <etanoyau@gmail.com>
-#  License: LGPL-3.0
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0-or-later
+"""
+Scalar apparent-field estimates: Resistivity and Phase.
+
+Both classes inherit from :class:`TensorBase` so their values can
+be rearranged into 2×2 tensor-like grids per frequency (and per
+station), according to the component label found in the table
+(e.g., ``ExHy`` goes to slot (0, 1)).
+
+They accept *modern* CSAVGW-like tables and common *legacy*
+aliases (AMTAVG/MTEdit).  Minimal metadata (units) is preserved
+and written back in a compact CSV block.
+
+Usage
+-----
+
+>>> r = Resistivity.from_avg((df, meta))
+>>> Z, f, st = r.to_tensor(var="rho", align="union")
+>>> ds = r.to_xarray()
+
+>>> p = Phase.from_avg((df, meta))
+>>> p.convert_unit("deg")
+>>> Zφ, f, st = p.to_tensor(var="phase")
+"""
 
 from __future__ import annotations
 
-from typing import Sequence, Any, Dict, List
+from dataclasses import dataclass, field
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+
 import numpy as np
+import pandas as pd
 
-from ..exceptions  import ResistivityError, PhaseError
-from .var  import VariationBase         
-from .utils   import number_stations, chunk_by_frequency
-from .tensor import TensorFactory, ImpedanceTensor
+from ..exceptions import AvgDataError
+from .tensor import TensorBase
+from .utils import ( 
+    _find_col, 
+    _to_num, 
+    _norm_comp, 
+    to_xarray as _to_xr, 
+)
 
-__all__= ["Resistivity", "Phase"] 
-
-
-class Phase(VariationBase):
-    """
-    Absolute *Z-tensor* phase (ϕ) per station / frequency.
-
-    Parameters
-    ----------
-    data : Sequence[float] | np.ndarray | None
-        Flat ``mrad`` vector – one element per *(freq, station)* pair.
-    n_freq, n_stations : int | None, optional
-        Grid dimensions.  Required on first :py:meth:`read`.
-    to_degree : bool, default *False*
-        Return phase in **degree** instead of the native **mrad**.
-
-    Notes
-    -----
-    The input is **milli-radians** as produced by Zonge’s AVG files.
-    Internally we convert to **radians** before delegating to
-    :class:`VariationBase`; the optional degree conversion is then
-    handled there.
-    """
-
-    def __init__(self,
-                 data: Sequence[float] | np.ndarray | None = None,
-                 *,
-                 n_freq:     int | None = None,
-                 n_stations: int | None = None,
-                 to_degree:  bool       = False,
-                 **kws:      Any) -> None:
-
-        super().__init__(None,
-                         n_freq=n_freq,
-                         n_stations=n_stations,
-                         to_degree=to_degree,
-                         **kws)
-        if data is not None:
-            self.read(data,
-                      n_freq=n_freq,
-                      n_stations=n_stations)
+__all__ = ["Resistivity", "Phase"]
 
 
-    def read(self,
-             data:  Sequence[float] | np.ndarray,
-             *,
-             n_freq:     int | None = None,
-             n_stations: int | None = None) -> None:
-        """
-        Load phase data (*mrad*) and populate internal caches.
+@dataclass
+class Resistivity(TensorBase):
+    r"""
+    Apparent resistivity (:math:`\rho_a`) per component.
 
-        All validation is eventually performed by the parent
-        :py:meth:`VariationBase.read`.
-        """
-        # mrad → rad
-        vec_rad = np.asarray(data, dtype=float).ravel() * 1.0e-3
-        super().read(vec_rad,n_freq=n_freq, n_stations=n_stations)
+    This is a *scalar* variable (one number per row), but the
+    class inherits the tensor-alignment logic so values land in
+    the appropriate :math:`2\times 2` slot given by ``comp``.
 
-    def write(self) -> List[str]:
-        """Serialise as ``phase=<val>`` rows (native units)."""
-        if self._raw is None:                        # pragma: no cover
-            return []
-        # restore mrad regardless of display unit
-        out = self._raw * 1.0e3
-        return [f"phase={v:g}" for v in out]
+    Recognized source columns (legacy + modern)
+    -------------------------------------------
+    * ``ARes.mag`` (modern)
+    * ``Resistivity`` (legacy tables)
+    * ``rho`` / ``Rho`` / ``ares.mag`` (variants)
 
-
-    def as_tensor(self) -> "ImpedanceTensor":
-        """
-        Return the phase grid as an :class:`~ImpedanceTensor`.
-
-        Only the *phase* block is populated – the constructor happily
-        accepts *None* for the other stacks (*z*, ρ, errors…).
-        """
-        if self._raw is None:
-            raise PhaseError("Nothing loaded - call `read()` first")
-
-        if self.n_freq is None or self.n_stations is None:
-            raise PhaseError("`n_freq` / `n_stations` unknown")
-
-        # reshape flat (f ⋅ s) → (f, s)
-        phase_fs = self._raw.reshape(self.n_freq, self.n_stations)
-
-        phase_dict = {
-            "xx": phase_fs,           # NB: same slab for all four slots
-            "xy": phase_fs,
-            "yx": phase_fs,
-            "yy": phase_fs,
-        }
-
-        return TensorFactory.build(phase=phase_dict)
-
-    @classmethod
-    def from_tensor(cls,
-                    tensor: "ImpedanceTensor",
-                    *,
-                    to_degree: bool = False
-                    ) -> "Phase":
-        """
-        Build a :class:`Phase` instance out of an existing
-        :class:`~ImpedanceTensor`.
-
-        Parameters
-        ----------
-        tensor : ImpedanceTensor
-            Source object – must contain a *phase* block.
-        to_degree : bool, default *False*
-            Whether the resulting :class:`Phase` object should operate
-            in degree rather than milli-radian.
-        """
-        if tensor.phase is None:
-            raise PhaseError("Input tensor carries no phase information")
-
-        n_freq, n_stn = tensor.phase.shape[:2]
-
-        # take the *xx* component – all four are identical for our
-        # simple AVG format; ravel back to flat (f ⋅ s)
-        data_mrad = tensor.phase[:, :, 0, 0].ravel() * 1.0e3
-
-        return cls(data_mrad,
-                   n_freq=n_freq,
-                   n_stations=n_stn,
-                   to_degree=to_degree)
-
-    def __str__(self) -> str:
-        if self._raw is None:
-            return "Phase(<empty>)"
-        unit = "°" if self._to_degree else "mrad"
-        span = f"{self.v_min:g}–{self.v_max:g} {unit}"
-        return f"Phase(n={len(self)}, span={span})"
-    
-class Resistivity(VariationBase):
-    """
-    Apparent-resistivity (ρₐ) container – Ohm·m.
-
-    The class stores the *raw* field estimate produced by Zonge’s AVG as
-    well as, optionally, the **SRes** column generated by the ASTATIC
-    utility.  Both arrays share the same *(n_freq × n_stations)* layout
-    and are exposed through the :pyattr:`loc` / :pyattr:`sres` maps.
-
-    Parameters
-    ----------
-    data : Sequence[float] | np.ndarray | None
-        Flat vector, one value per frequency–station pair.
-    n_freq, n_stations : int | None, optional
-        Grid dimensions.  Required the first time :py:meth:`read`
-        (or :py:meth:`set_sres`) is called.
-    sres : Sequence[float] | np.ndarray | None, optional
-        **Astatic-corrected** ρₐ produced by Zonge’s *ASTATIC* program.
-        Must share the same length / ordering as *data*.
-    **kwargs
-        Forwarded to :class:`VariationBase` (currently unused).
+    Canonical internal column: ``'rho'``.
 
     Attributes
     ----------
-    values : np.ndarray
-        Unique sorted resistivity values (Ohm·m).
-    v_min, v_max : float
-        Global extrema of *data*.
-    loc : dict[str, np.ndarray]
-        ``{station-id: ρₐ-vector}``.
-    sres : dict[str, np.ndarray] | None
-        Same mapping for the *SRes* column (``None`` if absent).
+    VAR_NAME : str
+        Canonical column in :pyattr:`frame` (``"rho"``).
+    ALIASES : tuple[str, ...]
+        Ordered alias list used during :meth:`read`.
+    UNIT_ATTR : str
+        Dataset attribute used for units (``"Unit.Rho"``).
     """
 
-    def __init__(
-            self,
-            data:       Sequence[float] | np.ndarray | None = None,
-            *,
-            n_freq:     int | None = None,
-            n_stations: int | None = None,
-            sres:       Sequence[float] | np.ndarray | None = None,
-            **kwargs:   Any,
-        ) -> None:
+    VAR_NAME: str = field(init=False, default="rho")
+    ALIASES: Tuple[str, ...] = field(
+        init=False,
+        default=(
+            "ARes.mag", "Resistivity", "rho", "Rho", "ares.mag",
+            "ARes", "ARes_mag",
+        ),
+    )
+    UNIT_ATTR: str = field(init=False, default="Unit.Rho")
 
-        super().__init__(
-            data, n_freq=n_freq, n_stations=n_stations,
-            **kwargs
+    # API 
+
+    def read(  # noqa: D401
+        self,
+        source: Union[
+            pd.DataFrame, Sequence[float], np.ndarray, pd.Series
+        ],
+        meta: Optional[Mapping[str, Any]] = None,
+        **kws: Any,
+    ) -> None:
+        """
+        Parse *source* and produce a compact frame with
+        ``station, freq, comp, rho``.  Coordinates are injected
+        conservatively when absent (``station=NaN``,
+        ``comp='ExHy'``).
+        """
+        self._meta = dict(meta or {})
+        # ensure a stable unit hint
+        self._meta.setdefault(self.UNIT_ATTR, "ohm·m")
+
+        # vector-like → create a minimal tidy frame
+        if isinstance(source, (list, tuple, np.ndarray, pd.Series)):
+            vec = pd.to_numeric(pd.Series(source), errors="coerce")
+            df = pd.DataFrame({self.VAR_NAME: vec})
+            df["station"] = kws.get("station", np.nan)
+            df["freq"] = kws.get("freq", np.nan)
+            df["comp"] = _norm_comp(kws.get("comp", "ExHy"))
+            self._frame = df[["station", "freq", "comp", self.VAR_NAME]]
+            return
+
+        if not isinstance(source, pd.DataFrame):
+            raise TypeError(
+                "Resistivity.read expects DataFrame or vector-like."
+            )
+
+        df = source.copy()
+        col = _find_col(df, self.ALIASES)
+        if col is None:
+            raise AvgDataError(
+                "Resistivity: none of aliases "
+                f"{self.ALIASES!r} present in table."
+            )
+
+        df = df.rename(columns={col: self.VAR_NAME})
+
+        # coords (inject defaults)
+        if "comp" not in df.columns:
+            df["comp"] = "ExHy"
+        if "station" not in df.columns:
+            df["station"] = np.nan
+        if "freq" not in df.columns:
+            raise AvgDataError("Resistivity requires a 'freq' column.")
+
+        # normalize dtypes
+        df["station"] = pd.to_numeric(df["station"], errors="ignore")
+        df["freq"] = pd.to_numeric(df["freq"], errors="coerce")
+        df["comp"] = df["comp"].map(_norm_comp)
+        df[self.VAR_NAME] = df[self.VAR_NAME].map(_to_num)
+
+        self._frame = df[["station", "freq", "comp", self.VAR_NAME]]
+
+    def write(
+        self,
+        *,
+        float_fmt: str = "%.6g",
+        na_rep: str = "",
+    ) -> Sequence[str]:
+        """
+        Serialise to a compact CSV block with a small meta
+        preamble (units + timestamp).
+        """
+        meta = {self.UNIT_ATTR: self._meta.get(self.UNIT_ATTR, "ohm·m")}
+        tmp = self.__class__()  # ephemeral for helper reuse
+        tmp._frame = self._frame.copy()
+        tmp._meta = meta
+        return tmp._write_csv_block(
+            cols=["station", "freq", "comp", self.VAR_NAME],
+            title=r"\ $Resistivity Block",
+            float_fmt=float_fmt,
+            na_rep=na_rep,
+            include_meta=True,
+            stamp=True,
         )
 
-        self._sres_raw: np.ndarray | None          = None
-        self.sres     : Dict[str, np.ndarray] | None = None
-
-        if sres is not None:
-            self.set_sres(sres, n_freq=n_freq, n_stations=n_stations)
-
-    def set_sres(
+    def to_xarray(
         self,
-        sres:       Sequence[float] | np.ndarray,
         *,
-        n_freq:     int | None = None,
-        n_stations: int | None = None,
-        ) -> None:
+        coords: Sequence[str] = ("station", "freq", "comp"),
+        attrs: Optional[Mapping[str, Any]] = None,
+    ):
         """
-        Attach an *ASTATIC* resistivity column.
-
-        Raises
-        ------
-        ResistivityError
-            When the supplied vector length is inconsistent with the
-            current *(n_freq, n_stations)* grid.
+        Convert to an :class:`xarray.Dataset` with one data
+        variable (``rho``).  Attributes include a stable unit
+        hint under ``Unit.Rho``.
         """
-        arr = np.asarray(sres, dtype=float).ravel()
+        merged = dict(self._meta)
+        merged.setdefault(self.UNIT_ATTR, "ohm·m")
+        if attrs:
+            merged.update(attrs)
+        return _to_xr(
+            self._frame.copy(),
+            coords=coords,
+            data_vars=[self.VAR_NAME],
+            attrs=merged,
+        )
 
-        nf = n_freq     if n_freq     is not None else self.n_freq
-        ns = n_stations if n_stations is not None else self.n_stations
-        if nf is None or ns is None:
-            raise ResistivityError("`n_freq` and `n_stations` are required")
-        if arr.size != nf * ns:
-            raise ResistivityError(
-                "SRes length mismatch "
-                f"(got {arr.size}, expected {nf * ns})")
+@dataclass
+class Phase(TensorBase):
+    r"""
+    Impedance phase (:math:`\varphi`) per component.
 
-        self._sres_raw = arr
-        ids, _         = number_stations(ns, nf)
-        chunks         = chunk_by_frequency(arr, nf)
-        self.sres      = dict(zip(ids, chunks))
+    Values are typically reported in **milliradians** for modern
+    CSAVGW tables (``Unit.Phase='mrad'``).  Use
+    :meth:`convert_unit` to switch to degrees when desired.
 
+    Recognized source columns (legacy + modern)
+    -------------------------------------------
+    * ``Z.phz`` (modern)
+    * ``Phase`` (legacy)
+    * ``phase`` / ``ZPHZ`` (variants)
 
-    def write(self) -> List[str]:
-        """Serialise as simple ``rho=<val>`` (and ``sres=<val>``) rows."""
-        rows = [f"rho={v:g}" for v in (self._raw or [])]
-        if self._sres_raw is not None:
-            rows += [f"sres={v:g}" for v in self._sres_raw]
-        return rows
+    Canonical internal column: ``'phase'``.
+    """
 
-    def as_tensor(self) -> "ImpedanceTensor":
+    VAR_NAME: str = field(init=False, default="phase")
+    ALIASES: Tuple[str, ...] = field(
+        init=False,
+        default=("Z.phz", "z.phz", "Phase", "phase"),
+    )
+    UNIT_ATTR: str = field(init=False, default="Unit.Phase")
+
+    # API #
+    def read(  # noqa: D401
+        self,
+        source: Union[
+            pd.DataFrame, Sequence[float], np.ndarray, pd.Series
+        ],
+        meta: Optional[Mapping[str, Any]] = None,
+        **kws: Any,
+    ) -> None:
         """
-        Pack the current ρₐ grid into an :class:`~ImpedanceTensor`.
-
-        Only the *rho* block is filled; other stacks are left ``None``.
+        Parse *source* and produce a compact frame with
+        ``station, freq, comp, phase``.  Coordinates are injected
+        conservatively when absent (``station=NaN``,
+        ``comp='ExHy'``).  ``Unit.Phase`` defaults to ``'mrad'``.
         """
-        if self._raw is None:
-            raise ResistivityError("Nothing loaded – call `read()` first")
-        if self.n_freq is None or self.n_stations is None:
-            raise ResistivityError("`n_freq` / `n_stations` unknown")
+        self._meta = dict(meta or {})
+        self._meta.setdefault(self.UNIT_ATTR, "mrad")
 
-        rho_fs = self._raw.reshape(self.n_freq, self.n_stations)
+        # vector-like path
+        if isinstance(source, (list, tuple, np.ndarray, pd.Series)):
+            vec = pd.to_numeric(pd.Series(source), errors="coerce")
+            df = pd.DataFrame({self.VAR_NAME: vec})
+            df["station"] = kws.get("station", np.nan)
+            df["freq"] = kws.get("freq", np.nan)
+            df["comp"] = _norm_comp(kws.get("comp", "ExHy"))
+            self._frame = df[["station", "freq", "comp", self.VAR_NAME]]
+            return
 
-        rho_dict = {comp: rho_fs for comp in ("xx", "xy", "yx", "yy")}
+        if not isinstance(source, pd.DataFrame):
+            raise TypeError(
+                "Phase.read expects DataFrame or vector-like."
+            )
 
-        return TensorFactory.build(rho=rho_dict)
+        df = source.copy()
+        col = _find_col(df, self.ALIASES)
+        if col is None:
+            raise AvgDataError(
+                "Phase: none of aliases "
+                f"{self.ALIASES!r} present in table."
+            )
 
+        df = df.rename(columns={col: self.VAR_NAME})
 
-    @classmethod
-    def from_tensor(cls,
-                    tensor: "ImpedanceTensor") -> "Resistivity":
+        if "comp" not in df.columns:
+            df["comp"] = "ExHy"
+        if "station" not in df.columns:
+            df["station"] = np.nan
+        if "freq" not in df.columns:
+            raise AvgDataError("Phase requires a 'freq' column.")
+
+        df["station"] = pd.to_numeric(df["station"], errors="ignore")
+        df["freq"] = pd.to_numeric(df["freq"], errors="coerce")
+        df["comp"] = df["comp"].map(_norm_comp)
+        df[self.VAR_NAME] = df[self.VAR_NAME].map(_to_num)
+
+        self._frame = df[["station", "freq", "comp", self.VAR_NAME]]
+
+    def write(
+        self,
+        *,
+        float_fmt: str = "%.6g",
+        na_rep: str = "",
+    ) -> Sequence[str]:
         """
-        Create a :class:`Resistivity` from an :class:`ImpedanceTensor`
-        that already holds a ρₐ block.
-
-        Only the canonical *rho* slab is extracted; *SRes* is not
-        populated here – call :py:meth:`set_sres` afterwards if needed.
+        Serialise to a compact CSV block with a meta preamble
+        carrying ``Unit.Phase`` and a UTC timestamp.
         """
-        if tensor.rho is None:
-            raise ResistivityError("Input tensor carries no rho block")
+        meta = {self.UNIT_ATTR: self._meta.get(self.UNIT_ATTR, "mrad")}
+        tmp = self.__class__()  # ephemeral
+        tmp._frame = self._frame.copy()
+        tmp._meta = meta
+        return tmp._write_csv_block(
+            cols=["station", "freq", "comp", self.VAR_NAME],
+            title=r"\ $Phase Block",
+            float_fmt=float_fmt,
+            na_rep=na_rep,
+            include_meta=True,
+            stamp=True,
+        )
 
-        n_freq, n_stn = tensor.rho.shape[:2]
-        data = tensor.rho[:, :, 0, 0].ravel()   # flatten xx-component
+    def to_xarray(
+        self,
+        *,
+        coords: Sequence[str] = ("station", "freq", "comp"),
+        attrs: Optional[Mapping[str, Any]] = None,
+    ):
+        """
+        Convert to an :class:`xarray.Dataset` with one data
+        variable (``phase``).  Attributes include a stable unit
+        hint under ``Unit.Phase``.
+        """
+        merged = dict(self._meta)
+        merged.setdefault(self.UNIT_ATTR, "mrad")
+        if attrs:
+            merged.update(attrs)
+        return _to_xr(
+            self._frame.copy(),
+            coords=coords,
+            data_vars=[self.VAR_NAME],
+            attrs=merged,
+        )
 
-        return cls(data,
-                   n_freq=n_freq,
-                   n_stations=n_stn)
+    def convert_unit(self, target: str = "mrad") -> None:
+        r"""
+        Convert the phase values **in place** between
+        :math:`\mathrm{mrad}` and :math:`\mathrm{deg}` and update
+        ``Unit.Phase`` in :pyattr:`meta`.
 
-    def __str__(self) -> str:
-        span = f"{self.v_min:g}–{self.v_max:g} Ω·m" if self.v_min else "n/a"
-        suffix = ", +SRes" if self._sres_raw is not None else ""
-        return (f"Resistivity(n={len(self)}, span={span}, "
-                f"stations={self.n_stations}, freqs={self.n_freq}{suffix})")
+        .. math::
+           1~\mathrm{mrad} =
+           \frac{180}{\pi \cdot 1000}~\mathrm{deg}
+        """
+        cur = str(self._meta.get(self.UNIT_ATTR, "mrad")).lower()
+        tgt = str(target).lower()
+        if cur == tgt:
+            return
+        if tgt not in {"mrad", "deg"}:
+            raise ValueError("target must be 'mrad' or 'deg'")
+
+        col = self.VAR_NAME
+        if col not in self._frame.columns:
+            return
+
+        x = pd.to_numeric(self._frame[col], errors="coerce")
+
+        if cur == "mrad" and tgt == "deg":
+            factor = 180.0 / (np.pi * 1000.0)
+        elif cur == "deg" and tgt == "mrad":
+            factor = (np.pi / 180.0) * 1000.0
+        else:
+            raise ValueError(f"unsupported conversion {cur} → {tgt}")
+
+        self._frame[col] = x * factor
+        self._meta[self.UNIT_ATTR] = tgt

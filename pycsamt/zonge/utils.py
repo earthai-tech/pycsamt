@@ -1007,3 +1007,70 @@ def chunk_by_frequency(
     return chunks
 
 
+
+def _find_col(
+    df: pd.DataFrame, candidates: Sequence[str]
+) -> Optional[str]:
+    """
+    Return the first column name present in *df* among
+    *candidates*.  Matching is case-insensitive and ignores
+    whitespace.
+    """
+    low = {str(c).strip().lower(): c for c in df.columns}
+    for want in candidates:
+        key = str(want).strip().lower()
+        if key in low:
+            return low[key]
+    return None
+
+
+def _to_num(x: object) -> float:
+    """
+    Robust numeric coercion.  Strings like '', '*', 'NaN' become
+    ``np.nan``.  Otherwise return a float when possible.
+    """
+    if x is None:
+        return np.nan
+    s = str(x).strip()
+    if s in {"", "*", "nan", "NaN", "None", "null"}:
+        return np.nan
+    try:
+        return float(s)
+    except Exception:
+        return np.nan
+
+
+def _norm_comp(x: object) -> str:
+    """
+    Canonicalize component labels into the 2×2 slots used in the
+    tensor layout.  Only a few common forms are normalized here;
+    everything else is passed through as a string.
+
+    Examples
+    --------
+    'exhy' → 'ExHy', 'EYHX' → 'EyHx', 'zxy' → 'Zxy'
+    """
+    if x is None:
+        return "ExHy"
+    s = str(x).strip()
+    if not s:
+        return "ExHy"
+
+    s_up = s.upper()
+    # zxx/zxy/zyx/zyy are accepted as-is (capitalized later)
+    # classic galvanic pairs:
+    if s_up in {"EXHY", "EX-HY", "E X H Y"}:
+        return "ExHy"
+    if s_up in {"EXHX", "EX-HX"}:
+        return "ExHx"
+    if s_up in {"EYHX", "EY-HX"}:
+        return "EyHx"
+    if s_up in {"EYHY", "EY-HY"}:
+        return "EyHy"
+
+    # impedance-like notations:
+    if s_up in {"ZXX", "ZXY", "ZYX", "ZYY"}:
+        return s_up.capitalize()
+
+    # fallback: capitalize first, keep inner case
+    return s[0:1].upper() + s[1:]

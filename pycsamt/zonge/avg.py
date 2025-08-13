@@ -369,7 +369,7 @@ class AVG(BaseAVG):
         n_station  = len(np.unique(stn))
 
         # ── station & frequency first 
-        self.Station.read(  stn,  unit="m")
+        self.Station.read(stn,  unit="m")
         self.Frequency.read(freq, n_freq=n_freq)
 
         # ── core scalar / vector components

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #       Author: LKouadio <etanoyau@gmail.com>
-#       License: LGPL-3.0-or-later
+#       License: LGPL-3.0 
 """pycsamt.zonge.utils
 General‑purpose helpers for **Zonge** AVG / AMTAVG files and
 accompanying *station* profiles.
@@ -33,14 +33,22 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-
+# Lazy import to keep hard dependency optional.
+try:
+    import xarray as xr  # type: ignore
+except Exception as exc:  # pragma: no cover
+    raise ImportError(
+        "xarray is required for to_xarray()"
+    ) from exc
+    
+from ..decorators import isdf 
 from ..gis.utils import ll_to_utm                # type: ignore
 from ..exceptions import (
     AvgFileError, 
     AvgDataError, 
   )
 from ..log.logger import get_logger
-
+from ..utils.deps import ensure_pkg 
 
 __all__ = [
     "load_avg", 
@@ -49,7 +57,9 @@ __all__ = [
     "classify_avg_format", 
     "extract_core_columns",
     "number_stations", 
-    "chunk_by_frequency"
+    "chunk_by_frequency", 
+    "write_avg", 
+    "to_xarray"
 ]
 
 logger = get_logger(__name__)
@@ -60,19 +70,62 @@ _RX_K2_HEADER      = re.compile(r"^Z\.mwgt\s*,", re.I)
 _RX_K1_HEADER      = re.compile(r"^skp\s+Station", re.I)
 _NUMERIC_REPLACE   = {"*": np.nan, "nan": np.nan, "NaN": np.nan,
                       "": np.nan}
+
 _COL_MAP = {
-    'Station': 'station', 'Stn': 'station', 'skp': 'station',
+    'Station': 'station',
+    'Stn': 'station',
+    'skp': 'skp',          
     'Freq': 'freq', 'Freq.': 'freq',
     'Comp': 'comp',
     'Tx.Amp': 'amps', 'Amps': 'amps',
     'E.mag': 'emag', 'Emag': 'emag',
     'E.phz': 'ephz', 'Ephz': 'ephz',
     'H.mag': 'hmag', 'B.mag': 'hmag',
-    'Hphz':  'hphz', 'B.phz': 'hphz',
+    'Hphz': 'hphz', 'B.phz': 'hphz',
     'Resistivity': 'rho', 'ARes.mag': 'rho',
     'Phase': 'phase', 'Z.phz': 'phase',
 }
 
+# add to _COL_MAP
+_COL_MAP.update({
+    'Z.mag': 'zmag',
+    'Z.phz': 'phase',   # already there via 'Phase' but keep explicit
+    'ARes.mag': 'rho',
+    'B.mag': 'hmag',    # you already map in __all__
+    'B.phz': 'hphz',
+    'E.%err': 'e.%err',
+    'E.perr': 'e.perr',
+    'B.%err': 'h.%err',
+    'B.perr': 'h.perr',
+    'Z.%err': 'z.%err',
+    'Z.perr': 'z.perr',
+    'ARes.%err': 'rho.%err',
+})
+
+_COL_MAP.update({
+    # Modern CSAVGW
+    'Z.mag': 'zmag',
+    'Z.phz': 'phase',
+    'ARes.mag': 'rho',
+    'SRes': 'rho_sc',          # static-corrected rho (modern)
+    'E.wgt': 'e.wgt',
+    'H.wgt': 'h.wgt',
+    'Choer': 'coh',
+    'Gdp.Blk': 'gdp_blk',
+    'Gdp.Chn': 'gdp_chn',
+    'Gdp.Time': 'gdp_time',
+    '|Z|': 'zabs',
+
+    'E.%err': 'e.%err', 'E.perr': 'e.perr',
+    'B.%err': 'h.%err', 'B.perr': 'h.perr',
+    'Z.%err': 'z.%err', 'Z.perr': 'z.perr',
+    'ARes.%err': 'rho.%err',
+
+    # Legacy extras
+    'TMARES': 'rho_sc', 'SRES': 'rho_sc',
+    'TMARES/SRES': 'rho_sc',
+    'Resistivity': 'rho',
+})
 
 _CANON2K2: dict[str, str] = {
     # survey logistics
@@ -166,142 +219,616 @@ def _parse_kind1(lines: Sequence[str]) -> pd.DataFrame:
     df = pd.DataFrame(data_rows, columns=hdr_tokens)
     return _standardise_columns(df)
 
+_COMMENT_PREFIXES = ('\\', '/', '!', '"')
+
+def _is_comment(ln: str) -> bool:
+    return bool(ln) and ln[0] in _COMMENT_PREFIXES
+
+
+def _next_block(lines, i):
+    """Yield (header_line_index, end_index_exclusive)."""
+    n = len(lines)
+    while i < n and not _RX_K2_HEADER.match(lines[i]):
+        i += 1
+    if i >= n:
+        return None, n
+    start = i
+    i += 1
+    while i < n:
+        s = lines[i]
+        if not s.strip():
+            i += 1
+            break
+        # DO NOT break on comments — they'll be skipped later
+        if _RX_K2_HEADER.match(s) or s.startswith('$'):
+            break
+        i += 1
+    return (start, i)
 
 def _parse_kind2(
-        lines: Sequence[str]) -> Tuple[pd.DataFrame, Dict[str, str]]:
-    """Parse comma‑separated (kind‑2) AVG file.
-
-    Returns a pair *(df, metadata)*.
+    lines: Sequence[str]
+) -> Tuple[pd.DataFrame, Dict[str, str]]:
     """
-    meta: Dict[str, str] = {}
-    block: List[str]      = []
-    for ln in lines:
-        if ln.startswith('$') and '=' in ln:
-            key, val           = ln[1:].split('=', 1)
-            meta[key.strip()]  = val.strip()
-            continue
-        if _RX_K2_HEADER.match(ln):
-            block.append(ln)
-            continue
-        if block and ln.strip():
-            block.append(ln)
-        if block and not ln.strip():
-            break
-    if not block:
-        raise AvgDataError("Data block missing in kind‑2 file")
-    df = pd.read_csv(io.StringIO('\n'.join(block)), skipinitialspace=True)
-    df = df.applymap(lambda v: _to_float(v) if isinstance(v, str) else v)
-    return _standardise_columns(df), meta
+    Parse a modern CSAVGW (kind-2) AVG file that contains
+    repeated CSV blocks, typically one per station/component.
 
+    The function:
+      * collects top-level $meta (once, before the first table),
+      * collects per-block $meta (stamped onto the block),
+      * reads each CSV block until a blank line, a new header,
+        or the next $keyword line,
+      * normalises column names to canonical lower-case,
+      * stamps a 'station' column from $Rx.Stn (fallbacks to
+        $Rx.GdpStn or $Stn.Beg),
+      * returns a single tidy DataFrame plus a meta dict that
+        includes a 'blocks' list holding each block's $meta.
+
+    Parameters
+    ----------
+    lines : Sequence[str]
+        Raw text lines read from the .avg file.
+
+    Returns
+    -------
+    (df, meta) : (pandas.DataFrame, dict)
+        df    : tidy concatenation of all blocks.
+        meta  : top-level $meta and 'blocks' per-block $meta.
+
+    Raises
+    ------
+    AvgDataError
+        If no data blocks are found.
+    """
+    global_meta: Dict[str, str] = {}
+    blocks_meta: List[Dict[str, str]] = []
+    frames: List[pd.DataFrame] = []
+
+    block_meta: Dict[str, str] = {}
+    i, n = 0, len(lines)
+    seen_table = False
+
+    while i < n:
+        ln = lines[i]
+
+        # Skip any comment lines anywhere in the file.  CSAVGW
+        # allows \, /, !, " to start comments.
+        if _is_comment(ln):
+            i += 1
+            continue
+
+        # Collect $key=value lines.  Before the first table, the
+        # keys are also considered "global" survey/job config.
+        if ln.startswith('$') and '=' in ln:
+            key, val = ln[1:].split('=', 1)
+            key = key.strip()
+            val = val.strip()
+
+            if not seen_table:
+                global_meta[key] = val
+
+            # Block-level $meta applies to the next table we hit.
+            block_meta[key] = val
+            i += 1
+            continue
+
+        # 3) If this line is the CSV header, parse *this* block
+        if _RX_K2_HEADER.match(ln):
+            # If we're here, try to locate the next table.  This can
+            # be separated by blanks or interleaved comments/metadata.
+            start, j = _next_block(lines, i)
+            if start is None:
+                break
+    
+            seen_table = True
+    
+            # Assemble header + rows for this block while skipping
+            # inline comment lines that may appear among rows.
+            table_txt = '\n'.join(
+                [lines[start]] + [
+                    s for s in lines[start + 1:j]
+                    if not _is_comment(s)
+                ]
+            )
+    
+            # Parse CSV with forgiving whitespace.  Convert numeric
+            # strings (including '*', '.5', '1.') with _to_float.
+            dfb = pd.read_csv(
+                io.StringIO(table_txt),
+                skipinitialspace=True
+            )
+            dfb = dfb.applymap(
+                lambda v: _to_float(v) if isinstance(v, str) else v
+            )
+    
+            # Stamp station and a few helpful block-level fields as
+            # columns.  Prefer client station number ($Rx.Stn).
+            stn = (
+                block_meta.get('Rx.Stn')
+                or block_meta.get('Rx.GdpStn')
+                or block_meta.get('Stn.Beg')
+            )
+            if stn is not None:
+                try:
+                    dfb['station'] = _to_float(stn)
+                except Exception:
+                    dfb['station'] = stn  # keep as text if odd
+    
+            # Component label and a couple of helpers can be handy for
+            # QC.  They are optional and harmless if missing.
+            if 'Rx.Cmp' in block_meta:
+                dfb['comp'] = block_meta['Rx.Cmp']
+            for k in ('Rx.Length', 'Rx.GdpStn'):
+                if k in block_meta:
+                    dfb[k.replace('.', '_').lower()] = block_meta[k]
+    
+            # Standardise to canonical lowercase names (e.g., ARes.mag
+            # → 'rho', Z.phz → 'phase', etc.).
+            dfb = _standardise_columns(dfb)
+    
+            # Keep this block and record its per-block metadata.
+            frames.append(dfb)
+            blocks_meta.append(dict(block_meta))
+    
+            # # Optional: keep "sticky" Rx.* meta for subsequent blocks that
+            # # omit it; otherwise clear fully
+            # sticky = ('Rx.Stn', 'Rx.GdpStn', 'Rx.Cmp', 'Rx.Length')
+            # block_meta = {k: v for k, v in block_meta.items() if k in sticky}
+        
+            # Reset block meta and continue scanning from block end.
+            block_meta.clear()
+            i = j
+            continue 
+        
+        # 4) Anything else (blank lines, stray text)
+        # Non-meta, non-table line → just advance
+        i += 1
+    
+    if not frames:
+        raise AvgDataError("Data block(s) missing in kind-2 file")
+
+    # Concatenate all blocks into a single tidy frame.
+    df = pd.concat(frames, ignore_index=True)
+
+    # Derive a convenient boolean selection flag from CSAVGW
+    # weights (1 = keep, 0 = skip).  If weights are absent, the
+    # column is simply not added.
+    if 'z.mwgt' in df.columns or 'z.pwgt' in df.columns:
+        mw = df.get('z.mwgt', 1).fillna(1).astype(float) > 0
+        pw = df.get('z.pwgt', 1).fillna(1).astype(float) > 0
+        df['use'] = mw & pw
+
+    # Merge top-level meta with collected per-block meta.
+    meta: Dict[str, Any] = {**global_meta, 'blocks': blocks_meta}
+    return df, meta
+
+
+def split_by_station(
+    df: pd.DataFrame
+) -> Dict[Any, pd.DataFrame]:
+    """
+    Split a tidy AVG DataFrame into per-station sub-frames.
+
+    The splitter is robust to dtype quirks by forcing 'station'
+    to numeric and normalising NumPy scalars into plain Python
+    types for dict keys.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Tidy table that includes a 'station' column.
+
+    Returns
+    -------
+    dict[Any, pandas.DataFrame]
+        Mapping of station id → sub-DataFrame (index reset).
+
+    Raises
+    ------
+    AvgDataError
+        If 'station' column is not present.
+    """
+    if 'station' not in df.columns:
+        raise AvgDataError(
+            "'station' column missing – cannot split"
+        )
+
+    # Coerce 'station' to numeric if needed to avoid object
+    # mixes and to keep group keys consistent.
+    if not np.issubdtype(df['station'].dtype, np.number):
+        df = df.copy()
+        df['station'] = pd.to_numeric(
+            df['station'], errors='coerce'
+        )
+
+    out: Dict[Any, pd.DataFrame] = {}
+
+    # Use dropna=False so NaN stations (if any) are still grouped
+    # and visible to the caller.
+    for stn, sub in df.groupby(
+        'station', sort=True, dropna=False
+    ):
+        # Normalise potential NumPy scalar to a plain Python
+        # number for stable dict keys and friendly equality.
+        try:
+            key = np.asarray(stn).item()
+        except Exception:
+            key = float(stn) if pd.notna(stn) else stn
+
+        # If the key is a clean integral float (e.g., 25.0),
+        # store it as an int for ergonomic lookups.
+        if (
+            isinstance(key, float)
+            and pd.notna(key)
+            and key.is_integer()
+        ):
+            key = int(key)
+
+        out[key] = sub.reset_index(drop=True)
+
+    return out
+
+
+@ensure_pkg ('xarray', extra="xarray is required for to_xarray()")
+@isdf
+def to_xarray(
+    df: pd.DataFrame,
+    *,
+    coords: Sequence[str] = ("station", "freq", "comp"),
+    data_vars: Optional[Sequence[str]] = None,
+    attrs: Optional[Dict[str, Any]] = None,
+) -> "xr.Dataset":
+    """
+    Convert a tidy Zonge table to an :class:`xarray.Dataset`.
+
+    The resulting dataset uses a multi-dimensional grid with
+    coordinates (typically ``station × freq × comp``).  Ragged
+    sampling across stations is handled implicitly by NaNs in
+    the corresponding data variables.
+
+    Parameters
+    ----------
+    df :
+        Long / tidy :class:`pandas.DataFrame` as returned by
+        :func:`load_avg` (kind-1 or kind-2).  Expected columns
+        include at least a subset of ``station, freq, comp``
+        and one or more numeric data columns such as
+        ``emag, hmag, rho, phase, …``.
+    coords :
+        Names of the DataFrame columns to use as coordinates
+        and dataset dimensions.  Columns not present in *df*
+        are ignored.  The default (``station, freq, comp``)
+        matches common CSAMT usage.
+    data_vars :
+        Names of columns to export as data variables.  When
+        *None*, all numeric columns **except** those listed in
+        *coords* are used.
+    attrs :
+        Mapping of global attributes to attach to the dataset.
+        A typical value is the *meta* dict returned by
+        :func:`load_avg`.  Keys like ``"blocks"`` (per-block
+        stash) are ignored to keep attributes clean.
+
+    Returns
+    -------
+    xr.Dataset
+        Dataset with dimensions given by the intersection of
+        *coords* and the columns present in *df*.  Coordinate
+        ordering is preserved (``station`` → ``freq`` → ``comp``
+        by default).
+
+    Notes
+    -----
+    * If ``comp`` is missing, a default value of ``"ExHy"`` is
+      injected so the *comp* dimension exists.
+    * Duplicate rows with identical coordinates are averaged
+      (numeric columns) to ensure a single value per cell.
+    * Boolean columns are preserved as data variables.
+    """
+    # Work on a copy; we will normalise types and sort below.
+    df = df.copy()
+
+    # Ensure a 'comp' column exists so we always get a comp
+    # dimension (kind-1 files often omit component labels).
+    if "comp" not in df.columns:
+        df["comp"] = "ExHy"
+
+    # Determine which coord columns we actually have.
+    idx_cols = [c for c in coords if c in df.columns]
+    if not idx_cols:
+        raise AvgDataError(
+            "No coordinate columns found. Expected any of: "
+            f"{coords!r}"
+        )
+
+    # Light type normalisation: make station/freq numeric when
+    # possible; keep comp as string/categorical.
+    if "station" in idx_cols:
+        df["station"] = pd.to_numeric(
+            df["station"], errors="ignore"
+        )
+    if "freq" in idx_cols:
+        df["freq"] = pd.to_numeric(df["freq"], errors="ignore")
+
+    # Provide a stable, interpretable order for 'comp'.  Keep a
+    # canonical order first, then append any unexpected labels.
+    if "comp" in idx_cols:
+        canon = [
+            "ExHy", "ExHx", "EyHx", "EyHy",
+            "Zxx", "Zxy", "Zyx", "Zyy", "Zvec", "Zdet",
+        ]
+        present = (
+            pd.Series(df["comp"].astype(str).unique())
+            .tolist()
+        )
+        extras = [c for c in present if c not in canon]
+        cats = canon + extras
+        df["comp"] = pd.Categorical(
+            df["comp"].astype(str),
+            categories=cats,
+            ordered=True,
+        )
+
+    # Decide which columns become data variables.  Default to
+    # all numeric (including bool) excluding coordinate cols.
+    if data_vars is None:
+        num_like = df.select_dtypes(
+            include=[np.number, "bool", "boolean"]
+        ).columns.tolist()
+        data_vars = [c for c in num_like if c not in idx_cols]
+
+    if not data_vars:
+        raise AvgDataError(
+            "No data variables selected. Provide 'data_vars' "
+            "or ensure df has numeric columns."
+        )
+
+    # Reduce duplicates: some files may contain repeated rows
+    # for the same (station, freq, comp).  We average numeric
+    # variables across duplicates to ensure uniqueness.
+    dup_mask = df.duplicated(subset=idx_cols, keep=False)
+    if bool(dup_mask.any()):
+        logger.warning(
+            "Duplicate coordinate rows found; averaging numeric "
+            "columns over duplicates."
+        )
+        # Only aggregate what we plan to emit as variables.
+        gb = df.groupby(idx_cols, sort=True, dropna=False)
+        df_num = gb[data_vars].mean()
+        df = df_num.reset_index()
+    else:
+        # Sort for predictable coordinate order.
+        df = df.sort_values(idx_cols, kind="mergesort")
+
+    # Build the Dataset.  MultiIndex → dense grid; raggedness
+    # becomes NaNs where combinations are missing.
+    ds = df.set_index(idx_cols)[data_vars].to_xarray()
+
+    # Order dimensions as requested, dropping missing ones.
+    dim_order = [d for d in coords if d in ds.dims]
+    ds = ds.transpose(*dim_order)
+
+    # Attach user attributes, filtering internal per-block stash.
+    if attrs:
+        clean = dict(attrs)
+        clean.pop("blocks", None)
+        ds.attrs.update(clean)
+
+    return ds
 
 def write_avg(
     core:  pd.DataFrame,
     extra: pd.DataFrame | None,
     meta:  dict[str, str] | None,
-    path:  str | Path | None = None,     # ← path now optional
+    path:  str | Path | None = None,
     *,
     stamp: bool = True,
     float_fmt: str = "%.6g",
     na_rep: str = "",
+    header_spaces: bool = False,   # use $k=v by default
 ) -> Path:
     """
-    Serialise *core* + *extra* to **kind-2 CSV**.
+    Serialize to Zonge kind-2 (CSAVGW/ASTATIC) .avg.
 
-    Parameters
-    ----------
-    core, extra
-        Frames returned by :func:`extract_core_columns`.
-    meta
-        Header ``$key = value`` pairs.
-    path
-        Destination.  When *None* a file called
-        ``exported_kind2.avg`` is created in the **current working
-        directory**.
-    stamp
-        Append a ``$Written`` UTC time-stamp.
-    float_fmt, na_rep
-        Forwarded to :pymeth:`pandas.DataFrame.to_csv`.
-
-    Returns
-    -------
-    pathlib.Path
-        Absolute path to the written file.
+    If the input frame has a 'station' column, data are written
+    as multiple blocks (one CSV section per station) with
+    $Rx.* lines preceding each block (recommended). Otherwise a
+    single block is written (legacy/utility case).
     """
-
-    # 1) Resolve destination
+    # --- 0) destination 
     if path is None:
         path = Path.cwd() / "exported_kind2.avg"
     path = Path(path).expanduser().resolve()
 
-    # 2) Build header block
-    header: list[str] = []
-    if meta:
-        header.extend(f"${k} = {v}" for k, v in meta.items())
+    # --- 1) build header (global $meta) 
+    # filter out non-$ keys like 'blocks'
+    meta = dict(meta or {})
+    meta.pop("blocks", None)
+
+    eq = " = " if header_spaces else "="
+    header_lines: list[str] = []
+    for k, v in meta.items():
+        header_lines.append(f"${k}{eq}{v}")
     if stamp:
         utc = datetime.utcnow().isoformat(timespec="seconds") + "Z"
-        header.append(f"$Written = {utc}")
-    header.append("")                       # blank line before table
+        header_lines.append(f"$Written{eq}{utc}")
 
-    # 3) Assemble dataframe
-    block = pd.concat([core, extra], axis=1) if extra is not None else core
+    # one blank before first table
+    header_lines.append("")
+    out_chunks: list[str] = ["\n".join(header_lines)]
+
+    # --- 2) assemble data block(s) 
+    block = pd.concat(
+        [core, extra], axis=1) if extra is not None else core
     block = block.copy()
 
-    # restore canonical → kind-2 column case
-    rename_map = {c: _CANON2K2.get(c.lower(), c) for c in block.columns}
+    # canonical → kind-2 casing (patch a couple of gaps)
+    canon2k2 = dict(_CANON2K2)
+    canon2k2.update({
+        "h.wgt": "H.wgt",
+        "rho_sc": "SRes",
+        "coh": "Choer",
+        "gdp_blk": "Gdp.Blk",
+        "gdp_chn": "Gdp.Chn",
+        "gdp_time": "Gdp.Time",
+        "zabs": "|Z|",
+    })
+    rename_map = {
+        c: canon2k2.get(c.lower(), c) for c in block.columns}
     block.rename(columns=rename_map, inplace=True)
 
-    # 4) Dump to disk
-    csv_txt = block.to_csv(index=False, float_format=float_fmt, na_rep=na_rep)
-    path.write_text("\n".join(header) + csv_txt, encoding="utf8")
+    # Expected CSAVGW order; extras will be appended after these.
+    ordered = [
+        "Z.mwgt","Z.pwgt","Freq","Tx.Amp",
+        "E.mag","E.phz","B.mag","B.phz",
+        "Z.mag","Z.phz","ARes.mag","SRes",
+        "E.wgt","H.wgt",
+        "E.%err","E.perr","B.%err","B.perr",
+        "Z.%err","Z.perr","ARes.%err",
+        "Choer","Gdp.Blk","Gdp.Chn","Gdp.Time","|Z|",
+    ]
 
+    def _order_cols(df: pd.DataFrame) -> list[str]:
+        present = [c for c in ordered if c in df.columns]
+        extras  = [c for c in df.columns if c not in present]
+        # Avoid writing a 'Station' column for kind-2 blocks
+        extras  = [c for c in extras if c.lower() != "station"]
+        return present + extras
+
+    # Multi-station writer (group and stamp $Rx.*)
+    if "station" in (c.lower() for c in block.columns):
+        # Identify the actual column name (case may vary)
+        stn_col = next(c for c in block.columns if c.lower() == "station")
+
+        for stn, sub in block.groupby(stn_col, sort=True, dropna=False):
+            # Defensive: skip NaN station group
+            if pd.isna(stn):
+                continue
+
+            # Per-block $Rx.* (best-effort; pull from columns if present)
+            rx_lines: list[str] = []
+            rx_stn = int(stn) if float(stn).is_integer() else stn
+            rx_lines.append(f"$Rx.Stn{eq}{rx_stn}")
+
+            # Optional goodies
+            if "rx_gdpstn" in block.columns:
+                rx_lines.append(f"$Rx.GdpStn{eq}{block['rx_gdpstn'].iloc[0]}")
+            if "rx_length" in block.columns:
+                rx_lines.append(f"$Rx.Length{eq}{block['rx_length'].iloc[0]}")
+            # If comp is uniform within the group, stamp it
+            comp_col = next(
+                (c for c in block.columns if c.lower()=="comp"), None)
+            if comp_col is not None:
+                vals = sub[comp_col].dropna().unique()
+                if len(vals) == 1:
+                    rx_lines.append(f"$Rx.Cmp{eq}{vals[0]}")
+
+            out_chunks.append("\n".join(rx_lines))
+
+            # Write the CSV table
+            dfw = sub.drop(columns=[stn_col], errors="ignore")
+            cols = _order_cols(dfw)
+            csv_txt = dfw[cols].to_csv(
+                index=False, float_format=float_fmt, na_rep=na_rep
+            )
+            out_chunks.append(csv_txt.rstrip("\n"))
+            out_chunks.append("")  # blank line after the block
+    else:
+        # Single-block writer
+        cols = _order_cols(block)
+        csv_txt = block[cols].to_csv(
+            index=False, float_format=float_fmt, na_rep=na_rep
+        )
+        out_chunks.append(csv_txt.rstrip("\n"))
+
+    # --- 3) write to disk 
+    path.write_text("\n".join(out_chunks), encoding="utf8")
     logger.info("AVG written → %s", path)
     return path
 
-def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
-    return df.rename(columns={c: _COL_MAP.get(c, c.lower()) for c in df.columns})
 
+def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
+    return df.rename(
+        columns={c: _COL_MAP.get(c, c.lower()) for c in df.columns})
 
 def load_avg(
-    path: str | Path, *,
+    path: str | Path,
+    *,
     ll_columns: Tuple[str, str] = ('latitude', 'longitude'),
-    utm_zone:   Optional[int]   = None,
-    inplace:    bool            = False
-    ) -> Tuple[pd.DataFrame, Dict[str, str]]:
-    """Read a Zonge AVG file.
+    utm_zone: Optional[int] = None,
+    inplace: bool = False
+) -> Tuple[pd.DataFrame, Dict[str, str]]:
+    """
+    Read a Zonge AVG file (legacy kind-1 or modern CSAVGW
+    kind-2) and return a tidy DataFrame plus metadata.
+
+    The function:
+      * classifies the file by header,
+      * parses kind-1 (fixed-width) via _parse_kind1,
+      * parses kind-2 (CSV blocks) via _parse_kind2,
+      * optionally adds UTM eastings/northings if lat/lon cols
+        are present (column names configurable via ll_columns).
 
     Parameters
     ----------
-    path         : str | Path
-        Filesystem location of the ``.avg`` file.
-    ll_columns   : tuple(str, str), optional
-        Column names holding lat / lon values if present.
-    utm_zone     : int, optional
-        Override automatic UTM zone detection.
-    inplace      : bool, default *False*
-        If *False* a copy is made before adding derived columns.
+    path : str | Path
+        Filesystem path to the .avg file.
+    ll_columns : (str, str), optional
+        Column names containing latitude/longitude (deg).
+    utm_zone : int, optional
+        UTM zone override; if None, auto-detect.
+    inplace : bool, default False
+        If False, return a copy so callers can mutate safely.
+
+    Returns
+    -------
+    (df, meta) : (pandas.DataFrame, dict)
+        df    : tidy table with normalised column names.
+        meta  : metadata dict.  For kind-2, includes a 'blocks'
+                list with per-block metadata.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the file path does not exist.
+    AvgFileError / AvgDataError
+        If classification or parsing fails.
     """
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(path)
+
+    # Read text and classify by header patterns.
     lines = path.read_text(errors='replace').splitlines()
-    kind  = classify_avg_format(lines)
+    kind = classify_avg_format(lines)
+
+    # Dispatch to the appropriate parser.
     if kind == 1:
         df, meta = _parse_kind1(lines), {}
     else:
         df, meta = _parse_kind2(lines)
+
+    # Copy unless caller explicitly wants "inplace".
     if not inplace:
         df = df.copy()
-    lat, lon = ll_columns
-    if lat in df.columns and lon in df.columns:
+
+    # Optionally compute UTM if lat/lon columns are present.
+    lat_col, lon_col = ll_columns
+    if lat_col in df.columns and lon_col in df.columns:
         try:
-            east, north    = ll_to_utm(df[lat].values, df[lon].values,
-                                       zone=utm_zone)
-            df['easting']  = east
+            east, north = ll_to_utm(
+                df[lat_col].values,
+                df[lon_col].values,
+                zone=utm_zone
+            )
+            df['easting'] = east
             df['northing'] = north
         except Exception as exc:  # pragma: no cover
-            logger.warning("Lat/Lon → UTM failed: %s", exc)
-    return df, meta
+            logger.warning(
+                "Lat/Lon → UTM failed: %s",
+                exc
+            )
 
+    return df, meta
 
 # Station‑profile utilities
 def validate_stn_profile(
@@ -406,11 +933,11 @@ def _dict_to_lines(data: Any) -> List[str]:
 
 
 def number_stations(
-        n_stations: int | Integral,
-        n_freq:     int | Integral,
-        *,
-        prefix: str = "S"
-    ) -> Tuple[List[str], List[str]]:
+    n_stations: int | Integral,
+    n_freq:     int | Integral,
+    *,
+    prefix: str = "S"
+) -> Tuple[List[str], List[str]]:
     """
     Generate station IDs and a frequency-expanded copy.
 
@@ -435,7 +962,6 @@ def number_stations(
     ids       = [f"{prefix}{i:02d}" for i in range(int(n_stations))]
     expanded  = list(np.repeat(ids, int(n_freq)))
     return ids, expanded
-
 
 def chunk_by_frequency(
     data: Sequence[Any] | np.ndarray,

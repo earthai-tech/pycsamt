@@ -35,8 +35,8 @@ T = TypeVar("T", bound=Callable[..., Any])
 def ensure_pkg(  # noqa: D401
     name: str,
     *,
-    dist_name: str | None = None,
     extra: str = "",
+    dist_name: str | None = None,
     min_version: str | None = None,
     auto_install: bool = False,
     use_conda: bool = False,
@@ -51,11 +51,11 @@ def ensure_pkg(  # noqa: D401
     name : str
         Canonical ``import`` target, e.g. ``"scipy"`` or
         ``"matplotlib.pyplot"``.
+    extra : str, default ``""``
+        Text appended to the *ImportError* message.
     dist_name : str, default *None*
         Distribution name on *PyPI*.  When *None* we assume it is the
         same as *package_name*.
-    extra : str, default ``""``
-        Text appended to the *ImportError* message.
     min_version : str, default *None*
         Enforce a minimum version (PEP 440 compliant string).
     auto_install : bool, default *False*

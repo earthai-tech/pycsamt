@@ -98,14 +98,17 @@ setup_kwargs['packages'] = [
 # force install pycsamt. Once pycsamt is installed , pyyaml and pyproj 
 # should already installed too. 
      
-setup_kwargs['install_requires'] = ['numpy>=1.8.1',
-                                     'scipy>=0.14.0',
-                                     'matplotlib',
-                                     'mtpy >=1.1.0',
-                                     'pyyaml',
-                                     'pyproj',
-                                     'configparser', 
-                                     'tqdm']
+setup_kwargs['install_requires'] = [
+        'numpy>=1.8.1',
+         'scipy>=0.14.0',
+         'matplotlib',
+         'mtpy >=1.1.0',
+         'pyyaml',
+         'pyproj',
+         'configparser', 
+         'tqdm', 
+         'xarray'
+         ]
                                      
 setup_kwargs['python_requires'] ='>=3.7'
 

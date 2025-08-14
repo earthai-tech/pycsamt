@@ -296,7 +296,7 @@ class TensorBase(AVGComponentBase):
             s_axis = None
             f_axis = 0
         elif arr.ndim == 4:
-            s_axis, f_axis = 0, 1
+            s_axis, f_axis = 0, 1 # noqa
         else:
             raise AvgDataError("tensor must be 3D or 4D")
 

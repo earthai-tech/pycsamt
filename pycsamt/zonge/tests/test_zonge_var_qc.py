@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pycsamt.zonge.var_qc import (
+from pycsamt.zonge.var_pc import (
     PcEmag, PcHmag, PcRho,
 
 )

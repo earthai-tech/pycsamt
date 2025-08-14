@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from pycsamt.zonge._transfer import LegacyAVGBase  
 from pycsamt.exceptions import AvgDataError
 from pycsamt.zonge.base import (
     FieldAliases,
@@ -13,13 +14,6 @@ from pycsamt.zonge.base import (
     AVGFrame,
     AVGComponentBase,
 )
-
-# Try to import optional / WIP class. Mark tests xfail if missing.
-try:  # noqa: SIM105
-    from pycsamt.zonge._transfer import LegacyAVGBase  # type: ignore
-except Exception:  # class not present yet
-    LegacyAVGBase = None
-
 
 def test_field_aliases_have_expected_members():
     # A few representative spot checks (not exhaustive)

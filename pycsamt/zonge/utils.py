@@ -71,43 +71,43 @@ _RX_K1_HEADER      = re.compile(r"^skp\s+Station", re.I)
 _NUMERIC_REPLACE   = {"*": np.nan, "nan": np.nan, "NaN": np.nan,
                       "": np.nan}
 
+# Instead of multiple update() calls...
 _COL_MAP = {
-    'Station': 'station',
+    # General & Legacy
+    'Station': 'station', 
     'Stn': 'station',
-    'skp': 'skp',          
-    'Freq': 'freq', 'Freq.': 'freq',
+    'skp': 'skp',
+    'Freq': 'freq', 
+    'Freq.': 'freq',
     'Comp': 'comp',
-    'Tx.Amp': 'amps', 'Amps': 'amps',
-    'E.mag': 'emag', 'Emag': 'emag',
-    'E.phz': 'ephz', 'Ephz': 'ephz',
-    'H.mag': 'hmag', 'B.mag': 'hmag',
-    'Hphz': 'hphz', 'B.phz': 'hphz',
-    'Resistivity': 'rho', 'ARes.mag': 'rho',
-    'Phase': 'phase', 'Z.phz': 'phase',
-}
+    'Amps': 'amps',
+    'Emag': 'emag',
+    'Ephz': 'ephz',
+    'Hmag': 'hmag',
+    'Hphz': 'hphz',
+    'Resistivity': 'rho',
+    'Phase': 'phase',
+    'TMARES': 'rho_sc', 
+    'SRES': 'rho_sc', 
+    'TMARES/SRES': 'rho_sc',
 
-# add to _COL_MAP
-_COL_MAP.update({
-    'Z.mag': 'zmag',
-    'Z.phz': 'phase',   # already there via 'Phase' but keep explicit
-    'ARes.mag': 'rho',
-    'B.mag': 'hmag',    # you already map in __all__
-    'B.phz': 'hphz',
-    'E.%err': 'e.%err',
-    'E.perr': 'e.perr',
-    'B.%err': 'h.%err',
-    'B.perr': 'h.perr',
-    'Z.%err': 'z.%err',
-    'Z.perr': 'z.perr',
-    'ARes.%err': 'rho.%err',
-})
-
-_COL_MAP.update({
-    # Modern CSAVGW
+    # Modern (CSAVGW) - overlaps are fine
+    'Tx.Amp': 'amps',
+    'E.mag': 'emag',
+    'E.phz': 'ephz',
+    'B.mag': 'hmag',  # Maps to hmag
+    'B.phz': 'hphz',  # Maps to hphz
     'Z.mag': 'zmag',
     'Z.phz': 'phase',
     'ARes.mag': 'rho',
-    'SRes': 'rho_sc',          # static-corrected rho (modern)
+    'SRes': 'rho_sc',
+    'E.%err': 'e.%err',
+    'E.perr': 'e.perr',
+    'B.%err': 'h.%err', # Maps to h.%err
+    'B.perr': 'h.perr', # Maps to h.perr
+    'Z.%err': 'z.%err',
+    'Z.perr': 'z.perr',
+    'ARes.%err': 'rho.%err',
     'E.wgt': 'e.wgt',
     'H.wgt': 'h.wgt',
     'Choer': 'coh',
@@ -115,17 +115,63 @@ _COL_MAP.update({
     'Gdp.Chn': 'gdp_chn',
     'Gdp.Time': 'gdp_time',
     '|Z|': 'zabs',
+}
 
-    'E.%err': 'e.%err', 'E.perr': 'e.perr',
-    'B.%err': 'h.%err', 'B.perr': 'h.perr',
-    'Z.%err': 'z.%err', 'Z.perr': 'z.perr',
-    'ARes.%err': 'rho.%err',
+# _COL_MAP = {
+#     'Station': 'station',
+#     'Stn': 'station',
+#     'skp': 'skp',          
+#     'Freq': 'freq', 'Freq.': 'freq',
+#     'Comp': 'comp',
+#     'Tx.Amp': 'amps', 'Amps': 'amps',
+#     'E.mag': 'emag', 'Emag': 'emag',
+#     'E.phz': 'ephz', 'Ephz': 'ephz',
+#     'H.mag': 'hmag', 'B.mag': 'hmag',
+#     'Hphz': 'hphz', 'B.phz': 'hphz',
+#     'Resistivity': 'rho', 'ARes.mag': 'rho',
+#     'Phase': 'phase', 'Z.phz': 'phase',
+# }
 
-    # Legacy extras
-    'TMARES': 'rho_sc', 'SRES': 'rho_sc',
-    'TMARES/SRES': 'rho_sc',
-    'Resistivity': 'rho',
-})
+# # add to _COL_MAP
+# _COL_MAP.update({
+#     'Z.mag': 'zmag',
+#     'Z.phz': 'phase',   # already there via 'Phase' but keep explicit
+#     'ARes.mag': 'rho',
+#     'B.mag': 'hmag',    # you already map in __all__
+#     'B.phz': 'hphz',
+#     'E.%err': 'e.%err',
+#     'E.perr': 'e.perr',
+#     'B.%err': 'h.%err',
+#     'B.perr': 'h.perr',
+#     'Z.%err': 'z.%err',
+#     'Z.perr': 'z.perr',
+#     'ARes.%err': 'rho.%err',
+# })
+
+# _COL_MAP.update({
+#     # Modern CSAVGW
+#     'Z.mag': 'zmag',
+#     'Z.phz': 'phase',
+#     'ARes.mag': 'rho',
+#     'SRes': 'rho_sc',          # static-corrected rho (modern)
+#     'E.wgt': 'e.wgt',
+#     'H.wgt': 'h.wgt',
+#     'Choer': 'coh',
+#     'Gdp.Blk': 'gdp_blk',
+#     'Gdp.Chn': 'gdp_chn',
+#     'Gdp.Time': 'gdp_time',
+#     '|Z|': 'zabs',
+
+#     'E.%err': 'e.%err', 'E.perr': 'e.perr',
+#     'B.%err': 'h.%err', 'B.perr': 'h.perr',
+#     'Z.%err': 'z.%err', 'Z.perr': 'z.perr',
+#     'ARes.%err': 'rho.%err',
+
+#     # Legacy extras
+#     'TMARES': 'rho_sc', 'SRES': 'rho_sc',
+#     'TMARES/SRES': 'rho_sc',
+#     'Resistivity': 'rho',
+# })
 
 _CANON2K2: dict[str, str] = {
     # survey logistics
@@ -212,8 +258,10 @@ def _parse_kind1(lines: Sequence[str]) -> pd.DataFrame:
         if ln.startswith(('\\', '$')):
             continue
         tokens = _RX_WS.sub(' ', ln.strip()).split()
-        data_rows.append([_to_float(tk) if j >= 4 else tk
-                          for j, tk in enumerate(tokens)])
+        data_rows.append([
+            _to_float(tk) if j >= 4 else tk  # First 4 cols are non-numeric
+            for j, tk in enumerate(tokens)
+        ])
     if not data_rows:
         raise AvgDataError("No data rows in kind‑1 file")
     df = pd.DataFrame(data_rows, columns=hdr_tokens)
@@ -1005,8 +1053,6 @@ def chunk_by_frequency(
     if drop_remainder and chunks and chunks[-1].size < n_per_chunk:
         chunks.pop()
     return chunks
-
-
 
 def _find_col(
     df: pd.DataFrame, candidates: Sequence[str]

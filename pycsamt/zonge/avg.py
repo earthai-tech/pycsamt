@@ -1,3 +1,20 @@
+    
+    # maybe you can write BaseAVG class first and when Im satisfy I will let you know to 
+    # create AMTAVG and CSAMTAVG classes 
+    # to inherit from this class. 
+    #
+    
+    # This is the previous version v1.xxx of the pycsamt. 
+    # now we are writing the version 2.xx which is totally differnt from the 
+    # previous one and adopt new architecture like fit and new API liek 
+    # show all the components previously given 
+    
+    # so rewrite this class to follow the new architecture . 
+    
+   
+# @has_fit("raise")
+# class AVG(BaseAVG): 
+
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
@@ -40,7 +57,7 @@ from ..utils.validation import check_is_fitted
 
 from .base import BaseAVG, OpsBase
 from .heads import Head
-from .properties import (
+from .property import (
     Hardware,
     SurveyAnnotation,
     SurveyConfiguration,
@@ -55,7 +72,7 @@ from .meas import (
 )
 from .resphase import Resistivity, Phase
 from .survey   import Station
-from .var      import (
+from .qc      import (
     PcEmag,
     PcHmag,
     PcRho,
@@ -74,7 +91,6 @@ from .z import Z
 logger = get_logger(__name__)
 
 __all__ = ["AVG", "AVGOps"]
-
 
 @has_fit("raise")
 class AVG(BaseAVG):
@@ -203,6 +219,7 @@ class AVG(BaseAVG):
         verbose: bool = False
     ) -> None:
   
+   
         # 1) create *all* component shells – they stay empty until
         #    _populate_components() fills them
         self.Head   = Head()

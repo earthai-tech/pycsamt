@@ -10,9 +10,9 @@ Fundamental mathematical & physical constants for EM geophysics
 Examples
 --------
 >>> from pycsamt.constants import MU_0, RHO_FACTOR, DEG2RAD
->>> Z_mod  = 1.20              # |Z| [V A⁻¹]
->>> freq   = 1_000.0           # 1 kHz
->>> rho_a  = (Z_mod**2) * RHO_FACTOR / freq     # apparent ρ [Ω·m]
+>>> Z_mod  = 1.20           # |Z| [V A⁻¹]
+>>> freq   = 1_000.0        # 1 kHz
+>>> rho_a  = (Z_mod**2) * RHO_FACTOR / freq    # apparent ρ [Ω·m]
 """
 
 from __future__ import annotations
@@ -31,17 +31,22 @@ __all__ = [
     "MU_0", "EPSILON_0", "C_0", "ETA_0",
     # geophysical helpers
     "RHO_FACTOR",
+    # unit conversions
+    "MICROVOLTS_TO_VOLTS", "PICOTESLA_TO_TESLA",
+    "METERS_TO_KILOMETERS", "PERCENT_FACTOR",
+    # zonge conventions
+    "ZONGE_RHO_FACTOR",
 ]
 # ---------------------------------------------------------------------
 # Pure mathematics
 # ---------------------------------------------------------------------
 
 PI:        Final[float] = math.pi
-TAU:       Final[float] = math.tau                    # 2 π
-DEG2RAD:   Final[float] = PI / 180.0                  # °
-RAD2DEG:   Final[float] = 180.0 / PI                  # rad
+TAU:       Final[float] = math.tau                  # 2 π
+DEG2RAD:   Final[float] = PI / 180.0                 # °
+RAD2DEG:   Final[float] = 180.0 / PI                 # rad
 LN10:      Final[float] = math.log(10.0)
-MRAD:      Final[float] = 1.0e3                       # 1 mrad = 10⁻³ rad
+MRAD:      Final[float] = 1.0e3                      # 1 mrad = 10⁻³ rad
 
 # ------------------------------------------------------------------
 # Small-angle / auto-unit heuristics
@@ -63,10 +68,10 @@ EPS_TOL:    Final[float] = 1.0e-9
 # Electromagnetic (vacuum) – CODATA 2018
 # ---------------------------------------------------------------------
 
-MU_0:       Final[float] = 4.0e-7 * PI  # H m⁻¹ – permeability # ≈ 1.2566370614 × 10-6
-EPSILON_0:  Final[float] = 8.854_187_817e-12          # F m⁻¹ – permittivity
+MU_0:       Final[float] = 4.0e-7 * PI  # H m⁻¹ – permeability
+EPSILON_0:  Final[float] = 8.854_187_817e-12      # F m⁻¹ – permittivity
 C_0:        Final[float] = 1.0 / math.sqrt(MU_0 * EPSILON_0)  # m s⁻¹
-ETA_0:      Final[float] = math.sqrt(MU_0 / EPSILON_0)        # Ω
+ETA_0:      Final[float] = math.sqrt(MU_0 / EPSILON_0)      # Ω
 
 # ---------------------------------------------------------------------
 # Handy factor for apparent-resistivity computations
@@ -74,3 +79,17 @@ ETA_0:      Final[float] = math.sqrt(MU_0 / EPSILON_0)        # Ω
 #   ρₐ = |Z|² / (μ₀ 2π f)   →   |Z|² * RHO_FACTOR / f
 RHO_FACTOR: Final[float] = 1.0 / (MU_0 * 2.0 * PI)
 
+# ---------------------------------------------------------------------
+# Unit Conversion Factors
+# ---------------------------------------------------------------------
+MICROVOLTS_TO_VOLTS: Final[float] = 1e-6
+PICOTESLA_TO_TESLA:  Final[float] = 1e-12
+METERS_TO_KILOMETERS: Final[float] = 1e-3
+PERCENT_FACTOR:      Final[float] = 100.0
+
+# ---------------------------------------------------------------------
+# Zonge-specific Conventions
+# ---------------------------------------------------------------------
+# Factor used in legacy Zonge resistivity formula:
+#   ρₐ = (1 / (5 * f)) * |E/H|²
+ZONGE_RHO_FACTOR:    Final[float] = 0.2  # 1 / 5

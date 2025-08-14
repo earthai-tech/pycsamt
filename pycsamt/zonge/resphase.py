@@ -159,7 +159,7 @@ class Resistivity(TensorBase):
         tmp._meta = meta
         return tmp._write_csv_block(
             cols=["station", "freq", "comp", self.VAR_NAME],
-            title=r"\ $Resistivity Block",
+            title=r"$Resistivity Block",
             float_fmt=float_fmt,
             na_rep=na_rep,
             include_meta=True,
@@ -286,7 +286,7 @@ class Phase(TensorBase):
         tmp._meta = meta
         return tmp._write_csv_block(
             cols=["station", "freq", "comp", self.VAR_NAME],
-            title=r"\ $Phase Block",
+            title=r"$Phase Block",
             float_fmt=float_fmt,
             na_rep=na_rep,
             include_meta=True,

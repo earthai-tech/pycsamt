@@ -1,228 +1,159 @@
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
-# License: LGPL-3.0
-
+# License: LGPL-3.0-or-later
 """
-Container that fan-outs an AVG *data block* into the
-domain-specific helper classes implemented in the surrounding
-sub-packages (``meas``, ``var``, ``resphase``, …).
+DataInfo - High-level AVG data aggregator.
 
-Typical usage
--------------
->>> from pycsamt.zonge.utils import load_avg
->>> from pycsamt.zonge.info  import DataInfo
->>>
->>> df, meta = load_avg("LCS01.avg")
->>> info     = DataInfo(df)
->>> info.station.value          # → ndarray
->>> info.phase["S07"]           # → per-station Phase slice
->>> info.z.mag.shape            # → (n_freq, n_station, 2, 2)
+This module provides the DataInfo class, which serves as a
+primary facade for interacting with a complete Zonge AVG dataset.
+It composes all other components (Header, Z, Resistivity, Phase,
+and various QC metrics) into a single, convenient container.
 """
-
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
-from typing  import Any, Dict #, Sequence, List
+from typing import Any, Mapping, Optional, Tuple, Union
 
-import numpy as np
 import pandas as pd
 
-from ..exceptions  import AvgDataError
-from ..log.logger import get_logger
-
-from .meas  import CompMeas, Amps, Frequency
+from ..exceptions import AvgDataError
+from .base import AVGFrame
+from .heads import Header
+from .meas import Amps, CompMeas, Frequency
+from .resphase import Phase, Resistivity
 from .survey import Station
-from .var import (
-    PcEmag, 
-    PcHmag, 
-    PcRho, 
-    SPhz, 
-    SHphz, 
-    SEphz
-)
-from .base import FieldAliases 
-from .resphase   import Phase, Resistivity
 from .utils import load_avg
+from .var_pc import PcEmag, PcHmag, PcRho
+from .var_std import SEphz, SHphz, SPhz
 from .z import Z
+
 
 __all__ = ["DataInfo"]
 
-logger = get_logger(__name__)
-
 
 class DataInfo:
-    """Parse a *kind-1/2* AVG **DataFrame** into typed sub-components."""
+    """
+    High-level aggregator for a complete Zonge AVG dataset.
 
-    def __init__(self,
-        frame: pd.DataFrame | None = None,
-        *,
-        to_degree: bool = False
-        ) -> None:
+    This class provides a unified interface to all parsed data
+    components from an AVG file, including header metadata,
+    impedance, resistivity, phase, and quality control metrics.
+    """
 
-        self.station     : Station      | None = None
-        self.frequency   : Frequency    | None = None
-        self.amps        : Amps         | None = None
-        self.comp        : CompMeas     | None = None
-        self.phase       : Phase        | None = None
-        self.rho         : Resistivity  | None = None
-        self.z           : Z            | None = None
+    def __init__(self) -> None:
+        # Core data holders
+        self._frame: Optional[AVGFrame] = None
+        self.df: Optional[pd.DataFrame] = None
+        self.meta: Optional[Mapping[str, Any]] = None
 
-        # quality metrics
-        self.pc_emag : PcEmag | None = None
-        self.pc_hmag : PcHmag | None = None
-        self.pc_rho  : PcRho  | None = None
-        self.s_ephz  : SEphz  | None = None
-        self.s_hphz  : SHphz  | None = None
-        self.s_phz   : SPhz   | None = None
+        # Component containers
+        self.header: Header = Header()
+        self.station: Station = Station()
+        self.z: Z = Z()
+        self.resistivity: Resistivity = Resistivity()
+        self.phase: Phase = Phase()
+        self.frequency: Frequency = Frequency()
+        self.amps: Amps = Amps()
+        self.comp: CompMeas = CompMeas()
 
-        if frame is not None:
-            self._populate_from_frame(frame.copy(), to_degree)
-
-
-    def _populate_from_frame(
-            self, df: pd.DataFrame, to_degree: bool
-        ) -> None:
-        """Dispatch every recognised column to its helper class."""
-        #  mandatory columns 
-        try:
-            stn = df[self._col("station")].to_numpy()
-            frq = df[self._col("freq")   ].to_numpy()
-        except KeyError as exc:
-            raise AvgDataError(f"Missing essential column: {exc}") from exc
-
-        # grid dimensions
-        unique_freq, n_per_stn = np.unique(frq, return_counts=True)
-        n_freq     = unique_freq.size
-        n_station  = n_per_stn[0] if n_per_stn.size else 0
-
-        # ---- core helpers 
-        self.station   = Station(stn, normalize=True)
-        self.frequency = Frequency(frq)
-        self.comp      = CompMeas(df.get(self._col("component")))
-
-        # amps, E/H field magnitudes & phases 
-        if (col := self._maybe(df, "amps")) is not None:
-            self.amps = Amps(df[col], n_freq=n_freq, n_station=n_station)
-
-        if (col := self._maybe(df, "phase")) is not None:
-            self.phase = Phase(df[col], n_freq=n_freq,
-                               n_stations=n_station, to_degree=to_degree)
-
-        if (col := self._maybe(df, "rho")) is not None:
-            self.rho = Resistivity(df[col], n_freq=n_freq,
-                                   n_stations=n_station)
-            # SRes column?
-            if (sc := self._maybe(df, "sres")) is not None:
-                self.rho.set_sres(df[sc], n_freq=n_freq,
-                                  n_stations=n_station)
-
-        # quality / variation metrics 
-        self._set_metric(df, "pcemag", PcEmag,  "pc_emag",
-                         n_freq, n_station)
-        self._set_metric(df, "pchmag", PcHmag,  "pc_hmag",
-                         n_freq, n_station)
-        self._set_metric(df, "pcrho",  PcRho,   "pc_rho",
-                         n_freq, n_station)
-        self._set_metric(df, "sphz",   SPhz,    "s_phz",
-                         n_freq, n_station, to_degree=to_degree)
-        self._set_metric(df, "sephz",  SEphz,   "s_ephz",
-                         n_freq, n_station, to_degree=to_degree)
-        self._set_metric(df, "shphz",  SHphz,   "s_hphz",
-                         n_freq, n_station, to_degree=to_degree)
-
-        # Z tensor (requires the four sub-components) 
-        z_cols = {k: self._maybe(df, f"z{k}") for k in ("xx", "xy", "yx", "yy")}
-        if all(v is not None for v in z_cols.values()):
-            z_stack = {k: df[col] for k, col in z_cols.items()}  # type: ignore[arg-type]
-            # reshape to (n_freq, n_station)
-            z_arr   = np.stack(
-                [v.to_numpy().reshape(n_station, n_freq).T for v in z_stack.values()],
-                axis=-1
-            ).reshape(n_freq, n_station, 2, 2)
-            self.z = Z(z_arr, freq=unique_freq,
-                       station_ids=list(self.station.names))
+        # QC components
+        self.pc_emag: PcEmag = PcEmag()
+        self.pc_hmag: PcHmag = PcHmag()
+        self.pc_rho: PcRho = PcRho()
+        self.s_ephz: SEphz = SEphz()
+        self.s_hphz: SHphz = SHphz()
+        self.s_phz: SPhz = SPhz()
 
     @classmethod
     def from_avg(
         cls,
-        path:        str | Path,
+        avg: Union[
+            str, Path, AVGFrame, pd.DataFrame,
+            Tuple[pd.DataFrame, Mapping[str, Any]]
+        ],
         *,
-        to_degree:   bool                    = False,
-        load_kwargs: dict[str, Any] | None   = None,
+        meta: Optional[Mapping[str, Any]] = None,
     ) -> "DataInfo":
         """
-        Quick shortcut::
-
-            info = DataInfo.from_avg("LCS01.avg", to_degree=True)
-
-        Parameters
-        ----------
-        path
-            Filesystem location of the ``.avg`` file.
-        to_degree
-            Convert internal phase caches to **degrees**.
-        load_kwargs
-            Extra keyword arguments forwarded verbatim to
-            :func:`pycsamt.zonge.utils.load_avg`
-            (e.g. ``ll_columns=('lat', 'lon')`` or ``utm_zone=30``).
-
-        Returns
-        -------
-        DataInfo
-            Fully populated instance.
+        Build a DataInfo object from a path, AVGFrame, or DataFrame.
         """
-        
-        df, _meta = load_avg(path, **(load_kwargs or {}))
-        logger.info("AVG loaded (%d rows) – building DataInfo …", len(df))
-        return cls(df, to_degree=to_degree)
+        if isinstance(avg, (str, Path)):
+            df, m = load_avg(Path(avg))
+            frame = AVGFrame(df, m, Path(avg))
+        elif isinstance(avg, AVGFrame):
+            frame = avg
+        elif isinstance(avg, tuple) and len(avg) == 2:
+            df, m = avg
+            frame = AVGFrame(df, dict(m))
+        elif isinstance(avg, pd.DataFrame):
+            frame = AVGFrame(avg, dict(meta or {}))
+        else:
+            raise TypeError(
+                "from_avg expects Path|AVGFrame|DataFrame|"
+                "(DataFrame, meta) tuple."
+            )
 
-    @staticmethod
-    def _col(df: pd.DataFrame, alias: str) -> str:
-        """
-        Return the first concrete column name that exists in *df* and
-        matches the FieldAliases entry for *alias*.
-        """
-        for cand in getattr(FieldAliases, alias, ()):
-            if cand in df.columns:            # ← check presence
-                return cand
-        raise KeyError(f"No column found for alias '{alias}'")
-    
-    @staticmethod
-    def _maybe(df: pd.DataFrame, alias: str) -> str | None:
-        for cand in getattr(FieldAliases, alias, ()):
-            if cand in df.columns:
-                return cand
-        return None
+        obj = cls()
+        obj.read(frame.data, frame.meta)
+        obj._frame = frame
+        return obj
 
-
-    def _set_metric(
+    def read(
         self,
-        df:        pd.DataFrame,
-        alias:     str,
-        cls,                    # type: ignore[valid-type]
-        attr_name: str,
-        n_freq:    int,
-        n_station: int,
-        **kws) -> None:
-        """Instantiate *cls* if *alias* is available and attach it."""
-        if (col := self._maybe(df, alias)) is None:
-            return
-        obj = cls(df[col], n_freq=n_freq, n_station=n_station, **kws)
-        setattr(self, attr_name, obj)
+        source: pd.DataFrame,
+        meta: Optional[Mapping[str, Any]] = None,
+    ) -> None:
+        """
+        Orchestrate reading data into all sub-components.
+        """
+        self.df = source
+        self.meta = meta or {}
 
-    def __repr__(self) -> str:
-        n_stn = len(self.station.names) if self.station else 0
-        n_frq = len(self.frequency.value) if self.frequency else 0
-        return f"DataInfo(stations={n_stn}, freqs={n_frq})"
+        # Populate header from metadata
+        self.header.read(meta=self.meta)
 
-    # quick attribute proxy (e.g. info['S03']['rho'])
-    def __getitem__(self, station: str) -> Dict[str, Any]:
-        return {
-            "rho"   : self.rho.loc[station]   if self.rho   else None,
-            "phase" : self.phase.loc[station] if self.phase else None,
-            "pcE"   : self.pc_emag.loc[station] if self.pc_emag else None,
-            "pcH"   : self.pc_hmag.loc[station] if self.pc_hmag else None,
-            "sϕZ"   : self.s_phz.loc[station]  if self.s_phz  else None,
-            "z"     : self.z[station]          if self.z      else None,
-    }
+        # Populate data components from the DataFrame
+        components = [
+            self.station, self.z, self.resistivity, self.phase,
+            self.frequency, self.amps, self.comp, self.pc_emag,
+            self.pc_hmag, self.pc_rho, self.s_ephz,
+            self.s_hphz, self.s_phz,
+        ]
 
+        for comp in components:
+            try:
+                comp.read(self.df, self.meta)
+            except AvgDataError as e:
+                # Gracefully skip components if their data is missing
+                # For example, a file might not have %Hmag
+                warnings.warn(
+                    f"Notice: Could not load component "
+                    f"'{comp.__class__.__name__}': {e}"
+                )
+            except Exception as e:
+                warnings.warn(
+                    f"Warning: Unexpected error loading "
+                    f"'{comp.__class__.__name__}': {e}"
+                )
+
+    def __str__(self) -> str:
+        if self.df is None:
+            return "DataInfo(empty)"
+
+        n_st = (
+            self.df["station"].nunique()
+            if "station" in self.df.columns
+            else 0
+        )
+        n_f = (
+            self.df["freq"].nunique()
+            if "freq" in self.df.columns
+            else 0
+        )
+        return (
+            f"DataInfo(stations={n_st}, freqs={n_f}, "
+            f"rows={len(self.df)})"
+        )
+
+    __repr__ = __str__

@@ -1,281 +1,413 @@
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
-
 """
-Lightweight container for the complex impedance tensor *Z*.
+Impedance tensor (Z) component for Zonge AVG data.
 
-Only the strict tensor bookkeeping lives here; heavy I/O and
-higher-level helpers (e.g. rotations, quality metrics) are bolted on
-later in the workflow.
+This module provides the `Z` class, which computes the complex
+impedance tensor from apparent resistivity and phase data. It
+inherits from TensorBase to provide powerful reshaping and
+analysis capabilities.
 """
 from __future__ import annotations
 
-from typing import Sequence, Dict, List, Any
+from typing import ( 
+    Any, 
+    Mapping, 
+    Optional, 
+    Sequence, 
+    Tuple, 
+    Union
+)
+
 import numpy as np
+import pandas as pd
 
-from ..constants import MU_0
-from ..exceptions import ZDataError, ZError
-from ..utils.zmath   import z_err_to_rphi_err 
+from ..constants import MU_0, PI
+from ..exceptions import AvgDataError
+from ..utils.deps import ensure_pkg
+from ..log.logger import get_logger 
 
-from .base   import AVGComponentBase
-from .tensor import ImpedanceTensor, TensorFactory 
-from .utils  import chunk_by_frequency, number_stations
-
+from .tensor import TensorBase, _norm_comp
+from .utils import ( 
+    _find_col, 
+    _to_num, 
+)
+logger = get_logger(__name__) 
 
 __all__ = ["Z"]
 
-class Z(AVGComponentBase):
+
+class Z(TensorBase):
+    r"""
+    Complex impedance tensor (Z) component.
+
+    This class reads tidy AVG tables and computes the complex
+    impedance Z from apparent resistivity (ρa) and impedance
+    phase (φ). It provides properties to access the complex
+    tensor, its real and imaginary parts, and the propagated
+    error.
+
+    .. math::
+        Z = \sqrt{\rho_a \cdot \omega \cdot \mu_0} \cdot
+        e^{i \cdot \phi}
+
+    where ω = 2πf.
     """
-    Impedance-tensor stack.
-
-    Parameters
-    ----------
-    z_array : array_like[complex], shape ``(n_freq, 2, 2)`` or
-              ``(n_freq, n_station, 2, 2)``
-        Complex impedance tensors.  A single ``(2, 2)`` matrix is promoted
-        to a stack with ``n_freq = 1``.
-    freq    : array_like[float], optional
-        Discrete transmit frequencies (Hz).  **Must** match
-        ``n_freq``.
-    station_ids : Sequence[str] | None, default *None*
-        Friendly identifiers (“S00”, “S01”, …).  When omitted they are
-        auto-generated in the *kind-2* fashion.
-    """
-
-    def __init__(
-        self,
-        z_array:       Sequence[Any] | np.ndarray | None = None,
-        *,
-        freq:          Sequence[float] | np.ndarray | None = None,
-        station_ids:   Sequence[str] | None = None,
-        ) -> None:
-
-        super().__init__()
-        self._z: np.ndarray | None        = None
-        self.freq: np.ndarray | None      = None
-        self.station_ids: List[str]       = list(station_ids) if station_ids \
-                                                else []
-        self.loc: Dict[str, np.ndarray]   = {}
-
-        if z_array is not None:
-            self.read(z_array, freq=freq, station_ids=station_ids)
 
     def read(
         self,
-        z_array:     Sequence[Any] | np.ndarray,
-        *,
-        freq:        Sequence[float] | np.ndarray | None = None,
-        station_ids: Sequence[str]           | None = None,
-        ) -> None:
+        source: pd.DataFrame,
+        meta: Optional[Mapping[str, Any]] = None,
+        **kws: Any,
+    ) -> None:
         """
-        Load a tensor stack and derive the *loc* mapping.
-
-        Raises
-        ------
-        ZDataError
-            When dimensions between *z_array*, *freq* and *station_ids*
-            are inconsistent.
+        Read and prepare data for impedance calculation.
         """
-        arr = np.asarray(z_array, dtype=complex)
-        if arr.ndim == 2:                       # promote a single matrix
-            arr = arr[None, ...]               # → (1, 2, 2)
-        if arr.ndim == 3:                       # add station axis
-            arr = arr[:, None, ...]            # → (n_freq, 1, 2, 2)
-        if arr.shape[-2:] != (2, 2):
-            raise ZDataError("Last two dims must be (2, 2)")
+        if not isinstance(source, pd.DataFrame):
+            raise TypeError(
+                "Z.read expects a pandas.DataFrame."
+            )
 
-        n_freq, n_station = arr.shape[:2]
+        df = source.copy()
+        self._meta = dict(meta or {})
 
-        # ­--- frequencies
-        if freq is None:
-            raise ZDataError("`freq` must be supplied the first time")
-        freq = np.asarray(freq, dtype=float).ravel()
-        if freq.size != n_freq:
-            raise ZDataError("len(freq) ≠ n_freq")
+        # --- Required columns ---
+        rho_aliases = (
+            "ARes.mag", "Resistivity", "rho",
+        )
+        phase_aliases = (
+            "Z.phz", "Phase", "phase",
+        )
+        freq_aliases = ("Freq", "freq")
 
-        # ­-- station identifiers
-        if station_ids is None:
-            station_ids, _ = number_stations(n_station, n_freq)
-        if len(station_ids) != n_station:
-            raise ZDataError("station-id count mismatch")
+        rho_col = _find_col(df, rho_aliases)
+        phase_col = _find_col(df, phase_aliases)
+        freq_col = _find_col(df, freq_aliases)
 
-        # commit
-        self._z          = arr
-        self.freq        = freq
-        self.station_ids = list(station_ids)
-
-        # build fast lookup dict:  (n_freq, 2, 2) per station
-        chunks = chunk_by_frequency(arr, n_freq)  # returns list(n_station)
-        self.loc = {sid: slab for sid, slab in zip(self.station_ids, chunks)}
-
-   
-    def write(self) -> List[str]:
-        """Return a flat *repr* mainly for unit-test round-trips."""
-        if self._z is None:
-            return []
-        flat = self._z.reshape(self._z.shape[0], self._z.shape[1], 4)
-        return [",".join(f"{v.real:+.6e}{v.imag:+.6e}j" for v in row.ravel())
-                for row in flat]
-
-
-    @property
-    def mag(self) -> np.ndarray:
-        """Absolute value ``|Z|`` – shape *(n_freq, n_station, 2, 2)*."""
-        if self._z is None:
-            raise ZDataError("Z array not loaded yet")
-        return np.abs(self._z)
-
-    @property
-    def rho(self) -> np.ndarray:
-        r"""Apparent resistivity,  
-        :math:`\rho_a = \dfrac{|Z|^2}{\mu_0\,\omega}`.
-
-        Returns
-        -------
-        ndarray
-            Same shape as :pyattr:`mag`.
-        """
-        if self._z is None or self.freq is None:
-            raise ZDataError("Z/Freq not initialised")
-        if not hasattr(self, "_rho_cache"):
-            # broadcasting: (n_freq, 1, 1, 1) against full tensor
-            omega               = 2.0 * np.pi * self.freq[:, None, None, None]
-            self._rho_cache     = self.mag ** 2 / (MU_0 * omega)
-        return self._rho_cache                                  # type: ignore[attr-defined]
-
-    @property
-    def phase(self) -> np.ndarray:
-        """Phase angle in **degrees** – same shape as :pyattr:`mag`."""
-        if self._z is None:
-            raise ZDataError("Z array not loaded yet")
-        if not hasattr(self, "_phase_cache"):
-            self._phase_cache = np.degrees(np.angle(self._z))
-        return self._phase_cache                                 # type: ignore[attr-defined]
-
-    def get_station_view(self, station: str) -> Dict[str, np.ndarray]:
-        """Return every derived slice for a single *station*."""
-        slab = self[station]                 # ← uses __getitem__
-        idx  = self.station_ids.index(station)
-        return {
-            "z"    : slab,
-            "mag"  : self.mag[:, idx, ...],
-            "rho"  : self.rho[:, idx, ...],
-            "phase": self.phase[:, idx, ...],
+        required = {
+            "rho": rho_col,
+            "phase": phase_col,
+            "freq": freq_col,
         }
+        missing = [k for k, v in required.items() if v is None]
+        if missing:
+            raise AvgDataError(
+                f"Z: missing required columns: {missing}"
+            )
 
-    # Uncertainty propagation (σ|Z| → σρ, σφ)
-    @property
-    def z_err(self) -> np.ndarray | None:
-        """Absolute σ|Z| values – same shape as :pyattr:`_z`."""
-        return getattr(self, "_z_err", None)
-    
-    @z_err.setter
-    def z_err(self, arr: Sequence[Any] | np.ndarray) -> None:
-        self._z_err = np.asarray(arr, dtype=float).reshape(self._z.shape)
-    
-    @property
-    def rho_err(self) -> np.ndarray:
-        """Relative ρ-error (Δρ/ρ).  Lazily computed from *z_err*."""
-        if self.z_err is None:
-            raise ZError("Set `z_err` before requesting `rho_err`")
-        if not hasattr(self, "_rho_err_cache"):
-            rel, _phi = z_err_to_rphi_err(self._z.real,
-                                           self._z.imag,
-                                           self.z_err)
-            self._rho_err_cache = rel.reshape(self._z.shape)
-        return self._rho_err_cache                           # type: ignore[attr-defined]
-    
-    @property
-    def phase_err(self) -> np.ndarray:
-        """Absolute phase error in **degrees** –  same shape as :pyattr:`phase`."""
-        if self.z_err is None:
-            raise ZError("Set `z_err` before requesting `phase_err`")
-        if not hasattr(self, "_phi_err_cache"):
-            _rel, phi = z_err_to_rphi_err(
-                self._z.real, self._z.imag, self.z_err
-                )
-            self._phi_err_cache = phi.reshape(self._z.shape)
-        return self._phi_err_cache                           # type: ignore[attr-defined]
+        # --- Optional error columns ---
+        rho_err_aliases = ("%Rho", "ARes.%err", "rho.%err")
+        phase_err_aliases = ("sPhz", "Z.perr", "z.perr")
 
-    # Quick-and-dirty QC masks
-    def bad_mask(
+        rho_err_col = _find_col(df, rho_err_aliases)
+        phase_err_col = _find_col(df, phase_err_aliases)
+
+        # --- Prepare internal frame ---
+        rename_map = {
+            rho_col: "rho",
+            phase_col: "phase",
+            freq_col: "freq",
+        }
+        if rho_err_col:
+            rename_map[rho_err_col] = "pc_rho"
+        if phase_err_col:
+            rename_map[phase_err_col] = "sphz"
+
+        df = df.rename(columns=rename_map)
+
+        # Ensure coords exist
+        if "station" not in df.columns:
+            df["station"] = np.nan
+        if "comp" not in df.columns:
+            df["comp"] = "ExHy"
+        
+        # Normalize component labels to uppercase canonical form
+        df["comp"] = df["comp"].map(_norm_comp)
+        df.dropna(subset=['comp'], inplace=True)
+        
+        # Normalize types
+        for col in ["rho", "phase", "freq", "pc_rho", "sphz"]:
+            if col in df.columns:
+                df[col] = df[col].map(_to_num)
+
+        keep_cols = [
+            "station", "freq", "comp", "rho", "phase",
+            "pc_rho", "sphz"
+        ]
+        self._frame = df.loc[
+            :, [c for c in keep_cols if c in df.columns]
+        ]
+        
+    def _get_component_series(
         self,
-        max_rho_err: float = 0.2,
-        max_phi_err: float = 5.0
-        ) -> np.ndarray:
-        """
-        Boolean mask of unreliable data points.
+        comp_names: Tuple[str, ...],
+        series: pd.Series
+    ) -> pd.Series:
+        """Helper to filter a property series by component."""
+        if self._frame.empty or "comp" not in self._frame.columns:
+            return pd.Series(dtype=series.dtype)
+
+        mask = self._frame["comp"].isin(comp_names)
+        return series[mask]
     
-        A point is flagged *True* whenever
-        ``rho_err > max_rho_err`` **OR** ``phase_err > max_phi_err``.
+    @property
+    def z(self) -> pd.Series:
         """
-        return (self.rho_err > max_rho_err) | (self.phase_err > max_phi_err)
-    
-
-    def as_tensor(self) -> "ImpedanceTensor":
-        """Return the current Z-stack as a 3-D
-        ``(n_freq, 2, 2)`` :class:`~pycsamt.zonge.tensor.ImpedanceTensor`.
-
-        The object bundles *z*, |Z|, ρₐ, φ and – if available –
-        the propagated one-sigma errors.
+        Complex impedance Z [Ω].
         """
-        if self._z is None:
-            raise ZDataError("Nothing loaded – call `read()` first")
+        if self._frame.empty:
+            return pd.Series(dtype="complex128")
 
-        return TensorFactory.build(
-            z      = {"xx": self._z[:, :, 0, 0],
-                      "xy": self._z[:, :, 0, 1],
-                      "yx": self._z[:, :, 1, 0],
-                      "yy": self._z[:, :, 1, 1]},
+        rho = self._frame["rho"]
+        phase_mrad = self._frame["phase"]
+        freq = self._frame["freq"]
 
-            z_err  = None if self.z_err is None else {
-                      "xx": self.z_err[:, :, 0, 0],
-                      "xy": self.z_err[:, :, 0, 1],
-                      "yx": self.z_err[:, :, 1, 0],
-                      "yy": self.z_err[:, :, 1, 1]},
+        # Convert phase from milliradians to radians
+        phase_rad = phase_mrad * 1e-3
+        omega = 2 * PI * freq
+        
+        # Calculate magnitude of Z
+        z_mag = np.sqrt(rho * omega * MU_0)
+        
+        # Calculate complex impedance
+        return z_mag * np.exp(1j * phase_rad)
+
+    @property
+    def z_real(self) -> pd.Series:
+        """
+        Real part of the impedance tensor, Z' [Ω].
+        """
+        return self.z.apply(np.real)
+
+    @property
+    def z_imag(self) -> pd.Series:
+        """
+        Imaginary part of the impedance tensor, Z'' [Ω].
+        """
+        return self.z.apply(np.imag)
+
+    @property
+    def z_err(self) -> pd.Series:
+        r"""
+        Propagated error in the magnitude of Z, |dZ| [Ω].
+
+        Calculated via standard error propagation from the
+        relative error in resistivity (dρ/ρ) and the absolute
+        error in phase (dφ).
+
+        .. math::
+            |dZ| \approx \sqrt{
+            (\frac{\partial |Z|}{\partial \rho} d\rho)^2 +
+            (|Z| d\phi)^2
+            }
+        
+        Since phase errors are often dominant and uncorrelated,
+        a simpler estimate is often used:
+
+        .. math::
+            |dZ| \approx \frac{1}{2} |Z| \frac{d\rho}{\rho}
+        """
+        if ( 
+                self._frame.empty 
+                or "rho" not in self._frame.columns
+            ):
+            return pd.Series(dtype="float64")
+
+        has_rho_err = "pc_rho" in self._frame.columns
+        has_phi_err = "sphz" in self._frame.columns
+
+        if not has_rho_err and not has_phi_err:
+            return pd.Series(dtype="float64", 
+                             index=self._frame.index)
+
+        z_mag = np.sqrt(
+            self._frame["rho"]
+            * (2 * PI * self._frame["freq"])
+            * MU_0
         )
 
+        term_rho_sq = 0.0
+        if has_rho_err:
+            # Relative error drho/rho
+            rel_err_rho = self._frame["pc_rho"] / 100.0
+            term_rho_sq = (0.5 * rel_err_rho)**2
 
-    @classmethod
-    def from_tensor(
-        cls,
-        tensor: "ImpedanceTensor",
+        term_phi_sq = 0.0
+        if has_phi_err:
+            dphi_rad = self._frame["sphz"] * 1e-3
+            term_phi_sq = dphi_rad**2
+        
+        # Propagated error in magnitude |Z|
+        # d|Z| = 0.5 * |Z| * (drho/rho)
+        
+        return z_mag * np.sqrt(term_rho_sq + term_phi_sq)
+
+    @property
+    def z_xx(self) -> pd.Series:
+        """Complex impedance for the Zxx component."""
+        return self._get_component_series(
+            ("ZXX", "ExHX"), self.z)
+
+    @property
+    def z_xy(self) -> pd.Series:
+        """Complex impedance for the Zxy component."""
+        return self._get_component_series(
+            ("ZXY", "EXHY"), self.z)
+
+    @property
+    def z_yx(self) -> pd.Series:
+        """Complex impedance for the Zyx component."""
+        return self._get_component_series(
+            ("ZYX", "EYHX"), self.z)
+
+    @property
+    def z_yy(self) -> pd.Series:
+        """Complex impedance for the Zyy component."""
+        return self._get_component_series(
+            ("ZYY", "EYHY"), self.z)
+
+    @property
+    def z_xx_err(self) -> pd.Series:
+        """Propagated error for the Zxx component."""
+        return self._get_component_series(
+            ("ZXX", "EXHX"), self.z_err)
+
+    @property
+    def z_xy_err(self) -> pd.Series:
+        """Propagated error for the Zxy component."""
+        return self._get_component_series(
+            ("ZXY", "EXHY"), self.z_err)
+
+    @property
+    def z_yx_err(self) -> pd.Series:
+        """Propagated error for the Zyx component."""
+        return self._get_component_series(
+            ("ZYX", "EYHX"), self.z_err)
+
+    @property
+    def z_yy_err(self) -> pd.Series:
+        """Propagated error for the Zyy component."""
+        return self._get_component_series(
+            ("ZYY", "EYHY"), self.z_err)
+
+    def to_tensor(
+        self,
         *,
-        freq: Sequence[float],
-        station_ids: Sequence[str] | None = None
-    ) -> "Z":
-        """Instantiate a :class:`Z` from an existing
-        :class:`~pycsamt.zonge.factory.ImpedanceTensor`.
-
-        Notes
-        -----
-        * ``freq`` must have the same length as ``tensor.z`` along
-          the first axis.
-        * If *station_ids* is omitted a default “S00, S01, …” sequence
-          is generated.
+        var: str = "z",
+        station: Optional[Union[int, float]] = None,
+        agg: str | None = "mean",
+        fill_value: float = np.nan,
+        sort_freq: bool = True,
+        align: str = "union",
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        z_obj = cls()
-        z_obj.read(
-            tensor.z,
-            freq        = freq,
-            station_ids = station_ids,
+        Convert impedance data into a 2x2 tensor.
+        """
+        temp_frame = self._frame.copy()
+
+        if var == "z":
+            temp_frame["__real"] = self.z_real
+            temp_frame["__imag"] = self.z_imag
+            
+            # Create a temporary instance for base method call
+            tb = TensorBase()
+            tb._frame = temp_frame
+            
+            T_real, freqs, stations = tb.to_tensor(
+                var="__real", station=station, agg=agg,
+                fill_value=fill_value, sort_freq=sort_freq,
+                align=align
+            )
+            T_imag, _, _ = tb.to_tensor(
+                var="__imag", station=station, agg=agg,
+                fill_value=fill_value, sort_freq=sort_freq,
+                align=align
+            )
+            return T_real + 1j * T_imag, freqs, stations
+            
+        elif var in ("z_real", "z_imag", "z_err"):
+            temp_frame[var] = getattr(self, var)
+            tb = TensorBase()
+            tb._frame = temp_frame
+            return tb.to_tensor(
+                var=var, station=station, agg=agg,
+                fill_value=fill_value, sort_freq=sort_freq,
+                align=align
+            )
+        else:
+            return super().to_tensor(
+                var=var, station=station, agg=agg,
+                fill_value=fill_value, sort_freq=sort_freq,
+                align=align
+            )
+
+    @ensure_pkg("xarray", extra="xarray is required")
+    def to_xarray(
+        self,
+        *,
+        var: str = "z",
+        station: Optional[Union[int, float]] = None,
+        agg: str | None = "mean",
+        fill_value: float = np.nan,
+        attrs: Optional[Mapping[str, Any]] = None,
+    ):
+        """
+        Return a 3D or 4D xarray.DataArray.
+        """
+        import xarray as xr
+
+        # Use the new to_tensor method to get the data
+        T, freqs, stations = self.to_tensor(
+            var=var, station=station, agg=agg,
+            fill_value=fill_value
         )
-        # optional uncertainties
-        if tensor.z_err is not None:
-            z_obj.z_err = tensor.z_err
-        return z_obj
+        
+        e_axis = np.array(["Ex", "Ey"])
+        h_axis = np.array(["Hx", "Hy"])
+        
+        merged_attrs = dict(self._meta)
+        if attrs:
+            merged_attrs.update(attrs)
+            
+        if stations.size == 0:
+            da = xr.DataArray(
+                T, dims=("freq", "e", "h"),
+                coords={
+                    "freq": freqs, "e": e_axis, "h": h_axis
+                },
+                attrs=merged_attrs, name=var,
+            )
+        else:
+            da = xr.DataArray(
+                T, dims=("station", "freq", "e", "h"),
+                coords={
+                    "station": stations, "freq": freqs,
+                    "e": e_axis, "h": h_axis
+                },
+                attrs=merged_attrs, name=var,
+            )
+        return da
 
-    def __getitem__(self, station: str) -> np.ndarray:
-        """Quick access: ``Z['S05']`` -> ``(n_freq, 2, 2)`` tensor stack."""
-        return self.loc[station]
+    def write(self) -> Sequence[str]:
+        """
+        Serializes the core Z data to a CSV block.
+        """
+        if self._frame.empty:
+            return ["\\ $Z (Impedance) Block", ""]
 
-    def __len__(self) -> int:
-        return 0 if self._z is None else self._z.shape[1]  # station count
+        # Create a temporary frame for writing
+        df_write = self._frame[
+            ["station", "freq", "comp"]
+        ].copy()
+        
+        df_write["z_real"] = self.z_real
+        df_write["z_imag"] = self.z_imag
+        df_write["z_err"] = self.z_err
 
-    def __repr__(self) -> str:                              # noqa: D401
-        if self._z is None:
-            return "Z(empty)"
-        n_freq, n_station = self._z.shape[:2]
-        return f"Z(n_freq={n_freq}, n_station={n_station})"
-
+        return self._write_csv_block(
+            cols=list(df_write.columns),
+            title="$Z (Impedance) Block",
+            include_meta=True,
+            stamp=True,
+        )

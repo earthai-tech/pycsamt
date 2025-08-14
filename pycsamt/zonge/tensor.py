@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
-# -*- coding: utf-8 -*-
-# Author: LKouadio <etanoyau@gmail.com> (structure & package)
-# License: LGPL-3.0
+
 """
 TensorBase – generic 2×2 impedance-like tensor adapter.
 
@@ -31,15 +29,13 @@ from typing import (
     Tuple, 
     Union
 )
-from dataclasses import dataclass #, field
 import numpy as np
 import pandas as pd
 
-from .base import AVGComponentBase
-
 from ..utils.deps import ensure_pkg 
 from ..exceptions import AvgDataError
-# from ..constants import PI   
+from .base import AVGComponentBase
+
 # --------------------------------------------------------------------------- #
 # Component <-> matrix position maps
 #   row axis:  E-field: Ex (0), Ey (1)
@@ -60,34 +56,6 @@ _COMP_POS: Dict[str, Tuple[int, int]] = {
 
 _E_AXIS = np.array(["Ex", "Ey"])
 _H_AXIS = np.array(["Hx", "Hy"])
-
-
-def _norm_comp(label: Any) -> Optional[str]:
-    """
-    Normalize a component label (‘ExHy’, ‘Zxy’, etc.) to an
-    uppercase token present in _COMP_POS. Return None if unknown.
-    """
-    if label is None:
-        return None
-    s = str(label).strip().upper()
-    # Fast path
-    if s in _COMP_POS:
-        return s
-    # Try to strip non-alnum characters just in case
-    s2 = "".join(ch for ch in s if ch.isalnum())
-    return s2 if s2 in _COMP_POS else None
-
-
-def _station_array(values: Iterable[Any]) -> np.ndarray:
-    """
-    Normalize station coordinate array for indexing. Keep numeric
-    if possible, else fall back to strings.
-    """
-    vals = pd.Series(values)
-    num = pd.to_numeric(vals, errors="coerce")
-    if num.notna().all():
-        return num.to_numpy()
-    return vals.astype(str).to_numpy()
 
 
 class TensorBase(AVGComponentBase):
@@ -415,170 +383,30 @@ class TensorBase(AVGComponentBase):
 
     __repr__ = __str__
 
-class TensorBuildError (Exception):
-    """ Tensor base exceptions"""
-    pass 
 
-@dataclass(slots=True)
-class ImpedanceTensor:
-    """Container holding *all* 2×2 stacks for a station / site.
-
-    Attributes
-    ----------
-    z : ndarray, complex
-        Shape ``(n_freq, 2, 2)``.
-    rho, phase : ndarray, float
-        Same shape as *z*.  Phase is **degrees**.
-    z_err, rho_err, phase_err : ndarray | None
-        Optional 1-σ uncertainties.  When *None* no error-prop
-        was provided for the corresponding field.
+def _norm_comp(label: Any) -> Optional[str]:
     """
-    z:          np.ndarray
-    rho:        np.ndarray
-    phase:      np.ndarray
-    z_err:      np.ndarray | None = None
-    rho_err:    np.ndarray | None = None
-    phase_err:  np.ndarray | None = None
-
-
-    def _slice(self, i: int, j: int, field: str = "z") -> np.ndarray:
-        return getattr(self, field)[:, i, j]
-
-    # impedance
-    @property 
-    def z_xx(self): return self._slice(0, 0, "z")
-    @property 
-    def z_xy(self): return self._slice(0, 1, "z")
-    @property 
-    def z_yx(self): return self._slice(1, 0, "z")
-    @property 
-    def z_yy(self): return self._slice(1, 1, "z")
-    # resistivity
-    @property 
-    def rho_xx(self): return self._slice(0, 0, "rho")
-    @property 
-    def rho_xy(self): return self._slice(0, 1, "rho")
-    @property 
-    def rho_yx(self): return self._slice(1, 0, "rho")
-    @property 
-    def rho_yy(self): return self._slice(1, 1, "rho")
-    # phase (deg)
-    @property 
-    def ph_xx(self): return self._slice(0, 0, "phase")
-    @property 
-    def ph_xy(self): return self._slice(0, 1, "phase")
-    @property 
-    def ph_yx(self): return self._slice(1, 0, "phase")
-    @property 
-    def ph_yy(self): return self._slice(1, 1, "phase")
-
-    def __str__(self) -> str:                       # user-friendly
-        blocks = ", ".join(
-            k for k, v in (("Z", self.z),
-                            ("ρ", self.rho),
-                            ("ϕ", self.phase)) if v is not None
-        )
-        nf, ns = self.z.shape[:2] if self.z is not None else \
-                  self.rho.shape[:2] if self.rho is not None else \
-                  self.phase.shape[:2]
-        return f"ImpedanceTensor({blocks}; n_freq={nf}, n_station={ns})"
-
-    def __repr__(self) -> str:                      # dev-oriented
-        cls = self.__class__.__name__
-        nf, ns = (self.z or self.rho or self.phase).shape[:2]
-        flags = "/".join(flag for flag in
-                         ("Z"  if self.z     is not None else "-",
-                          "ρ"  if self.rho   is not None else "-",
-                          "ϕ"  if self.phase is not None else "-"))
-        return (f"<{cls} {flags} "
-                f"(n_freq={nf}, n_station={ns}) at 0x{id(self):x}>")
-
-
-
-class TensorFactory:
+    Normalize a component label (‘ExHy’, ‘Zxy’, etc.) to an
+    uppercase token present in _COMP_POS. Return None if unknown.
     """
-    Tiny helper that stacks four *xx/xy/yx/yy* component vectors into the
-    canonical ``(n_freq, 1, 2, 2)`` shape expected by
-    :class:`~pycsamt.zonge.Z`.
+    if label is None:
+        return None
+    s = str(label).strip().upper()
+    # Fast path
+    if s in _COMP_POS:
+        return s
+    # Try to strip non-alnum characters just in case
+    s2 = "".join(ch for ch in s if ch.isalnum())
+    return s2 if s2 in _COMP_POS else None
+
+
+def _station_array(values: Iterable[Any]) -> np.ndarray:
     """
-
-    @classmethod
-    def build(
-        cls,
-        *,
-        # any **one** (or more) of the following can be supplied
-        z:        Dict[str, Sequence[Any]] | None = None,
-        rho:      Dict[str, Sequence[Any]] | None = None,
-        phase:    Dict[str, Sequence[Any]] | None = None,
-        # optional one-sigma errors
-        z_err:    Dict[str, Sequence[Any]] | None = None,
-        rho_err:  Dict[str, Sequence[Any]] | None = None,
-        ph_err:   Dict[str, Sequence[Any]] | None = None,
-        dtype_z:  Any = complex,
-        dtype_f:  Any = float,
-    ) -> "ImpedanceTensor":
-        """
-        Assemble an :class:`ImpedanceTensor` from the components that are
-        **actually** available.  Any non-supplied block (and its error)
-        will be set to ``None``.
-
-        Example
-        -------
-        >>> t = TensorFactory.build(rho=rho_dict)   # only ρₐ known
-        >>> assert t.rho is not None and t.z is None
-        """
-        if z is rho is phase is None:
-            raise TensorBuildError("At least one of z / rho / phase is required")
-
-        # figure out grid size from the first non-None block
-        proto = next(b for b in (z, rho, phase) if b is not None)
-        cls._check_dict(proto, "prototype")
-        n_freq = len(next(iter(proto.values())))
-
-        # helper to stack or return None
-        def _maybe_stack(block, kind, dtype):
-            if block is None:
-                return None
-            cls._check_dict(block, kind)
-            cls._assert_equal_len(block, n_freq, kind)
-            return cls._stack(block, dtype)
-
-        z_t     = _maybe_stack(z,        "z",     dtype_z)
-        rho_t   = _maybe_stack(rho,      "rho",   dtype_f)
-        phase_t = _maybe_stack(phase,    "phase", dtype_f)
-        ze_t    = _maybe_stack(z_err,    "z_err", dtype_f)
-        re_t    = _maybe_stack(rho_err,  "rho_err", dtype_f)
-        pe_t    = _maybe_stack(ph_err,   "ph_err", dtype_f)
-
-        return ImpedanceTensor(z_t, rho_t, phase_t, ze_t, re_t, pe_t)
-
-
-    _REQ_KEYS = ("xx", "xy", "yx", "yy")
-
-    @classmethod
-    def _check_dict(cls, d: Dict[str, Sequence[Any]] | None, label: str) -> None:
-        if d is None:
-            return
-        missing = [k for k in cls._REQ_KEYS if k not in d]
-        if missing:
-            raise TensorBuildError(f"{label}: missing keys {missing}")
-
-    @staticmethod
-    def _assert_equal_len(d: Dict[str, Sequence[Any]], n: int, label: str) -> None:
-        for k, v in d.items():
-            if len(v) != n:
-                raise TensorBuildError(
-                    f"{label}.{k}: length {len(v)} ≠ reference {n}"
-                )
-
-    @staticmethod
-    def _stack(block: Dict[str, Sequence[Any]] | None, dtype) -> np.ndarray:
-        if block is None:
-            return None     # type: ignore[return-value]
-        xx, xy, yx, yy = (np.asarray(block[k], dtype=dtype) for k in (
-            "xx", "xy", "yx", "yy"))
-        return np.stack(  # (n_freq, 2, 2)
-            (np.stack((xx, xy), axis=-1),
-             np.stack((yx, yy), axis=-1)),
-            axis=-2
-        )[..., None, :, :]        # → (n_freq, 1, 2, 2)
+    Normalize station coordinate array for indexing. Keep numeric
+    if possible, else fall back to strings.
+    """
+    vals = pd.Series(values)
+    num = pd.to_numeric(vals, errors="coerce")
+    if num.notna().all():
+        return num.to_numpy()
+    return vals.astype(str).to_numpy()

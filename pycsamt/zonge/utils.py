@@ -21,6 +21,7 @@ from numbers import Integral
 from pathlib import Path
 import re
 import io
+import warnings
 from typing import (
     List, 
     Tuple, 
@@ -33,16 +34,14 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-# Lazy import to keep hard dependency optional.
 try:
     import xarray as xr  # type: ignore
-except Exception as exc:  # pragma: no cover
-    raise ImportError(
-        "xarray is required for to_xarray()"
-    ) from exc
-    
+except ImportError:  # pragma: no cover
+    warnings.warn(
+        "xarray is required for the package"
+    )
 from ..decorators import isdf 
-from ..gis.utils import ll_to_utm                # type: ignore
+from ..gis.utils import ll_to_utm # type: ignore
 from ..exceptions import (
     AvgFileError, 
     AvgDataError, 
@@ -71,7 +70,6 @@ _RX_K1_HEADER      = re.compile(r"^skp\s+Station", re.I)
 _NUMERIC_REPLACE   = {"*": np.nan, "nan": np.nan, "NaN": np.nan,
                       "": np.nan}
 
-# Instead of multiple update() calls...
 _COL_MAP = {
     # General & Legacy
     'Station': 'station', 
@@ -97,6 +95,7 @@ _COL_MAP = {
     'E.phz': 'ephz',
     'B.mag': 'hmag',  # Maps to hmag
     'B.phz': 'hphz',  # Maps to hphz
+    'H.mag': 'hmag',
     'Z.mag': 'zmag',
     'Z.phz': 'phase',
     'ARes.mag': 'rho',
@@ -116,62 +115,6 @@ _COL_MAP = {
     'Gdp.Time': 'gdp_time',
     '|Z|': 'zabs',
 }
-
-# _COL_MAP = {
-#     'Station': 'station',
-#     'Stn': 'station',
-#     'skp': 'skp',          
-#     'Freq': 'freq', 'Freq.': 'freq',
-#     'Comp': 'comp',
-#     'Tx.Amp': 'amps', 'Amps': 'amps',
-#     'E.mag': 'emag', 'Emag': 'emag',
-#     'E.phz': 'ephz', 'Ephz': 'ephz',
-#     'H.mag': 'hmag', 'B.mag': 'hmag',
-#     'Hphz': 'hphz', 'B.phz': 'hphz',
-#     'Resistivity': 'rho', 'ARes.mag': 'rho',
-#     'Phase': 'phase', 'Z.phz': 'phase',
-# }
-
-# # add to _COL_MAP
-# _COL_MAP.update({
-#     'Z.mag': 'zmag',
-#     'Z.phz': 'phase',   # already there via 'Phase' but keep explicit
-#     'ARes.mag': 'rho',
-#     'B.mag': 'hmag',    # you already map in __all__
-#     'B.phz': 'hphz',
-#     'E.%err': 'e.%err',
-#     'E.perr': 'e.perr',
-#     'B.%err': 'h.%err',
-#     'B.perr': 'h.perr',
-#     'Z.%err': 'z.%err',
-#     'Z.perr': 'z.perr',
-#     'ARes.%err': 'rho.%err',
-# })
-
-# _COL_MAP.update({
-#     # Modern CSAVGW
-#     'Z.mag': 'zmag',
-#     'Z.phz': 'phase',
-#     'ARes.mag': 'rho',
-#     'SRes': 'rho_sc',          # static-corrected rho (modern)
-#     'E.wgt': 'e.wgt',
-#     'H.wgt': 'h.wgt',
-#     'Choer': 'coh',
-#     'Gdp.Blk': 'gdp_blk',
-#     'Gdp.Chn': 'gdp_chn',
-#     'Gdp.Time': 'gdp_time',
-#     '|Z|': 'zabs',
-
-#     'E.%err': 'e.%err', 'E.perr': 'e.perr',
-#     'B.%err': 'h.%err', 'B.perr': 'h.perr',
-#     'Z.%err': 'z.%err', 'Z.perr': 'z.perr',
-#     'ARes.%err': 'rho.%err',
-
-#     # Legacy extras
-#     'TMARES': 'rho_sc', 'SRES': 'rho_sc',
-#     'TMARES/SRES': 'rho_sc',
-#     'Resistivity': 'rho',
-# })
 
 _CANON2K2: dict[str, str] = {
     # survey logistics
@@ -202,7 +145,6 @@ _CANON2K2: dict[str, str] = {
     "e.wgt":  "E.wgt",
     "b.wgt":  "B.wgt",
 }
-
 
 def _to_float(val: str | float | int) -> float | np.floating:
     """Convert *val* to float while honouring project placeholders."""
@@ -448,7 +390,6 @@ def _parse_kind2(
     # Merge top-level meta with collected per-block meta.
     meta: Dict[str, Any] = {**global_meta, 'blocks': blocks_meta}
     return df, meta
-
 
 def split_by_station(
     df: pd.DataFrame

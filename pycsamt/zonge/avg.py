@@ -1,96 +1,295 @@
-    
-    # maybe you can write BaseAVG class first and when Im satisfy I will let you know to 
-    # create AMTAVG and CSAMTAVG classes 
-    # to inherit from this class. 
-    #
-    
-    # This is the previous version v1.xxx of the pycsamt. 
-    # now we are writing the version 2.xx which is totally differnt from the 
-    # previous one and adopt new architecture like fit and new API liek 
-    # show all the components previously given 
-    
-    # so rewrite this class to follow the new architecture . 
-    
-   
-# @has_fit("raise")
-# class AVG(BaseAVG): 
-
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
-# License: LGPL-3.0
-
+# License: LGPL-3.0-or-later
 """
-Level façade around :pymod:`pycsamt.zonge.utils`.
+AVG - Main user-facing data container for Zonge datasets.
 
-* Loads any 'kind-1 / kind-2' Zonge AVG file into a tidy
-  :class:`pandas.DataFrame`.
-* Keeps header metadata in a plain ``dict``.
-* Provides a symmetrical :py:meth:`write` helper to re-emit a
-  *kind-2* CSV AVG.
+This module provides the `AVG` class, which serves as the
+primary entry point and high-level facade for interacting with a
+complete Zonge AVG dataset. It composes all other components
+(Header, Z, Resistivity, Phase, and QC metrics) into a single,
+convenient container.
 """
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
-from typing  import ( 
-    Iterable, 
-    Literal, 
-    Sequence, 
-    Any, 
-    Callable
+from typing import (
+    Any,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+    Literal
 )
-from datetime import datetime, timezone
-import numpy as np 
+
+import numpy as np
 import pandas as pd
-from scipy.ndimage import uniform_filter1d
 
+from ..constants import MU_0, PI
 from ..decorators import has_fit
-from ..exceptions import ( 
-    AvgFileError, 
-    AvgDataError, 
-    ResistivityError, 
-    PhaseError, 
-    ZError, 
-    
-)
-from ..log.logger  import get_logger
-from ..utils.validation import check_is_fitted 
-
-from .base import BaseAVG, OpsBase
-from .heads import Head
-from .property import (
-    Hardware,
-    SurveyAnnotation,
-    SurveyConfiguration,
-    Receiver,
-    Transmitter,
-    SkipFlag,
-)
-from .meas import (
-    CompMeas,
-    Amps,
-    Frequency,
-)
-from .resphase import Resistivity, Phase
-from .survey   import Station
-from .qc      import (
-    PcEmag,
-    PcHmag,
-    PcRho,
-    SPhz,
-    SHphz,
-    SEphz,
-)
-from .info import DataInfo 
-from .utils        import (
+from ..log.logger import get_logger
+from ..utils.deps import ensure_pkg 
+from ._transfer import LegacyAVGBase
+from .base import AVGFrame
+from .info import DataInfo
+from .utils import ( 
+    classify_avg_format, 
     load_avg, 
-    write_avg, 
-    extract_core_columns,
+    write_avg
 )
-from .z import Z
+
+__all__ = ["BaseAVG","AVG", "AMTAVG"]
 
 logger = get_logger(__name__)
 
-__all__ = ["AVG", "AVGOps"]
+class BaseAVG:
+    """Base class for AVG data handling and file writing."""
+
+    def __init__(self, verbose: bool = False):
+        self.info: DataInfo = DataInfo()
+        self.verbose: bool = verbose
+        self._kind: Optional[int] = None
+        self._source_path: Optional[Path] = None
+
+    def read(
+        self,
+        source: Union[str, Path, pd.DataFrame, AVGFrame],
+        meta: Optional[Mapping[str, Any]] = None,
+    ):
+        """
+        Read, parse, and populate components from a data source.
+        """
+        df: pd.DataFrame
+        final_meta: Mapping[str, Any]
+
+        if isinstance(source, (str, Path)):
+            self._source_path = Path(source)
+            if self.verbose:
+                logger.info(
+                    f"Reading from file: {self._source_path}"
+                )
+            lines = self._source_path.read_text(
+                errors="replace"
+            ).splitlines()
+            self._kind = classify_avg_format(lines)
+            df, final_meta = load_avg(self._source_path)
+
+            if self._kind == 1:
+                if self.verbose:
+                    logger.info("Transforming legacy data.")
+                transformer = LegacyAVGBase()
+                ds = transformer.from_dataframe(df, meta=final_meta)
+                df = ds.to_dataframe().reset_index()
+                final_meta = ds.attrs
+
+        elif isinstance(source, pd.DataFrame):
+            if self.verbose:
+                logger.info("Reading from pandas DataFrame.")
+            df = source
+            final_meta = meta or {}
+            self._kind = 2  # Assume modern if from DataFrame
+
+        elif isinstance(source, AVGFrame):
+            if self.verbose:
+                logger.info("Reading from AVGFrame object.")
+            df = source.data
+            final_meta = source.meta
+            self._source_path = source.source
+            self._kind = 2  # Assume modern
+
+        else:
+            raise TypeError(
+                "Unsupported source type. Expected Path, str, "
+                "DataFrame, or AVGFrame."
+            )
+
+        if self.verbose:
+            logger.info("Populating data components...")
+        self.info.read(df, final_meta)
+        if self.verbose:
+            logger.info("AVG data successfully loaded.")
+            
+    def to_modern(
+        self,
+        path: Optional[Union[str, Path]] = None,
+        *,
+        stamp: bool = True,
+        float_fmt: str = "%.6g",
+        na_rep: str = "",
+        header_spaces: bool = False,
+    ):
+        """
+        Write data to a modern (kind-2) AVG file.
+        """
+        if self.info.df is None:
+            raise ValueError("Data frame is not loaded.")
+
+        if path is None:
+            base = (
+                self._source_path.stem
+                if self._source_path
+                else "export"
+            )
+            path = Path.cwd() / f"{base}_modern.avg"
+
+        if self.verbose:
+            logger.info(f"Writing modern AVG file to: {path}")
+
+        meta = self.info.header.to_keywords()
+
+        write_avg(
+            core=self.info.df,
+            extra=None,
+            meta=meta,
+            path=path,
+            stamp=stamp,
+            float_fmt=float_fmt,
+            na_rep=na_rep,
+            header_spaces=header_spaces,
+        )
+        
+    def to_legacy(
+        self,
+        path: Optional[Union[str, Path]] = None,
+        *,
+        precision: int = 4,
+        na_rep: str = "*",
+    ):
+        """
+        Write data to a legacy (kind-1) AVG file.
+        """
+        if self.info.df is None:
+            raise ValueError("Data frame is not loaded.")
+
+        if path is None:
+            base = (
+                self._source_path.stem
+                if self._source_path
+                else "export"
+            )
+            path = Path.cwd() / f"{base}_legacy.avg"
+
+        if self.verbose:
+            logger.info(f"Writing legacy AVG file to: {path}")
+
+        lines = []
+        h = self.info.header
+        lines.append(
+            f"\\ AMTAVG 7.76: "
+            f"\"{h.hardware.source_file or 'pycsamt.export'}\", "
+            f"Dated {h.hardware.dated or '...'}, "
+            f"Processed {h.hardware.processed or '...'}"
+        )
+        if h.rx.length_m is not None:
+            lines.append(f"$ ASPACE= {h.rx.length_m}m")
+        if h.tx.gdp_station is not None:
+            lines.append(f"$ XMTR  = {h.tx.gdp_station:>5.0f}.")
+
+        header_str = (
+            " skp Station Freq  Comp Amps     Emag     Ephz      "
+            "Hmag     Hphz  Resistivity   Phase  %Emag  sEphz  "
+            "%Hmag  sHphz   %Rho   sPhz"
+        )
+        separator_str = (
+            "\\-++------++----++---++----++---------++------++"
+            "---------++------++---------++------++-----++-----++"
+            "-----++-----++-----++-----+"
+        )
+        lines.append(header_str)
+        lines.append(separator_str)
+
+        df = self.info.df.sort_values(by=["station", "freq"])
+
+        # Define format specifier to avoid linter confusion
+        sci_fspec = f"%9.{precision}e"
+
+        def _format_val(val, fspec, na_char):
+            width = len(fspec % 0)
+            if pd.isna(val):
+                return na_char.center(width)
+            return fspec % val
+        
+        for _, row in df.iterrows():
+            skp = 2 if row.get("use", True) else 1
+
+            line = (
+                f" {skp:1d} "
+                f"{_format_val(row.get('station'), '%7.1f', na_rep)} "
+                f"{_format_val(row.get('freq'), '%5.0f', na_rep)} "
+                f"{str(row.get('comp', 'ExHy')):<4s} "
+                f"{_format_val(row.get('amps'), '%4.1f', na_rep)}   "
+                f"{_format_val(row.get('emag'), sci_fspec, na_rep)} "
+                f"{_format_val(row.get('ephz'), '%7.1f', na_rep)}  "
+                f"{_format_val(row.get('hmag'), sci_fspec, na_rep)} "
+                f"{_format_val(row.get('hphz'), '%7.1f', na_rep)}  "
+                f"{_format_val(row.get('rho'), sci_fspec, na_rep)} "
+                f"{_format_val(row.get('phase'), '%7.1f', na_rep)}   "
+                f"{_format_val(row.get('pc_emag'), '%4.1f', na_rep)}  "
+                f"{_format_val(row.get('s_ephz'), '%5.1f', na_rep)}  "
+                f"{_format_val(row.get('pc_hmag'), '%4.1f', na_rep)}  "
+                f"{_format_val(row.get('s_hphz'), '%5.1f', na_rep)}   "
+                f"{_format_val(row.get('pc_rho'), '%4.1f', na_rep)}  "
+                f"{_format_val(row.get('s_phz'), '%5.1f', na_rep)}"
+            )
+            lines.append(line)
+
+        Path(path).write_text("\n".join(lines))
+
+    def write(
+        self,
+        path: Optional[Union[str, Path]] = None,
+        *,
+        fmt: Literal[
+            "kind1", "kind2", "legacy", "modern", "auto"
+        ] = "auto",
+        **kwargs,
+    ):
+        """
+        Write AVG data to a file in the specified format.
+        """
+        fmt_lower = fmt.lower()
+        if fmt_lower in ("legacy", "kind1"):
+            self.to_legacy(path, **kwargs)
+        elif fmt_lower in ("modern", "kind2", "auto"):
+            self.to_modern(path, **kwargs)
+        else:
+            raise ValueError(f"Unknown format '{fmt}' specified.")
+
+    def __str__(self) -> str:
+        """Provide a concise, human-readable representation."""
+        if self.info.df is None or self.info.df.empty:
+            status = "empty"
+        else:
+            n_st = self.info.station.n_unique
+            n_f = self.info.frequency.n_unique
+            status = (
+                f"stations={n_st}, freqs={n_f}, "
+                f"rows={len(self.info.df)}"
+            )
+
+        src = (
+            f", source='{self._source_path.name}'"
+            if self._source_path
+            else ""
+        )
+        return f"{self.__class__.__name__}({status}{src})"
+
+    def __repr__(self) -> str:
+        """Provide an unambiguous developer representation."""
+        path_repr = (
+            f"Path('{self._source_path}')"
+            if self._source_path
+            else "None"
+        )
+        return (
+            f"{self.__class__.__name__}("
+            f"source_path={path_repr}, "
+            f"verbose={self.verbose}, "
+            f"loaded={'is not None' if self.info.df is not None else 'False'}"
+            ")"
+        )
+
 
 @has_fit("raise")
 class AVG(BaseAVG):
@@ -191,7 +390,7 @@ class AVG(BaseAVG):
     Load, tweak a component, and write back::
 
         >>> from pycsamt.zonge.avg import AVG
-        >>> avg = AVG('LCS01.avg', verbose=True).fit()
+        >>> avg = AVG(verbose=True).fit('LCS01.avg')
         >>> avg.PcEmag.values *= 0.75       # re-scale E-error
         >>> avg.write('LCS01_clean.avg')
 
@@ -210,893 +409,409 @@ class AVG(BaseAVG):
            Geophysics*, Vol. 2, pp. 713-809.
 
     """
-
-    def __init__(
-        self,
-        obj_or_path: str | Path | pd.DataFrame | None = None,
-        *,
-        meta: dict[str, str] | None = None,
-        verbose: bool = False
-    ) -> None:
-  
-   
-        # 1) create *all* component shells – they stay empty until
-        #    _populate_components() fills them
-        self.Head   = Head()
-
-        # header-property blocks
-        self.Hardware            = Hardware()
-        self.SurveyAnnotation    = SurveyAnnotation()
-        self.SurveyConfiguration = SurveyConfiguration()
-        self.Receiver            = Receiver()
-        self.Transmitter         = Transmitter()
-        self.SkipFlag            = SkipFlag()
-
-        # per-station / per-frequency measurements
-        self.Station     = Station()
-        self.Frequency   = Frequency()
-        self.Amps        = Amps()
-        self.Emag        = CompMeas("ExHy")
-        self.Ephz        = CompMeas("ExHy")
-        self.Hmag        = CompMeas("ExHy")
-        self.Hphz        = CompMeas("ExHy")
-
-        # variations & QC
-        self.PcEmag      = PcEmag()
-        self.PcHmag      = PcHmag()
-        self.PcRho       = PcRho()
-        self.SEphz       = SEphz()
-        self.SHphz       = SHphz()
-        self.SPhz        = SPhz()
-
-        # resistivity / phase
-        self.Resistivity = Resistivity()
-        self.Phase       = Phase()
-
-        # impedance tensor – created empty; maybe filled later
-        self.Z           = Z()
-
-        # misc
-        self.DataInfo    = DataInfo()
-
-        # 2) base initialisation (empty frame for now)
-        super().__init__(pd.DataFrame(), meta or {}, None)
-        self.verbose = verbose
-        self.obj_or_path = obj_or_path 
-        self.meta = meta 
-
-        
-    def read(
-        self,
-        obj_or_path: str | Path | pd.DataFrame |None,
-        *,
-        meta: dict[str, str] | None = None,
-        inplace: bool = False
-    ) -> "AVG":
-        """
-        Load an AVG file **or** a ready-made :class:`pandas.DataFrame`
-        *and hydrate every component object*.
-
-        • When *obj_or_path* is a path the file is parsed by
-          :func:`pycsamt.zonge.utils.load_avg`.
-        • When it is a DataFrame the caller is assumed to have done the
-          parsing already and *meta* becomes the header dictionary.
-        """
-        # ---- 1. acquire DataFrame + header ------------------------
-        self.obj_or_path = obj_or_path or self.obj_or_path 
-        self.meta = meta or self.meta 
-        
-        if isinstance(self.obj_or_path, (str, Path)):
-            df, hdr   = load_avg(Path(self.obj_or_path), inplace=inplace)
-            _source   = Path(self.obj_or_path)
-            if meta:                                   # user overrides
-                hdr.update(self.meta)
-        elif isinstance(self.obj_or_path, pd.DataFrame):
-            df, hdr, _source = self.obj_or_path.copy(), (meta or {}), None
-        else:
-            raise TypeError("read() expects AVG-path or DataFrame")
-
-        # 2. keep pristine copy for round-trips 
-        self._df_core = df.copy()
-
-        # 3. hydrate header / property blocks 
-        self._populate_header(hdr)
-
-        # ---- 4. create numeric component views 
-        self._populate_components(df)
-
-        # 5. update BaseAVG bookkeeping 
-        super().__init__(data=df, meta=hdr, source=_source)
-
-        if self.verbose:
-            logger.info("AVG loaded – %s", self)
-        return self
-
-    def _populate_header(self, hdr: dict[str, str]) -> None:
-        """
-        Map the *hdr* dict (key=value pairs returned by ``load_avg``)
-        onto the lightweight property containers.
-        """
-        
-        # -- hardware 
-        self.Hardware.set(
-            version      = hdr.get("AMTAVG",    self.Hardware.version),
-            source_file  = self.source,
-            dated        = hdr.get("Dated"),
-            processed    = hdr.get("Processed"),
-            astatic_ver  = hdr.get("ASTATIC",   self.Hardware.astatic_ver),
-            updated      = hdr.get("Updated"),
-        )
-
-        # -- survey configuration 
-        self.SurveyConfiguration.set(
-            survey_type   = hdr.get("Survey.Type",   "CSAMT"),
-            array_type    = hdr.get("Survey.Array"),
-            line_name     = hdr.get("Line.Name"),
-            line_number   = _try_float(hdr.get("Line.Number")),
-            line_azim_deg = _try_float(hdr.get("Line.Azimuth")),
-            unit_length   = hdr.get("Unit.Length",   "m"),
-            unit_emag     = hdr.get("Unit.E",        "nV/m"),
-            unit_hfield   = hdr.get("Unit.B",        "pT"),
-            unit_phase    = hdr.get("Unit.Phase",    "mrad"),
-            utm_zone      = _try_int(hdr.get("UTM_Zone")),
-        )
-
-        # -- survey annotation 
-        self.SurveyAnnotation.set(
-            project_name  = hdr.get("Job.Name",  
-                                    self.SurveyAnnotation.project_name),
-            project_area  = hdr.get("Area"),
-            customer_name = hdr.get("Customer"),
-            contractor_name = hdr.get("Contractor"),
-            project_label = hdr.get("Label"),
-        )
-
-        # -- transmitter & receiver 
-        self.Transmitter.set(
-            station   = _try_int(hdr.get("Tx.Stn",       0)),
-            gdp_station = _try_int(hdr.get("Tx.GdpStn")),
-            tx_type   = hdr.get("Tx.Type"),
-        )
-        self.Receiver.set(
-            station   = _try_int(hdr.get("Rx.Stn",       0)),
-            gdp_station = _try_int(hdr.get("Rx.GdpStn")),
-            length_m  = _try_float(hdr.get("Rx.Length")),
-            comps     = hdr.get("Rx.Cmp", "ExHy"),
-        )
-
-        # -- skip-flag (fall back to “2 = good”) 
-        self.SkipFlag.set(hdr.get("Skip", "2"))
-
-    def _populate_components(self, df: pd.DataFrame) -> None:
-        """
-        Slice the canonical DataFrame columns and feed every component
-        object.  The logic is intentionally strict: **all** mandatory
-        columns must exist; if something is missing a clear exception is
-        raised so the caller knows the AVG is incomplete or wrongly
-        parsed.
-        """
-        try:
-            stn   = df["station"].values
-            freq  = df["freq"].values
-        except KeyError as exc:
-            raise AvgDataError(f"mandatory column missing: {exc}") from None
-
-        n_freq     = len(np.unique(freq))
-        n_station  = len(np.unique(stn))
-
-        # ── station & frequency first 
-        self.Station.read(stn,  unit="m")
-        self.Frequency.read(freq, n_freq=n_freq)
-
-        # ── core scalar / vector components
-        _req = ("amps", "emag", "ephz", "hmag", "hphz", "rho", "phase")
-        for col in _req:
-            if col not in df.columns:
-                raise AvgDataError(f"AVG file lacks <{col}> column")
-                
-        self.Amps.read( df["amps"].values,    n_freq, n_station)
-        self.Emag.read( df["emag"].values,    n_freq, n_station)
-        self.Ephz.read( df["ephz"].values,    n_freq, n_station)
-        self.Hmag.read( df["hmag"].values,    n_freq, n_station)
-        self.Hphz.read( df["hphz"].values,    n_freq, n_station)
-        self.Resistivity.read(df["rho"].values,   n_freq, n_station)
-        self.Phase.read( df["phase"].values, n_freq, n_station)
-
-        # ── optional variations / QC columns 
-        self.PcEmag.read(df.get("e.%err", np.zeros_like(freq)),
-                         n_freq, n_station)
-        self.PcHmag.read(df.get("h.%err", np.zeros_like(freq)),
-                         n_freq, n_station)
-        self.PcRho .read(df.get("rho.%err", np.zeros_like(freq)),
-                         n_freq, n_station)
-        self.SEphz.read(df.get("e.perr", np.zeros_like(freq)),
-                        n_freq, n_station)
-        self.SHphz.read(df.get("h.perr", np.zeros_like(freq)),
-                        n_freq, n_station)
-        self.SPhz .read(df.get("phase.%err", np.zeros_like(freq)),
-                        n_freq, n_station)
-
-        # ── impedance tensor (kind-2 only) ─────────────────────────────
-        if {"z.mag", "z.phz"}.issubset(df.columns):
-            z_abs   = df["z.mag"].values
-            z_phase = df["z.phz"].values * 1e-3         # mrad → rad   (✓)
-        
-            # complex |Z|·e^{jφ}
-            z_complex = z_abs * (np.cos(z_phase) + 1j * np.sin(z_phase))
-        
-            # assume ExHy only → xx = yy = 0,  xy = Z,  yx = 0
-            z_stack = np.zeros((n_freq * n_station, 2, 2), dtype=complex)
-            z_stack[:, 0, 1] = z_complex
-        
-            # (n_freq, n_station, 2, 2)
-            z_stack = (
-                z_stack.reshape(n_station, n_freq, 2, 2)
-                       .swapaxes(0, 1)
-            )
-        
-            self.Z.read(
-                z_stack,
-                freq        = np.unique(freq),
-                station_ids = self.Station.names,
-            )
-
-    def _native_writer(
-        self,
-        path: str | Path | None,
-        core_only: bool = False,
-        stamp: bool = True,
-        keep: Iterable[str] | None = None, 
-        **kw
-        ) -> Path:
-        """
-        Serialise the current frame back to disk (*kind-2 CSV*).
-
-        Parameters
-        ----------
-        path       : str | Path
-            Destination filename (``.avg`` will **not** be added
-            automatically).
-        core_only  : bool, default *False*
-            When *True* only the *core* columns (see
-            :func:`~pycsamt.zonge.utils.extract_core_columns`) are
-            written; ancillary fields go to the *extra* block.
-        stamp      : bool, default *True*
-            Append a `$Written = …` UTC time-stamp.
-        keep       : Iterable[str] | None
-            Custom column subset passed to *extract_core_columns*
-            (ignored if *core_only* is *False*).
-        """
-        if core_only:
-            core, extra = extract_core_columns(self.data, keep=keep)
-        else:
-            core, extra = self.data, pd.DataFrame()
-
-        path = write_avg(
-            core, extra, 
-            self.meta, path=path, 
-            stamp=stamp, 
-            **kw
-            )
-        if self.verbose:
-        
-            logger.info("AVG saved -> %s", Path(path).resolve())
-            
-        return path 
-    
-    def write(
-        self,
-        path: str | Path | None = None,
-        *,
-        fmt: Literal["kind1", "kind2", "auto", "native"] = "auto",
-        when_unspecified: Literal["file", "string"] = "file",
-        core_only: bool = False,
-        stamp: bool = True,
-        keep: Iterable[str] | None = None,
-        **export_kw,
-    ) -> Path | str:
-        """
-        Serialise the current AVG **components** back to disk or return
-        the generated text.
-    
-        Parameters
-        ----------
-        path : str | Path | None, default *None*
-            Destination.  If *None* the behaviour depends on
-            *when_unspecified*.
-        fmt : {"kind1", "kind2", "auto"}, default ``"auto"``
-            Which flavour to emit.
-    
-            ``"auto"`` → decide from *path* suffix  
-            ``"kind1"`` → legacy whitespace table  
-            ``"kind2"`` → modern CSV with metadata
-        when_unspecified : {"file", "string"}, default ``"file"``
-            Fallback when *path* is *None*:
-    
-            * ``"file"``  → create a file called
-              ``<basename>_<fmt>.avg`` in *cwd*.
-            * ``"string"`` → return the text only.
-        core_only, stamp, keep
-            Forwarded to the underlying exporter **when applicable**.
-        export_kw
-            Extra keyword arguments propagated to *to_kind1* / *to_kind2*
-            (e.g. *float_fmt*, *na_rep* …).
-    
-        Returns
-        -------
-        Path | str
-            The written file **or** the AVG text.
-        """
-
-        # 0) Sanity
-        if self._df_core.empty:
-            raise AvgFileError(
-                "Nothing to write – load or build data first"
-            )
-        
-        fmt = str(fmt).lower() 
-        
-        if fmt=='native': 
-            return self._native_write(
-                path= path, 
-                core_only=core_only, 
-                stamp=stamp, 
-                keep=keep, 
-                **export_kw
-             )
-        
-        # 1) Resolve format
-        if fmt == "auto":
-            if isinstance(path, (str, Path)):
-                fmt = "kind1" if str(path).lower().endswith(
-                    "_kind1.avg") else "kind2"
-            else:
-                fmt = "kind2"                       # sensible default
-    
-        if fmt not in {"kind1", "kind2"}:
-            raise ValueError(
-                "fmt must be 'kind1', 'kind2' or 'auto'")
-    
-        # 2) Delegate to the right exporter
-        if fmt == "kind1":
-            result = self.to_kind1(
-                savefile=path,
-                when_unspecified=when_unspecified,
-                stamp=stamp,
-                core_only=core_only,
-                keep=keep,
-                **export_kw,
-            )
-        else:  # kind-2
-            result = self.to_kind2(
-                savefile=path,
-                when_unspecified=when_unspecified,
-                stamp=stamp,
-                core_keep=keep if core_only else None,
-                **export_kw,
-            )
-    
-        return result
-
-    @property
-    def core(self) -> pd.DataFrame:
-        """Return *kind-2* core columns (always a **copy**)."""
-        core, _ = extract_core_columns(self.data)
-        return core
-
-    @property
-    def extra(self) -> pd.DataFrame:
-        """Return ancillary columns (copy)."""
-        _, extra = extract_core_columns(self.data)
-        return extra
-
+    def __init__(self, verbose: bool = False):
+        super().__init__(verbose=verbose)
 
     @classmethod
-    def from_avg(cls, path: str | Path, **kw) -> "AVG":
-        """Shorthand for ``AVG().read(path, **kw)``."""
-        return cls().read(path, **kw)
-
-
-    def __getitem__(self, key: str) -> pd.Series:
-        """Column selection: ``avg['rho']``."""
-        return self.data[key]
-
-    def __len__(self) -> int:        # row count
-        return self.nrows
-
-    def _build_frame_from_components(self) -> pd.DataFrame:
+    def from_file(
+        cls,
+        path: Union[str, Path],
+        *,
+        verbose: bool = False,
+    ) -> "AVG":
         """
-        Recompose a tidy DataFrame from the current component objects.
-    
-        The routine assumes that *all “vector” components* share the same
-        grid size ``(n_freq × n_station)``.  Station & frequency provide
-        the master axes.
+        Load and parse an AVG file (legacy or modern).
+
+        This factory method handles file classification, parsing,
+        and optional transformation of legacy data into a modern,
+        consistent structure.
         """
-        if not (self.Station and self.Frequency):
-            raise AvgDataError("Station and/or Frequency not populated")
     
-        stn = self.Station.value.ravel()
-        frq = np.repeat(self.Frequency.value, len(
-            self.Station.value) // len(self.Frequency.value))
-    
-        # helper: flatten component → 1-D array or np.nan
-        def _vec(obj, attr="value"):
-            return getattr(obj, attr).ravel(
-                ) if obj is not None else np.full_like(frq, np.nan, dtype=float)
-    
-        frame_dict = {
-            "Station"    : stn,
-            "Freq"       : frq,
-            "Comp"       : self.CompMeas.name if self.CompMeas else "ExHy",
-            "Amps"       : _vec(self.Amps),
-            "Emag"       : _vec(self.Emag),
-            "Ephz"       : _vec(self.Ephz),
-            "Hmag"       : _vec(self.Hmag),
-            "Hphz"       : _vec(self.Hphz),
-            "Resistivity": _vec(self.Resistivity),
-            "Phase"      : _vec(self.Phase),
-            "%Emag"      : _vec(self.PcEmag),
-            "sEphz"      : _vec(self.SEphz),
-            "%Hmag"      : _vec(self.PcHmag),
-            "sHphz"      : _vec(self.SHphz),
-            "%Rho"       : _vec(self.PcRho),
-            "sPhz"       : _vec(self.SPhz),
+        obj = cls(verbose=verbose)
+        obj.read(path)
+        return obj
+
+    # --- Properties to expose components ---
+    @property
+    def header(self):
+        """Access the Header component."""
+        return self.info.header
+
+    @property
+    def station(self):
+        """Access the Station component."""
+        return self.info.station
+
+    @property
+    def z(self):
+        """Access the impedance (Z) component."""
+        return self.info.z
+
+    @property
+    def resistivity(self):
+        """Access the Resistivity component."""
+        return self.info.resistivity
+
+    @property
+    def phase(self):
+        """Access the Phase component."""
+        return self.info.phase
+
+    @property
+    def frequency(self):
+        """Access the Frequency component."""
+        return self.info.frequency
+        
+    @property
+    def df(self) -> Optional[pd.DataFrame]:
+        """
+        Access the core tidy DataFrame containing all available
+        data columns after parsing and normalization.
+        """
+        return self.info.df
+
+    @ensure_pkg ('xarray', extra="xarray is required.")
+    def to_xarray(
+        self,
+        *,
+        include_qc: bool = True,
+        include_z: bool = True,
+    ):
+        """
+        Export the complete dataset to a single xarray.Dataset.
+
+        This method aggregates primary data (resistivity, phase),
+        computed impedance (Z), and optional quality control (QC)
+        metrics into a unified, multi-dimensional dataset.
+        """
+        if self.info.df is None:
+            warnings.warn(
+                "Cannot create xarray.Dataset from empty data.")
+            return None
+
+        # Start with the primary data variables
+        ds_rho = self.resistivity.to_xarray()
+        ds_phase = self.phase.to_xarray()
+
+        # Merge primary datasets
+        ds = ds_rho.merge(ds_phase)
+
+        # Optionally compute and merge complex impedance
+        if include_z:
+            try:
+                z_real = self.z.to_xarray(var="z_real")
+                z_imag = self.z.to_xarray(var="z_imag")
+                z_err = self.z.to_xarray(var="z_err")
+                ds = ds.merge(z_real)
+                ds = ds.merge(z_imag)
+                ds = ds.merge(z_err)
+            except Exception as e:
+                if self.verbose:
+                    logger.warning(
+                        f"Could not compute impedance Z: {e}")
+
+        # Optionally merge all available QC metrics
+        if include_qc:
+            qc_components = {
+                "pc_emag": self.info.pc_emag,
+                "pc_hmag": self.info.pc_hmag,
+                "pc_rho": self.info.pc_rho,
+                "s_ephz": self.info.s_ephz,
+                "s_hphz": self.info.s_hphz,
+                "s_phz": self.info.s_phz,
+            }
+            for name, comp in qc_components.items():
+                try:
+                    ds_qc = comp.to_xarray()
+                    # Rename data var to avoid conflicts
+                    var_name = list(ds_qc.data_vars)[0]
+                    ds = ds.merge(ds_qc.rename({var_name: name}))
+                except Exception:
+                    if self.verbose:
+                        logger.info(
+                            f"Skipping QC component '{name}': "
+                            "data not available."
+                        )
+
+        # Attach comprehensive header metadata
+        ds.attrs.update(self.header.to_keywords())
+        ds.attrs["source_file"] = (
+            str(self._source_path) 
+            if self._source_path else "Unknown"
+        )
+        return ds
+
+    def to_tensor(
+        self,
+        var: str = "z",
+        *,
+        station: Optional[Union[int, float]] = None,
+        agg: str | None = "mean",
+        fill_value: float = np.nan,
+        sort_freq: bool = True,
+        align: str = "union",
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Export a specific variable as a 2x2 tensor.
+
+        This is a convenience method that delegates to the
+        appropriate component's `to_tensor` method.
+        """
+        component_map = {
+            "z": self.z,
+            "z_real": self.z,
+            "z_imag": self.z,
+            "z_err": self.z,
+            "rho": self.resistivity,
+            "phase": self.phase,
         }
-    
-        df = pd.DataFrame(frame_dict)
-        # leading skip flag (single value broadcasted)
-        df.insert(0, "skp", self.Head.skip.code)
-        return df
-
-
-    def to_kind2(
-        self,
-        savefile: str | Path | None = None,
-        *,
-        when_unspecified: Literal["file", "string"] = "file",
-        core_keep: Iterable[str] | None = None,
-        stamp: bool = True,
-        na_rep: str = "*",
-        float_fmt: str = "%.6g",
-    ) -> str | Path:
-        """
-        Emit a **kind-2** AVG (metadata header + CSV data block).
-    
-        Parameters
-        ----------
-        savefile : str | Path | None, default *None*
-            Where to write.  See *when_unspecified* for the fallback rule.
-        when_unspecified : {"file", "string"}, default ``"file"``
-            Behaviour when *savefile* is *None*.
-    
-            ``"file"``   → create ``<basename>_kind2.avg`` in *cwd*.  
-            ``"string"`` → return the text only.
-        core_keep : Iterable[str] | None, optional
-            Column names to keep in the **core** section
-            (defaults to the helper’s internal minimal set).
-        stamp : bool, default *True*
-            Append a ``$Written=<UTC-timestamp>`` record.
-        na_rep, float_fmt : str
-            Place-holder for NaNs and numeric formatting (passed to
-            :pandas:`DataFrame.to_csv`).
-    
-        Returns
-        -------
-        Path | str
-            Written file path **or** the raw text.
-        """
-
-        # 1) Data     – built from live components, *not* the raw DF
-        core, extra = extract_core_columns(
-            self._build_frame_from_components(), keep=core_keep
-        )
-        data_block  = pd.concat([core, extra], axis=1)
-    
-        csv_txt = data_block.to_csv(
-            index=False,
-            na_rep=na_rep,
-            float_format=float_fmt,
-        )
-    
-        # 2) Metadata – combine Head + self.meta
-        header_lines: list[str] = []
-    
-        # 2-a  pycsamt “Head” container   → $key = value
-        if hasattr(self, "Head") and isinstance(self.Head, Head):
-            for ln in self.Head.write():
-                header_lines.append(f"${ln}")
-    
-        # 2-b  original AVG metadata      → $key = value
-        for k, v in (self.meta or {}).items():
-            header_lines.append(f"${k} = {v}")
-    
-        # 2-c  optional time-stamp
-        if stamp:
-            
-            ts = datetime.now(tz=timezone.utc).isoformat(timespec="seconds")
-            header_lines.append(f"$Written = {ts}")
-    
-        header_lines.append("")                      # blank line before CSV
-        full_text = "\n".join(header_lines) + csv_txt
-    
-
-        # 3) Decide output
-        if savefile is not None:
-            out = Path(savefile).with_suffix(".avg")
-            out.write_text(full_text)
-            logger.info("kind-2 AVG written → %s", out)
-            return out
-    
-        if when_unspecified == "string":
-            logger.info("kind-2 AVG emitted as string (no file written)")
-            return full_text
-    
-        # default: write to current directory
-        base = (self.source.stem if getattr(self, "source", None)
-                else "exported")
-        out  = Path.cwd() / f"{base}_kind2.avg"
-        out.write_text(full_text)
-        logger.info("kind-2 AVG written (implicit) → %s", out)
-        return out
-
-
-    def to_kind1(
-        self,
-        savefile: str | Path | None = None,
-        *,
-        when_unspecified: Literal["file", "string"] = "file",
-        precision: int = 3,
-        na_rep: str = "*",
-    ) -> str | Path:
-        """
-        Emit a *legacy* kind-1 AVG table built from **live components**.
-    
-        Parameters
-        ----------
-        savefile : str | Path | None, default *None*
-            • Path → write exactly there.  
-            • *None* → behaviour controlled by *when_unspecified*.
-        when_unspecified : {"file", "string"}, default ``"file"``
-            Action when *savefile* is *None*:
-    
-            ``"file"``   → create ``<basename>_kind1.avg`` in *cwd*.  
-            ``"string"`` → return the text (do **not** write to disk).
-        precision : int, default *3*
-            Significant digits for numeric fields.
-        na_rep : str, default ``"*"``
-            Placeholder for missing values.
-    
-        Returns
-        -------
-        Path | str
-            • :class:`pathlib.Path` when a file is produced.  
-            • ``str`` when the text is returned.
-        """
-
-        # 1) rebuild DataFrame from the *current* component state
-        df = self._build_frame_from_components()  # internal helper
-    
-        k1_order = [
-            "skp", "Station", "Freq", "Comp", "Amps",
-            "Emag", "Ephz", "Hmag", "Hphz",
-            "Resistivity", "Phase",
-            "%Emag", "sEphz", "%Hmag", "sHphz",
-            "%Rho", "sPhz",
-        ]
-        df = df[k1_order]
-    
-        num_fmt = f"{{:.{precision}g}}".format
-        body = df.applymap(
-            lambda v: na_rep if pd.isna(v)
-            else num_fmt(v) if isinstance(v, (int, float, np.floating))
-            else str(v)
-        )
-    
-        header = " ".join(k1_order)
-        text   = header + "\n" + "\n".join(
-            " ".join(r) for r in body.to_numpy()) + "\n"
-    
-
-        # 2) Decide what to do with *text*
-        # a) user gave an explicit path  → honour it
-        if savefile is not None:
-            path = Path(savefile)
-            if path.suffix.lower() != ".avg":
-                path = path.with_suffix(".avg")
-            path.write_text(text)
-            logger.info("kind-1 AVG written -> %s", path)
-            return path
-    
-        # b) *savefile* omitted
-        if when_unspecified == "string":
-            logger.info("kind-1 AVG emitted as string (no file written)")
-            return text
-    
-        # default branch → produce a file in cwd
-        base   = (self.source.stem if getattr(self, "source", None)
-                  else "exported")
-        path   = Path.cwd() / f"{base}_kind1.avg"
-        path.write_text(text)
-        logger.info("kind-1 AVG written (implicit) → %s", path)
-        return path
-
-
-@has_fit("warn")                                      # a real `.fit()` is present
-class AVGOps(OpsBase):
-    """
-    Light **post-processing façade** around an :class:`~pycsamt.zonge.avg.AVG`
-    instance.
-
-    The class extracts the *Z-tensor*, apparent resistivity (ρ) and phase (ϕ)
-    stacks into fast NumPy arrays and exposes a handful of convenience
-    operations:
-
-    * :meth:`get_reference_frequency` – pick the *best* (or closest) frequency
-      according to a user criterion.
-    * :meth:`apply_filter` – run a generic 1-D smoothing / custom callable on
-      ρ and/or ϕ along the *frequency* axis.
-    * :meth:`update` – push modified **z / rho / phase** back into the cached
-      arrays **and** into the underlying :class:`AVG` (if any).
-
-    Parameters
-    ----------
-    obj : str | pathlib.Path | pandas.DataFrame | AVG | None
-        Any payload accepted by :pyclass:`AVG`.  When *None* the object must
-        be provided later to :meth:`fit`.
-    to_degree : bool, default *False*
-        Convert phase to **degrees** upon caching.
-    verbose : bool, default *False*
-        INFO-level progress logging.
-    **avg_kwargs
-        Extra arguments forwarded to :class:`AVG` when the loader is invoked
-        internally (e.g. ``verbose=False``).
-
-    Notes
-    -----
-    The class is **stateless** with respect to the original source – you may
-    freely modify the cached ``_z``, ``_rho``, ``_phase`` NumPy arrays and
-    then call :meth:`update` to propagate changes back to :class:`AVG`.
-    """
-
-    def __init__(
-        self,
-        obj: str | Path | pd.DataFrame | AVG | None = None,
-        *,
-        to_degree: bool = False,
-        verbose:   bool = False,
-        **avg_kwargs: Any,
-    ) -> None:
-
-        super().__init__(obj, verbose=verbose)
-        self._to_degree = to_degree
-
-        # mutable working copies (shape: n_freq × n_station)
-        self._z:     np.ndarray | None = None        # complex (…,2,2)
-        self._rho:   np.ndarray | None = None
-        self._phase: np.ndarray | None = None
-
-        # AVG loader may need extra parameters later
-        self._avg_kwargs = avg_kwargs
-
-        # user handed something → try an immediate fit
-        if obj is not None:
-            self.fit(obj, **avg_kwargs)
-
-
-    def fit(self, obj: Any | None = None, **avg_kwargs) -> "AVGOps":  # type: ignore[override]
-        """
-        Load *obj* (unless an :class:`AVG` is already held) and cache the
-        essential arrays.  **Idempotent** – repeated calls are ignored once
-        fitted.
-        """
-        if hasattr(self, "_is_fitted") and self._is_fitted:        # noqa: B023
-            return self                                            # already done
-
-
-        obj = obj or self.obj
-        if isinstance(obj, AVG):
-            self.avg: AVG = obj
-            if self.avg.data.empty:
-                raise AvgDataError("AVG instance has no data – call `.fit()` "
-                                   "on it beforehand.")
-        elif isinstance(obj, (pd.DataFrame, str, Path)):
-            avg_kwargs |= self._avg_kwargs
-            self.avg = AVG(obj, verbose=self.verbose, **avg_kwargs)
-            self.avg.fit(obj)                                      # guarantee data
-        else:
-            raise TypeError("Unsupported payload for AVGOps.fit")
-
-
-        # 2) cache NumPy views – makes later operations blazingly fast
-        self._cache_raw()
-        self._is_fitted = True
-        if self.verbose:
-            logger.info("AVGOps fitted: %d freq × %d station",
-                        self.n_freq, self.n_station)
-        return self
-
-
-    @property
-    def n_freq(self) -> int:
-        """Number of discrete transmit frequencies."""
-        return self._z.shape[0]                                
-
-    @property
-    def n_station(self) -> int:
-        """Number of stations in the line / grid."""
-        return self._z.shape[1]                                   
-
-    def get_reference_frequency(
-        self,
-        target: float | None = None,
-        *,
-        strategy: Literal["nearest", "median", "max_rho"] = "nearest",
-    ) -> int:
-        """
-        Return the *row-index* (0-based) of a “reference” frequency.
-
-        Parameters
-        ----------
-        target : float | None, default *None*
-            Desired frequency in **Hz** when *strategy* = ``'nearest'``.
-        strategy : {"nearest", "median", "max_rho"}, default "nearest"
-            Heuristic to pick the row:
-
-            * ``'nearest'`` – closest to *target*.
-            * ``'median'``  – 50-th percentile of the survey band.
-            * ``'max_rho'`` – frequency at which median(ρ) is maximal.
-
-        Raises
-        ------
-        NotFittedError
-            When :meth:`fit` has not been called yet.
-        """
-        check_is_fitted(self, "_is_fitted")
-
-        freq = self.avg.Frequency.value                      # 1-D unique array
-        if strategy == "nearest":
-            if target is None:
-                raise ValueError("`target` must be supplied for 'nearest'")
-            idx = int(np.abs(freq - target).argmin())
-            return idx
-
-        if strategy == "median":
-            return int(len(freq) // 2)
-
-        if strategy == "max_rho":
-            med_rho = np.nanmedian(self._rho, axis=1)        # shape n_freq
-            return int(np.nanargmax(med_rho))
-
-        raise ValueError(f"Unknown strategy: {strategy}")
-
-    def apply_filter(
-        self,
-        method: str | Callable[[np.ndarray], np.ndarray] = "moving",
-        *,
-        size:   int = 3
-    ) -> None:
-        """
-        Run a *very* light 1-D filter along the **frequency axis**.
-
-        Parameters
-        ----------
-        method : {"moving"} | callable
-            * ``"moving"`` – centred moving average with *size* samples.
-            * *callable*  – must accept / return a NumPy array of same
-              shape *(n_freq, n_station)*.
-        size : int, default *3*
-            Window length for the moving average.
-
-        Notes
-        -----
-        The operation **modifies** the cached ``_rho`` and ``_phase`` in-place.
-        Call :meth:`update` afterwards if you want the underlying
-        :class:`AVG` object to reflect the changes.
-        """
-        check_is_fitted(self, "_is_fitted")
-
-        if callable(method):
-            self._rho   = method(self._rho)
-            self._phase = method(self._phase)
-            return
-
-        if method == "moving":
-            if size < 2:
-                raise ValueError("`size` must be ≥ 2 for moving-average")
-            self._rho   = uniform_filter1d(self._rho,   size, axis=0,
-                                           mode="nearest")
-            self._phase = uniform_filter1d(self._phase, size, axis=0,
-                                           mode="nearest")
-            return
-
-        raise ValueError(f"Unsupported filter: {method}")
-
-    def update(
-        self,
-        *,
-        z:     np.ndarray | None = None,
-        rho:   np.ndarray | None = None,
-        phase: np.ndarray | None = None
-    ) -> None:
-        """
-        Replace **one or more** cached arrays and propagate the changes
-        back to the underlying :pyattr:`avg` object.
-
-        Notes
-        -----
-        Shapes **must** match the originals::
-
-            (n_freq, n_station, 2, 2)  for *z*
-            (n_freq, n_station)        for *rho* / *phase*
-        """
-        check_is_fitted(self, "_is_fitted")
-
-        if z is not None:
-            if z.shape != self._z.shape:
-                raise ZError("Shape mismatch for `z`")
-            self._z = z
-            self.avg.Z.read(
-                z, freq=self.avg.Frequency.value,
-                station_ids=list(self.avg.Station.names)
+        if var not in component_map:
+            raise ValueError(
+                f"Variable '{var}' not supported for tensor export. "
+                f"Choose from: {list(component_map.keys())}"
             )
 
-        if rho is not None:
-            if rho.shape != self._rho.shape:
-                raise ResistivityError("Shape mismatch for `rho`")
-            self._rho = rho
-            self.avg.Resistivity.read(
-                rho.ravel(), n_freq=self.n_freq, n_stations=self.n_station)
-
-        if phase is not None:
-            if phase.shape != self._phase.shape:
-                raise PhaseError("Shape mismatch for `phase`")
-            self._phase = phase
-            ph = np.deg2rad(phase) if self._to_degree else phase
-            self.avg.Phase.read(
-                ph.ravel(),
-                n_freq=self.n_freq,
-                n_stations=self.n_station,
-                to_degree=self._to_degree
+        component = component_map[var]
+        return component.to_tensor(
+            var=var,
+            station=station,
+            agg=agg,
+            fill_value=fill_value,
+            sort_freq=sort_freq,
+            align=align,
         )
 
-    def _cache_raw(self) -> None:
-        """
-        Extract *Z*, ρ and ϕ from :pyattr:`avg` and store them in
-        contiguous NumPy arrays – ready for fast numerical work.
-        """
-        z_ten = self.avg.Z.as_tensor()               # 3-D ImpedanceTensor
-        self._z     = z_ten.z.copy()                 # (n_freq,n_stn,2,2)
-        self._rho   = self.avg.Resistivity.values.reshape(  # type: ignore[attr-defined]
-                          self.n_freq, self.n_station)
-        raw_phase   = self.avg.Phase.values.reshape( # type: ignore[attr-defined]
-                          self.n_freq, self.n_station)
-        self._phase = (np.rad2deg(raw_phase) if self._to_degree
-                       else raw_phase)
-
-
-    def __str__(self) -> str:                        # noqa: D401
-        if not hasattr(self, "_is_fitted"):
-            return "AVGOps(<unfitted>)"
-        return (f"AVGOps({self.n_freq} freq × {self.n_station} station, "
-                f"degree={self._to_degree})")
+    def __str__(self) -> str:
+        """Provide a concise string representation."""
+        if self.info.df is None:
+            return "AVG(empty)"
+        return f"AVG(source='{self._source_path.name}')"
 
     __repr__ = __str__
 
 
-def _validate_shape(arr: np.ndarray, expected: Sequence[int], label: str) -> None:
-    if arr.shape != tuple(expected):
-        raise ValueError(f"{label} has shape {arr.shape}, expected {expected}")
+        
+class AMTAVG(AVG):
+    """
+    Extends AVG with tensor component properties and computations.
+    """
+    def compute_resistivity_phase(self):
+        """
+        Compute rho and phi from the complex impedance Z.
+        """
+        if self.info.df is None:
+            raise ValueError("Data frame is not loaded.")
 
-# helper function 
-def _try_float(val: str | int | float | None) -> float | None:
-    try:
-        return None if val in (None, "") else float(val)
-    except (TypeError, ValueError):
-        return None
+        z_complex = self.z.z
+        freq = self.info.df["freq"]
+        omega = 2 * PI * freq
 
-def _try_int(val: str | int | None) -> int | None:
-    try:
-        return None if val in (None, "") else int(float(val))
-    except (TypeError, ValueError):
-        return None
+        rho = (np.abs(z_complex)**2) / (omega * MU_0)
+        phi_rad = np.arctan2(z_complex.imag, z_complex.real)
+        phi_mrad = phi_rad * 1000.0
 
+        # Error propagation
+        z_err = self.z.z_err
+        # Avoid division by zero if z_complex is zero
+        abs_z = np.abs(z_complex)
+        safe_abs_z = np.where(abs_z == 0, np.nan, abs_z)
+
+        rho_err = 200 * (z_err / safe_abs_z)
+        phi_err = (
+            1000
+            * (z_err / safe_abs_z)
+            * np.abs(np.sin(phi_rad))
+        )
+
+        return rho, phi_mrad, rho_err, phi_err
+
+    def set_resistivity_phase(
+        self,
+        rho: pd.Series,
+        phi: pd.Series,
+        rho_err: Optional[pd.Series] = None,
+        phi_err: Optional[pd.Series] = None,
+    ):
+        """
+        Attach new rho/phi data and reconstruct Z.
+        """
+        if self.info.df is None:
+            raise ValueError("Data frame is not loaded.")
+
+        # Work on a copy to avoid modifying the original df
+        df = self.info.df.copy()
+
+        # Use .loc to ensure alignment and avoid warnings
+        df.loc[rho.index, "rho"] = rho
+        df.loc[phi.index, "phase"] = phi
+        if rho_err is not None:
+            df.loc[rho_err.index, "pc_rho"] = rho_err
+        if phi_err is not None:
+            df.loc[phi_err.index, "sphz"] = phi_err
+
+        # Re-read components to update their internal state
+        self.info.read(df, self.info.meta)
+        
+    def get_tensor_by_station(
+        self,
+        station_id: Union[int, float],
+        *,
+        var: Literal["z", "rho", "phase"] = "z",
+    ):
+        """
+        Fetch a 3D tensor for a single station using xarray.
+
+        This method returns an xarray.DataArray for the specified
+        variable, indexed by frequency and the 2x2 tensor axes.
+        """
+        component_map = {
+            "z": self.z,
+            "rho": self.resistivity,
+            "phase": self.phase,
+        }
+        if var not in component_map:
+            raise ValueError(
+                f"Variable '{var}' not supported. "
+                f"Choose from: {list(component_map.keys())}"
+            )
+
+        component = component_map[var]
+        # The component's to_xarray method handles tensor shape
+        ds = component.to_xarray()
+
+        try:
+            # Use .sel() for label-based selection
+            station_tensor = ds.sel(station=station_id)
+            return station_tensor
+        except KeyError:
+            logger.error(f"Station ID '{station_id}' not found.")
+            raise
+
+
+    # --- Z Tensor Components ---
+    @property
+    def z_xx(self): 
+        return self.z.z_xx
+    @property
+    def z_xy(self): 
+        return self.z.z_xy
+    @property
+    def z_yx(self):
+        return self.z.z_yx
+    @property
+    def z_yy(self): 
+        return self.z.z_yy
+    @property
+    def z_xx_err(self):
+        return self.z.z_xx_err
+    @property
+    def z_xy_err(self): 
+        return self.z.z_xy_err
+    @property
+    def z_yx_err(self): 
+        return self.z.z_yx_err
+    @property
+    def z_yy_err(self): 
+        return self.z.z_yy_err
+
+    # --- Resistivity Tensor Components ---
+    @property
+    def res_xx(self):
+        df = self.resistivity.frame
+        return df[df.comp == "ExHx"]["rho"]
+    @property
+    def res_xy(self):
+        df = self.resistivity.frame
+        return df[df.comp == "ExHy"]["rho"]
+    @property
+    def res_yx(self):
+        df = self.resistivity.frame
+        return df[df.comp == "EyHx"]["rho"]
+    @property
+    def res_yy(self):
+        df = self.resistivity.frame
+        return df[df.comp == "EyHy"]["rho"]
+
+    # --- Resistivity Error Components ---
+    @property
+    def res_xx_err(self):
+        df = self.info.pc_rho.frame
+        return df[df.comp == "ExHx"]["pc_rho"]
+    @property
+    def res_xy_err(self):
+        df = self.info.pc_rho.frame
+        return df[df.comp == "ExHy"]["pc_rho"]
+    @property
+    def res_yx_err(self):
+        df = self.info.pc_rho.frame
+        return df[df.comp == "EyHx"]["pc_rho"]
+    @property
+    def res_yy_err(self):
+        df = self.info.pc_rho.frame
+        return df[df.comp == "EyHy"]["pc_rho"]
+
+    # --- Phase Tensor Components ---
+    @property
+    def phase_xx(self):
+        df = self.phase.frame
+        return df[df.comp == "ExHx"]["phase"]
+    @property
+    def phase_xy(self):
+        df = self.phase.frame
+        return df[df.comp == "ExHy"]["phase"]
+    @property
+    def phase_yx(self):
+        df = self.phase.frame
+        return df[df.comp == "EyHx"]["phase"]
+    @property
+    def phase_yy(self):
+        df = self.phase.frame
+        return df[df.comp == "EyHy"]["phase"]
+
+    # --- Phase Error Components ---
+    @property
+    def phase_xx_err(self):
+        df = self.info.s_phz.frame
+        return df[df.comp == "ExHx"]["sphz"]
+    @property
+    def phase_xy_err(self):
+        df = self.info.s_phz.frame
+        return df[df.comp == "ExHy"]["sphz"]
+    @property
+    def phase_yx_err(self):
+        df = self.info.s_phz.frame
+        return df[df.comp == "EyHx"]["sphz"]
+    @property
+    def phase_yy_err(self):
+        df = self.info.s_phz.frame
+        return df[df.comp == "EyHy"]["sphz"]
+
+    def __str__(self) -> str:
+        """Provide a concise, human-readable representation."""
+        if self.info.df is None or self.info.df.empty:
+            status = "empty"
+        else:
+            n_st = self.info.station.n_unique
+            n_f = self.info.frequency.n_unique
+            status = (
+                f"stations={n_st}, freqs={n_f}, "
+                f"rows={len(self.info.df)}"
+            )
+
+        src = (
+            f", source='{self._source_path.name}'"
+            if self._source_path
+            else ""
+        )
+        return f"AMTAVG({status}{src})"
+
+    def __repr__(self) -> str:
+        """Provide an unambiguous developer representation."""
+        if self._source_path:
+            return (
+                f"AMTAVG.from_file("
+                f"'{self._source_path!s}', "
+                f"verbose={self.verbose})"
+            )
+        return f"AMTAVG(verbose={self.verbose}, loaded=False)"       
+    

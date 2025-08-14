@@ -360,7 +360,11 @@ class Header(HeaderComponentBase):
         if banner:
             lines.extend(banner)
             lines.append("")  # visual gap before $keywords
-
+        
+        # 2. Get all keywords and format them
+        # keywords = self.to_keywords()
+        # lines.extend(_dict_to_kv_lines(keywords))
+        
         # $keywords by section
         lines.extend(_dict_to_kv_lines(self.annotation.to_keywords()))
         lines.extend(_dict_to_kv_lines(self.config.to_keywords()))
@@ -370,7 +374,34 @@ class Header(HeaderComponentBase):
         # Stamp at the end for reproducibility.
         lines.append(f"$Written={_now_utc_stamp()}")
         return lines
+    
+    def update_from_keywords(self, meta: Dict[str, Any]) -> None:
+        """
+        Populate all sub-components from a keyword mapping.
+        This method dispatches keys to the appropriate component
+        (annotation, config, tx, rx) based on their prefix.
+        """
+        # This method's logic is identical to read(), so we
+        # can simply call it.
+        self.read(meta=meta)
 
+    def to_keywords(self) -> Dict[str, Any]:
+        """
+        Aggregate all $keyword=value pairs from sub-components.
+
+        This collects keywords from annotation, config, tx, and rx
+        into a single dictionary suitable for writing to a file.
+        """
+        # Consolidate keywords from all child components
+        # into a single dictionary.
+        all_keywords: Dict[str, Any] = {}
+        all_keywords.update(self.annotation.to_keywords())
+        all_keywords.update(self.config.to_keywords())
+        all_keywords.update(self.tx.to_keywords())
+        all_keywords.update(self.rx.to_keywords())
+
+        return all_keywords
+    
     # ---------------- diagnostics ---------------- #
     def asdict(self) -> Dict[str, Any]:
         """Plain dict view of all sub-components."""

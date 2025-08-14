@@ -383,13 +383,23 @@ def _parse_kind2(
     # weights (1 = keep, 0 = skip).  If weights are absent, the
     # column is simply not added.
     if 'z.mwgt' in df.columns or 'z.pwgt' in df.columns:
-        mw = df.get('z.mwgt', 1).fillna(1).astype(float) > 0
-        pw = df.get('z.pwgt', 1).fillna(1).astype(float) > 0
+        mw = _get_weight_bool (df, 'z.mwgt')
+        pw = _get_weight_bool (df, 'z.pwgt')
+        # mw = df.get('z.mwgt', 1).fillna(1).astype(float) > 0
+        # pw = df.get('z.pwgt', 1).fillna(1).astype(float) > 0
         df['use'] = mw & pw
 
     # Merge top-level meta with collected per-block meta.
     meta: Dict[str, Any] = {**global_meta, 'blocks': blocks_meta}
     return df, meta
+
+def _get_weight_bool (df, comp ='z.mwgt'): 
+    """ Get the bool weight for construction use. """
+    val =df.get(comp, 1) 
+    if isinstance (val, (float, int)): 
+        return val  > 0
+    return df.get(comp, 1).fillna(1).astype(float) > 0
+
 
 def split_by_station(
     df: pd.DataFrame

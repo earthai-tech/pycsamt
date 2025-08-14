@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Author: LKouadio <etanoyau@gmail.com> (structure by request)
+# Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
 Percent-variation (QC) components for Zonge AVG tables.
@@ -20,7 +20,7 @@ to :class:`xarray.Dataset` for multi-dimensional workflows.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import ( 
     ClassVar, 
     Dict, Any, 

@@ -38,8 +38,6 @@ __all__ = [
     "SurveyAnnotation",
 ]
 
-
-
 class SkipFlag:
     """
     Encapsulate Zonge *skip-flag* quality codes.

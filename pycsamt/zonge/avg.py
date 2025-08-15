@@ -26,6 +26,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from ..api.bunch import Bunch 
 from ..constants import MU_0, PI
 from ..decorators import has_fit
 from ..log.logger import get_logger
@@ -255,7 +256,46 @@ class BaseAVG:
             self.to_modern(path, **kwargs)
         else:
             raise ValueError(f"Unknown format '{fmt}' specified.")
+            
+    @property
+    def summary(self):
+        """
+        Provide a Bunch object with a summary of key attributes.
+        """
+        if self.info.df is None:
+            return Bunch(status="Data not loaded")
 
+        # Safely get values, providing defaults if not loaded
+        hdr = self.info.header
+        st = self.info.station
+        frq = self.info.frequency
+
+        # Smartly select useful information
+        info_dict = {
+            "source_file": (
+                self._source_path.name if self._source_path else "N/A"
+            ),
+            "data_kind": f"Kind-{self._kind}" if self._kind else "N/A",
+            "project": hdr.annotation.project_name or "N/A",
+            "survey_type": hdr.config.survey_type or "N/A",
+            "line_name": hdr.config.line_name or "N/A",
+            "num_stations": st.n_unique if st else 0,
+            "num_frequencies": frq.n_unique if frq else 0,
+            "station_range": (
+                f"{st.span[0]} - {st.span[1]} {st.unit}"
+                if st and st.span
+                else "N/A"
+            ),
+            "frequency_range": (
+                f"{frq.unique().min():.4g} - {frq.unique().max():.4g} Hz"
+                if frq and frq.n_unique > 0
+                else "N/A"
+            ),
+            "total_rows": len(self.info.df),
+        }
+
+        return Bunch(**info_dict)
+    
     def __str__(self) -> str:
         """Provide a concise, human-readable representation."""
         if self.info.df is None or self.info.df.empty:

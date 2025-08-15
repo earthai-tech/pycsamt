@@ -65,10 +65,15 @@ logger = get_logger(__name__)
 
 
 _RX_WS             = re.compile(r"\s+")
-_RX_K2_HEADER      = re.compile(r"^Z\.mwgt\s*,", re.I)
-_RX_K1_HEADER      = re.compile(r"^skp\s+Station", re.I)
+# _RX_K2_HEADER      = re.compile(r"^Z\.mwgt\s*,", re.I)
+# _RX_K1_HEADER      = re.compile(r"^skp\s+Station", re.I)
+
+_RX_K2_HEADER = re.compile(r"^\s*Z\.mwgt\s*,", re.I)
+_RX_K1_HEADER = re.compile(r"^\s*skp\s+Station", re.I)
+
 _NUMERIC_REPLACE   = {"*": np.nan, "nan": np.nan, "NaN": np.nan,
                       "": np.nan}
+_COMMENT_PREFIXES = ('\\', '/', '!', '"')
 
 _COL_MAP = {
     # General & Legacy
@@ -163,8 +168,14 @@ def _to_float(val: str | float | int) -> float | np.floating:
         return np.nan
 
 def classify_avg_format(lines: Sequence[str]) -> int:
-    """Return **1** or **2** depending on AVG flavour.
+    """
+    Return **1** or **2** depending on AVG flavour.
 
+    This function uses a multi-pass approach for robustness. It
+    first checks for explicit headers and then falls back to
+    analyzing structural clues like keyword format and data
+    delimiters.
+    
     Parameters
     ----------
     lines : Sequence[str]
@@ -174,16 +185,60 @@ def classify_avg_format(lines: Sequence[str]) -> int:
     ------
     AvgFileError
         When the function cannot detect a valid header.
+        
     """
+    # First pass: Look for the most definitive header lines.
+    # This is the fastest and most reliable method.
     for ln in lines:
         if _RX_K2_HEADER.search(ln):
-            logger.debug("Kind‑2 AVG detected")
+            logger.debug(
+                "Kind-2 AVG detected (found modern header)."
+            )
             return 2
         if _RX_K1_HEADER.search(ln):
-            logger.debug("Kind‑1 AVG detected")
+            logger.debug(
+                "Kind-1 AVG detected (found legacy header)."
+            )
             return 1
-    raise AvgFileError("Unrecognised AVG header – cannot classify file")
 
+    # Second pass: If no header found, analyze file structure.
+    has_commas = False
+    has_dot_in_keyword = False
+
+    for ln in lines:
+        s = ln.strip()
+        if not s:
+            continue
+
+        # Check for modern keyword style, e.g., '$Survey.Type='
+        if s.startswith('$'):
+            # This is a very strong indicator of a modern file.
+            match = re.match(r"\$\s*(\w+\.\w+)\s*=", s)
+            if match:
+                has_dot_in_keyword = True
+                break
+
+        # Heuristic: check for comma-separated data.
+        # Avoids matching headers with only one or two commas.
+        if not s.startswith(('$', '\\', '/')) and s.count(',') > 2:
+            has_commas = True
+
+    if has_dot_in_keyword:
+        logger.debug(
+            "Kind-2 AVG detected (found dot-notation keywords)."
+        )
+        return 2
+
+    if has_commas:
+        logger.debug(
+            "Kind-2 AVG detected (found comma-separated data)."
+        )
+        return 2
+
+    # If no strong indicators are found, parsing cannot proceed.
+    raise AvgFileError(
+        "Unrecognised AVG header – cannot classify file"
+    )
 
 def _parse_kind1(lines: Sequence[str]) -> pd.DataFrame:
     """Parse legacy fixed‑width (kind‑1) AVG table."""
@@ -208,8 +263,6 @@ def _parse_kind1(lines: Sequence[str]) -> pd.DataFrame:
         raise AvgDataError("No data rows in kind‑1 file")
     df = pd.DataFrame(data_rows, columns=hdr_tokens)
     return _standardise_columns(df)
-
-_COMMENT_PREFIXES = ('\\', '/', '!', '"')
 
 def _is_comment(ln: str) -> bool:
     return bool(ln) and ln[0] in _COMMENT_PREFIXES

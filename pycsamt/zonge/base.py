@@ -52,15 +52,14 @@ import pandas as pd
 
 from ..exceptions import AvgDataError 
 from ..log.logger import get_logger
-from .utils import load_avg 
+from ._transfer import LegacyAVGBase
+from .utils import load_avg, classify_avg_format 
 
 logger = get_logger(__name__)
 
 __all__ = [
     "FieldAliases", "AvgRow", "AVGFrame" , "AVGComponentBase", 
     ]
-
-
 
 @dataclass(slots=True)
 class AVGFrame:
@@ -265,12 +264,13 @@ class AVGComponentBase(ABC):
         self._meta: Dict[str, Any] = dict(meta or {})
         self._name: str = name or self.__class__.__name__
 
-
     @classmethod
     def from_avg(
         cls,
-        avg: Union[str, Path, AVGFrame, pd.DataFrame,
-                   Tuple[pd.DataFrame, Mapping[str, Any]]],
+        avg: Union[
+            str, Path, AVGFrame, pd.DataFrame,
+            Tuple[pd.DataFrame, Mapping[str, Any]]
+        ],
         *,
         meta: Optional[Mapping[str, Any]] = None,
         **kws
@@ -284,19 +284,35 @@ class AVGComponentBase(ABC):
           • ``(df, meta)`` tuple
           • bare ``df`` + explicit ``meta`` kwarg
         """
+        df: pd.DataFrame
+        m: Mapping[str, Any]
+
         if isinstance(avg, (str, Path)):
-            df, m = load_avg(Path(avg))
-            frame = AVGFrame(df, m, Path(avg))
+            # When loading from a file, classify it first
+            path = Path(avg)
+            lines = path.read_text(errors="replace").splitlines()
+            kind = classify_avg_format(lines)
+            df, m = load_avg(path)
+
+            # If it's legacy, transform it to modern structure
+            if kind == 1:
+                transformer = LegacyAVGBase()
+                ds = transformer.from_dataframe(df, meta=m)
+                df = ds.to_dataframe().reset_index()
+                m = ds.attrs
+
+            frame = AVGFrame(df, dict(m), path)
+
         elif isinstance(avg, AVGFrame):
             frame = avg
         elif isinstance(avg, tuple) and len(avg) == 2:
-            df, m = avg  # type: ignore[assignment]
-            frame = AVGFrame(df, dict(m), None)
+            df, m = avg
+            frame = AVGFrame(df, dict(m))
         elif isinstance(avg, pd.DataFrame):
-            frame = AVGFrame(avg, dict(meta or {}), None)
+            frame = AVGFrame(avg, dict(meta or {}))
         else:
             raise TypeError(
-                "from_avg expected Path|AVGFrame|DataFrame|"
+                "from_avg expects Path|AVGFrame|DataFrame|"
                 "(DataFrame, meta) tuple."
             )
 
@@ -304,11 +320,11 @@ class AVGComponentBase(ABC):
         try:
             obj.read(frame.data, frame.meta)
         except TypeError:
-            # old components that only accept (df)
+            # Fallback for older components
             obj.read(frame.data)
 
         return obj
-
+    
     @abstractmethod
     def read(
         self,

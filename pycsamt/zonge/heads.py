@@ -244,7 +244,6 @@ class Header(HeaderComponentBase):
         # from_lines; useful for diagnostics or provenance.
         self._raw_banner: list[str] = []
 
-    # ---------------- public API ---------------- #
     def read(
         self,
         df_unused: Any = None,

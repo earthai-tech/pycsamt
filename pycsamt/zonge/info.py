@@ -122,20 +122,20 @@ class DataInfo:
         ]
 
         for comp in components:
-            try:
+            # try:
                 comp.read(self.df, self.meta)
-            except AvgDataError as e:
-                # Gracefully skip components if their data is missing
-                # For example, a file might not have %Hmag
-                warnings.warn(
-                    f"Notice: Could not load component "
-                    f"'{comp.__class__.__name__}': {e}"
-                )
-            except Exception as e:
-                warnings.warn(
-                    f"Warning: Unexpected error loading "
-                    f"'{comp.__class__.__name__}': {e}"
-                )
+            # except AvgDataError as e:
+            #     # Gracefully skip components if their data is missing
+            #     # For example, a file might not have %Hmag
+            #     warnings.warn(
+            #         f"Notice: Could not load component "
+            #         f"'{comp.__class__.__name__}': {e}"
+            #     )
+            # except Exception as e:
+            #     warnings.warn(
+            #         f"Warning: Unexpected error loading "
+            #         f"'{comp.__class__.__name__}': {e}"
+            #     )
 
     def __str__(self) -> str:
         if self.df is None:

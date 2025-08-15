@@ -111,6 +111,7 @@ class TestBaseAVG:
         assert "rho" in base.info.df.columns
         # Check for an injected modern column
         assert "z.mwgt" in base.info.df.columns
+        assert "pc_hmag" in base.info.pc_hmag.frame.columns
 
     def test_read_from_dataframe(self):
         """Test reading directly from a pandas DataFrame."""
@@ -119,7 +120,8 @@ class TestBaseAVG:
             "freq": [1024, 512],
             "rho": [50, 60],
             "phase": [45, 55],
-            "comp": ["ExHy", "ExHy"]
+            "comp": ["ExHy", "ExHy"], 
+            "E.%err": [1, 2]
         })
         meta = {"Survey.Type": "CSAMT"}
         base = BaseAVG()

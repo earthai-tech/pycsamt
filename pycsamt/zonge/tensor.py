@@ -33,7 +33,7 @@ import numpy as np
 import pandas as pd
 
 from ..utils.deps import ensure_pkg 
-from ..exceptions import AvgDataError
+from ..exceptions import AvgDataError, TensorError
 from .base import AVGComponentBase
 
 # --------------------------------------------------------------------------- #
@@ -182,7 +182,8 @@ class TensorBase(AVGComponentBase):
         stations = _station_array(work["station"].unique())
         # union vs intersection of frequencies across stations
         if align not in {"union", "intersection"}:
-            raise ValueError("align must be 'union' or 'intersection'")
+            raise ValueError(
+                "align must be 'union' or 'intersection'")
 
         if align == "union":
             freqs = np.unique(work["freq"].to_numpy())
@@ -266,10 +267,10 @@ class TensorBase(AVGComponentBase):
         elif arr.ndim == 4:
             s_axis, f_axis = 0, 1 # noqa
         else:
-            raise AvgDataError("tensor must be 3D or 4D")
+            raise TensorError("tensor must be 3D or 4D")
 
         if arr.shape[-2:] != (2, 2):
-            raise AvgDataError("last two dims must be (2,2)")
+            raise TensorError("last two dims must be (2,2)")
 
         # Choose component label set
         if comp_style.lower().startswith("mt"):
@@ -398,7 +399,6 @@ def _norm_comp(label: Any) -> Optional[str]:
     # Try to strip non-alnum characters just in case
     s2 = "".join(ch for ch in s if ch.isalnum())
     return s2 if s2 in _COMP_POS else None
-
 
 def _station_array(values: Iterable[Any]) -> np.ndarray:
     """

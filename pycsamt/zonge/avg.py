@@ -20,7 +20,8 @@ from typing import (
     Optional,
     Tuple,
     Union,
-    Literal
+    Literal, 
+    Dict
 )
 
 import numpy as np
@@ -31,6 +32,7 @@ from ..constants import MU_0, PI
 from ..decorators import has_fit
 from ..log.logger import get_logger
 from ..utils.deps import ensure_pkg 
+from ..utils.validation import has_read 
 from ._transfer import LegacyAVGBase
 from .base import AVGFrame
 from .info import DataInfo
@@ -40,13 +42,64 @@ from .utils import (
     write_avg
 )
 
+
 __all__ = ["BaseAVG","AVG", "AMTAVG"]
 
 logger = get_logger(__name__)
 
 class BaseAVG:
-    """Base class for AVG data handling and file writing."""
+    r"""Base class for AVG data handling and file writing.
 
+    This class serves as the core engine for reading, parsing,
+    and writing Zonge AVG data files. It handles the logic for
+    identifying file types (legacy vs. modern), transforming
+    legacy data, and populating a structured data model.
+
+    Parameters
+    ----------
+    verbose : bool, default False
+        If ``True``, log messages will be printed to the console
+        during file reading and writing operations, providing
+        insight into the process.
+
+    Attributes
+    ----------
+    info : DataInfo
+        An aggregator object that holds all the individual data
+        components (e.g., Header, Station, Z, Resistivity).
+    verbose : bool
+        Controls the verbosity of logging output.
+    _kind : {1, 2} or None
+        Indicates the detected file format: 1 for legacy, 2 for
+        modern. ``None`` if no file has been read.
+    _source_path : pathlib.Path or None
+        The path to the source file that was read.
+
+    Notes
+    -----
+    This class is typically not instantiated directly by users.
+    Instead, the :class:`~pycsamt.zonge.AVG` class, which
+    inherits from `BaseAVG`, is the primary user-facing entry
+    point.
+
+    The `read` method is the main entry point for data ingestion
+    and is designed to be flexible, accepting file paths or
+    in-memory data structures.
+
+    Examples
+    --------
+    While direct use is uncommon, one could use `BaseAVG` like so:
+
+    >>> from pycsamt.zonge.avg import BaseAVG
+    >>> avg_processor = BaseAVG(verbose=True)
+    >>> avg_processor.read('path/to/your/data.avg')
+    >>> avg_processor.write('path/to/output.avg', fmt='modern')
+
+    See Also
+    --------
+    AVG : The primary user-facing class for AVG data.
+    DataInfo : The main component aggregator used by this class.
+    """
     def __init__(self, verbose: bool = False):
         self.info: DataInfo = DataInfo()
         self.verbose: bool = verbose
@@ -110,7 +163,9 @@ class BaseAVG:
         self.info.read(df, final_meta)
         if self.verbose:
             logger.info("AVG data successfully loaded.")
-            
+        
+        return self 
+    
     def to_modern(
         self,
         path: Optional[Union[str, Path]] = None,
@@ -125,7 +180,9 @@ class BaseAVG:
         """
         if self.info.df is None:
             raise ValueError("Data frame is not loaded.")
-
+        
+        has_read (self, attributes="info") 
+        
         if path is None:
             base = (
                 self._source_path.stem
@@ -162,7 +219,9 @@ class BaseAVG:
         """
         if self.info.df is None:
             raise ValueError("Data frame is not loaded.")
-
+        
+        has_read (self, attributes="info") 
+        
         if path is None:
             base = (
                 self._source_path.stem
@@ -249,6 +308,7 @@ class BaseAVG:
         """
         Write AVG data to a file in the specified format.
         """
+
         fmt_lower = fmt.lower()
         if fmt_lower in ("legacy", "kind1"):
             self.to_legacy(path, **kwargs)
@@ -264,7 +324,9 @@ class BaseAVG:
         """
         if self.info.df is None:
             return Bunch(status="Data not loaded")
-
+        
+        has_read (self, attributes="info") 
+        
         # Safely get values, providing defaults if not loaded
         hdr = self.info.header
         st = self.info.station
@@ -295,6 +357,23 @@ class BaseAVG:
         }
 
         return Bunch(**info_dict)
+    
+    def asdict(self) -> Dict[str, Any]:
+        r"""Return a shallow, JSON-serializable representation.
+
+        This method aggregates the keyword dictionaries from all
+        header components into a single dictionary, providing a
+        complete, serializable view of the survey's metadata.
+
+        Returns
+        -------
+        dict
+            A dictionary containing all header information.
+        """
+        if self.info.df is None:
+            return {"status": "Data not loaded"}
+
+        return self.header.to_keywords()   
     
     def __str__(self) -> str:
         """Provide a concise, human-readable representation."""
@@ -333,121 +412,94 @@ class BaseAVG:
 
 @has_fit("raise")
 class AVG(BaseAVG):
-    """
-    High-level façade around a Zonge **AVG / AMTAVG** file.
+    r"""High-level façade for a Zonge AVG/AMTAVG dataset.
 
-    An :class:`AVG` instance loads the raw text file (or an already
-    parsed :class:`~pandas.DataFrame`), normalises the column names,
-    *and* hydrates every helper object – stations, frequencies,
-    impedance, quality metrics, header blocks, and so on.  This makes
-    the whole survey instantly accessible through strongly-typed
-    attributes instead of ad-hoc column look-ups [1]_.
+    An :class:`AVG` instance loads a raw text file, normalizes
+    its content, and hydrates a full suite of data components,
+    including stations, frequencies, impedance, quality metrics,
+    and header blocks. This makes the entire survey accessible
+    through strongly-typed attributes [1]_.
 
     Parameters
     ----------
-    obj_or_path : str or pathlib.Path or pandas.DataFrame, optional
-        * Path to a ``.avg`` file *or*
-        * A prepared DataFrame that already follows the canonical
-          schema.  When this form is used the caller becomes
-          responsible for column consistency.
-        * If *None* the instance is created empty; call
-          :py:meth:`read` or :py:meth:`fit` later.
-    meta : dict, optional
-        Header key–value pairs that overwrite entries read from the
-        file.  Ignored when *obj_or_path* is a DataFrame unless you
-        explicitly supply it.
-    verbose : bool, default ``False``
-        Emit INFO messages during load / write operations.
-
+    verbose : bool, default False
+        If ``True``, log messages will be printed to the console
+        during file reading and writing operations.
 
     Attributes
     ----------
-    Head : :class:`pycsamt.zonge.heads.Head`
-        Aggregates *Hardware*, *SurveyAnnotation*, *SurveyConfiguration*
-        and the *Rx / Tx* property blocks plus the skip flag.
-    Station, Frequency : :class:`pycsamt.zonge.survey.Station`,
-        :class:`pycsamt.zonge.meas.Frequency`
-        One-dimensional vectors keyed by station id.
-    Amps, Emag, Ephz, Hmag, Hphz : measurement vectors.
-    Resistivity, Phase : 1-D apparent-resistivity and phase containers.
-    PcEmag, PcHmag, PcRho, SEphz, SHphz, SPhz : quality / variation
-        metrics.
-    Z : :class:`pycsamt.zonge.z.Z`
-        Full impedance tensor stack.
-    DataInfo : :class:`pycsamt.zonge.info.DataInfo`
-        Convenience bundle mirroring all of the above.
-
-    The *values* and *loc* maps exposed by each component follow the
-    same API: ``obj.loc['S05']`` returns the per-frequency 1-D array
-    for station *S05*.
-
+    header : :class:`pycsamt.zonge.heads.Header`
+        Aggregates *Hardware*, *SurveyAnnotation*,
+        *SurveyConfiguration*, and *Rx/Tx* property blocks.
+    station : :class:`pycsamt.zonge.survey.Station`
+        Manages survey line geometry and station coordinates.
+    frequency : :class:`pycsamt.zonge.meas.Frequency`
+        Manages the frequency axis for the measurements.
+    resistivity, phase : :class:`~.resphase.Resistivity`, :class:`~.resphase.Phase`
+        Containers for apparent resistivity and phase data.
+    z : :class:`pycsamt.zonge.z.Z`
+        Component for computing the complex impedance tensor.
+    df : pd.DataFrame or None
+        The core tidy DataFrame containing all available data
+        columns after parsing and normalization.
 
     Methods
-    ----------
-    read / fit
-        Parse a file or DataFrame and populate every component.
-    write
-        Emit a *kind-2* CSV AVG (see ``to_kind2`` and ``to_kind1`` for
-        direct control over the flavour).
-    to_kind1, to_kind2
-        Low-level helpers for serialisation without touching *self*.
-    asdict
-        Shallow JSON-serialisable representation of the whole object
-        (delegated to :class:`BaseAVG`).
-
+    -------
+    from_file(path, verbose=False)
+        Classmethod to load and parse an AVG file. This is the
+        primary entry point for creating an `AVG` instance.
+    read(source, meta=None)
+        Populates the object from a source (file, DataFrame, etc.).
+    write(path, fmt='auto', **kwargs)
+        Writes the data to a file, dispatching to `to_modern` or
+        `to_legacy` based on the `fmt` argument.
+    to_xarray()
+        Exports the entire dataset into a single, comprehensive
+        :class:`xarray.Dataset`.
+    to_tensor(var='z', **kwargs)
+        Exports a specific variable as a 2x2 NumPy tensor.
+    asdict()
+        Returns a JSON-serializable dictionary of all header
+        metadata.
 
     Notes
-    -------
-    Quick background on AVG files:
+    -----
+    Zonge Engineering produced two AVG file formats:
 
-    Zonge Engineering introduced two slightly different flavours:
+    * **Kind-1 (Legacy)**: Fixed-width text tables with minimal
+        metadata.
+    * **Kind-2 (Modern)**: CSV-based format with rich
+        ``$key=value`` headers, used by modern AMTAVG and ASTATIC.
 
-    * *kind-1* – legacy, fixed-width white-space tables.  No metadata
-      apart from a simple hardware banner.  Each row holds a single
-      `(station, freq, component)` triplet [2]_.
-
-    * *kind-2* – modern CSV with a rich ``$key = value`` header.  All
-      data for a given receiver station are grouped together.  This
-      is the format emitted by the current **AMTAVG** utility and by
-      *ASTATIC* after static correction.
-
-    The loader auto-detects the flavour and returns a tidy DataFrame
-    with canonical lower-case column names (``station, freq, emag,
-    rho, phase, ...``).  All subsequent processing is flavour-agnostic.
-    
-    * The class is decorated with :func:`pycsamt.decorators.has_fit`.
-      Therefore ``avg.fit(src)`` and ``avg.read(src)`` are synonyms
-      unless a real ``fit`` method is later implemented.
-    * Numeric columns are *never* kept as strings.  The loader replaces
-      Zonge placeholders (``*`` or blanks) with ``NaN`` and converts
-      the rest to ``float64``.
-    * Phases are stored internally in **radians**; the *to_degree*
-      flag propagated down the component tree controls the public
-      presentation.
+    The loader automatically detects the format and transforms it
+    into a canonical, tidy DataFrame. All subsequent processing is
+    format-agnostic. Zonge placeholders (``*``) are converted to
+    ``NaN``.
 
     Examples
-    ----------
-    Load, tweak a component, and write back::
+    --------
+    Load a file, access a component, and write back:
 
-        >>> from pycsamt.zonge.avg import AVG
-        >>> avg = AVG(verbose=True).fit('LCS01.avg')
-        >>> avg.PcEmag.values *= 0.75       # re-scale E-error
-        >>> avg.write('LCS01_clean.avg')
+    >>> from pycsamt.zonge import AVG
+    >>> avg = AVG.from_file('LCS01.avg', verbose=True)
+    >>> # Access resistivity for a specific component
+    >>> rho_xy = avg.resistivity.frame[
+    ...     avg.resistivity.frame.comp == 'ExHy'
+    ... ]
+    >>> avg.write('LCS01_clean.avg')
 
-    Build from an in-memory DataFrame::
+    Build from an in-memory DataFrame:
 
-        >>> df, meta = load_avg('raw.avg')
-        >>> avg = AVG(df, meta=meta).read()
-        >>> print(avg.DataInfo['S10']['rho'])
-
+    >>> from pycsamt.zonge.utils import load_avg
+    >>> df, meta = load_avg('raw.avg')
+    >>> avg = AVG()
+    >>> avg.read(df, meta=meta)
+    >>> print(avg.station.span)
 
     References
     ----------
-    .. [1] Zonge Engineering (2016). *AMTAVG 7.76 User Manual*.
-
-    .. [2] Zonge Engineering (1991). *Electromagnetic Methods in Applied
-           Geophysics*, Vol. 2, pp. 713-809.
-
+    .. [1] Zonge International, Inc. (2014). *ASTATIC v3.70
+           User Manual*.
     """
     def __init__(self, verbose: bool = False):
         super().__init__(verbose=verbose)
@@ -466,7 +518,6 @@ class AVG(BaseAVG):
         and optional transformation of legacy data into a modern,
         consistent structure.
         """
-    
         obj = cls(verbose=verbose)
         obj.read(path)
         return obj
@@ -528,7 +579,8 @@ class AVG(BaseAVG):
             warnings.warn(
                 "Cannot create xarray.Dataset from empty data.")
             return None
-
+        has_read (self, attributes="info") 
+        
         # Start with the primary data variables
         ds_rho = self.resistivity.to_xarray()
         ds_phase = self.phase.to_xarray()
@@ -597,6 +649,7 @@ class AVG(BaseAVG):
         This is a convenience method that delegates to the
         appropriate component's `to_tensor` method.
         """
+        has_read (self, attributes="info") 
         component_map = {
             "z": self.z,
             "z_real": self.z,
@@ -632,16 +685,71 @@ class AVG(BaseAVG):
 
         
 class AMTAVG(AVG):
+    r"""Extends AVG with tensor component properties and computations.
+
+    This class inherits from :class:`~pycsamt.zonge.avg.AVG` and
+    provides a more specialized interface for accessing individual
+    components of the impedance, resistivity, and phase tensors as
+    pandas Series. It is designed for users who need to work
+    directly with specific tensor elements (e.g., z_xy, rho_yx).
+
+    In addition to providing direct access to tensor components,
+    this class includes methods for advanced data manipulation,
+    such as recalculating resistivity and phase from the impedance
+    tensor.
+
+    Attributes
+    ----------
+    z_xx, z_xy, z_yx, z_yy : pd.Series
+        The complex impedance for the respective tensor component.
+    z_xx_err, z_xy_err, z_yx_err, z_yy_err : pd.Series
+        The propagated error for the respective impedance component.
+    res_xx, res_xy, res_yx, res_yy : pd.Series
+        The apparent resistivity for the respective tensor component.
+    res_xx_err, res_xy_err, res_yx_err, res_yy_err : pd.Series
+        The percent error for the respective resistivity component.
+    phase_xx, phase_xy, phase_yx, phase_yy : pd.Series
+        The impedance phase for the respective tensor component.
+    phase_xx_err, phase_xy_err, phase_yx_err, phase_yy_err : pd.Series
+        The standard deviation of the respective phase component.
+
+    Methods
+    -------
+    compute_resistivity_phase()
+        Calculates apparent resistivity and phase from the complex
+        impedance tensor Z.
+    set_resistivity_phase(rho, phi, rho_err=None, phi_err=None)
+        Updates the dataset with new resistivity and phase values,
+        triggering a recalculation of the impedance tensor.
+    get_tensor_by_station(station_id, var='z')
+        Fetches a 3D tensor for a single station using xarray.
+
+    Examples
+    --------
+    >>> from pycsamt.zonge import AMTAVG
+    >>> amt_avg = AMTAVG.from_file('path/to/your/data.avg')
+    >>> # Access a specific component of the resistivity tensor
+    >>> rho_xy_values = amt_avg.res_xy
+    >>> print(rho_xy_values.head())
+
+    See Also
+    --------
+    AVG : The parent class providing the main data loading and
+          exporting functionality.
+    Z : The component that handles impedance calculations.
+    Resistivity : The component that manages resistivity data.
+    Phase : The component that manages phase data.
     """
-    Extends AVG with tensor component properties and computations.
-    """
+    
     def compute_resistivity_phase(self):
         """
         Compute rho and phi from the complex impedance Z.
         """
         if self.info.df is None:
             raise ValueError("Data frame is not loaded.")
-
+        
+        has_read (self, attributes="info") 
+        
         z_complex = self.z.z
         freq = self.info.df["freq"]
         omega = 2 * PI * freq
@@ -677,18 +785,28 @@ class AMTAVG(AVG):
         """
         if self.info.df is None:
             raise ValueError("Data frame is not loaded.")
-
+        
+        has_read (self, attributes="info") 
+        
         # Work on a copy to avoid modifying the original df
         df = self.info.df.copy()
 
         # Use .loc to ensure alignment and avoid warnings
-        df.loc[rho.index, "rho"] = rho
-        df.loc[phi.index, "phase"] = phi
+        # df.loc[rho.index, "rho"] = rho
+        # df.loc[phi.index, "phase"] = phi
+        # if rho_err is not None:
+        #     df.loc[rho_err.index, "pc_rho"] = rho_err
+        # if phi_err is not None:
+        #     df.loc[phi_err.index, "sphz"] = phi_err
+        
+        # Direct assignment is safer and respects index alignment
+        df["rho"] = rho
+        df["phase"] = phi
         if rho_err is not None:
-            df.loc[rho_err.index, "pc_rho"] = rho_err
+            df["pc_rho"] = rho_err
         if phi_err is not None:
-            df.loc[phi_err.index, "sphz"] = phi_err
-
+            df["sphz"] = phi_err
+            
         # Re-read components to update their internal state
         self.info.read(df, self.info.meta)
         
@@ -704,6 +822,8 @@ class AMTAVG(AVG):
         This method returns an xarray.DataArray for the specified
         variable, indexed by frequency and the 2x2 tensor axes.
         """
+        has_read (self, attributes="info") 
+        
         component_map = {
             "z": self.z,
             "rho": self.resistivity,

@@ -8,11 +8,23 @@ Validation utilities for pycsamt.
 
 import inspect
 import warnings
-from typing import List, Optional, Any, Union, Sequence
+from functools import wraps 
+from typing import ( 
+    List, 
+    Optional, 
+    Any, 
+    Union, 
+    Sequence, 
+    Callable
+)
 
 import numpy as np 
-from ..exceptions import NotFittedError
+import pandas as pd 
 
+from ..exceptions import ( 
+    NotFittedError, 
+    NotReadError 
+)
 
 __all__ = [
     'check_is_fitted', 
@@ -23,13 +35,224 @@ __all__ = [
     '_is_numeric_dtype', 
     'check_consistency_size', 
     '_is_arraylike_1d', 
-    'is_instance_extended'
+    'is_instance_extended', 
+    "has_read", 
+    "check_has_read"
 ]
+
+def has_read(
+    obj: Any = None,
+    *,
+    attributes: Union[str, List[str], None] = None,
+    msg: Optional[str] = None,
+) -> bool:
+    r"""Check if an object has been populated with data.
+
+    This function provides a standardized way to verify that an
+    object's `read` method (or equivalent) has been called
+    before other methods are accessed. It uses a multi-stage
+    checking process for maximum flexibility.
+
+    Parameters
+    ----------
+    obj : object, optional
+        The instance of the class to check. If ``None``, the
+        function will attempt to find the instance (`self`) from
+        the calling method's frame.
+    attributes : str, list of str, optional
+        Attribute names to verify for existence and content. This
+        serves as a fallback check if no explicit read-state flag
+        is found on the object.
+    msg : str, optional
+        A custom error message to raise if validation fails. If
+        not provided, a default message is generated.
+
+    Returns
+    -------
+    bool
+        ``True`` if the object is considered "read". The function
+        does not return ``False`` but raises an error instead.
+
+    Raises
+    ------
+    NotReadError
+        If the object has not been read, based on one of the
+        checking mechanisms.
+    ValueError
+        If `obj` is ``None`` and `self` cannot be found in the
+        caller's scope.
+
+    Notes
+    -----
+    The check is performed with the following priority:
+
+    1. **Custom Method**: Looks for a `__has_read__` method on
+       the object. If it exists and returns ``False``, an error
+       is raised.
+    2. **Boolean Flag**: Looks for a `_has_read` attribute. If
+       it is explicitly ``False``, an error is raised.
+    3. **Attribute Inspection**: If neither of the above is found,
+       it checks the `attributes` argument to ensure the specified
+       attributes exist and are not empty.
+
+    Examples
+    --------
+    >>> from pycsamt.exceptions import NotReadError
+    >>> class MyReader:
+    ...     def __init__(self):
+    ...         self.data = None
+    ...     def read_data(self):
+    ...         self.data = [1, 2, 3]
+    ...     def process(self):
+    ...         has_read(self, attributes='data')
+    ...         return sum(self.data)
+    ...
+    >>> reader = MyReader()
+    >>> try:
+    ...     reader.process()
+    ... except NotReadError as e:
+    ...     print(e)
+    'MyReader' has not been read yet. Attribute 'data' is ...
+    >>> reader.read_data()
+    >>> reader.process()
+    6
+
+    See Also
+    --------
+    check_has_read : A decorator that uses this function.
+    """
+    if obj is None:
+        # Introspect the caller's frame to find 'self'
+        frame = inspect.currentframe()
+        if frame and frame.f_back:
+            obj = frame.f_back.f_locals.get('self')
+        if obj is None:
+            raise ValueError(
+                "No object provided or found as 'self' to check."
+            )
+
+    # 1) Custom __has_read__ method
+    if hasattr(obj, '__has_read__') and callable(
+        getattr(obj, '__has_read__')
+    ):
+        if not obj.__has_read__():
+            custom_msg = msg or (
+                f"'{obj.__class__.__name__}' reports not read via "
+                "__has_read__()."
+            )
+            raise NotReadError(custom_msg)
+        return True
+
+    # 2) Boolean flag
+    if hasattr(obj, '_has_read'):
+        flag = getattr(obj, '_has_read')
+        if flag is False:
+            custom_msg = msg or (
+                f"'{obj.__class__.__name__}' has `_has_read` "
+                "flag set to False."
+            )
+            raise NotReadError(custom_msg)
+        if flag is True:
+            return True
+
+    # 3) Fallback check: verify specified attributes
+    if attributes is None:
+        attributes = []
+    if isinstance(attributes, str):
+        attributes = [attributes]
+
+    if not attributes:
+        custom_msg = msg or (
+            f"'{obj.__class__.__name__}' has no explicit read flag "
+            "and no attributes were specified for checking."
+        )
+        raise NotReadError(custom_msg)
+
+    for attr in attributes:
+        value = getattr(obj, attr, None)
+        is_empty = False
+        if value is None:
+            is_empty = True
+        elif isinstance(value, pd.DataFrame) and value.empty:
+            is_empty = True
+        elif hasattr(value, "__len__") and len(value) == 0:
+            is_empty = True
+
+        if is_empty:
+            custom_msg = msg or (
+                f"'{obj.__class__.__name__}' has not been read. "
+                f"Attribute '{attr}' is missing or empty. Call a "
+                "read or from_* method first."
+            )
+            raise NotReadError(custom_msg)
+            
+    return True
+
+def check_has_read(
+    attributes: Union[str, List[str], None] = None,
+    *,
+    msg: Optional[str] = None,
+) -> Callable:
+    r"""Decorator to verify an object has been read.
+
+    This decorator uses the :func:`has_read` function to protect
+    a method, ensuring the object instance (`self`) has been
+    properly populated with data before the method is executed.
+
+    Parameters
+    ----------
+    attributes : str or list of str, optional
+        The attribute name(s) to pass to the `has_read` function
+        for validation. This is typically the name of a DataFrame
+        or a core data attribute.
+    msg : str, optional
+        A custom error message to raise if validation fails.
+
+    Returns
+    -------
+    callable
+        The decorated function.
+
+    Examples
+    --------
+    >>> from pycsamt.exceptions import NotReadError
+    >>> class MyDataLoader:
+    ...     def __init__(self):
+    ...         self.df = None
+    ...     def load(self):
+    ...         # In a real scenario, this would load data.
+    ...         self.df = "some data"
+    ...     @check_has_read(attributes="df")
+    ...     def get_data(self):
+    ...         return self.df
+    ...
+    >>> loader = MyDataLoader()
+    >>> try:
+    ...     loader.get_data()
+    ... except NotReadError as e:
+    ...     print(e)
+    'MyDataLoader' has not been read yet. Attribute 'df' is ...
+    >>> loader.load()
+    >>> loader.get_data()
+    'some data'
+
+    See Also
+    --------
+    has_read : The underlying validation function.
+    """
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            # 'self' is the instance the decorated method is called on
+            has_read(self, attributes=attributes, msg=msg)
+            return func(self, *args, **kwargs)
+        return wrapper
+    return decorator
 
 def check_is_fitted(
         obj: Any = None, attributes: Optional[List[str]] = None
     ) -> bool:
-    """
+    r"""
     Validate that an object is "fitted" before use.
 
     - If `obj` has a __is_fitted__ method, it is called.
@@ -57,7 +280,8 @@ def check_is_fitted(
         frame = inspect.currentframe().f_back
         obj = frame.f_locals.get('self')  # type: ignore
     if obj is None:
-        raise ValueError("No object provided or found as 'self' to check fitting.")
+        raise ValueError(
+            "No object provided or found as 'self' to check fitting.")
 
     # 1) Custom __is_fitted__ method
     if hasattr(obj, '__is_fitted__') and callable(obj.__is_fitted__):
@@ -69,7 +293,8 @@ def check_is_fitted(
 
     # 2) Explicit attribute presence
     if attributes:
-        missing = [attr for attr in attributes if getattr(obj, attr, None) is None]
+        missing = [attr for attr in attributes 
+                   if getattr(obj, attr, None) is None]
         if missing:
             raise NotFittedError(
                 f"{obj.__class__.__name__} missing required"
@@ -471,3 +696,4 @@ def is_instance_extended(instance, cls):
             if instance_module == cls_module:
                 return True
     return False
+

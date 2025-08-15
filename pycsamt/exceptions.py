@@ -17,6 +17,18 @@ class NotFittedError(PycsamtError):
     before `fit()` has been called to load the underlying data.
     """
     pass
+class NotReadError(PycsamtError):
+    """
+    Raised when an estimator or reader method is invoked
+    before `fit()` has been called to load the underlying data.
+    """
+    pass
+
+class TensorError(PycsamtError):
+    """
+    Raised Error if Tensor not 3D or 4D dimensional.
+    """
+    pass
 
 class GisError(PycsamtError):
     """Errors in GIS coordinate transformations and lookups."""

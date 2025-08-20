@@ -28,7 +28,7 @@ Usage
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Mapping, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -36,7 +36,7 @@ import pandas as pd
 from ..exceptions import AvgDataError
 from .tensor import TensorBase
 from .utils import ( 
-    _find_col, 
+    # _find_col, 
     _to_num, 
     _norm_comp, 
     to_xarray as _to_xr, 
@@ -73,13 +73,13 @@ class Resistivity(TensorBase):
     """
 
     VAR_NAME: str = field(init=False, default="rho")
-    ALIASES: Tuple[str, ...] = field(
-        init=False,
-        default=(
-            "ARes.mag", "Resistivity", "rho", "Rho", "ares.mag",
-            "ARes", "ARes_mag",
-        ),
-    )
+    # ALIASES: Tuple[str, ...] = field(
+    #     init=False,
+    #     default=(
+    #         "ARes.mag", "Resistivity", "rho", "Rho", "ares.mag",
+    #         "ARes", "ARes_mag",
+    #     ),
+    # )
     UNIT_ATTR: str = field(init=False, default="Unit.Rho")
 
     # API 
@@ -118,14 +118,20 @@ class Resistivity(TensorBase):
             )
 
         df = source.copy()
-        col = _find_col(df, self.ALIASES)
-        if col is None:
-            raise AvgDataError(
-                "Resistivity: none of aliases "
-                f"{self.ALIASES!r} present in table."
-            )
-
-        df = df.rename(columns={col: self.VAR_NAME})
+        # col = _find_col(df, self.ALIASES)
+        # if col is None:
+        #     raise AvgDataError(
+        #         "Resistivity: none of aliases "
+        #         f"{self.ALIASES!r} present in table."
+        #     )
+    
+        # df = df.rename(columns={col: self.VAR_NAME})
+        if self.VAR_NAME not in df.columns:
+            df[self.VAR_NAME] = np.nan
+            if self.verbose:
+                self._logger.debug(
+                    f"'{self.VAR_NAME}' not in source. Creating empty."
+                )
 
         # coords (inject defaults)
         if "comp" not in df.columns:
@@ -142,6 +148,8 @@ class Resistivity(TensorBase):
         df[self.VAR_NAME] = df[self.VAR_NAME].map(_to_num)
 
         self._frame = df[["station", "freq", "comp", self.VAR_NAME]]
+        
+        return self 
 
     def write(
         self,
@@ -157,6 +165,7 @@ class Resistivity(TensorBase):
         tmp = self.__class__()  # ephemeral for helper reuse
         tmp._frame = self._frame.copy()
         tmp._meta = meta
+        
         return tmp._write_csv_block(
             cols=["station", "freq", "comp", self.VAR_NAME],
             title=r"$Resistivity Block",
@@ -207,10 +216,10 @@ class Phase(TensorBase):
     """
 
     VAR_NAME: str = field(init=False, default="phase")
-    ALIASES: Tuple[str, ...] = field(
-        init=False,
-        default=("Z.phz", "z.phz", "Phase", "phase"),
-    )
+    # ALIASES: Tuple[str, ...] = field(
+    #     init=False,
+    #     default=("Z.phz", "z.phz", "Phase", "phase"),
+    # )
     UNIT_ATTR: str = field(init=False, default="Unit.Phase")
 
     # API #
@@ -247,14 +256,20 @@ class Phase(TensorBase):
             )
 
         df = source.copy()
-        col = _find_col(df, self.ALIASES)
-        if col is None:
-            raise AvgDataError(
-                "Phase: none of aliases "
-                f"{self.ALIASES!r} present in table."
-            )
+        # col = _find_col(df, self.ALIASES)
+        # if col is None:
+        #     raise AvgDataError(
+        #         "Phase: none of aliases "
+        #         f"{self.ALIASES!r} present in table."
+        #     )
 
-        df = df.rename(columns={col: self.VAR_NAME})
+        # df = df.rename(columns={col: self.VAR_NAME})
+        if self.VAR_NAME not in df.columns:
+            df[self.VAR_NAME] = np.nan
+            if self.verbose:
+                self._logger.debug(
+                    f"'{self.VAR_NAME}' not in source. Creating empty."
+                )
 
         if "comp" not in df.columns:
             df["comp"] = "ExHy"
@@ -269,6 +284,9 @@ class Phase(TensorBase):
         df[self.VAR_NAME] = df[self.VAR_NAME].map(_to_num)
 
         self._frame = df[["station", "freq", "comp", self.VAR_NAME]]
+        
+        return self 
+    
 
     def write(
         self,

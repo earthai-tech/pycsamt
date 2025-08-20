@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
+
 """
 AVG - Main user-facing data container for Zonge datasets.
 
@@ -23,7 +24,7 @@ from typing import (
     Literal, 
     Dict
 )
-
+from datetime import datetime
 import numpy as np
 import pandas as pd
 
@@ -36,6 +37,7 @@ from ..utils.validation import has_read
 from ._transfer import LegacyAVGBase
 from .base import AVGFrame
 from .info import DataInfo
+from .heads import _emit_hardware_banner
 from .utils import ( 
     classify_avg_format, 
     load_avg, 
@@ -172,7 +174,7 @@ class BaseAVG:
         *,
         stamp: bool = True,
         float_fmt: str = "%.6g",
-        na_rep: str = "",
+        na_rep: str = "*",
         header_spaces: bool = False,
     ):
         """
@@ -195,7 +197,8 @@ class BaseAVG:
             logger.info(f"Writing modern AVG file to: {path}")
 
         meta = self.info.header.to_keywords()
-
+        banner = _emit_hardware_banner(self.info.header.hardware)
+        
         write_avg(
             core=self.info.df,
             extra=None,
@@ -205,6 +208,7 @@ class BaseAVG:
             float_fmt=float_fmt,
             na_rep=na_rep,
             header_spaces=header_spaces,
+            banner_lines=banner,
         )
         
     def to_legacy(
@@ -235,11 +239,13 @@ class BaseAVG:
 
         lines = []
         h = self.info.header
+        # Today's date for 'Processed' if not available
+        today_str = datetime.now().strftime("%d %b %y")
         lines.append(
             f"\\ AMTAVG 7.76: "
             f"\"{h.hardware.source_file or 'pycsamt.export'}\", "
             f"Dated {h.hardware.dated or '...'}, "
-            f"Processed {h.hardware.processed or '...'}"
+            f"Processed {h.hardware.processed or today_str}"
         )
         if h.rx.length_m is not None:
             lines.append(f"$ ASPACE= {h.rx.length_m}m")
@@ -258,8 +264,16 @@ class BaseAVG:
         )
         lines.append(header_str)
         lines.append(separator_str)
-
-        df = self.info.df.sort_values(by=["station", "freq"])
+        
+        # Map from the canonical lowercase names in self.info.df
+        # to the names expected by the row.get() calls below.
+        rename_map = {
+            "e.%err": "pc_emag", "e.perr": "s_ephz",
+            "h.%err": "pc_hmag", "h.perr": "s_hphz",
+            "rho.%err": "pc_rho", "z.perr": "s_phz",
+        }
+        df = self.info.df.rename(columns=rename_map)
+        df = df.sort_values(by=["station", "freq"])
 
         # Define format specifier to avoid linter confusion
         sci_fspec = f"%9.{precision}e"
@@ -846,7 +860,6 @@ class AMTAVG(AVG):
         except KeyError:
             logger.error(f"Station ID '{station_id}' not found.")
             raise
-
 
     # --- Z Tensor Components ---
     @property

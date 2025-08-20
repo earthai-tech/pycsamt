@@ -63,7 +63,10 @@ class CompMeas(AVGComponentBase):
     """
 
     # canonical forms allowed by the pipeline
-    _VALID: set[str] = {"ExHy", "ExHx", "EyHy", "EyHx"}
+    _VALID: set[str] = {
+        "ExHy", "ExHx", "EyHy", "EyHx",
+        "Zxx", "Zxy", "Zyx", "Zyy",
+    }
 
     # tolerant normalisation map (upper/lower → canonical)
     _NORM: Dict[str, str] = {
@@ -71,6 +74,10 @@ class CompMeas(AVGComponentBase):
         "EYHY": "EyHy", "EYHX": "EyHx",
         "exhy": "ExHy", "exhx": "ExHx",
         "eyhy": "EyHy", "eyhx": "EyHx",
+        "ZXX": "Zxx", "ZXY": "Zxy",
+        "ZYX": "Zyx", "ZYY": "Zyy",
+        "zxx": "Zxx", "zxy": "Zxy",
+        "zyx": "Zyx", "zyy": "Zyy",
     }
 
     required: set[str] = set()              # flexible on input
@@ -93,10 +100,15 @@ class CompMeas(AVGComponentBase):
         # normalise tolerant variants → canonical
         def _norm_one(v: Any) -> str:
             s = str(v).strip()
-            return self._NORM.get(s, s)
+            # Use .upper() for case-insensitivity before mapping
+            return self._NORM.get(s.upper(), s)
 
         df["comp"] = df["comp"].map(_norm_one)
-
+        
+        # Drop rows with NaN or unrecognized components that may
+        # have been introduced during xarray conversion
+        df = df[df["comp"].isin(self._VALID)].copy()
+        
         # validate – bail early with a friendly message
         bad = sorted(set(df["comp"]) - self._VALID)
         if bad:

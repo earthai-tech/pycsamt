@@ -11,13 +11,11 @@ and various QC metrics) into a single, convenient container.
 """
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
 from typing import Any, Mapping, Optional, Tuple, Union
 
 import pandas as pd
 
-from ..exceptions import AvgDataError
 from .base import AVGFrame
 from .heads import Header
 from .meas import Amps, CompMeas, Frequency

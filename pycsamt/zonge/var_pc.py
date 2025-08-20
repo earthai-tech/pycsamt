@@ -27,15 +27,18 @@ from typing import (
     Mapping, 
     Optional,
     Sequence, 
-    Tuple
 )
 
 import numpy as np
 import pandas as pd
 
+from ..log.logger import get_logger 
 from ..exceptions import AvgDataError
 from .base import AVGComponentBase
 from .utils import to_xarray as _to_xr
+from .utils import _to_numeric_percent 
+
+logger = get_logger(__name__)
 
 __all__= [
     'PcEmag',
@@ -47,43 +50,7 @@ __all__= [
     'RhoPctErr',  
  ] 
 
-def _first_present(
-    df: pd.DataFrame,
-    candidates: Sequence[str],
-) -> Optional[str]:
-    """
-    Return the first column name found in *df* among *candidates*.
 
-    Parameters
-    ----------
-    df
-        Input tidy table.
-    candidates
-        Ordered list of legacy/modern aliases.
-
-    Returns
-    -------
-    str or None
-        The first matching column name, or *None* if absent.
-    """
- 
-    cols_lc = {str(c).strip().lower(): c for c in df.columns}
-    for a in candidates:
-        a_lc = str(a).strip().lower()
-        if a_lc in cols_lc:
-            return cols_lc[a_lc]
-    return None
-
-def _to_numeric_percent(series: pd.Series) -> pd.Series:
-    """
-    Convert a percent-like column to float while tolerating blanks.
-
-    Empty/asterisk tokens are mapped to NaN; strings like ``"5"`` or
-    ``"5.0"`` become ``5.0``.
-    """
-    s = series.astype(str).str.strip().replace(
-        {"": np.nan, "*": np.nan})
-    return pd.to_numeric(s, errors="coerce")
 
 
 @dataclass(slots=True)
@@ -103,8 +70,8 @@ class PercentVarBase(AVGComponentBase):
     # # canonical variable name written in the frame
     VAR_NAME: ClassVar[str] = ""                  # e.g., "pc_emag"
     
-    # # ordered list of candidate column labels in source tables
-    ALIASES: ClassVar[Tuple[str, ...]] = ()   # e.g., ("%Emag", "E.%err", ...)
+    # # # ordered list of candidate column labels in source tables
+    # ALIASES: ClassVar[Tuple[str, ...]] = ()   # e.g., ("%Emag", "E.%err", ...)
     
     # # default banner/title used by ``write()``
     TITLE: ClassVar[str] = "Percent Variation"
@@ -141,7 +108,7 @@ class PercentVarBase(AVGComponentBase):
             Free-form header/keyword mapping to stash as attrs.
         """
         # Guard to catch misconfigured subclasses early
-        if not self.VAR_NAME or not self.ALIASES:
+        if not self.VAR_NAME:
             raise RuntimeError(
                 f"{self.__class__.__name__}: VAR_NAME/ALIASES"
                 " must be set on the subclass."
@@ -151,12 +118,23 @@ class PercentVarBase(AVGComponentBase):
             raise TypeError("PercentVarBase.read expects a DataFrame.")
 
         df = source.copy()
-        var_col = _first_present(df, self.ALIASES)
-        if var_col is None:
-            raise AvgDataError(
-                f"{self.__class__.__name__}: none of aliases "
-                f"{self.ALIASES!r} present in table."
-            )
+        self._meta = dict(meta or {})
+        self._meta.setdefault(self.UNIT_ATTR, "%")
+        
+        # var_col = _first_present(df, self.ALIASES)
+        # if var_col is None:
+        #     raise AvgDataError(
+        #         f"{self.__class__.__name__}: none of aliases "
+        #         f"{self.ALIASES!r} present in table."
+        #     )
+        # After standardization, we expect the canonical VAR_NAME.
+        # If not present, create it with NaNs for consistency.
+        if self.VAR_NAME not in df.columns:
+            df[self.VAR_NAME] = np.nan
+            if self.verbose:
+                logger.debug(
+                    f"'{self.VAR_NAME}' not in source. Creating empty."
+                )
 
         # ensure coords exist (inject conservative defaults)
         if "comp" not in df.columns:
@@ -167,8 +145,8 @@ class PercentVarBase(AVGComponentBase):
             raise AvgDataError("frequency column 'freq' is required.")
 
         # normalize percent column → float
-        df[self.VAR_NAME] = _to_numeric_percent(df[var_col])
-
+        df[self.VAR_NAME] = _to_numeric_percent(df[self.VAR_NAME].copy())
+        
         keep = [c for c in (
             "station", "freq", "comp", self.VAR_NAME) if c in df.columns]
         # store a compact, predictable layout
@@ -178,6 +156,8 @@ class PercentVarBase(AVGComponentBase):
 
         # ensure a stable units hint at dataset level
         self._meta.setdefault(self.UNIT_ATTR, "%")
+        
+        return self 
 
     def write(
         self,
@@ -318,7 +298,7 @@ class PcEmag(PercentVarBase):
     :class:`xarray.Dataset`.
     """
     VAR_NAME = "pc_emag"
-    ALIASES = ("%Emag", "E.%err")
+    # ALIASES = get_aliases(VAR_NAME, kind ='qc') # ("%Emag", "E.%err")
     TITLE = "Percent |E| Variation"
     UNIT_ATTR = "Unit.Percent"
 
@@ -341,7 +321,7 @@ class PcHmag(PercentVarBase):
     """
     VAR_NAME = "pc_hmag"
     # 'H' vs 'B' modern label differences covered; legacy %Hmag too
-    ALIASES = ("%Hmag", "B.%err", "H.%err")
+    # ALIASES = get_aliases(VAR_NAME, kind ='qc')#("%Hmag", "B.%err", "H.%err")
     TITLE = "Percent |H| Variation"
     UNIT_ATTR = "Unit.Percent"
 
@@ -364,7 +344,7 @@ class PcRho(PercentVarBase):
     :class:`xarray.Dataset`.
     """
     VAR_NAME = "pc_rho"
-    ALIASES = ("%Rho", "ARes.%err", "rho.%err")
+    # ALIASES = get_aliases(VAR_NAME, kind ='qc')# ("%Rho", "ARes.%err", "rho.%err")
     TITLE = "Percent ρa Variation"
     UNIT_ATTR = "Unit.Percent"
 

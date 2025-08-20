@@ -2,25 +2,33 @@
 # Author: L. Kouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
-"""
-pycsamt.gis.utils
+r"""
+GIS utilities for *pycsamt* (v2). Provides coordinate
+transformations between geographic (lat/lon) and UTM using
+GDAL (preferred) or a PROJ fallback (``pyproj``).
 
-GIS utilities for pycsamt (v2.0).
-Provides coordinate transformation functions between
-latitude/longitude and UTM, using GDAL (preferred) or PyProj.
+Core features
+-------------
+- Geographic ⇄ UTM conversions (scalar and vectorized).
+- Flexible latitude/longitude parsing (decimal and DMS).
+- Small helpers for UTM zones and EPSG lookup.
 
-Main functions:
-  * project_point_ll2utm
-  * project_point_utm2ll
+Examples
+--------
+>>> from pycsamt.gis.utils import project_point_ll2utm
+>>> project_point_ll2utm(-118.34, 34.05)  # doctest: +SKIP
 
-Supports input formats for lat/lon:
-  * 'DD:MM:SS.sss'
-  * 'DD.decimal_degrees'
-  * float(DD.decimal_degrees)
+.. note::
 
-Examples:
-  >>> from pycsamt.gis.utils import project_point_ll2utm
-  >>> project_point_ll2utm(-118.34, 34.05)
+   Parts of this module are adapted from the **MTPy** project
+   (https://github.com/MTgeophysics/mtpy-v2). Original work:
+   Krieger, L., & Peacock, J. (2014), *MTpy: A Python toolbox
+   for magnetotellurics*, Computers & Geosciences, 72, 167–175,
+   https://doi.org/10.1016/j.cageo.2014.07.013.
+
+   The implementation here has been revised, fixed, and
+   extended for *pycsamt* v2, with additional validation,
+   deprecations, and compatibility layers.
 """
 
 import numpy as np
@@ -28,17 +36,21 @@ from typing import Optional, Tuple
 
 from ..decorators import Deprecated
 from ..log.logger import get_logger
-from .config import HAS_GDAL, EPSG_DICT
+from .config import (
+    HAS_GDAL,
+    EPSG_DICT,
+    GDALMissingError,
+    GisError,
+)
 from .constants import (
     DEG2RAD,
     RAD2DEG,
     ELLIPSOIDS,
-    _EQUATORIAL_RADIUS_IDX, 
-    _ECC_SQUARED_IDX, 
+    _EQUATORIAL_RADIUS_IDX,
+    _ECC_SQUARED_IDX,
     utm_letter_designator,
 )
 
-# GDAL or PyProj backend setup
 if HAS_GDAL:
     from osgeo import osr
     from osgeo.ogr import OGRERR_NONE
@@ -59,136 +71,287 @@ __all__ = [
     'get_epsg',
     'assert_xy_coordinate_system', 
     'decimal_to_dms', 
-    'dms_to_decimal'
-    
+    'dms_to_decimal',
+    'GisError'
 ]
 
+def assert_xy_coordinate_system(x, y) -> str:
+    r"""
+    Infer the coordinate system of paired ``x`` and ``y`` arrays.
 
-class GisError(Exception):
-    """Base exception for GIS utilities."""
-    pass
+    Heuristics detect one of three systems:
 
-def assert_xy_coordinate_system (x, y ): 
-    """ Assert the coordinates system of x and y. 
-    
-    Parameters 
-    ------------
-    x, y : arraylike 1d 
-       Array of position coordinates x and y  
-    
-    Returns 
-    ---------
-    cs: str
-       Coordinates system  ['utm'| 'dms'|'ll'] as:
-       
-       -'ll' for longitude -latitude coordinate system 
-       - 'dms' for degree-minute-second (DD:MM:SS) coordinate system.
-       - 'utm' for 'UTM' coordinate system. 
-      
-    Note 
+    * ``'ll'``  — longitude/latitude in decimal degrees.
+    * ``'dms'`` — degree-minute-second strings ``DD:MM:SS``.
+    * ``'utm'`` — any other numeric system (fallback).
+
+    Parameters
+    ----------
+    x, y : array-like (1D)
+        Arrays of horizontal (``x``) and vertical (``y``)
+        positions. Elements may be numeric or DMS strings.
+
+    Returns
     -------
-    Note that any other values that does not fit longitude-latitude ('ll') 
-    or Degree-minute-seconds ('DD:MM:SS') should be considered as 
-    'UTM' coordinate system. 
-       
-    Examples 
+    cs : {'utm', 'dms', 'll'}
+        Inferred coordinate system token.
+
+    Notes
+    -----
+    - DMS is detected if any array consists entirely of
+      strings containing the ``':'`` separator.
+    - Decimal degrees are detected when either orientation
+      matches bounds:
+
+      * ``|x| <= 180`` and ``|y| <= 90`` (lon, lat), or
+      * ``|x| <= 90`` and ``|y| <= 180`` (lat, lon).
+
+    - If neither DMS nor decimal-degree bounds match,
+      the function returns ``'utm'`` by default.
+
+    Examples
     --------
-    >>> import numpy as np 
-    >>> np.random.seed (42 ) 
-    >>> from pycsamt.gis.utils import assert_xy_coordinate_system
-    >>> x, y = np.random.rand(7 ), np.arange (7 )
-    >>> assert_xy_coordinate_system (x, y)
+    >>> import numpy as np
+    >>> np.random.seed(42)
+    >>> x, y = np.random.rand(7) * 1.0, np.arange(7) * 0.1
+    >>> assert_xy_coordinate_system(x, y)
     'll'
-    >>> assert_xy_coordinate_system (x, y*180) 
+    >>> assert_xy_coordinate_system(x * 1000, y * 1000)
     'utm'
-    >>> x = ['28:24:43.08','28:24:42.69','28:24:42.31'] 
-    >>> y = ['109:19:58.34','109:19:58.93','109:19:59.51'] 
-    >>> assert_xy_coordinate_system (x, y) 
+    >>> x = ['28:24:43.08', '28:24:42.69', '28:24:42.31']
+    >>> y = ['109:19:58.34', '109:19:58.93', '109:19:59.51']
+    >>> assert_xy_coordinate_system(x, y)
     'dms'
     """
-    def isdms (a ): 
-        return all ([':' in str (s) for s in a ] )
-        
-    cs ='utm'
-    x = np.array (x ) ; y = np.array (y) # for consistency 
-    
-    if ( 
-            isdms (x) or isdms (y) ) : 
-        cs ='dms'
-    
-    elif (
-             ( (x < 90).all () and  (y <180).all())
-          or (( x <180).all() and (y <90).all())
-          ): 
-        cs ='ll'
-    
-        
-    return cs 
+    def _is_dms(a) -> bool:
+        a = np.asarray(a, dtype=object).ravel()
+        if a.size == 0:
+            return False
+        return all(":" in str(v) for v in a)
 
-# DMS (degrees, minutes, seconds) parsing helpers
+    # Normalize to numpy arrays
+    xa = np.asarray(x, dtype=object).ravel()
+    ya = np.asarray(y, dtype=object).ravel()
+
+    # DMS detection
+    if _is_dms(xa) or _is_dms(ya):
+        return "dms"
+
+    # Try numeric interpretation
+    try:
+        xf = np.asarray(xa, dtype=float)
+        yf = np.asarray(ya, dtype=float)
+    except (ValueError, TypeError):
+        return "utm"
+
+    # Decimal-degree bounds (either orientation)
+    x180_y90 = (
+        np.all(np.abs(xf) <= 180.0)
+        and np.all(np.abs(yf) <= 90.0)
+    )
+    x90_y180 = (
+        np.all(np.abs(xf) <= 90.0)
+        and np.all(np.abs(yf) <= 180.0)
+    )
+    if x180_y90 or x90_y180:
+        return "ll"
+
+    return "utm"
 
 def _assert_minutes(minutes: float) -> float:
-    """
-    Validate minutes component: 0 <= minutes < 60.
+    r"""
+    Validate a minutes component in DMS notation.
+
+    Ensures that ``minutes`` lies in the half-open interval
+    ``[0, 60)``. Returns the input when valid, otherwise raises
+    ``ValueError``.
+
+    Parameters
+    ----------
+    minutes : float
+        Minutes component to validate.
+
+    Returns
+    -------
+    float
+        The validated minutes value.
+
+    Raises
+    ------
+    ValueError
+        If ``minutes`` is not in ``[0, 60)``.
+
+    Examples
+    --------
+    >>> _assert_minutes(59.9)
+    59.9
     """
     if not (0 <= minutes < 60):
-        raise ValueError(f"Minutes must be in [0,60): {minutes}")
+        msg = f"Minutes must be in [0, 60): {minutes}"
+        raise ValueError(msg)
     return minutes
 
 
 def _assert_seconds(seconds: float) -> float:
-    """
-    Validate seconds component: 0 <= seconds < 60.
+    r"""
+    Validate a seconds component in DMS notation.
+
+    Ensures that ``seconds`` lies in the half-open interval
+    ``[0, 60)``. Returns the input when valid, otherwise raises
+    ``ValueError``.
+
+    Parameters
+    ----------
+    seconds : float
+        Seconds component to validate.
+
+    Returns
+    -------
+    float
+        The validated seconds value.
+
+    Raises
+    ------
+    ValueError
+        If ``seconds`` is not in ``[0, 60)``.
+
+    Examples
+    --------
+    >>> _assert_seconds(12.345)
+    12.345
     """
     if not (0 <= seconds < 60):
-        raise ValueError(f"Seconds must be in [0,60): {seconds}")
+        msg = f"Seconds must be in [0, 60): {seconds}"
+        raise ValueError(msg)
     return seconds
 
 
-def _rollover_dms(unit: float, value: float) -> Tuple[float, float]:
-    """
-    Handle rollover when seconds or minutes >= 60 by carrying
-    over to higher unit.
+def _rollover_dms(
+    unit: float,
+    value: float,
+) -> tuple[float, float]:
+    r"""
+    Carry over excess seconds or minutes into the higher unit.
 
-    Returns (unit + carry, remainder).
+    If ``value >= 60``, this function computes the carry and
+    remainder, returning ``(unit + carry, remainder)``. If no
+    carry is needed, returns ``(unit, value)``.
+
+    Parameters
+    ----------
+    unit : float
+        The higher unit (minutes for seconds rollover, or
+        degrees for minutes rollover).
+    value : float
+        The lower unit to check and normalize.
+
+    Returns
+    -------
+    tuple of float
+        A pair ``(new_unit, remainder)`` after rollover.
+
+    Examples
+    --------
+    >>> _rollover_dms(10, 120)   # 120 sec -> 2 min
+    (12, 0)
     """
     carry = int(value // 60)
     remainder = value % 60
     if carry:
-        return unit + carry, remainder
-    return unit, remainder
+        return (unit + carry, remainder)
+    return (unit, remainder)
 
 
-def dms_to_decimal( position_str): 
-    "Convert a DMS string ('DD:MM:SS.sss') or decimal degrees to a float."
-    return convert_position_str2float (position_str) 
+def dms_to_decimal(position_str):
+    r"""
+    Convert a DMS string or decimal degrees to a float.
 
-def convert_position_str2float(position_str: str) -> Optional[float]:
-    """
-    Convert a DMS string ('DD:MM:SS.sss') or decimal degrees to a float.
+    This is a convenience wrapper around
+    :func:`convert_position_str2float`. It accepts either a
+    decimal degrees string/number or a sexagesimal string in
+    ``'DD:MM:SS.sss'`` format.
 
     Parameters
     ----------
-    position_str : str
-        DMS string or decimal degrees string/float.
+    position_str : str or float
+        Coordinate in decimal degrees or DMS string.
 
     Returns
     -------
     float or None
-        Decimal degrees value, or None for invalid input.
+        Decimal degrees value, or ``None`` for invalid input.
+
+    Examples
+    --------
+    >>> dms_to_decimal("34:03:00")
+    34.05
+    >>> dms_to_decimal("-118.34")
+    -118.34
     """
-    if position_str in (None, 'None'):
+    return convert_position_str2float(position_str)
+
+
+def convert_position_str2float(
+    position_str: str,
+) -> float | None:
+    r"""
+    Convert DMS string ``'DD:MM:SS.sss'`` or decimal string to
+    a float in decimal degrees.
+
+    The function first attempts a direct ``float()`` cast. If
+    that fails, it parses the DMS components, validates them,
+    and applies rollover so that values like ``'10:60:00'``
+    become ``'11:00:00'``.
+
+    Parameters
+    ----------
+    position_str : str
+        Input coordinate as decimal degrees or DMS string.
+
+    Returns
+    -------
+    float or None
+        Decimal degrees value. Returns ``None`` for inputs
+        that are ``None`` or the string ``'None'``.
+
+    Raises
+    ------
+    ValueError
+        If the string is not a valid decimal or DMS in the
+        form ``DD:MM:SS`` (with optional decimals).
+
+    Notes
+    -----
+    - Sign is taken from the degrees component only. Minutes
+      and seconds are treated as non-negative magnitudes.
+    - Rollover is applied to keep minutes and seconds within
+      ``[0, 60)``.
+
+    Examples
+    --------
+    >>> convert_position_str2float("34:03:00")
+    34.05
+    >>> convert_position_str2float("-118:20:24")
+    -118.34
+    >>> convert_position_str2float("-118.34")
+    -118.34
+    """
+    if position_str in (None, "None"):
         return None
-    # Try decimal
+
     try:
         return float(position_str)
     except (TypeError, ValueError):
         pass
 
-    # Must be DMS format
-    parts = position_str.split(':')
+    parts = str(position_str).split(":")
     if len(parts) != 3:
-        raise ValueError(f"Invalid DMS format, expected DD:MM:SS: {position_str}")
+        msg = (
+            "Invalid DMS format, expected 'DD:MM:SS': "
+            f"{position_str}"
+        )
+        raise ValueError(msg)
+
     deg = float(parts[0])
     minutes = _assert_minutes(float(parts[1]))
     seconds = _assert_seconds(float(parts[2]))
@@ -197,528 +360,906 @@ def convert_position_str2float(position_str: str) -> Optional[float]:
     deg, minutes = _rollover_dms(deg, minutes)
 
     sign = -1 if deg < 0 else 1
-    return sign * (abs(deg) + minutes/60.0 + seconds/3600.0)
+    return sign * (abs(deg) + minutes / 60.0 + seconds / 3600.0)
 
 
-def assert_lat_value(latitude):
+
+def assert_lat_value(latitude) -> Optional[float]:
+    r"""
+    Validate and coerce a latitude to decimal degrees.
+
+    Accepts a float-like value or a sexagesimal string and
+    returns the value in decimal degrees. Returns ``None`` for
+    ``None``-like inputs. Raises ``ValueError`` if the coerced
+    value is out of valid latitude bounds.
+
+    Parameters
+    ----------
+    latitude : float or str or None
+        Latitude in decimal degrees or as a string in
+        ``"DD:MM:SS.sss"`` format. ``None`` and ``"None"``
+        are treated as missing.
+
+    Returns
+    -------
+    float or None
+        Decimal degrees in ``[-90, 90)`` or ``None`` when the
+        input is missing.
+
+    Notes
+    -----
+    Sexagesimal parsing is delegated to
+    :func:`convert_position_str2float`.
+
+    Examples
+    --------
+    >>> assert_lat_value("34:03:00")
+    34.05
     """
-    make sure latitude is in decimal degrees
-    """
-    if latitude in [None, 'None']:
+    if latitude in [None, "None"]:
         return None
     try:
         lat_value = float(latitude)
-
     except TypeError:
         return None
-
     except ValueError:
         lat_value = convert_position_str2float(latitude)
 
     if abs(lat_value) >= 90:
         print("==> The lat_value =", lat_value)
-        raise ValueError(f'|Latitude| > 90, unacceptable!: {str(lat_value)!r}')
-
+        raise ValueError(
+            f"|Latitude| > 90, unacceptable!: {lat_value!r}"
+        )
     return lat_value
 
 
-def assert_lon_value(longitude):
+def assert_lon_value(longitude) -> Optional[float]:
+    r"""
+    Validate and coerce a longitude to decimal degrees.
+
+    Accepts a float-like value or a sexagesimal string and
+    returns the value in decimal degrees. Returns ``None`` for
+    ``None``-like inputs. Raises ``ValueError`` if the coerced
+    value is out of valid longitude bounds.
+
+    Parameters
+    ----------
+    longitude : float or str or None
+        Longitude in decimal degrees or as a string in
+        ``"DD:MM:SS.sss"`` format. ``None`` and ``"None"``
+        are treated as missing.
+
+    Returns
+    -------
+    float or None
+        Decimal degrees in ``[-180, 180)`` or ``None`` when
+        the input is missing.
+
+    Notes
+    -----
+    Sexagesimal parsing is delegated to
+    :func:`convert_position_str2float`.
+
+    Examples
+    --------
+    >>> assert_lon_value("-118:20:24")
+    -118.34
     """
-    make sure longitude is in decimal degrees
-    """
-    
-    if longitude in [None, 'None']:
+    if longitude in [None, "None"]:
         return None
     try:
         lon_value = float(longitude)
-
     except TypeError:
         return None
-
     except ValueError:
         lon_value = convert_position_str2float(longitude)
 
     if abs(lon_value) >= 180:
-        raise ValueError(f'|Longitude| > 180, unacceptable!: {str(lon_value)!r}')
-
+        raise ValueError(
+            f"|Longitude| > 180, unacceptable!: {lon_value!r}"
+        )
     return lon_value
 
 
-def assert_elevation_value(elevation):
-    """
-    make sure elevation is a floating point number
-    """
+def assert_elevation_value(elevation) -> float:
+    r"""
+    Validate and coerce an elevation to a floating number.
 
+    Attempts to cast ``elevation`` to ``float``. If coercion
+    fails, returns ``0.0`` and logs a warning.
+
+    Parameters
+    ----------
+    elevation : Any
+        Elevation value expected to be numeric.
+
+    Returns
+    -------
+    float
+        Elevation as a floating number. ``0.0`` is returned on
+        invalid input.
+
+    Notes
+    -----
+    A warning is logged via the package logger when the input
+    is not numeric.
+
+    Examples
+    --------
+    >>> assert_elevation_value("12.5")
+    12.5
+    >>> assert_elevation_value("oops")
+    0.0
+    """
     try:
         elev_value = float(elevation)
     except (ValueError, TypeError):
         elev_value = 0.0
-        logger.warn('{0} is not a number, setting elevation to 0'.format(elevation))
-
+        logger.warning(
+            "{} is not a number, setting elevation to 0".format(
+                elevation
+            )
+        )
     return elev_value
 
-def decimal_to_dms( position): 
-    """convert position float to a string in the format of DD:MM:SS"""
-    return convert_position_float2str (position )
 
-def convert_position_float2str(position):
-    """
-    convert position float to a string in the format of DD:MM:SS
-    
-    Arguments
-    -------------
-        **position** : float
-                       decimal degrees of latitude or longitude
-                       
+def decimal_to_dms(position: float) -> str:
+    r"""
+    Convert decimal degrees to a ``DD:MM:SS.ss`` string.
+
+    Parameters
+    ----------
+    position : float
+        Decimal degrees for latitude or longitude.
+
     Returns
-    --------------
-        **position_str** : string
-                          latitude or longitude in format of DD:MM:SS.ms
-                          
-    Example
-    -------------
-        >>> import mtpy.utils.gis_tools as gis_tools
-        >>> gis_tools.convert_position_float2str(-118.34563)
-        
-    """
+    -------
+    str
+        Sexagesimal string in ``"DD:MM:SS.ss"`` format.
 
-    assert type(position) is float, 'Given value is not a float'
+    See Also
+    --------
+    convert_position_float2str
+        Underlying converter used by this wrapper.
+
+    Examples
+    --------
+    >>> decimal_to_dms(-118.34563)
+    '-118:20:44.27'
+    """
+    return convert_position_float2str(position)
+
+
+def convert_position_float2str(position: float) -> str:
+    r"""
+    Convert a decimal-degree value to ``DD:MM:SS.ss`` string.
+
+    Parameters
+    ----------
+    position : float
+        Decimal degrees of latitude or longitude.
+
+    Returns
+    -------
+    str
+        Sexagesimal string in ``"DD:MM:SS.ss"`` format.
+
+    Notes
+    -----
+    The seconds field is rounded to 4 decimals to avoid
+    carry-over artifacts from floating point precision. If
+    rounding pushes seconds to ``60``, minutes are incremented
+    and seconds reset to ``0``.
+
+    Examples
+    --------
+    >>> convert_position_float2str(-118.34563)
+    '-118:20:44.27'
+    """
+    assert type(position) is float, (
+        "Given value is not a float"
+    )
 
     deg = int(position)
-    sign = 1
-    if deg < 0:
-        sign = -1
-
+    sign = -1 if deg < 0 else 1
     deg = abs(deg)
-    minutes = (abs(position) - deg) * 60.
-    # need to round seconds to 4 decimal places otherwise machine precision
-    # keeps the 60 second roll over and the string is incorrect.
-    sec = np.round((minutes - int(minutes)) * 60., 4)
-    if sec >= 60.:
-        minutes += 1
-        sec = 0
 
+    minutes = (abs(position) - deg) * 60.0
+    sec = np.round((minutes - int(minutes)) * 60.0, 4)
+    if sec >= 60.0:
+        minutes += 1.0
+        sec = 0.0
     if int(minutes) == 60:
         deg += 1
-        minutes = 0
-        
-    position_str = '{0}:{1:02.0f}:{2:05.2f}'.format(sign * int(deg),
-                                                    int(minutes),
-                                                    sec)
+        minutes = 0.0
 
+    position_str = "{}:{:02.0f}:{:05.2f}".format(
+        sign * int(deg),
+        int(minutes),
+        sec,
+    )
     return position_str
 
-
-
 @Deprecated(
-    "Use of GDAL SpatialReference for UTM string is deprecated;"  
-    "Refer to get_utm_zone for standard UTM formatting."
- )
-def get_utm_string_from_sr(spatial_ref: 'osr.SpatialReference') -> str:
-    """
-    Return UTM zone string (e.g. '11N') from a GDAL SpatialReference.
+    "GDAL SpatialReference → UTM string is deprecated; "
+    "use 'get_utm_zone' for standard UTM formatting."
+)
+def get_utm_string_from_sr(
+        spatial_ref: "osr.SpatialReference"
+    ) -> str:
+    r"""
+    Return a UTM zone string (e.g., ``'11N'``) from a GDAL
+    ``SpatialReference``.
+
+    Parameters
+    ----------
+    spatial_ref : osr.SpatialReference
+        GDAL spatial reference object with a UTM projection.
+
+    Returns
+    -------
+    str
+        UTM zone string such as ``'11N'`` or ``'55S'``. If a
+        valid UTM zone is not encoded, returns ``'0'``.
+
+    Notes
+    -----
+    This helper is deprecated. Prefer :func:`get_utm_zone`,
+    which derives a zone from latitude/longitude using the
+    standard UTM rules.
+
+    Examples
+    --------
+    >>> # sr is an osr.SpatialReference set to a UTM CRS
+    >>> # get_utm_string_from_sr(sr)  # doctest: +SKIP
     """
     zone = spatial_ref.GetUTMZone()
     if zone > 0:
         return f"{zone}N"
-    elif zone < 0:
+    if zone < 0:
         return f"{abs(zone)}S"
     return str(zone)
 
 
-def get_utm_zone(latitude: float, longitude: float) -> Tuple[int, bool, str]:
-    """
-    Determine the UTM zone number, hemisphere, and zone string for
-    given latitude and longitude.
+def get_utm_zone(
+    latitude: float,
+    longitude: float,
+) -> Tuple[int, bool, str]:
+    r"""
+    Compute the UTM zone, hemisphere flag, and zone string for
+    a geographic coordinate.
+
+    Parameters
+    ----------
+    latitude : float
+        Latitude in decimal degrees.
+    longitude : float
+        Longitude in decimal degrees.
 
     Returns
     -------
     zone_number : int
+        UTM zone number in ``[1, 60]``.
     is_northern : bool
-    zone_string : str (e.g. '11N')
+        ``True`` for the northern hemisphere, else ``False``.
+    zone_string : str
+        Concatenation of zone and latitude band letter, e.g.,
+        ``'11N'``.
+
+    Notes
+    -----
+    - Zone width is 6 degrees, starting at ``-180°``. Values
+      are wrapped into ``[1, 60]``.
+    - The latitude band letter is obtained via
+      :func:`utm_letter_designator`.
+
+    Examples
+    --------
+    >>> get_utm_zone(34.05, -118.34)[2]
+    '11S'
     """
-    # zone width = 6° starting at -180°
-    zone_number = int((longitude + 180) / 6) + 1
-    # handle wrap-around
+    zone_number = int((longitude + 180.0) / 6.0) + 1
     zone_number = ((zone_number - 1) % 60) + 1
-    is_northern = latitude >= 0
+    is_northern = latitude >= 0.0
     letter = utm_letter_designator(latitude)
     zone_string = f"{zone_number}{letter}"
     return zone_number, is_northern, zone_string
 
 
 def utm_zone_to_epsg(
-        zone_number: int, is_northern: bool
-        ) -> Optional[int]:
-    """
-    Lookup EPSG code for WGS84 UTM zone.
+    zone_number: int,
+    is_northern: bool,
+) -> Optional[int]:
+    r"""
+    Resolve the WGS84 UTM EPSG code for a given UTM zone.
 
     Parameters
     ----------
     zone_number : int
+        UTM zone number in ``[1, 60]``.
     is_northern : bool
+        ``True`` for northern hemisphere, ``False`` for
+        southern hemisphere.
+
+    Returns
+    -------
+    int or None
+        Matching EPSG code (e.g., ``32611`` or ``32755``) when
+        found, else ``None``.
+
+    Notes
+    -----
+    The lookup scans :data:`EPSG_DICT` for a PROJ string that
+    matches ``+zone``, ``+datum=WGS84``, and an optional
+    ``+south`` flag for the southern hemisphere.
+
+    Examples
+    --------
+    >>> utm_zone_to_epsg(11, True) in (32611, None)
+    True
     """
-    datum_flag = '' if is_northern else '+south'
+    datum_flag = "" if is_northern else "+south"
     for epsg_code, proj4 in EPSG_DICT.items():
-        if ( 
-                f"+zone={zone_number}" in proj4 
-                and '+datum=WGS84' in proj4 
-                and datum_flag in proj4
-            ):
+        if (
+            f"+zone={zone_number}" in proj4
+            and "+datum=WGS84" in proj4
+            and datum_flag in proj4
+        ):
             return epsg_code
     return None
 
 
-def get_epsg(latitude: float, longitude: float) -> Optional[int]:
+def get_epsg(
+    latitude: float,
+    longitude: float,
+) -> Optional[int]:
+    r"""
+    Get the WGS84 UTM EPSG code for a geographic coordinate.
+
+    Parameters
+    ----------
+    latitude : float
+        Latitude in decimal degrees.
+    longitude : float
+        Longitude in decimal degrees.
+
+    Returns
+    -------
+    int or None
+        EPSG code for the inferred UTM CRS, or ``None`` if no
+        match is found.
+
+    Notes
+    -----
+    This is a convenience wrapper that calls
+    :func:`get_utm_zone` and :func:`utm_zone_to_epsg`.
+
+    Examples
+    --------
+    >>> epsg = get_epsg(34.05, -118.34)
+    >>> epsg in (32611, 32711, None)
+    True
     """
-    Get EPSG code for the UTM projection (WGS84) of a latitude/longitude.
-    """
-    zone_number, is_northern, _ = get_utm_zone(latitude, longitude)
+    zone_number, is_northern, _ = get_utm_zone(
+        latitude,
+        longitude,
+    )
     return utm_zone_to_epsg(zone_number, is_northern)
 
 
-def project_point_ll2utm(lat, lon, datum='WGS84', utm_zone=None, epsg=None):
-    """
-    Project a point that is in Lat, Lon (will be converted to decimal degrees)
-    into UTM coordinates.
+def project_point_ll2utm(
+    lat,
+    lon,
+    datum: str = "WGS84",
+    utm_zone: Optional[str] = None,
+    epsg: Optional[int] = None,
+):
+    r"""
+    Transform one geographic point to UTM coordinates.
 
-    Arguments:
-    ---------------
-        **lat** : float or string (DD:MM:SS.ms)
-                  latitude of point
+    Converts a single latitude/longitude (in decimal degrees
+    or sexagesimal string) to UTM easting, northing, and zone.
+    Uses GDAL/OSR when available, else falls back to PROJ via
+    ``pyproj``.
 
-        **lon** : float or string (DD:MM:SS.ms)
-                  longitude of point
+    Parameters
+    ----------
+    lat : float or str
+        Latitude in decimal degrees or sexagesimal string
+        (``"DD:MM:SS.sss"``).
+    lon : float or str
+        Longitude in decimal degrees or sexagesimal string
+        (``"DD:MM:SS.sss"``).
+    datum : str, default "WGS84"
+        Geodetic datum name (e.g., ``"WGS84"``, ``"NAD83"``).
+        May also be an EPSG integer if GDAL is used.
+    utm_zone : str, optional
+        UTM zone designator like ``"55S"``. If omitted or set
+        to a non-string (or ``"none"``), the zone is inferred
+        from the input point.
+    epsg : int, optional
+        EPSG code for the projected CRS. When provided, it
+        takes precedence over ``utm_zone`` and ``datum``.
 
-        **datum** : string
-                    well known datum ex. WGS84, NAD27, NAD83, etc.
+    Returns
+    -------
+    easting : float or None
+        UTM easting in meters, or ``None`` when inputs are
+        ``None``.
+    northing : float or None
+        UTM northing in meters, or ``None`` when inputs are
+        ``None``.
+    zone : str or None
+        UTM zone string (e.g., ``"55S"``). ``None`` when not
+        determinable or inputs are ``None``.
 
-        **utm_zone** : string
-                       zone number and 'S' or 'N' e.g. '55S'
+    Notes
+    -----
+    - This variant accepts a single point. For vectorized
+      inputs, use :func:`project_points_ll2utm`.
+    - Inputs are validated with ``assert_lat_value`` and
+      ``assert_lon_value`` before projection.
+    - With GDAL, transforms use
+      ``osr.CoordinateTransformation``; with PROJ they use
+      ``pyproj.Proj``.
 
-        **epsg** : int
-                   epsg number defining projection (see
-                   http://spatialreference.org/ref/ for moreinfo)
-                   Overrides utm_zone if both are provided
-
-    Returns:
-    --------------
-        **proj_point**: tuple(easting, northing, zone)
-                        projected point in UTM in Datum
-
+    Examples
+    --------
+    >>> e, n, z = project_point_ll2utm(34.05, -118.34)
+    >>> z
+    '11S'
     """
     if lat is None or lon is None:
-        return None, None, None
+        return (None, None, None)
 
-    # make sure the lat and lon are in decimal degrees
-    if np.iterable(lon) and np.iterable(lat):
-        lat = np.array([assert_lat_value(lat_value) for lat_value in lat])
-        lon = np.array([assert_lon_value(lon_value) for lon_value in lon])
+    if np.iterable(lat) and np.iterable(lon):
+        lat = np.array(
+            [assert_lat_value(v) for v in lat]
+        )
+        lon = np.array(
+            [assert_lon_value(v) for v in lon]
+        )
         assert lat.size == lon.size
     else:
         lat = np.array([assert_lat_value(lat)])
         lon = np.array([assert_lon_value(lon)])
 
     if HAS_GDAL:
-        # set lat lon coordinate system
         ll_cs = osr.SpatialReference()
         if isinstance(datum, int):
             ogrerr = ll_cs.ImportFromEPSG(datum)
             if ogrerr != OGRERR_NONE:
-                raise GisError("GDAL/osgeo ogr error code: {}".format(ogrerr))
+                raise GisError(
+                    "GDAL/OSR error code: {}".format(ogrerr)
+                )
         elif isinstance(datum, str):
             ogrerr = ll_cs.SetWellKnownGeogCS(datum)
             if ogrerr != OGRERR_NONE:
-                raise GisError("GDAL/osgeo ogr error code: {}".format(ogrerr))
+                raise GisError(
+                    "GDAL/OSR error code: {}".format(ogrerr)
+                )
         else:
-            raise GisError("""datum {0} not understood, needs to be EPSG as int
-                               or a well known datum as a string""".format(datum))
-
-        # set utm coordinate system
+            raise GisError(
+                "datum {!r} not understood; use EPSG int or "
+                "well-known datum string".format(datum)
+            )
         utm_cs = osr.SpatialReference()
-    # end if
+    else:
+        pp = None  # type: ignore[assignment]
 
-    # project point on to EPSG coordinate system if given
     if isinstance(epsg, int):
         if HAS_GDAL:
             ogrerr = utm_cs.ImportFromEPSG(epsg)
             if ogrerr != OGRERR_NONE:
-                raise GisError("GDAL/osgeo ogr error code: {}".format(ogrerr))
+                raise GisError(
+                    "GDAL/OSR error code: {}".format(ogrerr)
+                )
         else:
-            pp = pyproj.Proj('+init=EPSG:%d'%(epsg))
-        # end if
-    # otherwise project onto given datum
+            pp = pyproj.Proj("+init=EPSG:{}".format(epsg))
     elif epsg is None:
         if HAS_GDAL:
             ogrerr = utm_cs.CopyGeogCSFrom(ll_cs)
             if ogrerr != OGRERR_NONE:
-                raise GisError("GDAL/osgeo ogr error code: {}".format(ogrerr))
-        # end if
-        if utm_zone is None or not isinstance(None, str) or utm_zone.lower() == 'none':
-            # get the UTM zone in the datum coordinate system, otherwise
-            zone_number, is_northern, utm_zone = get_utm_zone(lat.mean(),
-                                                              lon.mean())
+                raise GisError(
+                    "GDAL/OSR error code: {}".format(ogrerr)
+                )
+        if (
+            utm_zone is None
+            or not isinstance(utm_zone, str)
+            or utm_zone.lower() == "none"
+        ):
+            zone_num, is_north, utm_zone = get_utm_zone(
+                float(lat.mean()),
+                float(lon.mean()),
+            )
         else:
-            # get zone number and is_northern from utm_zone string
-            zone_number = int(utm_zone[0:-1])
-            is_northern = True if utm_zone[-1].lower() > 'n' else False
+            zone_num = int(utm_zone[:-1])
+            is_north = utm_zone[-1].lower() > "n"
 
-        if(HAS_GDAL):
-            utm_cs.SetUTM(zone_number, is_northern)
+        if HAS_GDAL:
+            utm_cs.SetUTM(zone_num, is_north)
         else:
-            projstring = '+proj=utm +zone=%d +%s +datum=%s' % \
-                         (zone_number, 'north' if is_northern else 'south', datum)
+            projstring = (
+                "+proj=utm +zone={} +{} +datum={}".format(
+                    zone_num,
+                    "north" if is_north else "south",
+                    datum,
+                )
+            )
             pp = pyproj.Proj(projstring)
-        # end if
-    # end if
 
-    # return different results depending on if lat/lon are iterable
-    projected_point = np.zeros_like(lat, dtype=[('easting', np.float),
-                                                ('northing', np.float),
-                                                ('elev', np.float),
-                                                ('utm_zone', 'U4')])
+    proj = np.zeros_like(
+        lat,
+        dtype=[
+            ("easting", np.float64),
+            ("northing", np.float64),
+            ("elev", np.float64),
+            ("utm_zone", "U4"),
+        ],
+    )
 
-    if(HAS_GDAL):
-        ll2utm = osr.CoordinateTransformation(ll_cs, utm_cs).TransformPoint
+    if HAS_GDAL:
+        ll2utm = osr.CoordinateTransformation(
+            ll_cs, utm_cs
+        ).TransformPoint
     else:
-        ll2utm = pp
-    # end if
+        ll2utm = pp  # type: ignore[assignment]
 
     for ii in range(lat.size):
-        point = ll2utm(lon[ii], lat[ii])
-        projected_point['easting'][ii] = point[0]
-        projected_point['northing'][ii] = point[1]
-        if(HAS_GDAL): projected_point['elev'][ii] = point[2]
-        projected_point['utm_zone'][ii] = utm_zone if utm_zone is not None else get_utm_zone(lat[ii], lon[ii])[2]
-    # end for
+        if HAS_GDAL:
+            x, y, z = ll2utm(
+                float(lon[ii]),
+                float(lat[ii]),
+            )
+            proj["easting"][ii] = x
+            proj["northing"][ii] = y
+            proj["elev"][ii] = z
+        else:
+            assert ll2utm is not None
+            x, y = ll2utm(
+                float(lon[ii]),
+                float(lat[ii]),
+            )
+            proj["easting"][ii] = x
+            proj["northing"][ii] = y
+        if utm_zone is None:
+            _, _, zstr = get_utm_zone(
+                float(lat[ii]),
+                float(lon[ii]),
+            )
+            proj["utm_zone"][ii] = zstr
+        else:
+            proj["utm_zone"][ii] = utm_zone
 
-    # if just projecting one point, then return as a tuple so as not to break
-    # anything.  In the future we should adapt to just return a record array
-    if len(projected_point) == 1:
-        return (projected_point['easting'][0],
-                projected_point['northing'][0],
-                projected_point['utm_zone'][0])
-    else:
-        return np.rec.array(projected_point)
+    if len(proj) == 1:
+        return (
+            proj["easting"][0],
+            proj["northing"][0],
+            proj["utm_zone"][0],
+        )
+    return np.rec.array(proj)
 
-def project_point_utm2ll(easting, northing, utm_zone, datum='WGS84', epsg=3149):
-    """
-    Project a point that is in Lat, Lon (will be converted to decimal degrees)
-    into UTM coordinates.
-    
-    Arguments:
-    ---------------
-        **easting** : float
-                    easting coordinate in meters
-                    
-        **northing** : float
-                    northing coordinate in meters
-        
-        **utm_zone** : string (##N or ##S)
-                      utm zone in the form of number and North or South
-                      hemisphere, 10S or 03N
-        
-        **datum** : string
-                    well known datum ex. WGS84, NAD27, etc.
-                    
-    Returns:
-    --------------
-        **proj_point**: tuple(lat, lon)
-                        projected point in lat and lon in Datum, as decimal
-                        degrees.
-                    
+
+def project_point_utm2ll(
+    easting: float,
+    northing: float,
+    utm_zone,
+    datum: str = "WGS84",
+    epsg: Optional[int] = 3149,
+) -> tuple[float, float]:
+    r"""
+    Transform a UTM point to latitude/longitude.
+
+    Converts UTM easting/northing to geographic latitude and
+    longitude (decimal degrees). Uses GDAL/OSR when available,
+    else falls back to PROJ via ``pyproj``.
+
+    Parameters
+    ----------
+    easting : float
+        Easting in meters.
+    northing : float
+        Northing in meters.
+    utm_zone : str or int
+        UTM zone designator. Either a string like ``"10S"`` or
+        an integer UTM code (negative for south). Ignored when
+        ``epsg`` is provided.
+    datum : str, default "WGS84"
+        Geodetic datum name (e.g., ``"WGS84"``, ``"NAD27"``).
+    epsg : int, optional
+        EPSG code defining the projected CRS. When provided, it
+        takes precedence over ``utm_zone`` and ``datum``. The
+        default is ``3149`` for historical compatibility.
+
+    Returns
+    -------
+    lat : float
+        Latitude in decimal degrees, rounded to 6 decimals.
+    lon : float
+        Longitude in decimal degrees, rounded to 6 decimals.
+
+    Notes
+    -----
+    - With GDAL, the conversion uses
+      ``osr.CoordinateTransformation`` to a geographic CRS
+      cloned from the projected CRS.
+    - With PROJ, the conversion uses ``pyproj.Proj`` with
+      ``inverse=True``.
+    - When ``epsg`` refers to a non-UTM CRS, ``utm_zone`` is
+      not required.
+    - The function validates ``easting`` and ``northing`` can
+      be cast to ``float`` and raises ``GisError`` otherwise.
+
+    Examples
+    --------
+    Using an explicit zone::
+
+        >>> project_point_utm2ll(377274.0, 3762150.0, "11S")
+
+    Using an EPSG code (preferred when known)::
+
+        >>> project_point_utm2ll(
+        ...     377274.0, 3762150.0, utm_zone="11S", epsg=32611
+        ... )
+
+    See Also
+    --------
+    project_points_ll2utm
+        Forward transform from geographic to UTM.
+
+    References
+    ----------
+    .. [1] PROJ documentation, https://proj.org/
+    .. [2] GDAL/OSR, https://gdal.org/
     """
     try:
         easting = float(easting)
-    except ValueError:
-        raise GisError("easting is not a float")
+    except ValueError as exc:
+        raise GisError("easting is not a float") from exc
     try:
         northing = float(northing)
-    except ValueError:
-        raise GisError("northing is not a float")
+    except ValueError as exc:
+        raise GisError("northing is not a float") from exc
 
     if HAS_GDAL:
-        # set utm coordinate system
         utm_cs = osr.SpatialReference()
         utm_cs.SetWellKnownGeogCS(datum)
-    # end if
+    else:
+        pp = None  # type: ignore[assignment]
 
     if epsg is not None:
         if HAS_GDAL:
             ogrerr = utm_cs.ImportFromEPSG(epsg)
             if ogrerr != OGRERR_NONE:
-                raise Exception("GDAL/osgeo ogr error code: {}".format(ogrerr))
+                raise RuntimeError(
+                    "GDAL/OSR error code: {}".format(ogrerr)
+                )
         else:
-            pp = pyproj.Proj('+init=EPSG:%d'%(epsg))
-        # end if
-    elif isinstance(utm_zone, str) or isinstance(utm_zone, np.bytes_):
-        # the isinstance(utm_zone, str) could be False in python3 due to numpy datatype change.
-        # So FZ added  isinstance(utm_zone, np.bytes_) and convert the utm_zone into string
+            pp = pyproj.Proj("+init=EPSG:{}".format(epsg))
+    elif isinstance(utm_zone, (str, np.bytes_)):
         if isinstance(utm_zone, np.bytes_):
-            utm_zone = utm_zone.decode('UTF-8') # b'54J'
+            utm_zone = utm_zone.decode("UTF-8")
         try:
-            zone_number = int(utm_zone[0:-1])  #b'54J'
+            zone_number = int(utm_zone[:-1])
             zone_letter = utm_zone[-1]
-        except ValueError:
-            raise ValueError('Zone number {0} is not a number'.format(utm_zone[0:-1]))
-        is_northern = True if zone_letter.lower() >= 'n' else False
+        except ValueError as exc:
+            raise ValueError(
+                "Zone number '{}' is not a number".format(
+                    utm_zone[:-1]
+                )
+            ) from exc
+        is_northern = zone_letter.lower() >= "n"
     elif isinstance(utm_zone, int):
-        # std UTM code returned by gdal
-        is_northern = False if utm_zone < 0 else True
+        is_northern = utm_zone >= 0
         zone_number = abs(utm_zone)
     else:
-        print("epsg and utm_zone", str(epsg), str(utm_zone))
+        raise NotImplementedError(
+            "utm_zone type '{}' not supported".format(
+                type(utm_zone).__name__
+            )
+        )
 
-        raise NotImplementedError("utm_zone type (%s, %s) not supported"%(type(utm_zone), str(utm_zone)))
-    
     if epsg is None:
         if HAS_GDAL:
             utm_cs.SetUTM(zone_number, is_northern)
         else:
-            projstring = '+proj=utm +zone=%d +%s +datum=%s' % \
-                         (zone_number, 'north' if is_northern else 'south', datum)
+            projstring = (
+                "+proj=utm +zone={} +{} +datum={}".format(
+                    zone_number,
+                    "north" if is_northern else "south",
+                    datum,
+                )
+            )
             pp = pyproj.Proj(projstring)
-        # end if
-    # end if
 
     if HAS_GDAL:
         ll_cs = utm_cs.CloneGeogCS()
-        utm2ll = osr.CoordinateTransformation(utm_cs, ll_cs).TransformPoint
-        ll_point = list(utm2ll(easting, northing, 0.))
+        utm2ll = osr.CoordinateTransformation(
+            utm_cs, ll_cs
+        ).TransformPoint
+        ll_point = list(utm2ll(easting, northing, 0.0))
+        lon, lat = ll_point[0], ll_point[1]
     else:
-        ll_point = pp(easting, northing, inverse=True)
-    # end if
+        assert pp is not None
+        lon, lat = pp(easting, northing, inverse=True)
 
-    # be sure to round out the numbers to remove computing with floats
-    return round(ll_point[1], 6), round(ll_point[0], 6)
+    return (round(lat, 6), round(lon, 6))
 
 
-def project_points_ll2utm(lat, lon, datum='WGS84', utm_zone=None, epsg=None):
-    """
-    Project a list of points that is in Lat, Lon (will be converted to decimal 
-    degrees) into UTM coordinates.
-    
-    Arguments:
-    ---------------
-        **lat** : float or string (DD:MM:SS.ms)
-                  latitude of point
-                  
-        **lon** : float or string (DD:MM:SS.ms)
-                  longitude of point
-        
-        **datum** : string
-                    well known datum ex. WGS84, NAD27, NAD83, etc.
+def project_points_ll2utm(
+    lat,
+    lon,
+    datum: str = "WGS84",
+    utm_zone: Optional[str] = None,
+    epsg: Optional[int] = None,
+):
+    r"""
+    Transform latitude/longitude to UTM coordinates.
 
-        **utm_zone** : string
-                       zone number and 'S' or 'N' e.g. '55S'. Defaults to the
-                       centre point of the provided points
-                       
-        **epsg** : int
-                   epsg number defining projection (see 
-                   http://spatialreference.org/ref/ for moreinfo)
-                   Overrides utm_zone if both are provided
+    Converts geographic coordinates to UTM eastings and
+    northings. Uses GDAL/OSR when available, else falls back
+    to PROJ via ``pyproj``. Accepts scalars or arrays; array
+    inputs must share the same shape.
 
-    Returns:
-    --------------
-        **proj_point**: tuple(easting, northing, zone)
-                        projected point in UTM in Datum
-                    
+    Parameters
+    ----------
+    lat : float, str, or array-like
+        Latitude(s) in decimal degrees or sexagesimal string.
+        Sexagesimal uses ``"DD:MM:SS.sss"`` format. When an
+        array is given, its shape must match ``lon``.
+    lon : float, str, or array-like
+        Longitude(s) in decimal degrees or sexagesimal string.
+        Same formatting rules as for ``lat``.
+    datum : str, default "WGS84"
+        Geodetic datum name. Examples: ``"WGS84"``,
+        ``"NAD83"``, ``"NAD27"``. Passed to the backend CRS.
+    utm_zone : str, optional
+        UTM zone designator (e.g., ``"55S"``). If omitted, a
+        zone is inferred from the input centroid. Ignored when
+        ``epsg`` is provided.
+    epsg : int, optional
+        EPSG code that fully defines the projected CRS. When
+        set, it takes precedence over ``utm_zone``.
+
+    Returns
+    -------
+    easting : float or ndarray
+        UTM easting(s) in meters. Matches the input shape for
+        array inputs.
+    northing : float or ndarray
+        UTM northing(s) in meters. Matches the input shape for
+        array inputs.
+    zone : str or None
+        UTM zone string (e.g., ``"55S"``) when determinable.
+        May be ``None`` for CRS that are not UTM.
+
+    Notes
+    -----
+    - If either ``lat`` or ``lon`` is ``None``, the function
+      returns ``(None, None, None)``.
+    - Array inputs are flattened for computation and then
+      reshaped back to the original layout.
+    - With GDAL, the transform uses
+      ``osr.CoordinateTransformation``; with PROJ it uses
+      ``pyproj.Proj``.
+    - When ``epsg`` refers to a non-UTM projected CRS, a UTM
+      zone may not be derivable; ``zone`` can be ``None``.
+
+    Examples
+    --------
+    Decimal degrees::
+
+        >>> e, n, z = project_points_ll2utm(34.05, -118.34)
+        >>> round(e, 1), round(n, 1), z
+        (..., ..., ...)
+
+    Sexagesimal strings::
+
+        >>> project_points_ll2utm("34:03:00", "-118:20:24")
+
+    Vectorized input::
+
+        >>> lats = [34.00, 34.05]
+        >>> lons = [-118.40, -118.34]
+        >>> e, n, z = project_points_ll2utm(lats, lons)
+
+    See Also
+    --------
+    project_point_utm2ll
+        Inverse transform from UTM to geographic coords.
+
+    References
+    ----------
+    .. [1] EPSG Registry, https://epsg.org/
+    .. [2] PROJ documentation, https://proj.org/
+    .. [3] GDAL/OSR, https://gdal.org/
     """
 
     lat = np.array(lat)
     lon = np.array(lon)
 
-    # check length of arrays
     if np.shape(lat) != np.shape(lon):
-        raise ValueError("latitude and longitude arrays are of different lengths")
+        raise ValueError(
+            "latitude and longitude arrays are of "
+            "different lengths"
+        )
 
-    # flatten, if necessary
     flattened = False
     llshape = np.shape(lat)
-    if llshape[0] > 1:
+    if llshape and llshape[0] > 1:
         flattened = True
         lat = lat.flatten()
         lon = lon.flatten()
 
-    '''
-    # check lat/lon values
-    # this is incredibly slow; disabling for the time being
-    for ii in range(len(lat)):
-        lat[ii] = assert_lat_value(lat[ii])
-        lon[ii] = assert_lon_value(lon[ii])
-    '''
-    
     if lat is None or lon is None:
-        return None, None, None
+        return (None, None, None)
 
     if HAS_GDAL:
-        # set utm coordinate system
         utm_cs = osr.SpatialReference()
         utm_cs.SetWellKnownGeogCS(datum)
-
-        # set lat, lon coordinate system
         ll_cs = utm_cs.CloneGeogCS()
         ll_cs.ExportToPrettyWkt()
-    # end if
+    else:
+        # pyproj will be used below via `pp`
+        pp = None  # type: ignore[assignment]
 
-    # get zone number, north and zone name
     if epsg is not None:
         if HAS_GDAL:
-            # set projection info
             ogrerr = utm_cs.ImportFromEPSG(epsg)
             if ogrerr != OGRERR_NONE:
-                raise Exception("GDAL/osgeo ogr error code: {}".format(ogrerr))
-            # get utm zone (for information) if applicable
-            utm_zone = utm_cs.GetUTMZone()
-
-            # Whilst some projections e.g. Geoscience Australia Lambert (epsg3112) do
-            # not yield UTM zones, they provide eastings and northings for the whole
-            # Australian region. We therefore set UTM zones, only when a valid UTM zone
-            # is available
-            if(utm_zone>0):
-                # set projection info
-                utm_cs.SetUTM(abs(utm_zone), utm_zone > 0)
+                raise RuntimeError(
+                    "GDAL/osgeo ogr error code: {}".format(
+                        ogrerr
+                    )
+                )
+            zone_id = utm_cs.GetUTMZone()
+            if zone_id and zone_id > 0:
+                utm_cs.SetUTM(abs(zone_id), zone_id > 0)
         else:
-            pp = pyproj.Proj('+init=EPSG:%d'%(epsg))
-        # end if
+            pp = pyproj.Proj("+init=EPSG:{}".format(epsg))
     else:
         if utm_zone is not None:
-            # get zone number and is_northern from utm_zone string
-            zone_number = int(utm_zone[0:-1])
-            is_northern = True if utm_zone[-1].lower() > 'n' else False
+            zone_number = int(utm_zone[:-1])
+            hemi_letter = utm_zone[-1].upper()
+            is_northern = hemi_letter >= "N"
         else:
-            # get centre point and get zone from that
-            latc = (np.nanmax(lat) + np.nanmin(lat)) / 2.
-            lonc = (np.nanmax(lon) + np.nanmin(lon)) / 2.
-            zone_number, is_northern, utm_zone = get_utm_zone(latc, lonc)
-        # set projection info
+            latc = (np.nanmax(lat) + np.nanmin(lat)) / 2.0
+            lonc = (np.nanmax(lon) + np.nanmin(lon)) / 2.0
+            zone_number = int(
+                np.floor((lonc + 180.0) / 6.0) + 1
+            )
+            letter = utm_letter_designator(latc)
+            is_northern = letter >= "N"
+            utm_zone = "{}{}".format(zone_number, letter)
 
-        if(HAS_GDAL):
+        if HAS_GDAL:
             utm_cs.SetUTM(zone_number, is_northern)
         else:
-            projstring = '+proj=utm +zone=%d +%s +datum=%s' % \
-                         (zone_number, 'north' if is_northern else 'south', datum)
+            projstring = (
+                "+proj=utm +zone={:d} +{} +datum={}".format(
+                    zone_number,
+                    "north" if is_northern else "south",
+                    datum,
+                )
+            )
             pp = pyproj.Proj(projstring)
-        # end if
-    # end if
-    
+
     if HAS_GDAL:
-        ll2utm = osr.CoordinateTransformation(ll_cs, utm_cs).TransformPoints
-        easting, northing, elev = np.array(ll2utm(np.array([lon, lat]).T)).T
-
+        ll2utm = osr.CoordinateTransformation(
+            ll_cs, utm_cs
+        ).TransformPoints
+        pts = np.array(ll2utm(np.array([lon, lat]).T))
+        easting = pts[:, 0]
+        northing = pts[:, 1]
     else:
-        ll2utm = pp
-        easting, northing = ll2utm(lon, lat)
-    # end if
+        assert pp is not None
+        easting, northing = pp(lon, lat)
 
-    projected_point = (easting, northing, utm_zone)
-
-    # reshape back into original shape
     if flattened:
-        lat = lat.reshape(llshape)
-        lon = lon.reshape(llshape)
+        easting = np.reshape(easting, llshape)
+        northing = np.reshape(northing, llshape)
 
-    return projected_point
+    return (easting, northing, utm_zone)
 
 def ll_to_utm(
     reference_ellipsoid: int,
@@ -904,122 +1445,288 @@ def utm_to_ll(
     return lat, lon
 
 
-def epsg_project(x, y, epsg_from, epsg_to):
+def epsg_project(
+    x,
+    y,
+    epsg_from,
+    epsg_to,
+):
+    r"""
+    Project coordinates between two EPSG-defined CRSs.
+
+    Leverages :mod:`pyproj` to transform ``(x, y)`` from the
+    CRS identified by ``epsg_from`` to the CRS identified by
+    ``epsg_to``. Inputs may be scalars or array-like; outputs
+    match the broadcasted input shape.
+
+    Parameters
+    ----------
+    x, y : float or array-like
+        Coordinates to transform. When arrays are provided,
+        they must be broadcastable to a common shape.
+    epsg_from : int
+        EPSG code of the source CRS.
+    epsg_to : int
+        EPSG code of the destination CRS.
+
+    Returns
+    -------
+    x2, y2 : float or ndarray
+        Transformed coordinates in the destination CRS. Returns
+        ``None`` when :mod:`pyproj` is unavailable or EPSG
+        codes are missing from :data:`EPSG_DICT`.
+
+    Notes
+    -----
+    - Uses ``pyproj.Transformer`` under the hood. Older
+      ``pyproj.transform`` calls are avoided.
+    - This helper consults :data:`EPSG_DICT` for PROJ strings.
+      If an EPSG code is absent from that dictionary, the
+      function logs a warning and returns ``None``.
+
+    Examples
+    --------
+    >>> # WGS84 lon/lat (EPSG:4326) to Web Mercator (EPSG:3857)
+    >>> epsg_project(-118.34, 34.05, 4326, 3857)  # doctest: +SKIP
+
+    References
+    ----------
+    .. [1] PROJ / pyproj documentation, https://pyproj.org/
     """
-    project some xy points using the pyproj modules
-    """
+    try:
+        import pyproj  # type: ignore
+    except Exception:  # pragma: no cover
+        logger.warning("Please install 'pyproj' to use "
+                       "epsg_project.")
+        return None
+
+    if epsg_from is None or epsg_to is None:
+        logger.warning("Both 'epsg_from' and 'epsg_to' must be "
+                       "provided.")
+        return None
 
     try:
-        import pyproj
-    except ImportError:
-        print("please install pyproj")
-        return
-    if epsg_from is not None:
+        src = pyproj.CRS.from_user_input(EPSG_DICT[epsg_from])
+        dst = pyproj.CRS.from_user_input(EPSG_DICT[epsg_to])
+    except KeyError:
+        logger.warning("EPSG code not in EPSG_DICT: from=%r to=%r",
+                       epsg_from, epsg_to)
+        return None
+
+    transformer = pyproj.Transformer.from_crs(
+        src,
+        dst,
+        always_xy=True,
+    )
+    x2, y2 = transformer.transform(x, y)
+    return x2, y2
+
+
+def utm_wgs84_conv(
+    lat: float,
+    lon: float,
+) -> tuple[float, float, int, str]:
+    r"""
+    Convert WGS84 (lat, lon) to UTM and verify round-trip.
+
+    Uses the :mod:`utm` package to convert a WGS84 geographic
+    coordinate to UTM ``(easting, northing, zone, letter)``.
+    Then converts back to lat/lon and checks numerical
+    consistency.
+
+    Parameters
+    ----------
+    lat : float
+        Latitude in decimal degrees (WGS84).
+    lon : float
+        Longitude in decimal degrees (WGS84).
+
+    Returns
+    -------
+    e : float
+        UTM easting (meters).
+    n : float
+        UTM northing (meters).
+    zone : int
+        UTM zone number in ``[1, 60]``.
+    letter : str
+        UTM latitude band letter.
+
+    Notes
+    -----
+    - Round-trip consistency is checked with a tolerance of
+      ``1e-10`` degrees. If exceeded, a warning is logged.
+    - Requires the external package ``utm`` (``pip install
+      utm``).
+
+    Examples
+    --------
+    >>> e, n, z, L = utm_wgs84_conv(34.05, -118.34)  # doctest: +SKIP
+    >>> z, L  # doctest: +SKIP
+    (11, 'S')
+
+    References
+    ----------
+    .. [1] Turbo87/utm, https://github.com/Turbo87/utm
+    """
+    try:
+        import utm  # type: ignore
+    except Exception:  # pragma: no cover
+        logger.warning("Please install 'utm' (pip install utm).")
+        raise
+
+    e, n, z, L = utm.from_latlon(lat, lon)
+    new_lat, new_lon = utm.to_latlon(e, n, z, L)
+
+    tol = 1e-10
+    if abs(lat - new_lat) > tol:
+        logger.warning("lat round-trip mismatch: in=%r out=%r",
+                       lat, new_lat)
+    if abs(lon - new_lon) > tol:
+        logger.warning("lon round-trip mismatch: in=%r out=%r",
+                       lon, new_lon)
+
+    return e, n, z, L
+
+@Deprecated(
+    "Deprecated; will be removed in a future release. "
+    "Use 'project_point_utm2ll' instead (GDAL/pyproj-backed)."
+)
+def transform_utm_to_ll(
+    easting: float,
+    northing: float,
+    zone,
+    reference_ellipsoid: str = "WGS84",
+) -> Tuple[float, float, float]:
+    r"""
+    Transform a UTM point to (lon, lat, alt) using GDAL/OSR.
+
+    Parameters
+    ----------
+    easting : float
+        UTM easting in meters.
+    northing : float
+        UTM northing in meters.
+    zone : str or int
+        Zone string like ``'11N'`` / ``'55S'`` or a signed
+        integer UTM code (negative for south).
+    reference_ellipsoid : str, default "WGS84"
+        Well-known geographic CRS name for GDAL.
+
+    Returns
+    -------
+    lon : float
+        Longitude in decimal degrees.
+    lat : float
+        Latitude in decimal degrees.
+    alt : float
+        Altitude (meters), usually ``0.0`` for 2D inputs.
+
+    Raises
+    ------
+    GDALMissingError
+        If GDAL/OSR is not available.
+    ValueError
+        If ``zone`` cannot be parsed.
+
+    Notes
+    -----
+    - This function is **deprecated**. Prefer
+      :func:`project_point_utm2ll`.
+    """
+    if not HAS_GDAL:
+        raise GDALMissingError(
+            "GDAL/OSR is required for 'transform_utm_to_ll'. "
+            "Use 'project_point_utm2ll' for a GDAL/pyproj path."
+        )
+
+    utm_sr = osr.SpatialReference()
+    utm_sr.SetWellKnownGeogCS(reference_ellipsoid)
+
+    # parse zone
+    if isinstance(zone, int):
+        zone_num = abs(zone)
+        is_north = zone >= 0
+    elif isinstance(zone, str):
         try:
-            p1 = pyproj.Proj(EPSG_DICT[epsg_from])
-            p2 = pyproj.Proj(EPSG_DICT[epsg_to])
-        except KeyError:
-            print("Surface or data epsg either not in dictionary or None")
-            return
+            zone_num = int(zone[:-1])
+            zone_letter = zone[-1]
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError(
+                f"Invalid UTM zone string: {zone!r}"
+            ) from exc
+        is_north = zone_letter.lower() >= "n"
+    else:
+        raise ValueError(
+            f"Unsupported zone type: {type(zone).__name__}"
+        )
 
-    return pyproj.transform(p1, p2, x, y)
+    utm_sr.SetUTM(zone_num, is_north)
+
+    ll_sr = utm_sr.CloneGeogCS()
+    to_ll = osr.CoordinateTransformation(utm_sr, ll_sr)
+
+    lon, lat, alt = to_ll.TransformPoint(easting, northing, 0.0)
+    return (lon, lat, alt)
 
 
-def utm_wgs84_conv(lat, lon):
+@Deprecated(
+    "Deprecated; will be removed in a future release. "
+    "Use 'project_point_ll2utm' instead (GDAL/pyproj-backed)."
+)
+def transform_ll_to_utm(
+    lon: float,
+    lat: float,
+    reference_ellipsoid: str = "WGS84",
+):
+    r"""
+    Transform a geographic point (lon, lat) to UTM using GDAL.
+
+    Parameters
+    ----------
+    lon : float
+        Longitude in decimal degrees.
+    lat : float
+        Latitude in decimal degrees.
+    reference_ellipsoid : str, default "WGS84"
+        Well-known geographic CRS name for GDAL.
+
+    Returns
+    -------
+    utm_sr : osr.SpatialReference
+        UTM spatial reference describing the destination CRS.
+    utm_point : tuple[float, float, float]
+        ``(easting, northing, altitude)`` in meters.
+
+    Raises
+    ------
+    GDALMissingError
+        If GDAL/OSR is not available.
+
+    Notes
+    -----
+    - This function is **deprecated**. Prefer
+      :func:`project_point_ll2utm`, which can use PROJ when
+      GDAL is unavailable.
     """
-    Bidirectional UTM-WGS84 converter https://github.com/Turbo87/utm/blob/master/utm/conversion.py
-    :param lat:
-    :param lon:
-    :return: tuple(e, n, zone, lett)
-    """
+    if not HAS_GDAL:
+        raise GDALMissingError(
+            "GDAL/OSR is required for 'transform_ll_to_utm'. "
+            "Use 'project_point_ll2utm' for a GDAL/pyproj path."
+        )
 
-    import utm  # pip install utm
-    tup = utm.from_latlon(lat, lon)
+    def _utm_zone_number(lon_deg: float) -> int:
+        return int(1 + (lon_deg + 180.0) / 6.0)
 
-    (new_lat, new_lon) = utm.to_latlon(tup[0], tup[1], tup[2], tup[3])
-    # print (new_lat,new_lon)  # should be same as the input param
+    def _is_northern(lat_deg: float) -> bool:
+        return lat_deg >= 0.0
 
-    # checking correctess
-    if abs(lat - new_lat) > 1.0 * np.e - 10:
-        print("Warning: lat and new_lat should be equal!")
+    utm_sr = osr.SpatialReference()
+    utm_sr.SetWellKnownGeogCS(reference_ellipsoid)
+    utm_sr.SetUTM(_utm_zone_number(lon), _is_northern(lat))
 
-    if abs(lon - new_lon) > 1.0 * np.e - 10:
-        print("Warning: lon and new_lon should be equal!")
+    ll_sr = utm_sr.CloneGeogCS()
+    to_utm = osr.CoordinateTransformation(ll_sr, utm_sr)
 
-    return tup
-
-
-#@gdal_data_check
-#@deprecated("This function may be removed in later release. mtpy.utils.gis_tools.project_point_utm2ll() should be "
-#            "used instead.")
-def transform_utm_to_ll(easting, northing, zone,
-                        reference_ellipsoid='WGS84'):
-    utm_coordinate_system = osr.SpatialReference()
-    # Set geographic coordinate system to handle lat/lon
-    utm_coordinate_system.SetWellKnownGeogCS(reference_ellipsoid)
-
-    try:
-        zone_number = int(zone[0:-1])
-        zone_letter = zone[-1]
-    except ValueError:
-        raise ValueError('Zone number {0} is not a number'.format(zone[0:-1]))
-    is_northern = True if zone_letter.lower() >= 'n' else False
-
-    utm_coordinate_system.SetUTM(zone_number, is_northern)
-
-    # Clone ONLY the geographic coordinate system
-    ll_coordinate_system = utm_coordinate_system.CloneGeogCS()
-
-    # create transform component
-    utm_to_ll_geo_transform = osr.CoordinateTransformation(utm_coordinate_system,
-                                                           ll_coordinate_system)
-    # returns lon, lat, altitude
-    return utm_to_ll_geo_transform.TransformPoint(easting, northing, 0)
-
-
-#@gdal_data_check
-@Deprecated("This function may be removed in later release. mtpy.utils.gis_tools.project_point_ll2utm() should be "
-            "used instead.")
-def transform_ll_to_utm(lon, lat, reference_ellipsoid='WGS84'):
-    """
-    transform a (lon,lat) to  a UTM coordinate.
-    The UTM zone number will be determined by longitude. South-North will be determined by Lat.
-    :param lon: degree
-    :param lat: degree
-    :param reference_ellipsoid:
-    :return: utm_coordinate_system, utm_point
-    """
-
-    def get_utm_zone(longitude):
-        return (int(1 + (longitude + 180.0) / 6.0))
-
-    def is_northern(latitude):
-        """
-        Determines if given latitude is a northern for UTM
-        """
-        # if (latitude < 0.0):
-        #     return 0
-        # else:
-        #     return 1
-        return latitude >= 0
-
-    utm_coordinate_system = osr.SpatialReference()
-    # Set geographic coordinate system to handle lat/lon
-    utm_coordinate_system.SetWellKnownGeogCS(reference_ellipsoid)
-    utm_coordinate_system.SetUTM(get_utm_zone(lon), is_northern(lat))
-
-    # Clone ONLY the geographic coordinate system
-    ll_coordinate_system = utm_coordinate_system.CloneGeogCS()
-    # create transform component
-    ll_to_utm_geo_transform = osr.CoordinateTransformation(ll_coordinate_system,
-                                                           utm_coordinate_system)
-
-    utm_point = ll_to_utm_geo_transform.TransformPoint(lon, lat, 0)
-
-    # returns easting, northing, altitude
-    return utm_coordinate_system, utm_point
-
-
-
-
-
+    easting, northing, alt = to_utm.TransformPoint(lon, lat, 0.0)
+    return utm_sr, (easting, northing, alt)

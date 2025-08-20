@@ -76,7 +76,7 @@ class PhaseStdBase(AVGComponentBase):
     """
     # Class-level constants; NOT instance fields
     VAR_NAME: ClassVar[str] = ""
-    KEY_CANDIDATES: ClassVar[Tuple[str, ...]] = ()
+    # KEY_CANDIDATES: ClassVar[Tuple[str, ...]] = ()
     LABEL: ClassVar[str] = ""
     
     def read(                                   # noqa: D401 (docstring above)
@@ -96,7 +96,7 @@ class PhaseStdBase(AVGComponentBase):
         with columns ``station, freq, comp`` when possible (missing
         coords become NaN / 'ExHy').
         """
-        if not self.KEY_CANDIDATES or not self.VAR_NAME:
+        if not self.VAR_NAME:
             raise RuntimeError(
                 f"{self.__class__.__name__}: subclass constants not set."
             )
@@ -126,14 +126,22 @@ class PhaseStdBase(AVGComponentBase):
         df = source.copy()
 
         # locate a compatible source column
-        col = _find_col(df, self.KEY_CANDIDATES)
-        if col is None:
-            raise AvgDataError(
-                f"{self.LABEL}: no compatible phase-stdev column "
-                f"found among {self.KEY_CANDIDATES!r}"
-            )
-
-        df = df.rename(columns={col: self.VAR_NAME})
+        # col = _find_col(df, self.KEY_CANDIDATES)
+        # if col is None:
+        #     raise AvgDataError(
+        #         f"{self.LABEL}: no compatible phase-stdev column "
+        #         f"found among {self.KEY_CANDIDATES!r}"
+        #     )
+        
+        if self.VAR_NAME not in df.columns:
+            df[self.VAR_NAME] = np.nan
+            if self.verbose:
+                logger.debug(
+                    f"'{self.VAR_NAME}' not found in source. "
+                    "Creating as empty column."
+                )
+                
+        # df = df.rename(columns={col: self.VAR_NAME})
 
         # coords – inject conservative defaults if missing
         if "comp" not in df.columns:
@@ -419,7 +427,7 @@ class SPhz(PhaseStdBase):
     Internal canonical column: ``'sphz'``.
     """
     VAR_NAME = "sphz"
-    KEY_CANDIDATES = ("sPhz", "SPhz", "Z.perr", "z.perr", "sphz")
+    # KEY_CANDIDATES = ("sPhz", "SPhz", "Z.perr", "z.perr", "sphz")
     LABEL = "Z phase σ (sPhz)"
 
 
@@ -451,7 +459,7 @@ class SHphz(PhaseStdBase):
     Internal canonical column: ``'shphz'``.
     """
     VAR_NAME = "shphz"
-    KEY_CANDIDATES = ("sHphz", "SHphz", "H.perr", "h.perr", "shphz")
+    # KEY_CANDIDATES = ("sHphz", "SHphz", "H.perr", "h.perr", "shphz")
     LABEL = "H phase σ (sHphz)"
 
 def _find_col(

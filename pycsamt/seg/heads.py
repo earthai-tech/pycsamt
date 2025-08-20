@@ -7,14 +7,11 @@ from __future__ import annotations
 from pathlib import Path
 import datetime as _dt
 import re
-from typing import Iterable, List, Optional, Sequence, Tuple, Union
-
-import numpy as np
+from typing import List, Optional, Sequence, Union
 
 from .. import __version__ as _PKG_VERSION
 from ..log.logger import get_logger
-from ..z.z import Z as EMZ  # noqa: F401  (kept for compatibility/use in this module)
-from ..property import FieldAliases
+from ..z.z import Z as EMZ  # noqa: F401  
 from ..site.location import Location
 from ..gis.utils import dms_to_decimal, decimal_to_dms
 from ..exceptions import (
@@ -24,22 +21,9 @@ from ..exceptions import (
 )
 from .base import EdiComponentBase
 from .properties import IsEdi, Source, Processing, Copyright
-from .utils import strip_items
-
-
-
 
 
 logger = get_logger(__name__)
-
-
-# (_KV_RE, _unquote, _norm_key, _is_tag, logger, IsEdi, HeaderError,
-#  EdIDataError) are assumed already imported/defined in this module,
-# as done for Head.
-
-# -----------------------
-# Internal parsing helpers
-# -----------------------
 
 # KEY=VALUE pairs, tolerant to spaces and optional quotes
 _KV_RE = re.compile(
@@ -82,7 +66,6 @@ def _is_tag(line: str, tag: str) -> bool:
     return line.upper().startswith(tag.upper())
 
 
-# Head
 class Head(EdiComponentBase):
     r"""
     EDI **HEAD** block.

@@ -48,7 +48,6 @@ def amtavg_instance(tmp_path_factory, full_modern_avg_content):
     return AMTAVG.from_file(path, verbose=True)
 
 # --- Tests for AMTAVG ---------------------------------------------
-
 class TestAMTAVG:
     def test_inheritance(self):
         """Test that AMTAVG inherits from AVG."""

@@ -19,6 +19,7 @@ from matplotlib import gridspec
 from ..api.typing import ArrayLike, NDArray, DType, EDIO, ZO
 from ..api.bunch import Bunch 
 from ..context import nullify_output
+from ..compat.aliases import compat_alias 
 from ..exceptions import EdIDataError, EMError
 from ..property import IsEdi
 
@@ -54,6 +55,9 @@ __all__ =[
     'plot_skew'
     
 ]
+
+_BACKWARD_SINCE = "2.0.0"
+_BACKWARD_REMOVE = "2.17.0"
 
 
 def check_em_kind(objs, /) -> str: # _assert_z_or_edi_objs
@@ -828,7 +832,14 @@ def plot_confidence(   # plot_confidence_in
 
     return ax
 
-
+@compat_alias(
+    "get2dtensor",
+    since=_BACKWARD_SINCE,
+    remove_in=_BACKWARD_REMOVE,
+    export=True,
+    extra=(f"Use 'tensor2d'. Removal in "
+           f"v{_BACKWARD_REMOVE}."),
+)
 def tensor2d(                                                 # get2dtensor 
     z_or_edis_obj_list: List[Union[EDIO, ZO]],
     /,
@@ -989,8 +1000,15 @@ def tensor2d(                                                 # get2dtensor
 
     return (mat2d, freqs) if return_freqs else mat2d
 
-
-def compute_qc(                                                    #qc
+@compat_alias(
+    "qc",
+    since=_BACKWARD_SINCE,
+    remove_in=_BACKWARD_REMOVE,
+    export=True,
+    extra=(f"Use 'compute_qc'. Removal in "
+           f"v{_BACKWARD_REMOVE}."),
+)
+def compute_qc(                                                    
     z_or_edis_obj_list: List[Union[EDIO, ZO]],
     /,
     tol: float = 0.5,
@@ -1190,11 +1208,14 @@ def compute_qc(                                                    #qc
 
     return out
 
-
-# Backward-compatibility alias.
-qc = compute_qc
-
-
+@compat_alias(
+    "get_full_frequency",
+    since=_BACKWARD_SINCE,
+    remove_in=_BACKWARD_REMOVE,
+    export=True,
+    extra=(f"Use 'full_freq'. Removal in "
+           f"v{_BACKWARD_REMOVE}."),
+)
 def full_freq(
     z_or_edis_obj_list: List[Union[EDIO, ZO]],
     /,
@@ -1280,11 +1301,16 @@ def full_freq(
 
     return f_ref
 
+# XXX TODO:
 
-# Backward-compatibility alias (v1.x name).
-get_full_frequency = full_freq
-
-# XXXTODO
+@compat_alias(
+    "plot_tensors2",
+    since=_BACKWARD_SINCE,
+    remove_in=_BACKWARD_REMOVE,
+    export=True,
+    extra=(f"Use 'plot_station_tensors'. Removal in "
+           f"v{_BACKWARD_REMOVE}."),
+)
 def plot_station_tensors(   # plot_tensors2 
     z_or_edis_obj_list: List[Union["EDIO", "ZO"]],
     /,
@@ -1822,9 +1848,6 @@ def _draw_station_panels(
     fig.subplots_adjust(hspace=0.1, wspace=0.3)
 
 
-# Backward-compatibility alias
-plot_tensors2 = plot_station_tensors
-
 def wrap_phase(
     phase: Union[np.ndarray, float, int],
     value_range: Optional[Union[Tuple[float, float], list, float, int]] = None,
@@ -1919,7 +1942,6 @@ def wrap_phase(
     out = wrapped * scale + vmin
 
     return out
-
 
 
 def _prepare_sensitivity(
@@ -2060,7 +2082,14 @@ def _prepare_sensitivity(
     return skew, mu, freqs, ymat, mode_norm, sites
 
 
-
+@compat_alias(
+    "plot_skew1d",
+    since=_BACKWARD_SINCE,
+    remove_in=_BACKWARD_REMOVE,
+    export=True,
+    extra=(f"Use 'plot_skew_1d'. Removal in "
+           f"v{_BACKWARD_REMOVE}."),
+)
 def plot_skew_1d(
     edis_list,
     /,
@@ -2236,10 +2265,15 @@ def plot_skew_1d(
             _style_ctx.__exit__(None, None, None)
 
 
-# Backward-compatibility alias
-plot_skew1d = plot_skew_1d
 
-
+@compat_alias(
+    "plot_skew2d",
+    since=_BACKWARD_SINCE,
+    remove_in=_BACKWARD_REMOVE,
+    export=True,
+    extra=(f"Use 'plot_skew_2d'. Removal in "
+           f"v{_BACKWARD_REMOVE}."),
+)
 def plot_skew_2d(
     edis_list,
     /,
@@ -2416,10 +2450,6 @@ def plot_skew_2d(
     return ax
 
 
-# Backward-compatibility alias
-plot_skew2d = plot_skew_2d
-
-
 def plot_tensors(
     z_or_edis_obj_list: List[Union["EDIO", "ZO"]],
     /,
@@ -2585,6 +2615,15 @@ def plot_strike(
             plot_type=kind,
             **kws,
         )
+
+@compat_alias(
+    "plot_l_curve",
+    since=_BACKWARD_SINCE,
+    remove_in=_BACKWARD_REMOVE,
+    export=True,
+    extra=(f"Use 'plot_lcurve'. Removal in "
+           f"v{_BACKWARD_REMOVE}."),
+)
 
 def plot_lcurve(
     rms: Iterable[Union[float, int]],
@@ -2848,10 +2887,6 @@ def _merge_plot_kws(
     return out
 
 
-# Backward-compatibility alias
-plot_l_curve = plot_lcurve
-
-
 def plot_skew(
     edis_list,
     /,
@@ -3009,3 +3044,13 @@ def plot_skew(
         dpi=dpi,
         **plot_kws,
     )
+
+# ============  Backward-compatibility alias(v1.xxx) ==========================
+
+get_full_frequency = full_freq
+qc = compute_qc
+plot_tensors2 = plot_station_tensors
+plot_skew1d = plot_skew_1d
+plot_skew2d = plot_skew_2d
+plot_l_curve = plot_lcurve
+get2dtensor = tensor2d

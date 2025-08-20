@@ -29,7 +29,7 @@ from typing import (
     Optional, 
     Sequence,
     Any, 
-    Iterable
+    Iterable, 
 )
 
 import numpy as np
@@ -48,7 +48,10 @@ from ..exceptions import (
   )
 from ..log.logger import get_logger
 from ..utils.deps import ensure_pkg 
-
+from .schema import ( 
+    _CANONICAL_MAP, # 
+    _CANON_TO_MODERN
+    )
 __all__ = [
     "load_avg", 
     "round_dipole_length", 
@@ -58,15 +61,14 @@ __all__ = [
     "number_stations", 
     "chunk_by_frequency", 
     "write_avg", 
-    "to_xarray"
+    "to_xarray", 
+
 ]
 
 logger = get_logger(__name__)
 
 
 _RX_WS             = re.compile(r"\s+")
-# _RX_K2_HEADER      = re.compile(r"^Z\.mwgt\s*,", re.I)
-# _RX_K1_HEADER      = re.compile(r"^skp\s+Station", re.I)
 
 _RX_K2_HEADER = re.compile(r"^\s*Z\.mwgt\s*,", re.I)
 _RX_K1_HEADER = re.compile(r"^\s*skp\s+Station", re.I)
@@ -75,81 +77,6 @@ _NUMERIC_REPLACE   = {"*": np.nan, "nan": np.nan, "NaN": np.nan,
                       "": np.nan}
 _COMMENT_PREFIXES = ('\\', '/', '!', '"')
 
-_COL_MAP = {
-    # General & Legacy
-    'Station': 'station', 
-    'Stn': 'station',
-    'skp': 'skp',
-    'Freq': 'freq', 
-    'Freq.': 'freq',
-    'Comp': 'comp',
-    'Amps': 'amps',
-    'Emag': 'emag',
-    'Ephz': 'ephz',
-    'Hmag': 'hmag',
-    'Hphz': 'hphz',
-    'Resistivity': 'rho',
-    'Phase': 'phase',
-    'TMARES': 'rho_sc', 
-    'SRES': 'rho_sc', 
-    'TMARES/SRES': 'rho_sc',
-
-    # Modern (CSAVGW) - overlaps are fine
-    'Tx.Amp': 'amps',
-    'E.mag': 'emag',
-    'E.phz': 'ephz',
-    'B.mag': 'hmag',  # Maps to hmag
-    'B.phz': 'hphz',  # Maps to hphz
-    'H.mag': 'hmag',
-    'Z.mag': 'zmag',
-    'Z.phz': 'phase',
-    'ARes.mag': 'rho',
-    'SRes': 'rho_sc',
-    'E.%err': 'e.%err',
-    'E.perr': 'e.perr',
-    'B.%err': 'h.%err', # Maps to h.%err
-    'B.perr': 'h.perr', # Maps to h.perr
-    'Z.%err': 'z.%err',
-    'Z.perr': 'z.perr',
-    'ARes.%err': 'rho.%err',
-    'E.wgt': 'e.wgt',
-    'H.wgt': 'h.wgt',
-    'Choer': 'coh',
-    'Gdp.Blk': 'gdp_blk',
-    'Gdp.Chn': 'gdp_chn',
-    'Gdp.Time': 'gdp_time',
-    '|Z|': 'zabs',
-}
-
-_CANON2K2: dict[str, str] = {
-    # survey logistics
-    "station": "Station",
-    "freq":    "Freq",
-    "comp":    "Comp",
-    # transmitter / field data
-    "amps":  "Tx.Amp",
-    "emag":  "E.mag",
-    "ephz":  "E.phz",
-    "hmag":  "B.mag",
-    "hphz":  "B.phz",
-    "zmag":  "Z.mag",
-    "phase": "Z.phz",
-    "rho":   "ARes.mag",
-    # quality metrics
-    "e.%err":   "E.%err",
-    "e.perr":   "E.perr",
-    "h.%err":   "B.%err",
-    "h.perr":   "B.perr",
-    "rho.%err": "ARes.%err",
-    "phase.%err": "Z.perr",
-    "z.%err":   "Z.%err",
-    "z.perr":   "Z.perr",
-    # ASTATIC weights (keep canonical labels)
-    "z.mwgt": "Z.mwgt",
-    "z.pwgt": "Z.pwgt",
-    "e.wgt":  "E.wgt",
-    "b.wgt":  "B.wgt",
-}
 
 def _to_float(val: str | float | int) -> float | np.floating:
     """Convert *val* to float while honouring project placeholders."""
@@ -453,6 +380,23 @@ def _get_weight_bool (df, comp ='z.mwgt'):
         return val  > 0
     return df.get(comp, 1).fillna(1).astype(float) > 0
 
+def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Rename columns to a canonical schema using CANONICAL MAP.
+    """
+    # Use a case-insensitive match for robustness
+    lower_to_canon = {
+        k.lower(): v for k, v in _CANONICAL_MAP.items()
+    }
+    rename_dict = {
+        c: lower_to_canon.get(str(c).lower(), str(c).lower())
+        for c in df.columns
+    }
+    return df.rename(columns=rename_dict)
+
+# def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
+#     return df.rename(
+#         columns={c: _COL_MAP.get(c, c.lower()) for c in df.columns})
 
 def split_by_station(
     df: pd.DataFrame
@@ -675,8 +619,9 @@ def write_avg(
     *,
     stamp: bool = True,
     float_fmt: str = "%.6g",
-    na_rep: str = "",
+    na_rep: str = "*",
     header_spaces: bool = False,   # use $k=v by default
+    banner_lines: Optional[Sequence[str]] = None,
 ) -> Path:
     """
     Serialize to Zonge kind-2 (CSAVGW/ASTATIC) .avg.
@@ -697,7 +642,10 @@ def write_avg(
     meta.pop("blocks", None)
 
     eq = " = " if header_spaces else "="
-    header_lines: list[str] = []
+    header_lines: list[str] = list(banner_lines or [])
+    if banner_lines:
+        header_lines.append("")  
+        
     for k, v in meta.items():
         header_lines.append(f"${k}{eq}{v}")
     if stamp:
@@ -714,7 +662,7 @@ def write_avg(
     block = block.copy()
 
     # canonical → kind-2 casing (patch a couple of gaps)
-    canon2k2 = dict(_CANON2K2)
+    canon2k2 = dict(_CANON_TO_MODERN)
     canon2k2.update({
         "h.wgt": "H.wgt",
         "rho_sc": "SRes",
@@ -775,32 +723,59 @@ def write_avg(
                     rx_lines.append(f"$Rx.Cmp{eq}{vals[0]}")
 
             out_chunks.append("\n".join(rx_lines))
-
-            # Write the CSV table
-            dfw = sub.drop(columns=[stn_col], errors="ignore")
-            cols = _order_cols(dfw)
-            csv_txt = dfw[cols].to_csv(
-                index=False, float_format=float_fmt, na_rep=na_rep
+            
+            cols_to_write = _order_cols(sub)
+            dfw = sub[cols_to_write]
+            out_chunks.append(
+                _format_aligned_csv(dfw, float_fmt, na_rep)
             )
-            out_chunks.append(csv_txt.rstrip("\n"))
+            
             out_chunks.append("")  # blank line after the block
     else:
         # Single-block writer
         cols = _order_cols(block)
-        csv_txt = block[cols].to_csv(
-            index=False, float_format=float_fmt, na_rep=na_rep
+        dfw = block[cols]
+        out_chunks.append(
+            _format_aligned_csv(dfw, float_fmt, na_rep)
         )
-        out_chunks.append(csv_txt.rstrip("\n"))
-
     # --- 3) write to disk 
     path.write_text("\n".join(out_chunks), encoding="utf8")
     logger.info("AVG written → %s", path)
     return path
 
+def _format_aligned_csv(
+    df: pd.DataFrame, float_fmt: str, na_rep: str
+) -> str:
+    """Formats a DataFrame to a perfectly aligned CSV string."""
+    # Convert all data to string representation first
+    df_str = pd.DataFrame(index=df.index)
+    for col in df.columns:
+        if pd.api.types.is_float_dtype(df[col]):
+            df_str[col] = df[col].apply(
+                lambda x: na_rep if pd.isna(x) else float_fmt % x
+            )
+        else:
+            df_str[col] = df[col].apply(
+                lambda x: na_rep if pd.isna(x) else str(x)
+            )
 
-def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
-    return df.rename(
-        columns={c: _COL_MAP.get(c, c.lower()) for c in df.columns})
+    # Calculate max width for each column
+    widths = {
+        col: max(df_str[col].str.len().max(), len(col))
+        for col in df_str.columns
+    }
+
+    # Format header and rows
+    header = ",".join(
+        f"{col:<{widths[col]}}" for col in df.columns
+    )
+    rows = [header]
+    for _, row in df_str.iterrows():
+        rows.append(",".join(
+            f"{val:<{widths[col]}}" for col, val in row.items()
+        ))
+    return "\n".join(rows)
+
 
 def load_avg(
     path: str | Path,
@@ -1124,3 +1099,42 @@ def _norm_comp(x: object) -> str:
 
     # fallback: capitalize first, keep inner case
     return s[0:1].upper() + s[1:]
+
+def _first_present(
+    df: pd.DataFrame,
+    candidates: Sequence[str],
+) -> Optional[str]:
+    """
+    Return the first column name found in *df*
+    among *candidates*.
+
+    Parameters
+    ----------
+    df
+        Input tidy table.
+    candidates
+        Ordered list of legacy/modern aliases.
+
+    Returns
+    -------
+    str or None
+        The first matching column name, or *None* if absent.
+    """
+ 
+    cols_lc = {str(c).strip().lower(): c for c in df.columns}
+    for a in candidates:
+        a_lc = str(a).strip().lower()
+        if a_lc in cols_lc:
+            return cols_lc[a_lc]
+    return None
+
+def _to_numeric_percent(series: pd.Series) -> pd.Series:
+    """
+    Convert a percent-like column to float while tolerating blanks.
+
+    Empty/asterisk tokens are mapped to NaN; strings like ``"5"`` or
+    ``"5.0"`` become ``5.0``.
+    """
+    s = series.astype(str).str.strip().replace(
+        {"": np.nan, "*": np.nan})
+    return pd.to_numeric(s, errors="coerce")

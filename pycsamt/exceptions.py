@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-# Author: Kouadio Laurent alias Daniel <etanoyau@gmail.com>
+# Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
+
 """
 pycsamt.exceptions
 

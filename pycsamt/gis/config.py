@@ -1,68 +1,138 @@
 # -*- coding: utf-8 -*-
 # Author: Kouadio Laurent alias Daniel <etanoyau@gmail.com>
 # License: LGPL-3.0
-"""
+r"""
 pycsamt.gis.config
 
-Configuration loader for GIS subpackage:
- - Verifies GDAL or PyProj availability
- - Loads EPSG definitions into EPSG_DICT
-"""
-import os
+Configuration loader for the GIS subpackage.
 
+- Verifies availability of GDAL or a PROJ-based fallback
+  (``pyproj``).
+- Loads EPSG definitions into :data:`EPSG_DICT` for use by
+  lightweight transformers.
+
+On import, the module attempts to locate GDAL resources.
+If unavailable, it verifies that ``pyproj`` can be imported.
+EPSG definitions are then loaded from ``pyproj`` data where
+possible; otherwise a local ``epsg.npy`` mapping is used.
+
+Exports
+-------
+HAS_GDAL : bool
+    ``True`` when GDAL/OSR is available.
+EPSG_DICT : dict[int, str]
+    Mapping of EPSG codes to PROJ strings.
+GDALMissingError : Exception
+    Raised when a GDAL-dependent routine is used without GDAL.
+GisError : Exception
+    Base exception for GIS utilities.
+
+Notes
+-----
+- Modern ``pyproj`` (>=3) ships a SQLite ``proj.db`` rather
+  than a flat ``epsg`` file. This loader uses a best-effort
+  approach to find legacy definitions; if none are found, the
+  local ``epsg.npy`` is used as a fallback.
+"""
+
+from __future__ import annotations
+
+import os
 import re
+from typing import Dict
 
 import numpy as np
+
 from pycsamt.decorators import GdalDataCheck
 from pycsamt.log.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Determine GDAL availability once
+
+# Availability checks
+
 _HAS_GDAL = GdalDataCheck._locate_gdal_data()
 if not _HAS_GDAL:
     try:
         import pyproj  # noqa: F401
-    except ImportError:
-        raise RuntimeError("Either GDAL or PyProj must be installed for GIS features.")
+    except ImportError as exc:  # pragma: no cover
+        raise RuntimeError(
+            "Either GDAL or pyproj must be installed for GIS "
+            "features."
+        ) from exc
+
 
 # Build EPSG dictionary
-EPSG_DICT = {}
+EPSG_DICT: Dict[int, str] = {}
 
 try:
-    import pyproj #Noqa 
+    import pyproj  # noqa: F401
 
-    # pyproj 3+ uses proj.db; older versions provide epsg file
-    data_dir = getattr(pyproj, 'pyproj_datadir', None)
-    epsg_path = os.path.join(data_dir, 'epsg') if data_dir else None
+    # pyproj 3+ uses proj.db; older releases may ship 'epsg'
+    data_dir = getattr(pyproj, "pyproj_datadir", None)
+    epsg_path = (
+        os.path.join(data_dir, "epsg") if data_dir else None
+    )
 
     if epsg_path and os.path.isfile(epsg_path):
-        with open(epsg_path, 'r', encoding='utf-8') as f:
+        with open(epsg_path, "r", encoding="utf-8") as f:
             for line in f:
-                if line.strip().startswith('#'):
+                if line.strip().startswith("#"):
                     continue
-                codes = re.findall(r'<(\d+)>', line)
+                codes = re.findall(r"<(\d+)>", line)
                 if not codes:
                     continue
                 code = int(codes[0])
-                proj4 = re.search(r'>([^<]+)<', line)
-                if proj4:
-                    EPSG_DICT[code] = proj4.group(1).strip()
+                m = re.search(r">([^<]+)<", line)
+                if m:
+                    EPSG_DICT[code] = m.group(1).strip()
     else:
         raise FileNotFoundError
 
 except Exception:
     # Fallback: load local numpy file of EPSG mappings
     here = os.path.dirname(os.path.abspath(__file__))
-    epsg_file = os.path.join(here, 'epsg.npy')
+    epsg_file = os.path.join(here, "epsg.npy")
     try:
-        EPSG_DICT = np.load(epsg_file, allow_pickle=True).item()
-    except Exception as e:
-        logger.error(f"Failed to load EPSG definitions: {e}")
+        EPSG_DICT = np.load(
+            epsg_file,
+            allow_pickle=True,
+        ).item()
+    except Exception as e:  # pragma: no cover
+        logger.error(
+            "Failed to load EPSG definitions: %s",
+            str(e),
+        )
         EPSG_DICT = {}
 
 # Expose availability
 HAS_GDAL = _HAS_GDAL
 
-__all__ = ['HAS_GDAL', 'EPSG_DICT']
 
+class GDALMissingError(RuntimeError):
+    r"""
+    Raised when a GDAL/OSR-dependent function is called while
+    GDAL is not available.
+
+    Notes
+    -----
+    Install GDAL (and the ``osgeo`` Python bindings) to use
+    GDAL-backed transforms. Prefer high-level helpers that can
+    fall back to PROJ, such as
+    :func:`project_point_ll2utm` and
+    :func:`project_point_utm2ll`, when GDAL is absent.
+    """
+
+
+class GisError(Exception):
+    r"""
+    Base exception for GIS utilities.
+    """
+
+
+__all__ = [
+    "HAS_GDAL",
+    "EPSG_DICT",
+    "GDALMissingError",
+    "GisError",
+]

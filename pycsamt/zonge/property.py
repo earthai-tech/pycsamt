@@ -566,7 +566,7 @@ class SurveyConfiguration:
 class SurveyAnnotation:
     """Project-level annotation block (``$Job.*``)."""
 
-    project_name: str = "CSAMT_survey"         # $Job.Name
+    project_name: str = "CSAMTSurvey"         # $Job.Name
     project_area: str | None = None            # $Job.Area
     customer_name: str = "Zonge Engineering"   # $Job.For
     contractor_name: str = "Zonge"             # $Job.By

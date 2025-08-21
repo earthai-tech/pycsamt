@@ -20,7 +20,7 @@ to :class:`xarray.Dataset` for multi-dimensional workflows.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+# from dataclasses import dataclass
 from typing import ( 
     ClassVar, 
     Dict, Any, 
@@ -36,7 +36,10 @@ from ..log.logger import get_logger
 from ..exceptions import AvgDataError
 from .base import AVGComponentBase
 from .utils import to_xarray as _to_xr
-from .utils import _to_numeric_percent 
+from .utils import ( 
+    _to_numeric_percent, 
+    find_and_rename_column
+)
 
 logger = get_logger(__name__)
 
@@ -52,8 +55,6 @@ __all__= [
 
 
 
-
-@dataclass(slots=True)
 class PercentVarBase(AVGComponentBase):
     """
     Abstract base for percent-variation QC columns.
@@ -79,7 +80,18 @@ class PercentVarBase(AVGComponentBase):
     # # default dataset attribute for units
     UNIT_ATTR: ClassVar[str] = "Unit.Percent"
 
-
+    def __init__(
+        self,
+        data: Optional[pd.DataFrame] = None,
+        meta: Optional[Mapping[str, Any]] = None,
+        *,
+        name: Optional[str] = None,
+        verbose: bool = False
+    ) -> None:
+        super().__init__(
+            data=data, meta=meta, name=name, verbose=verbose
+        )
+        
     def read(
         self,
         source: pd.DataFrame,
@@ -129,6 +141,10 @@ class PercentVarBase(AVGComponentBase):
         #     )
         # After standardization, we expect the canonical VAR_NAME.
         # If not present, create it with NaNs for consistency.
+        
+        # Use the new helper to standardize the column 
+        df = find_and_rename_column(df, self.VAR_NAME)
+        
         if self.VAR_NAME not in df.columns:
             df[self.VAR_NAME] = np.nan
             if self.verbose:

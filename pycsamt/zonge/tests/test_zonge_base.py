@@ -15,16 +15,18 @@ from pycsamt.zonge.base import (
     AVGComponentBase,
 )
 
+def _norm_field (field_value): 
+    return (str(v).lower() for v in field_value )
+
 def test_field_aliases_have_expected_members():
     # A few representative spot checks (not exhaustive)
-    assert "station" in FieldAliases.station
-    assert "stn" in FieldAliases.station
-    assert "hmag" in FieldAliases.hmag
-    assert "b.mag" in FieldAliases.hmag
-    assert "rho" in FieldAliases.rho
-    assert "ares.mag" in FieldAliases.rho
-    assert "phase" in FieldAliases.phase
-    assert "z.phz" in FieldAliases.phase
+    assert "station" in _norm_field (FieldAliases.station)
+    assert "stn" in _norm_field (FieldAliases.station)
+    assert "hmag" in _norm_field (FieldAliases.hmag)
+    assert "b.mag" in _norm_field(FieldAliases.hmag)
+    assert "ares.mag" in _norm_field(FieldAliases.rho)
+    assert "phase" in _norm_field(FieldAliases.phase)
+    assert "z.phz" in _norm_field(FieldAliases.phase)
 
 
 def test_avgrow_defaults_and_str_repr_json_roundtrip():

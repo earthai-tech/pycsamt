@@ -30,9 +30,15 @@ Examples
    extended for *pycsamt* v2, with additional validation,
    deprecations, and compatibility layers.
 """
+from __future__ import annotations
+
+from typing import ( 
+    Optional, Tuple, Any,
+    Union, Sequence
+)
 
 import numpy as np
-from typing import Optional, Tuple
+import pandas as pd 
 
 from ..decorators import Deprecated
 from ..log.logger import get_logger
@@ -72,6 +78,8 @@ __all__ = [
     'assert_xy_coordinate_system', 
     'decimal_to_dms', 
     'dms_to_decimal',
+    "to_utm", 
+    "to_ll", 
     'GisError'
 ]
 
@@ -747,6 +755,349 @@ def get_epsg(
     return utm_zone_to_epsg(zone_number, is_northern)
 
 
+def to_ll(
+    easting,
+    northing,
+    zone: Optional[Any] = None,
+    data: Optional[Any] = None,
+    *,
+    datum: str = "WGS84",
+    epsg: Optional[int] = None,
+    as_frame: bool = False,
+) -> Any:
+    r"""
+    Convert UTM coordinates to geographic (lat, lon) using
+    :func:`project_point_utm2ll`.
+
+    Accepts flexible inputs (scalars, arrays, Series, or
+    column names referencing a provided DataFrame). Returns a
+    tuple or a DataFrame with original and converted fields.
+
+    Parameters
+    ----------
+    easting, northing : float, array-like, or pd.Series
+        UTM coordinates in meters. When strings are given,
+        they are treated as column names in ``data``.
+    zone : str, int, array-like, or pd.Series, optional
+        UTM zone designator (e.g., ``"11S"``) or signed UTM
+        code (negative for south). If strings are given, they
+        are treated as column names in ``data``. May be
+        omitted when ``epsg`` is provided.
+    data : pd.DataFrame, optional
+        Source of columns when any of the inputs are strings.
+    datum : str, default "WGS84"
+        Datum name for GDAL-backed paths.
+    epsg : int, optional
+        EPSG code that defines the projected CRS. When set,
+        it takes precedence and ``zone`` is not required.
+    as_frame : bool, default False
+        If ``True``, return a DataFrame with columns
+        ``['easting','northing','zone','lat','lon']``.
+        Otherwise, return ``(lat, lon)`` as scalars or arrays.
+
+    Returns
+    -------
+    DataFrame or tuple
+        A DataFrame when ``as_frame=True``; otherwise a
+        tuple ``(lat, lon)`` matching the input shape.
+
+    Notes
+    -----
+    - Index is preserved when inputs originate from a Series
+      or from ``data[<column>]`` with ``as_frame=True``.
+    - When arrays are given and ``epsg`` is used, the same
+      EPSG applies to all rows.
+    - ``zone`` may be a scalar or an array/Series matching
+      the shape of ``easting`` and ``northing``.
+
+    Examples
+    --------
+    Scalars::
+
+        >>> to_ll(377274.0, 3762150.0, "11S")  # doctest: +SKIP
+        (34.05, -118.34)
+
+    From a DataFrame::
+
+        >>> # df has 'E', 'N', 'zone' columns
+        >>> # to_ll('E','N','zone', data=df, as_frame=True)
+        ...  # doctest: +SKIP
+    """
+    # --------------------------------------------------------------
+    # Resolve inputs to 1-D numpy arrays; keep optional index
+    # --------------------------------------------------------------
+    
+    idx =None 
+    def _extract(v, name: str):
+        nonlocal idx
+        if isinstance(v, str):
+            if data is None:
+                raise ValueError(
+                    f"'{name}' is a column name but "
+                    "'data' is not provided."
+                )
+            col = data[v]
+            
+            idx = getattr(col, "index", None)
+            return np.asarray(col.to_numpy())
+        if hasattr(v, "to_numpy"):  # pandas Series
+            idx = getattr(v, "index", None)
+            return np.asarray(v.to_numpy())
+        if np.isscalar(v):
+            return np.asarray([v])
+        return np.asarray(v)
+
+    e_arr = _extract(easting, "easting")
+    n_arr = _extract(northing, "northing")
+
+    if e_arr.shape != n_arr.shape:
+        raise ValueError(
+            "easting and northing shapes differ: "
+            f"{e_arr.shape} != {n_arr.shape}"
+        )
+
+    if zone is not None:
+        z_arr = _extract(zone, "zone")
+        if z_arr.size == 1 and e_arr.size > 1:
+            z_arr = np.full(e_arr.shape, z_arr.item(), dtype=object)
+        if z_arr.shape != e_arr.shape:
+            raise ValueError(
+                "zone shape must match easting/northing or be "
+                "scalar."
+            )
+    else:
+        # allow None when epsg is provided
+        z_arr = np.full(e_arr.shape, None, dtype=object)
+
+    # --------------------------------------------------------------
+    # Compute lat/lon element-wise (project_point_utm2ll works
+    # on scalars). Keep dtype as float64 for arrays.
+    # --------------------------------------------------------------
+    lat_list = []
+    lon_list = []
+
+    for i in range(e_arr.size):
+        zval = z_arr.ravel()[i]
+        lat_i, lon_i = project_point_utm2ll(  # type: ignore[name-defined]  # noqa: E501
+            float(e_arr.ravel()[i]),
+            float(n_arr.ravel()[i]),
+            zval,
+            datum=datum,
+            epsg=epsg,
+        )
+        lat_list.append(lat_i)
+        lon_list.append(lon_i)
+
+    lat_arr = np.asarray(lat_list, dtype=float).reshape(e_arr.shape)
+    lon_arr = np.asarray(lon_list, dtype=float).reshape(n_arr.shape)
+
+    # --------------------------------------------------------------
+    # Return per user request
+    # --------------------------------------------------------------
+    if as_frame:
+        def _orig(v, arr):
+            if np.isscalar(v):
+                return np.asarray([v])
+            if isinstance(v, str) and data is not None:
+                return np.asarray(data[v].to_numpy())
+            if hasattr(v, "to_numpy"):
+                return np.asarray(v.to_numpy())
+            return np.asarray(arr)
+
+        e_col = _orig(easting, e_arr)
+        n_col = _orig(northing, n_arr)
+        z_col = (
+            _orig(zone, z_arr)
+            if zone is not None
+            else np.asarray([None] * e_arr.size, dtype=object)
+        )
+
+        df = pd.DataFrame(
+            {
+                "easting": e_col,
+                "northing": n_col,
+                "zone": z_col,
+                "lat": lat_arr,
+                "lon": lon_arr,
+            }
+        )
+        if idx is not None and len(df) == len(idx):
+            df.index = idx
+        return df
+
+    # scalar squeeze if the inputs were scalars
+    if np.isscalar(easting) and np.isscalar(northing) and (
+        np.isscalar(zone) or zone is None
+    ):
+        return (lat_arr.item(), lon_arr.item())
+    return (lat_arr, lon_arr)
+
+def to_utm(
+    lat: Union [str, float, Sequence],
+    lon: Union [str, float, Sequence],
+    data: Optional[Any] = None,
+    *,
+    datum: str = "WGS84",
+    utm_zone: Optional[str] = None,
+    epsg: Optional[int] = None,
+    as_frame: bool = False,
+) -> Any:
+    r"""
+    Convert geographic coordinates to UTM using
+    :func:`project_point_ll2utm`.
+
+    Accepts flexible latitude/longitude inputs (scalars,
+    arrays, pandas Series, or column names referencing a
+    passed ``data`` frame). Returns either arrays/tuples or a
+    ``DataFrame`` with original and UTM fields.
+
+    Parameters
+    ----------
+    lat, lon : float, str, array-like, or pd.Series
+        Geographic coordinates in decimal degrees or DMS
+        strings. If a string is given, it is treated as a
+        column name and ``data`` must be provided.
+    data : pd.DataFrame, optional
+        Source of columns when ``lat`` or ``lon`` are strings.
+    datum : str, default "WGS84"
+        Datum name or EPSG (int) accepted by the underlying
+        transformer.
+    utm_zone : str, optional
+        UTM zone (e.g., ``"11S"``). If absent, it is inferred
+        from the input centroid (or per-point for scalar).
+    epsg : int, optional
+        EPSG code for the projected CRS. Overrides
+        ``utm_zone`` when provided.
+    as_frame : bool, default False
+        If ``True``, return a pandas ``DataFrame`` with
+        columns ``['lat','lon','easting','northing','zone']``.
+        If ``False``, return ``(easting, northing, zone)`` as
+        arrays (or scalars for scalar inputs).
+
+    Returns
+    -------
+    DataFrame or tuple
+        When ``as_frame=True``, a frame with original and UTM
+        columns. Otherwise a tuple ``(e, n, zone)`` where each
+        element matches the input shape (scalar or 1-D array).
+
+    Notes
+    -----
+    - Parsing of DMS strings and range checks are handled by
+      the underlying projection helper.
+    - For array inputs, this function preserves order and
+      length; indices are preserved when built from
+      ``data[<col>]`` and ``as_frame=True``.
+
+    Examples
+    --------
+    Scalar input::
+
+        >>> to_utm(34.05, -118.34)  # doctest: +SKIP
+        (..., ..., '11S')
+
+    From a DataFrame::
+
+        >>> # df has columns 'lat_deg' and 'lon_deg'
+        >>> # to_utm('lat_deg','lon_deg', data=df, as_frame=True)
+        ...  # doctest: +SKIP
+    """
+    # ------------------------------------------------------------------
+    # Resolve input into 1-D arrays and an optional index for frames
+    # ------------------------------------------------------------------
+    idx = None
+    def _extract(v, name: str):
+        nonlocal idx
+        if isinstance(v, str):
+            if data is None:
+                raise ValueError(
+                    f"'{name}' is a column name but 'data' "
+                    "is not provided."
+                )
+            col = data[v]
+            
+            idx = getattr(col, "index", None)
+            return np.asarray(col.to_numpy())
+        if hasattr(v, "to_numpy"):  # pandas Series
+            arr = v.to_numpy()  # type: ignore[attr-defined]
+            idx = getattr(v, "index", None)
+            return np.asarray(arr)
+        if np.isscalar(v):
+            return np.asarray([v])
+        return np.asarray(v)
+
+    lat_arr = _extract(lat, "lat")
+    lon_arr = _extract(lon, "lon")
+
+    if lat_arr.shape != lon_arr.shape:
+        raise ValueError(
+            "lat and lon shapes differ: "
+            f"{lat_arr.shape} != {lon_arr.shape}"
+        )
+    # ------------------------------------------------------------------
+    # Delegate to projection helper
+    # - project_point_ll2utm supports scalar or array inputs and
+    #   will return either a tuple (scalar) or a record array.
+    # ------------------------------------------------------------------
+    res = project_point_ll2utm(  # type: ignore[name-defined]
+        lat_arr,
+        lon_arr,
+        datum=datum,
+        utm_zone=utm_zone,
+        epsg=epsg,
+    )
+
+    # Normalize output to arrays
+    if isinstance(res, tuple):
+        e, n, z = res
+        e_arr = np.asarray([e])
+        n_arr = np.asarray([n])
+        z_arr = np.asarray([z], dtype=object)
+    else:
+        # expected a recarray with named fields
+        e_arr = np.asarray(res["easting"])
+        n_arr = np.asarray(res["northing"])
+        z_arr = np.asarray(res["utm_zone"], dtype=object)
+
+    # Return per user request
+    if as_frame:
+        # Build lat/lon columns reflecting original inputs
+        if np.isscalar(lat):
+            lat_col = np.asarray([lat])
+        elif isinstance(lat, str) and data is not None:
+            lat_col = np.asarray(data[lat].to_numpy())
+        elif hasattr(lat, "to_numpy"):
+            lat_col = np.asarray(lat.to_numpy())
+        else:
+            lat_col = np.asarray(lat_arr)
+
+        if np.isscalar(lon):
+            lon_col = np.asarray([lon])
+        elif isinstance(lon, str) and data is not None:
+            lon_col = np.asarray(data[lon].to_numpy())
+        elif hasattr(lon, "to_numpy"):
+            lon_col = np.asarray(lon.to_numpy())
+        else:
+            lon_col = np.asarray(lon_arr)
+
+        frame = pd.DataFrame(
+            {
+                "lat": lat_col,
+                "lon": lon_col,
+                "easting": e_arr,
+                "northing": n_arr,
+                "zone": z_arr,
+            }
+        )
+        if idx is not None and len(frame) == len(idx):
+            frame.index = idx
+        return frame
+
+    # arrays/scalars: squeeze to scalar if input was scalar
+    if np.isscalar(lat) and np.isscalar(lon):
+        return (e_arr[0], n_arr[0], z_arr[0])
+    return (e_arr, n_arr, z_arr)
+
 def project_point_ll2utm(
     lat,
     lon,
@@ -757,17 +1108,17 @@ def project_point_ll2utm(
     r"""
     Transform one geographic point to UTM coordinates.
 
-    Converts a single latitude/longitude (in decimal degrees
-    or sexagesimal string) to UTM easting, northing, and zone.
-    Uses GDAL/OSR when available, else falls back to PROJ via
-    ``pyproj``.
+    Accepts a single point or 1-D arrays/Series of points in
+    decimal degrees (or DMS strings) and returns UTM easting,
+    northing, and zone. Uses GDAL/OSR when available; falls
+    back to PROJ via ``pyproj`` with explicit XY order.
 
     Parameters
     ----------
-    lat : float or str
+    lat : float or str, array-like, or pd.Series
         Latitude in decimal degrees or sexagesimal string
         (``"DD:MM:SS.sss"``).
-    lon : float or str
+    lon : float, str, array-like, or pd.Series
         Longitude in decimal degrees or sexagesimal string
         (``"DD:MM:SS.sss"``).
     datum : str, default "WGS84"
@@ -783,15 +1134,20 @@ def project_point_ll2utm(
 
     Returns
     -------
-    easting : float or None
-        UTM easting in meters, or ``None`` when inputs are
-        ``None``.
-    northing : float or None
-        UTM northing in meters, or ``None`` when inputs are
-        ``None``.
-    zone : str or None
-        UTM zone string (e.g., ``"55S"``). ``None`` when not
-        determinable or inputs are ``None``.
+    tuple or np.recarray
+        For scalar input: ``(easting, northing, zone)``.
+        For array input: record array with fields
+        ``('easting','northing','elev','utm_zone')``.
+        
+        - easting : float or None
+             UTM easting in meters, or ``None`` when inputs are
+             ``None``.
+        - northing : float or None
+             UTM northing in meters, or ``None`` when inputs are
+             ``None``.
+        - zone : str or None
+             UTM zone string (e.g., ``"55S"``). ``None`` when not
+             determinable or inputs are ``None``.
 
     Notes
     -----
@@ -802,6 +1158,13 @@ def project_point_ll2utm(
     - With GDAL, transforms use
       ``osr.CoordinateTransformation``; with PROJ they use
       ``pyproj.Proj``.
+     
+    Notes
+    -----
+    - Enforces traditional GIS order (lon, lat) in the GDAL
+      path to avoid invalid-latitude errors with GDAL ≥ 3.
+    - The ``pyproj`` path uses a Transformer with
+      ``always_xy=True`` for the same reason.
 
     Examples
     --------
@@ -812,84 +1175,19 @@ def project_point_ll2utm(
     if lat is None or lon is None:
         return (None, None, None)
 
+    # normalize to 1-D arrays; accept scalars/iterables
     if np.iterable(lat) and np.iterable(lon):
-        lat = np.array(
-            [assert_lat_value(v) for v in lat]
-        )
-        lon = np.array(
-            [assert_lon_value(v) for v in lon]
-        )
-        assert lat.size == lon.size
+        lat_arr = np.asarray([assert_lat_value(v) for v in lat])
+        lon_arr = np.asarray([assert_lon_value(v) for v in lon])
+        if lat_arr.size != lon_arr.size:
+            raise ValueError("lat and lon sizes differ.")
     else:
-        lat = np.array([assert_lat_value(lat)])
-        lon = np.array([assert_lon_value(lon)])
+        lat_arr = np.asarray([assert_lat_value(lat)])
+        lon_arr = np.asarray([assert_lon_value(lon)])
 
-    if HAS_GDAL:
-        ll_cs = osr.SpatialReference()
-        if isinstance(datum, int):
-            ogrerr = ll_cs.ImportFromEPSG(datum)
-            if ogrerr != OGRERR_NONE:
-                raise GisError(
-                    "GDAL/OSR error code: {}".format(ogrerr)
-                )
-        elif isinstance(datum, str):
-            ogrerr = ll_cs.SetWellKnownGeogCS(datum)
-            if ogrerr != OGRERR_NONE:
-                raise GisError(
-                    "GDAL/OSR error code: {}".format(ogrerr)
-                )
-        else:
-            raise GisError(
-                "datum {!r} not understood; use EPSG int or "
-                "well-known datum string".format(datum)
-            )
-        utm_cs = osr.SpatialReference()
-    else:
-        pp = None  # type: ignore[assignment]
-
-    if isinstance(epsg, int):
-        if HAS_GDAL:
-            ogrerr = utm_cs.ImportFromEPSG(epsg)
-            if ogrerr != OGRERR_NONE:
-                raise GisError(
-                    "GDAL/OSR error code: {}".format(ogrerr)
-                )
-        else:
-            pp = pyproj.Proj("+init=EPSG:{}".format(epsg))
-    elif epsg is None:
-        if HAS_GDAL:
-            ogrerr = utm_cs.CopyGeogCSFrom(ll_cs)
-            if ogrerr != OGRERR_NONE:
-                raise GisError(
-                    "GDAL/OSR error code: {}".format(ogrerr)
-                )
-        if (
-            utm_zone is None
-            or not isinstance(utm_zone, str)
-            or utm_zone.lower() == "none"
-        ):
-            zone_num, is_north, utm_zone = get_utm_zone(
-                float(lat.mean()),
-                float(lon.mean()),
-            )
-        else:
-            zone_num = int(utm_zone[:-1])
-            is_north = utm_zone[-1].lower() > "n"
-
-        if HAS_GDAL:
-            utm_cs.SetUTM(zone_num, is_north)
-        else:
-            projstring = (
-                "+proj=utm +zone={} +{} +datum={}".format(
-                    zone_num,
-                    "north" if is_north else "south",
-                    datum,
-                )
-            )
-            pp = pyproj.Proj(projstring)
-
-    proj = np.zeros_like(
-        lat,
+    n = lat_arr.size
+    out = np.zeros(
+        n,
         dtype=[
             ("easting", np.float64),
             ("northing", np.float64),
@@ -899,46 +1197,118 @@ def project_point_ll2utm(
     )
 
     if HAS_GDAL:
-        ll2utm = osr.CoordinateTransformation(
-            ll_cs, utm_cs
-        ).TransformPoint
+        # build source geographic SRS
+        ll_cs = osr.SpatialReference()
+        if isinstance(datum, int):
+            ogrerr = ll_cs.ImportFromEPSG(datum)
+        else:
+            ogrerr = ll_cs.SetWellKnownGeogCS(str(datum))
+        if ogrerr != OGRERR_NONE:
+            raise GisError(
+                "GDAL/OSR error code: {}".format(ogrerr)
+            )
+
+        for i in range(n):
+            la = float(lat_arr[i])
+            lo = float(lon_arr[i])
+
+            utm_cs = osr.SpatialReference()
+            if isinstance(epsg, int):
+                ogrerr = utm_cs.ImportFromEPSG(epsg)
+                if ogrerr != OGRERR_NONE:
+                    raise GisError(
+                        "GDAL/OSR error code: {}".format(ogrerr)
+                    )
+                # zone string for info (derive if missing)
+                _, _, zone_str = get_utm_zone(la, lo)
+            else:
+                # tie projected CRS to same geographic part
+                ogrerr = utm_cs.CopyGeogCSFrom(ll_cs)
+                if ogrerr != OGRERR_NONE:
+                    raise GisError(
+                        "GDAL/OSR error code: {}".format(ogrerr)
+                    )
+                if (
+                    utm_zone is None
+                    or not isinstance(utm_zone, str)
+                    or utm_zone.lower() == "none"
+                ):
+                    znum, znorth, zone_str = get_utm_zone(la, lo)
+                else:
+                    znum = int(utm_zone[:-1])
+                    znorth = utm_zone[-1].lower() > "n"
+                    zone_str = utm_zone
+                utm_cs.SetUTM(znum, znorth)
+
+            # enforce (lon, lat) order in GDAL ≥ 3
+            if hasattr(osr, "OAMS_TRADITIONAL_GIS_ORDER"):
+                ll_cs.SetAxisMappingStrategy(
+                    osr.OAMS_TRADITIONAL_GIS_ORDER
+                )
+                utm_cs.SetAxisMappingStrategy(
+                    osr.OAMS_TRADITIONAL_GIS_ORDER
+                )
+
+            xform = osr.CoordinateTransformation(ll_cs, utm_cs)
+            x, y, z = xform.TransformPoint(lo, la, 0.0)
+
+            out["easting"][i] = x
+            out["northing"][i] = y
+            out["elev"][i] = z
+            out["utm_zone"][i] = zone_str
     else:
-        ll2utm = pp  # type: ignore[assignment]
+        # pyproj fallback with explicit (lon, lat)
+        import pyproj  # type: ignore
 
-    for ii in range(lat.size):
-        if HAS_GDAL:
-            x, y, z = ll2utm(
-                float(lon[ii]),
-                float(lat[ii]),
-            )
-            proj["easting"][ii] = x
-            proj["northing"][ii] = y
-            proj["elev"][ii] = z
-        else:
-            assert ll2utm is not None
-            x, y = ll2utm(
-                float(lon[ii]),
-                float(lat[ii]),
-            )
-            proj["easting"][ii] = x
-            proj["northing"][ii] = y
-        if utm_zone is None:
-            _, _, zstr = get_utm_zone(
-                float(lat[ii]),
-                float(lon[ii]),
-            )
-            proj["utm_zone"][ii] = zstr
-        else:
-            proj["utm_zone"][ii] = utm_zone
+        # source CRS from datum (string or epsg-int both ok)
+        src = pyproj.CRS.from_user_input(datum)
 
-    if len(proj) == 1:
+        for i in range(n):
+            la = float(lat_arr[i])
+            lo = float(lon_arr[i])
+
+            if isinstance(epsg, int):
+                dst = pyproj.CRS.from_epsg(epsg)
+                _, _, zone_str = get_utm_zone(la, lo)
+            else:
+                if (
+                    utm_zone is None
+                    or not isinstance(utm_zone, str)
+                    or utm_zone.lower() == "none"
+                ):
+                    znum, znorth, zone_str = get_utm_zone(la, lo)
+                else:
+                    znum = int(utm_zone[:-1])
+                    znorth = utm_zone[-1].lower() > "n"
+                    zone_str = utm_zone
+                proj4 = (
+                    "+proj=utm +zone={} +{} +datum={}".format(
+                        znum,
+                        "north" if znorth else "south",
+                        datum,
+                    )
+                )
+                dst = pyproj.CRS.from_string(proj4)
+
+            tr = pyproj.Transformer.from_crs(
+                src,
+                dst,
+                always_xy=True,
+            )
+            x, y = tr.transform(lo, la)
+
+            out["easting"][i] = x
+            out["northing"][i] = y
+            out["elev"][i] = 0.0
+            out["utm_zone"][i] = zone_str
+
+    if n == 1:
         return (
-            proj["easting"][0],
-            proj["northing"][0],
-            proj["utm_zone"][0],
+            out["easting"][0],
+            out["northing"][0],
+            out["utm_zone"][0],
         )
-    return np.rec.array(proj)
-
+    return np.rec.array(out)
 
 def project_point_utm2ll(
     easting: float,

@@ -27,7 +27,6 @@ Usage
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Any, Mapping, Optional, Sequence, Union
 
 import numpy as np
@@ -36,16 +35,15 @@ import pandas as pd
 from ..exceptions import AvgDataError
 from .tensor import TensorBase
 from .utils import ( 
-    # _find_col, 
+
     _to_num, 
     _norm_comp, 
     to_xarray as _to_xr, 
+    find_and_rename_column
 )
 
 __all__ = ["Resistivity", "Phase"]
 
-
-@dataclass
 class Resistivity(TensorBase):
     r"""
     Apparent resistivity (:math:`\rho_a`) per component.
@@ -72,17 +70,21 @@ class Resistivity(TensorBase):
         Dataset attribute used for units (``"Unit.Rho"``).
     """
 
-    VAR_NAME: str = field(init=False, default="rho")
-    # ALIASES: Tuple[str, ...] = field(
-    #     init=False,
-    #     default=(
-    #         "ARes.mag", "Resistivity", "rho", "Rho", "ares.mag",
-    #         "ARes", "ARes_mag",
-    #     ),
-    # )
-    UNIT_ATTR: str = field(init=False, default="Unit.Rho")
+    VAR_NAME: str = "rho"
+    UNIT_ATTR: str = "Unit.Rho"
 
-    # API 
+    def __init__(
+        self,
+        data: Optional[pd.DataFrame] = None,
+        meta: Optional[Mapping[str, Any]] = None,
+        *,
+        name: Optional[str] = None,
+        verbose: bool = False
+    ) -> None:
+        super().__init__(
+            data=data, meta=meta, name=name or "Resistivity",
+            verbose=verbose
+        )
 
     def read(  # noqa: D401
         self,
@@ -116,16 +118,9 @@ class Resistivity(TensorBase):
             raise TypeError(
                 "Resistivity.read expects DataFrame or vector-like."
             )
+        
+        df= find_and_rename_column(source.copy(), self.VAR_NAME)
 
-        df = source.copy()
-        # col = _find_col(df, self.ALIASES)
-        # if col is None:
-        #     raise AvgDataError(
-        #         "Resistivity: none of aliases "
-        #         f"{self.ALIASES!r} present in table."
-        #     )
-    
-        # df = df.rename(columns={col: self.VAR_NAME})
         if self.VAR_NAME not in df.columns:
             df[self.VAR_NAME] = np.nan
             if self.verbose:
@@ -197,32 +192,73 @@ class Resistivity(TensorBase):
             attrs=merged,
         )
 
-@dataclass
 class Phase(TensorBase):
-    r"""
-    Impedance phase (:math:`\varphi`) per component.
+    r"""Impedance phase (:math:`\varphi`) per component.
 
-    Values are typically reported in **milliradians** for modern
-    CSAVGW tables (``Unit.Phase='mrad'``).  Use
-    :meth:`convert_unit` to switch to degrees when desired.
+    This class manages the impedance phase data, inheriting from
+    :class:`~.tensor.TensorBase` to allow its scalar values to be
+    aligned into a :math:`2 \times 2` tensor-like grid based on
+    the component label.
 
-    Recognized source columns (legacy + modern)
-    -------------------------------------------
-    * ``Z.phz`` (modern)
-    * ``Phase`` (legacy)
-    * ``phase`` / ``ZPHZ`` (variants)
+    Notes
+    -----
+    Values are typically reported in **milliradians** in modern
+    CSAVGW tables (``Unit.Phase='mrad'``). Use the
+    :meth:`convert_unit` method to switch to degrees when
+    desired.
 
-    Canonical internal column: ``'phase'``.
+    The internal canonical column name for phase data is ``phase``.
+
+    Recognized source columns:
+
+    - ``Z.phz`` (modern)
+    - ``Phase`` (legacy)
+    - ``phase``, ``ZPHZ`` (common variants)
+
+    Attributes
+    ----------
+    VAR_NAME : str
+        The canonical column name used in the internal frame
+        (``"phase"``).
+    UNIT_ATTR : str
+        The dataset attribute key used for storing units
+        (``"Unit.Phase"``).
+
+    Examples
+    --------
+    >>> from pycsamt.zonge import Phase
+    >>> import pandas as pd
+    >>> data = {"freq": [1024], "phase": [1000]}
+    >>> p = Phase()
+    >>> p.read(pd.DataFrame(data))
+    >>> p.frame['phase'].iloc[0]
+    1000.0
+    >>> p.convert_unit("deg")
+    >>> p.frame['phase'].iloc[0]
+    57.2957...
+
+    See Also
+    --------
+    Resistivity : Manages apparent resistivity data.
+    TensorBase : The base class providing
     """
 
-    VAR_NAME: str = field(init=False, default="phase")
-    # ALIASES: Tuple[str, ...] = field(
-    #     init=False,
-    #     default=("Z.phz", "z.phz", "Phase", "phase"),
-    # )
-    UNIT_ATTR: str = field(init=False, default="Unit.Phase")
+    VAR_NAME: str = "phase"
+    UNIT_ATTR: str = "Unit.Phase"
 
-    # API #
+    def __init__(
+        self,
+        data: Optional[pd.DataFrame] = None,
+        meta: Optional[Mapping[str, Any]] = None,
+        *,
+        name: Optional[str] = None,
+        verbose: bool = False
+    ) -> None:
+        super().__init__(
+            data=data, meta=meta, name=name or "Phase",
+            verbose=verbose
+        )
+
     def read(  # noqa: D401
         self,
         source: Union[
@@ -255,15 +291,8 @@ class Phase(TensorBase):
                 "Phase.read expects DataFrame or vector-like."
             )
 
-        df = source.copy()
-        # col = _find_col(df, self.ALIASES)
-        # if col is None:
-        #     raise AvgDataError(
-        #         "Phase: none of aliases "
-        #         f"{self.ALIASES!r} present in table."
-        #     )
+        df= find_and_rename_column(source.copy(), self.VAR_NAME)
 
-        # df = df.rename(columns={col: self.VAR_NAME})
         if self.VAR_NAME not in df.columns:
             df[self.VAR_NAME] = np.nan
             if self.verbose:

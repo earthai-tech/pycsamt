@@ -73,67 +73,7 @@ class LegacyAVGBase:
     # When both routes to |Z| exist, prefer E/B over ρa–ω.
     prefer_emh_over_rho: bool = True
 
-    # # Column normalization map (legacy → canonical).
-    # col_map: Dict[str, str] = field(default_factory=dict)
-
-    # def __post_init__(self) -> None:
-    #     """Populate a robust default column map."""
-    #     if self.col_map:
-    #         return
-    #     # Keep this compact but comprehensive.  The goal is to
-    #     # tolerate typical legacy headers without being brittle.
-    #     self.col_map = {
-    #         # coordinates
-    #         "Station": "station",
-    #         "Stn": "station",
-    #         "Freq": "freq",
-    #         "Freq.": "freq",
-    #         "Comp": "comp",
-    #         # Tx / fields and phases
-    #         "Amps": "amps",
-    #         "Tx.Amp": "amps",
-    #         "Emag": "emag",
-    #         "E.mag": "emag",
-    #         "Ephz": "ephz",
-    #         "E.phz": "ephz",
-    #         "Hmag": "hmag",
-    #         "Hphz": "hphz",
-    #         "B.mag": "hmag",
-    #         "B.phz": "hphz",
-    #         # impedance, rho, phase
-    #         "Resistivity": "rho",
-    #         "ARes.mag": "rho",
-    #         "Phase": "phase",
-    #         "Z.phz": "phase",
-    #         "Z.mag": "zmag",
-    #         "|Z|": "zabs",
-    #         # errors / weights (legacy + modern labels)
-    #         "%Emag": "e.%err",
-    #         "sEphz": "e.perr",
-    #         "%Hmag": "h.%err",
-    #         "sHphz": "h.perr",
-    #         "%Rho": "rho.%err",
-    #         "sPhz": "z.perr",
-    #         "E.%err": "e.%err",
-    #         "E.perr": "e.perr",
-    #         "B.%err": "h.%err",
-    #         "B.perr": "h.perr",
-    #         "Z.%err": "z.%err",
-    #         "Z.perr": "z.perr",
-    #         "ARes.%err": "rho.%err",
-    #         "Z.mwgt": "z.mwgt",
-    #         "Z.pwgt": "z.pwgt",
-    #         "E.wgt": "e.wgt",
-    #         "H.wgt": "h.wgt",
-    #         # static-corrected rho
-    #         "SRes": "rho_sc",
-    #         "TMARES": "rho_sc",
-    #         "TMARES/SRES": "rho_sc",
-    #         # legacy skip flag
-    #         "skp": "skp",
-    #     }
-
-    # ---------- public API -----------------------------------
+    # public API 
     def from_path(
         self,
         path: Union[str, Path],
@@ -233,19 +173,6 @@ class LegacyAVGBase:
         out = df.rename(columns=rename_dict).copy()
         out.columns = [str(c).strip() for c in out.columns]
         return out
-        # return df.rename(columns=rename_dict)
-
-    # def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
-    #     """
-    #     Rename legacy / mixed-case columns into canonical names
-    #     and trim whitespace.  No type coercion here.
-    #     """
-    #     if df.empty:
-    #         raise AvgDataError("Empty legacy table.")
-    #     mapping = {c: self.col_map.get(c, c) for c in df.columns}
-    #     out = df.rename(columns=mapping).copy()
-    #     out.columns = [str(c).strip() for c in out.columns]
-    #     return out
 
     def _ensure_coords(self, df: pd.DataFrame) -> pd.DataFrame:
         """

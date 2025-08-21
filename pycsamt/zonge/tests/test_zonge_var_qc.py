@@ -33,8 +33,8 @@ def test_sphz_read_legacy_and_write_block_has_unit_meta():
     )
     s = SPhz.from_avg((df, {}))
     # internal, canonical column name exists
-    assert "sphz" in s.frame.columns
-    assert np.allclose(s.frame["sphz"].to_numpy(), [12.0, 9.5, 7.0])
+    assert "s_phz" in s.frame.columns
+    assert np.allclose(s.frame["s_phz"].to_numpy(), [12.0, 9.5, 7.0])
 
     lines = s.write()
     # banner + Unit.Phase meta present
@@ -49,14 +49,14 @@ def test_phase_convert_unit_roundtrip_mrad_deg():
     s = SPhz.from_avg((df, {"Unit.Phase": "mrad"}))
     # mrad -> deg
     s.convert_unit("deg")
-    v_deg = float(s.frame["sphz"].iloc[0]) 
+    v_deg = float(s.frame["s_phz"].iloc[0]) 
     expected_deg = 1000.0 * (180.0 / (np.pi * 1000.0))
     assert np.isclose(v_deg, expected_deg, rtol=0, atol=1e-8)
     assert s.meta["Unit.Phase"].lower() == "deg"
 
     # deg -> mrad
     s.convert_unit("mrad")
-    v_mrad = float(s.frame["sphz"].iloc[0])
+    v_mrad = float(s.frame["s_phz"].iloc[0])
     assert np.isfinite(v_mrad)
     assert s.meta["Unit.Phase"].lower() == "mrad"
 
@@ -74,7 +74,7 @@ def test_phase_to_xarray_dims_and_var():
     e = SEphz.from_avg((df, {"Unit.Phase": "mrad"}))
     ds = e.to_xarray()
     assert set(ds.dims) == {"station", "freq", "comp"}
-    assert "sephz" in ds.variables
+    assert "s_ephz" in ds.variables
     # attrs carry Unit.Phase
     assert str(ds.attrs.get("Unit.Phase", "")).lower() == "mrad"
 

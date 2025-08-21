@@ -35,7 +35,7 @@ from ..log.logger import get_logger
 from ..utils.deps import ensure_pkg 
 from ..utils.validation import has_read 
 from ._transfer import LegacyAVGBase
-from .base import AVGFrame
+from .base import AVGFrame, guess_kind_from_df
 from .info import DataInfo
 from .heads import _emit_hardware_banner
 from .utils import ( 
@@ -103,7 +103,7 @@ class BaseAVG:
     DataInfo : The main component aggregator used by this class.
     """
     def __init__(self, verbose: bool = False):
-        self.info: DataInfo = DataInfo()
+        self.info: DataInfo = DataInfo(verbose=verbose)
         self.verbose: bool = verbose
         self._kind: Optional[int] = None
         self._source_path: Optional[Path] = None
@@ -142,17 +142,21 @@ class BaseAVG:
         elif isinstance(source, pd.DataFrame):
             if self.verbose:
                 logger.info("Reading from pandas DataFrame.")
-            df = source
-            final_meta = meta or {}
-            self._kind = 2  # Assume modern if from DataFrame
-
+            frame = AVGFrame (data=source, meta=meta or {})
+        
+            df, final_meta, self._kind = guess_kind_from_df(
+                frame, transform=True,
+                verbose = self.verbose 
+            )
+            self._source_path = frame.source
+            
         elif isinstance(source, AVGFrame):
             if self.verbose:
                 logger.info("Reading from AVGFrame object.")
             df = source.data
             final_meta = source.meta
             self._source_path = source.source
-            self._kind = 2  # Assume modern
+            self._kind = guess_kind_from_df(df)
 
         else:
             raise TypeError(
@@ -195,12 +199,15 @@ class BaseAVG:
 
         if self.verbose:
             logger.info(f"Writing modern AVG file to: {path}")
+        
+        # Filter out artificial NaN rows before writing ---
+        df_to_write = self.info.df.dropna(subset=['rho']).copy()
 
         meta = self.info.header.to_keywords()
         banner = _emit_hardware_banner(self.info.header.hardware)
         
         write_avg(
-            core=self.info.df,
+            core=df_to_write,
             extra=None,
             meta=meta,
             path=path,
@@ -233,9 +240,6 @@ class BaseAVG:
                 else "export"
             )
             path = Path.cwd() / f"{base}_legacy.avg"
-
-        if self.verbose:
-            logger.info(f"Writing legacy AVG file to: {path}")
 
         lines = []
         h = self.info.header
@@ -272,8 +276,10 @@ class BaseAVG:
             "h.%err": "pc_hmag", "h.perr": "s_hphz",
             "rho.%err": "pc_rho", "z.perr": "s_phz",
         }
-        df = self.info.df.rename(columns=rename_map)
-        df = df.sort_values(by=["station", "freq"])
+        df = self.info.df.dropna(subset=['rho']).copy()
+        df = df.rename(
+            columns=rename_map
+        ).sort_values(by=["station", "freq"])
 
         # Define format specifier to avoid linter confusion
         sci_fspec = f"%9.{precision}e"
@@ -309,6 +315,10 @@ class BaseAVG:
             lines.append(line)
 
         Path(path).write_text("\n".join(lines))
+        
+        if self.verbose:
+            logger.info(f"Writing legacy AVG file to: {path}")
+            
 
     def write(
         self,

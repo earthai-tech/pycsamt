@@ -22,10 +22,11 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-from .base import AVGComponentBase # , AVGFrame
-from .utils import number_stations
 from ..exceptions import StationError
-
+from .base import AVGComponentBase # , AVGFrame
+from .utils import ( 
+    number_stations, find_and_rename_column
+)
 
 __all__ = ["Station"]
 
@@ -128,8 +129,11 @@ class Station(AVGComponentBase):
 
         # build a minimal frame with a numeric 'station' column
         if isinstance(source, pd.DataFrame):
+            source = find_and_rename_column(source.copy(), 'station')
+            
             if "station" not in source.columns:
                 raise StationError("column 'station' missing in frame")
+                
             frame = source[["station"]].copy()
             frame["station"] = _to_float_series(frame["station"])
         else:

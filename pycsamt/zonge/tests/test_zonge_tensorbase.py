@@ -8,8 +8,6 @@ import pandas as pd
 import pytest
 
 from pycsamt.zonge.tensor import TensorBase
-from pycsamt.exceptions import AvgDataError
-
 
 class DummyTensor(TensorBase):
     """

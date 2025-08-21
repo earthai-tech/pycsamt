@@ -11,11 +11,14 @@ and various QC metrics) into a single, convenient container.
 """
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 from typing import Any, Mapping, Optional, Tuple, Union
 
 import pandas as pd
 
+from ..exceptions import AvgDataError
+from ..log.logger import get_logger 
 from .base import AVGFrame
 from .heads import Header
 from .meas import Amps, CompMeas, Frequency
@@ -26,24 +29,92 @@ from .var_pc import PcEmag, PcHmag, PcRho
 from .var_std import SEphz, SHphz, SPhz
 from .z import Z
 
-
 __all__ = ["DataInfo"]
 
 
 class DataInfo:
-    """
-    High-level aggregator for a complete Zonge AVG dataset.
+    r"""High-level aggregator for a complete Zonge AVG dataset.
 
-    This class provides a unified interface to all parsed data
-    components from an AVG file, including header metadata,
-    impedance, resistivity, phase, and quality control metrics.
+    This class acts as the primary container and orchestrator for
+    all data and metadata parsed from a Zonge AVG file. It
+    composes all other data components (e.g., Header, Z,
+    Resistivity, Phase, and QC metrics) into a single,
+    convenient object.
+
+    Its main role is to provide a unified interface, holding all
+    the structured information in one place after the initial
+    parsing is complete.
+
+    Attributes
+    ----------
+    df : pandas.DataFrame or None
+        The core tidy DataFrame containing all available data
+        columns after parsing and standardization.
+    meta : mapping or None
+        The raw metadata dictionary extracted from the file's
+        header section.
+    header : :class:`~.heads.Header`
+        A component that aggregates all header-level metadata.
+    station : :class:`~.survey.Station`
+        A component that manages survey line geometry.
+    z : :class:`~.z.Z`
+        The component for computing the complex impedance tensor.
+    resistivity, phase : :class:`~.resphase.Resistivity`, :class:`~.resphase.Phase`
+        Components for apparent resistivity and phase data.
+    frequency, amps, comp : :class:`~.meas.Frequency`, etc.
+        Components for core measurement quantities.
+    pc_emag, pc_hmag, pc_rho : :class:`~.var_pc.PcEmag`, etc.
+        Components for percent-error quality control metrics.
+    s_ephz, s_hphz, s_phz : :class:`~.var_std.SEphz`, etc.
+        Components for phase standard deviation QC metrics.
+
+    Methods
+    -------
+    from_avg(avg, meta=None)
+        A classmethod factory to build a `DataInfo` object from
+        various sources, including a file path or DataFrame.
+    read(source, meta=None)
+        Orchestrates the population of all sub-components from a
+        standardized DataFrame and metadata dictionary.
+
+    Notes
+    -----
+    The `read` method is the core of this class. It iterates
+    through all its component attributes and calls their
+    respective `read` methods. It includes a robust error-
+    handling mechanism that will issue a warning and skip any
+    component that fails to load (e.g., due to missing data in
+    the source file), making the loading process resilient.
+
+    Examples
+    --------
+    While typically used internally by the `AVG` class, you could
+    use `DataInfo` directly:
+
+    >>> from pycsamt.zonge.info import DataInfo
+    >>> from pycsamt.zonge.utils import load_avg
+    >>> df, meta = load_avg('data/avg/K2.avg')
+    >>> data_info = DataInfo()
+    >>> data_info.read(df, meta)
+    >>> print(data_info.station)
+    Station(n=28, span=25.0–1375.0 m, inc=50.0)
+
+    See Also
+    --------
+    pycsamt.zonge.avg.AVG : The main user-facing class that uses
+        `DataInfo`.
+    pycsamt.zonge.base.AVGComponentBase : The base class for all
+        components held by `DataInfo`.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, verbose: bool = False) -> None:
         # Core data holders
         self._frame: Optional[AVGFrame] = None
         self.df: Optional[pd.DataFrame] = None
         self.meta: Optional[Mapping[str, Any]] = None
+        
+        self.verbose = verbose
+        self._logger = get_logger(self.__class__.__name__)
 
         # Component containers
         self.header: Header = Header()
@@ -120,21 +191,31 @@ class DataInfo:
         ]
 
         for comp in components:
-            # try:
+            try:
                 comp.read(self.df, self.meta)
-            # except AvgDataError as e:
-            #     # Gracefully skip components if their data is missing
-            #     # For example, a file might not have %Hmag
-            #     warnings.warn(
-            #         f"Notice: Could not load component "
-            #         f"'{comp.__class__.__name__}': {e}"
-            #     )
-            # except Exception as e:
-            #     warnings.warn(
-            #         f"Warning: Unexpected error loading "
-            #         f"'{comp.__class__.__name__}': {e}"
-            #     )
-
+            except AvgDataError as e:
+                # Gracefully skip components if their data is missing
+                msg = (
+                    f"Notice: Could not load component "
+                    f"'{comp.__class__.__name__}': {e}"
+                )
+                if self.verbose:
+                    self._logger.warning(msg)
+                else:
+                    warnings.warn(msg)
+                    
+            except Exception as e:
+                msg = (
+                    f"Warning: Unexpected error loading "
+                    f"'{comp.__class__.__name__}': {e}"
+                )
+                if self.verbose:
+                    self._logger.error(msg)
+                else:
+                    warnings.warn(msg)
+        
+        return self 
+    
     def __str__(self) -> str:
         if self.df is None:
             return "DataInfo(empty)"
@@ -155,3 +236,4 @@ class DataInfo:
         )
 
     __repr__ = __str__
+

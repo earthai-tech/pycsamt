@@ -143,7 +143,7 @@ def test_write_avg_default_path_and_header_case(
 
     txt = out_path.read_text(encoding="utf-8")
     # meta header written
-    assert "$Survey.Type = CSAMT" in txt
+    assert "$Survey.Type=CSAMT" in txt
     # column header should contain kind-2 label for rho
     # assert "ARes.mag" in txt.splitlines() # [-(len(core) + 1)]  # header line
 

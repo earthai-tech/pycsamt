@@ -26,7 +26,7 @@ Notes
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+# from dataclasses import dataclass
 from typing import ( 
     Any, 
     Dict, 
@@ -41,16 +41,16 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from ..exceptions import AvgDataError
 from ..log.logger import get_logger
 from .base import AVGComponentBase
-from .utils import AvgDataError
+from .utils import find_and_rename_column
 
 logger = get_logger(__name__)
 
 __all__ = ["SPhz", "SEphz", "SHphz", "PhaseSigma"]
 
 
-@dataclass
 class PhaseStdBase(AVGComponentBase):
     """
     Common implementation for phase stdev QC variables.
@@ -79,6 +79,19 @@ class PhaseStdBase(AVGComponentBase):
     # KEY_CANDIDATES: ClassVar[Tuple[str, ...]] = ()
     LABEL: ClassVar[str] = ""
     
+    def __init__(
+        self,
+        data: Optional[pd.DataFrame] = None,
+        meta: Optional[Mapping[str, Any]] = None,
+        *,
+        name: Optional[str] = None,
+        verbose: bool = False
+    ) -> None:
+        # Explicitly call the parent's initializer
+        super().__init__(
+            data=data, meta=meta, name=name, verbose=verbose
+        )
+        
     def read(                                   # noqa: D401 (docstring above)
         self,
         source: pd.DataFrame
@@ -124,6 +137,7 @@ class PhaseStdBase(AVGComponentBase):
             )
 
         df = source.copy()
+        df = find_and_rename_column(df, self.VAR_NAME)
 
         # locate a compatible source column
         # col = _find_col(df, self.KEY_CANDIDATES)
@@ -426,7 +440,7 @@ class SPhz(PhaseStdBase):
 
     Internal canonical column: ``'sphz'``.
     """
-    VAR_NAME = "sphz"
+    VAR_NAME = "s_phz"
     # KEY_CANDIDATES = ("sPhz", "SPhz", "Z.perr", "z.perr", "sphz")
     LABEL = "Z phase σ (sPhz)"
 
@@ -442,8 +456,8 @@ class SEphz(PhaseStdBase):
 
     Internal canonical column: ``'sephz'``.
     """
-    VAR_NAME = "sephz"
-    KEY_CANDIDATES = ("sEphz", "SEphz", "E.perr", "e.perr", "sephz")
+    VAR_NAME = "s_ephz"
+    # KEY_CANDIDATES = ("sEphz", "SEphz", "E.perr", "e.perr", "sephz")
     LABEL = "E phase σ (sEphz)"
 
 
@@ -458,7 +472,7 @@ class SHphz(PhaseStdBase):
 
     Internal canonical column: ``'shphz'``.
     """
-    VAR_NAME = "shphz"
+    VAR_NAME = "s_hphz"
     # KEY_CANDIDATES = ("sHphz", "SHphz", "H.perr", "h.perr", "shphz")
     LABEL = "H phase σ (sHphz)"
 

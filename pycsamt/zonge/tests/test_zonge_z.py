@@ -41,7 +41,7 @@ class TestZ:
         assert not z_comp.frame.empty
         expected_cols = {
             "station", "freq", "comp", "rho", "phase",
-            "pc_rho", "sphz"
+            "pc_rho", "s_phz"
         }
         assert expected_cols.issubset(z_comp.frame.columns)
         assert z_comp.frame.shape[0] == 6

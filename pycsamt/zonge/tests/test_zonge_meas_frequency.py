@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pytest for pycsamt.zonge.meas.Frequency
 
 from __future__ import annotations
 

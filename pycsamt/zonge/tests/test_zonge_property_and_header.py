@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
-# pytest for pycsamt.zonge.property & pycsamt.zonge.heads
 
 from __future__ import annotations
 
 import re
-
 import pytest
-
 from pycsamt.zonge.property import (
     SkipFlag,
     Hardware,
@@ -16,7 +13,6 @@ from pycsamt.zonge.property import (
     Transmitter,
 )
 from pycsamt.zonge.heads import Header
-
 
 # -------------------------------------------------------------------- #
 # SkipFlag                                                             #

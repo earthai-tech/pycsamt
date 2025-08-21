@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
-# License: LGPL-3.0-or-later
+# License: LGPL-3.0
 
 import numpy as np
 import pandas as pd
@@ -37,7 +37,6 @@ def test_resistivity_read_legacy_and_to_xarray():
     assert set(ds.dims) == {"station", "freq", "comp"}
     assert "rho" in ds.variables
     assert str(ds.attrs.get("Unit.Rho", "")).lower() in {"ohm·m", "ohm*m"}
-
 
 def test_resistivity_to_tensor_union_and_intersection():
     # Two stations, ragged freqs; only ExHy present (others → NaN)

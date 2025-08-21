@@ -41,7 +41,7 @@ except ImportError:  # pragma: no cover
         "xarray is required for the package"
     )
 from ..decorators import isdf 
-from ..gis.utils import ll_to_utm # type: ignore
+from ..gis.utils import to_utm # type: ignore
 from ..exceptions import (
     AvgFileError, 
     AvgDataError, 
@@ -49,9 +49,13 @@ from ..exceptions import (
 from ..log.logger import get_logger
 from ..utils.deps import ensure_pkg 
 from .schema import ( 
-    _CANONICAL_MAP, # 
-    _CANON_TO_MODERN
-    )
+    _CANONICAL_MAP,
+    _CANON_TO_MODERN,
+    _FLEXIBLE_LOOKUP, 
+    _CSAVGW_ORDERED, 
+    get_aliases, 
+)
+
 __all__ = [
     "load_avg", 
     "round_dipole_length", 
@@ -76,6 +80,28 @@ _RX_K1_HEADER = re.compile(r"^\s*skp\s+Station", re.I)
 _NUMERIC_REPLACE   = {"*": np.nan, "nan": np.nan, "NaN": np.nan,
                       "": np.nan}
 _COMMENT_PREFIXES = ('\\', '/', '!', '"')
+
+def find_and_rename_column(
+    df: pd.DataFrame,
+    canonical_name: str
+) -> pd.DataFrame:
+    """
+    Find a column by any of its aliases and rename it to the
+    canonical name.
+    """
+    # Use the get_aliases function we already built
+    aliases = get_aliases(canonical_name, kind="all")
+    
+    col_found = None
+    for alias in aliases:
+        if alias in df.columns:
+            col_found = alias
+            break
+            
+    if col_found and col_found != canonical_name:
+        return df.rename(columns={col_found: canonical_name})
+        
+    return df
 
 
 def _to_float(val: str | float | int) -> float | np.floating:
@@ -362,9 +388,9 @@ def _parse_kind2(
     # Derive a convenient boolean selection flag from CSAVGW
     # weights (1 = keep, 0 = skip).  If weights are absent, the
     # column is simply not added.
-    if 'z.mwgt' in df.columns or 'z.pwgt' in df.columns:
-        mw = _get_weight_bool (df, 'z.mwgt')
-        pw = _get_weight_bool (df, 'z.pwgt')
+    if 'z_mwgt' in df.columns or 'z_pwgt' in df.columns:
+        mw = _get_weight_bool (df, 'z_mwgt')
+        pw = _get_weight_bool (df, 'z_pwgt')
         # mw = df.get('z.mwgt', 1).fillna(1).astype(float) > 0
         # pw = df.get('z.pwgt', 1).fillna(1).astype(float) > 0
         df['use'] = mw & pw
@@ -380,23 +406,32 @@ def _get_weight_bool (df, comp ='z.mwgt'):
         return val  > 0
     return df.get(comp, 1).fillna(1).astype(float) > 0
 
+
 def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Rename columns to a canonical schema using CANONICAL MAP.
+    Rename columns to a canonical schema using a two-pass strategy.
     """
-    # Use a case-insensitive match for robustness
-    lower_to_canon = {
+    # Create a simple case-insensitive map for strict matching
+    strict_lower_map = {
         k.lower(): v for k, v in _CANONICAL_MAP.items()
     }
-    rename_dict = {
-        c: lower_to_canon.get(str(c).lower(), str(c).lower())
-        for c in df.columns
-    }
-    return df.rename(columns=rename_dict)
+    rename_dict = {}
+    for col in df.columns:
+        # Normalize the column name for flexible lookup
+        norm_col = str(col).lower().strip()# .replace(
+            # '.', '').replace('_', '').replace('%', '')
+ 
+        # 1. Try flexible lookup first for QC/weight columns
+        if norm_col in _FLEXIBLE_LOOKUP:
+            rename_dict[col] = _FLEXIBLE_LOOKUP[norm_col]
+        # 2. Fallback to strict, case-insensitive lookup for all others
+        elif str(col).lower() in strict_lower_map:
+            rename_dict[col] = strict_lower_map[str(col).lower()]
+        # 3. If no match, keep original name (or lowercase it)
+        else:
+            rename_dict[col] = str(col).lower()
 
-# def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
-#     return df.rename(
-#         columns={c: _COL_MAP.get(c, c.lower()) for c in df.columns})
+    return df.rename(columns=rename_dict)
 
 def split_by_station(
     df: pd.DataFrame
@@ -623,13 +658,81 @@ def write_avg(
     header_spaces: bool = False,   # use $k=v by default
     banner_lines: Optional[Sequence[str]] = None,
 ) -> Path:
-    """
-    Serialize to Zonge kind-2 (CSAVGW/ASTATIC) .avg.
+    r"""Serialize a DataFrame to a Zonge kind-2 AVG file.
 
-    If the input frame has a 'station' column, data are written
-    as multiple blocks (one CSV section per station) with
-    $Rx.* lines preceding each block (recommended). Otherwise a
-    single block is written (legacy/utility case).
+    This function serves as the core writer for creating modern,
+    CSAVGW/ASTATIC-style ``.avg`` files. It takes a DataFrame
+    with canonical column names, aggregates metadata, and formats
+    the output into a structured text file with data blocks
+    grouped by station.
+
+    Parameters
+    ----------
+    core : pandas.DataFrame
+        The main DataFrame containing the core measurement data.
+        It is expected to have canonical column names (e.g.,
+        'rho', 'phase', 'pc_emag').
+    extra : pandas.DataFrame or None
+        An optional DataFrame containing additional columns to be
+        merged with the core data before writing.
+    meta : dict, optional
+        A dictionary of global metadata to be written as
+        ``$keyword=value`` pairs in the file header.
+    path : str or pathlib.Path, optional
+        The output file path. If ``None``, a default filename
+        like ``exported_kind2.avg`` is created in the current
+        working directory.
+    stamp : bool, default True
+        If ``True``, a ``$Written=<timestamp>`` line is added to
+        the header for provenance.
+    float_fmt : str, default "%.6g"
+        The format specifier for writing floating-point numbers
+        in the data blocks.
+    na_rep : str, default "*"
+        The string representation for missing (NaN) values in the
+        data blocks, conforming to the Zonge convention.
+    header_spaces : bool, default False
+        If ``True``, adds spaces around the equals sign in header
+        keywords (e.g., ``$Key = Value``).
+    banner_lines : sequence of str, optional
+        A sequence of comment lines (starting with '\\') to be
+        prepended to the file header, typically for hardware and
+        processing information.
+
+    Returns
+    -------
+    pathlib.Path
+        The absolute path to the newly created ``.avg`` file.
+
+    Notes
+    -----
+    This function is designed to produce clean, compliant, and
+    human-readable kind-2 AVG files. Its key behaviors include:
+
+    - **Column Renaming**: It uses the ``CANON_TO_MODERN_MAP`` from
+      the :mod:`~.schema` module to automatically convert the
+      internal canonical column names back to the standard modern
+      format (e.g., 'rho' becomes 'ARes.mag').
+    - **Block Grouping**: If a 'station' column is present, the
+      function intelligently groups the data by station and writes
+      a separate data block for each, preceded by its specific
+      ``$Rx.*`` metadata.
+    - **Smart Column Filtering**: It automatically detects and
+      omits placeholder columns (like 'Choer', 'Gdp.Blk') if they
+      contain no valid data, preventing empty columns from
+      cluttering the output file. It also excludes internal helper
+      columns from the final output.
+    - **Aligned Formatting**: The function uses a custom CSV
+      formatter to produce neatly aligned, fixed-width-like
+      columns within the data blocks, matching the appearance of
+      files generated by Zonge's proprietary software.
+
+    See Also
+    --------
+    pycsamt.zonge.avg.BaseAVG.to_modern : The primary method that
+        calls this function.
+    pycsamt.zonge.utils.load_avg : The corresponding function for
+        reading AVG files.
     """
     # --- 0) destination 
     if path is None:
@@ -660,45 +763,44 @@ def write_avg(
     block = pd.concat(
         [core, extra], axis=1) if extra is not None else core
     block = block.copy()
+    
+    # Drop any "extra" columns that are completely empty
+    extra_cols_to_check = [
+        'coh', 'gdp_blk', 'gdp_chn', 'gdp_time', 'zabs'
+    ]
+    for col in extra_cols_to_check:
+        if col in block.columns and block[col].isnull().all():
+            block = block.drop(columns=[col])
 
     # canonical → kind-2 casing (patch a couple of gaps)
-    canon2k2 = dict(_CANON_TO_MODERN)
-    canon2k2.update({
-        "h.wgt": "H.wgt",
-        "rho_sc": "SRes",
-        "coh": "Choer",
-        "gdp_blk": "Gdp.Blk",
-        "gdp_chn": "Gdp.Chn",
-        "gdp_time": "Gdp.Time",
-        "zabs": "|Z|",
-    })
-    rename_map = {
-        c: canon2k2.get(c.lower(), c) for c in block.columns}
-    block.rename(columns=rename_map, inplace=True)
-
-    # Expected CSAVGW order; extras will be appended after these.
-    ordered = [
-        "Z.mwgt","Z.pwgt","Freq","Tx.Amp",
-        "E.mag","E.phz","B.mag","B.phz",
-        "Z.mag","Z.phz","ARes.mag","SRes",
-        "E.wgt","H.wgt",
-        "E.%err","E.perr","B.%err","B.perr",
-        "Z.%err","Z.perr","ARes.%err",
-        "Choer","Gdp.Blk","Gdp.Chn","Gdp.Time","|Z|",
-    ]
+    canon_to_modern = {
+        k: v for k, v in _CANON_TO_MODERN.items() if k in block.columns
+    }
+    block.rename(columns=canon_to_modern, inplace=True)
 
     def _order_cols(df: pd.DataFrame) -> list[str]:
-        present = [c for c in ordered if c in df.columns]
+        # Expected CSAVGW order; extras will be appended after these.
+        
+        present = [c for c in _CSAVGW_ORDERED if c in df.columns]
         extras  = [c for c in df.columns if c not in present]
-        # Avoid writing a 'Station' column for kind-2 blocks
-        extras  = [c for c in extras if c.lower() != "station"]
+        # Exclude all columns that are part of the block's metadata
+        extras = [ 
+            c for c in extras if c.lower() not in ( 
+                "station", "comp", "rx_length", "rx_gdpstn"
+                )
+            ]
         return present + extras
-
+    
+    # Identify the actual column name (case may vary)
+    stn_col = next(
+        (c for c in block.columns if c.lower() == "station"), None
+    )
     # Multi-station writer (group and stamp $Rx.*)
-    if "station" in (c.lower() for c in block.columns):
-        # Identify the actual column name (case may vary)
-        stn_col = next(c for c in block.columns if c.lower() == "station")
-
+    # if "station" in (c.lower() for c in block.columns):
+    #     # Identify the actual column name (case may vary)
+    #     stn_col = next(c for c in block.columns if c.lower() == "station")
+    if stn_col:
+        
         for stn, sub in block.groupby(stn_col, sort=True, dropna=False):
             # Defensive: skip NaN station group
             if pd.isna(stn):
@@ -784,41 +886,75 @@ def load_avg(
     utm_zone: Optional[int] = None,
     inplace: bool = False
 ) -> Tuple[pd.DataFrame, Dict[str, str]]:
-    """
-    Read a Zonge AVG file (legacy kind-1 or modern CSAVGW
-    kind-2) and return a tidy DataFrame plus metadata.
+    r"""Read a Zonge AVG file and return a tidy DataFrame and metadata.
 
-    The function:
-      * classifies the file by header,
-      * parses kind-1 (fixed-width) via _parse_kind1,
-      * parses kind-2 (CSV blocks) via _parse_kind2,
-      * optionally adds UTM eastings/northings if lat/lon cols
-        are present (column names configurable via ll_columns).
+    This function serves as the primary parser for both legacy
+    (kind-1) and modern (kind-2) Zonge AVG files. It automatically
+    detects the file format, parses the data accordingly, and
+    standardizes all column names to a consistent, canonical
+    schema.
 
     Parameters
     ----------
-    path : str | Path
-        Filesystem path to the .avg file.
-    ll_columns : (str, str), optional
-        Column names containing latitude/longitude (deg).
+    path : str or pathlib.Path
+        The filesystem path to the ``.avg`` file.
+    ll_columns : tuple[str, str], default ('latitude', 'longitude')
+        Column names in the source data that contain latitude and
+        longitude values in decimal degrees. This is not a standard
+        Zonge field but is supported for custom data formats.
     utm_zone : int, optional
-        UTM zone override; if None, auto-detect.
+        The UTM zone number to use for coordinate conversion. If
+        ``None``, the zone is auto-detected from the longitude.
     inplace : bool, default False
-        If False, return a copy so callers can mutate safely.
+        This parameter is deprecated and no longer has an effect,
+        as the function always returns a new DataFrame.
 
     Returns
     -------
-    (df, meta) : (pandas.DataFrame, dict)
-        df    : tidy table with normalised column names.
-        meta  : metadata dict.  For kind-2, includes a 'blocks'
-                list with per-block metadata.
+    df : pandas.DataFrame
+        A tidy DataFrame where all column names have been
+        standardized to the internal canonical schema (e.g.,
+        'Resistivity' becomes 'rho').
+    meta : dict
+        A dictionary containing all header metadata from the file.
+        For modern files, this includes a 'blocks' key with a
+        list of per-station metadata blocks.
 
     Raises
     ------
     FileNotFoundError
-        If the file path does not exist.
-    AvgFileError / AvgDataError
-        If classification or parsing fails.
+        If the file specified by `path` does not exist.
+    AvgFileError
+        If the file format cannot be reliably classified as either
+        legacy or modern.
+    AvgDataError
+        If parsing fails due to malformed or missing data within
+        the file.
+
+    Notes
+    -----
+    The standardization of column names is a key feature of this
+    function. It ensures that all subsequent processing steps can
+    rely on a consistent and predictable data structure, regardless
+    of the input file's original format. This is achieved by using
+    the ``_CANONICAL_MAP`` from the :mod:`~.schema` module.
+
+    Examples
+    --------
+    >>> from pycsamt.zonge.utils import load_avg
+    >>> # Load a modern AVG file
+    >>> df, meta = load_avg('data/avg/K2.avg')
+    >>> print(df.columns)
+    Index(['z_mwgt', 'freq', ..., 'station', 'comp', 'use'], dtype='object')
+    >>> print(meta['Survey.Type'])
+    CSAMT
+
+    See Also
+    --------
+    pycsamt.zonge.avg.AVG.from_file : The recommended high-level
+        entry point for loading AVG data.
+    pycsamt.zonge.utils.write_avg : The corresponding function for
+        writing AVG files.
     """
     path = Path(path)
     if not path.exists():
@@ -842,7 +978,7 @@ def load_avg(
     lat_col, lon_col = ll_columns
     if lat_col in df.columns and lon_col in df.columns:
         try:
-            east, north = ll_to_utm(
+            east, north, _ = to_utm(
                 df[lat_col].values,
                 df[lon_col].values,
                 zone=utm_zone
@@ -857,7 +993,6 @@ def load_avg(
 
     return df, meta
 
-# Station‑profile utilities
 def validate_stn_profile(
     profile: Sequence[str],
     splitter: str | None = None
@@ -886,8 +1021,6 @@ def validate_stn_profile(
     return len(matches), matches
 
 
-# Misc helpers (kept for backward compat.)
-
 def round_dipole_length(length: float | int) -> float:
     """Round *length* to the nearest 5‑m increment."""
     length = float(length)
@@ -899,7 +1032,6 @@ def round_dipole_length(length: float | int) -> float:
     return length - mod + 10
 
 
-# NEW v2 helpers
 def extract_core_columns(
      df: pd.DataFrame,
      *,

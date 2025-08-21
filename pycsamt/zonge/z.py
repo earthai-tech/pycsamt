@@ -30,8 +30,8 @@ from ..log.logger import get_logger
 
 from .tensor import TensorBase, _norm_comp
 from .utils import ( 
-    _find_col, 
     _to_num, 
+    _standardise_columns
 )
 logger = get_logger(__name__) 
 
@@ -39,20 +39,55 @@ __all__ = ["Z"]
 
 
 class Z(TensorBase):
-    r"""
-    Complex impedance tensor (Z) component.
+    r"""Complex impedance tensor (Z) component.
 
-    This class reads tidy AVG tables and computes the complex
-    impedance Z from apparent resistivity (ρa) and impedance
-    phase (φ). It provides properties to access the complex
-    tensor, its real and imaginary parts, and the propagated
-    error.
+    This class reads a tidy AVG table and computes the complex
+    impedance Z from apparent resistivity (:math:`\rho_a`) and
+    impedance phase (:math:`\phi`). It provides properties to
+    access the complex tensor, its real and imaginary parts, and
+    the propagated error.
+
+    The impedance is calculated using the standard formula [1]_:
 
     .. math::
         Z = \sqrt{\rho_a \cdot \omega \cdot \mu_0} \cdot
         e^{i \cdot \phi}
 
-    where ω = 2πf.
+    where :math:`\omega = 2\pi f`.
+
+    Attributes
+    ----------
+    z : pd.Series
+        The complex impedance :math:`Z` in Ohms [Ω].
+    z_real, z_imag : pd.Series
+        The real and imaginary parts of the impedance tensor.
+    z_err : pd.Series
+        The propagated error in the magnitude of :math:`Z`,
+        :math:`|dZ|`, in Ohms [Ω].
+    z_xx, z_xy, z_yx, z_yy : pd.Series
+        Convenience properties to access the individual components
+        of the complex impedance tensor.
+
+    Examples
+    --------
+    >>> from pycsamt.zonge import Z
+    >>> from pycsamt.zonge.avg import AVG
+    >>> avg = AVG.from_file('data/avg/K2.avg')
+    >>> z_component = avg.z
+    >>> # Get the complex impedance for all measurements
+    >>> complex_z_values = z_component.z
+    >>> # Get only the Z_xy component
+    >>> z_xy = z_component.z_xy
+
+    References
+    ----------
+    .. [1] Vozoff, K. (1972). The magnetotelluric method in the
+           exploration of sedimentary basins. Geophysics, 37(1),
+           98-141.
+
+    See Also
+    --------
+    TensorBase : The parent class providing tensor-shaping logic.
     """
 
     def read(
@@ -69,52 +104,28 @@ class Z(TensorBase):
                 "Z.read expects a pandas.DataFrame."
             )
 
-        df = source.copy()
+        # df = source.copy()
+        df = _standardise_columns(source.copy())
         self._meta = dict(meta or {})
 
-        # --- Required columns ---
-        rho_aliases = (
-            "ARes.mag", "Resistivity", "rho",
-        )
-        phase_aliases = (
-            "Z.phz", "Phase", "phase",
-        )
-        freq_aliases = ("Freq", "freq")
-
-        rho_col = _find_col(df, rho_aliases)
-        phase_col = _find_col(df, phase_aliases)
-        freq_col = _find_col(df, freq_aliases)
-
-        required = {
-            "rho": rho_col,
-            "phase": phase_col,
-            "freq": freq_col,
-        }
-        missing = [k for k, v in required.items() if v is None]
+        # # --- Required columns ---
+ 
+        # missing = [k for k, v in required.items() if v is None]
+        required = ["rho", "phase", "freq"]
+        missing = [c for c in required if c not in df.columns]
         if missing:
             raise AvgDataError(
                 f"Z: missing required columns: {missing}"
             )
-
         # --- Optional error columns ---
-        rho_err_aliases = ("%Rho", "ARes.%err", "rho.%err")
-        phase_err_aliases = ("sPhz", "Z.perr", "z.perr")
-
-        rho_err_col = _find_col(df, rho_err_aliases)
-        phase_err_col = _find_col(df, phase_err_aliases)
-
-        # --- Prepare internal frame ---
-        rename_map = {
-            rho_col: "rho",
-            phase_col: "phase",
-            freq_col: "freq",
-        }
-        if rho_err_col:
-            rename_map[rho_err_col] = "pc_rho"
-        if phase_err_col:
-            rename_map[phase_err_col] = "sphz"
-
-        df = df.rename(columns=rename_map)
+        optional_qc = ["pc_rho", "s_phz"]
+        for col in optional_qc:
+            if col not in df.columns:
+                df[col] = np.nan
+                if self.verbose:
+                    self._logger.debug(
+                        f"'{col}' not in source. Creating empty."
+                    )
 
         # Ensure coords exist
         if "station" not in df.columns:
@@ -127,18 +138,20 @@ class Z(TensorBase):
         df.dropna(subset=['comp'], inplace=True)
         
         # Normalize types
-        for col in ["rho", "phase", "freq", "pc_rho", "sphz"]:
+        for col in ["rho", "phase", "freq", "pc_rho", "s_phz"]:
             if col in df.columns:
                 df[col] = df[col].map(_to_num)
 
         keep_cols = [
             "station", "freq", "comp", "rho", "phase",
-            "pc_rho", "sphz"
+            "pc_rho", "s_phz"
         ]
         self._frame = df.loc[
             :, [c for c in keep_cols if c in df.columns]
         ]
         
+        return self 
+    
     def _get_component_series(
         self,
         comp_names: Tuple[str, ...],
@@ -215,7 +228,7 @@ class Z(TensorBase):
             return pd.Series(dtype="float64")
 
         has_rho_err = "pc_rho" in self._frame.columns
-        has_phi_err = "sphz" in self._frame.columns
+        has_phi_err = "s_phz" in self._frame.columns
 
         if not has_rho_err and not has_phi_err:
             return pd.Series(dtype="float64", 
@@ -235,7 +248,7 @@ class Z(TensorBase):
 
         term_phi_sq = 0.0
         if has_phi_err:
-            dphi_rad = self._frame["sphz"] * 1e-3
+            dphi_rad = self._frame["s_phz"] * 1e-3
             term_phi_sq = dphi_rad**2
         
         # Propagated error in magnitude |Z|
@@ -411,3 +424,38 @@ class Z(TensorBase):
             include_meta=True,
             stamp=True,
         )
+
+    def __str__(self) -> str:
+        """Provide a concise, human-readable representation."""
+        
+        if self._frame.empty:
+            return "Z(status=empty)"
+
+        # Safely get unique counts for the summary
+        n_st = (
+            self._frame["station"].nunique()
+            if "station" in self._frame.columns
+            else 0
+        )
+        n_frq = (
+            self._frame["freq"].nunique()
+            if "freq" in self._frame.columns
+            else 0
+        )
+        n_comp = (
+            self._frame["comp"].nunique()
+            if "comp" in self._frame.columns
+            else 0
+        )
+
+        return (
+            f"Z(rows={len(self._frame)}, "
+            f"stations={n_st}, "
+            f"freqs={n_frq}, "
+            f"components={n_comp})"
+        )
+
+    def __repr__(self) -> str:
+        """Provide an unambiguous developer representation."""
+        # For this class, a detailed __str__ is also a good __repr__
+        return self.__str__()

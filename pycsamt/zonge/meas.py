@@ -28,7 +28,6 @@ from typing import (
     Mapping, 
     Optional, 
     Sequence, 
-    Tuple,
     Union, 
 )
 
@@ -38,8 +37,9 @@ import pandas as pd
 from ..exceptions import FrequencyError, InputError
 from ..utils.deps import ensure_pkg 
 
-from .base import AVGComponentBase, FieldAliases
+from .base import AVGComponentBase
 from .utils import to_xarray as _to_xr  
+from .utils import _standardise_columns
 
 __all__ = ["CompMeas", "Amps", "Frequency"]  
 
@@ -137,7 +137,6 @@ class CompMeas(AVGComponentBase):
             stamp=False,
         )
 
-    # convenience descriptors
     @property
     def unique(self) -> List[str]:
         """Sorted unique component labels."""
@@ -214,6 +213,8 @@ class Amps(AVGComponentBase):
         self._frame = df
         self._meta  = dict(meta or {})
         self._compute_stats()
+        
+        return self 
 
     def _compute_stats(self) -> None:
         """Compute quick stats on finite ``amps`` values."""
@@ -288,7 +289,6 @@ class Amps(AVGComponentBase):
             stamp=False,
         )
 
-    # printable
     def __str__(self) -> str:
         s = self._stats
         if s.count == 0:
@@ -319,10 +319,6 @@ class Frequency(AVGComponentBase):
     required: set[str] = set()         # we can construct from a vector
     provides: set[str] = {"freq"}
 
-    # soft alias map (case-sensitive as we remap directly by column names)
-    _FREQ_ALIASES: Tuple[str, ...] = (
-        "freq", "Freq", "Frequency", "Freq.", "FREQ",
-    )
 
     def __init__(
         self,
@@ -371,26 +367,12 @@ class Frequency(AVGComponentBase):
             raise TypeError(
                 "Frequency.read expects DataFrame or vector-like")
 
-        df = source.copy()
+        df = _standardise_columns(source.copy())
 
-        # locate/normalise the frequency column
-        freq_col = None
-        for c in df.columns:
-            if c in self._FREQ_ALIASES:
-                freq_col = c
-                break
-        if freq_col is None:
-            # try FieldAliases with case-insensitive match
-            aliases = {a.lower() for a in FieldAliases.freq}
-            for c in df.columns:
-                if str(c).strip().lower() in aliases:
-                    freq_col = c
-                    break
-        if freq_col is None:
-            raise FrequencyError("no frequency column found in table")
-
-        df = df.rename(columns={freq_col: "freq"})
-
+        if "freq" not in df.columns:
+            raise FrequencyError(
+                "Canonical column 'freq' not found in table."
+            )
         # tidy coords (inject when absent)
         if "comp" not in df.columns:
             df["comp"] = "ExHy"
@@ -408,6 +390,8 @@ class Frequency(AVGComponentBase):
 
         self._frame = df[["station", "freq", "comp"]].copy()
         self._validate_positive()
+        
+        return self 
 
     def write(self) -> List[str]:
         """

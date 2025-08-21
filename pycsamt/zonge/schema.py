@@ -18,8 +18,10 @@ __all__ = [
     "_CANONICAL_MAP", 
     "_CANON_TO_MODERN", 
     "_CANON_TO_LEGACY",
+    "_FLEXIBLE_LOOKUP", 
+    "_CSAVGW_ORDERED", 
     "ALL_ALIASES", 
-    "QC_ALIASES",
+    "QC_ALIASES", 
     "get_aliases"
 ]
 
@@ -84,7 +86,6 @@ _CANONICAL_MAP: Dict[str, str] = {
     'Z.%err': 'z.%err',
     
 }
-
 
 _CANON_TO_MODERN: Dict[str, str] = {
     # survey logistics
@@ -157,6 +158,38 @@ _CANON_TO_LEGACY: Dict[str, str] = {
     "skp": "skp",
 }
 
+_CSAVGW_ORDERED = [
+    "Z.mwgt",
+    "Z.pwgt",
+    "Freq",
+    "Tx.Amp",
+    "E.mag",
+    "E.phz",
+    "B.mag",
+    "B.phz",
+    "Z.mag",
+    "Z.phz",
+    "ARes.mag",
+    "SRes",
+    "E.wgt",
+    "H.wgt",
+    "E.%err",
+    "E.perr",
+    "B.%err",
+    "B.perr",
+    "Z.%err",
+    "Z.perr",
+    "ARes.%err",
+    
+    # Expected CSAVGW order;
+    # extras will be appended after these.
+    "Choer",
+    "Gdp.Blk",
+    "Gdp.Chn",
+    "Gdp.Time",
+    "|Z|",
+    "use"
+]
 # 3. Dynamically Built Alias Lookups
 _canon_to_aliases: Dict[str, List[str]] = defaultdict(list)
 for alias, canon in _CANONICAL_MAP.items():
@@ -188,6 +221,43 @@ QC_ALIASES: Dict[str, Tuple[str, ...]] = {
     ),
 }
 
+_FLEX_CANON_NAMES = {
+    'pc_emag', 's_ephz', 'pc_hmag',
+    's_hphz', 'pc_rho', 's_phz',
+    'z_mwgt', 'z_pwgt', 'e_wgt', 
+    'h_wgt'
+}
+
+def _create_flexible_lookup() -> Dict[str, str]:
+    """
+    Creates a lookup dict that maps normalized variations of
+    aliases ONLY for QC and weight columns to their canonical name.
+    """
+    lookup = {}
+    for raw_alias, canon_value in _CANONICAL_MAP.items():
+        if canon_value in _FLEX_CANON_NAMES:
+            # Normalize the raw alias for broader matching
+            norm_key = raw_alias.lower()
+            variations = {
+                norm_key.replace('.', ''),
+                norm_key.replace('_', ''),
+                norm_key.replace('%', ''),
+            }
+            for var in variations:
+                lookup[var] = canon_value
+                
+    # Remove any keys that are also core data names
+    # to prevent collisions (e.g., 'rho' should not map to 'pc_rho').
+    core_data_keys = {
+        'emag', 'hmag', 'rho', 'phase', 'ephz', 'hphz', 
+        'zmag', 'rho_sc'}
+    for key in core_data_keys:
+        lookup.pop(key, None)
+        
+    return lookup
+
+# Create the flexible map once at module level
+_FLEXIBLE_LOOKUP = _create_flexible_lookup()
 
 def get_aliases(
     canonical_name: str,

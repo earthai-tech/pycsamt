@@ -65,7 +65,6 @@ _TMA_RX = re.compile(
 _KV_RX = re.compile(r"^\s*\$(?P<key>[^=\s]+)\s*=\s*(?P<val>.*)\s*$")
 
 
-
 class HeaderComponentBase:
     """
     Minimal base for *header* components that serialize to
@@ -275,14 +274,16 @@ class Header(HeaderComponentBase):
             lk = nk.lower()
             if lk.startswith("job."):
                 ann[nk] = v
-            elif lk.startswith("survey.") or \
-                 lk.startswith("stn.") or \
-                 lk.startswith("unit.") or \
-                 lk.startswith("gps."):
+            elif (
+                lk.startswith("survey.") or
+                lk.startswith("stn.") or
+                lk.startswith("unit.") or
+                lk.startswith("gps.")
+            ):
                 cfg[nk] = v
             elif lk.startswith("tx.") or lk == "xmtr":
                 txm[nk] = v
-            elif lk.startswith("rx."):
+            elif lk.startswith("rx.") or lk == "aspace":
                 rxc[nk] = v
 
         # Delegate to property classes (they resolve aliases).

@@ -35,51 +35,90 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from pathlib import Path
+import warnings
 from typing import (
     Any,
     Dict,
-    # Iterable,
     Mapping,
     MutableMapping,
     Optional,
     Sequence,
     Tuple,
     Union,
+    Literal
 )
 
 import numpy as np
 import pandas as pd
 
-from ..exceptions import AvgDataError 
+from ..exceptions import AvgDataError
 from ..log.logger import get_logger
 from ._transfer import LegacyAVGBase
-from .utils import load_avg, classify_avg_format 
+from .utils import ( 
+    _standardise_columns, 
+    load_avg, classify_avg_format 
+)
+from .schema import ALL_ALIASES
 
 logger = get_logger(__name__)
 
 __all__ = [
     "FieldAliases", "AvgRow", "AVGFrame" , "AVGComponentBase", 
+    "guess_kind_from_df"
     ]
 
 @dataclass(slots=True)
 class AVGFrame:
-    """
-    Tidy AVG table + side metadata.
+    r"""A container for a tidy AVG table and its metadata.
 
-    ``data``
-        A *pandas* DataFrame with **canonical**, lower-case
-        column names.  Examples: ``station``, ``freq``, ``comp``,
-        ``emag``, ``hmag``, ``rho``, ``phase``…
-    ``meta``
-        Free-form metadata (e.g., ``$Survey.Type``, units…).
-    ``source``
-        Optional origin path (useful for provenance/logging).
+    This dataclass acts as a standardized wrapper for the data
+    and metadata parsed from a Zonge AVG file. It ensures that
+    data passed between different parts of the package is
+    consistent and self-contained.
+
+    The `__post_init__` hook automatically standardizes the
+    column names of the incoming DataFrame, ensuring that any
+    instance of `AVGFrame` always contains a clean, canonical
+    dataset.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        A DataFrame containing the tabular data from an AVG file.
+        Column names are automatically normalized to the package's
+        internal canonical schema upon initialization.
+    meta : dict, optional
+        A dictionary holding the header metadata (e.g., survey
+        parameters, units) extracted from the ``$keyword=value``
+        lines in the AVG file.
+    source : pathlib.Path, optional
+        The filesystem path to the original ``.avg`` file, used for
+        provenance and logging.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from pycsamt.zonge.base import AVGFrame
+    >>> df = pd.DataFrame({'Resistivity': [100], 'Freq': [1024]})
+    >>> frame = AVGFrame(data=df, meta={'Survey.Type': 'CSAMT'})
+    >>> print(frame.data.columns)
+    Index(['rho', 'freq'], dtype='object')
+    >>> print(frame.meta['Survey.Type'])
+    CSAMT
+
+    See Also
+    --------
+    pycsamt.zonge.avg.AVG : The main user-facing data object.
+    pycsamt.zonge.info.DataInfo : Aggregator that uses AVGFrame.
     """
 
     data: pd.DataFrame
     meta: Dict[str, Any] = field(default_factory=dict)
     source: Optional[Path] = None
 
+    def __post__init__(self): 
+        self.data = _standardise_columns (self.data) 
+        
     @property
     def nrows(self) -> int:
         """Row count."""
@@ -134,47 +173,96 @@ class AVGFrame:
         )
 
 class FieldAliases:
+    r"""Dynamically provides all known aliases for canonical names.
+
+    This class serves as a convenient, centralized namespace for
+    accessing all known variations of a given canonical column
+    name. It is designed to be a single source of truth for
+    developers who need to work with different possible column
+    names.
+
+    Notes
+    -----
+    The primary purpose of this class is to improve code
+    readability and maintainability by avoiding the use of "magic
+    strings" for column names. Instead of writing
+    ``df[("rho", "Resistivity")]``, a developer can use the more
+    explicit ``df[FieldAliases.rho]``.
+
+    The class attributes are not hardcoded. They are generated
+    dynamically by introspecting the ``ALL_ALIASES`` dictionary
+    from the :mod:`~pycsamt.zonge.schema` module. This ensures
+    that `FieldAliases` is always in sync with the master data
+    schema and adheres to the DRY (Don't Repeat Yourself)
+    principle.
+
+    Examples
+    --------
+    You can access the tuple of aliases for any canonical name
+    directly as a class attribute:
+
+    >>> from pycsamt.zonge.base import FieldAliases
+    >>> # Get all known names for apparent resistivity
+    >>> FieldAliases.rho
+    ('ARes.mag', 'Resistivity')
+
+    >>> # Get all known names for H-field phase error
+    >>> FieldAliases.s_hphz
+    ('B.perr', 'H.perr', 'sHphz')
+
+    See Also
+    --------
+    pycsamt.zonge.schema.ALL_ALIASES : The source dictionary used
+        to build this class.
     """
-    Variants for frequently encountered labels.  Components may use
-    these tuples to search/validate presence in foreign frames.
+    # Dynamically populate the class attributes from the schema
+    for canon, aliases in ALL_ALIASES.items():
+        # Ensure the attribute name is a valid Python identifier
+        attr_name = canon.replace('.', '_').replace('%', 'pct')
+        locals()[attr_name] = aliases
 
-    Note: After parsing with ``load_avg``, your frame *should* be
-    canonical already; these aliases mostly serve for validation or
-    when consuming user-provided, partially-normalised tables.
-    """
-
-    # Spatial / survey
-    station: Tuple[str, ...] = ("station", "stn")
-    freq: Tuple[str, ...] = ("freq", "frequency")
-    comp: Tuple[str, ...] = ("comp",)
-
-    # Field magnitudes / phases
-    amps: Tuple[str, ...] = ("amps", "tx.amp")
-    emag: Tuple[str, ...] = ("emag", "e.mag")
-    ephz: Tuple[str, ...] = ("ephz", "e.phz")
-    hmag: Tuple[str, ...] = ("hmag", "b.mag")
-    hphz: Tuple[str, ...] = ("hphz", "b.phz")
-
-    # Impedance / rho / phase
-    zmag: Tuple[str, ...] = ("zmag",)
-    zabs: Tuple[str, ...] = ("zabs", "|z|")
-    rho: Tuple[str, ...] = ("rho", "ares.mag")
-    phase: Tuple[str, ...] = ("phase", "z.phz")
-
-    # Quality / weights
-    mwgt: Tuple[str, ...] = ("z.mwgt",)
-    pwgt: Tuple[str, ...] = ("z.pwgt",)
-    e_wgt: Tuple[str, ...] = ("e.wgt",)
-    h_wgt: Tuple[str, ...] = ("h.wgt",)
-
-    # Legacy skip flag
-    skp: Tuple[str, ...] = ("skp",)
-
+    # Statically define a few key ones for type hinting/clarity
+    station: Tuple[str, ...] = ALL_ALIASES.get("station", ())
+    freq: Tuple[str, ...] = ALL_ALIASES.get("freq", ())
+    comp: Tuple[str, ...] = ALL_ALIASES.get("comp", ())
+    rho: Tuple[str, ...] = ALL_ALIASES.get("rho", ())
+    phase: Tuple[str, ...] = ALL_ALIASES.get("phase", ())
+    
+    
 @dataclass(slots=True)
 class AvgRow:
-    """
-    Minimal, format-agnostic representation of a single AVG row.
-    Useful for tests, JSON export, or component round-trips.
+    r"""A structured, format-agnostic representation of a single row.
+
+    This dataclass provides a type-safe container for the data
+    from a single measurement record in an AVG file. It serves as
+    a convenient Data Transfer Object (DTO) for operations that
+    require iterating over individual data points, such as testing,
+    serialization to JSON, or specific calculations.
+
+    Attributes
+    ----------
+    station : int or float
+        The station identifier for the measurement.
+    freq : float
+        The frequency at which the measurement was taken (Hz).
+    comp : str
+        The component label (e.g., 'ExHy'). Defaults to 'ExHy' if
+        not provided.
+    amps : float, optional
+        The transmitter current amplitude (A).
+    emag, ephz : float, optional
+        The magnitude and phase of the electric field.
+    hmag, hphz : float, optional
+        The magnitude and phase of the magnetic field.
+    rho, phase : float, optional
+        The calculated apparent resistivity (ohm-m) and impedance
+        phase (mrad).
+    e_err, h_err, rho_err : float, optional
+        The relative percent error for E-field, H-field, and
+        resistivity magnitudes.
+    e_perr, h_perr, z_perr : float, optional
+        The standard deviation (error) for E-field phase, H-field
+        phase, and impedance phase.
     """
 
     station: Union[int, float]
@@ -217,33 +305,55 @@ class AvgRow:
 
 
 class AVGComponentBase(ABC):
-    """
-    Abstract base-class for a single AVG component.
+    r"""Abstract base class for a single AVG data component.
 
-    Sub-classes *must* implement:
-      • ``read(df, meta)``  → mutate internal state from a tidy
-        table and free-form metadata.
-      • ``write()``         → return a sequence of **text** lines
-        representing this component in an AVG-like block (e.g.,
-        a header + CSV rows).  The base provides helpers.
-      • ``from_avg(...)``   → convenience alternate constructor.
+    This class defines the fundamental "contract" that all data
+    components (e.g., Station, Resistivity, Phase) must follow.
+    It ensures that every component can be initialized from a
+    standardized data source and can serialize itself back into a
+    textual format.
 
-    Typical usage in a component:
+    Subclasses are expected to be specialized containers that manage
+    a specific subset of columns from the main AVG DataFrame.
 
-    >>> class Station(AVGComponentBase):
-    ...     required = {"station"}
-    ...     provides = {"station"}
-    ...     def read(self, df, meta):
-    ...         self._frame = df[["station"]].dropna()
-    ...         self._meta = dict(meta)
-    ...     def write(self):
-    ...         return self._write_csv_block(
-    ...             cols=["station"], title="$Station Block"
-    ...         )
+    Attributes
+    ----------
+    required : set[str]
+        A class attribute specifying the set of canonical column
+        names that must be present in the source DataFrame for the
+        component to be initialized.
+    provides : set[str]
+        A class attribute specifying the set of canonical column
+        names that this component is responsible for managing or
+        creating.
+    _frame : pandas.DataFrame
+        A protected attribute holding the component's data as a
+        tidy DataFrame with canonical column names.
+    _meta : dict
+        A protected attribute holding relevant metadata.
 
-    The base keeps payloads in a protected ``_frame`` (DataFrame)
-    plus a free-form ``_meta`` dict.  A small JSON/str interface
-    is provided for diagnostics.
+    Methods
+    -------
+    read(source, meta=None)
+        Abstract method to parse a source DataFrame and populate
+        the component's internal state.
+    write()
+        Abstract method to serialize the component's data into a
+        sequence of text lines suitable for an AVG file.
+    from_avg(avg, meta=None, **kws)
+        A classmethod factory that provides a convenient way to
+        build a component from various sources, including file
+        paths or in-memory DataFrames.
+
+    Notes
+    -----
+    The design of this base class ensures that all components
+    operate on a consistent, tidy data structure. The `from_avg`
+    factory method is particularly important, as it handles the
+    automatic transformation of legacy AVG files into the modern,
+    canonical format before passing the data to the component's
+    `read` method. This makes all components inherently agnostic
+    to the original file format.
     """
 
     # Sets listing which columns must be present / will be produced.
@@ -468,7 +578,113 @@ class AVGComponentBase(ABC):
     __repr__ = __str__
 
 
+def guess_kind_from_df(
+    df_or_frame: Union[pd.DataFrame, "AVGFrame"],
+    meta: Optional[Mapping[str, Any]] = None,
+    *,
+    transform: bool = False,
+    error: Literal["raise", "warn", "ignore"] = "raise",
+    verbose=0, 
+) -> Union[int, Tuple[pd.DataFrame, Mapping[str, Any], int]]:
+    r"""Infers the AVG format kind from a DataFrame's columns.
 
-from ._transfer import LegacyAVGBase # noqa 
+    This helper inspects the column names of a DataFrame to make
+    an educated guess about whether it represents a legacy (kind-1)
+    or modern (kind-2) AVG file. It can optionally transform
+    legacy data into the modern structure.
+
+    Parameters
+    ----------
+    df_or_frame : pd.DataFrame or AVGFrame
+        The DataFrame or AVGFrame object to inspect.
+    meta : mapping, optional
+        An optional metadata dictionary. Required if `transform` is
+        ``True`` and the source is a legacy DataFrame.
+    transform : bool, default False
+        If ``True`` and a legacy (kind-1) format is detected, this
+        function will use the :class:`~.LegacyAVGBase` transformer
+        to convert the data into the modern structure.
+    error : {'raise', 'warn', 'ignore'}, default 'raise'
+        Determines the behavior when a format cannot be reliably
+        determined.
+        - 'raise': Raises an `AvgFileError`.
+        - 'warn': Issues a warning and defaults to kind-2.
+        - 'ignore': Silently defaults to kind-2.
+
+    Returns
+    -------
+    int or tuple
+        - If `transform` is ``False``, returns an integer: ``1`` for
+          legacy, ``2`` for modern.
+        - If `transform` is ``True``, returns a tuple:
+          ``(df, meta, kind)``, where `df` and `meta` are the
+          (potentially transformed) data and metadata.
+
+    Raises
+    ------
+    TypeError
+        If the input is not a pandas DataFrame or AVGFrame.
+    AvgFileError
+        If `error` is 'raise' and the format cannot be determined.
+
+    Notes
+    -----
+    The detection logic uses a multi-pass heuristic:
+    1.  It first checks for columns with dot-notation (e.g.,
+        'ARes.mag'), which are exclusive to modern files.
+    2.  If none are found, it checks for legacy-specific QC
+        column names (e.g., '%Emag', 'sPhz').
+    3.  If neither is found, it falls back to a default,
+        controlled by the `error` parameter.
+    """
+
+    if isinstance(df_or_frame, AVGFrame):
+        df = df_or_frame.data
+        # Use the frame's meta unless an override is given
+        meta = meta or df_or_frame.meta
+    elif isinstance(df_or_frame, pd.DataFrame):
+        df = df_or_frame
+    else:
+        raise AvgDataError(
+            "Input must be a pandas DataFrame or an AVGFrame."
+        )
+
+    cols = set(df.columns)
+    kind = 0
+
+    # 1. Check for modern indicators (most reliable)
+    if any('.' in str(c) for c in cols):
+        kind = 2
+    else:
+        # 2. Check for legacy indicators
+        legacy_indicators = {
+            '%Emag', 'sEphz', '%Hmag', 'sHphz', '%Rho', 'sPhz'
+        }
+        if any(indicator in cols for indicator in legacy_indicators):
+            kind = 1
+
+    # 3. Handle cases where no clear indicators are found
+    if kind == 0:
+        msg = "Could not determine AVG kind from DataFrame columns."
+        if error == "raise":
+            raise AvgDataError(msg)
+        elif error == "warn":
+            warnings.warn(msg + " Defaulting to modern (kind-2).")
+            kind = 2
+        else: # 'ignore'
+            kind = 2
+
+    if transform and kind == 1:
+        if verbose:
+            logger.info("Transforming legacy DataFrame to modern.")
+        transformer = LegacyAVGBase()
+        ds = transformer.from_dataframe(df, meta=meta)
+        return ds.to_dataframe().reset_index(), ds.attrs, 2
+
+    elif transform:
+        return df, meta or {}, kind
+
+    return kind
+
 
 __all__.extend(["LegacyAVGBase"])

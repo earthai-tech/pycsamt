@@ -59,19 +59,46 @@ _H_AXIS = np.array(["Hx", "Hy"])
 
 
 class TensorBase(AVGComponentBase):
-    """
-    Add impedance-like tensor helpers on top of AVGComponentBase.
+    r"""Adds impedance-like tensor helpers to a component.
 
-    Subclasses must provide a tidy frame with at least:
-        ['freq', 'comp'] and (optionally) 'station'.
+    This class acts as a mixin, providing methods to transform
+    data between a tidy DataFrame format (one measurement per
+    row) and a dense, multi-dimensional tensor format suitable
+    for numerical computations.
 
-    You can then call:
-        to_tensor(var='rho', station=...)        # → np.ndarray
-        from_tensor(tensor, stations, freqs, ...)# → DataFrame
-        to_xarray_tensor(var='zabs')             # → xr.DataArray
+    It is agnostic to the actual physical quantity being
+    reshaped; the `var` parameter in its methods specifies which
+    column from the internal DataFrame to use for the tensor's
+    values.
 
-    The base is agnostic to “what” the tensor measures; `var`
-    is simply the column name you want to fold into 2×2 shape.
+    Notes
+    -----
+    Subclasses must provide a tidy `_frame` attribute containing
+    at least the columns ``['freq', 'comp']`` and optionally
+    ``'station'``.
+
+    The tensor axes are consistently ordered:
+    - 3D (single station): ``(frequency, E-field, H-field)``
+    - 4D (multi-station): ``(station, frequency, E, H)``
+
+    The E-field and H-field axes are of size 2, corresponding to
+    the x and y components.
+
+    Methods
+    -------
+    to_tensor(var, station=None, ...)
+        Converts a data column into a NumPy ndarray with a shape
+        of ``(..., 2, 2)``.
+    from_tensor(tensor, freqs, var, stations=None, ...)
+        Reconstructs a tidy DataFrame from a NumPy tensor.
+    to_xarray_tensor(var, station=None, ...)
+        Converts a data column into a labeled `xarray.DataArray`.
+
+    See Also
+    --------
+    Z : A key subclass that uses these tensor operations.
+    Resistivity : Another subclass that benefits from this mixin.
+    Phase : A third subclass that uses this mixin.
     """
 
     @staticmethod

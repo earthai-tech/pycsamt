@@ -331,7 +331,8 @@ def isdf(func):
 
         # Get 'data' argument from bound arguments
         data = bound_args.arguments.get(data_param_name, None)
-        columns = bound_args.arguments.get('columns', kwargs.get('columns', None))
+        columns = bound_args.arguments.get(
+            'columns', kwargs.get('columns', None))
         if isinstance(columns, str):
             columns = [columns]
         

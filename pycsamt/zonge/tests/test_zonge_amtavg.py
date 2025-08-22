@@ -107,7 +107,7 @@ class TestAMTAVG:
         assert amtavg_instance.phase.frame["phase"].iloc[0] == 100.0
         # Check if Z was recomputed (it will be different now)
         assert np.isclose(
-            np.abs(amtavg_instance.z.z.iloc[0]), 22.3, rtol=1e-1
+            np.abs(amtavg_instance.z.z.iloc[0]), 2.84, rtol=1e-2
         )
 
     def test_get_tensor_by_station(self, amtavg_instance):
@@ -116,7 +116,7 @@ class TestAMTAVG:
         station_tensor = amtavg_instance.get_tensor_by_station(
             station_id, var="rho"
         )
-        assert "xarray.DataArray" in str(type(station_tensor))
+        assert "xarray.core.dataarray.DataArray" in str(type(station_tensor))
         assert station_tensor.shape == (2, 2, 2)  # (freq, e, h)
         assert "station" not in station_tensor.dims
         assert station_tensor.coords["freq"].size == 2

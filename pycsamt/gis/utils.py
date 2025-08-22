@@ -34,10 +34,13 @@ from __future__ import annotations
 
 from typing import ( 
     Optional, Tuple, Any,
-    Union, Sequence
+    Union, Sequence,
+    Literal, 
+    overload
 )
 
 import numpy as np
+from numpy.typing import NDArray
 import pandas as pd 
 
 from ..decorators import Deprecated
@@ -65,6 +68,9 @@ else:
 
 logger = get_logger(__name__)
 
+
+Arr1D = NDArray[np.float_]
+Obj1D = NDArray[object]
 
 __all__ = [
     'project_point_ll2utm',
@@ -754,6 +760,39 @@ def get_epsg(
     )
     return utm_zone_to_epsg(zone_number, is_northern)
 
+@overload
+def to_ll(
+    easting: Any,
+    northing: Any,
+    zone: Optional[Any] = ...,
+    data: Optional[Any] = ...,
+    *,
+    datum: str = ...,
+    epsg: Optional[int] = ...,
+    as_frame: Literal[True],
+) -> "pd.DataFrame": ...
+@overload
+def to_ll(
+    easting: float,
+    northing: float,
+    zone: Optional[Any] = ...,
+    data: Optional[Any] = ...,
+    *,
+    datum: str = ...,
+    epsg: Optional[int] = ...,
+    as_frame: Literal[False] = ...,
+) -> Tuple[float, float]: ...
+@overload
+def to_ll(
+    easting: Union[Sequence[float], Arr1D],
+    northing: Union[Sequence[float], Arr1D],
+    zone: Optional[Union[Sequence[Any], Obj1D]] = ...,
+    data: Optional[Any] = ...,
+    *,
+    datum: str = ...,
+    epsg: Optional[int] = ...,
+    as_frame: Literal[False] = ...,
+) -> Tuple[Arr1D, Arr1D]: ...
 
 def to_ll(
     easting,
@@ -931,6 +970,42 @@ def to_ll(
     ):
         return (lat_arr.item(), lon_arr.item())
     return (lat_arr, lon_arr)
+
+# ---------- overloads for to_utm ----------
+
+@overload
+def to_utm(
+    lat: Any,
+    lon: Any,
+    data: Optional[Any] = ...,
+    *,
+    datum: str = ...,
+    utm_zone: Optional[str] = ...,
+    epsg: Optional[int] = ...,
+    as_frame: Literal[True],
+) -> "pd.DataFrame": ...
+@overload
+def to_utm(
+    lat: float,
+    lon: float,
+    data: Optional[Any] = ...,
+    *,
+    datum: str = ...,
+    utm_zone: Optional[str] = ...,
+    epsg: Optional[int] = ...,
+    as_frame: Literal[False] = ...,
+) -> Tuple[float, float, Optional[str]]: ...
+@overload
+def to_utm(
+    lat: Union[Sequence[Any], Arr1D],
+    lon: Union[Sequence[Any], Arr1D],
+    data: Optional[Any] = ...,
+    *,
+    datum: str = ...,
+    utm_zone: Optional[str] = ...,
+    epsg: Optional[int] = ...,
+    as_frame: Literal[False] = ...,
+) -> Tuple[Arr1D, Arr1D, Obj1D]: ...
 
 def to_utm(
     lat: Union [str, float, Sequence],

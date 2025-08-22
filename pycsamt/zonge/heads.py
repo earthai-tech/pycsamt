@@ -263,7 +263,7 @@ class Header(HeaderComponentBase):
         # We accept keys with or without leading '$'.
         def norm_key(k: str) -> str:
             return k.lstrip("$").strip()
-
+        
         ann: Dict[str, Any] = {}
         cfg: Dict[str, Any] = {}
         txm: Dict[str, Any] = {}

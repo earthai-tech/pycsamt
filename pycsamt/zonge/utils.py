@@ -29,7 +29,8 @@ from typing import (
     Optional, 
     Sequence,
     Any, 
-    Iterable, 
+    Iterable,
+    Union
 )
 
 import numpy as np
@@ -1270,3 +1271,22 @@ def _to_numeric_percent(series: pd.Series) -> pd.Series:
     s = series.astype(str).str.strip().replace(
         {"": np.nan, "*": np.nan})
     return pd.to_numeric(s, errors="coerce")
+
+def _to_complex(x: Any) -> Union[complex, float]:
+    """
+    Robustly convert a value to a complex number.
+
+    Handles strings, complex, float, and int types, returning
+    np.nan for values that cannot be converted.
+    """
+    if x is None:
+        return np.nan
+    s = str(x).strip()
+    if s in {"", "*", "nan", "NaN", "None", "null"}:
+        return np.nan
+    try:
+        # The complex() constructor is robust and can handle
+        # strings like '1+2j' as well as numeric types.
+        return complex(s)
+    except (ValueError, TypeError):
+        return np.nan

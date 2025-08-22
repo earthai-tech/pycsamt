@@ -35,6 +35,10 @@ _CANONICAL_MAP: Dict[str, str] = {
     'Comp': 'comp',
     'skp': 'skp',
     
+    # tipper,
+    'tx': 'tx', 
+    'ty': 'ty', 
+    
     # --- Measurements 
     'Amps': 'amps', 
     'Tx.Amp': 'amps',
@@ -84,6 +88,10 @@ _CANONICAL_MAP: Dict[str, str] = {
     'Gdp.Time': 'gdp_time',
     '|Z|': 'zabs',
     'Z.%err': 'z.%err',
+    
+    # tipper,
+    'tx': 'tx', 
+    'ty': 'ty', 
     
 }
 
@@ -136,6 +144,10 @@ _CANON_TO_MODERN: Dict[str, str] = {
     "z.pwgt": "Z.pwgt",
     "e.wgt":  "E.wgt",
     "b.wgt":  "B.wgt",
+    
+     # e.g Tipper, 
+    "tx": "Tx", 
+    "ty": "Ty", 
 }
 
 _CANON_TO_LEGACY: Dict[str, str] = {

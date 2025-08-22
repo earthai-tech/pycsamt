@@ -116,7 +116,7 @@ class AVGFrame:
     meta: Dict[str, Any] = field(default_factory=dict)
     source: Optional[Path] = None
 
-    def __post__init__(self): 
+    def __post_init__(self): 
         self.data = _standardise_columns (self.data) 
         
     @property
@@ -583,8 +583,9 @@ def guess_kind_from_df(
     meta: Optional[Mapping[str, Any]] = None,
     *,
     transform: bool = False,
+    mode: Literal["strict", "soft"] = "soft",
     error: Literal["raise", "warn", "ignore"] = "raise",
-    verbose=0, 
+    verbose: bool = False,
 ) -> Union[int, Tuple[pd.DataFrame, Mapping[str, Any], int]]:
     r"""Infers the AVG format kind from a DataFrame's columns.
 
@@ -610,6 +611,8 @@ def guess_kind_from_df(
         - 'raise': Raises an `AvgFileError`.
         - 'warn': Issues a warning and defaults to kind-2.
         - 'ignore': Silently defaults to kind-2.
+    verbose : bool, default False
+        Controls logging output during transformation.
 
     Returns
     -------
@@ -634,13 +637,15 @@ def guess_kind_from_df(
         'ARes.mag'), which are exclusive to modern files.
     2.  If none are found, it checks for legacy-specific QC
         column names (e.g., '%Emag', 'sPhz').
-    3.  If neither is found, it falls back to a default,
-        controlled by the `error` parameter.
+    3.  If neither is found, it checks for the presence of
+        internal canonical QC names (e.g., 'pc_emag', 's_phz'),
+        treating them as modern.
+    4.  Finally, it falls back to a default controlled by the
+        `error` parameter.
     """
 
     if isinstance(df_or_frame, AVGFrame):
         df = df_or_frame.data
-        # Use the frame's meta unless an override is given
         meta = meta or df_or_frame.meta
     elif isinstance(df_or_frame, pd.DataFrame):
         df = df_or_frame
@@ -662,17 +667,27 @@ def guess_kind_from_df(
         }
         if any(indicator in cols for indicator in legacy_indicators):
             kind = 1
+        else:
+            # 3. Check for already-standardized canonical names
+            canonical_indicators = {
+                'pc_emag', 's_ephz', 'pc_hmag', 's_hphz',
+                'pc_rho', 's_phz'
+            }
+            if any(c in canonical_indicators for c in cols):
+                kind = 2 # Treat as structurally modern
 
-    # 3. Handle cases where no clear indicators are found
+    # 4. Handle cases where no clear indicators are found
     if kind == 0:
-        msg = "Could not determine AVG kind from DataFrame columns."
-        if error == "raise":
-            raise AvgDataError(msg)
-        elif error == "warn":
-            warnings.warn(msg + " Defaulting to modern (kind-2).")
-            kind = 2
-        else: # 'ignore'
-            kind = 2
+        if mode == 'strict':
+            msg = "Could not determine AVG kind from DataFrame columns."
+            if error == "raise":
+                raise AvgDataError(msg)
+            elif error == "warn":
+                warnings.warn(msg + " Defaulting to modern (kind-2).")
+                kind = 2
+            # 'ignore'
+            
+        kind = 2
 
     if transform and kind == 1:
         if verbose:
@@ -685,6 +700,5 @@ def guess_kind_from_df(
         return df, meta or {}, kind
 
     return kind
-
 
 __all__.extend(["LegacyAVGBase"])

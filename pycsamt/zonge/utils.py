@@ -41,11 +41,13 @@ except ImportError:  # pragma: no cover
     warnings.warn(
         "xarray is required for the package"
     )
-from ..decorators import isdf 
+from ..decorators import isdf
+from ..compat.aliases import compat_alias 
 from ..gis.utils import to_utm # type: ignore
 from ..exceptions import (
     AvgFileError, 
-    AvgDataError, 
+    AvgDataError,
+    StationError
   )
 from ..log.logger import get_logger
 from ..utils.deps import ensure_pkg 
@@ -994,33 +996,256 @@ def load_avg(
 
     return df, meta
 
-def validate_stn_profile(
+def read_stn(path: Union[str, Path]) -> pd.DataFrame:
+    r"""
+    Parse Zonge ``.stn`` files (legacy and extended forms).
+
+    Supports:
+    - legacy, space-delimited with four columns
+      (``station easting northing elevation``)
+    - CSV with quoted headers 
+    - extended CSV headers containing optional columns
+      (e.g., heading, pitch, roll)
+    - embedded first-data row at end of header line
+      (e.g., ``...,roll -200,1472...``)
+
+    Lines starting with ``!``, ``/``, ``\``, ``#``, or ``;``
+    are treated as comments and skipped.
+
+    Returns a raw DataFrame; column normalization is left to
+    the caller (e.g., mapping ``dot/e/n/h`` to canonical
+    names).
+    """
+    try:
+        with open(Path(path), "r", encoding="utf-8") as f:
+            raw = f.read().splitlines()
+    except Exception as exc:
+        raise StationError(
+            f"Cannot read STN file: {exc}"
+        ) from exc
+
+    # keep non-empty, non-comment lines; do not drop lines
+    # beginning with quotes because quoted headers are valid
+    def _is_comment(s: str) -> bool:
+        s = s.lstrip()
+        return (not s) or s[0] in {"!", "/", "\\", "#", ";"}
+
+    lines: List[str] = [ln.strip() for ln in raw if not _is_comment(ln)]
+
+    if not lines:
+        raise StationError("Empty or comment-only STN file.")
+
+    # detect header line: choose the last line that contains
+    # any letter; numeric-only lines are data
+    header_idx = -1
+    for i, ln in enumerate(lines):
+        if re.search(r"[A-Za-z]", ln):
+            header_idx = i
+
+    # split header lines that also contain data, e.g.:
+    # "...,roll -200,1472..." → separate header/data
+    if header_idx >= 0:
+        m = re.match(
+            r"^(?P<head>.*[A-Za-z].*?)\s+(?P<data>[-+0-9].*)$",
+            lines[header_idx],
+        )
+        if m and ("," in m.group("data") or
+                  re.search(r"\s", m.group("data"))):
+            lines[header_idx] = m.group("head")
+            lines.insert(header_idx + 1, m.group("data"))
+
+    # choose delimiter: comma preferred if present in header
+    # or first data line; otherwise whitespace
+    def _has_comma(s: str) -> bool:
+        return "," in s
+
+    delim: str
+    if header_idx >= 0 and _has_comma(lines[header_idx]):
+        delim = ","
+    else:
+        # look at first data line
+        data_start = header_idx + 1 if header_idx >= 0 else 0
+        if data_start < len(lines) and _has_comma(lines[data_start]):
+            delim = ","
+        else:
+            delim = r"\s+"
+
+    # build header
+    if header_idx >= 0:
+        raw_header = lines[header_idx]
+        # strip common quotes (", “, ”) and extra whitespace
+        cleaned = (
+            raw_header.replace('"', "")
+            .replace("“", "")
+            .replace("”", "")
+            .strip()
+        )
+        header = [h.strip() for h in re.split(delim, cleaned)]
+        data_lines = lines[header_idx + 1 :]
+    else:
+        # no header: assume 4 legacy columns
+        header = ["station", "easting", "northing", "elevation"]
+        data_lines = lines
+
+    if not data_lines:
+        raise StationError("No data rows found in STN file.")
+
+    # join data and parse with pandas; use python engine for
+    # regex separators and ragged rows
+    data_str = "\n".join(data_lines)
+    try:
+        df = pd.read_csv(
+            io.StringIO(data_str),
+            sep=delim,
+            header=None,
+            names=header,
+            engine="python",
+        )
+    except Exception as exc:
+        raise StationError(
+            f"Failed to parse STN data: {exc}"
+        ) from exc
+
+    # drop fully-empty rows
+    df = df.dropna(how="all")
+
+    if df.empty:
+        raise StationError("STN parse produced empty DataFrame.")
+
+    return df
+
+@compat_alias(
+    "validate_stn_profile",
+    since="2.0.0",
+    remove_in="2.17.0",
+    export=True,
+    extra=("Use 'tensor2d'. Removal in v2.17.0."),
+)
+def detect_stn_header(
     profile: Sequence[str],
-    splitter: str | None = None
-    ) -> Tuple[int, List[Tuple[str, int]]]:
-    """Check *STN* file header and return *(score, index_list)*.
+    splitter: str | None = None,
+) -> Tuple[int, List[Tuple[str, int]]]:
+    r"""
+    Heuristically detect a ``.stn`` header and map token
+    positions.
+
+    Scans non-comment lines, tolerates CSV and whitespace,
+    quoted labels (e.g., ``3x"dot3x"``), and embedded
+    ``label=value`` segments. Returns a score (matched
+    labels) and a list of ``(canonical_label, index)`` for
+    the best header line found. If no header is detected,
+    returns ``(0, [])``.
 
     Parameters
     ----------
-    profile  : Sequence[str]
-        Raw lines from the ``.stn`` file.
-    splitter : str | None, default *None*
-        Token delimiter.  Defaults to whitespace.
-    """
-    splitter        = splitter or ' '
-    labels: set[str] = {
-        'dot', 'station', 'sta',
-        'e', 'east', 'easting',
-        'n', 'north', 'northing',
-        'h', 'elev', 'elevation',
-        'lon', 'lat', 'utm_zone',
-    }
-    header_tokens   = [tk.strip().lower() for tk in
-                       profile[0].split(splitter) if tk]
-    matches         = [(tk, idx) for idx, tk in enumerate(header_tokens)
-                       if tk in labels]
-    return len(matches), matches
+    profile : sequence of str
+        Raw lines of the STN file.
+    splitter : str or None, default None
+        Token delimiter. If ``None``, auto-detect per line
+        (comma if present, else whitespace).
 
+    Returns
+    -------
+    score : int
+        Number of recognized header labels on the best line.
+    matches : list of (str, int)
+        Pairs of canonical label name and column index.
+    """
+    # comments and empties
+    def _is_comment(s: str) -> bool:
+        s = s.lstrip()
+        return (not s) or s[0] in {"!", "/", "\\", "#", ";"}
+
+    # alias map → canonical label
+    aliases = {
+        # station
+        "dot": "station",
+        "station": "station",
+        "sta": "station",
+        # easting
+        "e": "easting",
+        "east": "easting",
+        "easting": "easting",
+        # northing
+        "n": "northing",
+        "north": "northing",
+        "northing": "northing",
+        # elevation
+        "h": "elevation",
+        "elev": "elevation",
+        "elevation": "elevation",
+        # optional extras
+        "line": "line",
+        "lon": "lon",
+        "lat": "lat",
+        "utm_zone": "utm_zone",
+        "heading": "heading",
+        "pitch": "pitch",
+        "roll": "roll",
+    }
+
+    def _split_line(ln: str) -> list[str]:
+        # remove common quote chars
+        s = (
+            ln.replace('"', "")
+            .replace("“", "")
+            .replace("”", "")
+            .strip()
+        )
+        # strip label=value to label
+        s = re.sub(r"\s*=\s*[^, \t]+", "", s)
+        sep = (
+            ","
+            if (splitter is None and "," in s)
+            else (splitter or r"\s+")
+        )
+        toks = re.split(sep, s)
+        out: list[str] = []
+        for t in toks:
+            t = t.strip().lower()
+            # keep letters and underscores only
+            t = re.sub(r"[^a-z_]", "", t)
+            if t:
+                out.append(t)
+        return out
+
+    best_score = 0
+    best_matches: list[tuple[str, int]] = []
+
+    # evaluate each non-comment line; pick the best header
+    for ln in profile:
+        if _is_comment(ln):
+            continue
+
+        tokens = _split_line(ln)
+        if not tokens:
+            continue
+
+        # header+data on same line → keep left of first digit
+        m = re.search(r"[-+]?\d", ln)
+        if m:
+            # limit tokenization to the header part
+            head = ln[: m.start()]
+            tokens = _split_line(head) or tokens
+
+        matches: list[tuple[str, int]] = []
+        for idx, tk in enumerate(tokens):
+            canon = aliases.get(tk)
+            if canon is not None:
+                matches.append((canon, idx))
+
+        score = len(matches)
+        if score > best_score or (
+            score == best_score and score > 0
+        ):
+            best_score = score
+            best_matches = matches
+
+    return best_score, best_matches
+
+
+# Back-compat alias
+validate_stn_profile = detect_stn_header
 
 def round_dipole_length(length: float | int) -> float:
     """Round *length* to the nearest 5‑m increment."""

@@ -44,6 +44,7 @@ from .utils import (
     load_avg, 
     write_avg
 )
+from .survey import Topography 
 
 
 __all__ = ["BaseAVG","AVG", "AMTAVG"]
@@ -109,7 +110,7 @@ class BaseAVG(Zonge):
         self.info: DataInfo = DataInfo(verbose=verbose)
         self._kind: Optional[int] = None
         self._source_path: Optional[Path] = None
-
+        self.topo: Optional[Topography] = None 
 
     def read(
         self,
@@ -250,6 +251,46 @@ class BaseAVG(Zonge):
             self._logger.info("AVG data successfully loaded.")
    
         return self 
+
+    def add_topography(
+        self,
+        stn_file: Union[str, Path, pd.DataFrame]
+    ) -> "BaseAVG":
+        r"""Read and attach station topography data.
+
+        This method reads a Zonge ``.stn`` file (or a DataFrame
+        with the same structure) and attaches a populated
+        :class:`~.survey.Topography` object to the instance.
+
+        Parameters
+        ----------
+        stn_file : str, Path, or DataFrame
+            The path to the ``.stn`` file or a pre-loaded
+            DataFrame containing the station location data.
+
+        Returns
+        -------
+        self : BaseAVG
+            The method returns the instance, allowing for
+            method chaining.
+        """
+  
+        has_read(self) # Ensure AVG data is loaded first
+
+        if self.verbose:
+            self._logger.info(f"Reading topography from: {stn_file}")
+
+        # Create and read the Topography component
+        self.topo = Topography(verbose=self.verbose).read(stn_file)
+
+        # Optional: You could add logic here to merge elevation
+        # into the main df if needed for specific calculations,
+        # but keeping it separate is generally better.
+        # For example:
+        # topo_map = self.topo.frame.set_index('station')['elevation']
+        # self.info.df['elevation'] = self.info.df['station'].map(topo_map)
+
+        return self
     
     def to_modern(
         self,
@@ -1124,7 +1165,7 @@ class AMTAVG(AVG):
     """
 
     def compute_resistivity_phase(
-        self, to_degree: bool = False
+        self, todeg: bool = False
     ) -> Tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
         r"""Compute rho and phi from the complex impedance Z.
 
@@ -1135,7 +1176,7 @@ class AMTAVG(AVG):
 
         Parameters
         ----------
-        to_degree : bool, default False
+        todeg : bool, default False
             If ``True``, the output impedance phase and its error
             will be converted from milliradians to degrees.
 
@@ -1196,7 +1237,7 @@ class AMTAVG(AVG):
             * np.abs(np.sin(phi_rad))
         )
 
-        if to_degree:
+        if todeg:
             phi = np.rad2deg(phi_rad)
             phi_err = phi_err_mrad * (180.0 / (PI * 1000.0))
         else:
@@ -1474,7 +1515,7 @@ class AMTAVG(AVG):
     def unwrap_phase(
         self,
         *,
-        to_degree: bool = False,
+        todeg: bool = False,
         update_components: bool = True,
     ) -> pd.DataFrame:
         r"""Unwraps the impedance phase to correct for 2π jumps.
@@ -1488,7 +1529,7 @@ class AMTAVG(AVG):
 
         Parameters
         ----------
-        to_degree : bool, default False
+        todeg : bool, default False
             If ``True``, the final unwrapped phase values in the
             DataFrame will be converted from milliradians to
             degrees.
@@ -1542,7 +1583,7 @@ class AMTAVG(AVG):
             lambda s: np.unwrap(s * 1e-3) # Convert to rad before unwrap
         )
 
-        if to_degree:
+        if todeg:
             # Convert unwrapped radians to degrees
             df["phase"] = unwrapped_rad * (180.0 / PI)
             unit = "deg"

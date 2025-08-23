@@ -22,6 +22,8 @@ __all__ = [
     "_CSAVGW_ORDERED", 
     "ALL_ALIASES", 
     "QC_ALIASES", 
+    "UNIT_MAP", 
+    "get_unit", 
     "get_aliases"
 ]
 
@@ -270,6 +272,47 @@ def _create_flexible_lookup() -> Dict[str, str]:
 
 # Create the flexible map once at module level
 _FLEXIBLE_LOOKUP = _create_flexible_lookup()
+
+UNIT_MAP: Dict[str, Tuple[str, str]] = {
+    # Canonical Name -> (Simple Unit, Formatted Label for Plots)
+    "rho": ("ohm.m", r"App. Res. ($\Omega \cdot m$)"),
+    "rho_sc": ("ohm.m", r"Corrected Res. ($\Omega \cdot m$)"),
+    "phase": ("mrad", "Phase (mrad)"),
+    "phase_deg": ("deg", r"Phase ($\degree$)"),
+    "emag": ("nV/Am", "E-Magnitude (nV/Am)"),
+    "hmag": ("pT/A", "H-Magnitude (pT/A)"),
+    "ephz": ("mrad", "E-Phase (mrad)"),
+    "ephz_deg": ("deg", r"E-Phase ($\degree$)"),
+    "hphz": ("mrad", "H-Phase (mrad)"),
+    "hphz_deg": ("deg", r"H-Phase ($\degree$)"),
+    "zmag": ("km/s", "Impedance Mag. (km/s)"),
+    "zabs": ("ohm", r"$|Z|$ ($\Omega$)"),
+    "pc_rho": ("%", r"$\rho_a$ Error (%)"),
+    "pc_emag": ("%", r"$|E|$ Error (%)"),
+    "pc_hmag": ("%", r"$|H|$ Error (%)"),
+    "s_phz": ("mrad", r"$\sigma_{\phi}$ (mrad)"),
+    "s_phz_deg": ("deg", r"$\sigma_{\phi}$ ($\degree$)"),
+    "s_ephz": ("mrad", r"$\sigma_{E\phi}$ (mrad)"),
+    "s_ephz_deg": ("deg", r"$\sigma_{E\phi}$ ($\degree$)"),
+    "s_hphz": ("mrad", r"$\sigma_{H\phi}$ (mrad)"),
+    "s_hphz_deg": ("deg", r"$\sigma_{H\phi}$ ($\degree$)"),
+    "skew": ("", "Skew"),
+    "strike_angle": ("degrees", "Strike Angle (degrees)"),
+    "tx": ("", "Tipper Tx"),
+    "ty": ("", "Tipper Ty"),
+    "freq": ("Hz", "Frequency (Hz)"),
+    "station": ("m", "Station Distance (m)"),
+}
+def get_unit(
+    canonical_name: str, formatted: bool = True
+) -> Optional[str]:
+    """
+    Fetch the unit string for a canonical variable name.
+    """
+    unit_tuple = UNIT_MAP.get(canonical_name)
+    if unit_tuple:
+        return unit_tuple[1] if formatted else unit_tuple[0]
+    return None
 
 def get_aliases(
     canonical_name: str,

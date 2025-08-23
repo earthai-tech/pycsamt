@@ -7,29 +7,716 @@ Survey layout helpers.
 - Station: robust line-geometry container that understands modern/legacy
   AVG frames, exposes unique station positions, IDs, and handy header
   ($Stn.*) derivations for round-trips.
+- Topography: robust container for .stn station location files.
+
 """
 from __future__ import annotations
 
+import warnings 
 from typing import ( 
     Any, Dict, 
     List, 
     Mapping, Optional, 
     Sequence, Tuple, 
-    Union
+    Union, Literal, 
+
 )
 from dataclasses import dataclass, field
-
+from pathlib import Path 
+from scipy.interpolate import griddata
 import numpy as np
 import pandas as pd
 
-from ..exceptions import StationError
+from ..exceptions import StationError, ProcessingError
+from ..log.logger import get_logger
+from ..utils.deps import import_optional_dependency
+from ..utils.validation import ensure_n_items 
+from ..gis.utils import ( 
+    assert_xy_coordinate_system, 
+    to_ll, to_utm,
+    normalize_lat_lon
+ )
 from .base import AVGComponentBase # , AVGFrame
 from .utils import ( 
-    number_stations, find_and_rename_column
+    number_stations, 
+    find_and_rename_column, 
+    read_stn
 )
 
-__all__ = ["Station"]
+__all__ = ["Station", "Topography"]
 
+
+logger = get_logger(__name__)
+
+
+class Topography(AVGComponentBase):
+    r"""A container for station topography and location data.
+
+    This class is designed to read, manage, and process spatial
+    information from Zonge ``.stn`` files, as described in the
+    ASTATIC manual [1]_. It handles both legacy (space-delimited)
+    and modern (comma-delimited) formats and provides a suite of
+    tools for coordinate conversion, regularization, and gridding.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame, optional
+        A pre-loaded DataFrame containing station location data.
+        If provided, it will be standardized upon initialization.
+    meta : mapping, optional
+        An optional dictionary for metadata, consistent with the
+        :class:`~.base.AVGComponentBase` API.
+    verbose : bool, default False
+        Controls the level of detail in logging output.
+
+    Attributes
+    ----------
+    stations : numpy.ndarray
+        An array of the station numbers or identifiers.
+    eastings, northings : numpy.ndarray
+        Arrays of the station UTM coordinates.
+    elevations : numpy.ndarray
+        An array of the station elevations.
+
+    Methods
+    -------
+    read(source)
+        Reads and parses a ``.stn`` file or a DataFrame.
+    generate(...)
+        A static method to create a synthetic survey line.
+    correct_coords(...)
+        Regularizes station locations to a best-fit straight line.
+    convert_coords(...)
+        Converts coordinates between UTM and geographic (lat/lon).
+    to_grid(...)
+        Interpolates the scattered station data onto a regular 2D
+        grid for contouring.
+    get_step()
+        Calculates the distance between consecutive stations.
+
+    Notes
+    -----
+    The `read` method is designed to be robust, automatically
+    detecting the delimiter and header row of ``.stn`` files.
+    Upon reading, it standardizes column names to a canonical
+    schema (e.g., 'easting', 'northing', 'elevation'), making
+    the data consistent for all subsequent processing steps.
+
+    Examples
+    --------
+    >>> from pycsamt.zonge.survey import Topography
+    >>> # Load topography from a .stn file
+    >>> topo = Topography().read('data/avg/K1.stn')
+    >>>
+    >>> # Generate a synthetic survey line
+    >>> synthetic_topo = Topography.generate(
+    ...     start_coord=(500000, 4000000),
+    ...     n_stations=20,
+    ...     step=50,
+    ...     azimuth=45
+    ... )
+    >>> # Get the average station spacing
+    >>> avg_step = synthetic_topo.get_step().mean()
+
+    References
+    ----------
+    .. [1] Zonge International, Inc. (2014). *ASTATIC v3.70
+           User Manual*, "STN Files" section, p. 36.
+    """
+    def __init__(
+        self,
+        data: Optional[pd.DataFrame] = None,
+        meta: Optional[Mapping[str, Any]] = None,
+        *,
+        name: Optional[str] = None,
+        verbose: bool = False
+    ) -> None:
+        super().__init__(
+            data=data, meta=meta, name=name or "Topography",
+            verbose=verbose
+        )
+
+    def read(
+        self,
+        source: Union[str, Path, pd.DataFrame],
+        meta: Optional[Mapping[str, Any]] = None,
+        **kws: Any
+    ) -> "Topography":
+        r"""Read topography data from a file path or DataFrame.
+
+        This is the primary data ingestion method for the Topography
+        class. It is designed to be robust, handling various ``.stn``
+        file formats and standardizing the data into a consistent
+        internal structure.
+    
+        Parameters
+        ----------
+        source : str, pathlib.Path, or pandas.DataFrame
+            The data source to load. This can be:
+            - A string or `pathlib.Path` pointing to a Zonge ``.stn``
+              file.
+            - A `pandas.DataFrame` containing station location data.
+        meta : mapping, optional
+            An optional dictionary for metadata, consistent with the
+            :class:`~.base.AVGComponentBase` API. This is typically
+            not used for ``.stn`` files.
+    
+        Returns
+        -------
+        self : Topography
+            The method returns the instance of the class, allowing
+            for convenient method chaining.
+    
+        Raises
+        ------
+        TypeError
+            If the `source` is of an unsupported type.
+        StationError
+            If the ``.stn`` file is malformed or a valid header row
+            cannot be found.
+    
+        Notes
+        -----
+        The file parser is designed to be flexible:
+        - It automatically detects whether the file is comma-delimited
+          or space-delimited.
+        - It intelligently searches for a header row by looking for
+          common keywords (e.g., 'station', 'easting'), rather than
+          assuming a fixed position.
+        - All column names are normalized to a canonical schema
+          (e.g., 'easting', 'northing', 'elevation') after reading.
+    
+        Examples
+        --------
+        >>> from pycsamt.zonge.survey import Topography
+        >>> # Load topography from a .stn file
+        >>> topo = Topography().read('data/avg/K1.stn')
+        >>> print(topo.stations[:5])
+        [150. 200. 250. 300. 350.]
+        """
+        if isinstance(source, (str, Path)):
+            df = read_stn(source)
+        elif isinstance(source, pd.DataFrame):
+            df = source.copy()
+        else:
+            raise TypeError("Source must be a file path or DataFrame.")
+
+        self._frame = self._normalize_stn_columns(df)
+        return self
+
+    def _normalize_stn_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Find and rename columns to a canonical schema.
+        """
+        rename_map = {}
+        for col in df.columns:
+            col_lower = str(col).lower()
+            if "station" in col_lower or "dot" in col_lower:
+                rename_map[col] = "station"
+            elif "east" in col_lower or col_lower == 'e':
+                rename_map[col] = "easting"
+            elif "north" in col_lower or col_lower == 'n':
+                rename_map[col] = "northing"
+            elif "elev" in col_lower or col_lower == 'h':
+                rename_map[col] = "elevation"
+            elif "head" in col_lower: rename_map[col] = "heading"
+            elif "pitch" in col_lower: rename_map[col] = "pitch"
+            elif "roll" in col_lower: rename_map[col] = "roll"
+
+        df = df.rename(columns=rename_map)
+        # Convert all columns to numeric
+        for col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        required = ["station", "easting", "northing", "elevation"]
+        missing = [c for c in required if c not in df.columns]
+        if missing:
+            raise ProcessingError(
+                f"STN data is missing required columns: {missing}"
+            )
+        return df.dropna(subset=required) 
+    
+    def convert_coords(
+        self,
+        to: Literal["utm", "ll", "auto"] = "auto",
+        *,
+        inplace: bool = True
+    ) -> Optional[pd.DataFrame]:
+        r"""Convert between UTM and geographic (lat/lon) coordinates.
+
+        This method provides a high-level interface for coordinate
+        system conversion, leveraging the underlying utilities in the
+        :mod:`~pycsamt.gis.utils` module.
+    
+        Parameters
+        ----------
+        to : {'utm', 'll', 'auto'}, default 'auto'
+            The target coordinate system.
+            
+            - 'utm': Convert to Universal Transverse Mercator.
+            - 'll': Convert to latitude/longitude decimal degrees.
+            - 'auto': Automatically detect the current system and
+              convert to the other.
+              
+        update_inplace : bool, default True
+            If ``True``, the internal DataFrame of the `Topography`
+            object is updated with the new coordinate columns.
+            If ``False``, a new DataFrame containing both the original
+            and converted coordinates is returned.
+    
+        Returns
+        -------
+        pandas.DataFrame or None
+            - If `update_inplace` is ``True``, returns ``None`` and
+              modifies the object's internal frame.
+            - If `update_inplace` is ``False``, returns a new DataFrame
+              with the added coordinate columns.
+    
+        Notes
+        -----
+        The function first uses
+        :func:`~.gis.utils.assert_xy_coordinate_system` to determine
+        the current coordinate system of the data. It then calls either
+        :func:`~.gis.utils.to_utm` or :func:`~.gis.utils.to_ll` to
+        perform the conversion.
+    
+        See Also
+        --------
+        pycsamt.gis.utils.to_utm : The underlying UTM conversion utility.
+        pycsamt.gis.utils.to_ll : The underlying lat/lon conversion utility.
+        """
+        if self._frame.empty:
+            raise ProcessingError("Topography data has not been loaded.")
+
+        x_coords = self.eastings
+        y_coords = self.northings
+        
+        current_system = assert_xy_coordinate_system(x_coords, y_coords)
+
+        if to == "auto":
+            to = "ll" if current_system == "utm" else "utm"
+
+        if to == current_system:
+            if self.verbose:
+                self._logger.info(
+                    f"Coordinates are already in '{to}' system. "
+                    "No conversion performed."
+                )
+            return
+
+        if to == "ll":
+            lat, lon = to_ll(x_coords, y_coords, as_frame=False)
+            new_df = pd.DataFrame(
+                {"latitude": lat, "longitude": lon},
+                index=self._frame.index
+            )
+        elif to == "utm":
+            east, north, zone = to_utm(x_coords, y_coords, as_frame=False)
+            new_df = pd.DataFrame(
+                {"easting": east, "northing": north, "utm_zone": zone},
+                index=self._frame.index
+            )
+        else:
+            raise ValueError(
+                f"Invalid target system '{to}'. Must be "
+                "'utm', 'll', or 'auto'."
+            )
+
+        if inplace:
+            for col in new_df.columns:
+                self._frame[col] = new_df[col]
+            if self.verbose:
+                self._logger.info(
+                    f"Coordinates converted to '{to}' and updated "
+                    "in place."
+                )
+            return None
+        
+        return pd.concat([self._frame, new_df], axis=1)
+    
+    def to_grid(
+        self,
+        resolution: int = 100,
+        method: Literal['linear', 'cubic', 'nearest'] = 'cubic'
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        r"""Interpolate scattered station data onto a regular 2D grid.
+
+        This method takes the scattered station locations (easting,
+        northing) and their corresponding elevations and
+        interpolates them onto a regular grid, which is essential
+        for creating contour maps or surface plots.
+
+        Parameters
+        ----------
+        resolution : int, default 100
+            The number of points to create in each dimension (x and
+            y) of the output grid. A higher number results in a
+            finer grid.
+        method : {'linear', 'cubic', 'nearest'}, default 'cubic'
+            The interpolation method to be used by the underlying
+            :func:`scipy.interpolate.griddata` function.
+            - 'linear': Performs linear interpolation.
+            - 'cubic': Performs cubic interpolation for a smoother
+              surface.
+            - 'nearest': Uses the value of the nearest data point.
+
+        Returns
+        -------
+        grid_x : numpy.ndarray
+            A 2D array of the X (easting) coordinates of the grid.
+        grid_y : numpy.ndarray
+            A 2D array of the Y (northing) coordinates of the grid.
+        grid_z : numpy.ndarray
+            A 2D array of the interpolated Z (elevation) values on
+            the grid.
+
+        Raises
+        ------
+        ProcessingError
+            If the topography data has not been loaded first.
+
+        See Also
+        --------
+        scipy.interpolate.griddata : The core interpolation
+            function used by this method.
+        pycsamt.zonge.plot.Plot.plot_location_map : A method for
+            visualizing the gridded data.
+        """
+
+        if self._frame.empty:
+            raise ProcessingError("Topography data has not been loaded.")
+
+        points = self._frame[['easting', 'northing']].values
+        values = self.elevations
+
+        # Create the target grid
+        grid_x, grid_y = np.mgrid[
+            self.eastings.min():self.eastings.max():complex(resolution),
+            self.northings.min():self.northings.max():complex(resolution)
+        ]
+
+        # Interpolate the data
+        grid_z = griddata(
+            points, values, (grid_x, grid_y), method=method)
+
+        return grid_x, grid_y, grid_z 
+    
+    def get_step(self) -> pd.Series:
+        r"""Calculate the distance between consecutive stations.
+
+        This method computes the Euclidean distance between each
+        station and the next one along the survey line, based on
+        their easting and northing coordinates.
+
+        Returns
+        -------
+        pandas.Series
+            A Series containing the calculated step distances in
+            meters. The first value is always 0. The length of the
+            Series matches the number of stations.
+
+        Notes
+        -----
+        The calculation assumes a Cartesian coordinate system (like
+        UTM) where the Pythagorean theorem can be applied to find
+        the distance between points. The result is useful for
+        assessing the regularity of station spacing and for
+        providing a default step size for other methods like
+        :meth:`correct_coords`.
+
+        Examples
+        --------
+        >>> from pycsamt.zonge.survey import Topography
+        >>> topo = Topography().read('data/avg/K1.stn')
+        >>> steps = topo.get_step()
+        >>> print(f"Average station spacing: {steps.mean():.2f} m")
+        """
+        if self._frame.empty or len(self._frame) < 2:
+            return pd.Series(dtype=float)
+
+        dx = np.diff(self.eastings)
+        dy = np.diff(self.northings)
+        steps = np.hypot(dx, dy)
+        
+        return pd.Series(
+            np.concatenate(([0], steps)),
+            index=self._frame.index
+        )
+
+    def correct_coords(
+        self,
+        step: Optional[float] = None,
+        *,
+        inplace: bool = True
+    ) -> Optional[pd.DataFrame]:
+        r"""Regularize station coordinates to a best-fit straight line.
+
+        This processing tool corrects for minor deviations in survey
+        line geometry by projecting all station locations onto a
+        best-fit straight line and re-spacing them at a uniform
+        interval. This is a common step for preparing data for 2D
+        inversion or gridding.
+
+        Parameters
+        ----------
+        step : float, optional
+            The desired uniform distance between stations along the
+            corrected line. If ``None``, the average step distance is
+            calculated automatically using the :meth:`get_step`
+            method.
+        update_inplace : bool, default True
+            If ``True``, the internal DataFrame of the `Topography`
+            object is updated in place with the new, corrected
+            coordinates. If ``False``, a new DataFrame with the
+            corrected coordinates is returned.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+            - If `update_inplace` is ``True``, returns ``None``.
+            - If `update_inplace` is ``False``, returns a new
+              DataFrame with the corrected 'easting' and 'northing'
+              columns.
+
+        Notes
+        -----
+        The correction process involves two main steps:
+        1.  A first-degree polynomial (a straight line) is fitted
+            to the original easting and northing coordinates using a
+            least-squares regression.
+        2.  New station locations are generated along this ideal
+            line at a constant spacing defined by the `step`
+            parameter.
+
+        See Also
+        --------
+        get_step : The method used to automatically determine the
+            average station spacing.
+        """
+        if self._frame.empty or len(self._frame) < 2:
+            warnings.warn(
+                "Not enough data to correct coordinates.")
+            return
+
+        x = self.eastings
+        y = self.northings
+
+        # 1. Determine the best-fit line
+        m, c = np.polyfit(x, y, 1) # y = mx + c
+
+        # 2. Calculate the uniform step distance
+        if step is None:
+            step = self.get_step().mean()
+            if self.verbose:
+                self._logger.info(
+                    f"Using auto-detected average step of {step:.2f} m."
+                )
+
+        # 3. Project the first station onto the line
+        x0, y0 = x[0], y[0]
+        x_proj_start = (x0 + m * (y0 - c)) / (1 + m**2)
+        y_proj_start = m * x_proj_start + c
+
+        # 4. Generate new points along the line
+        line_direction = np.array([1, m]) / np.sqrt(1 + m**2)
+        distances = np.arange(len(x)) * step
+        
+        new_eastings = x_proj_start + distances * line_direction[0]
+        new_northings = y_proj_start + distances * line_direction[1]
+
+        if inplace:
+            self._frame['easting'] = new_eastings
+            self._frame['northing'] = new_northings
+            if self.verbose:
+                self._logger.info(
+                    "Coordinates have been corrected and updated in place."
+                )
+                
+            return None
+        
+        df_corrected = self._frame.copy()
+        df_corrected['easting'] = new_eastings
+        df_corrected['northing'] = new_northings
+        
+        return df_corrected
+    
+    @staticmethod
+    def generate(
+        start_coord: Tuple[float, float],
+        n_stations: int,
+        step: float,
+        azimuth: float,
+        *,
+        initial_station_name: float = 0.,
+        initial_elevation: float = 0.,
+        elevation_gradient: float = 0.,
+        coord_type: Literal['utm', 'll'] = 'utm'
+    ) -> "Topography":
+        r"""Generate a synthetic station topography dataset.
+
+        This static method acts as a factory for creating a new
+        :class:`Topography` object based on survey design
+        parameters. It is useful for creating test data, planning
+        surveys, or generating a regularized coordinate set for
+        modeling.
+
+        Parameters
+        ----------
+        start_coord : tuple[float, float]
+            The starting coordinate of the survey line. The format
+            depends on `coord_type`:
+                
+            - For 'utm': (easting, northing) in meters.
+            - For 'll': (latitude, longitude) in decimal degrees.
+            
+        n_stations : int
+            The total number of stations to generate along the line.
+        step : float
+            The distance between consecutive stations, in meters.
+        azimuth : float
+            The azimuth of the survey line in degrees clockwise from
+            North (e.g., 0 for North, 90 for East).
+        initial_station_name : float, default 0.0
+            The name or number of the first station. Subsequent
+            station names are incremented by `step`.
+        initial_elevation : float, default 0.0
+            The elevation of the first station, in meters.
+        elevation_gradient : float, default 0.0
+            The change in elevation per meter along the survey line.
+            A positive value creates an upward slope.
+        coord_type : {'utm', 'll'}, default 'utm'
+            The coordinate system of the `start_coord`.
+
+        Returns
+        -------
+        Topography
+            A new, fully populated instance of the `Topography` class.
+
+        Notes
+        -----
+        When `coord_type` is 'll', the function uses geodetic
+        calculations to accurately generate new points along the
+        great-circle path and then converts the final lat/lon
+        coordinates to UTM for storage.
+        """
+        if n_stations <= 0:
+            raise ValueError("Number of stations must be positive.")
+
+        station_names = np.arange(
+            n_stations) * step + initial_station_name
+        distances = np.arange(n_stations) * step
+        elevations = initial_elevation + distances * elevation_gradient
+        
+        start_coord =ensure_n_items (
+            items=start_coord, 
+            name ='(latitude, longitude)',
+            expect="numeric", 
+            coerce=True, 
+            n=2
+        )
+        if coord_type == 'll':
+            import_optional_dependency(
+                'geopy', extra=( 
+                    "'geopy' is required for geodetectic"
+                    " position calculations")
+               )
+            # For lat/lon, we must calculate geodetic positions
+            from geopy.distance import geodesic
+            start_lat, start_lon = normalize_lat_lon (
+                *start_coord, assume='latlon')
+            # start_lat, start_lon = start_coord
+            
+            points = [start_coord]
+            for i in range(1, n_stations):
+                new_point = geodesic(
+                    meters=step).destination(points[-1], bearing=azimuth)
+                points.append((new_point.latitude, new_point.longitude))
+            
+            latitudes, longitudes = zip(*points)
+            eastings, northings, _ = to_utm(latitudes, longitudes)
+
+        else: # UTM coordinates
+            azimuth_rad = np.deg2rad(90 - azimuth) # Convert from bearing
+            dx = distances * np.cos(azimuth_rad)
+            dy = distances * np.sin(azimuth_rad)
+            start_x, start_y = start_coord
+            eastings = start_x + dx
+            northings = start_y + dy
+
+        df = pd.DataFrame({
+            'station': station_names,
+            'easting': eastings,
+            'northing': northings,
+            'elevation': elevations
+        })
+
+        return Topography(data=df)  
+    
+    def write(self) -> Sequence[str]:
+        r"""Serialize the topography data to .stn format lines.
+
+        This method converts the internal DataFrame of topography
+        data into a list of strings that conform to the standard
+        Zonge ``.stn`` file format. This is useful for exporting
+        processed or generated topography data.
+
+        Returns
+        -------
+        list[str]
+            A list of strings, where the first string is the comma-
+            separated header and subsequent strings are the data
+            rows.
+
+        Notes
+        -----
+        The output is designed to be a "modern" ``.stn`` file, using
+        comma-separated values, which is compatible with the ASTATIC
+        program and other Zonge software.
+
+        Examples
+        --------
+        >>> from pycsamt.zonge.survey import Topography
+        >>> topo = Topography.generate(
+        ...     start_coord=(500000, 4000000), n_stations=3,
+        ...     step=100, azimuth=90
+        ... )
+        >>> stn_lines = topo.write()
+        >>> for line in stn_lines:
+        ...     print(line)
+        station,easting,northing,elevation
+        0.0,500000.0,4000000.0,0.0
+        100.0,500100.0,4000000.0,0.0
+        200.0,500200.0,4000000.0,0.0
+        """
+        if self._frame.empty:
+            return []
+        
+        header = ",".join(self._frame.columns)
+        data_lines = self._frame.to_csv(
+            index=False, header=False, lineterminator='\n'
+        ).strip('\n').split('\n')
+        
+        return [header] + data_lines
+
+    @property
+    def stations(self) -> np.ndarray:
+        return self._frame.get(
+            "station", pd.Series(dtype=float)).values
+
+    @property
+    def eastings(self) -> np.ndarray:
+        return self._frame.get(
+            "easting", pd.Series(dtype=float)).values
+
+    @property
+    def northings(self) -> np.ndarray:
+        return self._frame.get(
+            "northing", pd.Series(dtype=float)).values
+
+    @property
+    def elevations(self) -> np.ndarray:
+        return self._frame.get(
+            "elevation", pd.Series(dtype=float)).values
 
 def _to_float_series(s: pd.Series) -> pd.Series:
     """Coerce a Series to float, preserving NaN for non-numeric."""

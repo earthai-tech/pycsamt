@@ -32,7 +32,7 @@ from .arrayops import (
 from .cleaner import ismissing
 from .conversion import convert_value
 from .stats import get_confidence_ratio, remove_outliers
-from .validation import is_instance_extended, assert_ratio, check_y
+from .validation import isinstance_relaxed, assert_ratio, check_y
 from .plot import plot_errorbar
 
 __all__ =[ 
@@ -127,10 +127,10 @@ def check_em_kind(objs, /) -> str: # _assert_z_or_edi_objs
 
     # Determine membership per class with robust isinstance checks.
     is_edi = [
-        bool(is_instance_extended(o, Edi)) for o in items
+        bool(isinstance_relaxed(o, Edi)) for o in items
     ]
     is_z = [
-        bool(is_instance_extended(o, Z)) for o in items
+        bool(isinstance_relaxed(o, Z)) for o in items
     ]
 
     # Any non-EM object?

@@ -8,6 +8,7 @@ Array and list manipulation utilities.
 from __future__ import annotations 
 import re
 from typing import Iterable, Union, Optional, Sequence, Any
+import warnings
 import matplotlib.pyplot as plt 
 import numpy as np
 import pandas as pd 
@@ -27,7 +28,8 @@ __all__ = [
     'reshape',
     'assert_xy_in', 
     'frameify', 
-    'interpolate_grid'
+    'interpolate_grid', 
+    'drop_nan_in', 
 ]
 
 def concat_array_from_list(
@@ -852,3 +854,99 @@ def fill_nan(
 
     # Restore 1D shape if needed
     return out[0] if orig1d else out
+
+def drop_nan_in(
+    y_true,
+    *y_preds: Any,
+    error: str = "raise",
+    nan_policy: str | None = None,
+):
+    r"""
+    Drop NaNs from ``y_true`` and align all ``y_preds``.
+
+    Samples where ``y_true`` is NaN are removed from ``y_true``
+    and from each array in ``y_preds`` so their lengths match.
+
+    Parameters
+    ----------
+    y_true : array-like, shape (n,)
+        True target values. Must be 1-D and same length as
+        each array in ``y_preds``.
+    *y_preds : array-like, shape (n,)
+        One or more prediction arrays aligned to ``y_true``.
+    error : {"raise","warn","ignore"}, default "raise"
+        Action when NaNs are seen in ``y_true`` **and**
+        ``nan_policy`` is ``None``.
+    nan_policy : {"raise","propagate","omit"}, optional
+        NaN behavior override:
+        - ``"raise"``: error if NaNs exist.
+        - ``"propagate"``: return inputs unchanged.
+        - ``"omit"``: drop NaN rows (preferred).
+
+    Returns
+    -------
+    y_true_f : ndarray, shape (m,)
+        Filtered true values (``m <= n``).
+    *y_preds_f : ndarrays, each shape (m,)
+        Filtered predictions in the same order as input.
+
+    Notes
+    -----
+    If ``nan_policy`` is given, it overrides ``error``.
+    With ``propagate``, no filtering is done.
+
+    Examples
+    --------
+    >>> yt = np.array([1., 2., np.nan, 4.])
+    >>> yp = np.array([0.9, 1.8, 3.1, 4.2])
+    >>> drop_nan_in(yt, yp, error="warn")
+    (array([1., 2., 4.]), array([0.9, 1.8, 4.2]))
+    """
+    # to arrays (float for NaN detection)
+    yt = np.asarray(y_true, dtype=float)
+    preds = [np.asarray(p) for p in y_preds]
+
+    # shape checks
+    for i, p in enumerate(preds):
+        if p.shape != yt.shape:
+            raise ValueError(
+                f"y_pred #{i} shape {p.shape} != y_true {yt.shape}"
+            )
+
+    has_nan = np.isnan(yt)
+    any_nan = bool(np.any(has_nan))
+
+    # policy overrides error
+    if nan_policy is not None:
+        if nan_policy == "raise" and any_nan:
+            raise ValueError("NaNs in y_true (nan_policy='raise').")
+        if nan_policy == "propagate":
+            return yt, *preds
+        if nan_policy != "omit" and nan_policy != "raise":
+            raise ValueError(
+                "nan_policy must be one of "
+                "{'raise','propagate','omit'}."
+            )
+        # fall through to omit
+
+    else:
+        # handle error when policy not given
+        if any_nan:
+            if error == "raise":
+                raise ValueError("NaNs in y_true.")
+            if error == "warn":
+                warnings.warn(
+                    "NaNs in y_true; dropping rows.", stacklevel=2
+                )
+            elif error != "ignore":
+                raise ValueError(
+                    "error must be one of "
+                    "{'raise','warn','ignore'}."
+                )
+
+    # build mask (omit or ignore/warn path)
+    mask = ~has_nan
+    yt_f = yt[mask]
+    preds_f = tuple(p[mask] for p in preds)
+    return yt_f, *preds_f
+

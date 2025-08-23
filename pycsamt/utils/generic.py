@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: GPL-3.0
+from __future__ import annotations
 
 import math
 import subprocess
+import importlib
 import sys
+import ast
 import time
 import re 
 import warnings 
-
+import inspect
 from typing import ( 
     Any, 
     Sequence, 
@@ -328,3 +331,347 @@ def strip_item(
             return np.array(cleaned)
     # Sequence -> list
     return cleaned
+
+def count_functions(
+    module_name: str,
+    include_class: bool = False,
+    return_counts: bool = True,
+    include_private: bool = False,
+    include_local: bool = False,
+) -> Union[int, List[str]]:
+    r"""
+    Count or list functions (and classes) in a module.
+
+    Parameters
+    ----------
+    module_name : str
+        Dotted name, e.g. ``"pkg.mod"``.
+    include_class : bool, default False
+        Include classes in the result.
+    return_counts : bool, default True
+        Return a count. If ``False``, return sorted names.
+    include_private : bool, default False
+        Include names that start with ``"_"``.
+    include_local : bool, default False
+        Include nested (local) functions.
+
+    Returns
+    -------
+    int or list of str
+        Count if ``return_counts=True`` else sorted names.
+
+    Notes
+    -----
+    Parses the module's AST. Nested functions are excluded
+    unless ``include_local=True``.
+
+    Examples
+    --------
+    >>> count_functions("collections", include_class=True)
+    20  # doctest: +SKIP
+    """
+
+    try:
+        mod = importlib.import_module(module_name)
+    except Exception as exc:
+        raise ImportError(
+            "Cannot import module: {}".format(module_name)
+        ) from exc
+
+    try:
+        src = inspect.getsource(mod)
+    except Exception as exc:
+        raise ValueError(
+            "Cannot read source for {}".format(module_name)
+        ) from exc
+
+    tree = ast.parse(src)
+
+    # attach parent links (for nested detection)
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            setattr(child, "parent", node)
+
+    def _is_nested(node: ast.AST) -> bool:
+        p = getattr(node, "parent", None)
+        while p is not None:
+            if isinstance(p, ast.FunctionDef):
+                return True
+            p = getattr(p, "parent", None)
+        return False
+
+    funcs: List[str] = []
+    clss: List[str] = []
+
+    for n in ast.walk(tree):
+        if isinstance(n, ast.FunctionDef):
+            if not include_private and n.name.startswith("_"):
+                continue
+            if not include_local and _is_nested(n):
+                continue
+            funcs.append(n.name)
+        elif include_class and isinstance(n, ast.ClassDef):
+            if not include_private and n.name.startswith("_"):
+                continue
+            clss.append(n.name)
+
+    names = sorted(funcs + (clss if include_class else []))
+    return len(names) if return_counts else names
+
+
+def get_valid_kwargs(
+    callable_obj: Any,
+    kwargs: dict[str, Any],
+) -> dict[str, Any]:
+    r"""
+    Filter keyword args to those accepted by a callable.
+
+    Given ``kwargs`` and a target callable (function, method,
+    class, or callable instance), return only the keys that
+    can be passed as keyword arguments. Extra keys are
+    ignored with a warning. If the callable accepts
+    ``**kwargs``, all keys are considered valid.
+
+    Parameters
+    ----------
+    callable_obj : callable or object
+        Target to inspect. If an instance is provided, its
+        class or ``__call__`` is inspected.
+    kwargs : dict
+        Candidate keyword arguments.
+
+    Returns
+    -------
+    dict
+        Subset of ``kwargs`` compatible with the callable.
+
+    Notes
+    -----
+    - Positional-only parameters (``/``) are not eligible as
+      keyword arguments and are excluded.
+    - If the signature cannot be resolved (e.g., some C
+      builtins), an empty dict is returned and a warning is
+      emitted.
+
+    Examples
+    --------
+    >>> def f(a, b=0, *, c=1): ...
+    >>> get_valid_kwargs(f, {"a": 1, "x": 9, "c": 2})
+    {'a': 1, 'c': 2}
+    """
+    # Resolve a suitable inspection target
+    target = callable_obj
+    if (
+        not inspect.isclass(target)
+        and not inspect.isfunction(target)
+        and not inspect.ismethod(target)
+        and not callable(target)
+    ):
+        target = target.__class__
+
+    # Try direct signature; then fall back to __call__
+    sig = None
+    try:
+        sig = inspect.signature(target)
+    except (ValueError, TypeError):
+        call = getattr(target, "__call__", None)
+        if call is not None:
+            try:
+                sig = inspect.signature(call)
+            except (ValueError, TypeError):
+                sig = None
+
+    if sig is None:
+        warnings.warn(
+            "Unable to retrieve signature; no kwargs will be "
+            "passed.",
+            stacklevel=2,
+        )
+        return {}
+
+    # If **kwargs present, all keys are valid
+    if any(
+        p.kind is inspect.Parameter.VAR_KEYWORD
+        for p in sig.parameters.values()
+    ):
+        return dict(kwargs)
+
+    # Eligible names: POSITIONAL_OR_KEYWORD and KEYWORD_ONLY
+    eligible_kinds = {
+        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        inspect.Parameter.KEYWORD_ONLY,
+    }
+    valid_names = {
+        name
+        for name, p in sig.parameters.items()
+        if p.kind in eligible_kinds
+    }
+
+    valid = {k: v for k, v in kwargs.items() if k in valid_names}
+    invalid = [k for k in kwargs.keys() if k not in valid_names]
+
+    if invalid:
+        bad = ", ".join(repr(k) for k in invalid)
+        warnings.warn(
+            "Ignoring invalid keyword(s): {}".format(bad),
+            stacklevel=2,
+        )
+
+    return valid
+
+
+def error_policy(
+    error: str | None,
+    *,
+    policy: str = "auto",
+    base: str = "ignore",
+    exception: type[Exception] = None,
+    msg: str | None = None,
+    valid_policies: set = None,
+) -> str:
+    r"""
+    Manage error-handling policies like 'warn', 'raise', or 'ignore'.
+
+    The `error_policy` function determines how to handle potential
+    errors by mapping the user-provided ``error`` argument to a valid
+    policy. It helps standardize responses such as warnings, raised
+    exceptions, or silent ignores. The function can adapt to different
+    modes, allowing for strict or flexible behavior depending on the
+    ``policy`` and ``base`` settings.
+
+    Parameters
+    ----------
+    error : str or None
+        The user-provided error setting. Can be `'warn'`, `'raise'`,
+        `'ignore'`, or `None`. If `None`, the behavior is resolved
+        based on ``policy`` and ``base``.
+
+    policy : str, default='auto'
+        Determines how to interpret a `None` error setting. Valid
+        options:
+
+        - `'auto'`: Resolve `None` to the default `base` policy.
+        - `'strict'`: Disallows `None` for `error`; raises an error
+          if encountered.
+        - `None`: Defers strictly to `base`.
+
+    base : str, default='ignore'
+        The fallback error policy when `None` is encountered and
+        `policy='auto'` or `policy=None`. Must be one of `'warn'`,
+        `'raise'`, or `'ignore'`.
+
+    exception : type of Exception, default=ValueError
+        The exception class to be raised if an invalid policy or
+        error is encountered.
+
+    msg : str, optional
+        A custom message for the raised exception if an invalid
+        `error` or `policy` is detected. If omitted, a default is
+        used.
+
+    Returns
+    -------
+    str
+        A valid error policy: one of `'warn'`, `'raise'`, or
+        `'ignore'`.
+
+    Raises
+    ------
+    ValueError
+        If `policy` is invalid or if `None` is not permitted by
+        `policy='strict'` but is used. Also raised if `error` cannot
+        be resolved to a valid policy or if `base` is invalid when
+        `policy='auto'`.
+
+    Notes
+    -----
+    - If `error` is already a valid policy (`'warn'`, `'raise'`,
+      `'ignore'`), it is returned immediately.
+    - When `error=None`, the behavior depends on the `policy` and
+      `base` parameters. Setting `policy='strict'` disallows `None`
+      for `error`.
+
+
+    .. math::
+       \\text{error\\_policy}:
+       \\begin{cases}
+         \\text{'warn'}, & \\text{issue a warning} \\\\
+         \\text{'raise'}, & \\text{raise an exception} \\\\
+         \\text{'ignore'}, & \\text{do nothing}
+       \\end{cases}
+
+
+    Examples
+    --------
+    >>> from pycsamt.utils.generic_utils import error_policy
+    >>> # Basic usage:
+    >>> resolved_error = error_policy('warn')
+    >>> print(resolved_error)
+    'warn'
+
+    >>> # Using 'auto' policy with a default base of 'ignore'
+    >>> resolved_error = error_policy(None, policy='auto',
+    ...                                base='warn')
+    >>> print(resolved_error)
+    'warn'
+
+    >>> # Strict policy disallows None
+    >>> error_policy(None, policy='strict')
+    ValueError: In strict policy, `None` is not acceptable as error.
+
+    See Also
+    --------
+    gofast.utils.validator.validate_nan_policy : A function that
+        validate NaN policies.
+    """  # noqa: E501
+
+    # Predefined valid policies.
+    valid_policies = valid_policies or {"warn", "raise", "ignore"}
+
+    # Default message if none is provided.
+    default_msg = (
+        "Invalid error policy: '{error}'. Valid options are "
+        f"{valid_policies}."
+    )
+    if exception is None:
+        exception = ValueError
+
+    # Use custom message or default if not supplied.
+    msg = msg or default_msg
+
+    # Validate the `policy` argument.
+    if policy not in {"auto", "strict", None}:
+        raise ValueError(
+            f"Invalid policy: '{policy}'. Valid options are "
+            "'auto', 'strict', or None."
+        )
+
+    # Resolve None values for `error` according to `policy`.
+    if error is None:
+        if policy == "auto":
+            # If policy='auto', fallback to `base` if no override is set.
+            error = base or "ignore"
+        elif policy == "strict":
+            # If policy='strict', disallow None for `error`.
+            raise ValueError(
+                "In strict policy, `None` is not acceptable as an "
+                "error. Please set `error` explicitly or switch "
+                "policy to 'auto'."
+            )
+        else:
+            # policy=None means strictly use `base` for resolution.
+            if base not in valid_policies:
+                raise ValueError(
+                    f"Invalid base policy: '{base}'. Must be one of "
+                    f"{valid_policies} when `error` is None and "
+                    "policy is None."
+                )
+            error = base
+
+    # Final check to ensure `error` is valid.
+    if error not in valid_policies:
+        # Raise the specified exception if the policy is invalid.
+        raise exception(msg.format(error=error))
+
+    # Return the resolved error policy.
+    return error

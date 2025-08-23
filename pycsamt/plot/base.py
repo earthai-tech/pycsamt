@@ -163,12 +163,13 @@ class BasePlot(ABC):
         s: float=  40.,
         cmap:str='jet_r',
         show_grid: bool = False,
-        galpha: float = .5,
+        galpha: float = .7,
         gaxis: str = 'both',
         gc: str = 'k',
-        gls: str = '--',
-        glw: float = 2.,
-        gwhich: str = 'major',               
+        gls: str = ':',
+        glw: float = 1.,
+        gwhich: str = 'major', 
+        grid_props: dict = None,               
         tp_axis: str = 'both',
         tp_labelsize: float = 3.,
         tp_bottom: bool =True,
@@ -238,6 +239,7 @@ class BasePlot(ABC):
         self.gls=gls
         self.glw=glw
         self.gwhich=gwhich
+        self.grid_props= grid_props
         self.tp_axis=tp_axis
         self.tp_labelsize=tp_labelsize  
         self.tp_bottom=tp_bottom
@@ -268,6 +270,7 @@ class BasePlot(ABC):
                          for pname, pvalues in self.__dict__.items() 
                          if pname.startswith('cb_')
                          }
+        self.grid_props= grid_props or {"linestyle": self.gls, "alpha": self.galpha}
 
     _PARAMS = OrderedDict(
         (p.name, p)

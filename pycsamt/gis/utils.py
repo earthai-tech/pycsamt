@@ -86,8 +86,187 @@ __all__ = [
     'dms_to_decimal',
     "to_utm", 
     "to_ll", 
+    "normalize_lat_lon", 
     'GisError'
 ]
+
+@overload
+def normalize_lat_lon(
+    a: Union[float, str],
+    b: Union[float, str],
+    *,
+    assume: Literal["lonlat", "latlon", "auto"] = ...,
+    error: Literal["ignore", "raise"] = ...,
+    clip: bool = ...,
+) -> Tuple[float, float]:
+    ...
+
+
+@overload
+def normalize_lat_lon(
+    a: Sequence[Union[float, str]],
+    b: Sequence[Union[float, str]],
+    *,
+    assume: Literal["lonlat", "latlon", "auto"] = ...,
+    error: Literal["ignore", "raise"] = ...,
+    clip: bool = ...,
+) -> Tuple[np.ndarray, np.ndarray]:
+    ...
+
+def normalize_lat_lon(
+    a: Any,
+    b: Any,
+    *,
+    assume: Literal["lonlat", "latlon", "auto"] = "lonlat",
+    error: Literal["ignore", "raise"] = "ignore",
+    clip: bool = False,
+):
+    r"""
+    Resolve input pair to ``(lat, lon)`` regardless of order.
+
+    Accepts values in either legacy order (lat, lon) or the
+    new expected order (lon, lat). Returns a tuple in the
+    canonical order ``(lat, lon)`` and avoids common
+    ``|Latitude| > 90`` errors by swapping when clear.
+
+    Parameters
+    ----------
+    a, b : float or str, or 1-D sequences
+        Coordinate components. Strings may be decimal or DMS
+        (``"DD:MM:SS"``). Sequences must be same length.
+    assume : {"lonlat","latlon","auto"}, default "lonlat"
+        Tie-break for ambiguous pairs (both ``|val| <= 90``).
+        
+        - ``"lonlat"``: treat input as (lon, lat).
+        - ``"latlon"``: treat input as (lat, lon).
+        - ``"auto"``: prefer (lon, lat) when ambiguous.
+        
+    error : {"ignore","raise"}, default "ignore"
+        On impossible pairs (both ``|val| > 90`` or both
+        ``|val| > 180``), either raise or return ``nan``s.
+    clip : bool, default False
+        If ``True``, clip lat to [-90, 90] and lon to
+        [-180, 180] when slightly out-of-range.
+
+    Returns
+    -------
+    lat, lon : float or ndarray
+        Coordinates in canonical order.
+
+    Notes
+    -----
+    Heuristics:
+
+    - If one value is in (90, 180] and the other in [-90, 90],
+      the former is lon and the latter is lat.
+    - If both are ``|val| <= 90``, use ``assume``.
+    - Values with ``|val| > 180`` are invalid unless ``clip``.
+    """
+    def _to_float(v):
+        if v is None or v == "None":
+            return np.nan
+        if isinstance(v, str):
+            try:
+                return float(v)
+            except Exception:
+                try:
+                    return convert_position_str2float(v)  # type: ignore  # noqa: E501
+                except Exception:
+                    return np.nan
+        try:
+            return float(v)
+        except Exception:
+            return np.nan
+
+    def _coerce_pair(x, y):
+        xv = _to_float(x)
+        yv = _to_float(y)
+
+        ax = abs(xv)
+        ay = abs(yv)
+
+        # invalid domain checks
+        if ax > 1e9 or ay > 1e9:
+            xv = np.nan
+            yv = np.nan
+
+        # quick invalid > 180
+        if ax > 180 or ay > 180:
+            if clip:
+                xv = np.clip(xv, -180.0, 180.0)
+                yv = np.clip(yv, -180.0, 180.0)
+                ax = abs(xv)
+                ay = abs(yv)
+            else:
+                if error == "raise":
+                    raise ValueError("Values exceed 180.")
+                return (np.nan, np.nan)
+
+        # decisive cases
+        if (90 < ax <= 180) and (ay <= 90):
+            lon = xv
+            lat = yv
+            return (lat, lon)
+        if (90 < ay <= 180) and (ax <= 90):
+            lon = yv
+            lat = xv
+            return (lat, lon)
+
+        # both within 90 → ambiguous
+        if ax <= 90 and ay <= 90:
+            if assume == "latlon":
+                lat, lon = xv, yv
+            else:
+                # "lonlat" and "auto" prefer lon,lat input
+                lat, lon = yv, xv
+            return (lat, lon)
+
+        # one slightly out of 90 but not decisive
+        if clip:
+            xv = np.clip(xv, -180.0, 180.0)
+            yv = np.clip(yv, -180.0, 180.0)
+            ax = abs(xv)
+            ay = abs(yv)
+
+        # fallback: try assume
+        if assume == "latlon":
+            lat, lon = xv, yv
+        else:
+            lat, lon = yv, xv
+
+        # final range checks
+        if abs(lat) > 90 or abs(lon) > 180:
+            if error == "raise":
+                raise ValueError("Unresolvable pair.")
+            return (np.nan, np.nan)
+
+        return (lat, lon)
+
+    # scalar vs vector handling
+    if np.isscalar(a) and np.isscalar(b):
+        return _coerce_pair(a, b)
+
+    a_arr = np.asarray(a, dtype=object)
+    b_arr = np.asarray(b, dtype=object)
+
+    if a_arr.shape != b_arr.shape:
+        raise ValueError("Shapes of a and b must match.")
+
+    lat_out = np.empty_like(a_arr, dtype=float)
+    lon_out = np.empty_like(b_arr, dtype=float)
+
+    it = np.nditer(
+        [a_arr, b_arr, lat_out, lon_out],
+        flags=["multi_index", "refs_ok"],
+        op_flags=[["readonly"], ["readonly"],
+                  ["writeonly"], ["writeonly"]],
+    )
+    for xa, xb, yl, yo in it:
+        lat, lon = _coerce_pair(xa.item(), xb.item())
+        yl[...] = lat
+        yo[...] = lon
+
+    return lat_out, lon_out
 
 def assert_xy_coordinate_system(x, y) -> str:
     r"""
@@ -593,6 +772,7 @@ def convert_position_float2str(position: float) -> str:
         sec,
     )
     return position_str
+
 
 @Deprecated(
     "GDAL SpatialReference → UTM string is deprecated; "

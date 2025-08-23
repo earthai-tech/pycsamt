@@ -118,7 +118,7 @@ class TestAMTAVGMethods:
     def test_unwrap_phase_to_degree(self, amtavg_for_methods):
         """Test phase unwrapping with conversion to degrees."""
         amtavg_for_methods.unwrap_phase(
-            to_degree=True, update_components=True
+            todeg=True, update_components=True
         )
         assert amtavg_for_methods.info.meta["Unit.Phase"] == "deg"
         assert -360 < amtavg_for_methods.df["phase"].iloc[0] < 360

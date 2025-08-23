@@ -18,8 +18,9 @@ from typing import Any, Mapping, Optional, Tuple, Union
 import pandas as pd
 
 from ..exceptions import AvgDataError
-from ..log.logger import get_logger 
+
 from .base import AVGFrame
+from .config import Zonge 
 from .heads import Header
 from .meas import Amps, CompMeas, Frequency
 from .resphase import Phase, Resistivity
@@ -32,7 +33,7 @@ from .z import Z
 __all__ = ["DataInfo"]
 
 
-class DataInfo:
+class DataInfo (Zonge):
     r"""High-level aggregator for a complete Zonge AVG dataset.
 
     This class acts as the primary container and orchestrator for
@@ -108,14 +109,13 @@ class DataInfo:
     """
 
     def __init__(self, verbose: bool = False) -> None:
+        super().__init__(verbose = verbose) 
+        
         # Core data holders
         self._frame: Optional[AVGFrame] = None
         self.df: Optional[pd.DataFrame] = None
         self.meta: Optional[Mapping[str, Any]] = None
         
-        self.verbose = verbose
-        self._logger = get_logger(self.__class__.__name__)
-
         # Component containers
         self.header: Header = Header()
         self.station: Station = Station()

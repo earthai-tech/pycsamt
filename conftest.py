@@ -8,46 +8,74 @@ This file defines shared fixtures for locating and accessing test
 data files, ensuring that tests can be run consistently from any
 directory.
 """
-import pytest
+
+from __future__ import annotations
+
 from pathlib import Path
+import pytest
+
 
 def get_project_root() -> Path:
-    """Find the project root by looking for the 'pycsamt' dir."""
-    # Starts from the current file and goes up the hierarchy
-    current_path = Path(__file__).resolve()
-    for parent in current_path.parents:
-        if (parent / 'pycsamt').is_dir():
+    """Find the repo root by locating the 'pycsamt' dir."""
+    cur = Path(__file__).resolve()
+    for parent in cur.parents:
+        if (parent / "pycsamt").is_dir():
             return parent
-    raise FileNotFoundError("Could not find project root.")
+    raise FileNotFoundError("Project root not found.")
+
 
 @pytest.fixture(scope="session")
 def project_root() -> Path:
-    """Fixture to provide the project's root directory."""
+    """Project root directory."""
     return get_project_root()
 
+
 @pytest.fixture(scope="session")
-def data_path(project_root) -> Path:
-    """Fixture to provide the path to the test data directory."""
+def data_path(project_root: Path) -> Path:
+    """Base path to bundled test data."""
     return project_root / "data" / "avg"
 
-@pytest.fixture(scope="session")
-def legacy_data_file(data_path):
-    """
-    Fixture for the path to the legacy K1.AVG data file.
-    Skips the test if the file is not found.
-    """
-    file_path = data_path / "K1.AVG"
-    if not file_path.exists():
-        pytest.skip(f"Legacy data file not found at: {file_path}")
-    return file_path
 
 @pytest.fixture(scope="session")
-def modern_data_file(data_path):
+def legacy_data_file(data_path: Path) -> Path:
     """
-    Fixture for the path to the modern K2.AVG data file.
-    Skips the test if the file is not found.
+    Path to legacy K1.AVG file; skip if missing.
     """
-    file_path = data_path / "K2.AVG"
-    if not file_path.exists():
-        pytest.skip(f"Modern data file not found at: {file_path}")
-    return file_path
+    p = data_path / "K1.AVG"
+    if not p.exists():
+        pytest.skip(f"Missing legacy data: {p}")
+    return p
+
+
+@pytest.fixture(scope="session")
+def modern_data_file(data_path: Path) -> Path:
+    """
+    Path to modern K2.AVG file; skip if missing.
+    """
+    p = data_path / "K2.AVG"
+    if not p.exists():
+        pytest.skip(f"Missing modern data: {p}")
+    return p
+
+
+@pytest.fixture(scope="session")
+def stn_file_k1(data_path: Path) -> Path:
+    """
+    Path to K1.stn topography file; skip if missing.
+    """
+    p = data_path / "K1.stn"
+    if not p.exists():
+        pytest.skip(f"Missing STN file: {p}")
+    return p
+
+@pytest.fixture(scope="session")
+def stn_file_k2(data_path: Path) -> Path:
+    """
+    Path to K2.stn topography file; skip if missing.
+    """
+    p = data_path / "K2.stn"
+    if not p.exists():
+        pytest.skip(f"Missing STN file: {p}")
+    return p
+
+

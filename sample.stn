@@ -1,0 +1,5 @@
+! Sample .stn file
+station,easting,northing,elevation
+100,500100,4000100,200
+200,500200,4000105,205
+300,500300,4000110,210

@@ -5,6 +5,7 @@
 """
 Validation utilities for pycsamt.
 """
+from __future__ import annotations
 
 import inspect
 import warnings
@@ -15,7 +16,9 @@ from typing import (
     Any, 
     Union, 
     Sequence, 
-    Callable
+    Callable, 
+    Iterable, 
+    Tuple
 )
 
 import numpy as np 
@@ -35,10 +38,250 @@ __all__ = [
     '_is_numeric_dtype', 
     'check_consistency_size', 
     '_is_arraylike_1d', 
-    'is_instance_extended', 
+    'isinstance_relaxed', 
     "has_read", 
-    "check_has_read"
+    "check_has_read", 
+    "isin", "isin_if",
+    "ensure_n_items"
 ]
+
+
+
+def ensure_n_items(
+    *values: Any,
+    n: int = 2,
+    items: Any = None,
+    expect: str = "mixed",
+    coerce: bool = False,
+    to_string: bool = False,
+    allow_none: bool = False,
+    allow_nan: bool = False,
+    bounds: Optional[Tuple[float, float]] = None,
+    unique: bool = False,
+    return_as: str = "tuple",
+    dtype: Any = None,
+    name: Optional[str] = None,
+    error: str = "raise",
+):
+    r"""
+    Parse and validate ``n`` elements from flexible input.
+
+    Accepts either:
+    - a single iterable of length ``n`` (not a string), or
+    - ``n`` separate positional values (``*values``).
+
+    Enforces type policy (numeric / string / mixed), optional
+    coercion, and optional bounds. Returns the values in the
+    requested container type.
+
+    Parameters
+    ----------
+    *values : Any
+        Positional values. If provided, ``items`` is ignored.
+    n : int, default 2
+        Number of elements expected.
+    items : Any, optional
+        A single iterable-of-``n`` alternative to ``*values``.
+    expect : {"numeric","string","mixed"}, default "mixed"
+        Type policy for the elements.
+    coerce : bool, default False
+        If ``True`` and ``expect="numeric"``, try to coerce
+        to ``float``.
+    to_string : bool, default False
+        Convert elements to ``str`` (applies to any policy).
+    allow_none : bool, default False
+        If ``True``, ``None`` is permitted.
+    allow_nan : bool, default False
+        If ``True``, ``nan`` is permitted (numeric policy).
+    bounds : (float, float), optional
+        Numeric lower/upper bounds (inclusive).
+    unique : bool, default False
+        Require that all elements are distinct.
+    return_as : {"tuple","list","array"}, default "tuple"
+        Container type for the result.
+    dtype : Any, optional
+        Numpy dtype used when ``return_as="array"``.
+    name : str, optional
+        Label used in error messages.
+    error : {"raise","warn","ignore"}, default "raise"
+        Behavior on validation failures.
+
+    Returns
+    -------
+    tuple | list | ndarray
+        Validated values in the requested container.
+
+    Notes
+    -----
+    - Strings are *not* treated as iterables for splitting.
+    - ``bool`` is not accepted as numeric.
+    """
+    label = name or "values"
+
+
+    # Collect inputs into a flat list of length n
+    if values:
+        seq = list(values)
+    else:
+        if _iter_not_str(items):
+            seq = list(items)  # type: ignore[arg-type]
+        else:
+            seq = [items]
+
+    if len(seq) != n:
+        msg = (
+            f"Expected {n} {label}; got {len(seq)}."
+        )
+        if error == "raise":
+            raise ValueError(msg)
+        if error == "warn":
+            warnings.warn(msg, stacklevel=2)
+
+    # If extra values are supplied, trim but warn.
+    if len(seq) > n:
+        msg = (
+            f"Got {len(seq)} {label}; truncating to {n}."
+        )
+        if error == "raise":
+            raise ValueError(msg)
+        if error == "warn":
+            warnings.warn(msg, stacklevel=2)
+        seq = seq[:n]
+
+    # If fewer, pad with None to reach n (warn/ignore only).
+    if len(seq) < n:
+        pad = [None] * (n - len(seq))
+        seq = list(seq) + pad
+
+
+    # Element-wise normalization
+    out: list[Any] = []
+    for i, x in enumerate(seq):
+        # None handling
+        if x is None:
+            if not allow_none:
+                msg = (
+                    f"{label}[{i}] is None; not allowed."
+                )
+                if error == "raise":
+                    raise TypeError(msg)
+                if error == "warn":
+                    warnings.warn(msg, stacklevel=2)
+            out.append(None)
+            continue
+
+        # string conversion (global)
+        if to_string:
+            out.append(str(x))
+            continue
+
+        # policy: string
+        if expect == "string":
+            if isinstance(x, (str, bytes, bytearray)):
+                out.append(str(x))
+            else:
+                msg = (
+                    f"{label}[{i}] must be string; "
+                    f"got {type(x).__name__!r}."
+                )
+                if error == "raise":
+                    raise TypeError(msg)
+                if error == "warn":
+                    warnings.warn(msg, stacklevel=2)
+                out.append(str(x))
+            continue
+
+        # policy: numeric
+        if expect == "numeric":
+            try:
+                v = (
+                    _to_float(x)
+                    if coerce
+                    else float(x)  # may raise
+                )
+            except Exception as exc:
+                msg = (
+                    f"{label}[{i}] not numeric: {x!r}."
+                )
+                if error == "raise":
+                    raise TypeError(msg) from exc
+                if error == "warn":
+                    warnings.warn(msg, stacklevel=2)
+                v = np.nan
+
+            if not allow_nan and np.isnan(v):
+                msg = (
+                    f"{label}[{i}] is NaN; not allowed."
+                )
+                if error == "raise":
+                    raise ValueError(msg)
+                if error == "warn":
+                    warnings.warn(msg, stacklevel=2)
+
+            if bounds is not None and np.isfinite(v):
+                lo, hi = bounds
+                if v < lo or v > hi:
+                    msg = (
+                        f"{label}[{i}]={v} outside "
+                        f"[{lo}, {hi}]."
+                    )
+                    if error == "raise":
+                        raise ValueError(msg)
+                    if error == "warn":
+                        warnings.warn(msg, stacklevel=2)
+
+            out.append(v)
+            continue
+
+        # policy: mixed (no checks)
+        out.append(x)
+
+    # Uniqueness check
+    if unique:
+        # stringify for hashability with stable compare
+        sig = tuple(map(repr, out))
+        if len(set(sig)) != len(out):
+            msg = f"{label} must be unique."
+            if error == "raise":
+                raise ValueError(msg)
+            if error == "warn":
+                warnings.warn(msg, stacklevel=2)
+
+
+    # Materialize in requested container
+    if return_as == "list":
+        return list(out)
+    if return_as == "array":
+        return np.array(out, dtype=dtype)
+    # default: tuple
+    return tuple(out)
+
+def _iter_not_str(x: Any) -> bool:
+    """True if iterable but not a (byte)string."""
+    if isinstance(x, (str, bytes, bytearray)):
+        return False
+    return hasattr(x, "__iter__")
+
+
+def _to_float(x: Any) -> float:
+    """Best-effort float coercion (keeps nan)."""
+    if x is None:
+        return np.nan
+    if isinstance(x, (float, np.floating)):
+        return float(x)
+    if isinstance(x, bool):
+        # avoid treating bool as numeric
+        raise TypeError("bool is not accepted as numeric.")
+    if isinstance(x, (int, np.integer)):
+        return float(x)
+    try:
+        v = float(x)
+        return v
+    except Exception as exc:
+        raise TypeError(
+            f"Cannot coerce {x!r} to float."
+        ) from exc
+
 
 def has_read(
     obj: Any = None,
@@ -372,50 +615,272 @@ def _assert_all_types(
 def _isin(
     arr: Union[np.ndarray, Any],
     subarr: Union[np.ndarray, Any],
-    return_mask: bool = False
+    *,
+    return_mask: bool = False,
 ) -> Union[bool, np.ndarray]:
-    """
-    Test whether all elements of `subarr` are in `arr`, or return mask.
+    r"""
+    Test membership of ``subarr`` in ``arr``, or return mask.
 
     Parameters
     ----------
     arr : array-like
-        Array of elements to test against.
+        Universe of values.
     subarr : array-like or scalar
-        Element(s) to test for membership in `arr`.
+        Values to test for presence in ``arr``.
     return_mask : bool, default False
-        If True, return boolean mask of same shape as `arr`.
-        If False, return whether all elements of `subarr` are in `arr`.
+        If ``True``, return a boolean mask over ``arr``.
+        Else return ``True`` if *all* of ``subarr`` are in
+        ``arr``.
 
     Returns
     -------
     mask : ndarray of bool
-        Boolean mask if `return_mask` is True.
+        When ``return_mask=True``.
     result : bool
-        True if all elements of `subarr` are in `arr`, False otherwise.
+        When ``return_mask=False``; ``True`` if all elements
+        of ``subarr`` are present in ``arr``.
 
     Raises
     ------
     ValueError
-        If inputs cannot be converted to NumPy arrays.
+        If inputs cannot be coerced to arrays.
     """
     try:
-        a = np.asarray(arr)
-        s = np.asarray(subarr)
-    except Exception as e:
+        a = np.asarray(arr, dtype=object)
+        s = np.asarray(subarr, dtype=object)
+    except Exception as exc:
         raise ValueError(
-            f"Invalid input for membership test: {e}"
-        )
+            f"Invalid inputs for membership: {exc}"
+        ) from exc
+
     mask = np.isin(a, s)
     if return_mask:
         return mask
-    # flatten unique subarr values
-    try:
-        s_vals = np.unique(s.ravel())
-    except Exception:
-        s_vals = np.array([s])
-    return bool(np.all(np.isin(s_vals, a)))
 
+    s1 = np.atleast_1d(s).ravel()
+    # unique values to avoid redundant checks
+    try:
+        s1 = np.unique(s1)
+    except Exception:
+        pass
+    return bool(np.all(np.isin(s1, a)))
+
+
+def isin(
+    arr: Any,
+    subarr: Any,
+    *,
+    return_mask: bool = False,
+    match: str = "all",
+    assume_unique: bool = False,
+    equal_nan: bool = False,
+    invert: bool = False,
+    return_missing: bool = False,
+    return_present: bool = False,
+):
+    r"""
+    Improved membership test with flexible outputs.
+
+    Parameters
+    ----------
+    arr : array-like
+        Universe of values to test against.
+    subarr : array-like or scalar
+        Values to check for presence in ``arr``.
+    return_mask : bool, default False
+        If ``True``, return a boolean mask with the same
+        shape as ``arr`` (membership of ``arr`` in ``subarr``).
+    match : {"all","any","count"}, default "all"
+        Reduction mode when ``return_mask`` is ``False``:
+            
+        - ``"all"``  → True if all of ``subarr`` in ``arr``.
+        - ``"any"``  → True if any of ``subarr`` in ``arr``.
+        - ``"count"``→ Number of elements of ``subarr`` in
+          ``arr`` (unique-sensitive per NumPy rules).
+          
+    assume_unique : bool, default False
+        Forwarded to :func:`numpy.isin` for speed when both
+        inputs have unique values.
+    equal_nan : bool, default False
+        Treat NaNs in ``arr`` and ``subarr`` as equal.
+    invert : bool, default False
+        When ``return_mask=True``, invert membership on the
+        elementwise mask (same as NumPy).
+    return_missing : bool, default False
+        When ``return_mask=False``, also return a list of
+        items from ``subarr`` that are not in ``arr``.
+    return_present : bool, default False
+        When ``return_mask=False``, also return a list of
+        items from ``subarr`` that are present in ``arr``.
+
+    Returns
+    -------
+    mask : ndarray of bool
+        If ``return_mask=True``.
+    result : bool or int
+        If ``return_mask=False``. ``bool`` for ``"all"`` and
+        ``"any"``; ``int`` for ``"count"``.
+    (result, missing) : tuple
+        When ``return_missing=True``.
+    (result, present) : tuple
+        When ``return_present=True``.
+    (result, missing, present) : tuple
+        When both flags are ``True``.
+
+    Notes
+    -----
+    - Uses ``dtype=object`` to robustly compare mixed types.
+    - For reduction, membership is computed on flattened
+      ``subarr`` values.
+
+    Examples
+    --------
+    >>> isin([1, 2, 3], [2, 5], match="any")
+    True
+    >>> isin([1, 2, 3], [2, 5], match="all")
+    False
+    >>> isin([1, 2, 3], [2, 2, 3], match="count")
+    2
+    >>> isin([1, 2, 3], [2, 5], return_missing=True)
+    (False, [5])
+    """
+    try:
+        a = np.asarray(arr, dtype=object)
+        s = np.asarray(subarr, dtype=object)
+    except Exception as exc:
+        raise ValueError(
+            f"Invalid inputs for membership: {exc}"
+        ) from exc
+
+    # elementwise mask over arr against subarr
+    mask = np.isin(
+        a,
+        s,
+        assume_unique=assume_unique,
+        invert=invert,
+        equal_nan=equal_nan,
+    )
+    if return_mask:
+        return mask
+
+    # reduction over subarr membership in arr
+    s1 = np.atleast_1d(s).ravel()
+    in_s = np.isin(
+        s1,
+        a,
+        assume_unique=assume_unique,
+        invert=False,
+        equal_nan=equal_nan,
+    )
+
+    if match not in {"all", "any", "count"}:
+        raise ValueError("match must be 'all', 'any', or 'count'.")
+
+    if match == "all":
+        result = bool(np.all(in_s))
+    elif match == "any":
+        result = bool(np.any(in_s))
+    else:
+        result = int(np.count_nonzero(in_s))
+
+    # optional extras
+    out = (result,)
+    if return_missing:
+        missing = s1[~in_s].tolist()
+        out = out + (missing,)
+    if return_present:
+        present = s1[in_s].tolist()
+        out = out + (present,)
+
+    return out[0] if len(out) == 1 else out
+
+def isin_if(
+    o: Iterable,
+    items: Union[str, Iterable],
+    *,
+    error: str = "raise",
+    return_diff: bool = False,
+    return_intersect: bool = False,
+) -> Optional[List]:
+    r"""
+    Check presence of ``items`` inside iterable ``o``.
+
+    When requested, return the missing items (difference) or
+    the items found (intersection). Optionally raise or warn
+    if some items are missing.
+
+    Parameters
+    ----------
+    o : iterable
+        Container to search in. If a string, it is treated
+        as a single token (not a char sequence).
+    items : str or iterable
+        Item or collection to check. Strings are treated as a
+        single token.
+    error : {"raise","warn","ignore"}, default "raise"
+        Behavior when missing items are detected (ignored if
+        a return is requested).
+    return_diff : bool, default False
+        If ``True``, return the list of missing items.
+    return_intersect : bool, default False
+        If ``True``, return the list of intersecting items.
+
+    Returns
+    -------
+    list or None
+        Missing items (``return_diff``), or intersection
+        (``return_intersect``). Otherwise ``None``.
+
+    Raises
+    ------
+    TypeError
+        If ``o`` is not iterable.
+    ValueError
+        If ``error`` is invalid or missing items with
+        ``error='raise'``.
+    """
+    if not isinstance(o, Iterable):
+        raise TypeError("`o` must be an iterable.")
+
+    def _to_set(v, is_items: bool) -> set:
+        # strings → single token
+        if isinstance(v, (str, bytes)):
+            return {v}
+        try:
+            return set(v)  # type: ignore[arg-type]
+        except TypeError:
+            # scalars (e.g., numbers)
+            return {v}
+
+    set_o = _to_set(o, is_items=False)
+    set_items = _to_set(items, is_items=True)
+
+    inter = list(set_o & set_items)
+    missing = list(set_items - set_o)
+
+    # request to return overrides error behavior
+    if return_diff or return_intersect:
+        error = "ignore"
+
+    if missing:
+        if error not in {"raise", "warn", "ignore"}:
+            raise ValueError(
+                "error must be {'raise','warn','ignore'}."
+            )
+        msg = (
+            "Missing item(s): "
+            + ", ".join(repr(x) for x in missing)
+        )
+        if error == "raise":
+            raise ValueError(msg)
+        if error == "warn":
+            warnings.warn(msg, stacklevel=2)
+
+    if return_diff:
+        return missing
+    if return_intersect:
+        return inter
+    return None
 
 def assert_ratio(
     v: Any,
@@ -503,7 +968,6 @@ def assert_ratio(
         raise ValueError(msg)
     return val
 
-
 def _validate_name_in(
     name: str,
     defaults: Union[Sequence[str], str] = '',
@@ -561,139 +1025,219 @@ def _validate_name_in(
         raise exception
     return result
 
-def _is_numeric_dtype (o, / , to_array =False ): 
-    """ Determine whether the argument has a numeric datatype, when
-    converted to a NumPy array.
+def isinstance_relaxed(
+    instance: Any,
+    cls: Union[type, Tuple[type, ...]],
+) -> bool:
+    r"""
+    Robust ``isinstance`` variant tolerant to reloads/tuples.
 
-    Booleans, unsigned integers, signed integers, floats and complex
-    numbers are the kinds of numeric datatype. 
-    
-    :param o: object, arraylike 
-        Object presumed to be an array 
-    :param to_array: bool, default=False 
-        If `o` is passed as non-array like list or tuple or other iterable 
-        object. Setting `to_array` to ``True`` will convert `o` to array. 
-    :return: bool, 
-        ``True`` if `o` has a numeric dtype and ``False`` otherwise. 
-    """ 
-    _NUMERIC_KINDS = set('buifc')
-    if not hasattr (o, '__iter__'): 
-        raise TypeError ("'o' is expected to be an iterable object."
-                         f" got: {type(o).__name__!r}")
-    if to_array : 
-        o = np.array (o )
-    if not hasattr(o, '__array__'): 
-        raise ValueError (f"Expect type array, got: {type (o).__name__!r}")
-    # use NUMERICKIND rather than # pd.api.types.is_numeric_dtype(arr) 
-    # for series and dataframes
-    return ( o.values.dtype.kind   
-            if ( hasattr(o, 'columns') or hasattr (o, 'name'))
-            else o.dtype.kind ) in _NUMERIC_KINDS 
-        
-def _check_consistency_size (ar1, ar2 , /  , error ='raise') :
-    """ Check consistency of two arrays and raises error if both sizes 
-    are differents. 
-    Returns 'False' if sizes are not consistent and error is set to 'ignore'.
-    """
-    if error =='raise': 
-        msg =("Array sizes must be consistent: '{}' and '{}' were given.")
-        assert len(ar1)==len(ar2), msg.format(len(ar1), len(ar2))
-        
-    return len(ar1)==len(ar2) 
-
-def check_consistency_size ( *arrays ): 
-    """ Check consistency of array and raises error otherwise."""
-    lengths = [len(X) for X in arrays if X is not None]
-    uniques = np.unique(lengths)
-    if len(uniques) > 1:
-        raise ValueError(
-            "Found input variables with inconsistent numbers of samples: %r"
-            % [int(l) for l in lengths]
-        )
-        
-def _is_arraylike_1d (x) :
-    """ Returns whether the input is arraylike one dimensional and not a scalar"""
-    if not hasattr (x, '__array__'): 
-        raise TypeError ("Expects a one-dimensional array, "
-                         f"got: {type(x).__name__!r}")
-    _is_arraylike_not_scalar(x)
-    return _is_arraylike_not_scalar(x) and  (  len(x.shape )< 2 or ( 
-        len(x.shape ) ==2 and x.shape [1]==1 )) 
-
-def _is_arraylike(x):
-    """Returns whether the input is array-like."""
-    return hasattr(x, "__len__") or hasattr(x, "shape") or hasattr(x, "__array__")
-
-
-def _is_arraylike_not_scalar(array):
-    """Return True if array is array-like and not a scalar"""
-    return _is_arraylike(array) and not np.isscalar(array)
-
-def is_instance_extended(instance, cls):
-    """
-    Performs an enhanced isinstance check that can gracefully handle a tuple 
-    of classes and module reloading issues, facilitating a more robust type 
-    checking, especially in environments where classes might be reloaded or 
-    imported differently, potentially leading to false negatives with the 
-    standard isinstance function.
+    First performs a normal :func:`isinstance` check. If it
+    fails, it compares class *names* and *module tails*
+    (final path segment) to mitigate false negatives that can
+    occur after module reloads or aliasing.
 
     Parameters
     ----------
     instance : object
-        The object to check.
+        Object to test.
     cls : type or tuple of types
-        The target class, classes, or a tuple of classes to check against. 
-        If `cls` is not a tuple, it will be converted to one for uniform handling.
+        Target class or a tuple of classes.
 
     Returns
     -------
     bool
-        True if `instance` is an instance of any class in `cls`, considering class 
-        name and module path matches. False otherwise.
+        ``True`` if the object is an instance of any target
+        class, either by direct check or by relaxed matching.
+
+    Notes
+    -----
+    The relaxed path matches when both class names are equal
+    and the last component of the module path matches, e.g.,
+    ``"pkg.mod"`` and ``"other.mod"`` → ``"mod"``.
 
     Examples
     --------
-    >>> class MyClass:
-    ...     pass
-    ...
-    >>> obj = MyClass()
-    >>> is_instance_extended(obj, MyClass)
+    >>> class A: ...
+    >>> a = A()
+    >>> isinstance_relaxed(a, A)
     True
-
-    # Demonstrating with module reloading issue
-    >>> import importlib
-    >>> importlib.reload(MyClass)
-    <module 'MyClass' from '...'>
-    >>> is_instance_extended(obj, MyClass)
-    False  # This might vary based on how MyClass is defined and reloaded
-
-    # Using a tuple of classes
-    >>> class AnotherClass:
-    ...     pass
-    ...
-    >>> is_instance_extended(obj, (MyClass, AnotherClass))
+    >>> isinstance_relaxed(a, (int, A))
     True
-
-    Note
-    ----
-    This function is particularly useful in dynamic environments where classes may 
-    be reloaded or when dealing with complex import hierarchies that could lead to 
-    situations where the standard `isinstance` check might erroneously return False 
-    due to objects being instances of classes that have been reloaded or imported 
-    under different namespaces.
     """
-    if not isinstance(cls, tuple):
-        cls = (cls,)  # Make cls a tuple if it isn't already, for uniform handling
-
-    direct_check = any(isinstance(instance, single_cls) for single_cls in cls)
-    if direct_check:
+    # direct isinstance for fast path
+    if isinstance(instance, cls):
         return True
 
-    for single_cls in cls:
-        if instance.__class__.__name__ == single_cls.__name__:
-            instance_module = instance.__class__.__module__.split('.')[-1]
-            cls_module = single_cls.__module__.split('.')[-1]
-            if instance_module == cls_module:
-                return True
+    # normalize target to a tuple
+    targets: Tuple[type, ...]
+    if isinstance(cls, tuple):
+        targets = cls
+    else:
+        targets = (cls,)
+
+    # safe accessors
+    inst_type = getattr(instance, "__class__", type(instance))
+    iname = getattr(inst_type, "__name__", None)
+    imod = getattr(inst_type, "__module__", "") or ""
+
+    imod_tail = imod.rsplit(".", 1)[-1]
+
+    for t in targets:
+        tname = getattr(t, "__name__", None)
+        tmod = getattr(t, "__module__", "") or ""
+        tmod_tail = tmod.rsplit(".", 1)[-1]
+
+        if iname is None or tname is None:
+            continue
+
+        # relaxed: name match + module-tail match
+        if iname == tname and imod_tail == tmod_tail:
+            return True
+
     return False
+
+
+def _is_numeric_dtype(o, /, to_array: bool = False) -> bool:
+    r"""
+    Check whether ``o`` has a numeric dtype as a NumPy array.
+
+    Numeric kinds are booleans, unsigned/signed ints, floats,
+    and complex numbers.
+
+    Parameters
+    ----------
+    o : array-like
+        Iterable to check.
+    to_array : bool, default False
+        If ``True``, coerce ``o`` to ``np.array`` first.
+
+    Returns
+    -------
+    bool
+        ``True`` if dtype is numeric, else ``False``.
+    """
+    _NUMERIC_KINDS = set("buifc")
+
+    if not hasattr(o, "__iter__"):
+        raise TypeError(
+            "'o' must be iterable. Got: {!r}".format(
+                type(o).__name__
+            )
+        )
+
+    if to_array:
+        o = np.array(o)
+
+    if not hasattr(o, "__array__"):
+        raise ValueError(
+            "Expect array-like. Got: {!r}".format(
+                type(o).__name__
+            )
+        )
+
+    # prefer dtype.kind on ndarray/Series/DataFrame
+    kind = (
+        o.values.dtype.kind
+        if (hasattr(o, "columns") or hasattr(o, "name"))
+        else o.dtype.kind
+    )
+    return kind in _NUMERIC_KINDS
+
+
+def _check_consistency_size(ar1, ar2, /, error: str = "raise") -> bool:
+    r"""
+    Check same length for two arrays. Optionally raise.
+
+    Parameters
+    ----------
+    ar1, ar2 : array-like
+        Arrays to compare.
+    error : {"raise","ignore"}, default "raise"
+        Raise on mismatch or return ``False``.
+
+    Returns
+    -------
+    bool
+        ``True`` if sizes match, else ``False``.
+    """
+    same = len(ar1) == len(ar2)
+    if not same and error == "raise":
+        msg = (
+            "Array sizes must match: '{}' vs '{}'."
+        ).format(len(ar1), len(ar2))
+        raise AssertionError(msg)
+    return same
+
+
+def check_consistency_size(*arrays) -> None:
+    r"""
+    Ensure all arrays have the same number of samples.
+
+    Parameters
+    ----------
+    *arrays : array-like
+        Inputs to validate. ``None`` entries are ignored.
+
+    Raises
+    ------
+    ValueError
+        If lengths differ among provided arrays.
+    """
+    lengths = [len(X) for X in arrays if X is not None]
+    uniques = np.unique(lengths)
+    if len(uniques) > 1:
+        raise ValueError(
+            "Inconsistent sample sizes: {}".format(
+                [int(l) for l in lengths]
+            )
+        )
+
+
+def _is_arraylike_1d(x) -> bool:
+    r"""
+    Return ``True`` if input is 1-D array-like (not scalar).
+
+    Raises
+    ------
+    TypeError
+        If input is not array-like.
+    """
+    if not hasattr(x, "__array__"):
+        raise TypeError(
+            "Expect a 1-D array. Got: {!r}".format(
+                type(x).__name__
+            )
+        )
+    if not _is_arraylike_not_scalar(x):
+        return False
+    nd = getattr(x, "ndim", None)
+    shape = getattr(x, "shape", None)
+    if nd is None or shape is None:
+        # fallback: treat as 1-D if len works
+        try:
+            _ = len(x)
+            return True
+        except Exception:
+            return False
+    return (nd < 2) or (nd == 2 and shape[1] == 1)
+
+
+def _is_arraylike(x) -> bool:
+    r"""
+    Return whether the input is array-like.
+    """
+    return (
+        hasattr(x, "__len__")
+        or hasattr(x, "shape")
+        or hasattr(x, "__array__")
+    )
+
+
+def _is_arraylike_not_scalar(array) -> bool:
+    r"""
+    Return ``True`` if array-like and not a scalar.
+    """
+    return _is_arraylike(array) and not np.isscalar(array)
+
 

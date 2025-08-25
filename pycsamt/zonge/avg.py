@@ -275,7 +275,7 @@ class BaseAVG(Zonge):
             method chaining.
         """
   
-        has_read(self) # Ensure AVG data is loaded first
+        has_read(self)
 
         if self.verbose:
             self._logger.info(f"Reading topography from: {stn_file}")
@@ -283,12 +283,13 @@ class BaseAVG(Zonge):
         # Create and read the Topography component
         self.topo = Topography(verbose=self.verbose).read(stn_file)
 
-        # Optional: You could add logic here to merge elevation
+        # XXX TODO: Optional: add logic here to merge elevation
         # into the main df if needed for specific calculations,
-        # but keeping it separate is generally better.
+        # but keeping it separate seems generally better.
         # For example:
         # topo_map = self.topo.frame.set_index('station')['elevation']
         # self.info.df['elevation'] = self.info.df['station'].map(topo_map)
+        # let keep safe for this version now.
 
         return self
     

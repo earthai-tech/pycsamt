@@ -91,7 +91,7 @@ class AVGPlot(Zonge, BasePlot):
         Creates a figure with multiple pseudosection subplots.
     plot_location_map(...)
         Visualizes station coordinates and elevation.
-    plot_strike_rose(...)
+    plot_strike(...)
         Creates a rose diagram of geoelectric strike angles.
     
     Notes
@@ -1145,7 +1145,6 @@ class AVGPlot(Zonge, BasePlot):
     
         return fig, ax
 
-    # this is not what I expect , I want when kind is 
     def plot_location_map(
         self,
         *,
@@ -1248,7 +1247,7 @@ class AVGPlot(Zonge, BasePlot):
 
         return fig, ax   
     
-    def plot_strike_rose(
+    def plot_strike(
         self,
         *,
         num_bins: int = 36,

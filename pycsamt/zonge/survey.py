@@ -2,7 +2,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
-Survey layout helpers.
+Survey layout.
 
 - Station: robust line-geometry container that understands modern/legacy
   AVG frames, exposes unique station positions, IDs, and handy header
@@ -36,7 +36,7 @@ from ..gis.utils import (
     to_ll, to_utm,
     normalize_lat_lon
  )
-from .base import AVGComponentBase # , AVGFrame
+from .base import AVGComponentBase 
 from .utils import ( 
     number_stations, 
     find_and_rename_column, 

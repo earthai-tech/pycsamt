@@ -6,135 +6,111 @@
 """
 
 #=================================================================
-class pyCSAMTError_occam2d_plot(Exception): 
+class OccamPlotError(Exception): 
     pass 
-class pyCSAMTError_occam2d(Exception): 
+class OccamError(Exception): 
     pass 
-class pyCSAMTError_occam2d_iter2dat(Exception): 
+class I2datError(Exception): 
     pass
 
-class pyCSAMTError_profile(Exception): 
-    pass 
-
-class pyCSAMTError_J(Exception):
-    pass
-
-class pyCSAMTError_site(Exception): 
+class ProfileError(Exception): 
     pass 
 
-class MTpyError_Z(Exception):
+class JError(Exception):
+    pass
+
+class SiteError(Exception): 
     pass 
 
-class MTpyError_inputarguments(Exception): 
+class ZError(Exception):
     pass 
 
-class pyCSAMTError_EDI(Exception):
+class InputError(Exception): 
     pass 
 
-class pyCSAMTError_location(Exception): 
-    pass 
-class pyCSAMTError_well_building(Exception): 
+class EDIError(Exception):
     pass 
 
-class pyCSAMTError_float(Exception):
-    pass
-class pyCSAMTError_frequency(Exception):
-    pass
-
-class pyCSAMTError_inputarguments(Exception):
-    pass
-
-class pyCSAMTError_Header(Exception):
+class LocationError(Exception): 
+    pass 
+class WellBuildingError(Exception): 
     pass 
 
-class pyCSAMTError_value(Exception):
+class FrequencyError(Exception):
     pass
-class pyCSAMTError_azimuth(Exception): 
+
+class HeaderError(Exception):
     pass 
 
-class pyCSAMTError_ts_data(Exception):
-    pass
-
-
-class pyCSAMTError_config_file(Exception):
-    pass
-
-
-class pyCSAMTError_file_handling(Exception):
-    pass
-
-
-class pyCSAMTError_avg_file(Exception):
-    pass
-
-class pyCSAMTError_AvgData(Exception):
-    pass
-
-
-class pyCSAMTError_AVG(Exception):
-    pass
-
-class pyCSAMTError_plot_tip(Exception):
-    pass 
-class pyCSAMTError_plot(Exception): 
+class AzimuthError(Exception): 
     pass 
 
-class pyCSAMTError_Z(Exception):
+class TSDataError(Exception):
     pass
 
 
-class pyCSAMTError_Emag(Exception):
+class ConfigFileError(Exception):
+    pass
+
+class FileHanglingError(Exception):
     pass
 
 
-class pyCSAMTError_Hmag(Exception):
+class AVGError(Exception):
     pass
 
-class pyCSAMTError_Ephz(Exception):
+
+class DataError(Exception):
     pass
 
-class pyCSAMTError_parameter_number(Exception):
-    pass
-
-class pyCSAMTError_processing(Exception):
-    pass
-
-class pyCSAMTError_module_import(Exception):
-    pass
-
-class pyCSAMTError_Phase(Exception):
+class PlotTipError(Exception):
+    pass 
+class PlotError(Exception): 
     pass 
 
-class pyCSAMTError_rho(Exception):
-    pass
-
-class pyCSAMTError_station(Exception):
-    pass
-
-class pyCSAMTError_structural(Exception): 
-    pass
-
-class pyCSAMTError_strata(Exception): 
-    pass
-class pyCSAMTError_memory(Exception): 
-    pass
-class pyCSAMTError_plot_geoinputargument(Exception): 
-    pass
-class pyCSAMTError_geodrill_inputarguments(Exception): 
-    pass
-
-class pyCSAMTError_SQL(Exception): 
-    pass
-class pyCSAMTError_SQL_manager(Exception): 
-    pass
-class pyCSAMTError_SQL_interface(Exception): 
-    pass
-class pyCSAMTError_SQL_geoDataBase(Exception): 
-    pass
-
-class pyCSAMTError_SQL_update_geoinformation(Exception): 
+class EmagError(Exception):
     pass
 
 
+class HmagError(Exception):
+    pass
+
+class EphzError(Exception):
+    pass
+
+class ParamNumberError(Exception):
+    pass
+
+class ProcessingError(Exception):
+    pass
+
+class PhaseError(Exception):
+    pass 
+
+class ResistivityError(Exception):
+    pass
+
+class StationError(Exception):
+    pass
+
+class StructuralError(Exception): 
+    pass
+
+class StrataError(Exception): 
+    pass
+class GeoMemoryError(Exception): 
+    pass
+class GeoError(Exception): 
+    pass
+class DrillError (Exception): 
+    pass 
+class SQLError(Exception): 
+    pass
+
+class DataBaseError(Exception): 
+    pass
+
+class ModEMError (Exception):
+    pass
 
 

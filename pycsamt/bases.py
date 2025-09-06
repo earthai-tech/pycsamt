@@ -27,7 +27,7 @@ from typing import (
 )
 
 import pycsamt.utils.func_utils as FU
-from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt._csamtpylog import csamtpylog
 
 
 T=TypeVar('T')

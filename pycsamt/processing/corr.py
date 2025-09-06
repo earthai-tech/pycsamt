@@ -21,10 +21,17 @@ from pycsamt.core.edi import Edi
 from pycsamt.core.cs import CSAMT
 from pycsamt.core  import z as CSAMTz
 from pycsamt.utils import zcalculator as Zcc
-from pycsamt.utils._csamtpylog import csamtpylog
 from pycsamt.utils.decorator import deprecated
-from pycsamt.utils import exceptions as CSex
 from pycsamt.utils import func_utils as func 
+from pycsamt._csamtpylog import csamtpylog
+from pycsamt.utils.exceptions import ( 
+    ProcessingError , 
+    FrequencyError, 
+    ResistivityError, 
+    PhaseError, 
+    FileHandlingError
+    
+    )
 try : 
     from pycsamt.__init__ import itqdm 
     if itqdm : 
@@ -142,7 +149,7 @@ class Processing(object):
     def frequency(self, freq): 
         if freq.dtype not in ['float', 'int']:
             try : freq = np.array([float(ff) for ff in freq])
-            except : raise CSex.pyCSAMTError_frequency(
+            except : raise FrequencyError(
                     'Frequency must be float number!')
         else : self._freq_array=freq
         
@@ -154,7 +161,7 @@ class Processing(object):
     def app_rho (self, app_res): 
         if app_res.dtype not in ['float', 'int']: 
             try : app_res =np.array([float(res) for res in app_res])
-            except : raise CSex.pyCSAMTError_rho(
+            except : raise ResistivityError(
                     'Apparent resistivities values must be float number.!')
         self._res_array=app_res
             
@@ -167,7 +174,7 @@ class Processing(object):
         if isinstance(reffreq, tuple) : # the case where value are preforced 
             reffreq = reffreq[0]
         try :reffreq =float(reffreq)
-        except:raise CSex.pyCSAMTError_frequency(
+        except:raise FrequencyError(
             'Reference frequency must be a float or int number.')
 
         if reffreq not in self.frequency:
@@ -180,7 +187,7 @@ class Processing(object):
                     'inside the range <{0}  to {1}>'.format(
                         self._freq_array.min(),self._freq_array.max()))
                                                           
-                raise CSex.pyCSAMTError_frequency(
+                raise FrequencyError(
                     'Frequency out of the range !')
                 
             self._reference_frequency =Zcc.find_reference_frequency(
@@ -201,7 +208,7 @@ class Processing(object):
             phz=np.array([float(pzz) for pzz in phz])
         except:
             
-            raise CSex.pyCSAMTError_Phase(
+            raise PhaseError(
             'Phase input must be a float number and radians.')
 
         self._phase_array=phz
@@ -259,7 +266,7 @@ class Processing(object):
                 self._logging.info(mess)
                 warnings.warn(mess)
                 
-                raise CSex.pyCSAMTError_processing(
+                raise ProcessingError(
                     'Could not process data with Nonetype obj!'
                     'Please provide your right data files or '
                     ' ndarray|dict of resistivies and phases values in degree.')
@@ -290,7 +297,7 @@ class Processing(object):
                                                   len(self.phase_obj))))
                     self._logging.error(mess.format(len(self.res_app_obj,
                                                         len(self.phase_obj))))              
-                    raise CSex.pyCSAMTError_processing(
+                    raise ProcessingError(
                         'Resistivity and phase must be the same length!')
                     
                 # convert values in rad 
@@ -328,8 +335,8 @@ class Processing(object):
                         warnings.warn(mess)
                         self.dipolelength =50.
                         
-            except CSex.pyCSAMTError_file_handling: 
-                raise CSex.pyCSAMTError_file_handling(
+            except FileHandlingError: 
+                raise FileHandlingError(
                     f" It seems {self.data_fn!r} does not exist."
                     "  Please provide the right filename or path.")            
 
@@ -925,7 +932,7 @@ class Processing(object):
             if freq_array is not None : 
                 self.frequency =freq_array 
             if res_array is None or phase_array is None or freq_array is None :
-                raise CSex.pyCSAMTError_processing('NoneType can be computed.'
+                raise ProcessingError('NoneType can be computed.'
                     ' Please provide either path to data file ' 
                     ' or provided resistivity , phase and frequeny arrays!')
         
@@ -1161,7 +1168,7 @@ class Processing(object):
         
         try: _filter =FILTER.lower()
         except : 
-            raise CSex.pyCSAMTError_processing(
+            raise ProcessingError(
                 'name of filters is `str` not  `{0}`'.format(type(_filter)))
         
         
@@ -1171,7 +1178,7 @@ class Processing(object):
                          'we will set filter to `tma`')
            print('--> Filter is resetting to TMA')
            
-           raise CSex.pyCSAMTError_processing(
+           raise ProcessingError(
                'Filter provided is Unrecognizable!')
            
         self._logging.info('Rewrite edifiles by applying filters')
@@ -1331,7 +1338,7 @@ class Processing(object):
                             'distortion tensor as a 2x2 matrices.')
                         print('---> Remove distorsion Error ! Please provide '
                               'the distortion Tensor as 2x2 matrices. ')
-                        raise CSex.pyCSAMTError_processing(
+                        raise ProcessingError(
                             'Could not remove distorsion.Please provided real '
                             ' distortion 2x2 matrixes')
                     _, z_corrected, z_corrected_err = \
@@ -1493,7 +1500,7 @@ class Processing(object):
         
         try: _filter =FILTER.lower()
         except : 
-            raise CSex.pyCSAMTError_processing(
+            raise ProcessingError(
                 'name of filters is `str` not  `{0}`'.format(type(_filter)))
 
         if _filter not in TAGS.keys(): 
@@ -1502,7 +1509,7 @@ class Processing(object):
                f"{func.smart_format(TAGS.keys())}."])
            
            warnings.warn(msg )
-           raise CSex.pyCSAMTError_processing(msg)
+           raise ProcessingError(msg)
     
         self._logging.info(f'Apply filters {_filter!r} to edifiles')
  
@@ -2070,7 +2077,7 @@ def interp_to_reference_freq(freq_array, rho_array,
     rhoObj=np.array([float(kk) for kk in rhoObj])
     
     if reference_freq not in freqObj : 
-        raise CSex.pyCSAMTError_frequency(
+        raise FrequencyError(
             'Reference frequency selected as input '
         'argument is not Found on the frequency array.'
             ' Please select the right frequency ')

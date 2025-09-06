@@ -15,7 +15,7 @@ import pandas as pd
 import sqlite3 as sq3 
 
 try : 
-    from pycsamt.utils._csamtpylog import csamtpylog
+    from pycsamt._csamtpylog import csamtpylog
     _logger=csamtpylog.get_csamtpy_logger(__name__)
 except :
     pass

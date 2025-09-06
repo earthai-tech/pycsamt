@@ -8,4 +8,12 @@ from pycsamt.view.plot import (
     PlotSlices
 )
 
-
+__all__=[
+    "Plot1d", 
+    "Plot2d", 
+    "plot_dataAndFits", 
+    "PlotPTMaps", 
+    "PlotRMSMaps", 
+    "PlotResponse", 
+    "PlotSlices"
+    ]

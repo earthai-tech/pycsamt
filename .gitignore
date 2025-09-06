@@ -68,9 +68,8 @@ nohup*
 OldWorks
 
 # exempt logfiles 
-logs
+#logs
 *.log
-
 
 # spyder project extension
 __pycache__/
@@ -86,8 +85,6 @@ __pycache__/
 
 # ignore description project
 project_description.md 
-
-
 
 #libraries
 lib/
@@ -126,7 +123,7 @@ coverage.xml
 *.pot
 
 # spyder stuff:
-*.log
+#*.log
 .spyproject/config/backups/workspace.ini.bak
 .spyproject/config/workspace.ini
 .pylint.d/
@@ -160,7 +157,6 @@ pycsamt_user_guide/
 
 # ignore quick examples docs 
 #quick_examples/
-_logfile/
 add.info/
 untitled0.py
 untitled1.py

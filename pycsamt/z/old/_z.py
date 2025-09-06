@@ -26,9 +26,14 @@ import math
 import numpy as np
 
 import pycsamt.utils.mtcalculator as MTcc
+<<<<<<< HEAD:pycsamt/z/old/_z.py
 import pycsamt.utils.exceptions as MTex
 from pycsamt.utils._csamtpylog import csamtpylog
 
+=======
+from pycsamt.utils.exceptions import ZError
+from pycsamt._csamtpylog import csamtpylog
+>>>>>>> f46d24176e4c8fcf6d86174866a24c5fe9f79eff:pycsamt/core/z.py
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 
 #============================
@@ -184,11 +189,11 @@ class ResPhase(object):
 
         # assert real array:
         if np.linalg.norm(np.imag(res_array)) != 0:
-            raise MTex.MTpyError_inputarguments('Error - array "res" is not' + \
+            raise TypeError('Error - array "res" is not' + \
                                                 'real valued !')
 
         if np.linalg.norm(np.imag(phase_array)) != 0:
-            raise MTex.MTpyError_inputarguments('Error - array "phase" is' + \
+            raise TypeError('Error - array "phase" is' + \
                                                 'not real valued !')
 
         abs_z = np.sqrt(5.0 * self.freq * (self.resistivity.T)).T
@@ -557,7 +562,7 @@ class Z(ResPhase):
             try:
                 inverse[idx_f, :, :] = np.array((np.matrix(self.z[idx_f, :, :])).I)
             except:
-                raise MTex.MTpyError_Z('The {0}ith impedance'.format(idx_f + 1) + \
+                raise ZError('The {0}ith impedance'.format(idx_f + 1) + \
                                        'tensor cannot be inverted')
 
         return inverse
@@ -820,13 +825,13 @@ class Z(ResPhase):
             distortion_tensor = np.matrix(np.real(distortion_tensor))
 
         except ValueError:
-            raise MTex.MTpyError_Z('The array provided is not a proper' + \
+            raise ZError('The array provided is not a proper' + \
                                    'distortion tensor')
 
         try:
             DI = distortion_tensor.I
         except np.linalg.LinAlgError:
-            raise MTex.MTpyError_Z('The provided distortion tensor is' + \
+            raise ZError('The provided distortion tensor is' + \
                                    'singular - I cannot invert that!')
 
         # propagation of errors (using 1-norm) - step 1 - inversion of D:
@@ -1264,9 +1269,10 @@ class Tipper(object):
         """
         if self.tipper_err is not None and \
                 (self._tipper_err.shape != tipper_err_array.shape):
-            raise MT_Z_Error('Shape of new "tipper_err" array does not match old' + \
-                             'new shape {0} != old shape {1}'.format(tipper_err_array.shape),
+            raise ZError('Shape of new "tipper_err" array does not match old' 
+                         'new shape {0} != old shape {1}'.format(tipper_err_array.shape,
                              self._tipper_err.shape)
+                         )
 
         # make sure the input array is of required shape
         if tipper_err_array is not None:
@@ -1640,7 +1646,7 @@ def correct4sensor_orientation(Z_prime, Bx=0, By=90, Ex=0, Ey=90,
         Z_prime = np.matrix(Z_prime)
 
     except:
-        raise MTex.MTpyError_inputarguments('ERROR - Z array not valid!' + \
+        raise TypeError('ERROR - Z array not valid!' + \
                                             'Must be 2x2 complex array')
 
     if Z_prime_error is not None:
@@ -1654,7 +1660,7 @@ def correct4sensor_orientation(Z_prime, Bx=0, By=90, Ex=0, Ey=90,
                 raise
 
         except:
-            raise MTex.MTpyError_inputarguments('ERROR - Z-error array not' + \
+            raise TypeError('ERROR - Z-error array not' + \
                                                 'valid! Must be 2x2 real array')
 
     T = np.matrix(np.zeros((2, 2)))
@@ -1678,7 +1684,7 @@ def correct4sensor_orientation(Z_prime, Bx=0, By=90, Ex=0, Ey=90,
     try:
         z_arr = np.array(np.dot(T, np.dot(Z_prime, U.I)))
     except:
-        raise MTex.MTpyError_inputarguments("ERROR - Given angles do not" + \
+        raise TypeError("ERROR - Given angles do not" + \
                                             "define basis for 2 dimensions - cannot convert Z'")
 
     z_err_arr = copy.copy(Z_prime_error)

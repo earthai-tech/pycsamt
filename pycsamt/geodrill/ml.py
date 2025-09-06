@@ -8,7 +8,7 @@ import pandas as pd
 
 from pycsamt.utils.ml_utils import neuron
 from pycsamt.geodrill.requestmanager import ManageDB
-from pycsamt.utils._csamtpylog import csamtpylog 
+from pycsamt._csamtpylog import csamtpylog 
 _logger =csamtpylog().get_csamtpy_logger(__name__)
 
 

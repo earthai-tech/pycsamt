@@ -14,7 +14,7 @@ import os
 import warnings
 import numpy as np 
 
-from pycsamt.utils._csamtpylog import csamtpylog 
+from pycsamt._csamtpylog import csamtpylog 
 from pycsamt.utils.exceptions import pyCSAMTError_file_handling
 
 class notion :

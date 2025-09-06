@@ -9,12 +9,18 @@ import shutil
 import warnings 
 import numpy as np 
 
+from pycsamt._csamtpylog import csamtpylog
 from pycsamt.utils import _p as inFO
-from pycsamt.utils import exceptions as CSex
 from pycsamt.utils import gis_tools as gis 
 from pycsamt.utils import avg_utils as cfunc
-from pycsamt.utils._csamtpylog import csamtpylog
 from pycsamt.utils import func_utils  as func
+from pycsamt.utils.exceptions import ( 
+    StationError, 
+    LocationError, 
+    ProfileError, 
+    SiteError, 
+    AzimuthError
+    )
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 
 try : 
@@ -121,19 +127,19 @@ class Location (object):
     def utm_zone (self, utm_zone): 
         if isinstance(utm_zone,(float,int)):
             warnings.warn('Wrong UTM zone input. Must be a str number.')
-            raise CSex.pyCSAMTError_location(
+            raise LocationError(
                 'UTM Zone must be string, '
                  'not <{0}>type.'.format(type(utm_zone)))
         else : 
             try :
                 float(utm_zone[:-2])
-            except : raise CSex.pyCSAMTError_location(
+            except : raise LocationError(
                     'Error UTM Zone designator. Both first letters'
                     ' provided are not acceotable !')
             else : 
                 if utm_zone[-1] not in list(
                         inFO.notion.utm_zone_dict_designator.keys()): 
-                    raise CSex.pyCSAMTError_location(
+                    raise LocationError(
                         'Wrong UTM Zone letter designator.'
                         ' Letter must be among <{0}>'.
                             format('|'.join(list(
@@ -170,7 +176,7 @@ class Location (object):
         else : 
             try : self._easting = np.array([ float(east)
                                             for east in easting])
-            except :raise CSex.pyCSAMTError_float(
+            except :raise TypeError(
                     'Easting must be float or an array of float number.')
             
     @northing.setter 
@@ -181,14 +187,14 @@ class Location (object):
             try : self._northing = np.array([float(north) 
                                              for north in northing])
         
-            except : raise CSex.pyCSAMTError_float(
+            except : raise TypeError(
                     'northing must be float or an array of float number. ')
         
     @stn_pos.setter 
     def stn_pos (self, stn_pk): 
         try : self._stn_pos =np.array([float(stn) 
                                        for stn in stn_pk])
-        except:raise CSex.pyCSAMTError_station(
+        except:raise StationError(
             'Station pka must be float number.! ')
 
 
@@ -196,7 +202,7 @@ class Location (object):
     def azimuth (self, easting_northing):
         print(easting_northing)
         if easting_northing.shape[1] !=2 : 
-            raise CSex.pyCSAMTError_azimuth(
+            raise AzimuthError(
                 'Azimuth expected to get two array_like(ndarray,2)')                                                                                                    
         elif easting_northing.shape[1] ==2 : 
             easting , northing =np.hsplit(easting_northing, 2)
@@ -223,7 +229,7 @@ class Location (object):
         if isinstance(self.latitude, np.ndarray):
             if self.latitude.size >= 1 or self.longitude >=1: # 
                 assert  self.latitude.size ==self.longitude.size,\
-                    CSex.pyCSAMTError_location(
+                    LocationError(
                     'latitude and longitude must be the same size.') 
     
                 self.easting = np.array([ 
@@ -254,7 +260,7 @@ class Location (object):
         """
         if utm_zone is not None : self._utm_zone =utm_zone 
         if self._utm_zone is None :
-            raise CSex.pyCSAMTError_location(
+            raise LocationError(
                 'Try to input the utm_zone : e.g.: 49N')
                                                                      
         _data_info_ll = gis.utm_to_ll(reference_ellipsoid=23,
@@ -362,7 +368,7 @@ class Site(object):
             
         elif self.stn_name is not None : 
             assert len(self.stn_name)== latitude.size, \
-                CSex.pyCSAMTError_site(
+                SiteError(
                 'Station names and latitude data must have the same size.'
                  ' But the given latitude size is <{0}>'.format(latitude.size))
 
@@ -376,7 +382,7 @@ class Site(object):
         if self.stn_name is None : self.stn_name = longitude.size
         if not isinstance(longitude,np.ndarray): longitude =np.array(longitude)
         if len(self.stn_name) != longitude.size :
-            raise CSex.pyCSAMTError_site(
+            raise SiteError(
                 'Station_names|longitude must'
                  ' have the same size.Longitude size is <{0}>'.
                           format(longitude.size))
@@ -391,7 +397,7 @@ class Site(object):
         if not isinstance(elevation,np.ndarray):
             elevation =np.array(elevation)
         if len(self.stn_name) != elevation.size :
-            raise CSex.pyCSAMTError_site('Station_names|Elevation must'
+            raise SiteError('Station_names|Elevation must'
                  ' have the same size.Elevation size is'
                  ' <{0}>'.format(elevation.size))
         self._elev ={stn:elev for stn, elev in zip (self.stn_name, elevation)} 
@@ -404,7 +410,7 @@ class Site(object):
         if self.stn_name is None : self.stn_name = azimuth.size
         if not isinstance(azimuth,np.ndarray): azimuth =np.array(azimuth)
         if len(self.stn_name) != azimuth.size :
-            raise CSex.pyCSAMTError_site(
+            raise SiteError(
                 'Station_names|Azimuth must'
                 ' have the same size.Azimuth size is <{0}>'.\
                           format(azimuth.size))
@@ -426,7 +432,7 @@ class Site(object):
                 
         if not isinstance(northing,np.ndarray): northing =np.array(northing)
         if len(self.stn_name) != northing.size :
-            raise CSex.pyCSAMTError_site(
+            raise SiteError(
                 'Station_names|Northing must'
                  ' have the same size.Northing size is <{0}>'.
                    format(northing.size))
@@ -441,7 +447,7 @@ class Site(object):
             self.stn_name = easting.size 
         if not isinstance(easting,np.ndarray): easting =np.array(easting)
         if len(self.stn_name) != easting.size :
-            raise CSex.pyCSAMTError_site(
+            raise SiteError(
                 'Station_names|Easting must'
                  ' have the same size.Easting size is <{0}>'.\
                         format(easting.size))
@@ -466,13 +472,13 @@ class Site(object):
         if data_fn is not None : self.sitedata = data_fn 
         if self.sitedata is None  and easting is None  and  northing is None :
             
-            raise CSex.pyCSAMTError_profile('Could not find the file to read. '
+            raise ProfileError('Could not find the file to read. '
                                             'Please provide the right path.')
         elif self.sitedata is not None : 
             if os.path.isfile (self.sitedata) : 
                 profile_obj =Profile(profile_fn=self.sitedata)
             
-            else : raise CSex.pyCSAMTError_profile(
+            else : raise ProfileError(
                 'Unable to read  a file. Please provide the right file.')
                                                    
             
@@ -697,7 +703,7 @@ class Profile (object):
         elif self.profile_fn  is None and (easting is not None or 
                                            northing is None) and \
             (lat is None or lon is None) : 
-            raise CSex.pyCSAMTError_profile(
+            raise ProfileError(
                 'Provided at least easting or lon or Northing'
                 ' or lat value or profile stn file.')    
         
@@ -735,7 +741,7 @@ class Profile (object):
                     decision , stn_headlines_id = cfunc._validate_stnprofile(
                         profile_lines= data_lines , spliting=split_type)
                     if decision <2:
-                        raise CSex.pyCSAMTError_profile(
+                        raise ProfileError(
                             'Please provide at least the Easting'
                              ' and northing coordinates or set the '
                              'lat/lon values to parse the data. ')
@@ -840,7 +846,7 @@ class Profile (object):
         elif _pflag ==2 or _pflag ==3 : 
             if _pflag == 2 : 
                 assert easting.size == northing.size ,\
-                    CSex.pyCSAMTError_profile(
+                    ProfileError(
                         'Easting and Northing must have the same size.'
                     ' easting|northing size are currentlysize is <{0}|{1}>.'.
                         format(easting.size, northing.size))
@@ -856,7 +862,7 @@ class Profile (object):
                 
             elif _pflag ==3 :
                 assert lat.size == lon.size ,\
-                    CSex.pyCSAMTError_profile(
+                    ProfileError(
                         'Easting and Northing must have the same size.'
                           ' lat|lon size are currentlysize is <{0}|{1}>.'.
                           format(lat.size, lon.size))
@@ -898,11 +904,11 @@ class Profile (object):
         
         if easting is not None : self.east = easting 
         if self.east is None :
-            raise CSex.pyCSAMTError_location(
+            raise LocationError(
                 'Easting coordinates must be provided . ')
         if northing is not None : self.north=northing 
         if self.north is None : 
-            raise CSex.pyCSAMTError_location(
+            raise LocationError(
                 'Northing coordinate must be provided.')
         
         if self.east is not None and self.north is not None :
@@ -911,7 +917,7 @@ class Profile (object):
               self.east =self.east.astype('float')
               self.north = self.north.astype('float')
             except : 
-                raise CSex.pyCSAMTError_float(
+                raise TypeError(
                     'Could not convert easting/northing to float.')
                    
         # use the one with the lower standard deviation
@@ -1030,7 +1036,7 @@ class Profile (object):
         if isinstance(x, str) or isinstance(y,str) : 
             try : float(x), float(y)
             except :
-                raise CSex.pyCSAMTError_profile(
+                raise ProfileError(
                     'Readjustment not possible with str number.'
                     ' Please provide the right values of x and y .')
         if x is None : 
@@ -1048,7 +1054,7 @@ class Profile (object):
                     'Not possible to reajust coordinates.'
                     ' Provide at least easting and northing values.')
                 
-                raise CSex.pyCSAMTError_station(
+                raise StationError(
                     'Could not find station file '
                     'to read. Can not readjust profile coordinates.')
             
@@ -1059,7 +1065,7 @@ class Profile (object):
             if inFO._sensitive().which_file(filename=stn_fn ,
                                             deep=False )=='stn':
                 if inFO._sensitive.which_file(filename=stn_fn ) !='stn': 
-                    raise CSex.pyCSAMTError_profile(
+                    raise ProfileError(
                         'File provided <{0}>is unacceptable. '
                         'Please provide your right stn file.'.
                             format(stn_fn))
@@ -1098,7 +1104,7 @@ class Profile (object):
                         ' ["dot|sta, "e|easting, "n|northing, "h|elev].'
                         ' Only this head can be parsed.')
                     
-                    raise CSex.pyCSAMTError_profile(
+                    raise ProfileError(
                         'Your station file profided is wrong. '
                         'Only <"dot|sta, "e|easting, '
                         '"n|northing, "h|elevation> can be parsed. ')
@@ -1225,11 +1231,11 @@ class Profile (object):
         if X is not None : self.east = X 
         if Y is not None : self.north = Y
         if self.east is None or self.north is None :
-            raise CSex.pyCSAMTError_profile('No possible way to straighten out '
+            raise ProfileError('No possible way to straighten out '
                 'the profile line . Please provide the right coordinates. ')
         
         if self.east.size != self.north.size : 
-            raise CSex.pyCSAMTError_profile('X and Y must be the same size. '
+            raise ProfileError('X and Y must be the same size. '
                        'X has a size <{0}> while Y has the size <{1}>. '
                        'Line cannot be straightened. '
                          'Please provide the same size of both arrays'.\
@@ -1238,7 +1244,7 @@ class Profile (object):
         # rescalled the coordinates 
         if reajust is not None :
             if len(reajust) !=2 : 
-                raise CSex.pyCSAMTError_profile(
+                raise ProfileError(
                     "Could not reajust coordinates beyond three values."
                     "Only x =reajust[0] and y=reajust[1] can be accepted. ")
                 
@@ -1405,7 +1411,7 @@ class Profile (object):
             self._logging.warning(
                 "It seems you did not provide any easting"
                             " values nor northing value.")
-            raise CSex.pyCSAMTError_profile(
+            raise ProfileError(
                 "You may provide easting and northing values before"
                 " writting a new station profile <*.stn> ")
             
@@ -1551,12 +1557,12 @@ class Profile (object):
             try :
                 easting = np.array([float(ss) for ss in easting])
                 northing =np.array([float(ss) for ss in northing])
-            except : raise CSex.pyCSAMTError_profile(
+            except : raise ProfileError(
                     "NoneType can not be computed."
                     "Please provide the right coordinates!.")
         
         if easting.size != northing.size :
-            raise CSex.pyCSAMTError_profile(
+            raise ProfileError(
             "Both coordinates array must have the same size."
              "The first argument size is <{0}>, while the second is <{1}>.".
                  format(easting.size, northing.size))
@@ -1617,14 +1623,14 @@ class Profile (object):
         reference_ellipsoid =kwargs.pop('reference_ellipsoid', 23)
         
         if easting is not  None  and northing is not None : 
-            assert easting.size == northing.size , CSex.pyCSAMTError_profile(
+            assert easting.size == northing.size , ProfileError(
                 'Easting and Northing must have the same size.'
                 ' Easting|northing size are currentlysize is <{0}|{1}>.'.\
                     format(easting.size, northing.size))
 
         elif latitude is not None and longitude is not None : 
             assert latitude.size == longitude.size , \
-                CSex.pyCSAMTError_profile(
+                ProfileError(
                     'Latitude and longitude must have the same size.'
                     ' Easting|northing size are currentlysize'
                         ' is <{0}|{1}>.'.format(easting.size, 
@@ -1634,7 +1640,7 @@ class Profile (object):
             utm_zone , easting, northing = gis.ll_to_utm(reference_ellipsoid,
                                                          latitude, longitude)
         else : 
-            raise CSex.pyCSAMTError_profile('May input at least easting and '
+            raise ProfileError('May input at least easting and '
                                             'northing coordinates values or'
                                             ' latitude and longitude values.')
             

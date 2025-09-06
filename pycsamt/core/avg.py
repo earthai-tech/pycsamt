@@ -20,15 +20,26 @@ import numpy as np
 import pandas as pd
 from  datetime import (datetime, timezone)
 
+from pycsamt._csamtpylog import csamtpylog
 from pycsamt.utils import _p as infOS
 from pycsamt.utils.decorator import deprecated
 from pycsamt.site import Site 
 from pycsamt.utils import zcalculator as Zcc
-from pycsamt.utils._csamtpylog import csamtpylog
-from pycsamt.utils import avg_utils as cfunc
+from pycsamt.utils import avg_utils as cfunc 
 from pycsamt.utils import func_utils as func
-from pycsamt.utils import exceptions as CSex
-
+#from pycsamt.utils import exceptions as CSex
+from pycsamt.exceptions import ( 
+    AVGError, 
+    ConfigFileError, 
+    FrequencyError, 
+    StationError, 
+    HeaderError, 
+    ZError, 
+    ProcessingError, 
+    ResistivityError, 
+    PhaseError,
+    
+    )
 _logger=csamtpylog.get_csamtpy_logger(__name__)
 
 __all__=[
@@ -107,31 +118,55 @@ class Avg (object):
         self.profile_fn =kwargs.pop('profile_fn', None)
         
 
-        self._f1_labels , self._f2_labels=['skp','Station',
-                                           ' Freq','Comp',
-                                           ' Amps','Emag',
-                                           'Ephz','Hmag',
-                                           'Hphz','Resistivity',
-                                           'Phase','%Emag',
-                                           'sEphz','%Hmag',
-                                           'sHphz','%Rho',
-                                           'sPhz'],['skp',
-                                                        'Freq','Tx.Amp',
-                                                        'E.mag','E.phz',
-                                                        'B.mag','B.phz',
-                                                        'Z.mag','Z.phz',
-                                                        'ARes.mag','SRes',
-                                                        'E.wgt', 'B.wgt',
-                                                        'E.%err','E.perr',
-                                                        'B.%err','B.perr',
-                                                        'Z.%err','Z.perr',
-                                                         'ARes.%err']
+        self._f1_labels=[
+            'skp',
+            'Station',
+            ' Freq',
+            'Comp',
+            ' Amps',
+            'Emag',
+            'Ephz',
+            'Hmag',
+            'Hphz',
+            'Resistivity',
+            'Phase',
+            '%Emag',
+            'sEphz',
+            '%Hmag',
+            'sHphz',
+            '%Rho',
+            'sPhz'
+            ]
+        self._f2_labels=[
+            'skp',
+            'Freq',
+            'Tx.Amp',
+            'E.mag',
+            'E.phz',
+            'B.mag',
+            'B.phz',
+            'Z.mag',
+            'Z.phz',
+            'ARes.mag',
+            'SRes',
+            'E.wgt', 
+            'B.wgt',
+            'E.%err',
+            'E.perr',
+            'B.%err',
+            'B.perr',
+            'Z.%err',
+            'Z.perr',
+            'ARes.%err'
+            ]
         self._zmark='$'
                                                     
-        self.EM_zonge2j = {'ExHx':'RXX', 
-                            'ExHy':'RXY',
-                                   'EyHx':'RYX', 
-                                   'EyHy':'RYY'}
+        self.EM_zonge2j = {
+            'ExHx':'RXX', 
+            'ExHy':'RXY',
+            'EyHx':'RYX', 
+            'EyHy':'RYY'
+            }
   
         for key in list(kwargs.keys()):
             self.__setattr__(key, kwargs[key])
@@ -154,13 +189,13 @@ class Avg (object):
         if data_fn is not None : 
             self.data_fn =data_fn 
         if self.data_fn is None  :
-            raise CSex.pyCSAMTError_avg_file(
+            raise AVGError(
                 'No AVG file found.Please check '
                 'your pathfile :<{0}>'.format(os.getcwd()))
         # print(self.data_fn)       
         if self.data_fn is not None : 
             if os.path.isfile(self.data_fn) is False :
-                raise CSex.pyCSAMTError_AVG('could not find %s', self.data_fn)
+                raise AVGError('could not find %s', self.data_fn)
                 
         self._logging.info('reading and checking the AVG file %s', self.data_fn)         
         #-------------------------------------------------------------
@@ -170,7 +205,7 @@ class Avg (object):
              self.data_fn.endswith('avg'.upper())) == False :
             warnings.warn(
                 '<Get more infos about AVG> :{0}'.format(infOS.notion.AVG))
-            raise CSex.pyCSAMTError_AVG(
+            raise AVGError(
                 'file provided is not an AVGfile.Please check your file!')
             
             
@@ -296,7 +331,7 @@ class Avg (object):
                     'It seems something wrong while reading'
                     ' Astatic file.', category=DeprecationWarning,
                     filename= func.__name__,  lineno=1)
-                raise CSex.pyCSAMTError_avg_file(
+                raise AVGError(
                     'File might be corrupted. number of frequency must'
                     ' be the same along along all stations.  ')
                     
@@ -319,12 +354,10 @@ class Avg (object):
             #  we set skip flag to '2' as good quality data 
             self.Skip_flag.setandget_skip_flag(skip_flag='2' ) 
         else : 
-            raise CSex.pyCSAMTError_avg_file(
+            raise AVGError(
                 'The number provided doesnt not match Avgfile.')
             
-            
-            
-            
+
     def avg_write_2_to_1 (self, data_fn=None , savepath =None ):
         """ 
         Method to rewrite avg Astatic file (F2) to main file F1 .
@@ -338,12 +371,12 @@ class Avg (object):
         """
         if data_fn is not None : self.data_fn =data_fn 
         if self.data_fn is None : 
-            raise CSex.pyCSAMTError_avg_file(
+            raise AVGError(
                 'No file detected. check your right path .')
         
         if self.data_fn is not None :
             if os.path.isfile (self.data_fn) is not True :
-                raise CSex.pyCSAMTError_avg_file(
+                raise AVGError(
                     'No file detected. Please check your right path. ')
                                                 
             #-- check whether the file is astatic file :
@@ -354,13 +387,13 @@ class Avg (object):
                 self.checker = cfunc._validate_avg_file(avg_data_file)
                 
                 if self.checker == 1 :
-                    raise CSex.pyCSAMTError_avg_file(
+                    raise AVGError(
                         'Input Avgfile < {0}> is not Zonge ASTATIC file. '
                         'Please put the right file !'.format(
                             os.path.basename(self.data_fn)))
                     
             else :
-                raise CSex.pyCSAMTError_AVG(
+                raise AVGError(
                     'No avg file detected ! Please check your file !')
             
         write_lines =['\\']
@@ -564,14 +597,14 @@ class Avg (object):
         
         if avg_data_fn is not None : self.data_fn = avg_data_fn 
         if self.data_fn is None :
-            raise CSex.pyCSAMTError_avg_file(
+            raise AVGError(
                 "Could not find any path to read ."
                  "Please provide your right AVG file.")
         
         if profile_fn is not None : self.profile_fn = profile_fn 
         
         if self.profile_fn is  None :
-            raise CSex.pyCSAMTError_station(
+            raise StationError(
                 'Need  absolutely station file.'
                 ' please provide your ".STN" file.')
         
@@ -838,7 +871,7 @@ class Avg (object):
         
         if data_fn is not None : self.data_fn = data_fn 
         if self.data_fn is None : 
-            raise CSex.pyCSAMTError_avg_file(
+            raise AVGError(
                 "Could not find any path to read ."
                 "Please provide your right AVG file.")
         
@@ -997,7 +1030,7 @@ class Avg (object):
                               ' Please provided the right filters'
                               ' for computing.'% apply_filter)
                                   
-                raise CSex.pyCSAMTError_processing(
+                raise ProcessingError(
                     'Filters provided is not acceptable.'
                     ' Recognized filters are "TMA","AMA" AND "FLMA"')
         
@@ -1420,7 +1453,7 @@ class SurveyAnnotation (object) :
             self.zon_serv_annotations = survey_annotations_data
             
         if self.zon_serv_annotations is None : 
-            CSex.pyCSAMTError_inputarguments(
+            raise ValueError(
                 'No survey_annotations informations found!')
             
             
@@ -1430,7 +1463,7 @@ class SurveyAnnotation (object) :
                     with open (self.zon_serv_annotations , 'r',
                                encoding ='utf8') as fid :
                         self.zon_serv_annotations =fid.readlines()
-            except : raise CSex.pyCSAMTError_Header(
+            except : raise HeaderError(
                     "Please check your annotation data ! "
                       "Must be be a list or file ") 
             
@@ -1567,14 +1600,14 @@ class SurveyConfiguration(object) :
         if survey_config_data is not None : 
             self.zon_surv_config = survey_config_data
         if self.zon_surv_config is None :
-            raise CSex.pyCSAMTError_Header("No Survey configuration data found."
+            raise HeaderError("No Survey configuration data found."
                                              " Please check your configuration file.")
         if type(self.zon_surv_config) is not list: 
             try :
                 if os.path.isfile(self.zon_surv_config) is True :
                     with open (self.zon_surv_config, 'r', encoding ='utf8') as fid :
                         self.zon_surv_config=fid.readlines()
-            except : raise CSex.pyCSAMTError_Header(
+            except : raise HeaderError(
                     "your configuration data must be either a list or a file.")
             
         # print(self.zon_surv_config)
@@ -1713,7 +1746,7 @@ class TransmitterProperties(object):
         """
         
         if Tx_data is None : 
-            CSex.pyCSAMTError_inputarguments('No Tx-proprerties found !')
+            TypeError('No Tx-proprerties found !')
         
         if Tx_data is not None : 
             for tx_infos in Tx_data : 
@@ -1820,14 +1853,14 @@ class ReceiverProperties(object):
             self.rx_data = Rx_data
         
         if self.rx_data is None : 
-            CSex.pyCSAMTError_inputarguments('No Zonge Rx-proprerties found !')
+            raise ValueError('No Zonge Rx-proprerties found !')
             
         if type(self.rx_data) is not list :
             try : 
                 if os.path.isfile(self.rx_data) ==True : 
                     with open(self.rx_data, 'r', encoding='utf-8') as frx:
                         self.rx_data =frx.readlines()
-            except : raise CSex.pyCSAMTError_Header(
+            except : raise HeaderError(
                     'Argument provided for rx_data are wrong !'
                                   ' Must be a list of file.')
                         
@@ -1920,7 +1953,7 @@ class Skip_flag (object) :
         
         if skip_flag is not None : 
             if skip_flag not in list(self.skip_flag_dict.keys()):
-                raise CSex.pyCSAMTError_config_file(
+                raise ConfigFileError(
                     'Wrong Input ! skip flag must be'
                      ' among : {0}'.format(list(self.skip_flag_dict.keys())))
             self.skip_flag = str(skip_flag)
@@ -2003,7 +2036,7 @@ class ZongeHardware(object):
         if zonge_hardw_infos is not None : 
             self.zonge_hardw_infos=zonge_hardw_infos 
         if self.zonge_hardw_infos is None : 
-            raise CSex.pyCSAMTError_Header(
+            raise HeaderError(
                 'No informations from hardware found !')
         
         if type (self.zonge_hardw_infos) is not list : 
@@ -2011,7 +2044,7 @@ class ZongeHardware(object):
                 with open(self.zonge_hardw_infos, 'r', encoding='utf8') as fzh : 
                     self.zonge_hardw_infos= fzh.readlines()
             except :
-                raise CSex.pyCSAMTError_Header(
+                raise HeaderError(
                     "Harware - infos must be either a list or  file !")
 
         for  infos in self.zonge_hardw_infos : 
@@ -2165,12 +2198,12 @@ class Data (object):
             self._data_array =data_array
             
         if self._data_array is None : 
-            raise CSex.pyCSAMTError_AvgData('No Data from avgfile to read.')
+            raise AVGError('No Data from avgfile to read.')
             
         if data_type is not None : 
             self._f =data_type
         if self._f not in [1,2]: 
-            raise CSex.pyCSAMTError_AvgData(' May check your avg Datafile.')
+            raise AVGError(' May check your avg Datafile.')
 
         
         number_of_freq_array , rep = \
@@ -2417,7 +2450,7 @@ class  Station(object):
                 [np.float(kk) for kk in station_data_array ])
   
         if self.station_data_array is None : 
-            raise CSex.pyCSAMTError_station('No stations data to read .')
+            raise StationError('No stations data to read .')
     
 
         num_station_counts , repsta = np.unique (self.station_data_array,
@@ -2425,7 +2458,7 @@ class  Station(object):
  
         #---> check if stations_data provided are each the same length. 
         if np.all(repsta, axis=0) != True : 
-            raise CSex.pyCSAMTError_station(
+            raise StationError(
                 'Stations provided must be the same length of reccurency.')
         if repsta[0] ==1 : 
             self.value = self.station_data_array 
@@ -2444,7 +2477,7 @@ class  Station(object):
             
             self._logging.warn(
                 'Station units provided is incorect.Try  "km" or "ft." Default is "m."')
-            raise CSex.pyCSAMTError_station(
+            raise StationError(
                 'Unit provided <{0}> doesnt not match correct units.'
                  'acceptable units are : "m", "km" or "ft"'.format(self.unit))
                     
@@ -2470,7 +2503,7 @@ class  Station(object):
             if type (self.rename_station) is list : 
                 self.rename_station=np.array(self.rename_station)
             if self.value.size != self.rename_station.size : 
-                raise CSex.pyCSAMTError_station(
+                raise StationError(
                     'Stations rename array must have the same length as'
                     ' the aray_data provided. lenght or stations_data is :<{0}>'
                     ' '.format(self.value.size))
@@ -2584,7 +2617,7 @@ class Frequency (object):
             self._freq_array =freq_array 
             
         if self._freq_array is None : 
-            raise CSex.pyCSAMTError_frequency('No Frequency Data found.')
+            raise FrequencyError('No Frequency Data found.')
             
             
         self._freq_array =np.array([np.float(kk) for kk in self._freq_array])  
@@ -2596,7 +2629,7 @@ class Frequency (object):
         
         self.numfreq = vacount_freq.size
         if np.all(freq_repeat, axis =0) != True : 
-            raise CSex.pyCSAMTError_frequency(
+            raise FrequencyError(
                 'Problem occured when reading frequency data.'
                  'All frequency on Avgfile Must be the same length. ')
         # self.value =vacount_freq
@@ -2656,7 +2689,7 @@ class Frequency (object):
                     self._logging.warn (
                         "Input interpolated arguments are wrong! arguments "
                         "type must a list of integers. ")
-                    raise CSex.pyCSAMTError_inputarguments(
+                    raise TypeError(
                         "Input value of frequency is wrong. Must be"
                          " a list of integers.")
             lengh_interp =np.linspace(self.normalize_freq_betw[0],
@@ -2721,14 +2754,14 @@ class Comp (object):
                     self.name =self.new_comp
                 else : 
                     self._logging.warn ('Component provided is wrong !')
-                    CSex.pyCSAMTError_inputarguments(
+                    TypeError(
                         "Component provide as new component is wrong"
                         "list of components:{0}".format(self.component_type))
             else : 
                 warnings.warn(
                     "Components must be a string : a list of arguments below:"
                      "{0}".format(self.component_type))
-                CSex.pyCSAMTError_inputarguments(
+                TypeError(
                     "Component type is wrong. must a string."
                     "list of components:{0}".format(self.component_type))
                     
@@ -2811,16 +2844,16 @@ class Amps (object):
         if amps_array is not None : 
             self._amps_array =amps_array 
         if self._amps_array is None : 
-            raise CSex.pyCSAMTError_inputarguments('No Ampers data !')
+            raise TypeError('No Ampers data !')
             
         if number_of_frequencies is not None : 
             self.nfreq =number_of_frequencies 
         else :
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 "Please specify the number of frequency !")
         if number_of_stations is not None : 
             self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments(
+        else : raise TypeError(
             'Please specify the number of stations')
             
         try : 
@@ -2829,7 +2862,7 @@ class Amps (object):
             self._amps_array=np.array([np.float(cc) for cc in self._amps_array])
 
         except : 
-            raise CSex.pyCSAMTError_value(
+            raise ValueError(
                 "Values provided for the amp are wrong."
                 " must be float or integer .")
             
@@ -2919,17 +2952,17 @@ class Emag (object):
         if e_mag_array is not None : 
             self.e_mag_array =e_mag_array 
         if self.e_mag_array is None : 
-            raise CSex.pyCSAMTError_inputarguments('No E-Field  data found  !')
+            raise TypeError('No E-Field  data found  !')
             
         if number_of_frequencies is not None : 
             self.nfreq =number_of_frequencies 
         else :
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 "Please specify the number of frequency !")
         if number_of_stations is not None :
             self.number_of_stations =number_of_stations 
         else :
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'Please specify the number of stations')
             
         try : 
@@ -2938,7 +2971,7 @@ class Emag (object):
             self.e_mag_array=np.array([np.float(cc) for cc in self.e_mag_array])
 
         except : 
-            raise CSex.pyCSAMTError_value(
+            raise ValueError(
                 "Values provided for the amp are wrong."
                  " must be float or integer .")
             
@@ -3037,17 +3070,17 @@ class Ephz (object):
         if e_phz_array is not None : 
             self.e_phz_array =e_phz_array
         if self.e_phz_array is None : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'No E-phase data found  !')
 
         if number_of_frequencies is not None : 
             self.nfreq =number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments(
+        else :raise TypeError(
             "Please specify the number of frequency !")
         if number_of_stations is not None : 
             self.number_of_stations =number_of_stations 
         else : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'Please specify the number of stations')
             
         try : 
@@ -3056,7 +3089,7 @@ class Ephz (object):
             self.e_phz_array=np.array([np.float(cc) for cc in self.e_phz_array])
 
         except : 
-            raise CSex.pyCSAMTError_value(
+            raise ValueError(
                 "Values provided for the E-phase are wrong."
                  " must be float or integer .")
         if self.to_degree : #---> set angle to degree .
@@ -3154,17 +3187,17 @@ class Hmag (object):
             self.h_mag_array =h_mag_array 
             
         if self.h_mag_array is None : 
-            raise CSex.pyCSAMTError_inputarguments('No B-Field  data found  !')
+            raise TypeError('No B-Field  data found  !')
             
         if number_of_frequencies is not None : 
             self.nfreq =number_of_frequencies 
         else :
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 "Please specify the number of frequency !")
         if number_of_stations is not None :
             self.number_of_stations =number_of_stations 
         else : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'Please specify the number of stations')
             
         try : 
@@ -3173,7 +3206,7 @@ class Hmag (object):
             self.h_mag_array=np.array([np.float(cc) for cc in self.h_mag_array])
 
         except : 
-            raise CSex.pyCSAMTError_value(
+            raise ValueError(
                 "Values provided for the B-Field are wrong."
                 " must be float or integer .")
             
@@ -3270,17 +3303,17 @@ class Hphz (object):
         if h_phz_array is not None : 
             self.h_phz_array=h_phz_array
         if self.h_phz_array is None : 
-            raise CSex.pyCSAMTError_inputarguments('No E-phase data found  !')
+            raise TypeError('No E-phase data found  !')
 
         if number_of_frequencies is not None :
             self.nfreq =number_of_frequencies 
         else :
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 "Please specify the number of frequency !")
         if number_of_stations is not None :
             self.number_of_stations =number_of_stations 
         else : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'Please specify the number of stations')
             
         try : 
@@ -3289,7 +3322,7 @@ class Hphz (object):
             self.h_phz_array=np.array([np.float(cc) for cc in self.h_phz_array])
 
         except : 
-            raise CSex.pyCSAMTError_value(
+            raise ValueError(
                 "Values provided for the E-phase are wrong."
                  " must be float or integer .")
         if self.to_degree : #---> set angle to degree .
@@ -3301,7 +3334,7 @@ class Hphz (object):
             self.h_phz_array, return_counts=True)
         
         if not np.all(repeat_hphz):
-            raise CSex.pyCSAMTError_value(
+            raise ValueError(
                 'Values of B-phases provided must have the same length'
                  ' for each stations. ')
         self.value =vcounts_h_phz
@@ -3404,24 +3437,24 @@ class Resistivity (object):
         if res_array  is not None : 
             self.res_array= res_array
         if self.res_array is None : 
-            raise CSex.pyCSAMTError_inputarguments('No Resistivity data found !')
+            raise TypeError('No Resistivity data found !')
 
         if number_of_frequencies is not None : 
             self.nfreq =number_of_frequencies 
         else :
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 "Please specify the number of frequency !")
         if number_of_stations is not None : 
             self.number_of_stations =number_of_stations 
         else : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'Please specify the number of stations')
         
         if Sres is not None :
 
             self.Sres = np.array([np.float(res) for res in Sres])
             if self.res_array.shape[0] != self.Sres.size : 
-                raise CSex.pyCSAMTError_rho(
+                raise ResistivityError(
                     'Resistivity calculated & '
                      'Astatic_array must get the same length!.')
         try : 
@@ -3430,14 +3463,14 @@ class Resistivity (object):
             self.res_array =np.array([np.float(cc) for cc in self.res_array])
 
         except :
-            raise CSex.pyCSAMTError_value(
+            raise ValueError(
                 "Values provided for the Resistivities are wrong."
                  " must be float or integer .")
         
         vcounts_res, repeat_hphz=np.unique (self.res_array,
                                             return_counts=True)
         if not np.all(repeat_hphz): 
-            raise CSex.pyCSAMTError_value(
+            raise ValueError(
                 'Values of Rho provided must have the same length'\
                  ' for each stations.')
         self.value =vcounts_res
@@ -3550,17 +3583,17 @@ class Phase (object):
         if phase_array is not None : 
             self._phase_array =phase_array
         if self._phase_array is None : 
-            raise CSex.pyCSAMTError_inputarguments('No Phase data found  !')
+            raise TypeError('No Phase data found  !')
 
         if number_of_frequencies is not None : 
             self.nfreq =number_of_frequencies 
         else :
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 "Please specify the number of frequency !")
         if number_of_stations is not None :
             self.number_of_stations =number_of_stations 
         else : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'Please specify the number of stations')
 
             
@@ -3571,7 +3604,7 @@ class Phase (object):
                                         for cc in self._phase_array])
 
         except : 
-            raise CSex.pyCSAMTError_value(
+            raise ValueError(
                 "Values provided for the Phase are wrong."\
                  " must be float or integer .")
         if self.to_degree : #---> set angle to degree .
@@ -3687,7 +3720,7 @@ class Z_Tensor(object): # rename to Z
             try : 
                 self._freq =np.array([np.float(ff) for ff in freq_array])
             except :
-                raise CSex.pyCSAMTError_frequency(
+                raise FrequencyError(
                     'wrong Input frequencies values.must be a float number. ')
                                             
             
@@ -3699,7 +3732,7 @@ class Z_Tensor(object): # rename to Z
         if phz_array.dtype not in ['float', 'int']:
             try :self._phase =np.array([float(phz) for phz in phz_array])
             except :
-                raise CSex.pyCSAMTError_Phase(
+                raise PhaseError(
                     'Arguments phase values must be int, or float .')
             
     @property 
@@ -3711,7 +3744,7 @@ class Z_Tensor(object): # rename to Z
             try : 
                 self._z_err =np.array([float(zz) for zz in z_error_])
             except :
-                raise CSex.pyCSAMTError_Z(
+                raise ZError(
                     "Error z input values are incorrects.")
     
     @property 
@@ -3724,7 +3757,7 @@ class Z_Tensor(object): # rename to Z
             try : 
                 zz_array= np.array([np.float(zz) for zz in zz_array])
             except : 
-                raise CSex.pyCSAMTError_Z(
+                raise ZError(
                     'z_impedance value must be a complex_number.')
         #---> provide freq value and phase .         
         if zz_array.dtype in ['float', 'int']: 
@@ -3761,7 +3794,7 @@ class Z_Tensor(object): # rename to Z
         if freq is not None : self.freq=freq
         
         if self.z is None or self.freq is None : 
-            raise CSex.pyCSAMTError_Z(
+            raise ZError(
                 'None values can not be computed. Check values !')
             
         self.rho =np.apply_along_axis(
@@ -3782,7 +3815,7 @@ class Z_Tensor(object): # rename to Z
         if res_array.dtype not in ['float', 'int']:
             try : self._rho = np.array([float(res) for res in res_array]) 
             except : 
-                raise CSex.pyCSAMTError_rho(
+                raise ResistivityError(
                     'Resistivities values must be float '
                      'or integer , not a None type !')
                 
@@ -3820,13 +3853,13 @@ class Z_Tensor(object): # rename to Z
         if self.rho is None  or self.phase is None or self.freq is None : 
             self._logging.warn(
                 'NoneType can not be computed. please check your data arrays.')
-            raise CSex.pyCSAMTError_Z(
+            raise ZError(
                 'could note compute a Nonetype number. please check numbers.')
         
         # compute imag part and real part of Z 
              
         if self.rho.size != self.freq.size : 
-            raise CSex.pyCSAMTError_Z(
+            raise ZError(
                 'Resistivity , freq and phase_array must be the same size. ')
         
         # zz_= np.array([np.sqrt(0.2 * self._freq[ii] * 
@@ -3874,18 +3907,18 @@ class Z_Tensor(object): # rename to Z
         if z_abs_array is not None : 
             self.zAS = z_abs_array 
         if self.zAS is None : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'No zonge Astatic  data found  !')            
             
         if number_of_frequencies is not None :
             self.nfreq = number_of_frequencies 
-        else :raise CSex.pyCSAMTError_inputarguments(
+        else :raise TypeError(
             "Please specify the number of frequency !")
         
         if number_of_stations is not None : 
             self.number_of_stations= number_of_stations
         else : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                                     'Please specify the number of stations')
 
         
@@ -3905,7 +3938,7 @@ class Z_Tensor(object): # rename to Z
                 np.int(self.number_of_stations)
             zabs_array=np.array([np.float(cc) for cc in zabs_array])
         except :
-            raise CSex.pyCSAMTError_value(
+            raise ValueError(
                 "Values provided for Z-astatic are wrong."
                 " check your Zonge AVG file .")        
         
@@ -3997,17 +4030,17 @@ class pcEmag (object):
         if pc_e_mag_array is not None : 
             self._pcEmag =pc_e_mag_array 
         if self._pcEmag is None : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'No E-mag statistical variation  data found  !')
             
         if number_of_frequencies is not None : 
             self.nfreq =number_of_frequencies 
         else :
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 "Please specify the number of frequency !")
         if number_of_stations is not None : 
             self.number_of_stations =number_of_stations 
-        else : raise CSex.pyCSAMTError_inputarguments(
+        else : raise TypeError(
             'Please specify the number of stations')
             
         try : 
@@ -4015,7 +4048,7 @@ class pcEmag (object):
                 np.int(self.number_of_stations)
             self._pcEmag=np.array([np.float(cc) for cc in self._pcEmag])
 
-        except : raise CSex.pyCSAMTError_value(
+        except : raise ValueError(
                 "Values provided for the E-mag stat.variation  are wrong."
                 " must be float or integer .")
             
@@ -4114,18 +4147,18 @@ class sEphz(object) :
         
         if sEphz_array is not None : self._sEphz =sEphz_array
         if self._sEphz is None :  
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'No stat.variation  B-field-phase data found  !')
                                                    
         if number_of_frequencies is not None : 
             self.nfreq = number_of_frequencies 
         else :
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 "Please specify the number of frequency !")
         if number_of_stations is not None : 
             self.number_of_stations =number_of_stations 
         else : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'Please specify the number of stations')
         self.nfreq , self.number_of_stations =np.int(self.nfreq),\
             np.int(self.number_of_stations)    
@@ -4139,7 +4172,7 @@ class sEphz(object) :
             try : 
                 input_obj =np.array([float(ss) for ss in input_obj])
             except : 
-                raise  CSex.pyCSAMTError_value(
+                raise  ValueError(
                     "Values provided for computing are wrong."
                     " must be float or integer .")
             
@@ -4244,18 +4277,18 @@ class pcHmag (object):
         if pc_h_mag_array is not None : 
             self._pcHmag =pc_h_mag_array 
         if self._pcHmag is None : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'No B-mag statistical variation  data found  !')
             
         if number_of_frequencies is not None : 
             self.nfreq =number_of_frequencies 
         else :
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 "Please specify the number of frequency !")
         if number_of_stations is not None : 
             self.number_of_stations =number_of_stations 
         else : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'Please specify the number of stations')
             
         try : 
@@ -4264,7 +4297,7 @@ class pcHmag (object):
             self._pcHmag=np.array([np.float(cc) for cc in self._pcHmag])
 
         except : 
-            raise CSex.pyCSAMTError_value(
+            raise ValueError(
                 "Values provided for the B-mag stat.variation  are wrong."
                  " must be float or integer .")
             
@@ -4365,18 +4398,18 @@ class sHphz(object) :
         
         if sHphz_array is not None : self._sHphz =sHphz_array
         if self._sHphz is None :  
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'No stat.variation B-field-phase data found  !')
                                                     
         if number_of_frequencies is not None :
             self.nfreq = number_of_frequencies 
         else :
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 "Please specify the number of frequency !")
         if number_of_stations is not None : 
             self.number_of_stations =number_of_stations 
         else : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'Please specify the number of stations')
         self.nfreq , self.number_of_stations =np.int(self.nfreq),\
             np.int(self.number_of_stations)    
@@ -4390,7 +4423,7 @@ class sHphz(object) :
             try : 
                 input_obj =np.array([float(ss) for ss in input_obj])
             except : 
-                raise  CSex.pyCSAMTError_value(
+                raise  ValueError(
                     "Values provided for computing are wrong."\
                     " must be float or integer .")
             
@@ -4502,17 +4535,17 @@ class pcRho (object):
         if pcRes_array  is not None : 
             self._pcRes= pcRes_array 
         if self._pcRes is None : 
-            raise CSex.pyCSAMTError_inputarguments('No Resistivity data found !')
+            raise TypeError('No Resistivity data found !')
 
         if number_of_frequencies is not None : 
             self.nfreq =number_of_frequencies 
         else :
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 "Please specify the number of frequency !")
         if number_of_stations is not None :
             self.number_of_stations =number_of_stations 
         else : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise TypeError(
                 'Please specify the number of stations')
       
         try : 
@@ -4521,13 +4554,13 @@ class pcRho (object):
             self._pcRes =np.array([np.float(cc) for cc in self._pcRes])
 
         except :
-            raise CSex.pyCSAMTError_value(
+            raise ValueError(
                 "Values provided for the Resistivities are wrong."
                  " must be float or integer .")
         
         vcounts_pcres, repeat_hphz=np.unique (self._pcRes, return_counts=True)
         if not np.all(repeat_hphz): 
-            raise CSex.pyCSAMTError_value(
+            raise ValueError(
                 'Values of Rho provided must have the same length'
                  ' for each stations. ')
         self.value =vcounts_pcres
@@ -4625,18 +4658,18 @@ class sPhz(object) :
         
         if sPhase_array is not None : self._sPhs =sPhase_array
         if self._sPhs is None : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise ZError(
                 'No stat.variation  Impedance Z -phase data found  !')
                 
         if number_of_frequencies is not None :
             self.nfreq = number_of_frequencies 
         else :
-            raise CSex.pyCSAMTError_inputarguments(
+            raise ValueError(
                 "Please specify the number of frequency !")
         if number_of_stations is not None : 
             self.number_of_stations =number_of_stations 
         else : 
-            raise CSex.pyCSAMTError_inputarguments(
+            raise StationError(
                 'Please specify the number of stations')
         self.nfreq , self.number_of_stations =np.int(self.nfreq),\
             np.int(self.number_of_stations)    
@@ -4650,7 +4683,7 @@ class sPhz(object) :
             try : 
                 input_obj =np.array([float(ss) for ss in input_obj])
             except : 
-                raise  CSex.pyCSAMTError_value(
+                raise  ValueError(
                     "Values provided for computing are wrong."\
                     " must be float or integer .")
             

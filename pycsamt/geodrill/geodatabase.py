@@ -20,12 +20,12 @@ import pandas as pd
 import warnings
 import datetime
 
-import  pycsamt.utils.exceptions as CSex 
 from pycsamt.geodrill.structural import Geo_formation 
 from pycsamt.geodrill._dictapp import Glob
 from pycsamt.geodrill.requestmanager import ManageDB
 from  pycsamt.utils.decorator import deprecated_to
-from pycsamt.utils._csamtpylog import csamtpylog 
+from pycsamt._csamtpylog import csamtpylog 
+from pycsamt.utils.exceptions  import DataBaseError, SQLError  
 #set LogInfos
 try :
     _logger=csamtpylog.get_csamtpy_logger(__name__)
@@ -208,7 +208,7 @@ class GeoDataBase (object):
         if self.geo_structure_name is None : 
             warnings.warn('No name is inputted as geological formation. Sorry ,'
                           ' your request is aborted !')
-            raise CSex.pyCSAMTError_SQL_manager(
+            raise SQLError(
                 'No name is given as geological formation. Sorry ,'\
                  ' your request is aborted !')
                 
@@ -301,11 +301,11 @@ class GeoDataBase (object):
             elif 'name' in list(kws.keys()) : 
                 geo_formation_name=str(kws['name'])
             else : 
-                raise CSex.pyCSAMTError_SQL_update_geoinformation(
+                raise SQLError(
                     ' Unable to find a new geological structure name.')
     
         if not isinstance(geo_formation_name, str) : 
-            raise CSex.pyCSAMTError_SQL_update_geoinformation(
+            raise SQLError(
                 'Unacceptable rock/layer name ={0}.'\
                     ' Please provide a right rock/layer name.')
         geo_formation_name=str(geo_formation_name) # for consistency 
@@ -329,7 +329,7 @@ class GeoDataBase (object):
                 'formation with their corresponding values ', 
                 ' see { _add_geo_structure } method .'])
             self._logging.warn(mess)
-            raise CSex.pyCSAMTError_SQL_update_geoinformation(
+            raise SQLError(
                 'Update name= {0}  failed ! it doesnt not exist in '
                 'geoDataBase'.format(self.geo_structure_name))
                     
@@ -344,7 +344,7 @@ class GeoDataBase (object):
                         " exist in geoDataBase.Please provide a right ", 
                         " keys among = {0}". format(tuple(self.codef[2:]))])
                     self._logging.error(mess)
-                    raise CSex.pyCSAMTError_SQL_manager(mess)
+                    raise SQLError(mess)
         
                 elif geo_key in self.codef :
                     if geo_key.find('pat') >= 0 : 
@@ -356,7 +356,7 @@ class GeoDataBase (object):
                                 ' value = {0} to float.'.format(kws[geo_key]), 
                                 'Please try again later.'])
                             self._logging.error(msg)
-                            raise CSex.pyCSAMTError_SQL_update_geoinformation(msg)
+                            raise SQLError(msg)
                             
                     # let get the formatage of all values  (properties values )  
                     elif geo_key.find('colorMPL') >=0 : 
@@ -554,11 +554,11 @@ class GeoDataBase (object):
             elif 'name' in list(kws.keys()) : 
                 new_geological_rock_name=str(kws['name'])
             else : 
-                raise CSex.pyCSAMTError_SQL_update_geoinformation(
+                raise SQLError(
                     ' ! Unable to find a new geo_logical structure name.')
     
         if not isinstance(new_geological_rock_name, str) : 
-            raise CSex.pyCSAMTError_SQL_update_geoinformation(
+            raise SQLError(
                 'Unacceptable rocks names ={0}.'
                  ' Please provide a right rock name.')
         new_geological_rock_name=str(new_geological_rock_name) # 
@@ -575,7 +575,7 @@ class GeoDataBase (object):
         elif geoDataBase_obj.success  ==0:
             mess = "Connection to SQL geoDataBase failed ! Try again later." 
             warnings.warn(mess)
-            raise CSex.pyCSAMTError_SQL_geoDataBase(mess)
+            raise DataBaseError(mess)
             
         #----------------------------------------------------------------------
        
@@ -586,7 +586,7 @@ class GeoDataBase (object):
                         geoDataBase_obj.geo_structure_name)
             warnings.warn(mess)
             _logger.error(mess)
-            raise CSex.pyCSAMTError_SQL_update_geoinformation(mess)
+            raise SQLError(mess)
             
         if geoDataBase_obj.geo_structure_exists is False : 
   
@@ -610,7 +610,7 @@ class GeoDataBase (object):
             for key in list(kws.keys()) : 
 
                 if key not in new_codef  : 
-                    raise CSex.pyCSAMTError_SQL_update_geoinformation(
+                    raise SQLError(
                         'Process aborted ! wrong <{0}> key!'
                          ' could not add new informations. '
                          'Please check your key !'.format(key))
@@ -686,7 +686,7 @@ class GeoDataBase (object):
                 warnings.warn (mess)
                 _logger.error(mess)
                 
-                raise CSex.pyCSAMTError_SQL_update_geoinformation(mess)
+                raise SQLError(mess)
                 
             else :
    
@@ -711,7 +711,7 @@ class GeoDataBase (object):
             mes ='Process aborted ! Could not convert'\
                 f' {pattern_value} to float number.'
             self._logging.warning(mes)
-            raise CSex.pyCSAMTError_SQL_update_geoinformation(mes)
+            raise SQLError(mes)
 
         else : 
             self._pattern = float(pattern_value)
@@ -749,7 +749,7 @@ class GeoDataBase (object):
                 
                     self._mplcolor = mpl.colors.to_rgb(str ( mpl_color))
                 except : 
-                    raise  CSex.pyCSAMTError_SQL_manager(
+                    raise  SQLError(
                         ' Unsupported {0} color!'.format(mpl_color))  
                 else :  # keep only R, G, B and abandon alpha . 
                         #Matplotlib give tuple of 4 values 
@@ -765,7 +765,7 @@ class GeoDataBase (object):
                              '  again later.'])
                 
                 self._logging.error(msg)
-                raise CSex.pyCSAMTError_SQL_update_geoinformation(msg)
+                raise SQLError(msg)
             # let check whether the value provided can be converted to float    
             if len(mpl_color)==3 :  
                 try : 
@@ -776,7 +776,7 @@ class GeoDataBase (object):
                                    '= {0} to float.'.format(mpl_color), 
                                    'Please try again later.'])
                      self._logging.error(msg)
-                     raise CSex.pyCSAMTError_SQL_update_geoinformation(msg)
+                     raise SQLError(msg)
                 else : 
                     # try to check if value is under 1.
                     # because color is encoding to 1 to 255 bits 
@@ -790,7 +790,7 @@ class GeoDataBase (object):
                                 f' `{ival}` is UNacceptable value ! Input ',
                                 f' value is {fmt}. It must be encoding from ',
                                 '1 to 255 bits as MPL colors.'])
-                            raise CSex.pyCSAMTError_SQL_update_geoinformation(msg)
+                            raise SQLError(msg)
                             
                 self._mplcolor=str( self._mplcolor) # put on str for consistency 
                 
@@ -842,7 +842,7 @@ class GeoDataBase (object):
                     self._electrical_props =[float(res) 
                                        for res in range_of_rocks_resvalues]
                 except : 
-                    raise CSex.pyCSAMTError_SQL_update_geoinformation(
+                    raise SQLError(
                         ' !Could not convert input values to float.')
                 else :# range the values to min to max 
                     self._electrical_props =sorted(self._electrical_props) 
@@ -868,7 +868,7 @@ class GeoDataBase (object):
                         
                 self._logging.error(mess)
                 warnings.warn(mess)
-                raise CSex.pyCSAMTError_SQL_update_geoinformation(mess)
+                raise SQLError(mess)
             else : 
                 
                 self._electrical_props = .0 #mean value  initialised 
@@ -953,7 +953,7 @@ class GeoDataBase (object):
             
         except : 
             warnings.warn('Could not create {AGS0} Table !')
-            raise CSex.pyCSAMTError_SQL_geoDataBase(
+            raise DataBaseError(
                 'Table AGS0 already exists !')
 
         if self.manage_geoDataBase.success ==1: 

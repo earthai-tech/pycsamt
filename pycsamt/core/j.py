@@ -25,8 +25,8 @@ from pycsamt.core.edi import (Edi, Hmeasurement, Emeasurement)
 from pycsamt.utils._p import _sensitive as SB 
 from pycsamt.utils.decorator import deprecated
 import pycsamt.utils.func_utils as func
-from pycsamt.utils import exceptions as CSex
-from pycsamt.utils._csamtpylog import csamtpylog
+from pycsamt.utils.exceptions import JError
+from pycsamt._csamtpylog import csamtpylog
 
 _logger = csamtpylog.get_csamtpy_logger(__name__)
 
@@ -173,7 +173,7 @@ class J_collection :
                 self._station_names = J.jname(number_of_sites= int(jstnames), 
                                           survey_name=self.survey_name)
             except :
-                raise CSex.pyCSAMTError_J(
+                raise JError(
                     'Stations names must be on list or the number'
                     ' of stations not <{0}>.'.format(type(jstnames)))
                 
@@ -213,7 +213,7 @@ class J_collection :
             self.jfiles_list = jfn
 
         if self.jfiles_list is None : 
-            raise CSex.pyCSAMTError_J('No files found !'
+            raise JError('No files found !'
                                       ' Please provide A.G. J-files ')
         # export to savepath 
         if savepath is None : # create a folder in your current work directory
@@ -399,7 +399,7 @@ class J_collection :
             self.jfiles_list = sorted(list_of_jfiles)
             
         elif self.jfiles_list is None : 
-            raise CSex.pyCSAMTError_J ('Can not find a list of j files.'
+            raise JError ('Can not find a list of j files.'
                                        ' Please check your path !')
             
         # we assume that only file is read than put on list  for looping.
@@ -523,7 +523,7 @@ class J_collection :
         """
         
         if list_of_jfiles is not None : self.jfiles_list= list_of_jfiles 
-        if self.jfiles_list is None : raise CSex.pyCSAMTError_J(
+        if self.jfiles_list is None : raise JError(
                 'Can not compute NoneType.Check your path')
         elif self.jfiles_list is not None :
             self.collect_jfiles(list_of_jfiles =self.jfiles_list )
@@ -607,7 +607,7 @@ class J_collection :
             self.savepath = savepath 
             
         if self.jfiles_list is  None : 
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'No files found to read . '
                  'Please check your path <%s>'% os.getcwd())  
         elif self.jfiles_list is not None : 
@@ -879,7 +879,7 @@ class J:
         try :
             self._jperiod=np.array([float(ii) for ii in jperds])
         except : 
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Can not convert "str"jperiod value to float.')
     
     @property 
@@ -893,7 +893,7 @@ class J:
         try : 
             self._app_rho=np.array([float(ii) for ii in japp_rho])
         except :
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Can not convert "str" apparent resistivity value to float.')
     
     @property 
@@ -907,7 +907,7 @@ class J:
         try : 
             self._jpha=np.array([float(ii) for ii in jphase])
         except : 
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Could not convert "str" phase value to float.')
         
     @property 
@@ -921,7 +921,7 @@ class J:
         try : 
             self._jrhomax=np.array([float(ii) for ii in jrhomax])
         except : 
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Could not convert "str"jrhomax value to float.')
         
     @property 
@@ -935,7 +935,7 @@ class J:
         try : 
             self._jphamax=np.array([float(ii) for ii in jphamax])
         except :
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Could not convert "str"jphamax value to float.')
         
     @property 
@@ -949,7 +949,7 @@ class J:
         try : 
             self._jrhomin=np.array([float(ii) for ii in jrhomin])
         except : 
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Could not convert "str"jrhomin value to float.')
         
     @property 
@@ -963,7 +963,7 @@ class J:
         try :
             self._jphamin=np.array([float(ii) for ii in jphamin])
         except : 
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Could not convert "str" jphamin value to float.')
         
     @property 
@@ -978,7 +978,7 @@ class J:
             self._jwrho=np.array(
                 [float(ii) for ii in jwrho])
         except : 
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Could not convert "str" jwrho value to float.')
     
     @property 
@@ -992,7 +992,7 @@ class J:
         try : 
             self._jwpha=np.array([float(ii) for ii in jwpha])
         except : 
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Could not convert "str" jwphase value to float.')
     
     @property 
@@ -1006,7 +1006,7 @@ class J:
         try : 
             self._jreal=np.array([float(ii) for ii in jreal])
         except : 
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Could not convert "str" jreal value to float.')   
 
 
@@ -1021,7 +1021,7 @@ class J:
         try : 
             self._jimag=np.array([float(ii) for ii in jimag])
         except :
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Could not convert "str" jimag value to float.')   
 
     @property 
@@ -1035,7 +1035,7 @@ class J:
         try : 
             self._jerror=np.array([float(ii) for ii in jerror])
         except :
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Could not convert "str" jerror value to float.')  
 
     @property 
@@ -1051,7 +1051,7 @@ class J:
         try : 
             self._jweight=np.array([float(ii) for ii in jweight])
         except : 
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Could not convert "str" jweight value to float.')  
 
 
@@ -1062,7 +1062,7 @@ class J:
     @jmode.setter 
     def jmode(self, jpolar):
         if not isinstance(jpolar, str):
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'jMode polarization must be on str not <{}>'.format(type(jpolar)))
         self._jmode =self.jMode(polarization_type=jpolar)
         
@@ -1087,7 +1087,7 @@ class J:
         if not isinstance(number_of_sites, int): 
             try :number_of_sites = int(number_of_sites)
             except : 
-                raise CSex.pyCSAMTError_J(
+                raise JError(
                     'Number of sites must be int not <{0}>.'.
                      format(type(number_of_sites)))
         for ss in range(number_of_sites):
@@ -1132,7 +1132,7 @@ class J:
                          
             print(notion.j)
             
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Value provided is not in polarization mode '
                  '.Please consult the dict above.') 
         
@@ -1149,7 +1149,7 @@ class J:
         jdata=[]
         if j_fn is not None : self.jfn =j_fn 
         if self.jfn is None : 
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'Error file. Please Provide the right path!')
   
         self._logging.info('Reading A.G.Jones J-format "%s"'%os.path.basename(
@@ -1163,7 +1163,7 @@ class J:
             else :
                 self._logging.warn("File <%s>is not J-format file." %self.jfn)
                 warnings.warn('File <%s> is not J-Format File.'% self.jfn)
-                raise CSex.pyCSAMTError_J(
+                raise JError(
                     'File provided doesn no match the J-format.'
                     ' Please consult :"http://mtnet.info/docs/jformat.txt" {0}'.\
                      format(webbrowser.open('http://mtnet.info/docs/jformat.txt')))
@@ -1246,7 +1246,7 @@ class J:
                     warnings.warn (
                         'J-FORMAT expects to get "9" records'
                          ' values like <{0}>'.format(*list(notion.j_recordR.keys())))
-                    raise CSex.pyCSAMTError_J(
+                    raise JError(
                         'For data type=R?? Only  9 Range values are not '
                         'acceptable. You provided <{0}>'.format(JDAT.shape[1]))
             elif (re.match(r'^Z', self.jmode) is True) or \
@@ -1260,7 +1260,7 @@ class J:
                     warnings.warn('JFORMAT for GSC responses expects'
                                   ' to get "5" records values like<{0}>'.\
                                       format(*list(notion.j_recordZ.keys())))
-                    raise CSex.pyCSAMTError_J(
+                    raise JError(
                         'For data type=R?? Only  9 Range values'
                         ' are not acceptable. You provided <{0}>'.format(JDAT.shape[1]))
         

@@ -68,6 +68,7 @@ if _missing_deps:
 # Expose installer utility for on-the-fly fixes
 from .utils.generic import ensure_package # Noqa 
 
+
 # Optional submodules fallback 
 _optional_modules = ["geodrill"]
 for mod in _optional_modules:

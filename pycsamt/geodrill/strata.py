@@ -11,7 +11,7 @@ look in _geocodes folder . will be deprecated soon
 """
 from pycsamt.utils.geo_utils import mapping_stratum as setdico
 try : 
-    from pycsamt.utils._csamtpylog import csamtpylog
+    from pycsamt._csamtpylog import csamtpylog
     _logger=csamtpylog.get_csamtpy_logger(__name__)
 except :
     pass

@@ -19,12 +19,20 @@ import pycsamt.core.edi as CSAMTedi
 import pycsamt.core.z as CSAMTz 
 import pycsamt.utils.zcalculator as Zcc
 from pycsamt.utils import _p as inFO
-from  pycsamt.core import j as CSAMTj 
-from pycsamt.site import (Site, Location, Profile) 
-from pycsamt.utils import exceptions as CSex
+from pycsamt.core import j as CSAMTj 
+from pycsamt.site import (
+    Site, 
+    Location, 
+    Profile
+ ) 
 from pycsamt.utils import func_utils as func
-from pycsamt.utils._csamtpylog import csamtpylog
-
+from pycsamt.utils.exceptions import ( 
+    ProcessingError, 
+    JError, 
+    AVGError, 
+    FileHanglingError
+)
+from pycsamt._csamtpylog import csamtpylog
 try : 
     from pycsamt.__init__ import itqdm 
     if itqdm : 
@@ -248,7 +256,7 @@ class CSAMT(object):
                  'Please provide one amomg them.')
             self._logging.warn('It seems file provided <%s> does not match '
                                '"edi" nor "avg" nor "j" file.' % self._fn)
-            raise CSex.pyCSAMTError_file_handling(
+            raise FileHanglingError(
                 f"Unable to read {self._fn!r}. Only 'edi', 'j' and 'avg' "
                 " formats can be parsed. Please check your path|file." )
             
@@ -762,7 +770,7 @@ class CSAMT(object):
             # self.jfiles_list = jfn
 
         if self.jfiles_list is None : 
-            raise CSex.pyCSAMTError_J(
+            raise JError(
                 'No files found !  Please provide A.G. J-files ')
         # export to savepath 
         if savepath is not None: 
@@ -1023,7 +1031,7 @@ class CSAMT(object):
         if data_fn is not None : 
             self._fn = data_fn 
         if self._fn is None : 
-            raise CSex.pyCSAMTError_avg_file(
+            raise AVGError(
                 "Could not find any path to read ."
                 "Please provide your right AVG file.")
         
@@ -1182,7 +1190,7 @@ class CSAMT(object):
                               ' Please provided the right filters'
                               ' for computing.'% apply_filter)
                                   
-                raise CSex.pyCSAMTError_processing(
+                raise ProcessingError(
                     'Filters provided is not acceptable.'
                     ' Recognized filters are "TMA","AMA" AND "FLMA"')
         

@@ -24,6 +24,133 @@ logger = get_logger(__name__)
 
 
 class ResPhase(BaseEM):
+    r"""
+    Resistivity/phase container backed by complex **Z**.
+
+    ``ResPhase`` computes apparent resistivity
+    :math:`\rho` and phase :math:`\phi` from a complex
+    impedance tensor **Z**, and supports the inverse map
+    :math:`(\rho,\ \phi) \rightarrow \mathbf{Z}` with error
+    propagation.  It is a light, independent container;
+    :class:`~pycsamt.z.z.Z` inherits from it to add
+    higher-level conveniences.
+
+    Parameters
+    ----------
+    z_array : ndarray, shape (n_freq, 2, 2), optional
+        Complex impedance tensor **Z**.  If omitted, call
+        :meth:`compute_resistivity_phase` later.
+    z_err_array : ndarray, shape (n_freq, 2, 2), optional
+        Absolute per-component uncertainty on **Z**.  If omitted,
+        uncertainties on :math:`\rho` and :math:`\phi` remain
+        ``None``.
+    freq : ndarray, shape (n_freq,), optional
+        Frequency vector in Hz.  Must be 1-D, finite and strictly
+        positive.
+    **kwargs
+        Forwarded to :class:`~pycsamt.z.base.BaseEM` (e.g., ``name``,
+        ``meta``).
+
+    Attributes
+    ----------
+    resistivity : ndarray, shape (n_freq, 2, 2)
+        Apparent resistivity :math:`\rho` (Ω·m).  Set by
+        :meth:`compute_resistivity_phase` or
+        :meth:`set_res_phase`.
+    phase : ndarray, shape (n_freq, 2, 2)
+        Phase :math:`\phi` in degrees.  Set alongside
+        :pyattr:`resistivity`.
+    resistivity_err : ndarray or None, shape (n_freq, 2, 2)
+        Absolute uncertainty on :math:`\rho` (Ω·m) or ``None`` if no
+        **Z** errors were provided.
+    phase_err : ndarray or None, shape (n_freq, 2, 2)
+        Absolute phase uncertainty (deg) or ``None``.
+    z : ndarray or None, shape (n_freq, 2, 2)
+        Complex **Z**, when known (set by the inverse path).
+    z_err : ndarray or None, shape (n_freq, 2, 2)
+        Absolute uncertainty on **Z**, when propagated.
+    freq : ndarray or None, shape (n_freq,)
+        Frequency vector in Hz (1-D, finite, > 0).
+    n_freq : int
+        Inferred number of frequencies (from :pyattr:`freq` or the
+        first dimension of known arrays).
+
+    Notes
+    -----
+    **Forward path.**  :math:`\rho` and :math:`\phi` are computed
+    from **Z** using
+
+    .. math::
+
+       \rho \;=\; 0.2\,\frac{|Z|^{2}}{f},
+       \qquad
+       \phi \;=\; \angle Z \quad (\text{in degrees}).
+
+    **Error propagation (forward).**  If **Z** errors are available,
+    the per-entry relative amplitude error is :math:`\Delta Z/|Z|`.
+    We use
+    :func:`~pycsamt.utils.zmath.z_error2r_phi_error`
+    to map this to the :math:`\rho` relative error (×2) and to an
+    absolute phase uncertainty (deg, capped at
+    :math:`90^{\circ}`).
+
+    **Inverse path.**  Given :math:`\rho` and :math:`\phi`, we
+    recover :math:`|Z|` from
+
+    .. math::
+
+       |Z| \;=\; \sqrt{\,5\,f\,\rho\,},
+
+    then build **Z** in Euler form.  When :math:`\rho` and
+    :math:`\phi` errors are given, the :math:`|Z|` error follows
+
+    .. math::
+
+       \frac{d|Z|}{|Z|} \;=\; \tfrac{1}{2}\,\frac{d\rho}{\rho},
+
+    and, together with the phase error, is converted to a single
+    absolute **Z** error per component via
+    :func:`~pycsamt.utils.zmath.propagate_error_polar2rect`.
+
+    Examples
+    --------
+    Compute :math:`\rho` and :math:`\phi` from a stack of **Z**::
+
+        >>> import numpy as np
+        >>> from pycsamt.z.resphase import ResPhase
+        >>> z = np.ones((2, 2, 2), complex)
+        >>> f = np.array([10.0, 1.0])
+        >>> rp = ResPhase()
+        >>> rp.compute_resistivity_phase(z_array=z, freq=f)
+        >>> rp.resistivity.shape, rp.phase.shape
+        ((2, 2, 2), (2, 2, 2))
+
+    Reconstruct **Z** from :math:`\rho,\ \phi` (no uncertainties)::
+
+        >>> rho = (0.2 / f)[:, None, None] * np.ones((2, 2, 2))
+        >>> phi = np.zeros_like(rho)
+        >>> rp.set_res_phase(rho, phi, f)
+        >>> rp._z.shape
+        (2, 2, 2)
+
+    See Also
+    --------
+    pycsamt.z.z.Z
+        High-level impedance container built on ``ResPhase``.
+    pycsamt.utils.zmath.z_error2r_phi_error
+        Forward error mapping for :math:`\rho` and :math:`\phi`.
+    pycsamt.utils.zmath.propagate_error_polar2rect
+        Polar → rectangular error propagation for **Z**.
+
+    References
+    ----------
+    .. [1] Chave, A. D., & Jones, A. G. (2012). *The
+           Magnetotelluric Method: Theory and Practice*. CUP.
+    .. [2] Simpson, F., & Bahr, K. (2005). *Practical
+           Magnetotellurics*. CUP.
+    """
+
+
     def __init__(
         self,
         z_array: Optional[np.ndarray] = None,
@@ -48,9 +175,7 @@ class ResPhase(BaseEM):
         if freq is not None:
             self.freq = freq
 
-    # -----------------------
-    # Core properties (guard)
-    # -----------------------
+
     @property
     def resistivity(self) -> np.ndarray:
         if self._resistivity is None:
@@ -103,15 +228,65 @@ class ResPhase(BaseEM):
                 phase_err_array, dtype=float
             )
 
-    # -----------------------------
-    # Forward: Z → (ρ, φ) (+ errs)
-    # -----------------------------
+
     def compute_resistivity_phase(
         self,
         z_array: Optional[np.ndarray] = None,
         z_err_array: Optional[np.ndarray] = None,
         freq: Optional[np.ndarray] = None,
     ) -> None:
+        r"""
+        Compute :math:`rho` and :math:`phi`(and their errors) 
+        from complex **Z**.
+    
+        Any provided inputs override the instance state.  On success,
+        :pyattr:`resistivity`, :pyattr:`phase`, and, when applicable,
+        :pyattr:`resistivity_err` and :pyattr:`phase_err` are set.
+    
+        Parameters
+        ----------
+        z_array : ndarray, shape (n_freq, 2, 2), optional
+            Complex impedance tensor **Z**.  If given, it replaces the
+            internal value used for the computation.
+        z_err_array : ndarray, shape (n_freq, 2, 2), optional
+            Absolute **Z** error.  If omitted, ρ and φ uncertainties are
+            set to ``None``.
+        freq : ndarray, shape (n_freq,), optional
+            Frequency vector in Hz.  Must be 1-D, finite and > 0.
+    
+        Returns
+        -------
+        None
+            Results are stored on the instance.
+    
+        Raises
+        ------
+        ZError
+            If **Z** is missing, shapes are inconsistent, values are not
+            finite, or frequencies are not strictly positive.
+    
+        Notes
+        -----
+        We use :math:`\rho = 0.2\,|Z|^2 / f` and
+        :math:`\phi = \angle Z` (in degrees).
+    
+        If ``z_err_array`` is given, per-entry uncertainties are
+        computed via
+        :func:`~pycsamt.utils.zmath.z_error2r_phi_error`.  The
+        resistivity error is **absolute** (Ω·m).  The phase error is
+        **absolute** (deg) and is capped at :math:`90^\circ`.
+    
+        Examples
+        --------
+        >>> import numpy as np
+        >>> z = np.ones((2, 2, 2), complex)
+        >>> f = np.array([10.0, 1.0])
+        >>> rp = ResPhase()
+        >>> rp.compute_resistivity_phase(z_array=z, freq=f)
+        >>> rp.resistivity.shape
+        (2, 2, 2)
+        """
+
         if z_array is not None:
             self._z = np.asarray(z_array, dtype=complex)
         if z_err_array is not None:
@@ -171,8 +346,10 @@ class ResPhase(BaseEM):
                     r_rel, ph_err = z_error2r_phi_error(
                         re, im, dz
                     )
+                    val = self._resistivity[k, i, j]
                     rho_e[k, i, j] = (
-                        self._resistivity[k, i, j] * r_rel
+                        0.0 if (val == 0.0) or (not np.isfinite(r_rel))
+                        else val * r_rel
                     )
                     phi_e[k, i, j] = ph_err
 
@@ -190,6 +367,71 @@ class ResPhase(BaseEM):
         res_err_array: Optional[np.ndarray] = None,
         phase_err_array: Optional[np.ndarray] = None,
     ) -> None:
+        r"""
+        Attach :math:`rho` and :math:`phi` (with optional errors) 
+        and reconstruct **Z**.
+    
+        This inverse path accepts apparent resistivity (ρ) and phase (φ)
+        at each frequency, reconstructs |Z| via ``|Z| = sqrt(5 f ρ)``,
+        and builds the complex tensor **Z**.  If both ρ and φ errors are
+        supplied, a per-entry absolute **Z** uncertainty is propagated in
+        polar coordinates and converted to rectangular form.
+    
+        Parameters
+        ----------
+        res_array : ndarray, shape (n_freq, 2, 2)
+            Apparent resistivity (Ω·m).  Must be real and finite.
+        phase_array : ndarray, shape (n_freq, 2, 2)
+            Phase in degrees.  Must be real and finite.
+        freq : ndarray, shape (n_freq,)
+            Frequency in Hz (1-D, finite, strictly positive).
+        res_err_array : ndarray, shape (n_freq, 2, 2), optional
+            Absolute error on ρ (Ω·m).  If omitted, **Z** error is left
+            ``None``.
+        phase_err_array : ndarray, shape (n_freq, 2, 2), optional
+            Absolute phase error in degrees.
+    
+        Returns
+        -------
+        None
+            Results are stored on the instance (:pyattr:`_z`,
+            :pyattr:`_z_err`, :pyattr:`resistivity`, :pyattr:`phase`).
+    
+        Raises
+        ------
+        ResistivityError
+            If ρ contains complex values.
+        PhaseError
+            If φ contains complex values.
+        ZError
+            If shapes are inconsistent, values are non-finite, or
+            frequencies are not strictly positive.
+    
+        Notes
+        -----
+        The relationship between :math:`|Z|` and :math:`\rho` implies
+        
+        ..math:: 
+         
+            \frac{d|Z|}{|Z|} = \tfrac{1}{2}\,\frac{d\rho}{\rho}.
+    
+        When error arrays are supplied, |Z| error follows the above and
+        is combined with phase error by
+        :func:`~pycsamt.utils.zmath.propagate_error_polar2rect` to yield
+        a single absolute **Z** error per component.
+    
+        Examples
+        --------
+        >>> import numpy as np
+        >>> f = np.array([10.0, 1.0])
+        >>> rho = (0.2 / f)[:, None, None] * np.ones((2, 2, 2))
+        >>> phi = np.zeros_like(rho)
+        >>> rp = ResPhase()
+        >>> rp.set_res_phase(rho, phi, f)
+        >>> rp._z.shape
+        (2, 2, 2)
+        """
+
         rho = np.asarray(res_array, dtype=float)
         phi = np.asarray(phase_array, dtype=float)
         f = np.asarray(freq, dtype=float)

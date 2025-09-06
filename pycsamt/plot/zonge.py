@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
-"""
-pycsamt.zonge.plot
-------------------
 
+"""
 This module provides the Plot class for visualizing Zonge AVG
 data. It offers high-level methods for creating common geophysical
 plots like sounding curves and pseudosections, mirroring the
@@ -34,18 +32,22 @@ from scipy.interpolate import UnivariateSpline
 import numpy as np
 import pandas as pd 
 
+from ..constants import PI  
 from ..exceptions import ProcessingError
 from ..utils.validation import has_read
 from ..utils.generic import get_valid_kwargs
 from ..utils.plot import set_axis_grid 
-from ..plot.base import BasePlot
- 
-from .config import Zonge
-from ..constants import PI 
-from .proc_utils import get_skew, get_strike
+from ..zonge.config import Zonge
+from ..zonge.proc_utils import ( 
+    get_skew, 
+    get_strike, 
+    prepare_strike_frame
+)
+
+from .base import BasePlot
 
 if TYPE_CHECKING:
-    from .avg import BaseAVG, AMTAVG
+    from ..zonge.avg import BaseAVG, AMTAVG
     from matplotlib.figure import Figure
     from matplotlib.axes import Axes
 
@@ -113,7 +115,8 @@ class AVGPlot(Zonge, BasePlot):
     The typical workflow is to first load data using `AMTAVG` and
     then pass the loaded object to the `Plot` class.
     
-    >>> from pycsamt.zonge import AMTAVG, AVGPlot
+    >>> from pycsamt.zonge import AMTAVG
+    >>> from pycsamt.plot import AVGPlot
     >>> # 1. Load the data
     >>> avg = AMTAVG.from_file('data/avg/K2.avg')
     >>>
@@ -142,7 +145,7 @@ class AVGPlot(Zonge, BasePlot):
             self.read(avg_data)
 
     def read(self, avg_data: "BaseAVG") -> "AVGPlot":
-        """
+        r"""
         Load an AVG data object into the plotter.
 
         This is the primary method for associating a dataset with
@@ -1247,77 +1250,124 @@ class AVGPlot(Zonge, BasePlot):
 
         return fig, ax   
     
+
     def plot_strike(
         self,
         *,
         num_bins: int = 36,
         corrected_df: Optional[pd.DataFrame] = None,
-        **kwargs
+        **kwargs,
     ) -> Tuple["Figure", "Axes"]:
-        """
+        r"""
         Plot a rose diagram of geoelectric strike angles.
         """
         has_read(self, attributes="avg")
         self.update(**kwargs)
-
-        if not hasattr(self.avg, 'z'):
-            raise ProcessingError(
-                "Strike plot requires an AMTAVG object with a Z component."
+    
+        # --------- build strike input (prefers complex z) -------- #
+        zf = getattr(getattr(self.avg, "z", None), "frame", None)
+        try:
+            strike_in = prepare_strike_frame(
+                z_frame=zf,
+                df=self.avg.df,
+                prefer="z",
+                phase_unit="auto",
+                drop_na=True,
+                na_policy="any",
             )
-
-        strike_df = get_strike(self.avg.z.frame)
+        except ProcessingError as exc:
+            raise ProcessingError(
+                f"Unable to prepare strike input: {exc}"
+            ) from exc
+    
+        strike_df = get_strike(strike_in)
         if strike_df.empty:
-            warnings.warn("No strike angles could be calculated.")
-            return plt.subplots(subplot_kw={'projection': 'polar'})
-
-        # Handle 180-degree ambiguity for original data
-        angles = strike_df['strike_angle'].dropna()
-        angles_rad = np.deg2rad(
-            np.concatenate([angles, angles + 180])
-        )
-
-        bins = np.linspace(0, 2 * np.pi, num_bins + 1)
-        counts, bin_edges = np.histogram(angles_rad, bins=bins)
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-
+            warnings.warn(
+                "No strike angles could be calculated.",
+                stacklevel=2,
+            )
+            return plt.subplots(
+                figsize=self.fig_size,
+                subplot_kw={"projection": "polar"},
+            )
+    
+        # ------------- histogram on polar axes (rose) ------------ #
+        ang = strike_df["strike_angle"].dropna().to_numpy(float)
+        ang = np.concatenate([ang, ang + 180.0])
+        ang_rad = np.deg2rad(ang)
+    
+        bins = np.linspace(0.0, 2.0 * np.pi, num_bins + 1)
+        counts, bin_edges = np.histogram(ang_rad, bins=bins)
+        widths = np.diff(bin_edges)
+        centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
+    
         fig, ax = plt.subplots(
             figsize=self.fig_size,
-            subplot_kw={'projection': 'polar'}
+            subplot_kw={"projection": "polar"},
         )
-
-        # Plot the original data as bars
-        widths = np.diff(bin_edges)
+    
         bars = ax.bar(
-            bin_edges[:-1], counts, width=widths,
-            edgecolor='k', lw=0.5, alpha=0.7, label="Original"
+            bin_edges[:-1],
+            counts,
+            width=widths,
+            edgecolor="k",
+            lw=0.5,
+            alpha=0.7,
+            label="Original",
         )
-        norm = mcolors.Normalize(vmin=0, vmax=counts.max())
-        for bar, count in zip(bars, counts):
-            bar.set_facecolor(plt.cm.get_cmap(self.cmap)(norm(count)))
-
-        # Plot corrected data if provided
+        norm = mcolors.Normalize(vmin=0, vmax=max(1, counts.max()))
+        cmap = getattr(self, "cmap", "viridis")
+        cm = plt.cm.get_cmap(cmap)
+        for b, c in zip(bars, counts):
+            b.set_facecolor(cm(norm(c)))
+    
+        # ------------------- optional corrected ------------------ #
         if corrected_df is not None:
-            strike_corr_df = get_strike(corrected_df)
-            if not strike_corr_df.empty:
-                angles_corr = strike_corr_df['strike_angle'].dropna()
-                angles_rad_corr = np.deg2rad(
-                    np.concatenate([angles_corr, angles_corr + 180])
+            try:
+                corr_in = prepare_strike_frame(
+                    z_frame=None,
+                    df=corrected_df,
+                    prefer="df",
+                    phase_unit="auto",
+                    drop_na=True,
+                    na_policy="any",
                 )
-                counts_corr, _ = np.histogram(angles_rad_corr, bins=bins)
+                strike_corr = get_strike(corr_in)
+            except Exception as exc:
+                warnings.warn(
+                    f"Corrected strike skipped: {exc}",
+                    stacklevel=2,
+                )
+                strike_corr = pd.DataFrame()
+    
+            if not strike_corr.empty:
+                a2 = strike_corr["strike_angle"].dropna()
+                a2 = np.concatenate([a2, a2 + 180.0])
+                a2r = np.deg2rad(a2)
+                cnt2, _ = np.histogram(a2r, bins=bins)
                 ax.plot(
-                    bin_centers, counts_corr, color='red',
-                    lw=1.5, label='Corrected', drawstyle='steps-mid'
+                    centers,
+                    cnt2,
+                    color="red",
+                    lw=1.5,
+                    label="Corrected",
+                    drawstyle="steps-mid",
                 )
-            ax.legend()
-
-        ax.set_theta_zero_location('N')
+                ax.legend()
+    
+        # -------------------------- style ------------------------ #
+        ax.set_theta_zero_location("N")
         ax.set_theta_direction(-1)
         ax.set_title(
             self.fig_title or "Geoelectric Strike Distribution",
-            fontsize=self.font_size + 4, fontweight='bold', pad=20
+            fontsize=self.font_size + 4,
+            fontweight="bold",
+            pad=20,
         )
-
-        if self.savefig:
+    
+        if getattr(self, "savefig", None):
             fig.savefig(self.savefig, dpi=self.fig_dpi)
-
+    
         return fig, ax
+
+

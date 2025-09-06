@@ -1,446 +1,571 @@
 # -*- coding: utf-8 -*-
+# Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 from __future__ import annotations
-
-from typing import List, Optional, Dict, Union
+from pathlib import Path
+from typing import List, Optional, Dict, Any, Tuple
 import os
-import re
-
-import numpy as np
 
 from ..log.logger import get_logger
 from ..exceptions import EdIDataError
-from .base import EdiComponentBase
+from .base import EDIComponentBase
+from .validation import ( 
+    _strip_norm, 
+    _to_int_or_none, 
+    _to_float_or_none, 
+    _split_comment, 
+    IsEdi
+ )
 
 logger = get_logger(__name__)
 
-
-# ------------------------- small helpers -------------------------
-
-def _norm(s: str) -> str:
-    """Trim and strip quotes."""
-    return s.strip().strip('"').strip("'")
+__all__ = ["TSect", "TSIO", "TimeSeriesMixin"]
 
 
-def _to_int(v: Optional[str]) -> Optional[int]:
-    if v in (None, "", "None"):
-        return None
-    try:
-        return int(float(v))
-    except Exception:
-        return None
-
-
-def _to_float(v: Optional[str]) -> Optional[float]:
-    if v in (None, "", "None"):
-        return None
-    try:
-        return float(v)
-    except Exception:
-        return None
-
-
-def _fmt_num(x: Union[int, float]) -> str:
-    """Format like typical EDI numeric output."""
-    if isinstance(x, int) or (isinstance(x, float) and float(x).is_integer()):
-        return f"{int(x)}"
-    return f"{float(x):.8E}"
-
-
-# ------------------------- data blocks -------------------------
-
-class TimeSeriesBlock(EdiComponentBase):
-    """
-    One >TSERIES block.
-
+class TSect(EDIComponentBase):
+    r"""
+    Minimal container for the ``>=TSERIESSECT`` header block.
+    It parses the section header and the ordered list of
+    measurement IDs that follow the header.  The class keeps a
+    pointer to where the first ``>TSERIES`` data block starts so
+    downstream readers can jump straight to the data.
+    
+    Parameters
+    ----------
+    verbose : int or bool, optional
+        Verbosity flag inherited from :class:`EDIComponentBase`.
+    logger : object, optional
+        Logger instance inherited from :class:`EDIComponentBase`.
+    **kws
+        Keyword overrides for any public attribute.  Unknown
+        keys are ignored.
+    
     Attributes
     ----------
-    sectid : Optional[str]
-    nchan  : int              # Number of channels; default from section if omitted
-    npts   : int              # REQUIRED
-    sr     : float            # Sample rate (Hz), REQUIRED
-    mpx    : str              # "CHAN" (default) or "TIME"
-    band   : Optional[str]
-    chksum : Optional[float]
-    data   : np.ndarray, shape (nchan, npts), dtype float64
+    sectid : str or None
+        Section identifier.  If absent in file it remains
+        ``None``.
+    nchan : int or None
+        Number of channels declared in the header.
+    nmeas : int or None
+        Number of measurements declared in the header.
+    npts : int or None
+        Number of samples per trace if provided.
+    maxblks : int or None
+        Hint for the maximum number of data blocks.
+    dt : float or None
+        Sampling interval in seconds when present.
+    meas_ids : list of str
+        Ordered list of measurement IDs collected from the
+        header tail.  One ID per line.
+    extra : dict
+        Any non standard key–value options preserved as strings.
+    start_data_lines_num : int or None
+        Absolute line index where the first ``>TSERIES`` block
+        begins.  Useful for fast data scans.
+    
+    Methods
+    -------
+    from_file(edi_path)
+        Parse a single ``>=TSERIESSECT`` from an EDI file.  The
+        method validates the file structure with
+        :meth:`validation.IsEdi._assert_edi` before parsing.
+    write()
+        Serialize the section back to EDI lines including the
+        measurement ID list.
+    
+    Notes
+    -----
+    Parsing is tolerant.  Unknown keys are stored in ``extra``.
+    Blank lines and comment lines beginning with ``//`` are
+    ignored.  If multiple time-series sections exist, call
+    :meth:`from_file` on the desired file view or use a higher
+    level iterator to locate the right header first.
+    
+    Examples
+    --------
+    >>> sect = TSect.from_file("sound.edi")
+    >>> sect.nchan, sect.dt
+    (3, 0.01)
+    >>> print("IDs:", sect.meas_ids[:2])
+    IDs: ['HX', 'HY']
+    
+    See Also
+    --------
+    TSIO
+        Reader and writer for ``>TSERIES`` data blocks.
+    validation.IsEdi
+        Lightweight EDI file validator used during reading.
+    
+    References
+    ----------
+    .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
+           https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
+
+
+    KEY_ORDER: List[str] = [
+        "sectid",
+        "nchan",
+        "nmeas",
+        "npts",
+        "maxblks",
+        "dt",
+    ]
 
     def __init__(
         self,
-        *,
-        nchan: int,
-        npts: int,
-        sr: float,
-        data: np.ndarray,
-        sectid: Optional[str] = None,
-        mpx: Optional[str] = "CHAN",
-        band: Optional[str] = None,
-        chksum: Optional[float] = None,
-    ) -> None:
-        super().__init__()
-        self.sectid = sectid
-        self.nchan = int(nchan)
-        self.npts = int(npts)
-        self.sr = float(sr)
-        self.mpx = "CHAN" if (mpx is None) else str(mpx).upper()
-        if self.mpx not in ("CHAN", "TIME"):
-            raise EdIDataError("TSERIES MPX must be 'CHAN' or 'TIME'.")
-        self.band = band
-        self.chksum = None if chksum is None else float(chksum)
+        *args: Any,
+        verbose: int | bool = 0,
+        logger=None,
+        **kws: Any,
+    ):
+        super().__init__(verbose=verbose, logger=logger)
+        self.sectid: Optional[str] = None
+        self.nchan: Optional[int] = None
+        self.nmeas: Optional[int] = None
+        self.npts: Optional[int] = None
+        self.maxblks: Optional[int] = None
+        self.dt: Optional[float] = None
+        self.meas_ids: List[str] = []
+        self.extra: Dict[str, Any] = {}
+        self.start_data_lines_num: Optional[int] = None
 
-        if not isinstance(data, np.ndarray):
-            raise EdIDataError("TimeSeriesBlock.data must be a numpy ndarray.")
-        if data.shape != (self.nchan, self.npts):
-            raise EdIDataError(
-                f"TimeSeriesBlock.data shape mismatch:"
-                f" expected ({self.nchan},{self.npts}), "
-                f"got {data.shape}"
-            )
-        self.data = data.astype(np.float64, copy=False)
-
-    # ---- flatten / unflatten helpers for MPX ----
-
-    def flatten(self) -> np.ndarray:
-        """
-        Flatten data according to self.mpx into 1D vector of length nchan*npts.
-        - MPX=CHAN: [ch0 series][ch1 series]...
-        - MPX=TIME: [t0 of all chans][t1 of all chans]...
-        """
-        if self.mpx == "CHAN":
-            return self.data.reshape(-1)  # (nchan * npts,)
-        # TIME: interleave by time
-        return self.data.T.reshape(-1)  # (npts * nchan,)
-
-    @staticmethod
-    def unflatten(vec: np.ndarray, nchan: int, npts: int, mpx: str
-                  ) -> np.ndarray:
-        """
-        Inverse of flatten() for given MPX.
-        Returns shape (nchan, npts).
-        """
-        if vec.size != nchan * npts:
-            raise EdIDataError("TSERIES data length doesn't match NCHAN*NPTS.")
-        mpx = str(mpx).upper()
-        if mpx == "CHAN":
-            return vec.reshape(nchan, npts)
-        elif mpx == "TIME":
-            return vec.reshape(npts, nchan).T
-        else:
-            raise EdIDataError("TSERIES MPX must be 'CHAN' or 'TIME'.")
-
-
-class TimeSeries(EdiComponentBase):
-    """
-    >=TSERIESSECT + multiple >TSERIES blocks
-
-    Section header (>=TSERIESSECT)
-    ------------------------------
-    sectid : Optional[str]
-    nchan  : int (>=1)
-    maxblks: Optional[int]
-    chksum : Optional[float]
-    chan_ids: List[str]  # ordered measurement IDs (length nchan)
-
-    Blocks
-    ------
-    blocks: List[TimeSeriesBlock]
-
-    API
-    ---
-    - from_edi_all(path) -> List[TimeSeries]
-    - from_edi(path, index=0) -> TimeSeries
-    - read(lines_for_section)
-    - write(numbers_per_line=6) -> List[str]
-    """
-
-    SECT_KEYS = ("sectid", "nchan", "maxblks", "chksum")
-
-    def __init__(
-        self,
-        *,
-        sectid: Optional[str] = None,
-        nchan: Optional[int] = None,
-        maxblks: Optional[int] = None,
-        chksum: Optional[float] = None,
-        chan_ids: Optional[List[str]] = None,
-        blocks: Optional[List[TimeSeriesBlock]] = None,
-    ) -> None:
-        super().__init__()
-        self.sectid = sectid
-        self.nchan = None if nchan is None else int(nchan)
-        self.maxblks = None if maxblks is None else int(maxblks)
-        self.chksum = None if chksum is None else float(chksum)
-        self.chan_ids = list(chan_ids) if chan_ids is not None else []
-        self.blocks: List[TimeSeriesBlock] = list(
-            blocks) if blocks is not None else []
-
-        self._raw_section_lines: Optional[List[str]] = None
-
-    # ----------------- discovery & extraction -----------------
+        for k, v in kws.items():
+            setattr(self, k, v)
 
     @classmethod
-    def from_edi_all(cls, edi_path: str) -> List["TimeSeries"]:
-        sections = cls._extract_all_section_blocks(edi_path)
-        out: List[TimeSeries] = []
-        for sec_lines in sections:
-            inst = cls().read(sec_lines)
-            out.append(inst)
+    def from_file(cls, edi_path: str) -> "TSect":
+        p = Path(edi_path)
+        IsEdi._assert_edi(p, deep=True)
+    
+        lines = p.read_text(
+            encoding="utf-8-sig", errors="replace"
+        ).splitlines()
+    
+        start = None
+        for i, ln in enumerate(lines):
+            if ln.lstrip().upper().startswith(">=TSERIESSECT"):
+                start = i
+                break
+        if start is None:
+            raise EdIDataError("No >=TSERIESSECT found.")
+    
+        # stop at first >TSERIES, next >=..., or EOF
+        stop = len(lines)
+        for j in range(start + 1, len(lines)):
+            u = lines[j].lstrip().upper()
+            if u.startswith(">TSERIES") or u.startswith(">="):
+                stop = j
+                break
+    
+        inst = cls()
+        for raw in lines[start + 1 : stop]:
+            s = raw.strip()
+            if not s or s.startswith("//"):
+                continue
+            if "=" in s:
+                k, v = s.split("=", 1)
+                key = _strip_norm(k).lower()
+                val = _strip_norm(v)
+                if key == "sectid":
+                    inst.sectid = val
+                elif key == "nchan":
+                    inst.nchan = _to_int_or_none(val)
+                elif key == "nmeas":
+                    inst.nmeas = _to_int_or_none(val)
+                elif key == "npts":
+                    inst.npts = _to_int_or_none(val)
+                elif key == "maxblks":
+                    inst.maxblks = _to_int_or_none(val)
+                elif key == "dt":
+                    inst.dt = _to_float_or_none(val)
+                else:
+                    inst.extra[key] = val
+            else:
+                if s:
+                    inst.meas_ids.append(_strip_norm(s))
+    
+        inst.start_data_lines_num = stop
+        return inst
+
+    def write(self) -> List[str]:
+        out: List[str] = [">=TSERIESSECT\n"]
+        vals: Dict[str, Any] = {
+            "sectid": self.sectid,
+            "nchan": self.nchan,
+            "nmeas": self.nmeas,
+            "npts": self.npts,
+            "maxblks": self.maxblks,
+            "dt": self.dt,
+        }
+        for key in self.KEY_ORDER:
+            val = vals.get(key, None)
+            if val in (None, "", "None"):
+                continue
+            out.append(
+                f"  {key.upper()}={str(val).upper()}\n"
+            )
+        for k, v in sorted(self.extra.items()):
+            if v in (None, "", "None"):
+                continue
+            out.append(f"  {k.upper()}={str(v).upper()}\n")
+
+        if self.meas_ids:
+            out.append(f"    // {len(self.meas_ids)}\n")
+            for mid in self.meas_ids:
+                out.append(f"     {str(mid)}\n")
         return out
 
+
+class _TSBlock(EDIComponentBase):
+    """
+    Single >TSERIES block: flexible header + values.
+    """
+
+    def __init__(
+        self,
+        *args: Any,
+        verbose: int | bool = 0,
+        logger=None,
+        **kws: Any,
+    ):
+        super().__init__(verbose=verbose, logger=logger)
+        self.options: Dict[str, Any] = {}
+        self.nvals_hint: Optional[int] = None
+        self.values: List[float] = []
+
+        # common aliases if present in header
+        self.npts: Optional[int] = None
+        self.dt: Optional[float] = None
+        self.id: Optional[str] = None
+
+        for k, v in kws.items():
+            setattr(self, k, v)
+
+    def apply_aliases(self) -> None:
+        npts = self.options.get("npts", None)
+        dt = self.options.get("dt", None)
+        cid = self.options.get("id", None)
+        self.npts = (
+            _to_int_or_none(npts) if npts is not None else None
+        )
+        self.dt = (
+            _to_float_or_none(dt) if dt is not None else None
+        )
+        self.id = str(cid) if cid not in (None, "") else None
+
+
+class TSIO(EDIComponentBase):
+    r"""
+    Reader and writer for ``>TSERIES`` data blocks.  Each data
+    block line starts with a flexible option list (e.g.
+    ``ID=HX NPTS=4 DT=0.25``) followed by a ``// N`` hint and
+    then one or more lines of numeric samples.
+    
+    Parameters
+    ----------
+    verbose : int or bool, optional
+        Verbosity flag inherited from :class:`EDIComponentBase`.
+    logger : object, optional
+        Logger instance inherited from :class:`EDIComponentBase`.
+    **kws
+        Keyword overrides for public attributes.
+    
+    Attributes
+    ----------
+    blocks : list of _TSBlock
+        Parsed time-series blocks in file order.  Every block
+        exposes:
+            
+            - ``options`` : dict of parsed header options.
+            - ``nvals_hint`` : int or None from the ``//`` count.
+            - ``values`` : list[float] of samples.
+            - ``id`` : str or None (alias of ``options['id']``).
+            - ``npts`` : int or None (alias of ``options['npts']``).
+            - ``dt`` : float or None (alias of ``options['dt']``).
+    
+    Methods
+    -------
+    from_file(edi_path, start_line=None, *, verbose=0, logger=None)
+        Parse all ``>TSERIES`` blocks starting at ``start_line``.
+        If ``start_line`` is ``None`` the first block is located
+        automatically.  The method assumes the file already
+        passed :meth:`validation.IsEdi._assert_edi` upstream.
+    write(per_line=None, float_fmt=None)
+        Serialize every block.  ``per_line`` controls how many
+        samples are printed per line.  ``float_fmt`` controls the
+        numeric format (e.g. ``"{: .6E}"``).
+    
+    Notes
+    -----
+    Header options are typed heuristically.  Integer-like tokens
+    become integers.  Otherwise they are parsed as floats when
+    possible, and finally left as strings.  The common aliases
+    ``id``, ``npts`` and ``dt`` are mirrored onto block fields
+    for convenience.
+    
+    Examples
+    --------
+    >>> sect = TSect.from_file("sound.edi")
+    >>> io = TSIO.from_file("sound.edi",
+    ...                     start_line=sect.start_data_lines_num)
+    >>> len(io.blocks)
+    2
+    >>> io.blocks[0].id, io.blocks[0].dt
+    ('HX', 0.25)
+    >>> lines = io.write(per_line=5, float_fmt="{: .3E}")
+    >>> print("".join(lines).splitlines()[0])
+    >TSERIES ID=HX NPTS=4 DT=0.25 // 4
+    
+    See Also
+    --------
+    TSect
+        Header reader for ``>=TSERIESSECT``.
+    SpectraIO
+        Similar reader for ``>SPECTRA`` blocks.
+    
+    References
+    ----------
+    .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
+           https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
+    """
+
+    def __init__(
+        self,
+        *args: Any,
+        verbose: int | bool = 0,
+        logger=None,
+        **kws: Any,
+    ):
+        super().__init__(verbose=verbose, logger=logger)
+        self.blocks: List[_TSBlock] = []
+        for k, v in kws.items():
+            setattr(self, k, v)
+
     @classmethod
-    def from_edi(cls, edi_path: str, index: int = 0) -> "TimeSeries":
-        sections = cls._extract_all_section_blocks(edi_path)
-        if not sections:
-            raise EdIDataError("No >=TSERIESSECT section found in EDI.")
-        if index < 0 or index >= len(sections):
-            raise IndexError(
-                f"TSERIESSECT index out of range (0..{len(sections)-1}).")
-        return cls().read(sections[index])
+    def from_file(
+        cls,
+        edi_path: str,
+        start_line: Optional[int] = None,
+        *,
+        verbose: int | bool = 0,
+        logger=None,
+    ) -> "TSIO":
+        if not os.path.isfile(edi_path):
+            raise FileNotFoundError(
+                f"{edi_path!r} is not a file."
+            )
+        with open(edi_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        if start_line is None:
+            for i, ln in enumerate(lines):
+                if ln.upper().lstrip().startswith(">TSERIES"):
+                    start_line = i
+                    break
+        if start_line is None:
+            raise EdIDataError("No >TSERIES blocks found.")
+
+        inst = cls(verbose=verbose, logger=logger)
+        i = start_line
+        n = len(lines)
+        while i < n:
+            ln = lines[i].rstrip("\n")
+            u = ln.upper().lstrip()
+            if u.startswith(">="):
+                break
+            if not u.startswith(">TSERIES"):
+                i += 1
+                continue
+
+            blk, nxt = cls._parse_block(
+                lines, i, verbose=verbose, logger=logger
+            )
+            inst.blocks.append(blk)
+            i = nxt
+
+        return inst
 
     @staticmethod
-    def _extract_all_section_blocks(edi_path: str) -> List[List[str]]:
-        """
-        Return a list of 'one-section' line lists (>=TSERIESSECT ... until next >= or EOF).
-        """
-        if not os.path.isfile(edi_path):
-            raise FileNotFoundError(f"{edi_path!r} is not a file.")
+    def _parse_block(
+        lines: List[str],
+        i: int,
+        *,
+        verbose: int | bool = 0,
+        logger=None,
+    ) -> Tuple[_TSBlock, int]:
+        head = lines[i].rstrip("\n")
+        body, cmt = _split_comment(head)
+        toks = body.split()
+        # toks[0] is ">TSERIES"
+        opts = toks[1:]
 
-        with open(edi_path, "r", encoding="utf-8") as f:
-            lines = [ln.rstrip("\n") for ln in f]
-
-        start_idxs: List[int] = []
-        for i, ln in enumerate(lines):
-            if ln.upper().startswith(">=TSERIESSECT"):
-                start_idxs.append(i)
-
-        sections: List[List[str]] = []
-        for si_idx, si in enumerate(start_idxs):
-            sj = len(lines)
-            for j in range(si + 1, len(lines)):
-                if j in start_idxs:
-                    sj = j
-                    break
-            sections.append(lines[si:sj])
-        return sections
-
-    # ----------------- parser -----------------
-
-    def read(self, lines_for_section: List[str]) -> "TimeSeries":
-        """
-        Read one >=TSERIESSECT block and its >TSERIES blocks.
-        """
-        if not lines_for_section or not lines_for_section[0].upper(
-                ).startswith(">=TSERIESSECT"):
-            raise EdIDataError(
-                "TSERIESSECT parsing requires a"
-                " section beginning with '>=TSERIESSECT'.")
-
-        self._raw_section_lines = list(lines_for_section)
-
-        # Header KVs
-        i = 1
-        while i < len(lines_for_section):
-            lnu = lines_for_section[i].upper().lstrip()
-            if lnu.startswith("//") or lnu.startswith(
-                    ">TSERIES") or lnu.startswith(">="):
-                break
-
-            if "=" in lines_for_section[i]:
-                k, v = lines_for_section[i].split("=", 1)
-                key, val = _norm(k).lower(), _norm(v)
-                if key in self.SECT_KEYS:
-                    if key == "nchan":
-                        self.nchan = _to_int(val)
-                    elif key == "maxblks":
-                        self.maxblks = _to_int(val)
-                    elif key == "chksum":
-                        self.chksum = _to_float(val)
-                    else:
-                        setattr(self, key, val)
-            i += 1
-
-        if self.nchan is None:
-            raise EdIDataError("TSERIESSECT header must define NCHAN.")
-
-        # Optional //NCHAN
-        chan_count_from_slash: Optional[int] = None
-        if i < len(lines_for_section) and lines_for_section[i].lstrip().startswith("//"):
+        blk = _TSBlock(verbose=verbose, logger=logger)
+        if cmt is not None:
             try:
-                chan_count_from_slash = int(lines_for_section[i].lstrip()[2:].strip())
+                blk.nvals_hint = int(float(cmt))
             except Exception:
-                chan_count_from_slash = None
-            i += 1
+                blk.nvals_hint = None
 
-        # Channel IDs dataset (exactly NCHAN)
-        ids: List[str] = []
-        while i < len(lines_for_section):
-            ln = lines_for_section[i].strip()
-            if not ln:
-                i += 1
+        for t in opts:
+            if "=" not in t:
                 continue
-            u = ln.upper()
-            if u.startswith(">TSERIES") or u.startswith(">="):
-                break
-            ids.extend([_norm(tok) for tok in ln.split()])
-            if len(ids) >= (self.nchan or 0):
-                ids = ids[: self.nchan]
-                i += 1
-                break
-            i += 1
+            k, v = t.split("=", 1)
+            key = _strip_norm(k).lower()
+            val = _strip_norm(v)
 
-        if len(ids) != self.nchan:
-            raise EdIDataError(
-                f"TSERIESSECT: expected {self.nchan} channel IDs, got {len(ids)}.")
-        if chan_count_from_slash is not None and chan_count_from_slash != self.nchan:
-            logger.warning(
-                "TSERIESSECT '//N' (%s) does not match NCHAN (%s). Proceeding.",
-                chan_count_from_slash, self.nchan
+            # best-effort typing: only ints for integer-like tokens
+            vlow = val.lower()
+            is_int_like = (
+                vlow.isdigit()
+                or (vlow.startswith(("+", "-")) and vlow[1:].isdigit())
             )
-        self.chan_ids = ids
+            
+            if is_int_like:
+                blk.options[key] = _to_int_or_none(val)
+            else:
+                fval = _to_float_or_none(val)
+                blk.options[key] = fval if fval is not None else val
 
-        # Parse >TSERIES blocks
-        self.blocks.clear()
-        while i < len(lines_for_section):
-            ln = lines_for_section[i]
-            lnu = ln.upper().lstrip()
 
-            if lnu.startswith(">="):
-                break
+        blk.apply_aliases()
 
-            if not lnu.startswith(">TSERIES"):
-                i += 1
+        j = i + 1
+        while j < len(lines):
+            s = lines[j].strip()
+            if not s:
+                j += 1
                 continue
-
-            # Header parse on >TSERIES line
-            spec_header = ln
-            trailing_count: Optional[int] = None
-            if "//" in spec_header:
+            if s.startswith(">"):
+                break
+            if s.startswith("//"):
+                j += 1
+                continue
+            before, _ = _split_comment(s)
+            for tok in before.split():
                 try:
-                    trailing_count = int(spec_header.split("//", 1)[1].strip())
+                    blk.values.append(float(tok))
                 except Exception:
-                    trailing_count = None # noqa
-                spec_header = spec_header.split("//", 1)[0]
+                    # tolerate non-numeric tokens
+                    pass
+            j += 1
 
-            header_pairs: Dict[str, str] = {}
-            for m in re.finditer(r"([A-Za-z]+)\s*=\s*([^ \t]+)", spec_header):
-                header_pairs[m.group(1).lower()] = _norm(m.group(2))
+        return blk, j
 
-            sectid = header_pairs.get("sectid", self.sectid)
-            nchan_here = _to_int(header_pairs.get("nchan")) or self.nchan
-            npts = _to_int(header_pairs.get("npts"))
-            sr = _to_float(header_pairs.get("sr"))
-            mpx = header_pairs.get("mpx", "CHAN").upper()
-            band = header_pairs.get("band")
-            chksum = _to_float(header_pairs.get("chksum"))
+    def write(
+        self,
+        per_line: Optional[int] = None,
+        float_fmt: Optional[str] = None,
+    ) -> List[str]:
+        kpl = self.PER_LINE if per_line is None else per_line
+        ffmt = self.FLOAT_FMT if float_fmt is None else float_fmt
 
-            if npts is None or sr is None:
-                raise EdIDataError(">TSERIES block requires NPTS and SR.")
-
-            # Collect exactly nchan*npts values
-            i += 1
-            needed = nchan_here * npts
-            vals: List[float] = []
-            while i < len(lines_for_section) and len(vals) < needed:
-                l = lines_for_section[i].strip()
-                if not l:
-                    i += 1
-                    continue
-                u2 = l.upper()
-                if u2.startswith(">=") or u2.startswith(">TSERIES"):
-                    # Unexpected early end; stop
-                    break
-                for tok in l.split():
-                    try:
-                        vals.append(float(tok))
-                    except Exception:
-                        pass
-                i += 1
-
-            if len(vals) < needed:
-                raise EdIDataError(
-                    f">TSERIES data incomplete: expected {needed} values, got {len(vals)}."
-                )
-            vec = np.array(vals[:needed], dtype=np.float64)
-            data = TimeSeriesBlock.unflatten(vec, nchan_here, npts, mpx)
-
-            block = TimeSeriesBlock(
-                sectid=sectid,
-                nchan=nchan_here,
-                npts=npts,
-                sr=sr,
-                mpx=mpx,
-                band=band,
-                chksum=chksum,
-                data=data,
-            )
-            self.blocks.append(block)
-
-        return self
-
-    def write(self, numbers_per_line: int = 6) -> List[str]:
-        """
-        Serialize one >=TSERIESSECT section (header + IDs + all >TSERIES blocks).
-        """
-        if self.nchan is None:
-            raise EdIDataError("Cannot write TSERIES without NCHAN.")
-        if len(self.chan_ids) != self.nchan:
-            raise EdIDataError(
-                f"Cannot write TSERIES: chan_ids length"
-                f" ({len(self.chan_ids)}) != NCHAN ({self.nchan})."
-            )
-
-        lines: List[str] = []
-        lines.append(">=TSERIESSECT\n")
-
-        def _emit_kv(k: str, v: Union[str, int, float, None]) -> None:
-            if v is None or v == "":
-                return
-            lines.append(f"  {k.upper()}={str(v).upper()}\n")
-
-        _emit_kv("SECTID", self.sectid or "")
-        _emit_kv("NCHAN", self.nchan)
-        _emit_kv("MAXBLKS", self.maxblks)
-        _emit_kv("CHKSUM", self.chksum)
-
-        # IDs count marker and IDs themselves
-        lines.append(f"  //{self.nchan}\n")
-        cur: List[str] = []
-        for cid in self.chan_ids:
-            cur.append(cid)
-            if len(cur) == numbers_per_line:
-                lines.append("  " + "\t".join(cur) + "\n")
-                cur.clear()
-        if cur:
-            lines.append("  " + "\t".join(cur) + "\n")
-
-        # Write each >TSERIES block
+        out: List[str] = []
         for blk in self.blocks:
-            hdr: List[str] = [">TSERIES"]
-            if blk.sectid:
-                hdr.append(f"SECTID={blk.sectid}")
-            if blk.nchan != self.nchan:
-                hdr.append(f"NCHAN={blk.nchan}")
-            hdr.append(f"NPTS={blk.npts}")
-            hdr.append(f"SR={_fmt_num(blk.sr)}")
-            if blk.mpx:
-                hdr.append(f"MPX={blk.mpx}")
-            if blk.band:
-                hdr.append(f"BAND={blk.band}")
-            if blk.chksum is not None:
-                hdr.append(f"CHKSUM={_fmt_num(blk.chksum)}")
+            head = [">TSERIES"]
+            # keep deterministic order for common keys
+            for k in ("id", "npts", "dt"):
+                v = blk.options.get(k, None)
+                if v is not None:
+                    head.append(f"{k.upper()}={v}")
+            # then any extras
+            for k in sorted(blk.options.keys()):
+                if k in {"id", "npts", "dt"}:
+                    continue
+                v = blk.options[k]
+                head.append(f"{k.upper()}={v}")
 
-            hdr_line = " ".join(hdr) + f"  // {blk.nchan * blk.npts}\n"
-            lines.append(hdr_line)
+            n_hint = (
+                blk.nvals_hint
+                if blk.nvals_hint is not None
+                else len(blk.values)
+            )
+            out.append(" ".join(head) + f" // {n_hint}\n")
 
-            vec = blk.flatten()  # honors MPX for output
-            chunk: List[str] = []
-            for val in vec:
-                chunk.append(_fmt_num(val))
-                if len(chunk) == numbers_per_line:
-                    lines.append("  " + "\t".join(chunk) + "\n")
-                    chunk.clear()
-            if chunk:
-                lines.append("  " + "\t".join(chunk) + "\n")
+            vals: List[str] = []
+            cnt = 0
+            for v in blk.values:
+                vals.append(ffmt.format(v))
+                cnt += 1
+                if cnt == kpl:
+                    out.append("  " + " ".join(vals) + "\n")
+                    vals = []
+                    cnt = 0
+            if vals:
+                out.append("  " + " ".join(vals) + "\n")
 
-        lines.append("\n")
-        return lines
+        return out
+
+
+class TimeSeriesMixin:
+    r"""
+    Convenience mixin that exposes two helpers so host classes
+    can read time-series content without depending on concrete
+    implementations.
+    
+    Methods
+    -------
+    read_tseries_header(edi_fn, *, verbose=0, logger=None)
+        Return a :class:`TSect` parsed from ``edi_fn``.  The
+        result holds the header fields and the position of the
+        first data block.
+    read_tseries_blocks(edi_fn, *, verbose=0, logger=None)
+        Return a :class:`TSIO` built from the same file.  The
+        method internally calls :class:`TSect` to find the first
+        ``>TSERIES`` and then streams all blocks.
+    
+    Notes
+    -----
+    Use this mixin in higher level readers or project classes to
+    offer a thin, stable API.  The methods only read data and do
+    not modify files on disk.
+    
+    Examples
+    --------
+    >>> class Reader(TimeSeriesMixin):
+    ...     pass
+    >>> hdr = Reader.read_tseries_header("sound.edi")
+    >>> ts = Reader.read_tseries_blocks("sound.edi")
+    >>> hdr.nchan, len(ts.blocks)
+    (2, 3)
+    
+    See Also
+    --------
+    TSect
+        Header parser for time-series sections.
+    TSIO
+        Data block reader and writer.
+    
+    References
+    ----------
+    .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
+           https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
+    """
+
+    @classmethod
+    def read_tseries_header(
+        cls,
+        edi_fn: str,
+        *,
+        verbose: int | bool = 0,
+        logger=None,
+    ) -> TSect:
+        return TSect.from_file(edi_fn)
+
+    @classmethod
+    def read_tseries_blocks(
+        cls,
+        edi_fn: str,
+        *,
+        verbose: int | bool = 0,
+        logger=None,
+    ) -> TSIO:
+        sect = TSect.from_file(edi_fn)
+        return TSIO.from_file(
+            edi_fn,
+            start_line=sect.start_data_lines_num,
+            verbose=verbose,
+            logger=logger,
+        )
+

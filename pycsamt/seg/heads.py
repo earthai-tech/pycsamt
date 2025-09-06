@@ -7,11 +7,10 @@ from __future__ import annotations
 from pathlib import Path
 import datetime as _dt
 import re
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Union, Iterable, Tuple
 
 from .. import __version__ as _PKG_VERSION
 from ..log.logger import get_logger
-from ..z.z import Z as EMZ  # noqa: F401  
 from ..site.location import Location
 from ..gis.utils import dms_to_decimal, decimal_to_dms
 from ..exceptions import (
@@ -19,11 +18,20 @@ from ..exceptions import (
     EdIDataError,
     FileHandlingError,
 )
-from .base import EdiComponentBase
-from .properties import IsEdi, Source, Processing, Copyright
-
+from .base import EDIComponentBase
+from .property import Source, Processing, Copyright
+from .validation import IsEdi 
 
 logger = get_logger(__name__)
+
+
+__all__ = [
+    "Head",
+    "Info",
+    "Heads",
+    "HeadMixin",
+    "InfoMixin",
+]
 
 # KEY=VALUE pairs, tolerant to spaces and optional quotes
 _KV_RE = re.compile(
@@ -47,11 +55,8 @@ def _unquote(s: str) -> str:
 
 
 def _norm_key(k: str) -> str:
-    """
-    Normalize header keys to canonical names.
-
-    SEG-EDI often mixes LON/LONG and case. Keep canonical names in lower.
-    """
+    """Normalize header keys (e.g. LON => LONG);
+    keep canonical lower-case."""
     k0 = k.strip().lower()
     if k0 == "lon":
         return "long"
@@ -59,96 +64,158 @@ def _norm_key(k: str) -> str:
 
 
 def _is_tag(line: str, tag: str) -> bool:
-    """Case-insensitive, whitespace-tolerant check for EDI tag."""
+    """Case-insensitive, whitespace-tolerant
+    check for EDI tag line."""
     line = line.strip()
     if not line.startswith(">"):
         return False
     return line.upper().startswith(tag.upper())
 
 
-class Head(EdiComponentBase):
-    r"""
-    EDI **HEAD** block.
+def _slice_section(
+    lines: Sequence[str], start_tag: str, 
+    after_tags: Iterable[str]
+    ) -> Tuple[List[str], int, int]:
+    """
+    Slice section content between start_tag and 
+    the next tag in after_tags.
 
-    The HEAD section identifies the dataset, describes where/when/by whom
-    data were acquired, and records how/when/by whom the EDI file was
-    written (per SEG MT/EMAP standard).
+    Returns (payload_lines, i_start, i_stop). 
+    Payload excludes the start_tag line.
+    Raises EdIDataError if start_tag not present.
+    """
+    i_start = None
+    i_stop = None
+    for i, ln in enumerate(lines):
+        if _is_tag(ln, start_tag):
+            i_start = i
+            break
+    if i_start is None:
+        raise EdIDataError(f"{start_tag} block not found in EDI file.")
+
+    for j in range(i_start + 1, len(lines)):
+        if any(_is_tag(lines[j], tag) for tag in after_tags
+               ) or lines[j].lstrip().startswith(">"):
+            i_stop = j
+            break
+
+    if i_stop is None:
+        i_stop = i_start + 1
+        while i_stop < len(lines) and not lines[i_stop].lstrip(
+                ).startswith(">"):
+            i_stop += 1
+
+    payload = [ln.strip() for ln in lines[i_start + 1 : i_stop]]
+    return payload, i_start, i_stop
+
+
+class Head(EDIComponentBase):
+    r"""
+    EDI ``>HEAD`` block container.
+
+    The :class:`Head` class parses and serializes the header
+    metadata of SEG-EDI files. It normalizes common variations
+    in field names (for example *LON* → *LONG*) and supports
+    latitude/longitude given either in decimal degrees or DMS
+    strings (with or without cardinal letters).
 
     Parameters
     ----------
-    edi_header_list : list of str, optional
-        Raw lines belonging to the ``>HEAD`` block (up to the start of
-        ``>INFO`` or the next section). If provided, they are parsed
-        immediately.
+    edi_header_list : sequence of str, optional
+        Raw lines that belong to the ``>HEAD`` section.  If
+        provided, they are parsed immediately via
+        :meth:`read`.
     **kwargs
-        Any HEAD attribute to override defaults (e.g., ``dataid``,
-        ``acqby``, ...). Unknown keys are set as dynamic attributes.
+        Attribute overrides (for example ``dataid``,
+        ``acqby``, ``coordsys``). Unknown keys become
+        dynamic attributes.
 
     Attributes
     ----------
-    Location : Location
-        Location container (latitude, longitude, elevation).
+    Location : :class:`~pycsamt.site.location.Location`
+        Container for geographic coordinates.  The
+        :pyattr:`lat`, :pyattr:`long` and :pyattr:`elev`
+        properties delegate to this object.
     dataid, acqby, fileby : str or None
-        Dataset id, acquisition contractor, file writer.
+        Dataset identifier, acquisition contractor, and file
+        author.
     acqdate, enddate, filedate : str or None
-        Dates (as strings). ``filedate`` defaults to current UTC
-        timestamp ``YYYY/MM/DD HH:MM:SS UTC``.
+        Acquisition start/end dates and the file timestamp.
+        ``filedate`` defaults to current UTC.
     country, state, county, prospect, loc : str or None
-        Descriptive metadata.
-    lat, long, elev : float or str
-        Geographic coordinates; properties delegate into ``Location``.
-        Readers accept either decimal degrees (float) or DMS strings;
-        writers output DMS strings.
+        Descriptive location metadata.
+    lat, long, elev : float or None
+        Coordinates as decimal degrees and elevation in the
+        current :pyattr:`units`.  DMS inputs are converted to
+        decimal when reading; writers emit DMS strings.
     units : {'m', 'ft'}
-        Elevation units (defaults to 'm').
-    stdvers : str
-        EDI standard version; defaults to ``'SEG 1.0'``.
-    progvers : str
-        Program version string; defaults to ``'pyCSAMT <version>'``.
-    progdate : str
-        Program revision date ``YYYY/MM/DD``.
+        Elevation units (default ``'m'``).
+    stdvers, progvers, progdate : str
+        EDI standard version, program version, and revision
+        date. ``progvers`` defaults to ``pyCSAMT <version>``.
     coordsys : str
-        Coordinate system description, default 'Geomagnetic North'.
+        Coordinate system description (default
+        ``'Geomagnetic North'``).
     declination : float or None
-        Geomagnetic declination, degrees.
+        Geomagnetic declination in degrees.
     datum : str
-        Geodetic datum (defaults to 'WGS84').
+        Geodetic datum (default ``'WGS84'``).
     maxsect : int or None
-        Maximum data sections in file.
+        Maximum section count in file when present.
     bindata : str or None
-        Optional tag for binary data file.
+        Optional tag for external binary payload.
     project, survey : str or None
-        Project/survey names.
+        Project and survey names if supplied.
     empty : float
-        Missing-value sentinel (defaults to ``1.0e32``).
+        Missing-value sentinel (default ``1.0e32``).
     edi_header : list of str or None
-        Retained, normalized list of ``KEY=VALUE`` lines parsed from HEAD.
+        Normalized ``KEY=VALUE`` lines retained after parse.
 
     Notes
     -----
-    - Parsing is tolerant to case and single/double quotes.
-    - For ``lat``/``long`` setters, DMS strings are converted to decimal
-      degrees using the GIS helpers and stored in ``Location`` in
-      decimal form. When writing, they are formatted back to DMS.
+    * Key names are normalized to lower case and stored in a
+      canonical set (for example *lon* is exposed as
+      :pyattr:`long`).
+    * Latitude and longitude accept DMS strings of the form
+      ``'DD:MM:SS'`` with optional decimals and optional
+      cardinal letters.  See :mod:`pycsamt.gis.utils`.
+    * Writers quote some text fields to match common EDI
+      formatting tools.
 
     Examples
     --------
-    Read only the HEAD block from a file:
+    Read and access coordinates::
 
-    >>> head = Head.get_header_list_from_edi("E01.edi")
-    >>> head.dataid
-    'E01'
-    >>> head.lat, head.long, head.elev
-    (.., .., ..)
+        h = Head.from_file("E01.edi")
+        (h.lat, h.long, h.elev)
 
-    Create and write HEAD lines:
+    Create and serialize a header block::
 
-    >>> h = Head(dataid="E1_2", acqby="ULTREM", units="m")
-    >>> lines = h.write_head_info()
-    >>> print("".join(lines))
+        h = Head(dataid="E1_2", acqby="ULTREM", units="m")
+        lines = h.write()
+        print("".join(lines))
+
+    See Also
+    --------
+    Info
+        Companion container for the ``>INFO`` block.
+    Heads
+        Aggregator that bundles :class:`Head` and
+        :class:`Info`.
+    pycsamt.gis.utils.dms_to_decimal
+        Robust DMS → decimal converter.
+    pycsamt.gis.utils.decimal_to_dms
+        Decimal → DMS formatter.
+    pycsamt.seg.properties.IsEdi
+        File validator used by :meth:`from_file`.
+
+    References
+    ----------
+    .. [1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
+           https://www.mtnet.info/
     """
 
-    # Canonical keys that we know how to write in order
+    # Canonical keys order for serialization
     head_keys: List[str] = [
         "dataid",
         "acqby",
@@ -183,9 +250,10 @@ class Head(EdiComponentBase):
 
     def __init__(
         self, edi_header_list: Optional[Sequence[str]] = None, 
-        **kwargs
+        verbose =0, logger =None, **kwargs
         ):
-        # Core containers
+        super().__init__(verbose = verbose, logger=logger)
+        # Location container
         self.Location = Location()
 
         # Defaults
@@ -194,8 +262,7 @@ class Head(EdiComponentBase):
         self.fileby: Optional[str] = None
         self.acqdate: Optional[str] = None
         self.enddate: Optional[str] = None
-        self.filedate: str = _dt.datetime.utcnow(
-            ).strftime("%Y/%m/%d %H:%M:%S UTC")
+        self.filedate: str = _dt.datetime.utcnow().strftime("%Y/%m/%d %H:%M:%S UTC")
 
         self.country: Optional[str] = None
         self.state: Optional[str] = None
@@ -203,7 +270,7 @@ class Head(EdiComponentBase):
         self.prospect: Optional[str] = None
         self.loc: Optional[str] = None
 
-        self.units: str = "m"
+        self.units: str = "M".lower() if False else "m"  # keep lower internally; write upper
         self.stdvers: str = "SEG 1.0"
         self.progvers: str = f"pyCSAMT {_PKG_VERSION}"
         self.progdate: str = _dt.datetime.utcnow().strftime("%Y/%m/%d")
@@ -219,17 +286,15 @@ class Head(EdiComponentBase):
         self.edi_header: Optional[List[str]] = list(
             edi_header_list) if edi_header_list else None
 
-        # Apply user overrides (including unknown keys)
+        # User overrides (unknown keys allowed)
         for k, v in kwargs.items():
             setattr(self, k, v)
 
         # Parse if provided
         if self.edi_header is not None:
-            self.read_head(self.edi_header)
+            self.read(self.edi_header)
 
-    # ----------------
-    # Lat/Long/Elev IO
-    # ----------------
+    # --------- Geographic IO via Location ----------
     @property
     def lat(self) -> Optional[float]:
         return self.Location.latitude
@@ -243,7 +308,7 @@ class Head(EdiComponentBase):
             self.Location.latitude = float(value)
         except (TypeError, ValueError):
             self.Location.latitude = float(dms_to_decimal(str(value)))
-            logger.info('Converted DMS string latitude to decimal degrees.')
+            logger.info("Converted DMS latitude to decimal degrees.")
 
     @property
     def long(self) -> Optional[float]:
@@ -258,7 +323,7 @@ class Head(EdiComponentBase):
             self.Location.longitude = float(value)
         except (TypeError, ValueError):
             self.Location.longitude = float(dms_to_decimal(str(value)))
-            logger.info('Converted DMS string longitude to decimal degrees.')
+            logger.info("Converted DMS longitude to decimal degrees.")
 
     @property
     def elev(self) -> Optional[float]:
@@ -271,88 +336,33 @@ class Head(EdiComponentBase):
         else:
             self.Location.elevation = float(value)
 
-    # ------------------------------
-    # Read HEAD block from EDI lines
-    # ------------------------------
+    # --------- API ----------
     @classmethod
-    def from_edi(cls, edi_fn: Union[str, Path]) -> "Head":
+    def from_file(cls, edi_fn: Union[str, Path]) -> Head:
         """
-        Extract and parse the ``>HEAD`` block from an EDI file.
-
-        Parameters
-        ----------
-        edi_fn : str or Path
-            Path to the EDI file.
-
-        Returns
-        -------
-        Head
-            A ``Head`` instance populated from the file.
-
-        Raises
-        ------
-        FileHandlingError
-            If ``edi_fn`` is None or invalid.
-        FileNotFoundError
-            If the file does not exist.
-        EdIDataError
-            If file fails EDI validation or HEAD section is missing.
+        Extract and parse the >HEAD block from an EDI file path.
         """
         if edi_fn is None:
             raise FileHandlingError("No EDI path provided.")
         edi_path = Path(edi_fn)
-        # Validate (deep)
+
+        # Validate EDI (deep check)
         IsEdi._assert_edi(edi_path, deep=True)
 
         lines = edi_path.read_text(
             encoding="utf-8-sig", errors="replace").splitlines()
+        payload, _, _ = _slice_section(
+            lines, ">HEAD", after_tags=[">INFO", ">=DEFINEMEAS"])
+        # drop quotes in payload for tolerant parsing
+        payload = [ln.replace('"', "") for ln in payload]
+        return cls(edi_header_list=payload)
 
-        # find >HEAD start and >INFO (or >=DEFINEMEAS) stop
-        start, stop = None, None
-        for i, ln in enumerate(lines):
-            if _is_tag(ln, ">HEAD"):
-                start = i
-                break
-        if start is None:
-            raise EdIDataError("HEAD block not found in EDI file.")
-
-        for j in range(start + 1, len(lines)):
-            if _is_tag(lines[j], ">INFO") or _is_tag(lines[j], ">=DEFINEMEAS"):
-                stop = j
-                break
-        if stop is None:
-            # If INFO is genuinely missing, take contiguous lines until next tag
-            stop = start + 1
-            while stop < len(lines) and not lines[stop].lstrip().startswith(">"):
-                stop += 1
-
-        # Slice includes header content (excluding the >HEAD line itself)
-        header_slice = [ln.strip().replace('"', "") for ln in lines[start + 1 : stop]]
-        return cls(edi_header_list=header_slice)
-
-    def read(self, edi_header_list: Optional[Sequence[str]] = None) -> "Head":
+    def read(self, edi_header_list: Optional[Sequence[str]] = None) -> Head:
         """
-        Parse a ``>HEAD`` key-value list and set attributes.
-
-        Parameters
-        ----------
-        edi_header_list : sequence of str, optional
-            Lines of the HEAD block (``KEY=VALUE``). If omitted, uses
-            ``self.edi_header``.
-
-        Returns
-        -------
-        Head
-            The instance (for chaining).
-
-        Raises
-        ------
-        HeaderError
-            If nothing is available to read.
+        Parse HEAD KV lines and set attributes.
         """
         if edi_header_list is not None:
             self.edi_header = list(edi_header_list)
-
         if not self.edi_header:
             raise HeaderError("No HEAD items to read.")
 
@@ -363,53 +373,33 @@ class Head(EdiComponentBase):
                 continue
             m = _KV_RE.match(line)
             if not m:
-                # skip non KV lines quietly
                 continue
             key = _norm_key(m.group("key"))
             val = _unquote(m.group("val"))
 
-            # Set attribute, with special handling for coordsys alias
             if key == "coordsys":
                 setattr(self, "coordsys", val)
             elif key == "lon":
                 setattr(self, "long", val)
             else:
                 setattr(self, key, val)
+
             normalized.append(f"{key.upper()}={val}")
 
         self.edi_header = normalized
         return self
 
-    # --------------------
-    # Write HEAD to lines
-    # --------------------
     def write(
-            self, head_list_infos: Optional[Sequence[str]] = None) -> List[str]:
+            self, head_list_infos: Optional[Sequence[str]] = None
+            ) -> List[str]:
         """
-        Build formatted ``>HEAD`` lines ready to be written to an EDI file.
-
-        When ``head_list_infos`` is provided, it is used as the source of
-        ``KEY=VALUE`` pairs (after normalization). Otherwise, current
-        attributes are serialized in the canonical order.
-
-        Parameters
-        ----------
-        head_list_infos : sequence of str, optional
-            Existing HEAD lines. If provided, they are normalized and
-            returned; if omitted, the method serializes the current
-            object state.
-
-        Returns
-        -------
-        list of str
-            Lines including the leading ``>HEAD`` and a trailing blank
-            line for readability.
+        Build formatted >HEAD lines (including trailing blank line).
         """
         lines: List[str] = [">HEAD\n"]
 
+        # If given explicit lines, normalize & echo them
         if head_list_infos is not None:
-            # Normalize and rewrite
-            cleaned = []
+            cleaned: List[str] = []
             for raw in head_list_infos:
                 s = raw.strip()
                 if not s or s.startswith(">"):
@@ -419,7 +409,6 @@ class Head(EdiComponentBase):
                     continue
                 key = _norm_key(m.group("key"))
                 val = _unquote(m.group("val"))
-                # Formatting: quote some keys, uppercase right-hand when desired
                 if key in self._quoted_keys:
                     out_val = f'"{val}"'
                 else:
@@ -429,21 +418,19 @@ class Head(EdiComponentBase):
             lines.append("\n")
             return lines
 
-        # Serialize current attributes in canonical order
+        # Serialize internal state in canonical order
         for key in self.head_keys:
             val = getattr(self, key, None)
             if val in (None, "", "None"):
                 continue
 
-            # Lat/long as DMS strings if numeric
             if key in {"lat", "long"}:
-                # Write as DMS text expected by many EDI tools
                 vnum = getattr(self, key)
                 try:
                     out_val = decimal_to_dms(float(vnum))
                 except Exception:
                     out_val = str(vnum)
-            elif key in {"elev"}:
+            elif key == "elev":
                 out_val = str(val)
             elif key in self._quoted_keys:
                 out_val = f'"{val}"'
@@ -455,60 +442,111 @@ class Head(EdiComponentBase):
         lines.append("\n")
         return lines
 
+    # Convenience helpers
+    def as_dict(self) -> dict:
+        """Export known fields as a plain dict."""
+        d = {k: getattr(self, k, None) for k in self.head_keys}
+        # inject decimals for lat/long (if present)
+        d["lat"] = self.lat
+        d["long"] = self.long
+        d["elev"] = self.elev
+        return d
 
-class Info(EdiComponentBase):
+    def update(self, **kwargs) -> Head:
+        """Update fields (accepts both known and unknown keys)."""
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+        return self
+
+    def __repr__(self) -> str:  # compact identity for debugging
+        return f"<Head dataid={self.dataid!r} lat={self.lat} long={self.long}>"
+
+
+class Info(EDIComponentBase):
     r"""
-    EDI **INFO** block.
+    EDI ``>INFO`` block container.
 
-    Collects survey-level information and processing provenance.
+    The :class:`Info` class collects survey-level metadata and
+    processing provenance.  It supports **both** classic
+    ``KEY=VALUE`` blocks and spectra-style **free-text** INFO
+    blocks.  Non-KV lines are preserved in
+    :pyattr:`info_text` and are written back unmodified.
 
     Parameters
     ----------
     edi_info_list : sequence of str, optional
-        Raw lines of the ``>INFO`` block (without the ``>INFO`` tag).
-        If provided, they are parsed immediately.
+        Raw ``KEY=VALUE`` lines for the INFO block.  If
+        provided, they are parsed immediately via
+        :meth:`read`.  Non-KV lines should be passed via
+        :pyattr:`info_text` or supplied through
+        :meth:`from_file`.
+    verbose : int, optional
+        Verbosity level forwarded to the base component.
+    logger : logging.Logger, optional
+        Logger instance to use for diagnostics.
+    info_text : sequence of str, optional
+        Free-text lines from spectra-style INFO blocks that
+        should be preserved.
     **kwargs
-        Any attribute overrides. Unknown keys are set as dynamic
-        attributes.
+        Attribute overrides; unknown keys are accepted.
 
     Attributes
     ----------
     maxinfo : int
-        Maximum number of information lines (default 999).
-    Source : Source
-        Provenance of the dataset (project, survey, sitename, etc.).
-    Processing : Processing
-        Processing meta-information (software, processedby, etc.).
-    Copyright : Copyright
-        Optional copyright metadata container.
+        Maximum number of textual entries (default ``999``).
+    Source : :class:`~pycsamt.seg.property.Source`
+        Survey provenance (project, survey, site name, and
+        creation date).
+    Processing : :class:`~pycsamt.seg.property.Processing`
+        Processing meta-information (software, run list,
+        sign convention, etc.).
+    Copyright : :class:`~pycsamt.seg.property.Copyright`
+        Optional copyright container.
     filter : str or None
-        Optional filter tag (e.g., for EMAP sections).
-    ediinfo : list of str or None
-        Normalized ``KEY=VALUE`` lines of the INFO block.
+        Optional filter tag.
+    ediinfo : list of str
+        Normalized KV lines retained after parse.
+    info_text : list of str
+        Free-form text preserved and written back.
 
     Notes
     -----
-    The following keys are routed to nested objects:
-
-    - ``project``, ``survey``, ``creationdate``, ``sitename`` → ``Source``
-    - ``processedby``, ``processingtag``, ``runlist``, ``remoteref``,
-      ``remotesite``, ``signconvention`` → ``Processing``
-    - ``processingsoftware`` → ``Processing.ProcessingSoftware.name``
+    * Known keys are routed into nested containers (for
+      example ``processedby`` → :pyattr:`Processing`).
+    * If an INFO block contains **no** KV lines, parse is
+      still successful; fields remain at defaults and
+      :pyattr:`info_text` carries the original text.
 
     Examples
     --------
-    Read the INFO block from a file:
+    Parse INFO from file with mixed content::
 
-    >>> info = Info.get_info_list_from_edi("E01.edi")
-    >>> info.Source.project
-    'SAMTEX'
+        i = Info.from_file("15125A_spe.edi")
+        i.Source.project
+        len(i.info_text)  # free-text lines preserved
 
-    Create and serialize:
+    Build and write a KV-only INFO block::
 
-    >>> i = Info()
-    >>> i.Source.project = "DemoProj"
-    >>> i.Processing.processedby = "pyCSAMT"
-    >>> print("".join(i.write()))
+        i = Info()
+        i.Source.project = "Demo"
+        i.Processing.processedby = "pyCSAMT"
+        print("".join(i.write()))
+
+    See Also
+    --------
+    Head
+        Header metadata companion.
+    Heads
+        Aggregator that bundles :class:`Head` and
+        :class:`Info`.
+    pycsamt.seg.property.Source
+    pycsamt.seg.property.Processing
+    pycsamt.seg.property.Copyright
+
+    References
+    ----------
+    .. [1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
+           https://www.mtnet.info/
     """
 
     # canonical key serialization order
@@ -530,12 +568,28 @@ class Info(EdiComponentBase):
     # keys to quote in output
     _quoted_keys = {"processedby", "processingsoftware"}
 
-    def __init__(self, edi_info_list=None, **kwargs):
-        super().__init__()
-        self.ediinfo = list(edi_info_list) if edi_info_list else None
-        self.filter = None  # used in some EMAP/processing contexts
-        self.maxinfo = 999
+    def __init__(
+        self,
+        edi_info_list: Optional[Sequence[str]] = None,
+        *,
+        verbose: int = 0,
+        logger=None,
+        info_text: Optional[Sequence[str]] = None,
+        **kwargs,
+    ):
+        super().__init__(verbose=verbose, logger=logger)
 
+        # Raw KV lines we could parse (normalized later)
+        self.ediinfo: Optional[List[str]] = list(
+            edi_info_list
+        ) if edi_info_list else None
+        # Free-text payload (lines that are *not* KEY=VALUE)
+        self.info_text: List[str] = list(info_text) if info_text else []
+
+        self.filter: Optional[str] = None  # used in some EMAP/processing contexts
+        self.maxinfo: int = 999
+
+        # nested containers
         self.Source = Source()
         self.Processing = Processing()
         self.Copyright = Copyright()
@@ -543,46 +597,27 @@ class Info(EdiComponentBase):
         for k, v in kwargs.items():
             setattr(self, k, v)
 
+        # If KV lines were passed, parse immediately
         if self.ediinfo is not None:
             self.read(self.ediinfo)
 
-    # ------------------------------
-    # Read INFO block from EDI lines
-    # ------------------------------
+
     @classmethod
-    def from_edi(cls, edi_fn=None) -> "Info":
+    def from_file(cls, edi_fn: Union[str, Path]) -> "Info":
         """
         Extract and parse the ``>INFO`` block from an EDI file.
 
-        Parameters
-        ----------
-        edi_fn : str or Path-like
-            Path to the EDI file.
-
-        Returns
-        -------
-        Info
-            Populated ``Info`` instance.
-
-        Raises
-        ------
-        FileHandlingError
-            If path is invalid.
-        FileNotFoundError
-            If file does not exist.
-        EdIDataError
-            If EDI validation fails or INFO block is missing.
+        Works for both KV-style INFO and free-text INFO blocks.
         """
         if edi_fn is None:
             raise FileHandlingError("No EDI path provided.")
-
-        
 
         p = Path(edi_fn)
         IsEdi._assert_edi(p, deep=True)
 
         lines = p.read_text(encoding="utf-8-sig", errors="replace").splitlines()
 
+        # Slice INFO payload until next section (>=DEFINEMEAS, >=MTSECT, or any '>' tag)
         start, stop = None, None
         for i, ln in enumerate(lines):
             if _is_tag(ln, ">INFO"):
@@ -591,58 +626,69 @@ class Info(EdiComponentBase):
         if start is None:
             raise EdIDataError("INFO block not found in EDI file.")
 
-        # Stop at next section tag (>=DEFINEMEAS, >=MTSECT, or any '>' line)
         for j in range(start + 1, len(lines)):
             if _is_tag(lines[j], ">=DEFINEMEAS") or _is_tag(lines[j], ">=MTSECT"):
                 stop = j
                 break
-            # if any next top-level block appears
             if lines[j].lstrip().startswith(">"):
                 stop = j
                 break
-
         if stop is None:
             stop = start + 1
             while stop < len(lines) and not lines[stop].lstrip().startswith(">"):
                 stop += 1
 
-        info_slice = [ln.strip().replace('"', "") for ln in lines[start + 1 : stop]]
-        return cls(edi_info_list=info_slice)
+        payload = lines[start + 1 : stop]
 
-    def read(self, edi_info_list=None) -> "Info":
+        # Split payload into KV lines vs free text; strip outer quotes on KV.
+        kv_lines: List[str] = []
+        text_lines: List[str] = []
+        for raw in payload:
+            s = raw.strip()
+            if not s:
+                # keep spacing inside text block; treat as text line
+                text_lines.append(raw)
+                continue
+            m = _KV_RE.match(s)
+            if m:
+                key = _norm_key(m.group("key"))
+                val = _unquote(m.group("val"))
+                kv_lines.append(f"{key}={val}")
+            else:
+                text_lines.append(raw)
+
+        obj = cls(edi_info_list=kv_lines, info_text=text_lines)
+        # If we had KV lines, __init__ already parsed them. If not, that's fine.
+        return obj
+
+    def read(
+            self, edi_info_list: Optional[Sequence[str]] = None
+        ) -> "Info":
         """
         Parse an INFO key-value list and set attributes.
 
-        Parameters
-        ----------
-        edi_info_list : sequence of str, optional
-            Lines of the INFO block (``KEY=VALUE``). If omitted, uses
-            ``self.ediinfo``.
-
-        Returns
-        -------
-        Info
-            The instance (for chaining).
-
-        Raises
-        ------
-        HeaderError
-            If nothing is available to read.
+        If there are no KEY=VALUE items (e.g., spectra-style free-text INFO),
+        this method simply leaves metadata at defaults and returns without error.
+        Any non-KV lines should be provided via ``info_text``
+        (from_file handles this).
         """
         if edi_info_list is not None:
             self.ediinfo = list(edi_info_list)
 
+        # Nothing to read is a valid state for spectra-style INFO; just return.
         if not self.ediinfo:
-            raise HeaderError("No INFO items to read.")
+            self.ediinfo = []
+            return self
 
-        normalized = []
+        normalized: List[str] = []
         for raw in self.ediinfo:
             line = raw.strip()
             if not line or line.startswith(">"):
                 continue
-            # tolerate blank/flag lines (e.g., comments)
             m = _KV_RE.match(line)
             if not m:
+                # KV list given but line isn't KV; treat as free text
+                self.info_text.append(raw)
                 continue
 
             key = _norm_key(m.group("key"))
@@ -663,6 +709,12 @@ class Info(EdiComponentBase):
                 "signconvention",
             }:
                 setattr(self.Processing, key, val)
+            elif key == "maxinfo":
+                # normalize to int when possible
+                try:
+                    self.maxinfo = int(float(val))
+                except Exception:
+                    self.maxinfo = 999
             else:
                 # accept other fields as direct attributes
                 setattr(self, key, val)
@@ -673,44 +725,32 @@ class Info(EdiComponentBase):
         logger.debug("Parsed INFO: %s", self.ediinfo)
         return self
 
-    # --------------------
-    # Write INFO to lines
-    # --------------------
-    def write(self, edi_info_list=None):
+
+    def write(self, edi_info_list: Optional[Sequence[str]] = None) -> List[str]:
         """
         Build formatted ``>INFO`` lines ready to write to an EDI file.
 
-        When ``edi_info_list`` is provided, it is normalized and returned.
-        Otherwise, the current object state is serialized in canonical
-        order, and additional known fields (CREATINGSOFTWARE, FILTER) are
-        appended when available.
-
-        Parameters
-        ----------
-        edi_info_list : sequence of str, optional
-            Existing INFO lines to normalize/rewrite.
-
-        Returns
-        -------
-        list of str
-            Lines including the leading ``>INFO`` and a trailing blank
-            line.
+        - If ``edi_info_list`` is provided, it is normalized and written.
+        - Otherwise, current attributes are serialized in canonical order,
+          followed by any preserved free-text lines stored in ``info_text``.
         """
-        out = [">INFO\n"]
+        out: List[str] = [">INFO\n"]
 
+        # If caller supplied lines, normalize KV and pass through non-KV as text.
         if edi_info_list is not None:
-            cleaned = []
+            cleaned: List[str] = []
+            text_passthru: List[str] = []
             for raw in edi_info_list:
                 s = raw.strip()
                 if not s or s.startswith(">"):
                     continue
                 m = _KV_RE.match(s)
                 if not m:
+                    text_passthru.append(raw.rstrip("\n"))
                     continue
                 key = _norm_key(m.group("key"))
                 val = _unquote(m.group("val"))
 
-                # quote some keys, uppercase others for style
                 if key in self._quoted_keys:
                     out_val = f'"{val}"'
                 else:
@@ -718,10 +758,13 @@ class Info(EdiComponentBase):
                 cleaned.append(f"  {key.upper()}={out_val}\n")
 
             out.extend(cleaned)
+            # Preserve any non-KV lines we were given
+            for t in text_passthru:
+                out.append(f"{t.rstrip()}\n")
             out.append("\n")
             return out
 
-        # serialize from current attributes
+        # Serialize KV items from current attributes/containers
         for key in self.infokeys:
             if key in {"project", "survey", "creationdate", "sitename"}:
                 val = getattr(self.Source, key, None)
@@ -749,13 +792,331 @@ class Info(EdiComponentBase):
 
             out.append(f"  {key.upper()}={out_val}\n")
 
-        # Additional metadata if available
-        if getattr(self.Source, "creatingsoftware", None):
-            out.append(
-                f"  CREATINGSOFTWARE={getattr(self.Source, 'creatingsoftware')}\n"
-            )
-        if self.filter:
-            out.append(f"  FILTER={str(self.filter).upper()}\n")
+        # Append preserved free-text INFO lines (spectra-style blocks, etc.)
+        if self.info_text:
+            for ln in self.info_text:
+                # write as-is (no extra '  ' if original spacing is desired)
+                out.append(f"{ln.rstrip()}\n")
 
         out.append("\n")
         return out
+
+    # -------- convenience --------
+    def as_dict(self) -> dict:
+        """Flattened INFO dictionary (KV items only)."""
+        d = {k: getattr(self, k, None) for k in self.infokeys}
+        d.update(
+            {
+                "project": getattr(self.Source, "project", None),
+                "survey": getattr(self.Source, "survey", None),
+                "creationdate": getattr(self.Source, "creationdate", None),
+                "sitename": getattr(self.Source, "sitename", None),
+                "processingsoftware": getattr(
+                    self.Processing.ProcessingSoftware, "name", None
+                ),
+            }
+        )
+        return d
+
+    def update(self, **kwargs) -> "Info":
+        """Update INFO fields (routes to nested containers where appropriate)."""
+        for k, v in kwargs.items():
+            key = _norm_key(k)
+            if key in {"project", "survey", "creationdate", "sitename"}:
+                setattr(self.Source, key, v)
+            elif key == "processingsoftware":
+                self.Processing.ProcessingSoftware.name = v
+            elif key in {
+                "processedby",
+                "processingtag",
+                "runlist",
+                "remoteref",
+                "remotesite",
+                "signconvention",
+            }:
+                setattr(self.Processing, key, v)
+            elif key == "info_text" and isinstance(v, (list, tuple)):
+                self.info_text = list(v)
+            else:
+                setattr(self, key, v)
+        return self
+
+    def __repr__(self) -> str:
+        return (
+            f"<Info project={self.Source.project!r} "
+            f"processedby={self.Processing.processedby!r} "
+            f"text_lines={len(self.info_text)}>"
+        )
+
+
+
+class Heads(EDIComponentBase):
+    r"""
+    Convenience aggregator for ``>HEAD`` and ``>INFO``.
+
+    The :class:`Heads` helper wraps a parsed
+    :class:`Head` and :class:`Info` pair and provides simple
+    I/O helpers to extract or write both blocks together.  It
+    is useful when a workflow wants to treat the *top matter*
+    of an EDI file as a single unit.
+
+    Parameters
+    ----------
+    head : :class:`Head`, optional
+        Parsed header.  One will be created by
+        :meth:`from_file` when reading from disk.
+    info : :class:`Info`, optional
+        Parsed INFO.  One will be created by
+        :meth:`from_file` when reading from disk.
+
+    Attributes
+    ----------
+    head : :class:`Head`
+        Header container.
+    info : :class:`Info`
+        INFO container.
+
+    Notes
+    -----
+    * :meth:`from_file` validates the input via
+      :class:`~pycsamt.seg.properties.IsEdi`, then slices the
+      two blocks and delegates to :class:`Head` and
+      :class:`Info`.
+    * :meth:`write` serializes in canonical order
+      (``>HEAD`` first, then ``>INFO``), preserving free-text
+      INFO content when present.
+
+    Examples
+    --------
+    Read both blocks at once and re-emit them::
+
+        hs = Heads.from_file("000CSA_csamt.edi")
+        lines = hs.write()
+        open("out.edi", "w", encoding="utf-8").writelines(lines)
+
+    Access nested objects directly::
+
+        hs.head.dataid, hs.info.Source.project
+
+    See Also
+    --------
+    Head, Info
+        Underlying block containers.
+    pycsamt.seg.properties.IsEdi
+        Validator used at read time.
+
+    References
+    ----------
+    .. [1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
+           https://www.mtnet.info/
+    """
+
+
+    def __init__(
+            self, head: Optional[Head] = None, info: Optional[Info] = None, 
+            verbose: int = 0, logger=None ):
+        super().__init__(verbose=verbose, logger=logger )
+        self.head: Head = head if head is not None else Head()
+        self.info: Info = info if info is not None else Info()
+
+    @classmethod
+    def from_file(cls, edi_fn: Union[str, Path]) -> Heads:
+        """
+        Load >HEAD and >INFO from EDI path and return an aggregate container.
+        """
+        p = Path(edi_fn)
+        if not p:
+            raise FileHandlingError("No EDI path provided.")
+        IsEdi._assert_edi(p, deep=True)
+
+        lines = p.read_text(encoding="utf-8-sig", errors="replace").splitlines()
+
+        # HEAD
+        head_payload, _, stop_h = _slice_section(
+            lines, ">HEAD", after_tags=[">INFO", ">=DEFINEMEAS"])
+        head_payload = [ln.replace('"', "") for ln in head_payload]
+        head = Head(edi_header_list=head_payload).read()
+
+        # INFO (optional in theory, but standard requires it right after HEAD)
+        try:
+            info_payload, _, _ = _slice_section(
+                lines, ">INFO", after_tags=[">=DEFINEMEAS", ">=MTSECT"])
+            info_payload = [ln.replace('"', "") for ln in info_payload]
+            info = Info(edi_info_list=info_payload).read()
+        except EdIDataError:
+            # Keep an empty info; callers may enrich later
+            logger.warning(
+                "INFO block not found immediately after HEAD; created empty Info()")
+            info = Info()
+
+        return cls(head=head, info=info)
+
+    def read(self, text_or_lines: Union[str, Sequence[str]]) -> Heads:
+        """
+        Parse >HEAD and >INFO from provided content (string or list of lines).
+        """
+        if isinstance(text_or_lines, str):
+            lines = text_or_lines.splitlines()
+        else:
+            lines = list(text_or_lines)
+
+        # HEAD
+        head_payload, _, _ = _slice_section(
+            lines, ">HEAD", after_tags=[">INFO", ">=DEFINEMEAS"])
+        self.head = Head(edi_header_list=[ln.replace(
+            '"', "") for ln in head_payload]).read()
+
+        # INFO
+        try:
+            info_payload, _, _ = _slice_section(
+                lines, ">INFO", after_tags=[">=DEFINEMEAS", ">=MTSECT"])
+            self.info = Info(edi_info_list=[
+                ln.replace('"', "") for ln in info_payload]).read()
+        except EdIDataError:
+            self.info = Info()  # leave empty
+        return self
+
+    def write(self) -> List[str]:
+        """
+        Serialize >HEAD + >INFO blocks back-to-back.
+        """
+        out: List[str] = []
+        out.extend(self.head.write())
+        out.extend(self.info.write())
+        return out
+
+    # Simple helpers
+    def to_text(self) -> str:
+        """Return concatenated HEAD+INFO text."""
+        return "".join(self.write())
+
+    def __repr__(self) -> str:
+        return ( 
+            f"<Heads dataid={self.head.dataid!r}"
+            f" project={self.info.Source.project!r}>"
+            )
+
+class HeadMixin:
+    r"""
+    Mixin that exposes :class:`Head` helpers on a host class.
+
+    ``HeadMixin`` adds convenience constructors for reading
+    the ``>HEAD`` block without forcing the host to inherit
+    from :class:`Head` directly.  This is primarily used by
+    higher-level SEG components that *contain* a header but
+    are not themselves :class:`Head` objects.
+
+    Methods
+    -------
+    from_file(edi_fn)
+        Return a new :class:`Head` parsed from *edi_fn*.
+    read(lines)
+        Shortcut to :meth:`Head.read`.
+    write(...)
+        Shortcut to :meth:`Head.write`.
+
+    Notes
+    -----
+    The mixin does not own any state; it simply forwards to
+    :class:`Head`.
+
+    Examples
+    --------
+    Use the mixin inside a host container::
+
+        class Host(HeadMixin):
+            pass
+
+        h = Host.from_file("E01.edi")
+        print(h.dataid)
+
+    See Also
+    --------
+    Head, InfoMixin
+    """
+
+
+    head: Head
+
+    # -- class-level convenience --
+    @classmethod
+    def from_file(cls, edi_fn: Union[str, Path]) -> Head:
+        """Return a parsed Head instance from EDI path."""
+        return Head.from_file(edi_fn)
+
+    # -- instance-level --
+    def read(self, edi_header_list: Optional[Sequence[str]] = None) -> Head:
+        """Parse HEAD KV lines into `self.head` and return it."""
+        if not hasattr(self, "head") or self.head is None:
+            self.head = Head()
+        return self.head.read(edi_header_list)
+
+    def write(self, head_list_infos: Optional[Sequence[str]] = None) -> List[str]:
+        """Serialize the host's `head` as >HEAD lines."""
+        if not hasattr(self, "head") or self.head is None:
+            self.head = Head()
+        return self.head.write(head_list_infos)
+
+
+class InfoMixin:
+    r"""
+    Mixin that exposes :class:`Info` helpers on a host class.
+
+    ``InfoMixin`` adds convenience constructors for reading
+    the ``>INFO`` block while keeping the host class focused
+    on its domain logic.  It forwards calls to
+    :class:`Info` and returns an :class:`Info` instance.
+
+    Methods
+    -------
+    from_file(edi_fn)
+        Return a new :class:`Info` parsed from *edi_fn*.
+    read(lines)
+        Shortcut to :meth:`Info.read`.
+    write(...)
+        Shortcut to :meth:`Info.write`.
+
+    Notes
+    -----
+    Free-text INFO blocks (for example spectra-style RUN
+    INFORMATION) are supported transparently by
+    :class:`Info`.  The mixin needs no special handling.
+
+    Examples
+    --------
+    Mix in the helpers::
+
+        class Host(InfoMixin):
+            pass
+
+        info = Host.from_file("15125A_spe.edi")
+        len(info.info_text)  # preserved text lines
+
+    See Also
+    --------
+    Info, HeadMixin
+    """
+
+
+    info: Info
+
+    # -- class-level convenience --
+    @classmethod
+    def from_file(cls, edi_fn: Union[str, Path]) -> Info:
+        """Return a parsed Info instance from EDI path."""
+        return Info.from_file(edi_fn)
+
+    # -- instance-level --
+    def read(self, edi_info_list: Optional[Sequence[str]] = None) -> Info:
+        """Parse INFO KV lines into `self.info` and return it."""
+        if not hasattr(self, "info") or self.info is None:
+            self.info = Info()
+        return self.info.read(edi_info_list)
+
+    def write(self, edi_info_list: Optional[Sequence[str]] = None) -> List[str]:
+        """Serialize the host's `info` as >INFO lines."""
+        if not hasattr(self, "info") or self.info is None:
+            self.info = Info()
+        return self.info.write(edi_info_list)
+
+

@@ -11,7 +11,7 @@ Zonge ASTATIC program manual.
 """
 from __future__ import annotations
 
-from typing import Union, Optional 
+from typing import Union, Optional, Literal, Iterable
 from typing import overload
 import warnings 
 
@@ -32,7 +32,8 @@ __all__ = [
     "interpolate_to_log_space",
     "smooth_rho_from_phase", 
     "get_reference_frequency", 
-    "get_skew", "get_strike"
+    "get_skew", "get_strike", 
+    "prepare_strike_frame"
 ]
 
 
@@ -871,4 +872,204 @@ def get_skew(df: pd.DataFrame) -> pd.DataFrame:
         'freq': tensor_df['freq'],
         'skew': skew
     })
+
+
+def prepare_strike_frame(
+    *,
+    z_frame: Optional[pd.DataFrame] = None,
+    df: Optional[pd.DataFrame] = None,
+    prefer: Literal["z", "df"] = "z",
+    station_col: str = "station",
+    freq_col: str = "freq",
+    comp_col: str = "comp",
+    z_col: str = "z",
+    rho_col: str = "rho",
+    phase_col: str = "phase",
+    phase_unit: Literal["auto", "deg", "mrad", "rad"] = "auto",
+    drop_na: bool = True,
+    na_policy: Literal["any", "all"] = "any",
+    components: Optional[Iterable[str]] = None,
+    ensure_sorted: bool = True,
+    copy: bool = True,
+    mu0: float = 4.0 * np.pi * 1e-7,
+) -> pd.DataFrame:
+    r"""
+    Build a strike-ready frame with complex ``z``.
+
+    Prefers an input frame that already contains a complex
+    impedance column. If not available, derives ``z`` from
+    ``rho``, ``phase`` and ``freq``:
+
+    .. math::
+        |Z| = \sqrt{\mu_0 \, \omega \, \rho_a},\quad
+        Z = |Z|\,[\cos\phi + i\sin\phi]
+
+    Parameters
+    ----------
+    z_frame : DataFrame, optional
+        Frame that already holds a complex column ``z``.
+    df : DataFrame, optional
+        Long frame with columns for apparent resistivity,
+        phase and frequency (``rho``, ``phase``, ``freq``).
+    prefer : {"z","df"}, default "z"
+        Source priority when both frames are given.
+    station_col, freq_col, comp_col, z_col, rho_col, phase_col
+        Column names in provided frames.
+    phase_unit : {"auto","deg","mrad","rad"}, default "auto"
+        Unit for ``phase``. ``"auto"`` guesses:
+        - ``|phase|max <= π*1.5`` → rad
+        - else if ``<= 180`` → deg
+        - else → mrad
+    drop_na : bool, default True
+        Drop NA rows before computing.
+    na_policy : {"any","all"}, default "any"
+        Row-drop policy when ``drop_na=True``.
+    components : iterable of str, optional
+        If given, keep only these components.
+    ensure_sorted : bool, default True
+        Sort output by (station, freq, comp).
+    copy : bool, default True
+        Work on a copy of the source frame(s).
+    mu0 : float, default 4π·1e−7
+        Magnetic permeability of free space.
+
+    Returns
+    -------
+    DataFrame
+        Columns: ``station``, ``freq``, ``comp``, ``z``.
+
+    Raises
+    ------
+    ProcessingError
+        If required columns are missing or inputs are
+        not provided.
+    """
+    need_base = {station_col, freq_col, comp_col}
+
+    def _subset(
+        fr: pd.DataFrame, cols: list[str]
+    ) -> pd.DataFrame:
+        miss = [c for c in cols if c not in fr.columns]
+        if miss:
+            raise ProcessingError(
+                "Missing columns: {}".format(miss)
+            )
+        out = fr.loc[:, cols]
+        return out.copy() if copy else out
+
+    def _mask_components(fr: pd.DataFrame) -> pd.DataFrame:
+        if components is None:
+            return fr
+        return fr[fr[comp_col].isin(list(components))]
+
+    # -------------------- try z_frame path -------------------- #
+    if z_frame is not None and prefer == "z":
+        cols = [station_col, freq_col, comp_col, z_col]
+        try:
+            out = _subset(z_frame, cols)
+            out = _mask_components(out)
+            if drop_na:
+                out = out.dropna(how=na_policy)
+            # try to ensure complex dtype
+            if not np.issubdtype(
+                out[z_col].dtype, np.complexfloating
+            ):
+                out[z_col] = out[z_col].astype(complex)
+            out = out.rename(
+                columns={station_col: "station",
+                         freq_col: "freq",
+                         comp_col: "comp",
+                         z_col: "z"}
+            )
+            if ensure_sorted:
+                out = out.sort_values(["station", "freq", "comp"])
+            return out
+        except ProcessingError:
+            pass  # fall back to df path
+
+    # --------------------- try df (derive) -------------------- #
+    if df is not None:
+        cols = list(need_base | {rho_col, phase_col, freq_col})
+        out = _subset(df, cols)
+        out = _mask_components(out)
+        if drop_na:
+            out = out.dropna(how=na_policy)
+
+        # coerce numerics
+        for c in (rho_col, phase_col, freq_col):
+            out[c] = pd.to_numeric(out[c], errors="coerce")
+        if drop_na:
+            out = out.dropna(how=na_policy)
+
+        if out.empty:
+            raise ProcessingError("No data after NA drop.")
+
+        # magnitude from apparent resistivity (SI)
+        f = out[freq_col].to_numpy(float)
+        r = out[rho_col].to_numpy(float)
+        # avoid negative / zero
+        f = np.clip(f, 1e-12, np.inf)
+        r = np.clip(r, 0.0, np.inf)
+        omega = 2.0 * np.pi * f
+        zmag = np.sqrt(mu0 * omega * r)
+
+        # phase → radians
+        ph = out[phase_col].to_numpy(float)
+        if phase_unit == "deg":
+            ph_rad = np.deg2rad(ph)
+        elif phase_unit == "mrad":
+            ph_rad = ph / 1000.0
+        elif phase_unit == "rad":
+            ph_rad = ph
+        else:
+            # auto
+            max_abs = (
+                np.nanmax(np.abs(ph)) if ph.size else 0.0
+            )
+            if max_abs <= np.pi * 1.5:
+                ph_rad = ph  # already radians
+            elif max_abs <= 180.0:
+                ph_rad = np.deg2rad(ph)
+            else:
+                ph_rad = ph / 1000.0
+
+        zc = zmag * (np.cos(ph_rad) + 1j * np.sin(ph_rad))
+
+        ret = out.loc[:, [station_col, freq_col, comp_col]]
+        ret = ret.copy() if copy else ret
+        ret["z"] = zc
+        ret = ret.rename(
+            columns={station_col: "station",
+                     freq_col: "freq",
+                     comp_col: "comp"}
+        )
+        if ensure_sorted:
+            ret = ret.sort_values(["station", "freq", "comp"])
+        return ret
+
+    # ------------------------ fallback z_frame ----------------- #
+    if z_frame is not None:
+        cols = [station_col, freq_col, comp_col, z_col]
+        out = _subset(z_frame, cols)
+        out = _mask_components(out)
+        if drop_na:
+            out = out.dropna(how=na_policy)
+        if not np.issubdtype(
+            out[z_col].dtype, np.complexfloating
+        ):
+            out[z_col] = out[z_col].astype(complex)
+        out = out.rename(
+            columns={station_col: "station",
+                     freq_col: "freq",
+                     comp_col: "comp",
+                     z_col: "z"}
+        )
+        if ensure_sorted:
+            out = out.sort_values(["station", "freq", "comp"])
+        return out
+
+    raise ProcessingError(
+        "Provide 'z_frame' with a complex 'z' column or "
+        "'df' with 'rho','phase','freq' to derive z."
+    )
 

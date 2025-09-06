@@ -2,11 +2,11 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
-Configuration for the pytest suite.
+Pytest configuration and shared fixtures.
 
-This file defines shared fixtures for locating and accessing test
-data files, ensuring that tests can be run consistently from any
-directory.
+Locates project data folders and exposes paths to legacy AVG,
+STN, and EDI files. Also provides a simulated minimal EDI file
+for tests that do not rely on repository data.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ import pytest
 
 
 def get_project_root() -> Path:
-    """Find the repo root by locating the 'pycsamt' dir."""
+    """Find repo root by locating the 'pycsamt' dir."""
     cur = Path(__file__).resolve()
     for parent in cur.parents:
         if (parent / "pycsamt").is_dir():
@@ -30,17 +30,17 @@ def project_root() -> Path:
     return get_project_root()
 
 
+# --------------------- AVG / legacy data ----------------------
+
 @pytest.fixture(scope="session")
 def data_path(project_root: Path) -> Path:
-    """Base path to bundled test data."""
+    """Base path to bundled AVG data."""
     return project_root / "data" / "avg"
 
 
 @pytest.fixture(scope="session")
 def legacy_data_file(data_path: Path) -> Path:
-    """
-    Path to legacy K1.AVG file; skip if missing.
-    """
+    """Path to legacy K1.AVG; skip if missing."""
     p = data_path / "K1.AVG"
     if not p.exists():
         pytest.skip(f"Missing legacy data: {p}")
@@ -49,9 +49,7 @@ def legacy_data_file(data_path: Path) -> Path:
 
 @pytest.fixture(scope="session")
 def modern_data_file(data_path: Path) -> Path:
-    """
-    Path to modern K2.AVG file; skip if missing.
-    """
+    """Path to modern K2.AVG; skip if missing."""
     p = data_path / "K2.AVG"
     if not p.exists():
         pytest.skip(f"Missing modern data: {p}")
@@ -60,22 +58,109 @@ def modern_data_file(data_path: Path) -> Path:
 
 @pytest.fixture(scope="session")
 def stn_file_k1(data_path: Path) -> Path:
-    """
-    Path to K1.stn topography file; skip if missing.
-    """
+    """Path to K1.stn topography; skip if missing."""
     p = data_path / "K1.stn"
     if not p.exists():
         pytest.skip(f"Missing STN file: {p}")
     return p
 
+
 @pytest.fixture(scope="session")
 def stn_file_k2(data_path: Path) -> Path:
-    """
-    Path to K2.stn topography file; skip if missing.
-    """
+    """Path to K2.stn topography; skip if missing."""
     p = data_path / "K2.stn"
     if not p.exists():
         pytest.skip(f"Missing STN file: {p}")
     return p
 
 
+# --------------------------- EDI data -------------------------
+
+@pytest.fixture(scope="session")
+def edi_path(project_root: Path) -> Path:
+    """Base path to bundled EDI data."""
+    return project_root / "data" / "edi"
+
+
+@pytest.fixture(scope="session")
+def edi_imp_file(edi_path: Path) -> Path:
+    """Path to 15125A_imp.edi; skip if missing."""
+    p = edi_path / "15125A_imp.edi"
+    if not p.exists():
+        pytest.skip(f"Missing EDI: {p}")
+    return p
+
+
+@pytest.fixture(scope="session")
+def edi_spe_file(edi_path: Path) -> Path:
+    """Path to 15125A_spe.edi; skip if missing."""
+    p = edi_path / "15125A_spe.edi"
+    if not p.exists():
+        pytest.skip(f"Missing EDI: {p}")
+    return p
+
+
+@pytest.fixture(scope="session")
+def edi_csamt_file(edi_path: Path) -> Path:
+    """Path to 000CSA_csamt.edi; skip if missing."""
+    p = edi_path / "000CSA_csamt.edi"
+    if not p.exists():
+        pytest.skip(f"Missing EDI: {p}")
+    return p
+
+
+@pytest.fixture(
+    scope="session",
+    params=[
+        "15125A_imp.edi",
+        "15125A_spe.edi",
+        "000CSA_csamt.edi",
+    ],
+)
+def any_edi_file(request: pytest.FixtureRequest,
+                 edi_path: Path) -> Path:
+    """
+    Parametrized EDI path. Skips the case if a file is absent.
+    """
+    p = edi_path / str(request.param)
+    if not p.exists():
+        pytest.skip(f"Missing EDI: {p}")
+    return p
+
+
+# --------------- Synthetic/minimal EDI for tests --------------
+
+@pytest.fixture()
+def simulated_edi(tmp_path: Path) -> Path:
+    """
+    Create a minimal valid EDI on the fly for isolated tests.
+    """
+    lines = [
+        ">HEAD",
+        "  DATAID=SIM01",
+        "  LAT=26:00:00N",
+        "  LONG=010:00:00E",
+        "  ELEV=1000",
+        "  STDVERS=SEG 1.0",
+        "",
+        ">INFO",
+        "  PROJECT=SIM",
+        '  PROCESSEDBY=pyCSAMT',
+        '  PROCESSINGSOFTWARE=pyCSAMT',
+        "",
+        ">=MTSECT",
+        "  SECTID=SIM01",
+        "  NFREQ=2",
+        "",
+        ">!****FREQUENCIES****!",
+        ">FREQ  //2",
+        "  1.000000E+02  2.000000E+02",
+        "",
+        ">ZXXR ROT=ZROT  //2",
+        "  1.000000E+00  1.000000E+00",
+        "",
+        ">END",
+    ]
+    p = tmp_path / "simulated.edi"
+    p.write_text("\n".join(lines), encoding="utf-8")
+    return p

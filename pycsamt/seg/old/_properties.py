@@ -26,7 +26,10 @@ from pathlib import Path
 from typing import Iterable, Sequence, Tuple, Union
 
 from ..exceptions import EdIDataError, FileHandlingError
-from .base import EDIComponentBase
+from .base import EDIComponentBase# no need to inherit since base.py called 
+# already IsEdi. This will avoid circular import 
+
+# revise this class to best follow our new structure ... 
 
 
 

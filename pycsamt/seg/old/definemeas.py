@@ -3,6 +3,7 @@
 # License: LGPL-3.0
 from __future__ import annotations
 
+from pathlib import Path
 from typing import List, Dict, Optional
 
 from .base import EdiComponentBase
@@ -28,7 +29,7 @@ from .properties import IsEdi
 from .heads import _KV_RE, _unquote, _norm_key, _is_tag, logger
 
 
-class DefineMeasurement(EdiComponentBase):
+class DefineMeasurement(EdiComponentBase):# In new structure, it is called EDIComponentBase
     r"""
     ``>=DEFINEMEAS`` section: sensor locations and per-channel
     parameters.
@@ -181,7 +182,7 @@ class DefineMeasurement(EdiComponentBase):
         if edi_fn is None:
             raise FileHandlingError("No EDI path provided.")
 
-        from pathlib import Path
+
 
         p = Path(edi_fn)
         IsEdi._assert_edi(p, deep=True)
@@ -322,6 +323,7 @@ class DefineMeasurement(EdiComponentBase):
 
         logger.info('Found %d channel line(s) in DEFINEMEAS.', self.nchan)
         self.define_measurement = items_out
+        
         return self
 
     # -------------

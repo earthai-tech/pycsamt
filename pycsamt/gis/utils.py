@@ -32,6 +32,7 @@ Examples
 """
 from __future__ import annotations
 
+import re
 from typing import ( 
     Optional, Tuple, Any,
     Union, Sequence,
@@ -89,6 +90,10 @@ __all__ = [
     "normalize_lat_lon", 
     'GisError'
 ]
+
+_HEMI_RE = re.compile(r"\s*([NSEW])\s*$", re.IGNORECASE)
+_HEMI_SIGN = {"N": 1, "E": 1, "S": -1, "W": -1}
+
 
 @overload
 def normalize_lat_lon(
@@ -490,6 +495,8 @@ def convert_position_str2float(
     r"""
     Convert DMS string ``'DD:MM:SS.sss'`` or decimal string to
     a float in decimal degrees.
+    Accepts optional trailing hemisphere letter:
+    'N','S','E','W' (e.g., '26:00:00N', '10:00:00 W').
 
     The function first attempts a direct ``float()`` cast. If
     that fails, it parses the DMS components, validates them,
@@ -529,32 +536,62 @@ def convert_position_str2float(
     >>> convert_position_str2float("-118.34")
     -118.34
     """
+
     if position_str in (None, "None"):
         return None
 
+    # Fast path: plain decimal string/number
     try:
         return float(position_str)
     except (TypeError, ValueError):
         pass
 
-    parts = str(position_str).split(":")
+    # Normalize and peel optional hemisphere at end
+    s = str(position_str).strip().strip('"').strip("'")
+    hemi_sign: int | None = None
+    m = _HEMI_RE.search(s)
+    if m:
+        hemi = m.group(1).upper()
+        hemi_sign = _HEMI_SIGN[hemi]
+        s = s[: m.start()].rstrip()
+
+    parts = s.split(":")
     if len(parts) != 3:
-        msg = (
-            "Invalid DMS format, expected 'DD:MM:SS': "
-            f"{position_str}"
-        )
+        msg = "Invalid DMS, expected 'DD:MM:SS': {}".format(position_str)
         raise ValueError(msg)
 
+    # Degrees may carry sign; minutes/seconds must be non-negative
     deg = float(parts[0])
-    minutes = _assert_minutes(float(parts[1]))
-    seconds = _assert_seconds(float(parts[2]))
+    try:
+        minutes = abs(float(parts[1]))
+    except ValueError as exc:
+        raise ValueError("Invalid minutes: {!r}".format(parts[1])) from exc
+    try:
+        seconds = abs(float(parts[2]))
+    except ValueError as exc: # noqa
+        # Handle cases like '00N' already stripped above, but be safe
+        # by removing any trailing non-numeric tokens.
+        t = re.sub(r"[^\d.+\-eE]", "", parts[2])
+        try:
+            seconds = abs(float(t))
+        except Exception as exc2:
+            raise ValueError(
+                "Invalid seconds: {!r}".format(parts[2])) from exc2
 
+    minutes = _assert_minutes(minutes)
+    seconds = _assert_seconds(seconds)
+
+    # Rollover SS->MM then MM->DD
     minutes, seconds = _rollover_dms(minutes, seconds)
     deg, minutes = _rollover_dms(deg, minutes)
 
+    # Sign: hemisphere (if any) overrides degree sign
     sign = -1 if deg < 0 else 1
-    return sign * (abs(deg) + minutes / 60.0 + seconds / 3600.0)
+    if hemi_sign is not None:
+        sign = hemi_sign
+    deg = abs(deg)
 
+    return sign * (deg + minutes / 60.0 + seconds / 3600.0)
 
 
 def assert_lat_value(latitude) -> Optional[float]:

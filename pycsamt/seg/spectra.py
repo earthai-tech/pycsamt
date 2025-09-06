@@ -1,546 +1,574 @@
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
+
 from __future__ import annotations
 
-from typing import List, Optional, Dict, Union
+from pathlib import Path
+from typing import List, Optional, Dict, Any, Tuple
 import os
-import re
-
-import numpy as np
 
 from ..log.logger import get_logger
 from ..exceptions import EdIDataError
-from .base import EdiComponentBase
+from .base import EDIComponentBase
+from .validation import ( 
+    _strip_norm, 
+    _to_int_or_none, 
+    _to_float_or_none, 
+    _split_comment,
+    )
+from .validation import IsEdi 
 
 logger = get_logger(__name__)
 
-
-def _norm(s: str) -> str:
-    """Trim and strip quotes."""
-    return s.strip().strip('"').strip("'")
+__all__ = ["SpectraSECT", "SpectraIO", "SpectraMixin"]
 
 
-def _to_int(v: Optional[str]) -> Optional[int]:
-    if v in (None, "", "None"):
-        return None
-    try:
-        return int(float(v))
-    except Exception:
-        return None
+class SpectraSECT(EDIComponentBase):
+    r"""
+    Minimal container for the ``>=SPECTRASECT`` header.
 
+    The class parses and serializes the spectra section
+    header that precedes one or more ``>SPECTRA`` data
+    blocks. It collects the option key/values and the
+    ordered set of measurement IDs that the spectra apply
+    to, as described by the SEG EDI convention [1]_.
 
-def _to_float(v: Optional[str]) -> Optional[float]:
-    if v in (None, "", "None"):
-        return None
-    try:
-        return float(v)
-    except Exception:
-        return None
-
-
-def _is_section_start(line_upper: str) -> bool:
-    # Any new major block/section marker
-    return (
-        line_upper.startswith(">=")  # new section header
-        or line_upper.startswith(">FREQ")
-        or line_upper.startswith(">ZROT")
-        or line_upper.startswith(">RHOROT")
-        or line_upper.startswith(">!")  # comment/data intro
-        or line_upper.startswith(">SPECTRA")  # next spectra block
-    )
-
-
-class SpectraBlock(EdiComponentBase):
-    """
-    One >SPECTRA block.
+    Parameters
+    ----------
+    verbose : int or bool, optional
+        Verbosity flag propagated from :class:`Base`.
+    logger : object, optional
+        Logger instance to use. If ``None``, a default
+        null-safe logger is attached.
+    **kws :
+        Additional field overrides. Keys may include
+        any attribute listed below.
 
     Attributes
     ----------
-    freq : float            # Hz (required)
-    bw   : float            # Hz (required)
-    nchan: int              # if absent in header, fallback to section.nchan
-    rotspec : Optional[float]
-    avgt    : Optional[float]  # can be non-integer in practice
-    avgf    : Optional[float]
-    band    : Optional[str]
-    segnum  : Optional[int]    # default 0
-    chksum  : Optional[float]
-    matrix  : np.ndarray (nchan x nchan, complex)  # crosspower (Hermitian)
+    sectid : str or None
+        Section identifier, often a site name. Some
+        files omit this or use a numeric ID.
+    nchan : int or None
+        Number of channels in the spectra set.
+    nfreq : int or None
+        Number of frequencies expected in the section.
+    maxblks : int or None
+        Maximum number of blocks. Rarely used.
+    meas_ids : list of str
+        Ordered measurement ID list that follows the
+        option lines in ``>=SPECTRASECT``.
+    start_data_lines_num : int or None
+        Line index in the EDI where the first
+        ``>SPECTRA`` block begins. Set by
+        :meth:`from_file`.
+
+    Notes
+    -----
+    * Parsing is tolerant to case and extra whitespace.
+    * Unknown header keys are ignored instead of raising.
+    * The measurement ID list is collected from the
+      header body once option lines end.
+    * The start of the spectra data is detected by the
+      first ``>SPECTRA`` tag, by the next ``>=...`` tag,
+      or by end of file, whichever comes first.
+    * For consistent processing, maintain the same
+      frequency set across related data sections,
+      as recommended in the EDI spec [1]_.
+
+    See Also
+    --------
+    SpectraIO
+        Reader/writer for the ``>SPECTRA`` data blocks.
+    MTEMAP
+        Header for ``>=MTSECT`` or ``>=EMAPSECT``. The
+        spectra frequency set should match the MT set.
+    TSect
+        Header for ``>=TSERIESSECT`` (time series).
+
+    Examples
+    --------
+    Read only the header and measurement IDs:
+
+    >>> sect = SpectraSECT.from_file("site.edi")
+    >>> sect.nfreq, sect.nchan
+    (128, 5)
+    >>> sect.meas_ids[:2]
+    ['HX1', 'HY1']
+
+    Serialize a header:
+
+    >>> sect.nfreq = 3
+    >>> sect.meas_ids = ["HX", "HY", "EX", "EY"]
+    >>> lines = sect.write()
+    >>> print("".join(lines).strip())  # doctest: +ELLIPSIS
+    >=SPECTRASECT
+      SECTID=...
+      NCHAN=...
+      NFREQ=3
+      MAXBLKS=...
+        // 4
+         HX
+         HY
+         EX
+         EY
+
+    References
+    ----------
+    .. [1] SEG EDI standard, "Spectra Data Sections".
     """
 
-    def __init__(
-        self,
-        *,
-        freq: float,
-        bw: float,
-        nchan: int,
-        matrix: np.ndarray,
-        rotspec: Optional[float] = None,
-        avgt: Optional[float] = 1.0,
-        avgf: Optional[float] = 1.0,
-        band: Optional[str] = None,
-        segnum: Optional[int] = 0,
-        chksum: Optional[float] = None,
-        sectid: Optional[str] = None,
-    ) -> None:
-        super().__init__()
-        self.sectid = sectid
-        self.freq = float(freq)
-        self.bw = float(bw)
-        self.nchan = int(nchan)
-        self.rotspec = None if rotspec is None else float(rotspec)
-        self.avgt = None if avgt is None else float(avgt)
-        self.avgf = None if avgf is None else float(avgf)
-        self.band = band
-        self.segnum = None if segnum is None else int(segnum)
-        self.chksum = None if chksum is None else float(chksum)
+    KEY_ORDER: List[str] = [
+        "sectid",
+        "nchan",
+        "nfreq",
+        "maxblks",
+    ]
 
-        if not isinstance(matrix, np.ndarray):
-            raise EdIDataError("SpectraBlock.matrix must be a numpy ndarray.")
-        if matrix.shape != (self.nchan, self.nchan):
-            raise EdIDataError(
-                "SpectraBlock.matrix shape mismatch:"
-                f" expected ({self.nchan},{self.nchan}), "
-                f"got {matrix.shape}"
-            )
-        self.matrix = matrix.astype(np.complex128, copy=False)
+    def __init__(self, *args: Any, verbose:int=0, logger=None, **kws: Any):
+        super().__init__(verbose=verbose, logger=logger)
+        self.sectid: Optional[str] = None
+        self.nchan: Optional[int] = None
+        self.nfreq: Optional[int] = None
+        self.maxblks: Optional[int] = None
+        self.meas_ids: List[str] = []
+        self.start_data_lines_num: Optional[int] = None
 
-    # Packing / Unpacking between Hermitian and 
-    # SEG compressed real N×N 
-
-    @staticmethod
-    def pack_to_compressed_real(m: np.ndarray) -> np.ndarray:
-        """
-        Pack Hermitian NxN complex matrix into NxN real "compressed" array:
-        - diagonal = real(diag)
-        - lower-left (i>j) = real(m[i,j])
-        - upper-right (i<j) = imag(m[i,j])  (sign preserved)
-
-        Returns
-        -------
-        np.ndarray of shape (N, N), dtype=float64
-        """
-        if m.ndim != 2 or m.shape[0] != m.shape[1]:
-            raise EdIDataError("Matrix must be square for spectra packing.")
-        n = m.shape[0]
-        out = np.zeros((n, n), dtype=np.float64)
-        # Diagonal (real autos)
-        out[np.diag_indices(n)] = m.diagonal().real
-        # Lower-left: real parts
-        il, jl = np.tril_indices(n, k=-1)
-        out[il, jl] = m[il, jl].real
-        # Upper-right: imaginary parts
-        iu, ju = np.triu_indices(n, k=1)
-        out[iu, ju] = m[iu, ju].imag
-        return out
-
-    @staticmethod
-    def unpack_from_compressed_real(a: np.ndarray) -> np.ndarray:
-        """
-        Reconstruct Hermitian matrix from NxN real "compressed" array:
-        - diag = real autos
-        - real parts from lower-left
-        - imaginary parts from upper-right (sign preserved)
-
-        Returns complex Hermitian NxN matrix.
-        """
-        if a.ndim != 2 or a.shape[0] != a.shape[1]:
-            raise EdIDataError("Compressed array must be square.")
-        n = a.shape[0]
-        m = np.zeros((n, n), dtype=np.complex128)
-        # diagonal
-        d = np.diag_indices(n)
-        m[d] = a[d] + 0j
-        # off-diags
-        iu, ju = np.triu_indices(n, k=1)
-        for i, j in zip(iu, ju):
-            real = a[j, i]
-            imag = a[i, j]
-            m[i, j] = real + 1j * imag
-            m[j, i] = real - 1j * imag
-        return m
-
-
-class Spectra(EdiComponentBase):
-    """
-    >=SPECTRASECT + multiple >SPECTRA blocks
-
-    Section header (>=SPECTRASECT)
-    ------------------------------
-    sectid: Optional[str]
-    nchan : int (>=1)
-    nfreq : int (>=1)
-    maxblks: Optional[int]
-    chksum : Optional[float]
-    chan_ids: List[str]  # ordered measurement IDs (length nchan)
-
-    Blocks
-    ------
-    blocks: List[SpectraBlock]
-
-    API
-    ---
-    - from_edi(edi_path: str, index: int = 0) -> Spectra
-    - from_edi_all(edi_path: str) -> List[Spectra]
-    - read(lines_for_one_section: List[str]) -> Spectra
-    - write() -> List[str]  # returns lines with >=SPECTRASECT, IDs, and >SPECTRA blocks
-    """
-
-    # keys recognized in >=SPECTRASECT
-    SECT_KEYS = ("sectid", "nchan", "nfreq", "maxblks", "chksum")
-
-    def __init__(
-        self,
-        *,
-        sectid: Optional[str] = None,
-        nchan: Optional[int] = None,
-        nfreq: Optional[int] = None,
-        maxblks: Optional[int] = None,
-        chksum: Optional[float] = None,
-        chan_ids: Optional[List[str]] = None,
-        blocks: Optional[List[SpectraBlock]] = None,
-    ) -> None:
-        super().__init__()
-        self.sectid = sectid
-        self.nchan = None if nchan is None else int(nchan)
-        self.nfreq = None if nfreq is None else int(nfreq)
-        self.maxblks = None if maxblks is None else int(maxblks)
-        self.chksum = None if chksum is None else float(chksum)
-        self.chan_ids = list(chan_ids) if chan_ids is not None else []
-        self.blocks: List[SpectraBlock] = list(blocks) if blocks is not None else []
-
-        # internal bookkeeping
-        self._raw_section_lines: Optional[List[str]] = None
-
+        for k, v in kws.items():
+            setattr(self, k, v)
 
     @classmethod
-    def from_edi_all(cls, edi_path: str) -> List["Spectra"]:
-        """Parse all >=SPECTRASECT sections from an EDI file."""
-        sections = cls._extract_all_section_blocks(edi_path)
-        out: List[Spectra] = []
-        for sec_lines in sections:
-            inst = cls().read(sec_lines)
-            out.append(inst)
-        return out
-
-    @classmethod
-    def from_edi(cls, edi_path: str, index: int = 0) -> "Spectra":
-        """Parse the `index`-th >=SPECTRASECT from an EDI file (0-based)."""
-        sections = cls._extract_all_section_blocks(edi_path)
-        if not sections:
-            raise EdIDataError("No >=SPECTRASECT section found in EDI.")
-        if index < 0 or index >= len(sections):
-            raise IndexError(
-                f"SPECTRASECT index out of range (0..{len(sections)-1}).")
-        return cls().read(sections[index])
-
-    @staticmethod
-    def _extract_all_section_blocks(edi_path: str) -> List[List[str]]:
-        """Return a list of 'one-section' line 
-        lists (>=SPECTRASECT ... until next >= or EOF)."""
-        if not os.path.isfile(edi_path):
-            raise FileNotFoundError(f"{edi_path!r} is not a file.")
-
-        with open(edi_path, "r", encoding="utf-8") as f:
-            lines = [ln.rstrip("\n") for ln in f]
-
-        start_idxs: List[int] = []
+    def from_file(cls, edi_path: str) -> "SpectraSECT":
+        # Pseudo test with >Head missing
+        
+        #     if not os.path.isfile(edi_path):
+        #         raise FileNotFoundError(
+        #             f"{edi_path!r} is not a file."
+        #         )
+        #     with open(edi_path, "r", encoding="utf-8") as f:
+        #         lines = f.readlines()
+        
+        p = Path(edi_path)
+        IsEdi._assert_edi(p, deep=True)
+    
+        lines = p.read_text(
+            encoding="utf-8-sig", errors="replace"
+        ).splitlines()
+    
+        # find >=SPECTRASECT
+        start = None
         for i, ln in enumerate(lines):
-            if ln.upper().startswith(">=SPECTRASECT"):
-                start_idxs.append(i)
-
-        sections: List[List[str]] = []
-        for k, si in enumerate(start_idxs):
-            # section extends from si to next >=... or EOF
-            sj = len(lines)
-            for j in range(si + 1, len(lines)):
-                if j in start_idxs:
-                    sj = j
-                    break
-            sections.append(lines[si:sj])
-        return sections
-
-    # Parsing a single >=SPECTRASECT section (header + IDs + >SPECTRA blocks)
-    def read(self, lines_for_section: List[str]) -> "Spectra":
-        """
-        Read one >=SPECTRASECT block and its >SPECTRA blocks.
-
-        Parameters
-        ----------
-        lines_for_section : list of lines starting at '>=SPECTRASECT' up to
-                            (but not including) the next '>=...' or EOF.
-        """
-        if not lines_for_section or not lines_for_section[0].upper(
-                ).startswith(">=SPECTRASECT"):
-            raise EdIDataError(
-                "SPECTRASECT parsing requires a section"
-                " beginning with '>=SPECTRASECT'.")
-
-        self._raw_section_lines = list(lines_for_section)
-
-        # 1) Parse header key-values (lines after the >=SPECTRASECT
-        # line, until dataset '//N' or IDs start)
-        i = 1
-        while i < len(lines_for_section):
-            lnu = lines_for_section[i].upper().lstrip()
-            if lnu.startswith("//"):
-                # channel count line (optional)
+            if ln.lstrip().upper().startswith(">=SPECTRASECT"):
+                start = i
                 break
-            if lnu.startswith(">SPECTRA"):
-                # means no channel-ID dataset; not compliant but tolerate
-                break
-            if lnu.startswith(">="):
-                # next section already, stop
-                break
-
-            # key=val pairs possibly spaced
-            if "=" in lines_for_section[i]:
-                k, v = lines_for_section[i].split("=", 1)
-                key, val = _norm(k).lower(), _norm(v)
-                if key in self.SECT_KEYS:
-                    if key in ("nchan", "nfreq", "maxblks"):
-                        setattr(self, key, _to_int(val))
-                    elif key == "chksum":
-                        self.chksum = _to_float(val)
-                    else:
-                        setattr(self, key, val)
-            i += 1
-
-            # stop header if next line is IDs count marker or >SPECTRA
-            if i < len(lines_for_section):
-                nxt = lines_for_section[i].lstrip()
-                if nxt.startswith("//") or nxt.upper().startswith(">SPECTRA"):
-                    break
-
-        if self.nchan is None or self.nfreq is None:
-            raise EdIDataError("SPECTRASECT header must define NCHAN and NFREQ.")
-
-        # 2) Parse optional //NCHAN line (count line)
-        chan_count_from_slash: Optional[int] = None
-        if i < len(lines_for_section) and lines_for_section[i].lstrip().startswith("//"):
-            try:
-                chan_count_from_slash = int(
-                    lines_for_section[i].lstrip()[2:].strip())
-            except Exception:
-                chan_count_from_slash = None
-            i += 1
-
-        # 3) Read measurement IDs dataset: exactly NCHAN IDs (possibly split across lines)
-        ids: List[str] = []
-        while i < len(lines_for_section):
-            ln = lines_for_section[i].strip()
-            if not ln:
-                i += 1
-                continue
-            u = ln.upper()
+        if start is None:
+            raise EdIDataError("No >=SPECTRASECT found.")
+    
+        # stop at first >SPECTRA, next >=..., or EOF
+        stop = len(lines)
+        for j in range(start + 1, len(lines)):
+            u = lines[j].lstrip().upper()
             if u.startswith(">SPECTRA") or u.startswith(">="):
+                stop = j
                 break
-            # split by whitespace; these are IDs like 111.001
-            ids.extend([_norm(tok) for tok in ln.split()])
-            if len(ids) >= (self.nchan or 0):
-                ids = ids[: self.nchan]
-                i += 1
-                break
-            i += 1
+    
+        inst = cls()
+        for raw in lines[start + 1 : stop]:
+            s = raw.strip()
+            if not s or s.startswith("//"):
+                continue
+            if "=" in s:
+                k, v = s.split("=", 1)
+                key = _strip_norm(k).lower()
+                val = _strip_norm(v)
+                if key == "sectid":
+                    inst.sectid = val
+                elif key == "nchan":
+                    inst.nchan = _to_int_or_none(val)
+                elif key == "nfreq":
+                    inst.nfreq = _to_int_or_none(val)
+                elif key == "maxblks":
+                    inst.maxblks = _to_int_or_none(val)
+            else:
+                if s:
+                    inst.meas_ids.append(_strip_norm(s))
+    
+        inst.start_data_lines_num = stop
+        return inst
 
-        if len(ids) != self.nchan:
-            raise EdIDataError(
-                f"SPECTRASECT: expected {self.nchan}"
-                f" channel IDs, got {len(ids)}.")
-        if chan_count_from_slash is not None and chan_count_from_slash != self.nchan:
-            logger.warning(
-                "SPECTRASECT '//N' (%s) does not match NCHAN (%s). Proceeding.",
-                chan_count_from_slash, self.nchan
+    def write(self) -> List[str]:
+        out: List[str] = [">=SPECTRASECT\n"]
+        values: Dict[str, Any] = {
+            "sectid": self.sectid,
+            "nchan": self.nchan,
+            "nfreq": self.nfreq,
+            "maxblks": self.maxblks,
+        }
+        for key in self.KEY_ORDER:
+            val = values.get(key, None)
+            if val in (None, "", "None"):
+                continue
+            out.append(
+                f"  {key.upper()}={str(val).upper()}\n"
             )
-        self.chan_ids = ids
+        if self.meas_ids:
+            out.append(
+                f"    // {len(self.meas_ids)}\n"
+            )
+            for mid in self.meas_ids:
+                out.append(f"     {str(mid)}\n")
+        return out
 
-        # 4) Parse >SPECTRA blocks within this section
-        self.blocks.clear()
-        while i < len(lines_for_section):
-            ln = lines_for_section[i]
-            lnu = ln.upper().lstrip()
 
-            if lnu.startswith(">="):  # next section
+class _SpectraBlock(EDIComponentBase):
+    """
+    Single >SPECTRA block container.
+    """
+
+    def __init__(
+        self, *args: Any, 
+        verbose: int | bool =0 , 
+        logger=None, **kws: Any
+    ):
+        super().__init__(verbose=verbose, logger=logger)
+        self.freq: Optional[float] = None
+        self.rotspec: Optional[int] = None
+        self.bw: Optional[float] = None
+        self.avgt: Optional[float] = None
+        self.nvals_hint: Optional[int] = None
+        self.options: Dict[str, Any] = {}
+        self.values: List[float] = []
+
+        for k, v in kws.items():
+            setattr(self, k, v)
+
+    def header_dict(self) -> Dict[str, Any]:
+        d = dict(self.options)
+        if self.freq is not None:
+            d["freq"] = self.freq
+        if self.rotspec is not None:
+            d["rotspec"] = self.rotspec
+        if self.bw is not None:
+            d["bw"] = self.bw
+        if self.avgt is not None:
+            d["avgt"] = self.avgt
+        return d
+
+
+class SpectraIO(EDIComponentBase):
+    r"""
+    Read and write ``>SPECTRA`` data blocks.
+
+    A spectra section contains one block per frequency.
+    Each block begins with a ``>SPECTRA`` line that holds
+    options such as frequency and bandwidth, optionally
+    followed by a comment with the number of values,
+    then one or more lines of numeric values.
+
+    Known options are normalized:
+
+    * ``FREQ`` : float
+    * ``ROTSPEC`` : int
+    * ``BW`` : float
+    * ``AVGT`` : float
+
+    Unrecognized options are preserved in a free-form
+    mapping so that vendor-specific metadata is not lost.
+
+    Parameters
+    ----------
+    verbose : int or bool, optional
+        Verbosity flag propagated from :class:`Base`.
+    logger : object, optional
+        Logger instance to use. If ``None``, a default
+        null-safe logger is attached.
+    **kws :
+        Additional field overrides.
+
+    Attributes
+    ----------
+    blocks : list of _SpectraBlock
+        Parsed spectra blocks, one per frequency. Each
+        block stores header options, the optional value
+        count hint, and the numeric values.
+
+    Notes
+    -----
+    * :meth:`from_file` reads successive ``>SPECTRA``
+      blocks starting from a given line or from the
+      first match in the file.
+    * Values are parsed as floats; non-numeric tokens
+      in data lines are ignored rather than raising.
+    * The writer orders known options first in the
+      header line, then appends extra options sorted
+      by key. Both option keys and values are written
+      in upper case.
+    * Line formatting uses the per-line and float
+      format defaults from :class:`Base` unless you
+      provide explicit overrides.
+
+    See Also
+    --------
+    SpectraSECT
+        Header container for spectra sections.
+    TSIO
+        Time-series counterpart for ``>TSERIES``.
+
+    Examples
+    --------
+    Read all spectra blocks:
+
+    >>> io = SpectraIO.from_file("site.edi")
+    >>> len(io.blocks)
+    128
+    >>> b0 = io.blocks[0]
+    >>> b0.freq, b0.bw  # doctest: +ELLIPSIS
+    (..., ...)
+
+    Build and serialize blocks:
+
+    >>> from pycsamt.seg.spectra import _SpectraBlock
+    >>> io = SpectraIO()
+    >>> blk = _SpectraBlock()
+    >>> blk.freq = 10.0
+    >>> blk.rotspec = 1
+    >>> blk.values = [0.1, 0.2, 0.3]
+    >>> io.blocks.append(blk)
+    >>> lines = io.write(per_line=2, float_fmt="{: .3E}")
+    >>> print("".join(lines).strip())
+    >SPECTRA FREQ=10.0 ROTSPEC=1 // 3
+      1.000E-01  2.000E-01
+      3.000E-01
+
+    References
+    ----------
+    .. [1] SEG EDI standard, "Spectra Data Sections".
+    """
+
+    def __init__(
+        self, *args: Any, 
+        verbose: int | bool =0 , 
+        logger=None, **kws: Any
+    ):
+        super().__init__(verbose=verbose, logger=logger)
+        self.blocks: List[_SpectraBlock] = []
+        for k, v in kws.items():
+            setattr(self, k, v)
+
+    # --------------------------
+    # Load from file
+    # --------------------------
+    @classmethod
+    def from_file(
+        cls,
+        edi_path: str,
+        start_line: Optional[int] = None,
+    ) -> "SpectraIO":
+        if not os.path.isfile(edi_path):
+            raise FileNotFoundError(
+                f"{edi_path!r} is not a file."
+            )
+        with open(edi_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        if start_line is None:
+            # find first >SPECTRA
+            for i, ln in enumerate(lines):
+                if ln.upper().lstrip().startswith(">SPECTRA"):
+                    start_line = i
+                    break
+        if start_line is None:
+            raise EdIDataError("No >SPECTRA blocks found.")
+
+        inst = cls()
+        i = start_line
+        n = len(lines)
+        while i < n:
+            ln = lines[i].rstrip("\n")
+            u = ln.upper().lstrip()
+            if u.startswith(">="):
                 break
-
-            if not lnu.startswith(">SPECTRA"):
+            if not u.startswith(">SPECTRA"):
                 i += 1
                 continue
 
-            # Parse header options in the >SPECTRA line
-            # Example: >SPECTRA SECTID=DEMO-11 FREQ=144 BW=36 AVGF=12 AVGT=128 //25
-            spec_header = ln
-            header_pairs: Dict[str, str] = {}
-            # Extract '//' trailing count, if present (not strictly needed)
-            trailing_count: Optional[int] = None
-            if "//" in spec_header:
+            blk, next_i = cls._parse_block(lines, i)
+            inst.blocks.append(blk)
+            i = next_i
+
+        return inst
+
+    # --------------------------
+    # Parse one >SPECTRA block
+    # --------------------------
+    @staticmethod
+    def _parse_block(
+        lines: List[str],
+        i: int,
+    ) -> Tuple[_SpectraBlock, int]:
+        head = lines[i].rstrip("\n")
+        body, cmt = _split_comment(head)
+        toks = body.split()
+        # toks[0] is ">SPECTRA"
+        opts = toks[1:]
+
+        blk = _SpectraBlock()
+        if cmt is not None:
+            try:
+                blk.nvals_hint = int(float(cmt))
+            except Exception:
+                blk.nvals_hint = None
+
+        for t in opts:
+            if "=" not in t:
+                continue
+            k, v = t.split("=", 1)
+            key = _strip_norm(k).lower()
+            val = _strip_norm(v)
+            if key == "freq":
+                blk.freq = _to_float_or_none(val)
+            elif key == "rotspec":
+                blk.rotspec = _to_int_or_none(val)
+            elif key == "bw":
+                blk.bw = _to_float_or_none(val)
+            elif key == "avgt":
+                blk.avgt = _to_float_or_none(val)
+            else:
+                # keep unknown options
+                blk.options[key] = val
+
+        j = i + 1
+        while j < len(lines):
+            s = lines[j].strip()
+            if not s:
+                j += 1
+                continue
+            if s.startswith(">"):
+                break
+            if s.startswith("//"):
+                j += 1
+                continue
+            # collect floats
+            before, _ = _split_comment(s)
+            for tok in before.split():
                 try:
-                    trailing_count = int(spec_header.split("//", 1)[1].strip())
+                    blk.values.append(float(tok))
                 except Exception:
-                    trailing_count = None # noqa
-                spec_header = spec_header.split("//", 1)[0]
+                    # tolerate bad tokens
+                    pass
+            j += 1
 
-            # Find key=val pairs
-            for m in re.finditer(r"([A-Za-z]+)\s*=\s*([^ \t]+)", spec_header):
-                header_pairs[m.group(1).lower()] = _norm(m.group(2))
+        return blk, j
 
-            # Resolve header values with fallback
-            sectid = header_pairs.get("sectid", self.sectid)
-            freq = _to_float(header_pairs.get("freq"))
-            bw = _to_float(header_pairs.get("bw"))
-            if freq is None or bw is None:
-                raise EdIDataError(">SPECTRA block requires FREQ and BW.")
 
-            nchan_here = _to_int(header_pairs.get("nchan")) or self.nchan
-            rotspec = _to_float(header_pairs.get("rotspec"))
-            avgt = _to_float(header_pairs.get("avgt")) or 1.0
-            avgf = _to_float(header_pairs.get("avgf")) or 1.0
-            band = header_pairs.get("band")
-            segnum = _to_int(header_pairs.get("segnum")) or 0
-            chksum = _to_float(header_pairs.get("chksum"))
+    def write(
+        self,
+        per_line: Optional[int] = None,
+        float_fmt: Optional[str] = None,
+    ) -> List[str]:
+        kpl = self.PER_LINE if per_line is None else per_line
+        ffmt = self.FLOAT_FMT if float_fmt is None else float_fmt
 
-            # Read dataset: exactly nchan*nchan real values (packed NxN real array)
-            i += 1
-            needed = nchan_here * nchan_here
-            vals: List[float] = []
-            while i < len(lines_for_section) and len(vals) < needed:
-                l = lines_for_section[i].strip()
-                if not l:
-                    i += 1
-                    continue
-                u2 = l.upper()
-                if u2.startswith(">=") or u2.startswith(">SPECTRA"):
-                    # Unexpected early end; stop to avoid infinite loop
-                    break
-                # collect all floats on the line
-                for tok in l.split():
-                    try:
-                        vals.append(float(tok))
-                    except Exception:
-                        pass
-                i += 1
+        out: List[str] = []
+        for blk in self.blocks:
+            head = [">SPECTRA"]
+            hd = blk.header_dict()
+            # keep stable order in output
+            for key in ("freq", "rotspec", "bw", "avgt"):
+                if key in hd and hd[key] is not None:
+                    head.append(
+                        f"{key.upper()}={hd[key]}"
+                    )
+            # include any extra options
+            for k, v in sorted(blk.options.items()):
+                head.append(f"{k.upper()}={str(v).upper()}")
 
-            if len(vals) < needed:
-                raise EdIDataError(
-                    ">SPECTRA data incomplete: expected"
-                    f" {needed} values, got {len(vals)}."
+            n_hint = (
+                blk.nvals_hint
+                if blk.nvals_hint is not None
+                else len(blk.values)
+            )
+            head_line = " ".join(head) + f" // {n_hint}\n"
+            out.append(head_line)
+
+            line_vals: List[str] = []
+            cnt = 0
+            for v in blk.values:
+                line_vals.append(ffmt.format(v))
+                cnt += 1
+                if cnt == kpl:
+                    out.append(
+                        "  " + " ".join(line_vals) + "\n"
+                    )
+                    line_vals = []
+                    cnt = 0
+            if line_vals:
+                out.append(
+                    "  " + " ".join(line_vals) + "\n"
                 )
 
-            a = np.array(vals[:needed], dtype=np.float64).reshape(
-                nchan_here, nchan_here)
-            m = SpectraBlock.unpack_from_compressed_real(a)
-
-            block = SpectraBlock(
-                sectid=sectid,
-                freq=freq,
-                bw=bw,
-                nchan=nchan_here,
-                rotspec=rotspec,
-                avgt=avgt,
-                avgf=avgf,
-                band=band,
-                segnum=segnum,
-                chksum=chksum,
-                matrix=m,
-            )
-            self.blocks.append(block)
-
-        return self
-
-    def write(self, numbers_per_line: int = 6) -> List[str]:
-        """
-        Serialize one >=SPECTRASECT section 
-        (header + IDs + all >SPECTRA blocks).
-
-        Parameters
-        ----------
-        numbers_per_line : int
-            How many numeric values per row when writing datasets.
-        """
-        if self.nchan is None or self.nfreq is None:
-            raise EdIDataError("Cannot write SPECTRA without NCHAN and NFREQ.")
-        if len(self.chan_ids) != self.nchan:
-            raise EdIDataError(
-                "Cannot write SPECTRA: chan_ids length"
-                f" ({len(self.chan_ids)}) != NCHAN ({self.nchan})."
-            )
-
-        lines: List[str] = []
-        lines.append(">=SPECTRASECT\n")
-        # Header
-        def _emit_kv(k: str, v: Union[str, int, float, None]) -> None:
-            if v is None or v == "":
-                return
-            lines.append(f"  {k.upper()}={str(v).upper()}\n")
-
-        _emit_kv("SECTID", self.sectid or "")
-        _emit_kv("NCHAN", self.nchan)
-        _emit_kv("NFREQ", self.nfreq)
-        _emit_kv("MAXBLKS", self.maxblks)
-        _emit_kv("CHKSUM", self.chksum)
-
-        # IDs count marker
-        lines.append(f"  //{self.nchan}\n")
-        # Write IDs (as provided; 6 per line default)
-        cur: List[str] = []
-        for cid in self.chan_ids:
-            cur.append(cid)
-            if len(cur) == numbers_per_line:
-                lines.append("  " + "\t".join(cur) + "\n")
-                cur.clear()
-        if cur:
-            lines.append("  " + "\t".join(cur) + "\n")
-
-        # Write blocks
-        for blk in self.blocks:
-            # header line
-            header_items: List[str] = [">SPECTRA"]
-            if blk.sectid:
-                header_items.append(f"SECTID={blk.sectid}")
-            header_items.append(f"FREQ={_fmt_num(blk.freq)}")
-            header_items.append(f"BW={_fmt_num(blk.bw)}")
-            if blk.nchan != self.nchan:
-                header_items.append(f"NCHAN={blk.nchan}")
-            if blk.rotspec is not None:
-                header_items.append(f"ROTSPEC={_fmt_num(blk.rotspec)}")
-            if blk.avgf is not None:
-                header_items.append(f"AVGF={_fmt_num(blk.avgf)}")
-            if blk.avgt is not None:
-                header_items.append(f"AVGT={_fmt_num(blk.avgt)}")
-            if blk.band:
-                header_items.append(f"BAND={blk.band}")
-            if blk.segnum is not None:
-                header_items.append(f"SEGNUM={blk.segnum}")
-            if blk.chksum is not None:
-                header_items.append(f"CHKSUM={_fmt_num(blk.chksum)}")
-
-            # trailing count is exactly nchan*nchan
-            header = " ".join(header_items) + f"  //{blk.nchan * blk.nchan}\n"
-            lines.append(header)
-
-            # Pack matrix to NxN real array, emit in row-major
-            a = SpectraBlock.pack_to_compressed_real(blk.matrix)
-            flat = a.reshape(-1)
-            chunk: List[str] = []
-            for val in flat:
-                chunk.append(_fmt_num(val))
-                if len(chunk) == numbers_per_line:
-                    lines.append("  " + "\t".join(chunk) + "\n")
-                    chunk.clear()
-            if chunk:
-                lines.append("  " + "\t".join(chunk) + "\n")
-
-        lines.append("\n")
-        return lines
+        return out
 
 
-def _fmt_num(x: Union[int, float]) -> str:
+class SpectraMixin:
+    r"""
+    Convenience facade for spectra access.
+
+    This mixin exposes a compact API that host classes
+    can reuse to discover and read spectra sections in
+    an EDI file.
+
+    Methods
+    -------
+    from_file(edi_fn)
+        Return a :class:`SpectraSECT` parsed from the
+        first ``>=SPECTRASECT`` header in ``edi_fn``.
+    read_blocks(edi_fn)
+        Return a :class:`SpectraIO` by scanning all
+        subsequent ``>SPECTRA`` blocks that belong to the
+        section discovered by :class:`SpectraSECT`.
+
+    Notes
+    -----
+    Use this mixin in higher-level readers so spectra
+    handling remains consistent and centralized. The
+    method pair mirrors the design used for MT/EMAP
+    headers and for time series sections.
+
+    See Also
+    --------
+    SpectraSECT
+        Header parsing and serialization.
+    SpectraIO
+        Data block reader/writer.
+    MTEMAP
+        MT/EMAP section header, often used alongside
+        spectra for the same dataset.
+
+    Examples
+    --------
+    >>> class Reader(SpectraMixin):
+    ...     pass
+    >>> sect = Reader.from_file("site.edi")
+    >>> io = Reader.read_blocks("site.edi")
+    >>> len(io.blocks) > 0
+    True
+
+    References
+    ----------
+    .. [1] SEG EDI standard, "Spectra Data Sections".
     """
-    Format numbers similar to common EDI examples (scientific for floats).
-    Keep integers as int-like strings.
-    """
-    if isinstance(x, int) or (isinstance(x, float) and float(x).is_integer()):
-        return f"{int(x)}"
-    # 8 significant digits in E-format
-    return f"{float(x):.8E}"
+
+    @classmethod
+    def from_file(cls, edi_fn: str) -> SpectraSECT:
+        return SpectraSECT.from_file(edi_fn)
+
+    @classmethod
+    def read_blocks(
+        cls, edi_fn: str
+    ) -> SpectraIO:
+        sect = SpectraSECT.from_file(edi_fn)
+        return SpectraIO.from_file(
+            edi_fn, start_line=sect.start_data_lines_num
+        )

@@ -16,7 +16,6 @@ from __future__ import annotations
 import math
 import re
 import sys
-import time
 from pathlib import Path
 from collections.abc import Sized
 import shutil
@@ -418,6 +417,43 @@ def _format_block_numbers(
         buf.append(" " * indent + " ".join(line))
     return "\n".join(buf)
 
+def quick_edi_stats(
+    *,
+    total: int,
+    ok: int,
+    label: str = "EDI",
+    width: int | None = None,
+) -> None:
+    """One-line recap similar to legacy *show_stats*."""
+    term = shutil.get_terminal_size((80, 20)).columns
+    width = width or max(60, min(120, term))
+    bar = "~" * width
+
+    rate = (ok / total) * 100 if total else 0.0
+    print(bar)
+    print(
+        f"{label:<15} read  : {ok:>6d}/{total:<6d}"
+        f"  —  success {rate:6.2f} %"
+    )
+    print(bar)
+
+
+def _format_kv(k: str, v):
+    kU = k.upper()
+    # leave numerics bare; quote strings only if needed
+    if isinstance(v, (int, float)):
+        return f"{k}={v}"
+    s = "" if v is None else str(v)
+    # LAT/LONG/ELEV commonly numeric; if a string slipped in and
+    # parses as a number, keep it bare.
+    try:
+        if kU in {"LAT", "LONG", "ELEV"}:
+            fv = float(s.replace("D", "E").replace("d", "e"))
+            return f"{k}={fv}"
+    except Exception:
+        pass
+    # quote if whitespace or quotes present
+    return f'{k}="{s.replace(chr(34), "")}"'
 
 def _ensure_1d(a: Union[Sequence[float], np.ndarray]) -> np.ndarray:
     v = np.asarray(a).ravel()
@@ -514,9 +550,8 @@ def minimum_parser_to_write_edi(obj: Mapping[str, Any]) -> str:
     if head:
         lines.append(">HEAD")
         for k, v in head.items():
-            lines.append(f"  {k}={_quote(v)}" if isinstance(v, str) and k.upper() not in {"LAT", "LONG"}
-                         else f"  {k}={v}" if not isinstance(v, str)
-                         else f"  {k}={_quote(v)}")
+            lines.append("  " + _format_kv(k, v))
+            
         lines.append("")
 
     # >INFO
@@ -841,31 +876,4 @@ def show_edi_stats(
     print(bar, file=stream)
 
 
-def quick_edi_stats(
-    *,
-    total: int,
-    ok: int,
-    label: str = "EDI",
-    width: int | None = None,
-) -> None:
-    """One-line recap similar to legacy *show_stats*."""
-    term = shutil.get_terminal_size((80, 20)).columns
-    width = width or max(60, min(120, term))
-    bar = "~" * width
 
-    rate = (ok / total) * 100 if total else 0.0
-    print(bar)
-    print(
-        f"{label:<15} read  : {ok:>6d}/{total:<6d}"
-        f"  —  success {rate:6.2f} %"
-    )
-    print(bar)
-
-# -----------------------------------------------------------------------------
-# quick demo when launched directly
-# -----------------------------------------------------------------------------
-if __name__ == "__main__":
-    t0 = time.time()
-    time.sleep(0.15)                      # fake work
-    show_edi_stats(range(42), range(39))
-    show_edi_stats(42, 39, elapsed=time.time() - t0)

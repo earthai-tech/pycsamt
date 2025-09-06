@@ -22,7 +22,6 @@ from .proc_utils import (
     get_skew, get_strike
 )
 from .resphase import Resistivity, Phase
-from .plot import AVGPlot
 from .schema import (
     _CANONICAL_MAP as CANONICAL_MAP, 
     _CANON_TO_MODERN as CANON_TO_MODERN_MAP, 
@@ -43,7 +42,6 @@ __all__ = [
     "Hardware", "SurveyAnnotation", "SurveyConfiguration",
     "Receiver", "Transmitter", "SkipFlag",
     "Resistivity", "Phase",
-    "AVGPlot", 
     "CANONICAL_MAP", "CANON_TO_MODERN_MAP", "CANON_TO_LEGACY_MAP",
     "ALL_ALIASES", "QC_ALIASES", "get_aliases",
     "Station",

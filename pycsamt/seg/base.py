@@ -20,10 +20,9 @@ from abc import ABC, abstractmethod
 import datetime as _dt
 import statistics as _stats
 import textwrap as _tw
-import logging
+
 from pathlib import Path
 from dataclasses import is_dataclass, fields as dc_fields
-from dataclasses import dataclass, field  
 from typing import ( 
     Any, 
     Dict,
@@ -39,120 +38,145 @@ from typing import (
     Iterator,
     Callable 
 )
-try:
-    from ..log.logger import get_logger as _get_logger
-except Exception:  # pragma: no cover
-    _get_logger = None
-
-from .properties import IsEdi 
+from ..log.logger import get_logger as _get_logger
+from .validation import IsEdi 
 
 PathLike = Union[str, Path]
 
 
 __all__ = [
-    "CollectionBase", 
-    "EDIComponentBase", 
-    "EdiFileBase", 
-  ]
+    "Base",
+    "BaseMixin",
+    "SEGBase",
+    "EDIComponentBase",
+    "EdiFileBase",
+]
 
 _T = TypeVar("_T")
 
 
-class EDIComponentBase:
-    """Base class for SEG-EDI components.
+# Common, light mixin for facade
+class Base:  # picked by seg.config (mixin discovery)
+    INDENT: int = 2
+    PER_LINE: int = 6
+    FLOAT_FMT: str = "{: .6E}"
 
-    This mixin provides consistent ``__repr__`` and ``__str__``
-    plus helpers to serialize component attributes into EDI-like
-    ``KEY=VALUE`` lines.
+    def __init__(
+        self,
+        *args,
+        verbose: int | bool = 0,
+        logger=None,
+        **kwargs,
+    ) -> None:
+        """
+        Cooperative init: set verbosity and instance logger,
+        then chain to next MRO parent.
+        """
+        try:
+            super().__init__(*args, **kwargs)
+        except Exception:
+            # tolerate bases without cooperative __init__
+            pass
 
-    Subclasses may override:
-    - ``_section``: name of the EDI block (e.g. ``"HEAD"``).
-    - ``_float_fmt``: numeric format, default ``"%.6E"``.
-    - ``_indent``: spaces for left indent when rendering lines.
-    - ``_show_in_str``: ordered subset of keys to include in
-      ``__str__``. If ``None``, all non-None fields are used.
-    - ``validate``: to enforce invariants.
+        self.verbose: int = int(verbose)
+        name = (
+            f"{self.__class__.__module__}."
+            f"{self.__class__.__name__}"
+        )
+        self._logger = (
+            logger if logger is not None
+            else self._logger_factory(name)
+        )
 
-    Notes
-    -----
-    - Field order is derived from type hints (``__annotations__``)
-      when available; otherwise it falls back to attribute order
-      in ``__dict__`` at runtime.
-    - ``None`` values are skipped in output lines.
-    - Strings with spaces or quotes are double-quoted.
-    - Floats are formatted with scientific notation by default.
-    - ``__repr__`` is intentionally short (truncated) and geared
-      for debugging, while ``__str__`` prints an EDI-style block.
+    @staticmethod
+    def _logger_factory(name: str):
+        """Return a module/project logger (null-safe)."""
+        if _get_logger is not None:
+            return _get_logger(name)
+        import logging as _logging
 
-    Examples
-    --------
-    >>> class Head(EDIComponentBase):
-    ...     _section = "HEAD"
-    ...     DATAID: str
-    ...     STDVERS: str = "SEG 1.0"
-    ...     EMPTY: float = 1.0e32
-    ...
-    >>> h = Head()
-    >>> h.DATAID = "E1_2"
-    >>> print(str(h)).startswith(">HEAD")
-    True
-    >>> "DATAID" in repr(h)
-    True
-    """
+        lg = _logging.getLogger(name)
+        if not lg.handlers:
+            lg.addHandler(_logging.NullHandler())
+        return lg
 
-    # EDI rendering preferences (subclasses may override)
+
+# Back-compat / alternate mixin names expected by config
+class BaseMixin(Base):  # pragma: no cover
+    pass
+
+
+class SEGBase(Base):  # pragma: no cover
+    pass
+
+class EDIComponentBase(Base):
     _section: Optional[str] = None
-    _float_fmt: str = "{:.6E}"
+    _float_fmt: str = "{: .6E}"
     _indent: int = 2
     _show_in_str: Optional[Sequence[str]] = None
     _repr_max_items: int = 6
     _repr_max_chars: int = 120
 
-    # core protocol 
+    def __init__(
+        self,
+        *args,
+        verbose: int | bool = 0,
+        logger=None,
+        **kwargs,
+    ) -> None:
+        """
+        Ensure all components get .verbose and ._logger.
+        """
+        super().__init__(
+            *args,
+            verbose=verbose,
+            logger=logger,
+            **kwargs,
+        )
+    # -------- repr/str ---------
     def __repr__(self) -> str:
         cls = self.__class__.__name__
-        items = self._iter_kv(exclude_none=True)
-        # truncate for readability
-        preview: List[str] = []
-        total_chars = 0
-        for i, (k, v) in enumerate(items):
+        parts: List[str] = []
+        chars = 0
+        for i, (k, v) in enumerate(self._iter_kv(True)):
             if i >= self._repr_max_items:
-                preview.append("…")
+                parts.append("…")
                 break
             frag = f"{k}={self._repr_value(v)}"
-            total_chars += len(frag)
-            if total_chars > self._repr_max_chars:
-                preview.append("…")
+            chars += len(frag)
+            if chars > self._repr_max_chars:
+                parts.append("…")
                 break
-            preview.append(frag)
-        inside = ", ".join(preview)
+            parts.append(frag)
+        inside = ", ".join(parts)
         return f"{cls}({inside})"
 
     def __str__(self) -> str:
-        # If section is defined, render EDI block. Otherwise fallback
-        # to a simple one-line KV view.
         if self._section:
             lines = [f">{self._section}"]
-            for line in self.to_lines(only=self._show_in_str):
-                lines.append(line)
+            lines.extend(self.to_lines(only=self._show_in_str))
             return "\n".join(lines)
-        # fallback
         kv = " ".join(self.to_lines(only=self._show_in_str))
         return f"{self.__class__.__name__} {kv}"
 
-    # public helpers 
+    # public 
     def to_dict(self, *, exclude_none: bool = True) -> Dict[str, Any]:
-        """Return attributes as a dict.
-
-        Parameters
-        ----------
-        exclude_none : bool, default=True
-            If ``True``, drop keys whose values are ``None``.
-        """
         out: Dict[str, Any] = {}
-        for k, v in self._iter_kv(exclude_none=exclude_none):
+        for k, v in self._iter_kv(exclude_none):
             out[k] = v
         return out
+
+    @classmethod
+    def from_dict(
+        cls, data: Mapping[str, Any]
+    ) -> "EDIComponentBase":
+        obj = cls()
+        for k, v in (data or {}).items():
+            try:
+                setattr(obj, k, v)
+            except Exception:  # pragma: no cover
+                pass
+        return obj
 
     def to_lines(
         self,
@@ -160,84 +184,47 @@ class EDIComponentBase:
         only: Optional[Sequence[str]] = None,
         indent: Optional[int] = None,
     ) -> List[str]:
-        """Format attributes as EDI-like ``KEY=VALUE`` lines.
-
-        Parameters
-        ----------
-        only : sequence of str, optional
-            Subset of keys to include (order respected).
-        indent : int, optional
-            Number of leading spaces; defaults to ``self._indent``.
-        """
         pad = indent if indent is not None else self._indent
-        kv = list(self._iter_kv(exclude_none=True))
+        kv = list(self._iter_kv(True))
         if only is not None:
             order = list(only)
-            # keep declared order; filter missing
-            kv = [(k, v) for k, v in kv if k in order]
-            # ensure explicit order
-            kv.sort(key=lambda kv_: order.index(kv_[0]))
-        return [self._format_kv(k, v, pad) for k, v in kv]
+            kv = [(k, v) for (k, v) in kv if k in order]
+            kv.sort(key=lambda it: order.index(it[0]))
+        return [self._format_kv(k, v, pad) for (k, v) in kv]
 
     def to_text(self) -> str:
-        """Render the component as EDI block text.
-
-        Returns
-        -------
-        str
-            Block text. If ``_section`` is not set, a one-line
-            ``KEY=VALUE`` sequence is returned.
-        """
         return str(self)
 
-    def update(self, /, **kwargs: Any) -> "EDIComponentBase":
-        """Update attributes in place and revalidate.
-
-        Returns
-        -------
-        self
-        """
-        for k, v in kwargs.items():
+    def update(self, /, **kw: Any) -> "EDIComponentBase":
+        for k, v in kw.items():
             setattr(self, k, v)
         self.validate()
         return self
 
-    def clone(self, /, **overrides: Any) -> "EDIComponentBase":
-        """Create a shallow copy with optional overrides."""
+    def clone(self, /, **ov: Any) -> "EDIComponentBase":
         new = self.__class__()
-        for k, v in self._iter_kv(exclude_none=False):
+        for k, v in self._iter_kv(False):
             setattr(new, k, v)
-        for k, v in overrides.items():
+        for k, v in ov.items():
             setattr(new, k, v)
         new.validate()
         return new
 
-    # subclass hooks 
+    # subclass hook 
     def validate(self) -> None:
-        """Hook for subclasses to enforce invariants.
-
-        The default implementation does nothing. Override to raise
-        a ``ValueError`` (or a domain-specific error) when state
-        is invalid.
-        """
         return None
 
-    # internals: formatting 
+    #  internals 
     @classmethod
     def _field_names(cls) -> List[str]:
-        # Prefer dataclass field order if available
         if is_dataclass(cls):
             return [f.name for f in dc_fields(cls)]
-        # fall back to annotations if present
         ann = getattr(cls, "__annotations__", None) or {}
         if ann:
             return list(ann.keys())
-        # last resort: empty; subclasses without hints will rely
-        # on instance __dict__ iteration order at runtime
         return []
 
-    def _iter_kv(self, *, exclude_none: bool) -> Iterable[Tuple[str, Any]]:
-        # Start from class-declared field order (dataclass or type hints)
+    def _iter_kv(self, exclude_none: bool) -> Iterator[Tuple[str, Any]]:
         seen = set()
         for name in self._field_names():
             if not hasattr(self, name):
@@ -247,7 +234,6 @@ class EDIComponentBase:
                 continue
             seen.add(name)
             yield name, val
-        # Include any dynamically added attributes not declared in type hints
         for name, val in self.__dict__.items():
             if name.startswith("_") or name in seen:
                 continue
@@ -259,263 +245,196 @@ class EDIComponentBase:
         return " " * indent + f"{key}={self._format_value(value)}"
 
     def _format_value(self, value: Any) -> str:
-        # Strings: quote if spaces or quotes present.
         if isinstance(value, str):
             v = value.strip()
-            if any(ch.isspace() for ch in v) or ('"' in v):
+            if (any(ch.isspace() for ch in v)) or ('"' in v):
                 return '"' + v.replace('"', "") + '"'
             return v
-        # Booleans: render as 0/1 like many EDI writers do.
         if isinstance(value, bool):
             return "1" if value else "0"
-        # Numbers: float -> scientific, int -> as-is
         if isinstance(value, float):
             if value != value:  # NaN
                 return "NaN"
             return self._float_fmt.format(value)
         if isinstance(value, int):
             return str(value)
-        # Sequences: join by space (subclasses may override)
         if isinstance(value, (list, tuple)):
             return " ".join(self._format_value(v) for v in value)
-        # Fallback: default repr
         return str(value)
 
     @staticmethod
     def _repr_value(value: Any) -> str:
         if isinstance(value, str):
             v = value.replace('"', "")
-            return f'"{v}"' if len(v) > 20 or " " in v else v
+            return f'"{v}"' if (len(v) > 20 or " " in v) else v
         if isinstance(value, float):
             return f"{value:.6g}"
         if isinstance(value, (list, tuple)):
-            preview = ", ".join(
-                (f"{x:.6g}" if isinstance(x, float) else repr(x)) for x in value[:4]
+            prev = ", ".join(
+                (f"{x:.6g}" if isinstance(x, float) else repr(x))
+                for x in value[:4]
             )
             if len(value) > 4:
-                preview += ", …"
-            return f"[{preview}]"
+                prev += ", …"
+            return f"[{prev}]"
         return repr(value)
 
 
-def _logger_for(name: str) -> logging.Logger:
-    if _get_logger is not None:
-        return _get_logger(name)
-    # Fallback to std logging (no-op if user doesn't configure it)
-    lg = logging.getLogger(name)
-    if not lg.handlers:
-        lg.addHandler(logging.NullHandler())
-    return lg
-
-
-@dataclass
 class EdiFileBase(EDIComponentBase, ABC):
-    """
-    A robust base for EDI file objects.
-
-    Subclass this to create the concrete `Edi` class. It manages:
-      • path & validation (via IsEdi)
-      • section/component registry
-      • pretty __repr__/__str__ and a short .summary()
-      • read()/write() lifecycle hooks
-      • composition helpers for blocks and fixed-width numeric data
-      • metadata proxies (dataid, lat/lon/elev) if sections provide them
-    """
-
-    # --- File identity & config
     path: Optional[Path] = None
     strict_validate: bool = True
-    block_size: int = 6                  # default numbers per line for data blocks
-    number_fmt: str = " 15.6e"           # default float fmt for data blocks
-    data_header_tpl: str = ">!****{title}****!\n"  # comment headers for blocks
+    block_size: int = 6
+    number_fmt: str = " 15.6e"
+    data_header_tpl: str = ">!****{title}****!\n"
 
-    # --- Registry of sections (Head, Info, DefineMeasurement,
-    # MTEMAP, Spectra, TimeSeries, Z, Tip…)
-    sections: Dict[str, EDIComponentBase] = field(
-        default_factory=dict, repr=False)
+    sections: Dict[str, EDIComponentBase] = {}
 
-    # --- Internal logger
-    _log: logging.Logger = field(
-        default_factory=lambda: _logger_for(
-            __name__), init=False, repr=False)
+    _log = Base._logger_factory(__name__)
 
-
-    # Construction & initialization
-    def __post_init__(self) -> None:
-        # Normalize path
-        if isinstance(self.path, (str, Path)):
-            self.path = Path(self.path) if self.path is not None else None
-
-        # Optionally validate EDI file early
+    def __init__(
+        self,
+        *,
+        path: Optional[PathLike] = None,
+        strict_validate: bool = True,
+    ) -> None:
+        self.path = Path(path) if path is not None else None
+        self.strict_validate = bool(strict_validate)
+        self.block_size = 6
+        self.number_fmt = " 15.6e"
+        self.data_header_tpl = ">!****{title}****!\n"
+        self.sections = {}
         if self.path is not None and self.strict_validate:
             self._validate_path(self.path)
 
-    # Public API (to be used by concrete Edi subclass)
+    # ---------- I/O ------------
     @classmethod
-    def from_file(cls, file: PathLike, **kwargs: Any) -> "EdiFileBase":
-        """
-        Build an instance from an on-disk EDI file and call .read().
-
-        Subclasses should implement .read() to populate sections.
-        """
-        inst = cls(path=Path(file), **kwargs)
+    def from_file(
+        cls, file: PathLike, **kw: Any
+    ) -> "EdiFileBase":
+        inst = cls(path=Path(file), **kw)
         inst.read()
         return inst
 
     def write_file(
-            self, file: Optional[PathLike] = None, *, 
-            overwrite: bool = True) -> Path:
-        """
-        Compose current content and write to disk.
-
-        Subclasses must implement .compose() to return a string (or an
-        iterable of lines). This base method handles path resolution,
-        overwrite behavior, and encoding.
-        """
-        target = Path(file) if file is not None else self._default_output_path()
+        self,
+        file: Optional[PathLike] = None,
+        *,
+        overwrite: bool = True,
+    ) -> Path:
+        target = Path(file) if file is not None else self._default_out()
         if target.exists() and not overwrite:
-            raise FileExistsError(f"{target} already exists and overwrite=False.")
-
-        # Compose
+            raise FileExistsError(
+                f"{target} exists and overwrite=False."
+            )
         text = self.compose()
         if isinstance(text, (list, tuple)):
             text = "".join(text)
-
-        # Ensure parent directory
         target.parent.mkdir(parents=True, exist_ok=True)
         with target.open("w", encoding="utf-8", newline="\n") as f:
             f.write(text)
-
         self._log.info("Wrote EDI to %s", str(target))
         return target
 
-
     @abstractmethod
     def read(self) -> "EdiFileBase":
-        """
-        Read from self.path (which should be set) and populate `sections`.
-        Must return self.
-        """
         ...
 
     @abstractmethod
     def compose(self) -> Union[str, List[str]]:
-        """
-        Generate the full EDI text (or list of lines) from the current `sections`.
-        Must be implemented by the concrete Edi class.
-        """
         ...
 
-    # Section registry helpers
-    def add_section(self, name: str, section: EDIComponentBase) -> None:
-        """Register/replace a section object under a normalized key."""
+    # ------- registry ----------
+    def add_section(self, name: str, s: EDIComponentBase) -> None:
         key = self._normalize_section_name(name)
-        self.sections[key] = section
+        self.sections[key] = s
 
     def get_section(self, name: str) -> Optional[EDIComponentBase]:
-        """Retrieve a section by name (normalized); returns None if missing."""
         return self.sections.get(self._normalize_section_name(name))
 
     def remove_section(self, name: str) -> None:
-        """Remove a section by name; ignores missing keys."""
         self.sections.pop(self._normalize_section_name(name), None)
 
-    def iter_sections(self) -> Iterable[Tuple[str, EDIComponentBase]]:
-        """Iterate over (name, section) pairs in insertion order."""
+    def iter_sections(
+        self,
+    ) -> Iterable[Tuple[str, EDIComponentBase]]:
         return self.sections.items()
 
-
-    # Metadata proxies (if present)
+    # ------- proxies -----------
     @property
     def dataid(self) -> Optional[str]:
         head = self.get_section("head")
-        return getattr(head, "dataid", None) if head is not None else None
+        return getattr(head, "dataid", None) if head else None
 
     @property
     def lat(self) -> Optional[float]:
         head = self.get_section("head")
         dm = self.get_section("definemeasurement")
-        return (
-            getattr(head, "lat", None)
-            if head is not None and getattr(head, "lat", None) is not None
-            else getattr(dm, "reflat", None) if dm is not None else None
-        )
+        if head and getattr(head, "lat", None) is not None:
+            return getattr(head, "lat", None)
+        return getattr(dm, "reflat", None) if dm else None
 
     @property
     def lon(self) -> Optional[float]:
         head = self.get_section("head")
         dm = self.get_section("definemeasurement")
-        return (
-            getattr(head, "long", None)
-            if head is not None and getattr(head, "long", None) is not None
-            else getattr(dm, "reflong", None) if dm is not None else None
-        )
+        if head and getattr(head, "long", None) is not None:
+            return getattr(head, "long", None)
+        return getattr(dm, "reflong", None) if dm else None
 
     @property
     def elev(self) -> Optional[float]:
         head = self.get_section("head")
         dm = self.get_section("definemeasurement")
-        return (
-            getattr(head, "elev", None)
-            if head is not None and getattr(head, "elev", None) is not None
-            else getattr(dm, "refelev", None) if dm is not None else None
-        )
+        if head and getattr(head, "elev", None) is not None:
+            return getattr(head, "elev", None)
+        return getattr(dm, "refelev", None) if dm else None
 
-    # Validation
+    # ------- validation --------
     def _validate_path(self, file: Path) -> None:
-        """Use IsEdi to validate file existence and EDI-ness."""
-        # Shallow validation (extension) if strict_validate is False
         IsEdi._assert_edi(str(file), deep=self.strict_validate)
 
-    # Default output path (can be overridden)
-    def _default_output_path(self) -> Path:
-        """
-        Resolve a reasonable default output file name.
-
-        Uses dataid (if available) and today's date: <DATAID>_<YYYYMMDD>.edi
-        Falls back to 'output_<timestamp>.edi'.
-        """
-        stem = (self.dataid or "output") + "_" + _dt.datetime.utcnow(
-            ).strftime("%Y%m%d")
+    # ------- defaults ----------
+    def _default_out(self) -> Path:
+        stem = (self.dataid or "output")
         return Path(f"{stem}.edi")
 
-    # Formatting helpers
+    # ------- fmt helpers -------
     @staticmethod
     def normalize_section_title(title: str) -> str:
-        """Uppercase title, ensure no leading '>'."""
         t = (title or "").strip()
         return t.lstrip(">").upper()
 
     def format_block_header(self, title: str) -> str:
-        """Return a 'comment' header line like '>!****TITLE****!\\n'."""
         return self.data_header_tpl.format(
-            title=self.normalize_section_title(title))
+            title=self.normalize_section_title(title)
+        )
 
     @staticmethod
     def format_section_head(head: str) -> str:
-        """Return a section head marker (e.g., '>=MTSECT\\n' or '>INFO\\n')."""
-        head = head.strip()
-        if not head.startswith(">"):
-            head = ">" + head
-        return head.upper() + ("\n" if not head.endswith("\n") else "")
+        h = head.strip()
+        if not h.startswith(">"):
+            h = ">" + h
+        return h.upper() + ("\n" if not h.endswith("\n") else "")
 
     def format_kv(
-            self, key: str, value: Any, *, 
-            quote: bool = False, 
-            width: Optional[int] = None
-            ) -> str:
-        """
-        Format '  KEY=VALUE\\n' with optional quoting and fixed width 
-        right alignment.
-        """
-        key_up = key.strip().upper()
+        self,
+        key: str,
+        value: Any,
+        *,
+        quote: bool = False,
+        width: Optional[int] = None,
+    ) -> str:
+        k = key.strip().upper()
         if value is None:
             val = ""
         else:
-            val = f'"{value}"' if quote and isinstance(value, str) else str(value)
+            if quote and isinstance(value, str):
+                val = f'"{value}"'
+            else:
+                val = str(value)
         if width is not None:
             val = f"{val:>{width}}"
-        return f"  {key_up}={val}\n"
+        return f"  {k}={val}\n"
 
     def format_data_block(
         self,
@@ -523,129 +442,77 @@ class EdiFileBase(EDIComponentBase, ABC):
         data: Iterable[Union[float, int]],
         *,
         per_line: Optional[int] = None,
-        num_fmt: Optional[str] = None,
         header_comment: bool = True,
         count_comment: bool = True,
     ) -> List[str]:
-        """
-        Format a numeric data block (e.g., FREQ, ZXXR, RHOXY) as a list of lines.
-
-        Parameters
-        ----------
-        title : str
-            The data block name (e.g., 'FREQ', 'ZXXR').
-        data : Iterable[float|int]
-            Numeric sequence to format.
-        per_line : int
-            Numbers per line (default to self.block_size).
-        num_fmt : str
-            Number format (default to self.number_fmt).
-        header_comment : bool
-            If True, include a '>!****TITLE****!' comment line.
-        count_comment : bool
-            If True, append '  //N' count on the first line after
-            the title if EDI style needs it.
-
-        Returns
-        -------
-        List[str] : lines ready to join/write.
-        """
-        title_norm = self.normalize_section_title(title)
-        nums = list(data or [])
-        n = len(nums)
-        per_line = per_line or self.block_size
-        num_fmt = num_fmt or self.number_fmt
-
+        t = self.normalize_section_title(title)
+        vals = list(data or [])
+        n = len(vals)
+        per = per_line or self.block_size
         out: List[str] = []
         if header_comment:
-            out.append(self.format_block_header(title_norm))
-
-        # Title line (optional with count suffix)
+            out.append(self.format_block_header(t))
         if count_comment:
-            out.append(self.format_section_head(f">{title_norm}  //{n}"))
+            out.append(self.format_section_head(f">{t}  //{n}"))
         else:
-            out.append(self.format_section_head(f">{title_norm}"))
-
-        # Body lines
+            out.append(self.format_section_head(f">{t}"))
         if n == 0:
-            return out  # empty set represented by header only
+            return out
+        # lazy import to avoid cycles
+        from .utils import _format_block_numbers as fmtnums
 
-        # Chunk and format numbers
-        def _fmt(x: Union[float, int]) -> str:
-            try:
-                return f"{float(x):{num_fmt}}"
-            except Exception:
-                return f"{0.0:{num_fmt}}"
-
-        for i in range(0, n, per_line):
-            chunk = nums[i : i + per_line]
-            out.append("".join(_fmt(v) for v in chunk) + "\n")
-
+        out.append(
+            fmtnums(vals, per_line=per, indent=2) + "\n"
+        )
         return out
 
-
-    # Frequency normalization helper
+    # ------- misc --------------
     @staticmethod
     def ensure_descending_frequency(
-        freq: Iterable[float]
-        ) -> Tuple[List[float], Optional[List[int]]]:
-        """
-        Return frequency in descending order. Also returns an index permutation
-        if a reordering was needed; otherwise permutation is None.
-
-        Useful so that Z/tipper arrays can be permuted consistently by caller.
-        """
+        freq: Iterable[float],
+    ) -> Tuple[List[float], Optional[List[int]]]:
         f = list(freq or [])
         if not f:
             return f, None
         if len(f) < 2 or f[0] >= f[-1]:
             return f, None
-        # ascending -> reverse
         idx = list(range(len(f)))[::-1]
         return f[::-1], idx
 
-    # Serialization
     def to_dict(self) -> Dict[str, Any]:
-        """Serialize this file object + sections."""
-        d = {
+        return {
             "path": str(self.path) if self.path is not None else None,
             "strict_validate": self.strict_validate,
             "block_size": self.block_size,
             "number_fmt": self.number_fmt,
             "data_header_tpl": self.data_header_tpl,
-            "sections": {k: v.to_dict() if hasattr(
-                v, "to_dict") else dict(
-                    v.__dict__) for k, v in self.sections.items()},
+            "sections": {
+                k: (v.to_dict() if hasattr(v, "to_dict") else dict(v.__dict__))
+                for k, v in self.sections.items()
+            },
         }
-        return d
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "EdiFileBase":
-        """
-        Rehydrate an instance from a dict produced by .to_dict().
-        Sections are restored as generic EdiComponentBase instances unless
-        the subclass overrides this method to dispatch to concrete types.
-        """
         inst = cls(
             path=Path(data["path"]) if data.get("path") else None,
             strict_validate=bool(data.get("strict_validate", True)),
         )
         inst.block_size = int(data.get("block_size", inst.block_size))
         inst.number_fmt = str(data.get("number_fmt", inst.number_fmt))
-        inst.data_header_tpl = str(data.get(
-            "data_header_tpl", inst.data_header_tpl))
-
-        sections = data.get("sections") or {}
-        for k, v in sections.items():
-            comp = EDIComponentBase.from_dict(v) if isinstance(
-                v, Mapping) else EDIComponentBase()
+        inst.data_header_tpl = str(
+            data.get("data_header_tpl", inst.data_header_tpl)
+        )
+        for k, v in (data.get("sections") or {}).items():
+            comp = (
+                EDIComponentBase.from_dict(v)
+                if isinstance(v, Mapping)
+                else EDIComponentBase()
+            )
             inst.add_section(k, comp)
         return inst
 
-
-    # Representations
     def summary(self) -> str:
-        """Short human-readable summary for __str__."""
         parts = [
             f"file={self.path.name if self.path else '<memory>'}",
             f"dataid={self.dataid or '-'}",
@@ -662,23 +529,25 @@ class EdiFileBase(EDIComponentBase, ABC):
         parts.append(f"sections={list(self.sections.keys()) or '[]'}")
         return "Edi(" + ", ".join(parts) + ")"
 
-    def __str__(self) -> str:  # pragma: no cover - simple formatting
+    def __str__(self) -> str:  # pragma: no cover
         return self.summary()
 
-    def __repr__(self) -> str:  # pragma: no cover - simple formatting
+    def __repr__(self) -> str:  # pragma: no cover
         cls = self.__class__.__name__
-        return f"<{cls} path={self.path!r} sections={list(self.sections.keys())!r}>"
+        return (
+            f"<{cls} path={self.path!r} "
+            f"sections={list(self.sections.keys())!r}>"
+        )
 
-
-    # Utilities
     @staticmethod
     def _normalize_section_name(name: str) -> str:
         return (name or "").strip().lower()
 
-    # Handy for tests or string output without touching disk
     def compose_to_string(self) -> str:
         text = self.compose()
         return "".join(text) if isinstance(text, list) else str(text)
+
+
 
 class CollectionBase(Generic[_T], Sequence[_T]):
     """

@@ -5,9 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Tuple
 import os
+import numpy as np
 
 from ..log.logger import get_logger
 from ..exceptions import EdIDataError
+from ..z.base import BaseEM 
 from .base import EDIComponentBase
 from .validation import ( 
     _strip_norm, 
@@ -497,6 +499,15 @@ class TSIO(EDIComponentBase):
 
         return out
 
+    def __iter__(self):
+        return iter(self.blocks)
+
+    def __len__(self):
+        return len(self.blocks)
+
+    def __getitem__(self, idx):
+        return self.blocks[idx]
+
 
 class TimeSeriesMixin:
     r"""
@@ -568,4 +579,240 @@ class TimeSeriesMixin:
             verbose=verbose,
             logger=logger,
         )
+
+class TimeSeries(BaseEM):
+    r"""
+    Container for ``>TSERIES`` data aggregated by channel.
+
+    The class groups samples by channel ``ID`` and keeps a
+    per-channel sampling interval.  It is a light facade built
+    on top of :class:`~pycsamt.seg.time_series.TSect` and
+    :class:`~pycsamt.seg.time_series.TSIO`.
+
+    Parameters
+    ----------
+    name : str, optional
+        Display name forwarded to :class:`BaseEM`.
+    verbose : int, default 0
+        Verbosity level, forwarded to :class:`BaseEM`.
+
+    Attributes
+    ----------
+    ids : list of str
+        Ordered channel identifiers (e.g. ``["HX","HY"]``).
+    data : dict[str, ndarray]
+        Mapping ``channel -> 1-D samples``.  Each array has
+        length equal to the concatenation of all blocks that
+        belong to that channel, in file order.
+    dt_map : dict[str, float]
+        Mapping ``channel -> dt`` (seconds).  When a block has
+        no ``DT`` option, :class:`TSect.dt` is used as a
+        fallback.  If neither is present, ``1.0`` is used in
+        :meth:`time`.
+    npts_map : dict[str, int]
+        Mapping ``channel -> number of samples`` accumulated
+        across all blocks.
+    extra_blocks : list of dict
+        Optional raw per-block metadata preserved for round-
+        tripping or vendor-specific fields.
+
+    Notes
+    -----
+    The class is designed for two common workflows:
+
+    1. **Build from parsed IO.**  Use :meth:`from_io` with a
+       header (:class:`TSect`) and a data stream
+       (:class:`TSIO`).  The constructor performs channel
+       discovery, concatenation, and ``dt`` assignment.
+
+    2. **Write back to EDI.**  Use :meth:`to_io` to obtain a
+       fresh (:class:`TSect`, :class:`TSIO`) pair.  One block
+       per channel is emitted, using the accumulated data and
+       the final ``dt`` chosen for that channel.
+
+    Channel order is stable and follows first appearance in
+    the input stream.  The :meth:`time` vector is computed as
+    ``np.arange(N) * dt`` for the requested channel.
+
+    Methods
+    -------
+    channels()
+        Return the ordered list of channel identifiers.
+    get(cid)
+        Return the 1-D sample array for channel ``cid``.
+    time(cid)
+        Return a 1-D time vector using ``dt_map[cid]`` or the
+        agreed fallback.
+    from_io(sect, io, empty=None) : classmethod
+        Build a :class:`TimeSeries` from parsed header and IO.
+    to_io()
+        Serialize the current state to (:class:`TSect`,
+        :class:`TSIO`) for writing.
+    align(ids=None, fill=0.0)
+        Right-pad channels to the same length and return a
+        2-D array ``(nmax, nch)`` and the channel order.
+
+    Examples
+    --------
+    Build from blocks and compute a time vector::
+
+        from pycsamt.seg.time_series import TSect, TSIO
+        from pycsamt.seg.time_series import TimeSeries
+
+        sect = TSect(sectid="TS", dt=0.25)
+        io = TSIO()  # filled elsewhere
+
+        ts = TimeSeries.from_io(sect, io)
+        hx = ts.get("HX")
+        t = ts.time("HX")
+
+    Round-trip to EDI blocks::
+
+        sect2, io2 = ts.to_io()
+        # pass sect2.write() and io2.write() to your writer
+
+    See Also
+    --------
+    pycsamt.seg.time_series.TSect
+        Header parser for ``>=TSERIESSECT``.
+    pycsamt.seg.time_series.TSIO
+        Reader/writer for ``>TSERIES`` blocks.
+
+    References
+    ----------
+    .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
+           https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
+    """
+
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        *,
+        verbose: int = 0,
+    ) -> None:
+        super().__init__(name=name, verbose=verbose)
+        self.ids: List[str] = []
+        self.data: Dict[str, np.ndarray] = {}
+        self.dt_map: Dict[str, float] = {}
+        self.npts_map: Dict[str, int] = {}
+        self.extra_blocks: List[Dict[str, object]] = []
+
+    def channels(self) -> List[str]:
+        return list(self.ids)
+
+    def get(self, cid: str) -> np.ndarray:
+        return np.asarray(self.data[cid])
+
+    def time(self, cid: str) -> np.ndarray:
+        x = self.get(cid)
+        dt = float(self.dt_map.get(cid, 1.0))
+        return np.arange(x.size, dtype=float) * dt
+
+
+    @classmethod
+    def from_io(
+        cls, 
+        sect: TSect, 
+        io: TSIO, *, 
+        empty: float | None = None
+    ) -> "TimeSeries":
+        inst = cls()
+        inst._order: list[str] = []
+        inst._data: dict[str, np.ndarray] = {}
+        inst.dt_map: dict[str, float] = {}
+        inst.npts_map: dict[str, int] = {}
+        inst._sect_dt = (
+            float(sect.dt) if sect.dt is not None else None
+        )
+
+        def _cid(blk: _TSBlock, k: int) -> str:
+            cid = getattr(blk, "id", None)
+            if not cid:
+                cid = str(blk.options.get("id", "")).strip()
+            return cid if cid else f"CH{k}"
+
+        for k, blk in enumerate(io.blocks, start=1):
+            cid = _cid(blk, k)
+            vals = np.asarray(blk.values, float)
+
+            if cid not in inst._data:
+                inst._order.append(cid)
+                inst._data[cid] = vals
+                inst.npts_map[cid] = int(vals.size)
+            else:
+                inst._data[cid] = np.concatenate(
+                    (inst._data[cid], vals)
+                )
+                inst.npts_map[cid] += int(vals.size)
+
+            bdt = blk.options.get("dt", None)
+            dt = (
+                float(bdt) if bdt is not None
+                else inst._sect_dt
+            )
+            if dt is not None:
+                inst.dt_map[cid] = dt
+
+        inst._channels = list(inst._order)
+        inst.channels = lambda: list(inst._channels)
+        inst.get = lambda c: inst._data[str(c)]
+        
+        def _time(ch: str) -> np.ndarray:
+            x = inst._data[str(ch)]
+            dt = float(inst.dt_map.get(str(ch), 1.0))
+            return np.arange(x.size, dtype=float) * dt
+        
+        inst.time = _time
+
+        return inst
+
+    def to_io(self) -> tuple[TSect, TSIO]:
+        chans = self.channels()
+        total = int(sum(self.get(c).size for c in chans))
+        sect = TSect(
+            sectid=getattr(self, "sectid", None) or "TS",
+            nchan=len(chans),
+            nmeas=len(chans),
+            npts=total,
+            dt=self._sect_dt,
+        )
+        
+        sect.meas_ids = list(chans)  
+        io = TSIO()
+        blks: list[_TSBlock] = []
+        for cid in chans:
+            x = np.asarray(self.get(cid), float)
+            blk = _TSBlock()
+            blk.options["id"] = str(cid)
+            blk.options["npts"] = int(x.size)
+            dt = self.dt_map.get(cid, self._sect_dt)
+            if dt is not None:
+                blk.options["dt"] = float(dt)
+            blk.nvals_hint = int(x.size)
+            blk.values = x.tolist()
+            blks.append(blk)
+
+        io.blocks = blks
+        return sect, io
+
+
+    def align(
+        self,
+        ids: Optional[List[str]] = None,
+        *,
+        fill: float = 0.0,
+    ) -> Tuple[np.ndarray, List[str]]:
+        ch = self.ids if ids is None else ids
+        nmax = max(self.data[c].size for c in ch)
+        M = np.full((nmax, len(ch)), fill, float)
+        for j, c in enumerate(ch):
+            v = self.data[c]
+            M[: v.size, j] = v
+        return M, ch
+
+    def __contains__(self, cid: str) -> bool:
+        return cid in self.data
+
+    def __len__(self) -> int:
+        return sum(a.size for a in self.data.values())
 

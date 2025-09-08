@@ -551,7 +551,8 @@ class Z(ResPhase):
         n = self._z.shape[0]
 
         # Normalize factors to vectors of length n.
-        def _normalize_factor(v: float | Sequence[float], name: str) -> np.ndarray:
+        def _normalize_factor(
+                v: float | Sequence[float], name: str) -> np.ndarray:
             vv = np.asarray(v, dtype=float).ravel()
             if vv.size == 1:
                 out = np.full(n, vv[0], dtype=float)

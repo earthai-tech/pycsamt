@@ -8,8 +8,12 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any, Tuple
 import os
 
+import numpy as np 
+
 from ..log.logger import get_logger
-from ..exceptions import EdIDataError
+from ..exceptions import EdIDataError 
+from ..z.base import BaseEM 
+
 from .base import EDIComponentBase
 from .validation import ( 
     _strip_norm, 
@@ -19,10 +23,12 @@ from .validation import (
     )
 from .validation import IsEdi 
 
+
 logger = get_logger(__name__)
 
-__all__ = ["SpectraSECT", "SpectraIO", "SpectraMixin"]
+__all__ = ["SpectraSECT", "SpectraIO", "SpectraMixin", "Spectra"]
 
+_EMPTY = 1.0e32
 
 class SpectraSECT(EDIComponentBase):
     r"""
@@ -510,6 +516,14 @@ class SpectraIO(EDIComponentBase):
 
         return out
 
+    def __iter__(self):
+        return iter(self.blocks)
+
+    def __len__(self):
+        return len(self.blocks)
+
+    def __getitem__(self, idx):
+        return self.blocks[idx]
 
 class SpectraMixin:
     r"""
@@ -572,3 +586,448 @@ class SpectraMixin:
         return SpectraIO.from_file(
             edi_fn, start_line=sect.start_data_lines_num
         )
+
+class Spectra(BaseEM):
+    r"""
+    Container for ``>SPECTRA`` blocks grouped per frequency.
+
+    The class gathers one spectra record per frequency and
+    exposes typed header fields (frequency, rotation flag,
+    bandwidth, and averaging time) together with the numeric
+    values stored in each block.  It is a compact, array-
+    oriented view on top of :class:`~pycsamt.seg.spectra.
+    SpectraSECT` and :class:`~pycsamt.seg.spectra.SpectraIO`.
+
+    Parameters
+    ----------
+    name : str, optional
+        Display name forwarded to :class:`BaseEM`.
+    verbose : int, default 0
+        Verbosity level, forwarded to :class:`BaseEM`.
+
+    Attributes
+    ----------
+    freq : ndarray, shape ``(n_blk,)``
+        Frequency (Hz) per block.  Missing values are set to
+        ``np.nan``.
+    rotspec : ndarray of int, shape ``(n_blk,)``
+        Rotation specifier per block.  Missing values are set
+        to ``-1``.
+    bw : ndarray, shape ``(n_blk,)``
+        Nominal bandwidth (Hz) per block or ``np.nan``.
+    avgt : ndarray, shape ``(n_blk,)``
+        Averaging time (s) per block or ``np.nan``.
+    values : list of ndarray
+        Numeric payload for each block.  Lengths may differ
+        across blocks, as allowed by the SEG format.
+    n_values : ndarray of int, shape ``(n_blk,)``
+        Number of values in each block (as parsed or counted).
+
+    Notes
+    -----
+    Blocks may contain vendor-specific options beyond the
+    canonical ``FREQ``, ``ROTSPEC``, ``BW``, and ``AVGT``.
+    Those options are preserved when round-tripping via
+    :meth:`to_io`.  The class does **not** impose a common
+    length across spectra vectors; if you require a 2-D array,
+    pad the :attr:`values` list explicitly.
+
+    The constructor itself does not read files.  Use
+    :meth:`from_io` or :meth:`from_file` to populate an
+    instance from sections and data blocks.
+
+    Methods
+    -------
+    from_io(sect, io) : classmethod
+        Build a :class:`Spectra` from :class:`SpectraSECT`
+        and :class:`SpectraIO`.
+    from_file(path) : classmethod
+        Convenience that calls :class:`SpectraSECT.from_file`
+        and :class:`SpectraIO.from_file`, then delegates to
+        :meth:`from_io`.
+    to_io()
+        Serialize the current state to a fresh pair
+        (:class:`SpectraSECT`, :class:`SpectraIO`) that can be
+        written back to an EDI file.
+
+    Examples
+    --------
+    Read, inspect, and serialize spectra::
+
+        from pycsamt.seg.spectra import Spectra
+
+        sp = Spectra.from_file("site.edi")
+        f = sp.freq
+        first = sp.values[0]
+
+        sect2, io2 = sp.to_io()
+        # writer can now combine sect2.write() and io2.write()
+
+    See Also
+    --------
+    pycsamt.seg.spectra.SpectraSECT
+        Header for ``>=SPECTRASECT`` sections.
+    pycsamt.seg.spectra.SpectraIO
+        Reader/writer for ``>SPECTRA`` blocks.
+    pycsamt.seg.EDIFile
+        High-level dispatcher that can attach spectra to an
+        EDI session.
+
+    References
+    ----------
+    .. [1] SEG EDI standard, *Spectra Data Sections*.
+           Society of Exploration Geophysicists.
+    .. [2] Chave, A. D., & Jones, A. G. (2012). *The
+           Magnetotelluric Method: Theory and Practice*.
+           Cambridge Univ. Press.
+    """
+    # Holds: freq(nf,), S(nf,nc,nc)
+    # Hermitian, per-block meta.
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        *,
+        verbose: int = 0,
+    ) -> None:
+        super().__init__(name=name, verbose=verbose)
+        self._freq = np.zeros(0, float)
+        self._S = np.zeros((0, 0, 0), complex)
+
+        self.bw = np.zeros(0, float)
+        self.avgt = np.zeros(0, float)
+        self.avgf = np.zeros(0, float)
+        self.rotspec = np.zeros(0, float)
+        self.segnum = np.zeros(0, int)
+        self.band: List[str] = []
+
+        self.chan_ids: List[str] = []
+
+    # ---------------- basic props
+    @property
+    def freq(self) -> np.ndarray:
+        return self._freq
+
+    @property
+    def S(self) -> np.ndarray:
+        return self._S
+
+    @property
+    def n_freq(self) -> int:
+        return int(self._freq.size)
+
+    @property
+    def n_chan(self) -> int:
+        return int(self._S.shape[1]) if self._S.ndim else 0
+
+    # -------------- pack/unpack helpers
+    @staticmethod
+    def _unpack(vals: np.ndarray, n: int, *, empty: float) -> np.ndarray:
+        v = np.asarray(vals, float)
+        need = n * n
+        if v.size < need:
+            raise EdIDataError("SPECTRA payload too short")
+        M = v[:need].reshape(n, n)
+        M = np.where(M == float(empty), 0.0, M)
+
+        H = np.zeros((n, n), complex)
+        for i in range(n):
+            H[i, i] = M[i, i] + 0.0j
+            for j in range(i + 1, n):
+                re = M[j, i]
+                im = M[i, j]
+                H[i, j] = re + 1j * im
+                H[j, i] = re - 1j * im
+        return H
+
+    @staticmethod
+    def _pack(H: np.ndarray) -> np.ndarray:
+        if H.ndim != 2 or H.shape[0] != H.shape[1]:
+            raise ValueError("H must be square")
+        n = H.shape[0]
+        M = np.zeros((n, n), float)
+        for i in range(n):
+            M[i, i] = float(H[i, i].real)
+            for j in range(i + 1, n):
+                z = H[i, j]
+                M[j, i] = float(z.real)
+                M[i, j] = float(z.imag)
+        return M.ravel()
+
+    # -------------- build from IO
+    @classmethod
+    def from_io(
+        cls,
+        sect: "SpectraSECT",
+        io: "SpectraIO",
+        *,
+        empty: float = 1.0e32,
+        verbose: int = 0,
+    ) -> "Spectra":
+        # infer nchan robustly
+        nc: Optional[int] = None
+    
+        # 1) prefer explicit header nchan
+        if getattr(sect, "nchan", None) is not None:
+            try:
+                nc = int(sect.nchan)  # type: ignore[arg-type]
+            except Exception:
+                nc = None
+    
+        # 2) try channel ids length
+        if not nc or nc <= 0:
+            ids = getattr(sect, "meas_ids", None)
+            if ids:
+                try:
+                    nc = int(len(ids))
+                except Exception:
+                    nc = None
+    
+        # 3) try block hint or values length of the first block
+        if (not nc or nc <= 0) and getattr(io, "blocks", None):
+            first = next(
+                (b for b in io.blocks if getattr(
+                    b, "values", None)), None)
+            if first is not None:
+                hint = getattr(first, "nvals_hint", None)
+                if isinstance(hint, (int, float)) and hint > 0:
+                    root = int(round(np.sqrt(float(hint))))
+                    if root * root == int(hint):
+                        nc = root
+                if not nc or nc <= 0:
+                    nv = len(np.asarray(
+                        getattr(first, "values", []), float))
+                    if nv > 0:
+                        root = int(round(np.sqrt(nv)))
+                        if root > 0 and root * root <= nv:
+                            nc = root
+    
+        if not nc or nc <= 0:
+            raise EdIDataError("bad SPECTRA header: cannot infer nchan")
+            
+
+        if not hasattr(io, "blocks") or not io.blocks:
+            raise EdIDataError("no >SPECTRA blocks")
+    
+        self = cls(
+            name=getattr(sect, "sectid", None),
+            verbose=verbose,
+        )
+        self.chan_ids = list(sect.meas_ids or [])
+    
+        def _f(x, dv=0.0) -> float:
+            try:
+                v = float(x)
+                return v
+            except Exception:
+                return float(dv)
+    
+        def _i(x, dv=0) -> int:
+            try:
+                return int(float(x))
+            except Exception:
+                return int(dv)
+    
+        def _opt(blk) -> dict:
+            o = getattr(blk, "options", None)
+            return o if isinstance(o, dict) else {}
+    
+        def _get_freq(blk) -> float | None:
+            # attr first
+            fv = getattr(blk, "freq", None)
+            if fv is None:
+                opts = _opt(blk)
+                for k in ("freq", "cfreq", "f", "frequency"):
+                    if k in opts:
+                        fv = opts.get(k)
+                        break
+            try:
+                v = float(fv)
+                return v if np.isfinite(v) else None
+            except Exception:
+                return None
+    
+        def _get_float(
+            blk, *names: str, default: float | None = None
+        ) -> float | None:
+            # attribute names then options
+            for nm in names:
+                v = getattr(blk, nm, None)
+                if v is not None:
+                    try:
+                        vv = float(v)
+                        return vv
+                    except Exception:
+                        pass
+            o = _opt(blk)
+            for nm in names:
+                if nm in o:
+                    try:
+                        vv = float(o.get(nm))
+                        return vv
+                    except Exception:
+                        pass
+            return default
+    
+        def _get_int(
+            blk, *names: str, default: int | None = None
+        ) -> int | None:
+            for nm in names:
+                v = getattr(blk, nm, None)
+                if v is not None:
+                    try:
+                        return int(float(v))
+                    except Exception:
+                        pass
+            o = _opt(blk)
+            for nm in names:
+                if nm in o:
+                    try:
+                        return int(float(o.get(nm)))
+                    except Exception:
+                        pass
+            return default
+    
+        freqs: list[float] = []
+        mats: list[np.ndarray] = []
+        bw: list[float] = []
+        avgt: list[float] = []
+        avgf: list[float] = []
+        rots: list[float] = []
+        segnum: list[int] = []
+        band: list[str] = []
+    
+        for blk in io.blocks:
+            f0 = _get_freq(blk)
+            if f0 is None:
+                continue
+    
+            vals = np.asarray(
+                getattr(blk, "values", []), float
+            )
+            H = cls._unpack(vals, nc, empty=empty)
+    
+            freqs.append(float(f0))
+            mats.append(H)
+    
+            bw.append(
+                _get_float(blk, "bw", default=0.0) or 0.0
+            )
+            avgt.append(
+                _get_float(blk, "avgt", default=1.0) or 1.0
+            )
+            avgf.append(
+                _get_float(blk, "avgf", default=np.nan) or np.nan
+            )
+            rots.append(
+                _get_float(blk, "rotspec", default=np.nan)
+                or np.nan
+            )
+            sn = _get_int(blk, "segnum", default=0)
+            segnum.append(0 if sn is None else int(sn))
+            bo = _opt(blk).get("band", "")
+            band.append(str(bo).upper() if bo else "")
+    
+        n = len(freqs)
+        if n == 0:
+            # tolerate empty after filtering
+            self._freq = np.zeros(0, float)
+            self._S = np.zeros((0, nc, nc), complex)
+            self.bw = np.zeros(0, float)
+            self.avgt = np.zeros(0, float)
+            self.avgf = np.zeros(0, float)
+            self.rotspec = np.zeros(0, float)
+            self.segnum = np.zeros(0, int)
+            self.band = []
+            return self
+    
+        self._freq = np.asarray(freqs, float)
+        self._S = np.stack(mats, axis=0)
+        self.bw = np.asarray(bw, float)
+        self.avgt = np.asarray(avgt, float)
+        self.avgf = np.asarray(avgf, float)
+        self.rotspec = np.asarray(rots, float)
+        self.segnum = np.asarray(segnum, int)
+        self.band = list(band)
+    
+        # ensure high→low order
+        if n > 1 and self._freq[-1] > self._freq[0]:
+            sl = slice(None, None, -1)
+            self._freq = self._freq[sl]
+            self._S = self._S[sl]
+            self.bw = self.bw[sl]
+            self.avgt = self.avgt[sl]
+            self.avgf = self.avgf[sl]
+            self.rotspec = self.rotspec[sl]
+            self.segnum = self.segnum[sl]
+            self.band = self.band[::-1]
+    
+        return self
+
+
+    # -------------- round-trip to IO
+    def to_io(self) -> Tuple["SpectraSECT", "SpectraIO"]:
+        nc = self.n_chan
+        nf = self.n_freq
+        sect = SpectraSECT(
+            sectid=self.name,
+            nchan=nc,
+            nfreq=nf,
+        )
+        sect.meas_ids = list(self.chan_ids)
+
+        io = SpectraIO()
+        for k in range(nf):
+            blk = _SpectraBlock()
+            blk.freq = float(self._freq[k])
+            blk.rotspec = float(self.rotspec[k])
+            blk.bw = float(self.bw[k])
+            blk.avgt = float(self.avgt[k])
+            blk.options["avgf"] = float(self.avgf[k])
+            if int(self.segnum[k]) != 0:
+                blk.options["segnum"] = int(self.segnum[k])
+            if self.band[k]:
+                blk.options["band"] = str(self.band[k])
+
+            blk.nvals_hint = nc * nc
+            blk.values = self._pack(self._S[k]).tolist()
+            io.blocks.append(blk)
+
+        return sect, io
+
+    # -------------- conveniences
+    def matrix(self, k: int) -> np.ndarray:
+        return np.array(self._S[k], copy=True)
+
+    def psd(self, idx: int) -> np.ndarray:
+        return np.asarray(self._S[:, idx, idx].real)
+
+    def cross(self, i: int, j: int) -> np.ndarray:
+        return np.asarray(self._S[:, i, j])
+
+    def rotate(
+        self,
+        theta_deg: float,
+        *,
+        pairs: Optional[List[Tuple[int, int]]] = None,
+    ) -> None:
+        if self.n_chan < 2:
+            return
+        th = float(theta_deg) * np.pi / 180.0
+        R2 = np.array(
+            [[np.cos(th), -np.sin(th)],
+             [np.sin(th),  np.cos(th)]],
+            float,
+        )
+        if pairs is None:
+            pairs = []
+            for b in range(0, self.n_chan - 1, 2):
+                pairs.append((b, b + 1))
+
+        for a, b in pairs:
+            T = np.eye(self.n_chan, float)
+            T[a : b + 1, a : b + 1] = R2
+            # S' = T S Tᴴ  per frequency
+            self._S = np.einsum(
+                "ij,fjk,lk->fil", T, self._S, T, optimize=True
+            )
+

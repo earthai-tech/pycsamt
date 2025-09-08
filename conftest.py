@@ -164,3 +164,51 @@ def simulated_edi(tmp_path: Path) -> Path:
     p = tmp_path / "simulated.edi"
     p.write_text("\n".join(lines), encoding="utf-8")
     return p
+
+# ----------------------- EDIS collection -----------------------
+
+@pytest.fixture(scope="session")
+def edis_path(project_root: Path) -> Path:
+    """
+    Base path to a folder holding multiple EDI files.
+    """
+    p = project_root / "data" / "edis"
+    if not p.exists():
+        pytest.skip(f"Missing EDIS folder: {p}")
+    return p
+
+
+@pytest.fixture(scope="session")
+def edis_files(edis_path: Path) -> list[Path]:
+    """
+    All *.edi files discovered under the EDIS folder.
+    """
+    files = sorted(edis_path.rglob("*.edi"))
+    if not files:
+        pytest.skip(f"No EDI files found in: {edis_path}")
+    return files
+
+
+@pytest.fixture(scope="session")
+def any_edis_file(edis_files: list[Path]) -> Path:
+    """
+    A single EDI from the collection (first after sorting).
+    """
+    return edis_files[0]
+
+
+@pytest.fixture(scope="session")
+def edi_collection(edis_path: Path):
+    """
+    Parsed EDICollection built from the EDIS folder.
+    """
+    try:
+        from pycsamt.seg.collection import EDICollection
+    except Exception as exc:  # pragma: no cover
+        pytest.skip(f"Cannot import EDICollection: {exc}")
+
+    col = EDICollection(recursive=True, verbose=0)
+    edis = col.parse([edis_path])
+    if not edis:
+        pytest.skip("EDICollection parsed 0 items.")
+    return col

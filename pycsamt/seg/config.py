@@ -61,7 +61,7 @@ class _NoOp:  # pragma: no cover
 # Map submodule -> candidate class names to import.
 # The first found symbol is used as a mixin.
 _CANDIDATES = {
-    "base": ["Base", "BaseMixin", "SEGBase"],
+    "base": ["Base", "BaseMixin", "SEGBase", "SurveyBase"],
     "cbase": ["ParseMixin", "CoreParser", "CBBase"],
     "heads": ["Heads", "HeadMixin", "InfoMixin"],
     "meas": [
@@ -77,7 +77,8 @@ _CANDIDATES = {
     "property": ["PropertiesMixin"],
     "edi": ["EDIMixin", "EDIFile", "EDIOMixin"],
     "collection": ["CollectionMixin", "EDICollection"],
-    "utils": ["UtilsMixin"],
+    # "Utils": ["UtilsMixin"]
+    # update with survey.py and xa.py 
 }
 
 
@@ -98,7 +99,7 @@ def _import_first(module: str, names: Iterable[str]) -> Type:
     """
 
     try:
-        mod = import_module(f".{{module}}", package=__package__)
+        mod = import_module(f".{{module}}", package=__package__) # Fstring is missing placeholder , fix it
     except Exception:  # pragma: no cover
         return _NoOp
 
@@ -146,7 +147,6 @@ class _Facade:
     __config__: SEGConfig = SEGConfig()
     __mixins__: Tuple[Type, ...] = ()
 
-    # ---------------------- class-level API ----------------------
     @classmethod
     def _delegate_cls(cls, name: str):
         """Find the first classmethod implementation.
@@ -191,7 +191,7 @@ class _Facade:
             raise NotImplementedError("No loads available")
         return meth(text, **kw)
 
-    # --------------------- instance-level API --------------------
+    
     def _delegate_self(self, name: str):
         """Find the first instance method implementation.
 
@@ -233,7 +233,7 @@ class _Facade:
             raise NotImplementedError("No dumps available")
         return meth(self, **kw)
 
-    # --------------------- convenience helpers ------------------
+    
     def asdict(self) -> dict:
         """Merge ``asdict`` from mixins if present.
 

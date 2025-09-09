@@ -212,3 +212,45 @@ def edi_collection(edis_path: Path):
     if not edis:
         pytest.skip("EDICollection parsed 0 items.")
     return col
+
+
+# ------------------------ J (Jones) data ----------------------
+@pytest.fixture(scope="session")
+def j_path(project_root: Path) -> Path:
+    """Base path to J single-file samples."""
+    return project_root / "data" / "j"
+
+
+@pytest.fixture(scope="session")
+def j_single_file(j_path: Path) -> Path:
+    """Single J file: kb0-s001.txt; skip if missing."""
+    p = j_path / "kb0-s001.txt"
+    if not p.exists():
+        pytest.skip(f"Missing J file: {p}")
+    return p
+
+
+@pytest.fixture(scope="session")
+def jc_path(project_root: Path) -> Path:
+    """Base path to a J collection (S00.dat, ...)."""
+    p = project_root / "data" / "jc"
+    if not p.exists():
+        pytest.skip(f"Missing J collection: {p}")
+    return p
+
+
+@pytest.fixture(scope="session")
+def jc_files(jc_path: Path) -> list[Path]:
+    """All S*.dat files discovered under jc_path."""
+    files = sorted(jc_path.glob("S*.dat"))
+    if not files:
+        pytest.skip(f"No J files found in: {jc_path}")
+    return files
+
+
+@pytest.fixture(scope="session")
+def any_jc_file(jc_files: list[Path]) -> Path:
+    """A single J file from the collection (first sorted)."""
+    return jc_files[0]
+
+

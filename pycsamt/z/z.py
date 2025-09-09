@@ -1037,7 +1037,7 @@ class Z(ResPhase):
         )
 
         return inv
-
+    
     @property
     def z_xx(self) -> np.ndarray:
         if self._z is None:

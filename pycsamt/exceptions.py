@@ -63,6 +63,17 @@ class JFileError(PycsamtError):
     """Error handling J-format (joint) data files."""
     pass
 
+class JParseError(PycsamtError):
+    """Raised when a J‑file token cannot be parsed.
+
+    The message tries to include the line number and a short
+    hint about the expected syntax to aid debugging.
+    """
+
+class JError(PycsamtError):
+    """Raised when a J‑Data Error.
+    """
+
 class SiteError(PycsamtError):
     """Error with site metadata or operations."""
     pass

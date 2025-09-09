@@ -20,7 +20,7 @@ from ..z.tipper import Tipper
 
 from .validation import IsEdi
 from .sections import iter_sections
-from .spectra import SpectraIO, Spectra
+from .spectra import SpectraSECT, SpectraIO, Spectra
 from .time_series import TSIO, TimeSeries
 from .other import OtherSECT, OtherIO
 from .utils import _format_block_numbers
@@ -601,7 +601,7 @@ class EDIFile(EDIMixin, EDIOMixin):
         for mod, key in (
             (".heads", "head"),
             (".heads", "info"),
-            (".definemeas", "definemeasurement"),
+            (".meas", "definemeas"),
         ):
             try:
                 pkg = __import__(
@@ -611,7 +611,7 @@ class EDIFile(EDIMixin, EDIOMixin):
                 try:
                     cls = getattr(pkg, key.capitalize())
                 except AttributeError:
-                    cls = getattr(pkg, "DefineMeasurement")
+                    cls = getattr(pkg, "DefineMeas")
                 obj = cls.from_file(self.path)
                 self.add_section(key, obj)
             except Exception:
@@ -637,6 +637,16 @@ class EDIFile(EDIMixin, EDIOMixin):
                     logger.debug("OTHERIO skip: %s", exc)
     
             if name == "spectra_sect":
+                # header from iter_sections may be minimal → enrich
+                try:
+                    need_ids = not getattr(header, "meas_ids", None)
+                    need_map = not getattr(header, "id_to_chtype", None)
+                    if need_ids or need_map:
+                        rich = SpectraSECT.from_file(str(self.path))
+                        header = rich
+                except Exception:
+                    pass
+            
                 self.add_section("spectra_sect", header)
       
                 spec_obj = None
@@ -680,7 +690,27 @@ class EDIFile(EDIMixin, EDIOMixin):
                             pass
 
                 self.add_section("spectra", spec_obj)
-
+                
+                # assert/log once to catch this class of issues
+                if getattr(spec_obj, "chan_ids", None) in (None, []):
+                    logger.debug(
+                        "Spectra chan_ids empty; check SPECTRASECT.")
+                    
+                # --- FALLBACK: build Z/Tipper from Spectra if no MT blocks
+                if (not has_tf) and getattr(spec_obj, "n_freq", 0) > 0:
+                    try:
+                        z_from_sp, tip_from_sp = spec_obj.to_Z()
+                        if z_from_sp is not None:
+                            self.Z = z_from_sp
+                            # ensure rho/phi are available downstream
+                            self.Z.compute_resistivity_phase()
+                            # we *do not* mark has_tf here; we only read raw
+                            # MT blocks when MTSECT was found.
+                        if tip_from_sp is not None:
+                            self.Tip = tip_from_sp
+                    except Exception as exc:
+                        logger.debug("Z from SPECTRA failed: %s", exc)
+            
             # attach TSERIES data blocks
             if name == "timeseries_sect":
                 # keep the header object for metadata
@@ -721,9 +751,12 @@ class EDIFile(EDIMixin, EDIOMixin):
                 self.add_section("timeseries", ts_obj)
 
 
-        if has_tf:
+        # if has_tf:
+        #     self.read_data()
+        # only scan MT numeric blocks when we actually found them
+        if self._data_start is not None:
             self.read_data()
-    
+        
         return self
 
     def read_data(self) -> "EDIFile":
@@ -758,7 +791,7 @@ class EDIFile(EDIMixin, EDIOMixin):
         for key in (
             "head",
             "info",
-            "definemeasurement",
+            "definemeas",
             "mtsect",
             "spectra",
             "timeseries",
@@ -782,14 +815,14 @@ class EDIFile(EDIMixin, EDIOMixin):
         datatype: str | None = None,
         savepath: str | Path | None = None,
         add_filter_array: np.ndarray | None = None,
+        synthesize_spectra: bool = False,  
         **kwargs,
     ) -> str:
         # verbosity: prefer kwarg, else instance value
         v = kwargs.pop("verbose", None)
         if v is not None:
             self.verbose = int(v)
-    
-        # ---------------- datatype detection -----------------
+  
         # v2 auto-detects MT vs EMAP from the section header.
         def _detect_tf_mode() -> str | None:
             m = self.get_section("mtsect")
@@ -817,7 +850,6 @@ class EDIFile(EDIMixin, EDIOMixin):
             (datatype or dt_auto or "mt").strip().lower()
         )
     
-        # ---------------- out dir and filename ---------------
         out_dir = (
             Path(savepath).expanduser().resolve()
             if savepath is not None
@@ -846,7 +878,6 @@ class EDIFile(EDIMixin, EDIOMixin):
     
         out_path = out_dir / name
     
-        # ------------------- writer body ---------------------
         lines: list[str] = []
     
         # 1) structural section headers (safe compose)
@@ -901,7 +932,7 @@ class EDIFile(EDIMixin, EDIOMixin):
             return f, zrot, trot, bool(tip_ok)
     
         # 2) MT/EMAP numeric blocks, only if we have MT/EMAP
-        if self.has_section("mtsect"):
+        if self.has_section("mtsect") or self.Z.n_freq > 0:
             freq, zrot, trot, tip_ok = _emit_freq_and_rot()
     
             z = np.nan_to_num(self.Z.z)
@@ -1074,6 +1105,31 @@ class EDIFile(EDIMixin, EDIOMixin):
         spec_io = self.get_section("spectra_io")
         spec_obj = self.get_section("spectra")
     
+        # synthesize when asked and no spectra loaded
+        if (spec_io is None and spec_obj is None and synthesize_spectra
+                and self.Z.n_freq > 0):
+            try:
+                sp = Spectra.from_Z(
+                    self.Z,
+                    include_hz=self.has_tipper,
+                    tipper=self.Tip if self.has_tipper else None,
+                    name=(getattr(self.get_section("head"), "dataid", None)
+                          or getattr(self.Z, "name", None)),
+                    verbose=self.verbose,
+                )
+                spec_obj = sp
+                spec_sect, spec_io = sp.to_io()
+                # register so compose_headers / later code can use them
+                self.add_section("spectra", sp)
+                if spec_sect is not None:
+                    self.add_section("spectra_sect", spec_sect)
+                if spec_io is not None:
+                    self.add_section("spectra_io", spec_io)
+            except Exception as exc:
+                logger.debug("synth spectra failed: %s", exc)
+        
+        # existing behavior (write parsed spectra if present)
+        
         if spec_sect is None and spec_io is None and spec_obj:
             try:
                 spec_sect, spec_io = spec_obj.to_io()
@@ -1334,7 +1390,6 @@ class EDIFile(EDIMixin, EDIOMixin):
         # forward to main writer; map to new_edifn param
         return fresh.write(new_edifn=edi_fn, **kwargs)
     
-    # ------------- convenience properties -----------------
 
     @property
     def n_freq(self) -> int:

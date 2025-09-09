@@ -6,13 +6,16 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Tuple
-import os
+# import os
 
 import numpy as np 
 
 from ..log.logger import get_logger
 from ..exceptions import EdIDataError 
-from ..z.base import BaseEM 
+from ..z.base import BaseEM
+from ..z.z import Z
+from ..z.tipper import Tipper 
+from ..utils.validation import has_read 
 
 from .base import EDIComponentBase
 from .validation import ( 
@@ -21,6 +24,11 @@ from .validation import (
     _to_float_or_none, 
     _split_comment,
     )
+from .ops import (
+    synthesize_spectra_from_z,
+    effective_dof_from_meta,
+    compute_errors_from_S,
+)
 from .validation import IsEdi 
 
 
@@ -140,7 +148,9 @@ class SpectraSECT(EDIComponentBase):
         self.maxblks: Optional[int] = None
         self.meas_ids: List[str] = []
         self.start_data_lines_num: Optional[int] = None
-
+        
+        self.id_to_chtype: Dict[str, str] = {}
+        
         for k, v in kws.items():
             setattr(self, k, v)
 
@@ -201,6 +211,8 @@ class SpectraSECT(EDIComponentBase):
                     inst.meas_ids.append(_strip_norm(s))
     
         inst.start_data_lines_num = stop
+        inst.id_to_chtype = cls._collect_id_to_chtype(lines)
+        
         return inst
 
     def write(self) -> List[str]:
@@ -224,6 +236,36 @@ class SpectraSECT(EDIComponentBase):
             )
             for mid in self.meas_ids:
                 out.append(f"     {str(mid)}\n")
+        return out
+
+
+    @staticmethod
+    def _collect_id_to_chtype(lines: List[str]) -> Dict[str, str]:
+        """
+        Scan >HMEAS / >EMEAS lines and build {ID -> CHTYPE}.
+        IDs are kept as strings; CHTYPE is upper-cased.
+        """
+        out: Dict[str, str] = {}
+        for raw in lines:
+            s = raw.lstrip()
+            u = s.upper()
+            if not (u.startswith(">HMEAS") or u.startswith(">EMEAS")):
+                continue
+            toks = s[1:].split()
+            kv: Dict[str, str] = {}
+            for t in toks[1:]:
+                if "=" in t:
+                    k, v = t.split("=", 1)
+                    kv[_strip_norm(k).upper()] = _strip_norm(v)
+            mid = kv.get("ID", None)
+            cht = (
+                kv.get("CHTYPE")
+                or kv.get("CH")
+                or kv.get("COMP")
+                or kv.get("TYPE")
+            )
+            if mid and cht:
+                out[str(mid)] = str(cht).upper()
         return out
 
 
@@ -371,12 +413,19 @@ class SpectraIO(EDIComponentBase):
         edi_path: str,
         start_line: Optional[int] = None,
     ) -> "SpectraIO":
-        if not os.path.isfile(edi_path):
-            raise FileNotFoundError(
-                f"{edi_path!r} is not a file."
-            )
-        with open(edi_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
+        # if not os.path.isfile(edi_path):
+        #     raise FileNotFoundError(
+        #         f"{edi_path!r} is not a file."
+        #     )
+        # with open(edi_path, "r", encoding="utf-8") as f:
+        #     lines = f.readlines()
+        
+        p = Path(edi_path)
+        IsEdi._assert_edi(p, deep=True)
+    
+        lines = p.read_text(
+            encoding="utf-8-sig", errors="replace"
+        ).splitlines()
 
         if start_line is None:
             # find first >SPECTRA
@@ -405,9 +454,7 @@ class SpectraIO(EDIComponentBase):
 
         return inst
 
-    # --------------------------
-    # Parse one >SPECTRA block
-    # --------------------------
+
     @staticmethod
     def _parse_block(
         lines: List[str],
@@ -701,6 +748,7 @@ class Spectra(BaseEM):
         self.band: List[str] = []
 
         self.chan_ids: List[str] = []
+        self.id_to_chtype: Dict[str, str] = {}
 
     # ---------------- basic props
     @property
@@ -753,7 +801,7 @@ class Spectra(BaseEM):
                 M[i, j] = float(z.imag)
         return M.ravel()
 
-    # -------------- build from IO
+
     @classmethod
     def from_io(
         cls,
@@ -813,7 +861,14 @@ class Spectra(BaseEM):
             verbose=verbose,
         )
         self.chan_ids = list(sect.meas_ids or [])
-    
+        # carry DefineMeas mapping (if present on the header)
+        idm = getattr(sect, "id_to_chtype", None)
+        if isinstance(idm, dict) and idm:
+            try:
+                setattr(self, "id_to_chtype", dict(idm))
+            except Exception:
+                pass
+
         def _f(x, dv=0.0) -> float:
             try:
                 v = float(x)
@@ -909,44 +964,50 @@ class Spectra(BaseEM):
             freqs.append(float(f0))
             mats.append(H)
     
-            bw.append(
-                _get_float(blk, "bw", default=0.0) or 0.0
-            )
-            avgt.append(
-                _get_float(blk, "avgt", default=1.0) or 1.0
-            )
-            avgf.append(
-                _get_float(blk, "avgf", default=np.nan) or np.nan
-            )
-            rots.append(
-                _get_float(blk, "rotspec", default=np.nan)
-                or np.nan
-            )
+            # bw
+            v = _get_float(blk, "bw", default=0.0)
+            bw.append(0.0 if v is None else float(v))
+            
+            # avgt
+            v = _get_float(blk, "avgt", default=1.0)
+            avgt.append(1.0 if v is None else float(v))
+            
+            # avgf
+            v = _get_float(blk, "avgf", default=np.nan)
+            avgf.append(np.nan if v is None else float(v))
+            
+            # rotspec  (this was causing your failure)
+            v = _get_float(blk, "rotspec", default=np.nan)
+            rots.append(np.nan if v is None else float(v))
+            
+            # segnum
             sn = _get_int(blk, "segnum", default=0)
             segnum.append(0 if sn is None else int(sn))
+            
+            # band
             bo = _opt(blk).get("band", "")
             band.append(str(bo).upper() if bo else "")
-    
+
         n = len(freqs)
         if n == 0:
             # tolerate empty after filtering
-            self._freq = np.zeros(0, float)
-            self._S = np.zeros((0, nc, nc), complex)
-            self.bw = np.zeros(0, float)
-            self.avgt = np.zeros(0, float)
-            self.avgf = np.zeros(0, float)
-            self.rotspec = np.zeros(0, float)
-            self.segnum = np.zeros(0, int)
+            self._freq = np.zeros(0, dtype=float)
+            self._S = np.zeros((0, nc, nc), dtype=complex)
+            self.bw = np.zeros(0, dtype=float)
+            self.avgt = np.zeros(0, dtype=float)
+            self.avgf = np.zeros(0, dtype=float)
+            self.rotspec = np.zeros(0, dtype=float)
+            self.segnum = np.zeros(0, dtype=int)
             self.band = []
             return self
     
-        self._freq = np.asarray(freqs, float)
+        self._freq = np.asarray(freqs, dtype=float)
         self._S = np.stack(mats, axis=0)
-        self.bw = np.asarray(bw, float)
-        self.avgt = np.asarray(avgt, float)
-        self.avgf = np.asarray(avgf, float)
-        self.rotspec = np.asarray(rots, float)
-        self.segnum = np.asarray(segnum, int)
+        self.bw = np.asarray(bw, dtype=float)
+        self.avgt = np.asarray(avgt, dtype=float)
+        self.avgf = np.asarray(avgf, dtype=float)
+        self.rotspec = np.asarray(rots, dtype=float)
+        self.segnum = np.asarray(segnum, dtype=int)
         self.band = list(band)
     
         # ensure high→low order
@@ -963,7 +1024,6 @@ class Spectra(BaseEM):
     
         return self
 
-
     # -------------- round-trip to IO
     def to_io(self) -> Tuple["SpectraSECT", "SpectraIO"]:
         nc = self.n_chan
@@ -974,7 +1034,7 @@ class Spectra(BaseEM):
             nfreq=nf,
         )
         sect.meas_ids = list(self.chan_ids)
-
+        
         io = SpectraIO()
         for k in range(nf):
             blk = _SpectraBlock()
@@ -1024,10 +1084,665 @@ class Spectra(BaseEM):
                 pairs.append((b, b + 1))
 
         for a, b in pairs:
-            T = np.eye(self.n_chan, float)
+            T = np.eye(self.n_chan, dtype=float)
             T[a : b + 1, a : b + 1] = R2
             # S' = T S Tᴴ  per frequency
             self._S = np.einsum(
                 "ij,fjk,lk->fil", T, self._S, T, optimize=True
             )
+
+    def to_Z(
+        self,
+        *,
+        id_to_chtype: dict[str, str] | None = None,
+        e_labels: tuple[str, str] = ("EX", "EY"),
+        h_labels: tuple[str, str] = ("HX", "HY"),
+        use_remote: bool = False,
+        ridge: float | None = None,
+        estimate_error: bool = True,
+        dof: float | np.ndarray | None = None,
+    ):
+        r"""
+        Recover an impedance tensor ``Z`` and, if available, the
+        tipper from cross-spectra stored in this :class:`Spectra`.
+    
+        The method resolves channel types, extracts the electric
+        and magnetic sub-blocks, and computes per-frequency
+        ``Z = S_EH @ inv(S_HH)``.  If a vertical magnetic channel
+        is present it also computes the tipper
+        ``T = S_ZH @ inv(S_HH)``.  Optional ridge regularization
+        can be applied to stabilize the magnetic block.
+    
+        Parameters
+        ----------
+        id_to_chtype : dict of str to str, optional
+            Mapping from measurement IDs (as recorded in
+            ``>=SPECTRASECT`` or ``DefineMeas``) to channel
+            types (``"HX"``, ``"HY"``, ``"HZ"``, ``"EX"``,
+            ``"EY"``).  If omitted, the method uses
+            ``self.id_to_chtype`` when available, otherwise it
+            interprets ``self.chan_ids`` directly as labels.
+        e_labels : tuple of str, default (``"EX"``, ``"EY"``)
+            Labels that identify the two electric channels used
+            for the ``E`` block.
+        h_labels : tuple of str, default (``"HX"``, ``"HY"``)
+            Labels that identify the two horizontal magnetic
+            channels used for the ``H`` block.
+        use_remote : bool, default ``False``
+            When duplicate electric channels exist (e.g., local
+            and remote), choose the second occurrence for the
+            ``E`` block if ``True``; otherwise choose the first.
+        ridge : float, optional
+            Non-negative Tikhonov regularization added to
+            ``S_HH`` prior to inversion, ``S_HH + ridge * I``.
+        estimate_error : bool, default ``True``
+            If ``True``, estimate per-component 1-sigma standard
+            errors for ``Z`` (and tipper when available) using
+            ``compute_errors_from_S`` and the degrees of freedom
+            given by ``dof`` (or inferred; see Notes).
+        dof : float or ndarray, optional
+            Effective degrees of freedom per frequency.  If an
+            array is provided it must broadcast to ``n_freq``.
+            If ``None`` and ``estimate_error`` is ``True``, the
+            method tries to infer DoF from metadata via
+            ``effective_dof_from_meta`` using ``segnum``, or
+            ``avgt * bw`` as a fallback.
+    
+        Returns
+        -------
+        z_obj : :class:`pycsamt.z.z.Z`
+            Impedance object on the spectra frequency grid with
+            ``z`` populated and, when estimated, ``z_err`` set.
+        tip : :class:`pycsamt.z.tipper.Tipper` or ``None``
+            Tipper on the same grid when ``HZ`` is available.
+            When errors are estimated, tipper uncertainties are
+            attached.
+    
+        Raises
+        ------
+        EdIDataError
+            If spectra are empty, channel types cannot be
+            resolved, or the stabilized magnetic block is
+            singular.
+    
+        Notes
+        -----
+        Per frequency, ``Z`` is formed as ``Z = S_EH @ inv(S_HH)``,
+        where ``S_EH`` is the cross-spectra between E and H, and
+        ``S_HH`` is the magnetic auto/cross block. If a vertical
+        magnetic channel is available, the tipper is computed as
+        ``T = S_ZH @ inv(S_HH)``.
+        
+        Channel type resolution proceeds in this order:
+    
+        1. explicit ``id_to_chtype`` argument,
+        2. ``self.id_to_chtype`` from the section header or
+           ``DefineMeas``,
+        3. direct interpretation of ``self.chan_ids``.
+    
+        When both local and remote electric channels are present,
+        setting ``use_remote=True`` chooses the second occurrence
+        as a simple heuristic.  Frequency ordering is preserved.
+    
+        Uncertainties are computed by first-order propagation
+        under a complex-Wishart model and scale as
+        ``1 / sqrt(DoF)``.  If DoF cannot be determined, errors
+        are left as NaN.
+    
+        Examples
+        --------
+
+        >>> Zhat, That = spectra.to_Z()
+        >>> Zhat, _ = spectra.to_Z(
+        ...     use_remote=True, ridge=1e-6
+        ... )
+        >>> Zhat, _ = spectra.to_Z(
+        ...     dof=np.full(spectra.n_freq, 24.0)
+        ... )
+    
+        See Also
+        --------
+        Spectra.from_Z
+            Inverse operation that synthesizes spectra.
+        spectra_from_Z
+            Functional wrapper for the inverse operation.
+        effective_dof_from_meta
+            Infer DoF from ``segnum``, ``avgt`` and ``bw``.
+        compute_errors_from_S
+            Per-frequency uncertainty estimator.
+    
+        References
+        ----------
+        .. [1] Chave, A. D., & Jones, A. G. (2012). *The
+               Magnetotelluric Method: Theory and Practice*.
+               Cambridge University Press.
+        .. [2] Bendat, J. S., & Piersol, A. G. (2011). *Random
+               Data: Analysis and Measurement Procedures*. Wiley.
+        """
+        has_read(
+            self, 
+            msg="Spectra not populated; call from_file()/from_io() first."
+        )
+
+        if self.n_freq == 0 or self.n_chan < 2:
+            raise EdIDataError("Spectra is empty or too small.")
+        
+        # default to mapping collected on SpectraSECT (if any)
+        if id_to_chtype is None:
+            id_to_chtype = getattr(self, "id_to_chtype", None)
+            
+        def _norm(s: object) -> str:
+            t = "".join(ch for ch in str(s).upper() if ch.isalpha())
+            return t
+        
+        # Resolve per-channel types in the order used by S (self.chan_ids)
+        # - If the file stored numeric IDs in SPECTRASECT, you *must* pass
+        #   `id_to_chtype` (built from >HMEAS/>EMEAS). Otherwise, we accept
+        #   chan_ids that are already like ["HX","HY","HZ","EX","EY",...].
+        
+        if id_to_chtype:
+            kinds_raw = [
+                id_to_chtype.get(str(mid), "") for mid in self.chan_ids]
+        else:
+            kinds_raw = list(self.chan_ids)
+        
+        kinds = [_norm(x) for x in kinds_raw]
+ 
+        # pick indices for H and E
+        def _all_idx(lbl: str) -> list[int]:
+            L = _norm(lbl)
+            return [
+                i for i, k in enumerate(kinds)
+                if (k == L) or k.startswith(L)
+            ]
+
+        ex_all, ey_all = _all_idx(e_labels[0]), _all_idx(e_labels[1])
+        hx_all, hy_all = _all_idx(h_labels[0]), _all_idx(h_labels[1])
+        hz_all = _all_idx("HZ")
+    
+        def _choose(pair):
+            # choose the first by default; second if remote requested
+            if not pair:
+                return None
+            return pair[1] if (use_remote and len(pair) > 1) else pair[0]
+    
+        idx_ex = _choose(ex_all)
+        idx_ey = _choose(ey_all)
+        idx_hx = _choose(hx_all)
+        idx_hy = _choose(hy_all)
+        idx_hz = _choose(hz_all)  # optional
+        
+        if None in (idx_ex, idx_ey, idx_hx, idx_hy):
+            raise EdIDataError(
+                "Missing required channels to build Z "
+                f"(EX={idx_ex}, EY={idx_ey}, HX={idx_hx}, HY={idx_hy})."
+            )
+    
+        h_idx = [idx_hx, idx_hy]
+        e_idx = [idx_ex, idx_ey]
+        
+        # Build Z(f) = S_EH @ inv(S_HH) per frequency; optionally
+        # estimate errors using DoF.  Preallocate outputs.
+        z_arr = np.zeros((self.n_freq, 2, 2), dtype=complex)
+        z_err = (
+            np.full((self.n_freq, 2, 2), np.nan, dtype=float)
+            if estimate_error else None
+        )
+        
+        tip_arr = (
+            None if idx_hz is None else
+            np.zeros((self.n_freq, 1, 2), dtype=complex)
+        )
+        tip_err = (
+            None
+            if (idx_hz is None or not estimate_error) else
+            np.full((self.n_freq, 1, 2), np.nan, float)
+        )
+        
+        I2 = np.eye(2, dtype=float)
+        
+        for k in range(self.n_freq):
+            S = self._S[k]  # (nchan, nchan), Hermitian complex
+            S_HH = S[np.ix_(h_idx, h_idx)].astype(complex)
+            S_EH = S[np.ix_(e_idx, h_idx)].astype(complex)
+        
+            if ridge is not None and ridge > 0.0:
+                S_HH = S_HH + float(ridge) * I2
+        
+            try:
+                inv_SHH = np.linalg.inv(S_HH)
+            except np.linalg.LinAlgError as exc:
+                raise EdIDataError(
+                    f"S_HH singular at k={k}: {exc}"
+                ) from exc
+        
+            z_arr[k] = S_EH @ inv_SHH
+        
+            if tip_arr is not None:
+                S_ZH = S[np.ix_([idx_hz], h_idx)].astype(complex)
+                tip_arr[k, 0, :] = S_ZH @ inv_SHH
+        
+            # error estimates (optional) 
+            if not estimate_error or z_err is None:
+                continue
+        
+            # Resolve DoF M_k:
+            # priority: explicit `dof` -> `segnum` -> avgt*bw.
+            M_k = None
+            if dof is not None:
+                M_k = float(np.asarray(dof)[k])
+            else:
+                M_k = effective_dof_from_meta(
+                    segnum=(
+                        self.segnum[k] if hasattr(self, "segnum")
+                        else None
+                    ),
+                    avgt=(
+                        self.avgt[k] if hasattr(self, "avgt")
+                        else None
+                    ),
+                    bw=(
+                        self.bw[k] if hasattr(self, "bw")
+                        else None
+                    ),
+                )
+                if M_k is not None:
+                    M_k = float(M_k)
+        
+            if M_k and M_k > 0.0:
+                z_e, t_e = compute_errors_from_S(
+                    S=S,
+                    e_idx=tuple(e_idx),
+                    h_idx=tuple(h_idx),
+                    hz_idx=idx_hz,
+                    M=M_k,
+                    ridge=ridge,
+                )
+                z_err[k] = z_e
+                if tip_err is not None and t_e is not None:
+                    tip_err[k, 0, :] = t_e
+   
+        # --- finalize/attach uncertainties with user-facing warnings
+        valid_ze = (
+            estimate_error
+            and (z_err is not None)
+            and np.all(np.isfinite(z_err))
+            and np.all(z_err >= 0.0)
+        )
+        
+        valid_te = (
+            (tip_arr is not None)
+            and estimate_error
+            and (tip_err is not None)
+            and np.all(np.isfinite(tip_err))
+            and np.all(tip_err >= 0.0)
+        )
+        
+        if estimate_error and not valid_ze:
+            n_nan_ze = 0 if z_err is None else int(
+                np.count_nonzero(~np.isfinite(z_err))
+            )
+            n_neg_ze = 0 if z_err is None else int(
+                np.count_nonzero(z_err < 0.0)
+            )
+            logger.warning(
+                "Z error estimation skipped: invalid entries "
+                "(nan=%d, neg=%d) and/or missing DoF. "
+                "Errors will not be attached. Consider passing "
+                "`dof`, or disable with `estimate_error=False`.",
+                n_nan_ze, n_neg_ze,
+            )
+            z_err = None
+        
+        if estimate_error and (tip_arr is not None) and not valid_te:
+            n_nan_te = 0 if tip_err is None else int(
+                np.count_nonzero(~np.isfinite(tip_err))
+            )
+            n_neg_te = 0 if tip_err is None else int(
+                np.count_nonzero(tip_err < 0.0)
+            )
+            logger.warning(
+                "Tipper error estimation skipped: invalid entries "
+                "(nan=%d, neg=%d) and/or missing DoF. "
+                "Errors will not be attached.",
+                n_nan_te, n_neg_te,
+            )
+            tip_err = None
+        
+        # --- build objects (attach uncertainties only when valid)
+        nm = getattr(self, "name", None)
+        if z_err is not None:
+            z_obj = Z(
+                z_array=z_arr,
+                freq=self.freq,
+                name=nm,
+                z_err_array=z_err,
+                verbose=self.verbose,
+            )
+        else:
+            z_obj = Z(
+                z_array=z_arr,
+                freq=self.freq,
+                name=nm,
+                verbose=self.verbose,
+            )
+        
+        tip_obj = None
+        if tip_arr is not None:
+            tip_obj = Tipper()
+            tip_obj._freq = np.array(self.freq, dtype=float)
+            tip_obj._tipper = tip_arr
+            if tip_err is not None:
+                tip_obj._tipper_err = tip_err
+            # compute derived quantities (no uncertainties needed)
+            tip_obj.compute_amp_phase()
+            tip_obj.compute_mag_direction()
+        
+        return z_obj, tip_obj
+        
+    def __has_read__(self) -> bool:
+        """
+        Lightweight check used by utils.validation.has_read().
+        Returns True only if a non-empty spectral stack is present
+        and shapes are coherent.
+        """
+        try:
+            # freq present and 1-D
+            if not isinstance(self._freq, np.ndarray) or self._freq.ndim != 1:
+                return False
+            if self._freq.size == 0:
+                return False
+            # spectral cube present and consistent
+            S = getattr(self, "_S", None)
+            if not isinstance(S, np.ndarray) or S.ndim != 3:
+                return False
+            nf, n1, n2 = S.shape
+            if nf != self._freq.size or n1 != n2 or n1 < 2:
+                return False
+            return True
+        except Exception:
+            return False
+
+    @classmethod
+    def from_Z(
+        cls,
+        z_obj: "Z",
+        **kws: Any,
+    ) -> "Spectra":
+        r"""
+        Create a :class:`Spectra` from a transfer function
+        :class:`~pycsamt.z.z.Z`.
+        
+        This class method is a thin, convenience wrapper
+        around :func:`spectra_from_Z`.  It synthesizes a full
+        Hermitian cross–spectral density tensor from the
+        impedance tensor ``Z(f)`` and optional inputs that
+        control magnetic power and tipper usage.
+        
+        Parameters
+        ----------
+        z_obj : :class:`~pycsamt.z.z.Z`
+            Input impedance object.  The attributes
+            ``z_obj.z`` (shape ``(n, 2, 2)``) and
+            ``z_obj.freq`` (shape ``(n,)``) must be set.
+        **kws : Any
+            Forwarded to :func:`spectra_from_Z`.  See that
+            function for the complete set of options such as
+            ``S_HH``, ``H_psd``, ``tipper``, ``include_hz``,
+            and ``chan_order``.
+        
+        Returns
+        -------
+        Spectra
+            A spectra container on the same frequency grid as
+            ``z_obj``.  Channel order follows the requested
+            ``chan_order`` (default: ``HX, HY, EX, EY``).
+        
+        Raises
+        ------
+        EdIDataError
+            If ``z_obj`` is incomplete (missing ``z`` or
+            ``freq``).
+        
+        Notes
+        -----
+        Absolute spectral levels are not carried by the
+        impedance tensor.  To obtain physically scaled
+        spectra, provide magnetic spectra via ``S_HH`` or
+        ``H_psd``.  If neither is given, a unit–power
+        assumption is used (``S_HH = I``), which is suitable
+        for tests but not for quantitative analysis.
+        
+        This method does not infer per–frequency metadata
+        such as bandwidth or averaging time; those fields
+        are initialized with zeros/NaNs.
+        
+        Examples
+        --------
+        >>> ed = EDIFile("site_imp.edi")
+        >>> sp = Spectra.from_Z(
+        ...     ed.Z,
+        ...     H_psd=(np.ones(ed.Z.n_freq),
+        ...            np.ones(ed.Z.n_freq),
+        ...            None),
+        ... )
+        >>> sect, io = sp.to_io()
+        >>> _ = ed.write_new_edi(
+        ...     edi_fn="site_with_synth_spec.edi",
+        ...     Spectra=sp,
+        ... )
+        
+        See Also
+        --------
+        spectra_from_Z
+            Functional API that performs the synthesis.
+        pycsamt.seg.ops.synthesize_spectra_from_z
+            Low–level array helper used under the hood.
+        Spectra.to_Z
+            Inverse operation (spectra → Z).
+        
+        References
+        ----------
+        .. [1] Chave, A. D., & Jones, A. G. (2012). *The
+               Magnetotelluric Method: Theory and Practice*.
+               Cambridge Univ. Press.
+        .. [2] Bendat, J. S., & Piersol, A. G. (2011).
+               *Random Data: Analysis and Measurement
+               Procedures*. Wiley.
+        .. [3] SEG EDI MT/EMAP standard (1987). MTNet.
+        """
+
+        return spectra_from_Z(z_obj=z_obj, **kws)
+     
+def spectra_from_Z(
+    z_obj: "Z",
+    *,
+    S_HH: np.ndarray | None = None,
+    H_psd: tuple[
+        np.ndarray,
+        np.ndarray,
+        np.ndarray | None,
+    ] | None = None,
+    tipper: "Tipper | np.ndarray | None" = None,
+    include_hz: bool = False,
+    chan_order: tuple[str, ...] = (
+        "HX",
+        "HY",
+        "EX",
+        "EY",
+    ),
+    e_noise: float | np.ndarray | None = None,
+    h_noise: float | np.ndarray | None = None,
+    name: str | None = None,
+    verbose: int = 0,
+) -> "Spectra":
+    r"""
+    Synthesize a :class:`Spectra` from a transfer function
+    :class:`~pycsamt.z.z.Z` and optional tipper.
+    
+    Given the relation ``E = Z H``, the cross–spectral
+    blocks are
+    
+    * ``S_EH = Z S_HH``
+    * ``S_EE = Z S_HH Z^H``
+    
+    and, if tipper ``T`` and HZ are supplied,
+    
+    * ``S_ZH = T S_HH``, ``S_ZZ = T S_HH T^H``,
+    * ``S_EZ = Z S_HH T^H``.
+    
+    If magnetic spectra are not provided, a unit–power
+    assumption (``S_HH = I``) is used.  The result is
+    Hermitian by construction.
+    
+    Parameters
+    ----------
+    z_obj : :class:`~pycsamt.z.z.Z`
+        Input impedance with ``z`` (``(n, 2, 2)``) and
+        ``freq`` (``(n,)``) populated.
+    S_HH : ndarray, optional
+        Magnetic spectra per frequency, shape ``(n, 2, 2)``.
+        Must be Hermitian.  Overrides ``H_psd`` if both are
+        provided.
+    H_psd : tuple of arrays, optional
+        ``(Pxx, Pyy, Pxy)`` with ``Pxx, Pyy`` real
+        ``(n,)`` and optional complex ``Pxy (n,)``.  Used
+        to assemble ``S_HH`` when ``S_HH`` is not given.
+    tipper : :class:`~pycsamt.z.tipper.Tipper` or ndarray, \
+    optional
+        Horizontal tipper as object or array.  Arrays must
+        have shape ``(n, 1, 2)`` or ``(n, 2)``.  Required
+        when ``include_hz`` is ``True`` or when ``HZ`` is
+        in ``chan_order``.
+    include_hz : bool, default False
+        If ``True``, include HZ and all cross–terms.
+        Requires ``tipper``.
+    chan_order : tuple of str, default (\"HX\",\"HY\",\"EX\",\"EY\")
+        Order of channels in the synthesized spectra.  If
+        ``HZ`` is included, the tipper must be provided.
+    e_noise : float or ndarray, optional
+        Diagonal noise power added to the electric block
+        ``S_EE``.  Scalar or ``(n,)``.
+    h_noise : float or ndarray, optional
+        Diagonal noise power added to the magnetic block
+        ``S_HH``.  Scalar or ``(n,)``.
+    name : str, optional
+        Display name for the resulting :class:`Spectra`.
+        Defaults to ``z_obj.name``.
+    verbose : int, default 0
+        Verbosity flag propagated to :class:`Spectra`.
+    
+    Returns
+    -------
+    Spectra
+        A spectra container on ``z_obj.freq``.  The
+        attribute ``chan_ids`` matches ``chan_order``.
+    
+    Raises
+    ------
+    EdIDataError
+        If ``z_obj`` lacks ``z`` or ``freq``, or if HZ is
+        requested without a tipper.
+    ValueError
+        If provided arrays have incompatible shapes.
+    
+    Notes
+    -----
+    Absolute scaling depends entirely on the magnetic
+    spectra.  Without ``S_HH`` or ``H_psd``, the result
+    is unit–power and useful mainly for testing or
+    structural checks.
+    
+    Per–frequency metadata (e.g., bandwidth, averaging
+    time) are not inferred and are initialized with
+    zeros/NaNs.  Channel order is honored exactly; the
+    resulting spectra are explicitly symmetrized to be
+    Hermitian.
+    
+    Examples
+    --------
+    Minimal synthesis with unit power:
+    
+    >>> ed = EDIFile("site_imp.edi")
+    >>> sp = spectra_from_Z(ed.Z)
+    
+    With magnetic PSD and tipper, including HZ:
+    
+    >>> Pxx = np.full(ed.Z.n_freq, 1e-2)
+    >>> Pyy = np.full(ed.Z.n_freq, 1e-2)
+    >>> sp = spectra_from_Z(
+    ...     ed.Z,
+    ...     H_psd=(Pxx, Pyy, None),
+    ...     tipper=ed.Tip,
+    ...     include_hz=True,
+    ...     chan_order=("HX","HY","HZ","EX","EY"),
+    ... )
+    
+    Writing synthesized spectra to EDI:
+    
+    >>> sect, io = sp.to_io()
+    >>> _ = ed.write_new_edi(
+    ...     edi_fn="site_with_synth_spec.edi",
+    ...     Spectra=sp,
+    ... )
+    
+    See Also
+    --------
+    Spectra.from_Z
+        Classmethod wrapper returning a spectra from Z.
+    pycsamt.seg.ops.synthesize_spectra_from_z
+        Low–level array constructor used internally.
+    Spectra.to_Z
+        Inverse operation (spectra → Z and tipper).
+    
+    References
+    ----------
+    .. [1] Chave, A. D., & Jones, A. G. (2012). *The
+           Magnetotelluric Method: Theory and Practice*.
+           Cambridge Univ. Press.
+    .. [2] Bendat, J. S., & Piersol, A. G. (2011).
+           *Random Data: Analysis and Measurement
+           Procedures*. Wiley.
+    .. [3] SEG EDI MT/EMAP standard (1987). MTNet.
+    """
+
+    if (
+        getattr(z_obj, "z", None) is None
+        or getattr(z_obj, "freq", None) is None
+    ):
+        raise EdIDataError(
+            "Z object is incomplete (z or freq missing)."
+        )
+
+    tip_arr = None
+    if tipper is not None:
+        tip_arr = getattr(tipper, "tipper", tipper)
+
+    Sfull, order = synthesize_spectra_from_z(
+        z_obj.z,
+        S_HH=S_HH,
+        H_psd=H_psd,
+        tipper=tip_arr,
+        include_hz=include_hz,
+        chan_order=chan_order,
+        e_noise=e_noise,
+        h_noise=h_noise,
+    )
+
+    sp = Spectra(
+        name=(name or getattr(z_obj, "name", None)),
+        verbose=verbose,
+    )
+    sp._freq = np.asarray(z_obj.freq, float)
+    sp._S = np.asarray(Sfull, complex)
+    sp.chan_ids = list(order)
+
+    nf = sp.n_freq
+    sp.bw = np.zeros(nf, float)
+    sp.avgt = np.zeros(nf, float)
+    sp.avgf = np.full(nf, np.nan, float)
+    sp.rotspec = np.full(nf, np.nan, float)
+    sp.segnum = np.zeros(nf, int)
+    sp.band = [""] * nf
+    return sp
 

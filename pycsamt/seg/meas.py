@@ -35,6 +35,22 @@ __all__= [
     ]
 
 
+
+# TOKEN =  key=value   (value may contain +/-, dot, colon or text)
+_TOKEN_RE = re.compile(
+    r"(?P<k>[A-Za-z][A-Za-z0-9_]*)\s*=\s*(?P<v>[^\s]+)"
+)
+
+
+def _kv_tokens_from_line(line: str) -> Dict[str, str]:
+    out: Dict[str, str] = {}
+    for m in _TOKEN_RE.finditer(line):
+        k = m.group("k").strip().lower()
+        v = m.group("v").strip().strip('"').strip("'")
+        out[k] = v
+    return out
+
+
 def _slice_section(
     lines: Sequence[str],
     start_tag: str,
@@ -75,24 +91,6 @@ def _slice_section(
 
     payload = [ln.rstrip("\n") for ln in lines[start + 1 : stop]]
     return payload, start, stop
-
-
-# Measurement line parsing
-
-# TOKEN =  key=value   (value may contain +/-, dot, colon or text)
-_TOKEN_RE = re.compile(
-    r"(?P<k>[A-Za-z][A-Za-z0-9_]*)\s*=\s*(?P<v>[^\s]+)"
-)
-
-
-def _kv_tokens_from_line(line: str) -> Dict[str, str]:
-    out: Dict[str, str] = {}
-    for m in _TOKEN_RE.finditer(line):
-        k = m.group("k").strip().lower()
-        v = m.group("v").strip().strip('"').strip("'")
-        out[k] = v
-    return out
-
 
 
 class Hmeasurement(EDIComponentBase):

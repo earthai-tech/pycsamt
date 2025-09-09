@@ -26,6 +26,31 @@ import inspect
 __all__ = ["SEG", "SEGConfig", "discover_mixins"]
 
 
+# Map submodule -> candidate class names to import.
+# The first symbol found is used.
+_CANDIDATES = {
+    "base": ["Base", "BaseMixin", "SEGBase", "SurveyBase"],
+    "cbase": ["ParseMixin", "CoreParser", "CBBase"],
+    "heads": ["Heads", "HeadMixin", "InfoMixin"],
+    "meas": [
+        "MeasMixin",
+        "DefineMeasMixin",
+        "EMeasMixin",
+        "HMeasMixin",
+    ],
+    "components": ["ComponentsMixin"],
+    "spectra": ["SpectraMixin", "SpectraIO", "Spectra"],
+    "time_series": ["TimeSeriesMixin", "TSIO", "TimeSeries"],
+    "mtemap": ["EMAPMixin", "EMAPComponents"],
+    "property": ["PropertiesMixin"],
+    "edi": ["EDIMixin", "EDIFile", "EDIOMixin"],
+    "collection": ["CollectionMixin", "EDICollection"],
+    # NEW: add survey/xa modules
+    "survey": ["SurveyBase", "Stations", "Topography", "EDIProfile"],
+    "xa": ["XAMixin", "EDIAcc"],
+}
+
+
 @dataclass(frozen=True)
 class SEGConfig:
     """Global knobs for the SEG facade.
@@ -58,28 +83,6 @@ class _NoOp:  # pragma: no cover
 
     pass
 
-# Map submodule -> candidate class names to import.
-# The first found symbol is used as a mixin.
-_CANDIDATES = {
-    "base": ["Base", "BaseMixin", "SEGBase", "SurveyBase"],
-    "cbase": ["ParseMixin", "CoreParser", "CBBase"],
-    "heads": ["Heads", "HeadMixin", "InfoMixin"],
-    "meas": [
-        "MeasMixin",
-        "DefineMeasMixin",
-        "EMeasMixin",
-        "HMeasMixin",
-    ],
-    "components": ["ComponentsMixin"],
-    "spectra": ["SpectraMixin", "SpectraIO"],
-    "time_series": ["TimeSeriesMixin", "TSIO"],
-    "mtemap": ["EMAPMixin", "EMAPComponents"],
-    "property": ["PropertiesMixin"],
-    "edi": ["EDIMixin", "EDIFile", "EDIOMixin"],
-    "collection": ["CollectionMixin", "EDICollection"],
-    # "Utils": ["UtilsMixin"]
-    # update with survey.py and xa.py 
-}
 
 
 def _import_first(module: str, names: Iterable[str]) -> Type:
@@ -99,7 +102,7 @@ def _import_first(module: str, names: Iterable[str]) -> Type:
     """
 
     try:
-        mod = import_module(f".{{module}}", package=__package__) # Fstring is missing placeholder , fix it
+        mod = import_module(f".{module}", package=__package__)
     except Exception:  # pragma: no cover
         return _NoOp
 
@@ -108,7 +111,6 @@ def _import_first(module: str, names: Iterable[str]) -> Type:
         if inspect.isclass(obj):
             return obj  # type: ignore[return-value]
     return _NoOp
-
 
 def discover_mixins() -> Tuple[Type, ...]:
     """Discover available component mixins.

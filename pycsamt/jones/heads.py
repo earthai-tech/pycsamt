@@ -36,7 +36,6 @@ __all__ = [
 ]
 
 
-
 class Banner(JComponentBase):
     r"""
     Parse and serialize the top provenance comment line.
@@ -143,10 +142,11 @@ class Banner(JComponentBase):
         verbose: int = 0,
     ) -> None:
         super().__init__(verbose=verbose)
-        self.software = software
+       
         self.station_hint = station
         self.date = date
         self.note = note
+        self._software = software
         self._raw: Optional[str] = None
         if top_lines is not None:
             self.read(top_lines)
@@ -174,7 +174,7 @@ class Banner(JComponentBase):
         for ln in top_lines:
             m = RE_BANNER.match(ln.rstrip("\n"))
             if m:
-                self.software = m.group("software").strip()
+                self._software = m.group("software").strip()
                 self.station_hint = m.group("station").strip()
                 self.date = m.group("date").strip()
                 self.note = m.group("note").strip()
@@ -183,18 +183,62 @@ class Banner(JComponentBase):
         self._mark_read(True)
         return self
 
-    def write(self) -> List[str]:
-        sw = self.software or "PYSCAMT"
+    def write(
+        self,
+        *,
+        new: bool = True,
+        include_origin: bool = False,
+    ) -> list[str]:
         st = self.station_hint or ""
-        dt = (
-            self.date
-            if self.date is not None
-            else datetime.now().strftime("%d/%m/%y")
-        )
-        nt = (self.note or "RAW RECS").strip().upper()
-        line = f"#WRITTEN BY {sw}: {st} {dt} {nt}".rstrip()
-        return [line]
+        lines: list[str] = []
+    
+        if new:
+            sw = "PYCSAMT"
+            dt = datetime.now().strftime("%d/%m/%y")
+            nt = (self.note or "RAW RECS").strip().upper()
+            lines.append(
+                f"#WRITTEN BY {sw}: {st} {dt} {nt}".rstrip()
+            )
+        else:
+            sw = self.software or "PYCSAMT"
+            dt = (
+                self.date
+                if self.date is not None
+                else datetime.now().strftime("%d/%m/%y")
+            )
+            nt = (self.note or "RAW RECS").strip().upper()
+            lines.append(
+                f"#WRITTEN BY {sw}: {st} {dt} {nt}".rstrip()
+            )
+    
+        if include_origin and self._raw:
+            # keep original line verbatim, but mark as provenance
+            lines.append(
+                "#FROM "
+                + self._raw.lstrip("#").strip().lstrip("WRITTEN BY")
+            )
+    
+        return lines
 
+    @property
+    def software(self) -> str | None:
+        return ( 
+            None if self._software is None 
+            else self._software.upper()
+        )
+    
+    @property
+    def date_parsed(self) -> datetime | None:
+        if not self.date:
+            return None
+        txt = self.date.strip()
+        fmts = ("%d/%m/%y", "%Y-%m-%d", "%d-%m-%Y")
+        for f in fmts:
+            try:
+                return datetime.strptime(txt, f)
+            except Exception:
+                pass
+        return None
 
 
 class Info(JComponentBase):
@@ -314,15 +358,22 @@ class Info(JComponentBase):
         
         return cls(info_list, verbose=verbose)
 
-
-
     def write(
         self, j_info_list: Optional[Sequence[str]] = None
     ) -> List[str]:
         if j_info_list is not None:
             self.read(j_info_list)
-        out: List[str] = []
+        # out: List[str] = []
+        # for c in self.comments:
+        #     out.append(c.rstrip("\n"))
+        # for k, v in self.items.items():
+        #     out.append(f">{k} = {v}")
+        # return out
+        out: list[str] = []
         for c in self.comments:
+            # skip any original “#WRITTEN BY …” banner lines
+            if RE_BANNER.match(c):
+                continue
             out.append(c.rstrip("\n"))
         for k, v in self.items.items():
             out.append(f">{k} = {v}")
@@ -374,13 +425,44 @@ class Info(JComponentBase):
         return self.site.elevation
 
 
+    def get(self, key: str, default: str | None = None
+            ) -> str | None:
+        return self.items.get(key.upper(), default)
+    
+    def keys(self) -> tuple[str, ...]:
+        return tuple(self.items.keys())
+    
+    def values(self) -> tuple[str, ...]:
+        return tuple(self.items.values())
+    
+    def items_map(self) -> dict[str, str]:
+        # explicit copy to avoid accidental mutation
+        return dict(self.items)
+    
+    @property
+    def lat(self) -> float | None:
+        return self.latitude
+    
+    @property
+    def lon(self) -> float | None:
+        return self.longitude
 
+    
+    def __contains__(self, key: str) -> bool:
+        return key.upper() in self.items
+    
+    def __getitem__(self, key: str) -> str:
+        return self.items[key.upper()]
+    
     def __str__(self) -> str:
         n = len(self.items)
         return f"Info(items={n})"
 
     def __repr__(self) -> str:
-        return f"Info(items={len(self.items)}, cmts={len(self.comments)})"
+        return ( 
+            f"Info(items={len(self.items)},"
+            " cmts={len(self.comments)})"
+            )
 
 
 class Head(JComponentBase):
@@ -575,6 +657,41 @@ class Head(JComponentBase):
             raise ValueError("head not fully defined")
         return [f"{self.station}", f"{_fmt_dtype(self.dtype)}", f"{self.n}"]
 
+    @property
+    def kind(self) -> str | None:
+        return ( None if self.dtype is None 
+                else self.dtype.kind
+            )
+    
+    @property
+    def comp(self) -> str | None:
+        return ( 
+            None if self.dtype is None 
+            else self.dtype.comp
+        )
+    
+    @property
+    def units(self) -> str | None:
+        return ( 
+            None if self.dtype is None 
+            else self.dtype.units
+        )
+    
+    @property
+    def tensor_hint(self) -> str | None:
+        return (
+            None if self.dtype is None 
+            else self.dtype.tensor_hint
+        )
+    
+    @property
+    def header(self) -> tuple[str, str, int] | None:
+        if self.station is None or self.dtype is None:
+            return None
+        if self.n is None:
+            return None
+        return (self.station, f"{self.kind}{self.comp}", self.n)
+
     def __str__(self) -> str:
         return f"Head(station={self.station!r}, n={self.n})"
 
@@ -691,13 +808,14 @@ class Heads(JComponentBase):
         self._mark_read(True)
         return self
 
-    def write(self) -> List[str]:
-        out: List[str] = []
-        out.extend(self.banner.write())
+    def write(self, include_origin=False) -> List[str]:
+        out: list[str] = []
+        out.extend(self.banner.write(
+            new=True, include_origin=include_origin))
         out.extend(self.head.write())
         out.extend(self.info.write())
         return out
-    
+
     @classmethod
     def from_lines(
         cls, lines: Sequence[str], *, verbose: int = 0
@@ -745,7 +863,7 @@ class Heads(JComponentBase):
     @property
     def software(self) -> str | None:
         return self.banner.software
-    
+
     def __str__(self) -> str:
         return f"Heads(n={self.n})"
 

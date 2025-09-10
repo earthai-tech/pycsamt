@@ -322,7 +322,7 @@ class CoreParser(ParseMixin):
     def parse(self, sources: SrcType) -> List[EDIFile]:
         edis: List[EDIFile] = []
         self.results.clear()
-        # ---------- NEW ----------
+   
         self._errors.clear()
 
         for p in self._iter_edi_files(

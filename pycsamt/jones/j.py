@@ -688,7 +688,8 @@ class JFile(JIOMixin):
             raise ValueError("path is required")
 
         self.heads = Heads.from_file(
-            self.path, verbose=self.verbose)
+            self.path, verbose=self.verbose
+        )
         self.blocks = JBlocks.from_file(
             self.path, verbose=self.verbose)
 
@@ -832,7 +833,7 @@ class JFile(JIOMixin):
         have_z = (
                 self.Z is not None
                 and (
-                    getattr(self.Z, "z_array", None) is not None
+                    getattr(self.Z, "_z", None) is not None
                     or getattr(self.Z, "z", None) is not None
                 )
             )
@@ -867,7 +868,7 @@ class JFile(JIOMixin):
         # info
         if self.heads is not None and hasattr(self.heads, "info"):
             try:
-                lines.extend(self.heads.info.write(include_origin=True))
+                lines.extend(self.heads.info.write())
             except Exception:
                 pass
 
@@ -1242,9 +1243,9 @@ class JFile(JIOMixin):
             "nf": self._nfreq(),
             "cstr": cstr,
             "cmap": cmap,
-            "lat": self._flt(self.lat),
-            "lon": self._flt(self.lon),
-            "az": self._flt(self.azimuth),
+            "lat": _flt(self.lat),
+            "lon": _flt(self.lon),
+            "az": _flt(self.azimuth),
             "pname": self._pname(),
             "pstr": self._pstr(),
         }

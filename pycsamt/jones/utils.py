@@ -35,6 +35,14 @@ from .config import (
 )
 
 
+__all__ = [
+    "JParseError", "DataType", "ParsedRow",
+    "iter_lines",
+    "is_comment", "is_blank", "parse_info", "parse_station",
+    "parse_datatype_units", "parse_npoints", "parse_row",
+    "strip_nondata", "iter_info", "iter_rows",
+]
+
 
 @dataclass(frozen=True)
 class DataType:
@@ -314,15 +322,3 @@ def iter_rows(kind: str, lines: Iterable[str]) -> Iterator[ParsedRow]:
             continue
         yield parse_row(kind, ln, lineno=i)
 
-
-__all__ = [
-    # errors & data holders
-    "JParseError", "DataType", "ParsedRow",
-    # IO
-    "iter_lines",
-    # classifiers / parsers
-    "is_comment", "is_blank", "parse_info", "parse_station",
-    "parse_datatype_units", "parse_npoints", "parse_row",
-    # generators
-    "strip_nondata", "iter_info", "iter_rows",
-]

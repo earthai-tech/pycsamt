@@ -141,6 +141,3 @@ class JComponentBase(BaseJones):
         "shape",
     ]
 
-    # Inherit everything from BaseJones; subclasses only need to
-    # implement the parsing/serialization routines.
-

@@ -109,7 +109,6 @@ class CollectionMixin(ParseMixin):
        https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
 
-    # --------------------- ingest utilities -----------------
     def add_from(
         self,
         sources: Union[Pathish, Sequence[Pathish]],

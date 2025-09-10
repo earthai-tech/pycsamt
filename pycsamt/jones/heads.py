@@ -371,12 +371,12 @@ class Info(JComponentBase):
         # return out
         out: list[str] = []
         for c in self.comments:
-            # skip any original “#WRITTEN BY …” banner lines
+            # skip any original #WRITTEN BY … banner lines
             if RE_BANNER.match(c):
                 continue
             out.append(c.rstrip("\n"))
         for k, v in self.items.items():
-            out.append(f">{k} = {v}")
+            out.append(f">{k:<10} = {v:>13}")
         return out
     
     def read(

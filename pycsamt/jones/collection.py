@@ -15,6 +15,7 @@ from typing import (
 )
 
 import numpy as np
+import pandas as pd
 
 from ..log.logger import get_logger
 from .cbase import JCBBase, JCoreParser, JParseMixin
@@ -335,27 +336,55 @@ class JCollection(JCBBase, JCollectionMixin):
                 continue
             out.add(jf)
         return out
-
+    
     def _resolve(self, site: str) -> JFile:
-        """Find item by key, site/station, stem, or filename."""
-        idx = getattr(self, "_index", None)
-        if isinstance(idx, dict) and site in idx:
-            return idx[site]
+        """Find item by key, site/station, stem, 
+        or filename (case-insensitive)."""
+        site_upper = str(site).upper()
+        # Case-insensitive check on the 
+        # index dictionary first for speed
+        for key, idx in self._index.items():
+            if str(key).upper() == site_upper:
+                return self._items[idx]
+        
+        # Fallback to iterating through all items if not in index
         for jf in self:
             sid = getattr(jf, "site", None)
-            if sid and str(sid) == str(site):
+            if sid and str(sid).upper() == site_upper:
                 return jf
+        
+        # Fallback to path matching (case-insensitive)
+        site_lower = str(site).lower()
         for jf in self:
             p = getattr(jf, "path", None)
             if p is None:
                 continue
-            if p.stem == site or p.name == site or str(p) == site:
+            if (p.stem.lower() == site_lower or 
+                p.name.lower() == site_lower or 
+                str(p).lower() == site_lower):
                 return jf
         raise KeyError(f"site not found: {site!r}")
+        
+
+    # def _resolve(self, site: str) -> JFile:
+    #     """Find item by key, site/station, stem, or filename."""
+    #     idx = getattr(self, "_index", None)
+    #     if isinstance(idx, dict) and site in idx:
+    #         return idx[site]
+    #     for jf in self:
+    #         sid = getattr(jf, "site", None)
+    #         if sid and str(sid) == str(site):
+    #             return jf
+    #     for jf in self:
+    #         p = getattr(jf, "path", None)
+    #         if p is None:
+    #             continue
+    #         if p.stem == site or p.name == site or str(p) == site:
+    #             return jf
+    #     raise KeyError(f"site not found: {site!r}")
 
     def _heads(self, jf: JFile):
         return getattr(jf, "heads", None)
-
 
     def get(
         self,
@@ -386,11 +415,11 @@ class JCollection(JCBBase, JCollectionMixin):
 
         # --------------- Z ------------------
         if w == "z":
-            return getattr(getattr(jf, "Z", None), "z_array", None)
+            return getattr(getattr(jf, "Z", None), "z", None)
         if w in {"zxx", "zxy", "zyx", "zyy"}:
             m = {"zxx": (0, 0), "zxy": (0, 1),
                  "zyx": (1, 0), "zyy": (1, 1)}[w]
-            z = getattr(getattr(jf, "Z", None), "z_array", None)
+            z = getattr(getattr(jf, "Z", None), "z", None)
             if z is None:
                 return default
             a = np.asarray(z)
@@ -401,7 +430,7 @@ class JCollection(JCBBase, JCollectionMixin):
             tp = getattr(jf, "Tip", None)
             if tp is None:
                 return default
-            arr = getattr(tp, "tipper_array", None)
+            arr = getattr(tp, "tipper", None)
             if arr is None:
                 return default
             a = np.asarray(arr)
@@ -680,6 +709,90 @@ class JCollection(JCBBase, JCollectionMixin):
             vals.append(np.nan if v is None else float(v))
         return np.asarray(vals, dtype=float)
 
+    def export(
+        self,
+        output_dir: Pathish,
+        *,
+        file_pattern: str = "{station}.j",
+        export_summary: bool = False,
+        summary_filename: str = "summary.csv",
+        **jfile_write_kwargs,
+    ) -> dict:
+        """
+        Exports all JFile items to a directory with advanced options.
+    
+        This method orchestrates the writing of each JFile in the collection
+        to a specified directory, with flexible naming, error handling, and
+        an optional summary CSV file.
+    
+        Parameters
+        ----------
+        output_dir : Pathish
+            The path to the directory where files will be saved. It will
+            be created if it does not exist.
+        file_pattern : str, default="{station}.j"
+            A format string for output filenames. Can use attributes of
+            JFile like `{station}`, `{name}`, `{site}`.
+        export_summary : bool, default=False
+            If True, a summary of the collection will also be saved as a
+            CSV file in the output directory.
+        summary_filename : str, default="summary.csv"
+            The name of the summary file if `export_summary` is True.
+        **jfile_write_kwargs
+            Keyword arguments to be passed directly to each `JFile.write()`
+            call (e.g., `datatype="ZRT"`, `overwrite=True`).
+    
+        Returns
+        -------
+        dict
+            A dictionary with two keys:
+            - 'successful': A list of paths to successfully written files.
+            - 'failed': A list of tuples, where each tuple contains the
+              station name and the error that occurred.
+        """
+        out_dir = Path(str(output_dir)).expanduser().resolve()
+        out_dir.mkdir(parents=True, exist_ok=True)
+    
+        successful_paths = []
+        failed_items = []
+    
+        # Use tqdm for a progress bar if available
+        items_iterator = self._items
+        try:
+            from tqdm import tqdm 
+            items_iterator = tqdm(self._items, desc="Exporting J-Files")
+        except (NameError, ImportError):
+            pass # tqdm not installed
+    
+        for jf in items_iterator:
+            sid = jf.site or "unknown_station"
+            try:
+                filename = file_pattern.format(
+                    station=sid, site=sid, name=jf.name
+                )
+                output_path = out_dir / filename
+                
+                # Delegate the actual writing to the JFile instance
+                written_path = jf.write(
+                    new_jfn=str(output_path), **jfile_write_kwargs
+                )
+                successful_paths.append(written_path)
+            except Exception as e:
+                failed_items.append((sid, e))
+                logger.error(f"Failed to write J-file for station {sid}: {e}")
+    
+        # Export the summary CSV if requested
+        if export_summary:
+            try:
+                summary_df = pd.DataFrame(self.summary())
+                summary_path = out_dir / summary_filename
+                summary_df.to_csv(summary_path, index=False)
+                successful_paths.append(str(summary_path))
+            except Exception as e:
+                failed_items.append(("summary.csv", e))
+                logger.error(f"Failed to write summary CSV: {e}")
+    
+        return {"successful": successful_paths, "failed": failed_items}
 
     def __repr__(self) -> str:  # pragma: no cover
         return (

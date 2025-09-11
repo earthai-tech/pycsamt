@@ -12,6 +12,7 @@ import math
 
 import numpy as np
 
+from ..log.logger import get_logger 
 from .base import JComponentBase
 from .config import ( 
     ENCODING_DEFAULT,
@@ -21,7 +22,7 @@ from .config import (
     RE_BLANK, 
     MISSING_FLOAT
 )
-# --- add at top with other imports ---
+
 from .config import (
     RE_STATION,
     RE_DATATYPE_UNITS,
@@ -33,6 +34,8 @@ from .utils import parse_datatype_units, JParseError
 
 from .utils import iter_lines
 from .heads import Head
+
+logger = get_logger(__name__)
 
 __all__ = [
     "RRow", "TFRow", "JBlock",
@@ -702,7 +705,7 @@ class JBlocks(JComponentBase):
     .. [1] A. G. Jones (1994). Magnetotelluric data file
        J-format, version 2.0.
     """
-
+    
     def __init__(
         self,
         blocks: Optional[Sequence[JBlock]] = None,
@@ -783,6 +786,19 @@ class JBlocks(JComponentBase):
             if b.station is not None:
                 out.append(b.station)
         return out
+
+    @property
+    def station(self) -> str | None:
+        """
+        Return the single, unique station name for 
+        the block collection.
+        Returns None if no blocks are present.
+        """
+        if not self.blocks:
+            return None
+        # All blocks should have the same
+        # station name after correct parsing
+        return self.blocks[0].station
     
     @property
     def kinds(self) -> list[str]:
@@ -874,80 +890,111 @@ def _extract_first_head_and_body(
     return h, seq[start:]
 
 
-
 def _extract_all_blocks(
         lines: Sequence[str], *, verbose: int = 0
     ) -> List["JBlock"]:
+    """
+    Robustly parse all data blocks from a J-file for 
+    a single station.
+
+    This parser finds the single station name for the 
+    file and then iteratively finds all subsequent data blocks, 
+    which are identified by a [data_type, count] pair.
+    """
     seq = list(lines)
     blocks: List[JBlock] = []
-
-    while seq:
-        # skip comments/info/blank
-        i = 0
-        while i < len(seq) and (RE_BLANK.match(seq[i]) or
-                                seq[i].lstrip().startswith("#") or
-                                seq[i].lstrip().startswith(">")):
-            i += 1
-        seq = seq[i:]
-        if not seq:
-            break
-
-        # need a station
-        if not RE_STATION.match(seq[0]):
-            # drop one line and keep searching
-            seq = seq[1:]
+    
+    # 1. Find the first station line in the entire file. This will be the
+    #    station for ALL subsequent blocks.
+    station_line = None
+    first_data_line_index = 0
+    for i, line in enumerate(seq):
+        # Skip over the initial comment and info blocks
+        if RE_COMMENT.match(line) or RE_INFO.match(line) or RE_BLANK.match(line):
             continue
-
-        # find dtype/count in either order
-        j = 1
-        while j < len(seq) and RE_BLANK.match(seq[j]):
-            j += 1
-        if j >= len(seq):
+        # The first non-header line must be the station
+        if RE_STATION.match(line):
+            station_line = line
+            first_data_line_index = i + 1
             break
+            
+    if station_line is None:
+        # If no station is found in the file, there are no blocks to parse.
+        if verbose:
+            logger.warning(
+                "No station line found. Cannot parse data blocks."
+            )
+        return []
 
-        dtype_idx = count_idx = None
-        try:
-            parse_datatype_units(seq[j])       # station -> dtype -> count
-            dtype_idx = j
-            k = j + 1
-            while k < len(seq) and RE_BLANK.match(seq[k]):
-                k += 1
-            if k < len(seq) and RE_NPOINTS.match(seq[k]):
-                count_idx = k
-        except JParseError:
-            if RE_NPOINTS.match(seq[j]):       # station -> count -> dtype
+    # 2. Now, loop through the rest of the 
+    # file from where we found the station.
+    i = first_data_line_index
+    while i < len(seq):
+        # Find the next data type line, skipping any blank lines
+        dtype_line = None
+        dtype_idx = -1
+        while i < len(seq):
+            line = seq[i].strip()
+            if RE_BLANK.match(line):
+                i += 1
+                continue
+            try:
+                parse_datatype_units(line)
+                dtype_line = line
+                dtype_idx = i
+                break
+            except JParseError:
+                # This line is not a dtype, probably
+                # leftover data or garbage. Skip it.
+                i += 1
+        
+        if not dtype_line:
+            break # No more data type lines found, we are done.
+
+        # 3. Find the next count line, skipping blank lines
+        count_line = None
+        count_idx = -1
+        j = dtype_idx + 1
+        while j < len(seq):
+            line = seq[j].strip()
+            if RE_BLANK.match(line):
+                j += 1
+                continue
+            if RE_NPOINTS.match(line):
+                count_line = line
                 count_idx = j
-                t = j + 1
-                while t < len(seq) and not RE_STATION.match(seq[t]):
-                    if not RE_BLANK.match(seq[t]):
-                        try:
-                            parse_datatype_units(seq[t])
-                            dtype_idx = t
-                            break
-                        except JParseError:
-                            pass
-                    t += 1
+                break
+            # If we find something that is not
+            # a count, the header is malformed.
+            break 
+            
+        if not count_line:
+            # Could not find a count for the detected
+            # data type, stop parsing.
+            if verbose:
+                logger.warning(
+                    "Found data type '{dtype_line}'"
+                    " but no following count. "
+                    "Stopping parse."
+                )
+            break
 
-        if dtype_idx is None or count_idx is None:
-            # header incomplete, drop station and continue
-            seq = seq[1:]
-            continue
-
-        # build head from raw header strings
-        header = [seq[0], seq[dtype_idx], seq[count_idx]]
-        head = Head(verbose=verbose).read(header)
-
-        # body starts after count line; read up to n rows defensively
-        body = seq[count_idx + 1:]
-        blk = _block_factory(head, verbose=verbose).read((head, body))
+        # 4. We have the full header. Create the block.
+        header_lines = [station_line, dtype_line, count_line]
+        head = Head(verbose=verbose).read(header_lines)
+        
+        body_start_index = count_idx + 1
+        body_lines = seq[body_start_index:]
+        
+        # Create the block and let its `read` method consume the data rows
+        blk = _block_factory(head, verbose=verbose).read((head, body_lines))
         blocks.append(blk)
-
-        # consume header (3) + declared rows (head.n) from seq
-        rows = max(head.n or 0, 0)
-        seq = body[rows:]
-
+        
+        # 5. Advance the main loop index past the data we just consumed.
+        rows_consumed = max(head.n or 0, 0)
+        i = body_start_index + rows_consumed
+        
     return blocks
-
 
 def _locate_header_indices(
     seq: Sequence[str], start: int

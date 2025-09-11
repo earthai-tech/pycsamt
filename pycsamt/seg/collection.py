@@ -373,25 +373,54 @@ class EDICollection(CBBase, CollectionMixin):
                 continue
             out.add(ed)
         return out
-    
+
     def _resolve(self, site: str) -> EDIFile:
-        """Find item by key, station, stem or filename."""
-        # fast path: exact key in index, if we have one
-        idx = getattr(self, "_index", None)
-        if isinstance(idx, dict) and site in idx:
-            return idx[site]
-        # linear scan fallbacks
+        """Find item by key, station, stem or filename
+        (case-insensitive)."""
+        site_upper = str(site).upper()
+        
+        # Fast path: case-insensitive check on the index dictionary
+        for key, idx in self._index.items():
+            if str(key).upper() == site_upper:
+                return self._items[idx]
+                
+        # Fallback to iterating through all items (case-insensitive)
         for ed in self:
             sid = getattr(ed, "station", None)
-            if sid and str(sid) == str(site):
+            if sid and str(sid).upper() == site_upper:
                 return ed
+                
+        # Fallback to path matching (case-insensitive)
+        site_lower = str(site).lower()
         for ed in self:
             p = getattr(ed, "path", None)
             if p is None:
                 continue
-            if p.stem == site or p.name == site or str(p) == site:
+            if (p.stem.lower() == site_lower or
+                p.name.lower() == site_lower or
+                str(p).lower() == site_lower):
                 return ed
+                
         raise KeyError(f"site not found: {site!r}")
+    
+    # def _resolve(self, site: str) -> EDIFile:
+    #     """Find item by key, station, stem or filename."""
+    #     # fast path: exact key in index, if we have one
+    #     idx = getattr(self, "_index", None)
+    #     if isinstance(idx, dict) and site in idx:
+    #         return idx[site]
+    #     # linear scan fallbacks
+    #     for ed in self:
+    #         sid = getattr(ed, "station", None)
+    #         if sid and str(sid) == str(site):
+    #             return ed
+    #     for ed in self:
+    #         p = getattr(ed, "path", None)
+    #         if p is None:
+    #             continue
+    #         if p.stem == site or p.name == site or str(p) == site:
+    #             return ed
+    #     raise KeyError(f"site not found: {site!r}")
     
     
     def _head(self, ed: EDIFile):
@@ -623,6 +652,126 @@ class EDICollection(CBBase, CollectionMixin):
     
         return ed
 
+    def export(
+        self,
+        output_dir: Pathish,
+        *,
+        file_pattern: str = "{station}.edi",
+        **edi_write_kwargs,
+    ) -> dict:
+        """
+        Exports all EDIFile items to a directory with advanced options.
+    
+        This method orchestrates the writing of each EDIFile in the
+        collection to a specified directory, with flexible naming and
+        clear error reporting.
+    
+        Parameters
+        ----------
+        output_dir : Pathish
+            The path to the directory where EDI files will be saved.
+            It will be created if it does not exist.
+        file_pattern : str, default="{station}.edi"
+            A format string for output filenames. Can use attributes
+            like `{station}`.
+        **edi_write_kwargs
+            Keyword arguments to be passed directly to each
+            `EDIFile.write()` call (e.g., `datatype="mt"`,
+            `synthesize_spectra=True`).
+    
+        Returns
+        -------
+        dict
+            A dictionary with two keys:
+            - 'successful': A list of paths to successfully written files.
+            - 'failed': A list of tuples, where each tuple contains the
+              station name and the error that occurred during writing.
+        """
+        out_dir = Path(str(output_dir)).expanduser().resolve()
+        out_dir.mkdir(parents=True, exist_ok=True)
+    
+        successful_paths = []
+        failed_items = []
+        
+        items_iterator = self._items
+        
+        # Optional: Use tqdm for a progress bar if available
+        try:
+            from tqdm import tqdm
+        except ImportError:
+            tqdm = None
+        
+        if tqdm:
+            items_iterator = tqdm(self._items, desc="Exporting EDI Files")
+    
+        for ed in items_iterator:
+            sid = self._site_of(ed) or "unknown_station"
+            try:
+                filename = file_pattern.format(station=sid)
+                output_path = out_dir / filename
+                
+                # Delegate the actual writing to the EDIFile instance
+                written_path = ed.write(
+                    new_edifn=str(output_path), **edi_write_kwargs
+                )
+                successful_paths.append(written_path)
+            except Exception as e:
+                failed_items.append((sid, e))
+                logger.error(f"Failed to write EDI for station {sid}: {e}")
+    
+        return {"successful": successful_paths, "failed": failed_items}
+
+    @staticmethod
+    def _site_of(it: EDIFile) -> str | None:
+        """Safely extract the site/station 
+        name from an EDIFile."""
+        return getattr(it, "station", None)
+    
+    @staticmethod
+    def _lat_of(it: EDIFile) -> float | None:
+        """Safely extract the latitude from 
+        an EDIFile's HEAD section."""
+        head = it.get_section("head")
+        v = getattr(head, "lat", None)
+        return float(v) if isinstance(v, (int, float)) else None
+    
+    @staticmethod
+    def _lon_of(it: EDIFile) -> float | None:
+        """Safely extract the longitude from 
+        an EDIFile's HEAD section."""
+        head = it.get_section("head")
+        v = getattr(head, "long", None)
+        return float(v) if isinstance(v, (int, float)) else None
+    
+    @property
+    def sites(self) -> list[str]:
+        """Returns a list of best-effort 
+        station names for each item."""
+        out: list[str] = []
+        for it in self._items:
+            s = self._site_of(it)
+            out.append(s if s is not None else "")
+        return out
+    
+    @property
+    def latitude(self) -> np.ndarray:
+        """Returns a numpy array of latitudes
+        (np.nan for missing values)."""
+        vals: list[float] = []
+        for it in self._items:
+            v = self._lat_of(it)
+            vals.append(np.nan if v is None else float(v))
+        return np.asarray(vals, dtype=float)
+    
+    @property
+    def longitude(self) -> np.ndarray:
+        """Returns a numpy array of longitudes 
+        (np.nan for missing values)."""
+        vals: list[float] = []
+        for it in self._items:
+            v = self._lon_of(it)
+            vals.append(np.nan if v is None else float(v))
+        return np.asarray(vals, dtype=float)
 
     def __repr__(self) -> str:  # pragma: no cover
         return (

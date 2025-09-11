@@ -157,8 +157,8 @@ def test_build_from_comp_T_only():
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_scan_blocks_true_file(j_single_file: Path):
-    jf = JFile(verbose=0)
-    comp = jf._scan_blocks(j_single_file)
+    jf = JFile(j_single_file, verbose=0)
+    comp = jf._scan_blocks(jf.blocks)
     # we expect at least resistivity/phase in the sample
     assert isinstance(comp, dict) and len(comp) >= 1
     assert any(k.startswith("R") for k in comp.keys())

@@ -5,9 +5,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable, List, Dict
+from typing import Iterable, List, Dict, Optional 
 
 import numpy as np
+import pandas as pd 
+
 import xarray as xr
 
 from ..log.logger import get_logger
@@ -23,131 +25,173 @@ def build_dataset(
     *,
     drop_empty: bool = True,
 ) -> "xr.Dataset":
-    """
-    Build a multi-site xarray Dataset from an iterable 
-    of :class:`EDIFile`.
+    r"""
+    Build a multi-site xarray Dataset from an iterable of EDIFile.
 
-    The function assembles one row (``site``) per input EDI, 
-    exposing transfer- function variables and any optional 
-    spectra / time-series data when present.
-
-    Behavior
-    --------
-    * The primary frequency coordinate comes from ``Z.freq``. 
-      If it is empty, the function falls back to ``Spectra.freq`` 
-      (when available).
-    * Each site includes baseline variables: ``z``, ``z_err``, ``zrot``,
-      ``tip``, ``tip_err``, and scalar forms ``rho`` / ``phi``.
-    * Spectra and time-series content (e.g. ``spec_vals``, ``spec_len``,
-      ``ts``, ``time``, ``dt``, ``npts``) are attached when present.
-    * The output has a ``site`` coordinate. Site IDs are inferred 
-      in this order:
-          
-          ``station`` -> ``HEAD.dataid`` -> ``Spectra.name`` → file stem.
-          
-    * Datasets for all sites are concatenated along ``site`` 
-      (outer join on ``freq``). A convenience coordinate 
-      ``c=['zxx','zxy','zyx','zyy']`` is added.
+    This function iterates through a collection of parsed
+    :class:`~pycsamt.seg.edi.EDIFile` objects, converts each one
+    into a single-site :class:`xarray.Dataset`, and then
+    concatenates them into a unified, multi-site dataset.
 
     Parameters
     ----------
-    edis :
-        Iterable of :class:`EDIFile` objects.
-    drop_empty : bool, default ``True``
-        If ``True``, skip entries that have neither a transfer-function
-        frequency grid nor spectra/time-series variables. If ``False``,
-        an empty shell for such entries is kept.
+    edis : Iterable of :class:`~pycsamt.seg.edi.EDIFile`
+        An iterable (e.g., a list or a
+        :class:`~pycsamt.seg.collection.EDICollection`) of parsed EDI
+        objects.
+    drop_empty : bool, default=True
+        If ``True``, any :class:`EDIFile` object that contains no
+        frequency data will be skipped and excluded from the final
+        dataset.
 
     Returns
     -------
     xr.Dataset
-        Dimensions: ``site``, ``freq``, ``i``, ``j``, ``tcomp``.
-        Attributes include per-site metadata such as ``path``, ``filename``,
-        ``dataid``, ``lat``, ``lon``, ``elev``, ``nfreq``, ``has_tip``,
-        ``has_spec``, ``has_ts``, and ``software``.
-
-    Examples
-    --------
-    >>> ed1, ed2 = EDIFile("a.edi"), EDIFile("b.edi")
-    >>> ds = build_dataset([ed1, ed2], drop_empty=False)
-    >>> list(ds.coords["site"].values)
-    ['SITE_A', 'SITE_B']  # example
-    """
-
-    parts: List[xr.Dataset] = []
-    for ed in edis:
-        try:
-            ds = _ds_from_edi(ed)
-            # consider dataset "empty" only if it has 
-            # neither TF freq nor spectra/ts vars
-            is_empty_tf = ds.sizes.get("freq", 0) == 0
-            has_sp_or_ts = any(k in ds.data_vars for k in (
-                "spec_vals", "ts"))
-            if drop_empty and is_empty_tf and not has_sp_or_ts:
-                continue  # truly empty
-            parts.append(ds)
-        except Exception as exc:
-            logger.debug("skip %s: %s", ed, exc)
-        
-    if not parts:
-        # empty shell for downstream code
-        base = xr.Dataset(
-            data_vars={},
-            coords={
-                "site": [],
-                "freq": [],
-                "i": [0, 1],
-                "j": [0, 1],
-                "tcomp": ["tx", "ty"],
-            },
-            attrs={},
-        )
-        return base
-
-    # align by coords, join outer on freq
-    ds = xr.concat(parts, dim="site", join="outer")
-
-    # component labels for convenience
-    ds = ds.assign_coords(
-        c=("c", ["zxx", "zxy", "zyx", "zyy"])
-    )
-    return ds
-
-
-class XAMixin:
-    """
-    Mixin that adds convenient xarray exports to 
-    collection-like classes.
-
-    Classes that are iterable over :class:`EDIFile` 
-    (i.e., implement ``__iter__`` yielding ``EDIFile`` instances) 
-    can inherit from this mixin to obtain:
-
-    * ``to_xarray(drop_empty=True)`` – build a multi-site Dataset via
-      :func:`build_dataset`.
-    * ``meta_table()`` – return a compact per-site metadata table as
-      an ``xarray.Dataset`` (no transfer-function arrays).
+        A single dataset containing data from all valid EDI files.
+        The dataset is indexed by a ``site`` dimension, and
+        site-specific metadata (latitude, longitude, etc.) are
+        stored as non-dimensional coordinates aligned with this
+        dimension.
 
     Notes
     -----
-    * This mixin does not impose storage or indexing; it only relies on
-      iteration over ``EDIFile`` objects.
-    * Site identifiers follow the same inference rule as
-      :func:`build_dataset` (``station`` -> ``HEAD.dataid`` →
-                             ``Spectra.name`` -> file stem).
+    The resulting dataset is structured with dimensions for sites,
+    frequencies, and tensor components. This structure is ideal for
+    vectorized computations and advanced plotting across multiple
+    sites.
+
+    This function correctly handles site-specific metadata by
+    assigning it to coordinates, preventing data loss during
+    concatenation, which is a common pitfall when storing metadata
+    in global attributes.
+
+    See Also
+    --------
+    EDICollection.to_xarray : A convenient wrapper around this function.
+    EDIFile : The per-item reader that provides the source data.
+    EDIAcc : An accessor for interacting with the created dataset.
 
     Examples
     --------
-    >>> class MyColl(XAMixin):
-    ...     def __init__(self, items): self._items = list(items)
-    ...     def __iter__(self): return iter(self._items)
-    ...
-    >>> coll = MyColl([EDIFile("a.edi"), EDIFile("b.edi")])
-    >>> ds = coll.to_xarray()
-    >>> meta = coll.meta_table()
+    >>> from pycsamt.seg import EDICollection, build_dataset
+    >>> # Create a collection of EDI files
+    >>> edi_collection = EDICollection.from_sources("data/edis/")
+    >>> # Build the xarray dataset
+    >>> ds = build_dataset(edi_collection)
+    >>> print(ds)
+    <xarray.Dataset>
+    Dimensions:      (site: 2, freq: 60, ...)
+    Coordinates:
+      * site         (site) object 'S01' 'S02'
+      * freq         (freq) float64 320.0 286.9 ...
+        ...
+        lat          (site) float64 26.05 26.05
+        lon          (site) float64 -10.33 -10.33
+    Data variables:
+        z            (site, freq, output_ch, input_ch) complex128 ...
+        z_err        (site, freq, output_ch, input_ch) float64 ...
+        ...
     """
+    
+    datasets = []
+    metadata_records = []
+    for ed in edis:
+        try:
+            ds = _ds_from_edi(ed)
+            is_empty_tf = ds.sizes.get("freq", 0) == 0
+            has_sp_or_ts = any(k in ds.data_vars for k in ("spec_vals", "ts"))
+            if drop_empty and is_empty_tf and not has_sp_or_ts:
+                continue
+            datasets.append(ds)
+            metadata_records.append(_meta_from_edi(ed))
+        except Exception as exc:
+            logger.debug("Skip %s: %s", ed, exc)
+        
+    if not datasets:
+        return xr.Dataset(coords={
+            "site": [], "freq": [], "output_ch": [], "input_ch": []
+        })
 
+    full_ds = xr.concat(datasets, dim="site", join="outer")
 
+    if metadata_records:
+        meta_df = pd.DataFrame(metadata_records).set_index("site")
+        for col in meta_df.columns:
+            full_ds = full_ds.assign_coords({col: ("site", meta_df[col])})
+
+    return full_ds
+
+class XAMixin:
+    r"""
+    A mixin that adds convenient xarray exports to collection classes.
+
+    This mixin provides a bridge between collection-like objects
+    (such as :class:`~pycsamt.seg.collection.EDICollection`) and
+    the powerful, multi-dimensional data structures offered by
+    the `xarray` library. Any class that is iterable over
+    :class:`~pycsamt.seg.edi.EDIFile` instances can inherit from this
+    mixin to gain methods for data conversion and metadata
+    extraction.
+
+    Methods
+    -------
+    to_xarray(drop_empty=True)
+        Converts the entire collection into a single, comprehensive
+        :class:`xarray.Dataset`. This method leverages
+        :func:`build_dataset` to handle the conversion and
+        concatenation of multiple EDI files.
+    meta_table()
+        Extracts only the site-level metadata (e.g., coordinates,
+        filenames, data quality flags) from the collection and
+        returns it as a clean, tabular :class:`xarray.Dataset`,
+        omitting the bulky transfer function data.
+
+    Notes
+    -----
+    - This mixin is designed to be lightweight and does not impose any
+      specific storage or indexing strategy on the host class; it only
+      requires that the host class implements the `__iter__` method
+      to yield :class:`~pycsamt.seg.edi.EDIFile` objects.
+    - The site identifiers used in the resulting datasets follow the
+      same robust inference rules as :func:`build_dataset`.
+
+    See Also
+    --------
+    build_dataset : The core function that performs the conversion.
+    EDICollection : A primary user of this mixin.
+    EDIAcc : The accessor for interacting with the created dataset.
+
+    Examples
+    --------
+    To use this mixin, simply inherit from it in your collection class.
+
+    >>> from pycsamt.seg.edi import EDIFile
+    >>> class MyEDICollection(XAMixin):
+    ...     def __init__(self, items):
+    ...         self._items = list(items)
+    ...     def __iter__(self):
+    ...         return iter(self._items)
+    ...
+    >>> # Assume "site1.edi" and "site2.edi" exist
+    >>> edi_files = [EDIFile("data/edis/S01.edi"), EDIFile("data/edis/S02.edi")]
+    >>> collection = MyEDICollection(edi_files)
+    >>>
+    >>> # Convert the entire collection to an xarray Dataset
+    >>> ds = collection.to_xarray()
+    >>> print(ds.site.values)
+    ['S01' 'S02']
+    >>>
+    >>> # Get a summary table of just the metadata
+    >>> metadata_ds = collection.meta_table()
+    >>> print(metadata_ds[['lat', 'lon']])
+    <xarray.Dataset>
+    Dimensions:  (site: 2)
+    Coordinates:
+      * site     (site) object 'S01' 'S02'
+    Data variables:
+        lat      (site) float64 26.05 26.05
+        lon      (site) float64 -10.33 -10.33
+    """
     def to_xarray(
         self,
         *,
@@ -157,62 +201,75 @@ class XAMixin:
         return build_dataset(self, drop_empty=drop_empty)
 
     def meta_table(self) -> "xr.Dataset":
-        """
-        Return a tiny Dataset with per-site metadata only.
-        """
+        """Extracts site-level metadata into a new Dataset."""
         rows: List[Dict[str, object]] = []
         for ed in self:
-            m = _meta(ed)
-            m["site"] = _site_id(ed)
-            rows.append(m)
+            rows.append(_meta_from_edi(ed))
         if not rows:
             return xr.Dataset(coords={"site": []})
-        cols = {}
-        for k in rows[0].keys():
-            cols[k] = ("site", [r.get(k) for r in rows])
-        ds = xr.Dataset(coords={"site": cols.pop("site")[1]})
-        for k, v in cols.items():
-            ds[k] = v
-        return ds
+
+        meta_df = pd.DataFrame(rows).set_index("site")
+        return xr.Dataset.from_dataframe(meta_df)
 
  
 @xr.register_dataset_accessor("edi")
 class EDIAcc:
-    """
-    xarray Dataset accessor providing convenience methods for 
-    EDI collections.
+    r"""
+    An xarray accessor for convenient interaction with EDI datasets.
 
-    This accessor is available as ``ds.edi`` on Datasets created by
-    :func:`build_dataset` (or otherwise matching its schema).
+    This accessor is registered under the ``.edi`` namespace and
+    provides domain-specific methods and properties for datasets
+    created by :func:`build_dataset`. It simplifies common data
+    selection and visualization tasks that are specific to MT/EM
+    (magnetotelluric/electromagnetic) data.
+
+    Properties
+    ----------
+    stations : list[str]
+        A list of all unique station or site names present in the
+        dataset's ``site`` coordinate.
 
     Methods
     -------
-    stations() -> list[str]
-        Site identifiers from the ``site`` coordinate.
-    get(site: str) -> xr.Dataset
-        Subset the Dataset by a specific site ID.
-    components() -> list[str]
-        Return impedance component labels (``['zxx','zxy','zyx','zyy']``).
-    z_as_comp() -> xr.DataArray
-        View ``z`` reshaped as ``(freq, c)`` using the component labels.
-    band(fmin=None, fmax=None) -> xr.Dataset
-        Frequency subsetting helper (inclusive bounds).
-    has_spectra() -> bool, spectra() -> xr.Dataset
-        Presence check and view for variables starting with ``spec_``.
-    has_timeseries() -> bool, timeseries() -> xr.Dataset
-        Presence check and view for time-series variables (``ts``, ``time``,
-        ``dt``, ``npts``).
-    attrs() -> dict
-        Shallow copy of Dataset attributes.
+    get(site)
+        Selects and returns a new :class:`xarray.Dataset` containing
+        data for only a single site, specified by its name. The
+        selection is case-insensitive.
+    band(fmin=None, fmax=None)
+        Filters the dataset to a specific frequency range. Returns a
+        new dataset containing only the data within the inclusive
+        frequency bounds.
+    plot_apparent_resistivity(site, **kwargs)
+        Generates a standard plot of apparent resistivity and phase
+        curves for the off-diagonal tensor components (XY and YX) of
+        a specified site.
+    attrs()
+        Returns a dictionary of the dataset's global attributes.
+
+    See Also
+    --------
+    build_dataset : The function used to create datasets compatible
+                    with this accessor.
 
     Examples
     --------
-    >>> ds.edi.stations
-    ['SITE_A', 'SITE_B']
-    >>> ds.edi.get('SITE_A').sizes['freq']
-    60
-    >>> zc = ds.edi.z_as_comp()  # (freq, c)
-    >>> slim = ds.edi.band(fmin=1.0, fmax=100.0)
+    >>> from pycsamt.seg import EDICollection, build_dataset
+    >>> edi_collection = EDICollection.from_sources("data/edis/")
+    >>> ds = build_dataset(edi_collection)
+    >>>
+    >>> # Get a list of all station names
+    >>> print(ds.edi.stations)
+    ['S01', 'S02', 'S03', ...]
+    >>>
+    >>> # Select data for a single station (case-insensitive)
+    >>> site_data = ds.edi.get('s01')
+    >>>
+    >>> # Filter the data to a specific frequency band (e.g., 1 to 100 Hz)
+    >>> filtered_ds = ds.edi.band(fmin=1.0, fmax=100.0)
+    >>>
+    >>> # Create a standard plot for a site
+    >>> fig, axes = ds.edi.plot_apparent_resistivity(site='S01')
+    >>> # fig.show() # Uncomment to display plot
     """
     def __init__(self, ds: "xr.Dataset") -> None:
         self._ds = ds
@@ -222,30 +279,159 @@ class EDIAcc:
         s = self._ds.coords.get("site", None)
         return [] if s is None else [str(v) for v in s.data]
 
+
+    
     def get(self, site: str) -> "xr.Dataset":
-        return self._ds.sel(site=str(site))
+        """Selects data for a single site (case-insensitive)."""
+        # Find the correctly cased site name from the coordinates
+        site_coord = self._ds.coords['site'].values
+        try:
+            match = next(s for s in site_coord if s.upper() == site.upper())
+            return self._ds.sel(site=match)
+        except StopIteration:
+            raise KeyError(f"Site '{site}' not found in dataset.")
 
-    def components(self) -> List[str]:
-        if "c" in self._ds.coords:
-            return [str(v) for v in self._ds["c"].data]
-        return ["zxx", "zxy", "zyx", "zyy"]
+    def plot_apparent_resistivity(
+        self,
+        site: str,
+        components: list[str] = ["xy", "yx"],
+        phase_mod: Optional[int] = None,
+        figsize: tuple[int, int] = (8, 8),
+        show_grid: bool = True,
+        grid_props: Optional[dict] = None,
+        savefig: Optional[str] = None,
+        **plot_kwargs,
+    ):
+        r"""
+        Generates a standard plot of apparent resistivity and phase.
+    
+        This method provides a flexible interface for visualizing MT
+        (magnetotelluric) data, allowing customization of components,
+        phase wrapping, and plot aesthetics.
+    
+        Parameters
+        ----------
+        site : str
+            The site identifier to plot.
+        components : list of str, default=["xy", "yx"]
+            A list of tensor components to plot (e.g., "xy", "yx", "xx").
+            The selection is case-insensitive.
+        phase_mod : int, optional
+            If provided, wraps the phase to a specific quadrant. For
+            example, ``phase_mod=90`` will display phases in the [0, 90]
+            degree range, useful for visualizing data in a single quadrant.
+        figsize : tuple[int, int], default=(8, 6)
+            The figure size for the plot.
+        show_grid : bool, default=True
+            Whether to display a grid on both subplots.
+        grid_props : dict, optional
+            Additional properties to customize the grid lines (e.g.,
+            ``{'color': 'grey', 'linestyle': '--', 'linewidth': 0.5}``).
+        savefig : str, optional
+            If a path is provided, the plot will be saved to that file.
+        **plot_kwargs :
+            Additional keyword arguments passed directly to xarray's
+            ``.plot.line()`` method for customizing the lines.
+    
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            The matplotlib Figure object.
+        axes : np.ndarray of matplotlib.axes.Axes
+            An array containing the two subplot Axes objects.
+    
+        Examples
+        --------
+        >>> # Basic plot of off-diagonal components
+        >>> fig, axes = ds.edi.plot_apparent_resistivity(site='S01')
+        >>> # fig.show()
+    
+        >>> # Plot all components and save the figure
+        >>> fig, axes = ds.edi.plot_apparent_resistivity(
+        ...     site='S01',
+        ...     components=['xy', 'yx', 'xx', 'yy'],
+        ...     savefig='S01_all_components.png'
+        ... )
+    
+        >>> # Plot with phase wrapped to the first quadrant and custom styling
+        >>> fig, axes = ds.edi.plot_apparent_resistivity(
+        ...     site='S01',
+        ...     phase_mod=90,
+        ...     grid_props={'color': 'red', 'linestyle': ':'},
+        ...     marker='o'  # passed to plot.line
+        ... )
+        """
+        import matplotlib.pyplot as plt
+        import matplotlib.ticker as mticker
+    
+        ds_site = self.get(site)
+        fig, axes = plt.subplots(2, 1, sharex=True, figsize=figsize)
+        
+        comp_map = {
+            "xy": ("Hx", "Hy"), "yx": ("Hy", "Hx"),
+            "xx": ("Hx", "Hx"), "yy": ("Hy", "Hy")
+        }
+        
+        default_grid_props = {'which': 'both', 'linestyle': '--', 'linewidth': 0.5}
+        if grid_props:
+            default_grid_props.update(grid_props)
+            
+        for comp in components:
+            comp_lower = comp.lower()
+            if comp_lower not in comp_map:
+                logger.warning(f"Component '{comp}' is not valid. Skipping.")
+                continue
+                
+            output_ch, input_ch = comp_map[comp_lower]
+            
+            # --- Resistivity Plot (Log-Log) ---
+            rho_data = ds_site["rho"].sel(output_ch=output_ch, input_ch=input_ch)
+            rho_data.plot.line(
+                ax=axes[0], xscale="log", yscale="log",
+                label=f"$\\rho_{{{comp_lower}}}$", **plot_kwargs
+            )
+            
+            # --- Phase Plot (Semi-Log) ---
+            phi_data = ds_site["phi"].sel(output_ch=output_ch, input_ch=input_ch)
+            if phase_mod is not None and isinstance(phase_mod, int):
+                phi_data = phi_data % phase_mod
+                
+            phi_data.plot.line(
+                ax=axes[1], xscale="log",
+                label=f"$\\phi_{{{comp_lower}}}$", **plot_kwargs
+            )
+    
+        # --- Aesthetics and Formatting ---
+        axes[0].set_ylabel("Apparent Resistivity (Ω·m)")
+        axes[0].set_xlabel("") # Remove x-label from top plot
+        
+        axes[1].set_ylabel("Phase (degrees)")
+        axes[1].set_xlabel("Frequency (Hz)")
+        
+        # Grid formatting
+        if show_grid:
+            axes[0].grid(**default_grid_props)
+            axes[1].grid(**default_grid_props)
+    
+        # Use scientific notation for log axes
+        axes[0].xaxis.set_major_formatter(mticker.LogFormatterSciNotation())
+        axes[0].yaxis.set_major_formatter(mticker.LogFormatterSciNotation())
+    
+        axes[0].legend()
+        axes[1].legend()
+        fig.suptitle(f"Site: {site}", fontsize=14)
+        plt.tight_layout(rect=[0, 0, 1, 0.96]) # Adjust for suptitle
+    
+        if savefig:
+            plt.savefig(savefig, dpi=300)
+            
+        return fig, axes
 
-    def z_as_comp(self) -> "xr.DataArray":
-        # reshape (i,j)->comp with mapping
-        z = self._ds["z"]
-        zz = xr.concat(
-            [
-                z.sel(i=0, j=0),
-                z.sel(i=0, j=1),
-                z.sel(i=1, j=0),
-                z.sel(i=1, j=1),
-            ],
-            dim="c",
-        )
-        return zz.assign_coords(
-            c=["zxx", "zxy", "zyx", "zyy"]
-        )
 
+    def attrs(self) -> Dict[str, object]:
+        """Returns the global attributes of the Dataset."""
+        return dict(self._ds.attrs)
+    
     def band(
         self,
         fmin: float | None = None,
@@ -280,8 +466,66 @@ class EDIAcc:
         keep = [k for k in keep if k in self._ds]
         return self._ds[keep] if keep else self._ds
 
-    def attrs(self) -> Dict[str, object]:
-        return dict(self._ds.attrs)
+def _site_id_from_edi(ed: EDIFile) -> str:
+    """Infer site ID with fallbacks."""
+    return ed.station or "unknown_site"
+
+def _meta_from_edi(ed: EDIFile) -> Dict[str, object]:
+    """Extract metadata from an EDIFile object for a single site."""
+    head = ed.get_section("head")
+    p = ed.path
+    software = ed.processingsoftware
+            
+    return {
+        "site": _site_id_from_edi(ed),
+        "path": str(p) if isinstance(p, Path) else None,
+        "filename": p.name if isinstance(p, Path) else None,
+        "dataid": ed.station,
+        "lat": getattr(head, "lat", None) if head else None,
+        "lon": (
+            getattr(head, "long", None) 
+            or getattr(head, "lon", None)
+            ) if head else None,
+        "elev": getattr(head, "elev", None) if head else None,
+        "has_tip": ed.has_tipper,
+        "nfreq": ed.n_freq,
+        "has_spec": ed.get_section("spectra") is not None,
+        "has_ts": ed.get_section("timeseries") is not None,
+        "software": software,
+    }
+
+def _get_tensor_or_zeros(
+    obj: Optional[object], attr: str, n_freq: int, dtype: np.dtype
+) -> np.ndarray:
+    """Safely get a (n_freq, 2, 2) tensor array or return zeros."""
+    val = getattr(obj, attr, None) if obj else None
+    if val is None:
+        return np.zeros((n_freq, 2, 2), dtype=dtype)
+    
+    arr = np.asarray(val)
+    if arr.ndim == 3 and arr.shape == (n_freq, 2, 2):
+        return arr.astype(dtype, copy=False)
+        
+    return np.zeros((n_freq, 2, 2), dtype=dtype)
+
+def _get_tipper_or_zeros(
+    obj: Optional[object], attr: str, n_freq: int, dtype: np.dtype
+) -> np.ndarray:
+    """Safely get a (n_freq, 2) tipper array or return zeros."""
+    val = getattr(obj, attr, None) if obj else None
+    if val is None:
+        return np.zeros((n_freq, 2), dtype=dtype)
+    
+    arr = np.asarray(val)
+    # Handle the standard (n_freq, 1, 2) shape
+    if arr.ndim == 3 and arr.shape == (n_freq, 1, 2):
+        return arr[:, 0, :].astype(dtype, copy=False)
+    # Handle cases where it might already be 2D
+    if arr.ndim == 2 and arr.shape == (n_freq, 2):
+        return arr.astype(dtype, copy=False)
+
+    return np.zeros((n_freq, 2), dtype=dtype)
+
 
 def _site_id(ed: EDIFile) -> str:
     # preference: station -> HEAD.dataid 
@@ -489,8 +733,99 @@ def _ts_pack(ed: EDIFile) -> Dict[str, xr.DataArray]:
     )
     return out
 
-
 def _ds_from_edi(ed: EDIFile) -> xr.Dataset:
+    """
+    Creates a single-site xarray Dataset from one EDIFile object.
+
+    This function is refactored for clarity and completeness, leveraging
+    helper functions to handle data extraction and optional data blocks
+    like spectra and time-series.
+    """
+    sid = _site_id_from_edi(ed)
+
+    # --- Determine primary frequency array ---
+    # Prefer Z.freq, but fall back to Spectra.freq if Z is empty.
+    f = np.asarray(getattr(ed.Z, "freq", []), dtype=float)
+    if f.size == 0:
+        spec = ed.get_section("spectra")
+        if spec:
+            f = np.asarray(getattr(spec, "freq", []), dtype=float)
+    n_freq = f.size
+
+    # --- Extract Transfer Function Data using helpers ---
+    z = _get_tensor_or_zeros(
+        ed.Z, "z", n_freq, dtype=complex
+        )
+    z_err = _get_tensor_or_zeros(
+        ed.Z, "z_err", n_freq, dtype=float
+        )
+    rho = _get_tensor_or_zeros(
+        ed.Z, "resistivity", n_freq, dtype=float
+        )
+    phi = _get_tensor_or_zeros(
+        ed.Z, "phase", n_freq, dtype=float
+        )
+    rho_err = _get_tensor_or_zeros(
+        ed.Z, "resistivity_err", n_freq, dtype=float
+        )
+    phi_err = _get_tensor_or_zeros(
+        ed.Z, "phase_err", n_freq, dtype=float
+    )
+    
+
+    zrot_val = getattr(ed.Z, "rotation_angle", np.zeros(n_freq))
+    zrot = (
+        np.asarray(zrot_val) if zrot_val.size == n_freq 
+        else np.zeros(n_freq, dtype=np.float64)
+        )
+
+    tip = _get_tipper_or_zeros(
+        ed.Tip, "tipper", n_freq, np.complex128)
+    tip_err = _get_tipper_or_zeros(
+        ed.Tip, "tipper_err", n_freq, np.float64)
+
+    # --- Create the base Dataset ---
+    ds = xr.Dataset(
+        data_vars={
+            "z": (("freq", "output_ch", "input_ch"), z),
+            "z_err": (("freq", "output_ch", "input_ch"), z_err),
+            "rho": (("freq", "output_ch", "input_ch"), rho),
+            "phi": (("freq", "output_ch", "input_ch"), phi),
+            "rho_err": (("freq", "output_ch", "input_ch"), rho_err),
+            "phi_err": (("freq", "output_ch", "input_ch"), phi_err),
+            
+            "zrot": (("freq",), zrot),
+            "tip": (("freq", "tcomp"), tip),
+            "tip_err": (("freq", "tcomp"), tip_err),
+        },
+        coords={
+            "freq": f,
+            "output_ch": ["Hx", "Hy"],
+            "input_ch": ["Hx", "Hy"],
+            "tcomp": ["Tx", "Ty"],
+        },
+    ).expand_dims(site=[sid])
+
+    # --- Add Spectra and Time-Series data ---
+    try:
+        sp_data = _spec_pack(ed)
+        if sp_data:
+            ds = ds.merge(xr.Dataset(sp_data))
+    except NameError:
+         # _spec_pack not defined, skipping.
+        pass
+
+    try:
+        ts_data = _ts_pack(ed)
+        if ts_data:
+            ds = ds.merge(xr.Dataset(ts_data))
+    except NameError:
+        # _ts_pack not defined, skipping.
+        pass
+        
+    return ds
+
+def _ds_from_edi_v1(ed: EDIFile) -> xr.Dataset:
     sid = _site_id(ed)
 
     # prefer Z freq; if empty, fall back to Spectra freq

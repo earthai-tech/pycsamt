@@ -203,14 +203,16 @@ def edi_collection(edis_path: Path):
     Parsed EDICollection built from the EDIS folder.
     """
     try:
+        from pycsamt.seg.cbase import CoreParser
         from pycsamt.seg.collection import EDICollection
     except Exception as exc:  # pragma: no cover
         pytest.skip(f"Cannot import EDICollection: {exc}")
 
-    col = EDICollection(recursive=True, verbose=0)
-    edis = col.parse([edis_path])
+    cor = CoreParser(recursive=True, verbose=0)
+    edis = cor.parse([edis_path])
     if not edis:
         pytest.skip("EDICollection parsed 0 items.")
+    col = EDICollection(items=edis)
     return col
 
 

@@ -16,11 +16,7 @@ from ..z.z import Z
 from ..z.tipper import Tipper
 from ..z.resphase import ResPhase
 
-from .config import (
-    FLOAT_FORMAT_R,
-    FLOAT_FORMAT_TF,
-    TENSOR_INDEX
-)
+from .config import TENSOR_INDEX
 from .heads import Heads
 from .blocks import JBlocks, RBlock, TFBlock
 
@@ -205,15 +201,15 @@ class JIOMixin(JMixin):
     
     def _scan_blocks(
         self,
-        path: Path,
-        *,
-        start: Optional[int] = None,  # noqa: ARG002
-        empty_val: float = -999.0,  # noqa: ARG002
+        j_blocks: JBlocks,
     ) -> Dict[str, Dict[str, Any]]:
-        jb = JBlocks.from_file(path, verbose=getattr(self, "verbose", 0))
+        """
+        Converts a JBlocks object into a dictionary of component data.
+        """
         comp: Dict[str, Dict[str, Any]] = {}
-
-        for blk in jb.blocks:
+        
+        # Operate on the blocks from the passed object
+        for blk in j_blocks.blocks: 
             if isinstance(blk, RBlock):
                 a = blk.to_numpy()
                 comp[blk.head.dtype.kind + blk.head.dtype.comp] = {
@@ -295,7 +291,7 @@ class JIOMixin(JMixin):
                 if ia.size == 0:
                     continue
                 zval = self._complex(d["real"][ib], d["imag"][ib])
-                err = np.asarray(d.get("err", 0.0), float)
+                err = np.asarray(d.get("err", 0.0), dtype=float)
                 err = err[ib] if err.size else np.zeros(ib.size, dtype=float)
     
                 if comp_code == "XX":
@@ -370,7 +366,7 @@ class JIOMixin(JMixin):
     
             for key, d in r_parts.items():
                 comp_code = key[-2:].upper()
-                p = np.asarray(d["period"], float)
+                p = np.asarray(d["period"], dtype=float)
                 _, ia, ib = self._align_by_periods(p0, p)
                 if ia.size == 0:
                     continue
@@ -436,8 +432,9 @@ class JIOMixin(JMixin):
                 tipper_array=t_arr,
                 tipper_err_array=e_arr,
                 freq=freq,
+                name=t_parts[k0]["head"].station
             )
-    
+            
         return z_out, tip_out, rp_out
 
 
@@ -484,7 +481,7 @@ class JFile(JIOMixin):
         Number of frequency samples (``0`` if unknown).
     name : str or None
         Friendly site/station name.  Precedence is:
-        ``Z.name`` → head.station → file stem.
+        ``Z.name`` -> head.station -> file stem.
     site : str or None
         Alias for the station code (if known).
     lat, lon, azimuth, az_hint, elev : float or None
@@ -686,14 +683,19 @@ class JFile(JIOMixin):
             self.path = _as_path(path)
         if self.path is None:
             raise ValueError("path is required")
-
+        
+        # Parse headers and all blocks ONCE.
         self.heads = Heads.from_file(
             self.path, verbose=self.verbose
         )
         self.blocks = JBlocks.from_file(
             self.path, verbose=self.verbose)
-
-        comp = self._scan_blocks(self.path, start=start)
+        
+        # Scan the already-parsed blocks object
+        # (no re-reading from disk).
+        comp = self._scan_blocks(self.blocks)
+        
+        # Build the final Z, Tip, and Res objects.
         z, tip, rp = self._build_from_comp(comp)
         self.Z = z
         self.Tip = tip
@@ -702,7 +704,8 @@ class JFile(JIOMixin):
         self._read_ok = True
         return self
 
-    def write(  # noqa: C901
+
+    def write(
         self,
         j_fn: str | None = None,
         new_jfn: str | None = None,
@@ -778,328 +781,178 @@ class JFile(JIOMixin):
         .. [1] A. G. Jones, *Magnetotelluric data file
                J-format*, version 2.0, 1994.
         """
-
-        vb = self.verbose if verbose is None else int(verbose)
-
+        
+        if not self.__has_read__():
+            raise RuntimeError(
+                "Cannot write JFile; call .read() first."
+            )
+ 
         def _ensure_parent(p: Path) -> None:
             p.parent.mkdir(parents=True, exist_ok=True)
+            
+        lines: List[str] = []
+        vb = self.verbose if verbose is None else int(verbose)
+        
+        # --- 1. Formatting Helpers for Standard J-Format Output ---
+        def _fmt(val: float, width: int, precision: int) -> str:
+            """Formats a number with fixed width and precision."""
+            if not np.isfinite(val):
+                return f"{'NaN':>{width}}"
+            # Space for sign pad, G for general format
+            return f"{val:{width}.{precision}G}"
 
-        def _fmt(fmt: str, v: float) -> str:
-            try:
-                return fmt.format(v)
-            except Exception:
-                return fmt.format(float("nan"))
-
-        def _fmt_row_r(p: float, rho: float, pha: float) -> str:
-            return " ".join(
-                [
-                    _fmt(FLOAT_FORMAT_R, p),
-                    _fmt(FLOAT_FORMAT_R, rho),
-                    _fmt(FLOAT_FORMAT_R, pha),
-                    _fmt(FLOAT_FORMAT_R, rho),
-                    _fmt(FLOAT_FORMAT_R, rho),
-                    _fmt(FLOAT_FORMAT_R, pha),
-                    _fmt(FLOAT_FORMAT_R, pha),
-                    _fmt(FLOAT_FORMAT_R, 1.0),
-                    _fmt(FLOAT_FORMAT_R, 1.0),
-                ]
-            )
-
-        def _fmt_row_tf(
-            p: float,
-            re: float,
-            im: float,
-            err: float,
-            w: float = 1.0,
+        def _fmt_sci(
+            val: float, width: int, precision: int
         ) -> str:
-            return " ".join(
-                [
-                    _fmt(FLOAT_FORMAT_TF, p),
-                    _fmt(FLOAT_FORMAT_TF, re),
-                    _fmt(FLOAT_FORMAT_TF, im),
-                    _fmt(FLOAT_FORMAT_TF, err),
-                    _fmt(FLOAT_FORMAT_TF, w),
-                ]
-            )
+            """Formats a number in scientific notation."""
+            if not np.isfinite(val):
+                return f"{'NaN':>{width}}"
+            # Format and clean up E+0 -> E+, E-0 -> E-
+            s = f"{val:{width}.{precision}E}"
+            return s.replace('E+0', 'E+').replace('E-0', 'E-')
 
-        def _periods_from_freq(f: Optional[np.ndarray]) -> np.ndarray:
-            if f is None:
-                return np.array([], float)
-            with np.errstate(divide="ignore", invalid="ignore"):
-                p = np.where(f > 0.0, 1.0 / f, np.nan)
-            return p.astype(float)
-
-        # decide families to emit 
-        have_z = (
-                self.Z is not None
-                and (
-                    getattr(self.Z, "_z", None) is not None
-                    or getattr(self.Z, "z", None) is not None
+        # --- 2. Write Main Headers (Banner & Info) ---
+        if self.heads:
+            lines.extend(
+                self.heads.banner.write(
+                    new=True, include_origin=True
                 )
             )
+            lines.extend(self.heads.info.write())
 
-        have_r = self.Res is not None
-        have_t = self.Tip is not None
+        # --- 3. Prepare to Write Data Blocks ---
+        first_block_written = False
+        station_line = self.station or "UNKNOWN"
+        if self.az_hint is not None:
+            station_line += f"  {self.az_hint:g}"
 
-        if datatype is None:
-            flags = {"Z": have_z, "R": have_r, "T": have_t}
-        else:
-            key = datatype.upper().strip()
-            if key in {"ALL", "ZRT"}:
-                flags = {"Z": have_z, "R": have_r, "T": have_t}
-            else:
-                flags = {
-                    "Z": "Z" in key and have_z,
-                    "R": "R" in key and have_r,
-                    "T": "T" in key and have_t,
-                }
-
-        # header preamble 
-        lines: List[str] = []
-
-        # banner
-        if self.heads is not None and hasattr(self.heads, "banner"):
-            try:
-                lines.extend(
-                    self.heads.banner.write(include_origin=True))
-            except Exception:
-                pass
-
-        # info
-        if self.heads is not None and hasattr(self.heads, "info"):
-            try:
-                lines.extend(self.heads.info.write())
-            except Exception:
-                pass
-
-        # station id and optional azimuth hint
-        station = "SITE"
-        az_hint: str = ""
-        if self.heads is not None and self.heads.head is not None:
-            if self.heads.head.station:
-                station = str(self.heads.head.station).upper()
-            ah = getattr(self.heads.head, "az_hint", None)
-            if isinstance(ah, (int, float)):
-                az_hint = f" {ah:g}"
-
-        #  helper: write 1 block 
-        def _write_head(dtype: str, nrows: int) -> None:
-            lines.append(f"{station}{az_hint}")
-            lines.append(dtype)
-            lines.append(str(int(nrows)))
-
-        #  write Z 
-        if flags.get("Z", False):
-            z = self.Z  # already checked not None
-            za = getattr(z, "_z", None)
-            if za is None:
-                za = getattr(z, "z", None)
-            
-            ze = getattr(z, "_z_err", None)
-            if ze is None: 
-               ze = getattr(z, "z_err", None)
+        have = {
+            "Z": self.Z is not None,
+            "R": self.Res is not None,
+            "T": self.Tip is not None
+        }
+        key = (datatype or "ZRT").upper().strip()
+        flags = {
+            "Z": "Z" in key and have["Z"],
+            "R": "R" in key and have["R"],
+            "T": "T" in key and have["T"],
+        }
         
-            f = getattr(z, "freq", None)
-            p = _periods_from_freq(f)
-
-            # components map
-            comps = {
-                "XX": (0, 0),
-                "XY": (0, 1),
-                "YX": (1, 0),
-                "YY": (1, 1),
-            }
-            for code, (i, j) in comps.items():
-                if za is None:
-                    continue
-                try:
-                    v = np.asarray(za)[:, i, j]
-                except Exception:
+        # --- 4. Write R-Blocks (Resistivity/Phase) ---
+        if flags.get("R") and self.Res and self.periods is not None:
+            for code, (i, j) in self._tidx.items():
+                rho = self.Res.resistivity[:, i, j]
+                if np.all(np.abs(rho) < 1e-12):
                     continue
                 
-                # errors
-                err = None
-                if ze is None:
-                    err = np.zeros_like(v.real, dtype=float)
-                    
-                if ze is not None:
-                    try:
-                        err = np.asarray(ze)[:, i, j].astype(float)
-                    except Exception:
-                        err = None
-    
-                if err is None:
-                    err = np.zeros_like(v.real, dtype=float)
+                if not first_block_written:
+                    lines.append(station_line)
+                    first_block_written = True
 
-                # valid rows: period & value finite
-                keep = np.isfinite(p) & np.isfinite(v.real) & np.isfinite(
-                    v.imag
-                )
-                nrows = int(np.count_nonzero(keep))
-                if nrows == 0:
+                lines.append(f"R{code}")
+                lines.append(str(self.n_freq))
+                pha = self.Res.phase[:, i, j]
+                
+                for k in range(self.n_freq):
+                    p, r_val, ph_val = (
+                        self.periods[k], rho[k], pha[k]
+                    )
+                    # Create nicely aligned 9-column output
+                    row = (
+                        f"{_fmt_sci(p, 11, 4)}"
+                        f"{_fmt(r_val, 11, 4)}"
+                        f"{_fmt(ph_val, 11, 2)}"
+                        f"{_fmt(r_val, 11, 4)}"
+                        f"{_fmt(r_val, 11, 4)}"
+                        f"{_fmt(ph_val, 11, 2)}"
+                        f"{_fmt(ph_val, 11, 2)}"
+                        f"{_fmt(1.0, 9, 2)}"
+                        f"{_fmt(1.0, 9, 2)}"
+                    )
+                    lines.append(row)
+
+        # --- 5. Write T-Blocks (Tipper) ---
+        if (flags.get("T") and self.Tip and
+                self.Tip.tipper is not None and self.periods is not None):
+            for code, k in {"ZX": 0, "ZY": 1}.items():
+                t_comp = self.Tip.tipper[:, 0, k]
+                if np.all(np.abs(t_comp) < 1e-12):
                     continue
+                if not first_block_written:
+                    lines.append(station_line)
+                    first_block_written = True
 
-                _write_head(f"Z{code} SI", nrows)
-                for pi, zi, ei in zip(p[keep], v[keep], err[keep]):
-                    lines.append(
-                        _fmt_row_tf(float(pi), float(zi.real),
-                                    float(zi.imag), float(ei), 1.0)
+                lines.append(f"T{code}")
+                lines.append(str(self.n_freq))
+                err = self.Tip.tipper_err
+                t_err = err[:, 0, k] if err is not None else np.zeros(self.n_freq)
+                
+                for l_idx in range(self.n_freq):
+                    p, t, e = (
+                        self.periods[l_idx], t_comp[l_idx], t_err[l_idx]
                     )
-
-        # write R 
-        if flags.get("R", False):
-            # prefer direct Res; else compute from Z
-            rp = self.Res  # type: ignore[assignment]
-            if rp is not None:
-                f = getattr(rp, "freq", None)
-                p = _periods_from_freq(f)
-                # expect attributes like res_xy, phase_xy, ...
-                pairs = {
-                    "XX": ("res_xx", "phase_xx"),
-                    "XY": ("res_xy", "phase_xy"),
-                    "YX": ("res_yx", "phase_yx"),
-                    "YY": ("res_yy", "phase_yy"),
-                }
-                for code, (rname, pname) in pairs.items():
-                    rho = getattr(rp, rname, None)
-                    pha = getattr(rp, pname, None)
-                    if rho is None or pha is None:
-                        continue
-                    r = np.asarray(rho, float)
-                    ph = np.asarray(pha, float)
-                    keep = np.isfinite(p) & np.isfinite(r) & np.isfinite(ph)
-                    nrows = int(np.count_nonzero(keep))
-                    if nrows == 0:
-                        continue
-                    _write_head(f"R{code}", nrows)
-                    for pi, ri, phii in zip(p[keep], r[keep], ph[keep]):
-                        lines.append(_fmt_row_r(float(pi), float(ri),
-                                                float(phii)))
-            elif self.Z is not None:
-                # derive from Z magnitudes
-                z = self.Z
-                za = getattr(z, "z")
-                f = getattr(z, "freq", None)
-                p = _periods_from_freq(f)
-                if za is not None:
-                    mu0 = 4.0e-7 * math.pi
-                    w = 2.0 * math.pi * np.asarray(f, float)
-                    comps = {
-                        "XX": (0, 0),
-                        "XY": (0, 1),
-                        "YX": (1, 0),
-                        "YY": (1, 1),
-                    }
-                    for code, (i, j) in comps.items():
-                        try:
-                            zc = np.asarray(za)[:, i, j]
-                        except Exception:
-                            continue
-                        mag2 = (zc.real ** 2 + zc.imag ** 2)
-                        with np.errstate(divide="ignore", invalid="ignore"):
-                            rho = mag2 / (mu0 * w)
-                        pha = np.degrees(np.arctan2(zc.imag, zc.real))
-                        keep = (
-                            np.isfinite(p)
-                            & np.isfinite(rho)
-                            & np.isfinite(pha)
-                        )
-                        nrows = int(np.count_nonzero(keep))
-                        if nrows == 0:
-                            continue
-                        _write_head(f"R{code}", nrows)
-                        for pi, ri, phii in zip(
-                            p[keep], rho[keep], pha[keep]
-                        ):
-                            lines.append(
-                                _fmt_row_r(float(pi), float(ri),
-                                           float(phii))
-                            )
-
-        # write Tipper 
-        if flags.get("T", False) and self.Tip is not None:
-            tp = self.Tip
-            ta = getattr(tp, "tipper")
-            te = getattr(tp, "tipper_err", None)
-            f = getattr(tp, "freq", None)
-            p = _periods_from_freq(f)
-            
-            arr = None
-            # shape: (n, 2) -> ZX, ZY
-            if ta is not None:
-                arr = np.asarray(ta)
-                if arr.ndim == 3 and arr.shape[1:] == (1, 2):
-                    arr = arr[:, 0, :]
-                if arr.shape[-1] != 2:
-                    arr = None
-            if arr is not None:
-                err = None
-                if te is not None:
-                    err = np.asarray(te, float)
-                    if err.ndim == 3 and err.shape[1:] == (1, 2):
-                        err = err[:, 0, :]
-                    if err.shape[-1] != 2:
-                        err = None
-                if err is None:
-                    err = np.zeros_like(arr.real, float)
-
-                comps = {"ZX": 0, "ZY": 1}
-                for code, k in comps.items():
-                    v = arr[:, k]
-                    e = err[:, k]
-                    keep = (
-                        np.isfinite(p) & np.isfinite(v.real)
-                        & np.isfinite(v.imag)
+                    row = (
+                        f"{_fmt_sci(p, 11, 4)}"
+                        f"{_fmt(t.real, 12, 4)}"
+                        f"{_fmt(t.imag, 12, 4)}"
+                        f"{_fmt(e, 12, 4)}"
+                        f"{_fmt(1.0, 9, 2)}"
                     )
-                    nrows = int(np.count_nonzero(keep))
-                    if nrows == 0:
-                        continue
-                    _write_head(f"T{code}", nrows)
-                    for pi, zi, ei in zip(p[keep], v[keep], e[keep]):
-                        lines.append(
-                            _fmt_row_tf(float(pi), float(zi.real),
-                                        float(zi.imag), float(ei), 1.0)
-                        )
-
-        # finalize target 
-        base = None
-        if new_jfn:
-            base = Path(new_jfn)
-        elif j_fn:
-            base = Path(j_fn)
-        elif self.path is not None:
-            base = Path(self.path.name)
-        else:
-            base = Path("out.j")
-
-        folder = None
-        if savepath is not None:
-            folder = Path(savepath)
-        elif self.path is not None and self.path.parent.exists():
-            folder = self.path.parent
-        else:
-            folder = Path(".")
-
+                    lines.append(row)
+        
+        # --- 6. Write Z-Blocks (Impedance) ---
+        if (flags.get("Z") and self.Z and
+                self.Z.z is not None and self.periods is not None):
+            for comp_code, (i, j) in self._tidx.items():
+                z_comp = self.Z.z[:, i, j]
+                if np.all(np.abs(z_comp) < 1e-12):
+                    continue
+                if not first_block_written:
+                    lines.append(station_line)
+                    first_block_written = True
+                
+                lines.append(f"Z{comp_code} SI")
+                lines.append(str(self.n_freq))
+                err = self.Z.z_err
+                z_err = err[:, i, j] if err is not None else np.zeros(self.n_freq)
+                
+                for k in range(self.n_freq):
+                    p, z, e = (
+                        self.periods[k], z_comp[k], z_err[k]
+                    )
+                    row = (
+                        f"{_fmt_sci(p, 11, 4)}"
+                        f"{_fmt(z.real, 12, 4)}"
+                        f"{_fmt(z.imag, 12, 4)}"
+                        f"{_fmt(e, 12, 4)}"
+                        f"{_fmt(1.0, 9, 2)}"
+                    )
+                    lines.append(row)
+        
+        # --- 7. Finalize and Save File ---
+        path = self.path
+        base = Path(
+            new_jfn or j_fn or (path.name if path else "out.j")
+        )
+        folder = Path(
+            savepath or (path.parent if path and path.parent.exists() else ".")
+        )
         out_path = folder / base
-        if not overwrite and out_path.exists():
-            stem = out_path.stem
-            suf = out_path.suffix or ".j"
-            k = 1
-            while True:
-                cand = out_path.with_name(f"{stem}_{k}{suf}")
-                if not cand.exists():
-                    out_path = cand
-                    break
-                k += 1
 
+        if not overwrite and out_path.exists():
+            stem, suf = out_path.stem, out_path.suffix or ".j"
+            c = 1
+            while out_path.exists():
+                out_path = out_path.with_name(f"{stem}_{c}{suf}")
+                c += 1
+                
         _ensure_parent(out_path)
         out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
         if vb:
             logger.info("Wrote J file: %s", out_path)
 
         return str(out_path)
-
+    
 
     @property
     def freq(self) -> Optional[np.ndarray]:
@@ -1114,11 +967,7 @@ class JFile(JIOMixin):
     @property
     def periods(self) -> Optional[np.ndarray]:
         f = self.freq
-        if f is None:
-            return None
-        with np.errstate(divide="ignore", invalid="ignore"):
-            p = np.where(f > 0.0, 1.0 / f, np.nan)
-        return p
+        return None if f is None else self._hz_from_period(f)
 
     @property
     def n_freq(self) -> int:
@@ -1195,15 +1044,7 @@ class JFile(JIOMixin):
     def site (self): 
         # site / station
         # be in defensive
-        site = (
-            getattr(self, "station", None)
-            or getattr(self, "site", None)
-            or getattr(getattr(self, "heads", None), "station", None)
-            or getattr(getattr(self, "head", None), "station", None)
-            or getattr(getattr(self, "header", None), "dataid", None)
-            or "UNKNOWN"
-        )
-        return site 
+        return self.station or "UNKNOWN"
     
     def __has_read__(self) -> bool:
         return bool(self._read_ok)

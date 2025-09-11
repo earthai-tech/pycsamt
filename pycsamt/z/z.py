@@ -27,7 +27,6 @@ from ..utils.zmath import (
     rotatematrix_incl_errors,
     invertmatrix_incl_errors,  
 )
-from .base import BaseEM 
 
 logger = get_logger(__name__)
 
@@ -126,22 +125,19 @@ class Z(ResPhase):
         z_array: Optional[np.ndarray] = None,
         z_err_array: Optional[np.ndarray] = None,
         freq: Optional[np.ndarray] = None,
-        *,
+        *, 
         name: Optional[str] = None,
         meta: Optional[dict] = None,
         verbose: int = 0,
     ) -> None:
         # Ensure BaseEM is initialized (logger, name, meta,
         # verbose). ResPhase does not call super().__init__.
-        BaseEM.__init__(
+        ResPhase.__init__(
             self,
             name=name,
             meta={} if meta is None else meta,
             verbose=verbose,
         )
-        # Initialize parent state (keeps arrays as None).
-        ResPhase.__init__(self)
-
         self._z: Optional[np.ndarray] = None
         self._z_err: Optional[np.ndarray] = None
         self._freq: Optional[np.ndarray] = None

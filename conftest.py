@@ -164,3 +164,95 @@ def simulated_edi(tmp_path: Path) -> Path:
     p = tmp_path / "simulated.edi"
     p.write_text("\n".join(lines), encoding="utf-8")
     return p
+
+# ----------------------- EDIS collection -----------------------
+
+@pytest.fixture(scope="session")
+def edis_path(project_root: Path) -> Path:
+    """
+    Base path to a folder holding multiple EDI files.
+    """
+    p = project_root / "data" / "edis"
+    if not p.exists():
+        pytest.skip(f"Missing EDIS folder: {p}")
+    return p
+
+
+@pytest.fixture(scope="session")
+def edis_files(edis_path: Path) -> list[Path]:
+    """
+    All *.edi files discovered under the EDIS folder.
+    """
+    files = sorted(edis_path.rglob("*.edi"))
+    if not files:
+        pytest.skip(f"No EDI files found in: {edis_path}")
+    return files
+
+
+@pytest.fixture(scope="session")
+def any_edis_file(edis_files: list[Path]) -> Path:
+    """
+    A single EDI from the collection (first after sorting).
+    """
+    return edis_files[0]
+
+
+@pytest.fixture(scope="session")
+def edi_collection(edis_path: Path):
+    """
+    Parsed EDICollection built from the EDIS folder.
+    """
+    try:
+        from pycsamt.seg.cbase import CoreParser
+        from pycsamt.seg.collection import EDICollection
+    except Exception as exc:  # pragma: no cover
+        pytest.skip(f"Cannot import EDICollection: {exc}")
+
+    cor = CoreParser(recursive=True, verbose=0)
+    edis = cor.parse([edis_path])
+    if not edis:
+        pytest.skip("EDICollection parsed 0 items.")
+    col = EDICollection(items=edis)
+    return col
+
+
+# ------------------------ J (Jones) data ----------------------
+@pytest.fixture(scope="session")
+def j_path(project_root: Path) -> Path:
+    """Base path to J single-file samples."""
+    return project_root / "data" / "j"
+
+
+@pytest.fixture(scope="session")
+def j_single_file(j_path: Path) -> Path:
+    """Single J file: kb0-s001.txt; skip if missing."""
+    p = j_path / "kb0-s001.txt"
+    if not p.exists():
+        pytest.skip(f"Missing J file: {p}")
+    return p
+
+
+@pytest.fixture(scope="session")
+def jc_path(project_root: Path) -> Path:
+    """Base path to a J collection (S00.dat, ...)."""
+    p = project_root / "data" / "jc"
+    if not p.exists():
+        pytest.skip(f"Missing J collection: {p}")
+    return p
+
+
+@pytest.fixture(scope="session")
+def jc_files(jc_path: Path) -> list[Path]:
+    """All S*.dat files discovered under jc_path."""
+    files = sorted(jc_path.glob("S*.dat"))
+    if not files:
+        pytest.skip(f"No J files found in: {jc_path}")
+    return files
+
+
+@pytest.fixture(scope="session")
+def any_jc_file(jc_files: list[Path]) -> Path:
+    """A single J file from the collection (first sorted)."""
+    return jc_files[0]
+
+

@@ -19,7 +19,7 @@ from ..exceptions import (
     FileHandlingError,
 )
 from .base import EDIComponentBase
-from .property import Source, Processing, Copyright
+from .property import Source, Processing, Copyright, Software
 from .validation import IsEdi 
 
 logger = get_logger(__name__)
@@ -214,6 +214,10 @@ class Head(EDIComponentBase):
     .. [1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
            https://www.mtnet.info/
     """
+    # prog details  
+    _PROGVERS = f"pyCSAMT {_PKG_VERSION}"
+    _PROGDATE = _dt.datetime.utcnow().strftime("%Y/%m/%d")
+    _FILEDATE = _dt.datetime.utcnow().strftime("%Y/%m/%d %H:%M:%S UTC")
 
     # Canonical keys order for serialization
     head_keys: List[str] = [
@@ -262,7 +266,7 @@ class Head(EDIComponentBase):
         self.fileby: Optional[str] = None
         self.acqdate: Optional[str] = None
         self.enddate: Optional[str] = None
-        self.filedate: str = _dt.datetime.utcnow().strftime("%Y/%m/%d %H:%M:%S UTC")
+        self.filedate: str = self._FILEDATE
 
         self.country: Optional[str] = None
         self.state: Optional[str] = None
@@ -272,8 +276,8 @@ class Head(EDIComponentBase):
 
         self.units: str = "M".lower() if False else "m"  # keep lower internally; write upper
         self.stdvers: str = "SEG 1.0"
-        self.progvers: str = f"pyCSAMT {_PKG_VERSION}"
-        self.progdate: str = _dt.datetime.utcnow().strftime("%Y/%m/%d")
+        self.progvers: str = self._PROGVERS
+        self.progdate: str = self._PROGDATE 
         self.coordsys: str = "Geomagnetic North"
         self.declination: Optional[float] = None
         self.datum: str = "WGS84"
@@ -308,7 +312,10 @@ class Head(EDIComponentBase):
             self.Location.latitude = float(value)
         except (TypeError, ValueError):
             self.Location.latitude = float(dms_to_decimal(str(value)))
-            logger.info("Converted DMS latitude to decimal degrees.")
+            if self.verbose:
+                logger.info(
+                    "Converted DMS latitude to decimal degrees."
+                )
 
     @property
     def long(self) -> Optional[float]:
@@ -323,7 +330,10 @@ class Head(EDIComponentBase):
             self.Location.longitude = float(value)
         except (TypeError, ValueError):
             self.Location.longitude = float(dms_to_decimal(str(value)))
-            logger.info("Converted DMS longitude to decimal degrees.")
+            if self.verbose:
+                logger.info(
+                    "Converted DMS longitude to decimal degrees."
+                    )
 
     @property
     def elev(self) -> Optional[float]:
@@ -390,8 +400,9 @@ class Head(EDIComponentBase):
         return self
 
     def write(
-            self, head_list_infos: Optional[Sequence[str]] = None
-            ) -> List[str]:
+        self, head_list_infos: Optional[Sequence[str]] = None, 
+        stamp: bool=True, 
+        ) -> List[str]:
         """
         Build formatted >HEAD lines (including trailing blank line).
         """
@@ -420,10 +431,18 @@ class Head(EDIComponentBase):
 
         # Serialize internal state in canonical order
         for key in self.head_keys:
-            val = getattr(self, key, None)
+            if stamp and key == "progvers":
+                val = self._PROGVERS  # This gets the current default value
+            elif stamp and key == "progdate":
+                val = self._PROGDATE  # This gets the current default value
+            elif stamp and key=="filedate": 
+                val= self._FILEDATE 
+            else:
+                val = getattr(self, key, None)
+            
             if val in (None, "", "None"):
                 continue
-
+    
             if key in {"lat", "long"}:
                 vnum = getattr(self, key)
                 try:
@@ -548,7 +567,9 @@ class Info(EDIComponentBase):
     .. [1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
            https://www.mtnet.info/
     """
-
+    _PROCESSEDBY = f"pyCSAMT v{_PKG_VERSION}" 
+    _PROCESSINGSOFTWARE =Software(name= "PYCSAMT")
+    
     # canonical key serialization order
     infokeys = [
         "maxinfo",
@@ -591,7 +612,10 @@ class Info(EDIComponentBase):
 
         # nested containers
         self.Source = Source()
-        self.Processing = Processing()
+        self.Processing = Processing(
+            processedby=self._PROCESSEDBY, 
+            ProcessingSoftware = self._PROCESSINGSOFTWARE, 
+        )
         self.Copyright = Copyright()
 
         for k, v in kwargs.items():
@@ -662,7 +686,7 @@ class Info(EDIComponentBase):
         return obj
 
     def read(
-            self, edi_info_list: Optional[Sequence[str]] = None
+            self, edi_info_list: Optional[Sequence[str]] = None, 
         ) -> "Info":
         """
         Parse an INFO key-value list and set attributes.

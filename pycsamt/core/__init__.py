@@ -1,37 +1,109 @@
-from .cs import CSAMT
-from .edi import (
-    _assert_edi_obj, 
-    Edi, 
-    Edi_collection, 
-    Software, 
-    Copyright, 
-    Source, 
-    Person, 
-    References, 
-    MTEMAP, 
-    get_ediObjs, 
+# -*- coding: utf-8 -*-
+
+# Re-export submodules so users/tests can do:
+#   from pycsamt.core import base as b
+#   from pycsamt.core import transformers as tr
+# from . import base
+# from . import transformers
+
+# Public transformer classes / mixins
+from ._transformers import TransformerMixin  # if present in your package
+from .transformers import AVGtoEDI, JtoEDI
+
+# Core base utilities / classes
+from .base import CoreObject, MTBase, TFBundle, to_edi
+
+# Registry primitives (low-level record/manifest/store + helpers)
+from ._registry import (
+    RegistryError,
+    Record,
+    Manifest,
+    ManifestStore,
+    FileManifestStore,
+    Registry,
+    guess_kind,
 )
 
-from .avg import (
-    Avg , 
-    SurveyAnnotation, 
-    SurveyConfiguration, 
-    TransmitterProperties, 
-    ReceiverProperties, 
-    Skip_flag, 
-    ZongeHardware 
+# High-level Registry API and packing helpers
+from .registry import (
+    Packer,
+    register_packer,
+    get_packer,
+    list_packers,
+    pack_to_file,
+    unpack_from_file,
+    RegistryAPI,
 )
 
-from .j import (
-    J_collection, 
-    J, 
-    J_infos 
+# Bundle helpers / mixins
+from .mixins import (
+    bundle_from_edi,
+    BundleMixin,
+    BundleContainerMixin,
 )
 
-from .z import (
-    ResPhase, 
-    Z,
-    correct4sensor_orientation 
-    
-    )
+# Core configuration & adapter registry
+from .config import (
+    StationNamePolicy,
+    CoreConfig,
+    get_config,
+    configure,
+    reset_config,
+    config_context,
+    to_dict,
+    register_adapter,
+    get_adapter,
+    list_adapters,
+)
 
+__all__ = [
+    # Submodules
+    # "base",
+    # "transformers",
+
+    # Transformers / mixins
+    "TransformerMixin",
+    "AVGtoEDI",
+    "JtoEDI",
+
+    # Base exports
+    "CoreObject",
+    "MTBase",
+    "TFBundle",
+    "to_edi",
+
+    # Registry (low-level)
+    "RegistryError",
+    "Record",
+    "Manifest",
+    "ManifestStore",
+    "FileManifestStore",
+    "Registry",
+    "guess_kind",
+
+    # Registry (high-level) + packers
+    "Packer",
+    "register_packer",
+    "get_packer",
+    "list_packers",
+    "pack_to_file",
+    "unpack_from_file",
+    "RegistryAPI",
+
+    # Bundle helpers / mixins
+    "bundle_from_edi",
+    "BundleMixin",
+    "BundleContainerMixin",
+
+    # Config & adapter registry
+    "StationNamePolicy",
+    "CoreConfig",
+    "get_config",
+    "configure",
+    "reset_config",
+    "config_context",
+    "to_dict",
+    "register_adapter",
+    "get_adapter",
+    "list_adapters",
+]

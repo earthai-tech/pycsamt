@@ -254,7 +254,9 @@ class BaseAVG(Zonge):
 
     def add_topography(
         self,
-        stn_file: Union[str, Path, pd.DataFrame]
+        stn_file: Union[str, Path, pd.DataFrame], 
+        utm_zone: str= None, 
+        epsg: int =None, 
     ) -> "BaseAVG":
         r"""Read and attach station topography data.
 
@@ -281,7 +283,11 @@ class BaseAVG(Zonge):
             self._logger.info(f"Reading topography from: {stn_file}")
 
         # Create and read the Topography component
-        self.topo = Topography(verbose=self.verbose).read(stn_file)
+        self.topo = Topography( 
+            verbose=self.verbose, 
+            utm_zone= utm_zone, 
+            epsg= epsg 
+            ).read(stn_file)
 
         # XXX TODO: Optional: add logic here to merge elevation
         # into the main df if needed for specific calculations,
@@ -667,24 +673,6 @@ class BaseAVG(Zonge):
             and not self.info.df.empty
         )
     
-    def __str__(self) -> str:
-        """Provide a concise, human-readable representation."""
-        if self.info.df is None or self.info.df.empty:
-            status = "empty"
-        else:
-            n_st = self.info.station.n_unique
-            n_f = self.info.frequency.n_unique
-            status = (
-                f"stations={n_st}, freqs={n_f}, "
-                f"rows={len(self.info.df)}"
-            )
-
-        src = (
-            f", source='{self._source_path.name}'"
-            if self._source_path
-            else ""
-        )
-        return f"{self.__class__.__name__}({status}{src})"
 
     def __repr__(self) -> str:
         """Provide an unambiguous developer representation."""
@@ -694,13 +682,281 @@ class BaseAVG(Zonge):
             else "None"
         )
         return (
-            f"{self.__class__.__name__}("
-            f"source_path={path_repr}, "
-            f"verbose={self.verbose}, "
-            f"loaded={'is not None' if self.info.df is not None else 'False'}"
-            ")"
+            f"{self.__class__.__name__}.from_file("
+            f"path={path_repr}, "
+            f"verbose={self.verbose})"
+            if self.__has_read__() else
+            f"{self.__class__.__name__}(verbose={self.verbose}, loaded=False)"
         )
+    
+    def _summary_stats(self) -> str:
+        """Creates a statistical summary block for the AVG data."""
+        if not self.__has_read__():
+            return "  (No statistics available: data not loaded)\n"
+    
+        summary_bunch = self.summary
+        n_stations = summary_bunch.get("num_stations", 0)
+        n_freqs = summary_bunch.get("num_frequencies", 0)
+    
+        # Initialize coordinate and elevation data as None
+        lats, lons, elevs = None, None, None
+    
+        # Get location data ONLY if a topography file is loaded
+        if self.topo is not None and not self.topo.frame.empty:
+            # Ensure lat/lon are available for the summary
+            if 'latitude' not in self.topo.frame.columns or (
+                    'longitude' not in self.topo.frame.columns):
+                self.topo.convert_coords(to='ll', inplace=True)
+    
+            lats = self.topo.latitude
+            lons = self.topo.longitude
+            elevs = self.topo.elevation
+    
+        freqs = self.info.frequency.unique()
+    
+        # Helper to safely format data ranges
+        def format_range(
+            arr: Optional[np.ndarray], fmt: str
+        ) -> str:
+            """Safely formats the min/max of an array."""
+            # Check if array is valid and has finite numbers
+            if (
+                arr is not None and arr.size > 0
+                and np.any(np.isfinite(arr))
+            ):
+                return (
+                    f"{np.nanmin(arr):{fmt}} to "
+                    f"{np.nanmax(arr):{fmt}}"
+                )
+            return "N/A"
+    
+        # Generate range strings for all variables
+        lat_range = format_range(lats, ".4f")
+        lon_range = format_range(lons, ".4f")
+        elev_range = format_range(elevs, ".2f") # Fixed
+        freq_range = format_range(freqs, ".2E")
+    
+        lines = [
+            "  " + "-" * 68,
+            "  Statistical Summary:",
+            ("    Survey Type: "
+             f"{summary_bunch.get('survey_type', 'N/A')}"),
+            ("    Line Name:   "
+             f"{summary_bunch.get('line_name', 'N/A')}"),
+            (f"    Stations:    {n_stations} "
+             f"({summary_bunch.get('station_range', 'N/A')})"),
+            f"    Frequencies: {n_freqs}",
+            f"    Freq Range (Hz): {freq_range}",
+            f"    Latitude Range:  {lat_range}",
+            f"    Longitude Range: {lon_range}",
+            f"    Elevation Range (m): {elev_range}", 
+            "  " + "-" * 68,
+        ]
+        return "\n".join(lines)
 
+
+    def __str__(self) -> str:  # pragma: no cover
+        """Provides a detailed, robust summary of the AVG data."""
+        if not self.__has_read__():
+            src = (
+                f"'{self._source_path.name}'"
+                if self._source_path else "Not Loaded"
+            )
+            return f"{self.__class__.__name__}(source={src}, status=empty)"
+    
+        # --- Header ---
+        title = (
+            f" {self.__class__.__name__} Summary"
+            f" (Source: {self._source_path.name}) "
+        )
+        width = 95  # Adjusted width for new table format
+        header = [
+            "=" * width,
+            title.center(width),
+            "=" * width
+        ]
+    
+        # --- Statistical Summary ---
+        stats_str = self._summary_stats()
+    
+        # --- Per-Site Details (from topography component) ---
+        details = ["\nStation Details:"]
+
+        if self.topo is not None and not self.topo.frame.empty:
+            topo = self.topo
+            
+            # 1. Calculate all the summary statistics from topo data
+            n_stations = len(topo.stations)
+            steps = topo.get_step()
+            valid_steps = steps[steps > 0]
+            total_length = valid_steps.sum()
+            mean_azimuth = topo.get_azimuth(mode='mean')
+            elevations = topo.elevation
+        
+            # 2. Format the calculated values for clean display
+            length_str = (
+                f"{total_length / 1000:.2f} km" if total_length > 1000
+                else f"{total_length:.1f} m"
+            )
+            
+            def to_cardinal(deg: float) -> str:
+                """Helper to convert azimuth degree to cardinal direction."""
+                if np.isnan(deg): return ""
+                dirs = [
+                    "N", "N-NE", "NE", "E-NE", "E", "E-SE", "SE", "S-SE",
+                    "S", "S-SW", "SW", "W-SW", "W", "W-NW", "NW", "N-NW"
+                ]
+                return dirs[int(round(deg / 22.5)) % 16]
+        
+            azimuth_str = (
+                f"{mean_azimuth:.1f}° ({to_cardinal(mean_azimuth)})"
+            )
+            
+            spacing_str = (
+                f"Min: {valid_steps.min():.1f}, "
+                f"Mean: {valid_steps.mean():.1f}, "
+                f"Max: {valid_steps.max():.1f}"
+            ) if not valid_steps.empty else "N/A"
+        
+            elev_range_str = (
+                f"{elevations.min():.1f} - {elevations.max():.1f} "
+                f"(Δ: {elevations.max() - elevations.min():.1f})"
+            ) if elevations.size > 1 else "N/A"
+        
+            start_pt_str = f"({topo.easting[0]:.1f}, {topo.northing[0]:.1f})"
+            end_pt_str = f"({topo.easting[-1]:.1f}, {topo.northing[-1]:.1f})"
+            
+            # 3. Structure the data for a formatted key-value table
+            table_data = [
+                ("Number of Stations", f"{n_stations}"),
+                ("Total Line Length", length_str),
+                ("Line Azimuth (Mean)", azimuth_str),
+                ("Station Spacing (m)", spacing_str),
+                ("Elevation Range (m)", elev_range_str),
+                ("Start Point (E, N)", start_pt_str),
+                ("End Point (E, N)", end_pt_str),
+            ]
+        
+            # 4. Build the formatted table string for display
+            header1, header2 = "Geometry", "Value"
+            
+            # max_key_len = max(len(key) for key, _ in table_data)
+            # for key, val in table_data:
+            #     details.append(f"  {key.ljust(max_key_len)}: {val}")
+            # 4. Calculate dynamic column widths based on content
+            col1_width = max(len(header1), max(len(k) for k, _ in table_data))
+            col2_width = max(len(header2), max(len(v) for _, v in table_data))
+            
+            # 5. Build the formatted table strings
+            separator = (f"  {'-' * (col1_width + col2_width + 7)}")
+            
+            details.append(separator)
+            details.append(f"  | {header1.ljust(col1_width)} | "
+                           f"{header2.ljust(col2_width)} |")
+            details.append(separator)
+        
+            for key, val in table_data:
+                details.append(f"  | {key.ljust(col1_width)} | "
+                               f"{val.ljust(col2_width)} |")
+            details.append(separator)
+    
+        
+        else:
+            # Message when no topography data is loaded
+            details.append(
+                "  (Not available: topography file not loaded)"
+            )
+        # --- New Section: Dataset Details ---
+        dataset_details = ["\nDataset Details (Per-Station Summary):"]
+        df = self.info.df.copy()
+        agg_cols = ['rho', 'phase', 'pc_rho', 's_phz']
+        
+        # 1. Aggregate main data to get per-station stats
+        summary_df = df.groupby('station')[agg_cols].agg(
+            ['min', 'max'])
+        
+        # 2. FIX: Robustly flatten the MultiIndex columns into strings
+        # This is the most important change. It turns ('rho','min') into 'rho_min'
+        summary_df.columns = [
+            '_'.join(filter(None, col)).strip()
+            for col in summary_df.columns.values
+        ]
+        summary_df.reset_index(inplace=True)
+        
+        # 3. Create the combined string columns (now using simple string keys)
+        summary_df['Station'] = summary_df['station'].apply('{:,.1f}'.format)
+        summary_df['ρ Range'] = summary_df.apply(
+            lambda r: f"{r['rho_min']:.2e} - {r['rho_max']:.2e}", axis=1
+        )
+        summary_df['Φ Range'] = summary_df.apply(
+            lambda r: f"{r['phase_min']:.2f} - {r['phase_max']:.2f}", axis=1
+        )
+        summary_df['%err Range'] = summary_df.apply(
+            lambda r: f"{r['pc_rho_min']:.2f} - {r['pc_rho_max']:.2f}", axis=1
+        )
+        summary_df['σΦ Range'] = summary_df.apply(
+            lambda r: f"{r['s_phz_min']:.2f} - {r['s_phz_max']:.2f}", axis=1
+        )
+        
+        # Select only the formatted string columns for display
+        display_df = summary_df[[
+            'Station', 'ρ Range', 'Φ Range', '%err Range', 'σΦ Range'
+        ]]
+        
+        # 4. Calculate dynamic column widths (this code now works correctly)
+        headers = {
+            'Station': 'Station', 'ρ Range': 'ρ Min - ρ Max',
+            'Φ Range': 'Φ Min - Φ Max', '%err Range': '%err Min - %err Max',
+            'σΦ Range': 'σΦ Min - σΦ Max'
+        }
+        col_widths = {
+            col: max(len(headers[col]), display_df[col].str.len().max())
+            for col in display_df.columns
+        }
+    
+        # 4. Build the table strings
+        header_row = " | ".join([
+            headers[col].center(col_widths[col])
+            for col in display_df.columns
+        ])
+        separator_row = "-+-".join(['-' * col_widths[col]
+                                    for col in display_df.columns])
+        
+        dataset_details.append(header_row)
+        dataset_details.append(separator_row)
+    
+        # Function to format a single data row
+        def format_row(row):
+            return " | ".join([
+                row['Station'].ljust(col_widths['Station']),
+                row['ρ Range'].center(col_widths['ρ Range']),
+                row['Φ Range'].center(col_widths['Φ Range']),
+                row['%err Range'].center(col_widths['%err Range']),
+                row['σΦ Range'].center(col_widths['σΦ Range'])
+            ])
+    
+        # 5. Handle Truncation and build data rows
+        n_stations = len(display_df)
+        if n_stations > 30:
+            for _, row in display_df.head(5).iterrows():
+                dataset_details.append(format_row(row))
+            
+            ellipsis_row = " | ".join(['...'.center(col_widths[col])
+                                      for col in display_df.columns])
+            dataset_details.append(ellipsis_row)
+            
+            for _, row in display_df.tail(5).iterrows():
+                dataset_details.append(format_row(row))
+        else:
+            for _, row in display_df.iterrows():
+                dataset_details.append(format_row(row))
+    
+        dataset_details.append(separator_row)
+    
+        # --- Combine and Return ---
+        return "\n".join(
+            header + [stats_str] + details + dataset_details
+        )
 
 @has_fit("raise")
 class AVG(BaseAVG):
@@ -1042,7 +1298,7 @@ class AVG(BaseAVG):
             sort_freq=sort_freq,
             align=align,
         )
-    # --- Properties to expose components ---
+    
     @property
     def header(self):
         """Access the Header component."""
@@ -1079,16 +1335,8 @@ class AVG(BaseAVG):
         Access the core tidy DataFrame containing all available
         data columns after parsing and normalization.
         """
-        return self.info.df
+        return self.info.df 
     
-    def __str__(self) -> str:
-        """Provide a concise string representation."""
-        if self.info.df is None:
-            return "AVG(empty)"
-        return f"AVG(source='{self._source_path.name}')"
-
-    __repr__ = __str__
-
 
         
 class AMTAVG(AVG):
@@ -1934,33 +2182,3 @@ class AMTAVG(AVG):
     def phase_yy_err(self):
         df = self.info.s_phz.frame
         return df[df.comp == "EyHy"]["s_phz"]
-
-    def __str__(self) -> str:
-        """Provide a concise, human-readable representation."""
-        if self.info.df is None or self.info.df.empty:
-            status = "empty"
-        else:
-            n_st = self.info.station.n_unique
-            n_f = self.info.frequency.n_unique
-            status = (
-                f"stations={n_st}, freqs={n_f}, "
-                f"rows={len(self.info.df)}"
-            )
-
-        src = (
-            f", source='{self._source_path.name}'"
-            if self._source_path
-            else ""
-        )
-        return f"AMTAVG({status}{src})"
-
-    def __repr__(self) -> str:
-        """Provide an unambiguous developer representation."""
-        if self._source_path:
-            return (
-                f"AMTAVG.from_file("
-                f"'{self._source_path!s}', "
-                f"verbose={self.verbose})"
-            )
-        return f"AMTAVG(verbose={self.verbose}, loaded=False)"       
-    

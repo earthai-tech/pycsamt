@@ -469,7 +469,6 @@ def _quote(s: Any) -> str:
     return s
 
 
-# Public: minimal EDI writer
 def minimum_parser_to_write_edi(obj: Mapping[str, Any]) -> str:
     """
     Write a minimal, valid SEG-EDI text from a structured mapping.

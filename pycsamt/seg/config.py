@@ -26,6 +26,31 @@ import inspect
 __all__ = ["SEG", "SEGConfig", "discover_mixins"]
 
 
+# Map submodule -> candidate class names to import.
+# The first symbol found is used.
+_CANDIDATES = {
+    "base": ["Base", "BaseMixin", "SEGBase", "SurveyBase"],
+    "cbase": ["ParseMixin", "CoreParser", "CBBase"],
+    "heads": ["Heads", "HeadMixin", "InfoMixin"],
+    "meas": [
+        "MeasMixin",
+        "DefineMeasMixin",
+        "EMeasMixin",
+        "HMeasMixin",
+    ],
+    "components": ["ComponentsMixin"],
+    "spectra": ["SpectraMixin", "SpectraIO", "Spectra"],
+    "time_series": ["TimeSeriesMixin", "TSIO", "TimeSeries"],
+    "mtemap": ["EMAPMixin", "EMAPComponents"],
+    "property": ["PropertiesMixin"],
+    "edi": ["EDIMixin", "EDIFile", "EDIOMixin"],
+    "collection": ["CollectionMixin", "EDICollection"],
+    # NEW: add survey/xa modules
+    "survey": ["SurveyBase", "Stations", "Topography", "EDIProfile"],
+    "xa": ["XAMixin", "EDIAcc"],
+}
+
+
 @dataclass(frozen=True)
 class SEGConfig:
     """Global knobs for the SEG facade.
@@ -58,27 +83,6 @@ class _NoOp:  # pragma: no cover
 
     pass
 
-# Map submodule -> candidate class names to import.
-# The first found symbol is used as a mixin.
-_CANDIDATES = {
-    "base": ["Base", "BaseMixin", "SEGBase"],
-    "cbase": ["ParseMixin", "CoreParser", "CBBase"],
-    "heads": ["Heads", "HeadMixin", "InfoMixin"],
-    "meas": [
-        "MeasMixin",
-        "DefineMeasMixin",
-        "EMeasMixin",
-        "HMeasMixin",
-    ],
-    "components": ["ComponentsMixin"],
-    "spectra": ["SpectraMixin", "SpectraIO"],
-    "time_series": ["TimeSeriesMixin", "TSIO"],
-    "mtemap": ["EMAPMixin", "EMAPComponents"],
-    "property": ["PropertiesMixin"],
-    "edi": ["EDIMixin", "EDIFile", "EDIOMixin"],
-    "collection": ["CollectionMixin", "EDICollection"],
-    "utils": ["UtilsMixin"],
-}
 
 
 def _import_first(module: str, names: Iterable[str]) -> Type:
@@ -98,7 +102,7 @@ def _import_first(module: str, names: Iterable[str]) -> Type:
     """
 
     try:
-        mod = import_module(f".{{module}}", package=__package__)
+        mod = import_module(f".{module}", package=__package__)
     except Exception:  # pragma: no cover
         return _NoOp
 
@@ -107,7 +111,6 @@ def _import_first(module: str, names: Iterable[str]) -> Type:
         if inspect.isclass(obj):
             return obj  # type: ignore[return-value]
     return _NoOp
-
 
 def discover_mixins() -> Tuple[Type, ...]:
     """Discover available component mixins.
@@ -146,7 +149,6 @@ class _Facade:
     __config__: SEGConfig = SEGConfig()
     __mixins__: Tuple[Type, ...] = ()
 
-    # ---------------------- class-level API ----------------------
     @classmethod
     def _delegate_cls(cls, name: str):
         """Find the first classmethod implementation.
@@ -191,7 +193,7 @@ class _Facade:
             raise NotImplementedError("No loads available")
         return meth(text, **kw)
 
-    # --------------------- instance-level API --------------------
+    
     def _delegate_self(self, name: str):
         """Find the first instance method implementation.
 
@@ -233,7 +235,7 @@ class _Facade:
             raise NotImplementedError("No dumps available")
         return meth(self, **kw)
 
-    # --------------------- convenience helpers ------------------
+    
     def asdict(self) -> dict:
         """Merge ``asdict`` from mixins if present.
 

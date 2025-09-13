@@ -8,7 +8,7 @@ Tipper
 
 from __future__ import annotations
 
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence
 
 import numpy as np
 
@@ -151,7 +151,12 @@ class Tipper(BaseEM):
         tipper_array: Optional[np.ndarray] = None,
         tipper_err_array: Optional[np.ndarray] = None,
         freq: Optional[Sequence[float]] = None,
+        *, 
+        name: Optional[str] = None,
+        **kw:  Any
     ) -> None:
+        super().__init__(name=name,**kw)
+        
         self._tipper: Optional[np.ndarray] = None
         self._tipper_err: Optional[np.ndarray] = None
         self._freq: Optional[np.ndarray] = None

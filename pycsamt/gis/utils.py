@@ -51,6 +51,7 @@ from .config import (
     EPSG_DICT,
     GDALMissingError,
     GisError,
+    ElevationAPIConfig
 )
 from .constants import (
     DEG2RAD,
@@ -1113,7 +1114,10 @@ def to_ll(
         )
 
     if zone is not None:
-        z_arr = _extract(zone, "zone")
+        if isinstance (zone, str): 
+            z_arr = np.asarray([zone], dtype=object)
+        else:
+            z_arr = _extract(zone, "zone")
         if z_arr.size == 1 and e_arr.size > 1:
             z_arr = np.full(e_arr.shape, z_arr.item(), dtype=object)
         if z_arr.shape != e_arr.shape:
@@ -1744,7 +1748,9 @@ def project_point_utm2ll(
     else:
         assert pp is not None
         lon, lat = pp(easting, northing, inverse=True)
-
+    # normalize_lat_lon resolve the classic axis order issue often 
+    # seen when interacting with different GIS libraries.  
+    lat, lon = normalize_lat_lon(lon, lat, assume="latlon")
     return (round(lat, 6), round(lon, 6))
 
 
@@ -2392,3 +2398,436 @@ def transform_ll_to_utm(
 
     easting, northing, alt = to_utm.TransformPoint(lon, lat, 0.0)
     return utm_sr, (easting, northing, alt)
+
+
+def _resolve_api_name(name: Optional[str]) -> str:
+    """
+    Resolves the API name from a full name or a shorthand symbol.
+    """
+    # If no name is given, use the default from the config.
+    if name is None:
+        return ElevationAPIConfig.DEFAULT_API
+
+    # Map shorthand symbols to their corresponding API names.
+    symbol_map = {
+        ',': 'open_meteo',       # Comma for comma_separated
+        '|': 'open_topo_data',   # Pipe for pipe_separated
+        'indiv': 'usgs_ned', 
+    }
+
+    # First, check if the provided name is a direct valid key.
+    if name in ElevationAPIConfig.APIS:
+        return name
+
+    # Next, check if it's a recognized shorthand symbol.
+    if name in symbol_map:
+        return symbol_map[name]
+
+    # If the name is unrecognized, log a warning and fallback.
+    logger.warning(
+        f"Unknown API name or symbol: '{name}'. "
+        f"Falling back to default API: "
+        f"'{ElevationAPIConfig.DEFAULT_API}'."
+    )
+    return ElevationAPIConfig.DEFAULT_API
+
+def _extract_value_from_nested_dict(
+    data: dict, key_path: str
+) -> Any:
+    r"""Extract a value from a nested dict using a dot-path.
+
+    This helper traverses a dictionary structure using a
+    dot-separated string to locate and return a nested value.
+
+    Parameters
+    ----------
+    data : dict
+        The dictionary to search within.
+    key_path : str
+        A dot-separated path representing the keys to follow.
+        For example, 'results.elevation' will access
+        ``data['results']['elevation']``.
+
+    Returns
+    -------
+    Any
+        The value found at the specified path, or ``None`` if any
+        key along the path does not exist.
+    """
+    # Split the path into individual keys.
+    keys = key_path.split('.')
+    value = data
+    # Sequentially access each key in the path.
+    for key in keys:
+        if isinstance(value, list) and key.isdigit():
+            try:
+                # Handle list indexing if a key is a digit.
+                value = value[int(key)]
+            except IndexError:
+                # Index is out of bounds.
+                return None
+        elif isinstance(value, dict):
+            # Access the next level of the dictionary.
+            value = value.get(key)
+        else:
+            # The path is invalid for the current data structure.
+            return None
+
+        if value is None:
+            # A key was not found.
+            return None
+            
+    return value
+
+@overload
+def get_elevation_from_api(
+    latitude: float,
+    longitude: float,
+    api_name: Optional[str] = None
+) -> float:
+    ...
+
+@overload
+def get_elevation_from_api(
+    latitude: Union[Sequence[float], np.ndarray],
+    longitude: Union[Sequence[float], np.ndarray],
+    api_name: Optional[str] = None
+) -> np.ndarray:
+    ...
+
+def get_elevation_from_api(
+    latitude: Union[float, Sequence[float], np.ndarray],
+    longitude: Union[float, Sequence[float], np.ndarray],
+    api_name: Optional[str] = None
+) -> Union[float, np.ndarray]:
+    r"""Fetches elevation from sea level for geographic coords.
+
+    This function queries an online service to retrieve elevation
+    data (in meters) for one or more points on Earth's surface.
+    It supports multiple APIs and includes a fallback mechanism.
+
+    Parameters
+    ----------
+    latitude : float or array-like
+        The latitude(s) of the point(s) in decimal degrees.
+    longitude : float or array-like
+        The longitude(s) of the point(s) in decimal degrees.
+    api_name : str, optional
+        The name of the elevation API to use (e.g., 'open_meteo',
+        'open_topo_data'). Can also be a shorthand symbol like
+        ',' or '|'. If ``None``, the default API is used.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        - If inputs are scalars, returns a single float for the
+          elevation in meters.
+        - If inputs are arrays, returns a NumPy array of
+          elevations.
+
+    Raises
+    ------
+    GisError
+        If the API request fails after all fallbacks or if the
+        response is invalid.
+    ImportError
+        If the `requests` library is not installed.
+
+    Notes
+    -----
+    This utility requires an active internet connection and the
+    `requests` library. If a specified API fails, the function
+    will automatically attempt to use the default API as a
+    fallback. The underlying data quality depends on the chosen
+    API provider [1]_.
+
+    See Also
+    --------
+    get_elevation_from_utm : A similar function for UTM coords.
+    pycsamt.gis.config.ElevationAPIConfig : API configurations.
+
+    References
+    ----------
+    .. [1] Open-Meteo Elevation API Documentation.
+           https://open-meteo.com/en/docs/elevation-api
+
+    Examples
+    --------
+    >>> # Fetch elevation for a single point (Mt. Everest)
+    >>> lat, lon = 27.9881, 86.9250
+    >>> elev = get_elevation_from_api(lat, lon)
+    >>> print(f"Elevation of Mount Everest: {elev:.2f} m")
+    Elevation of Mount Everest: 8815.00 m
+
+    >>> # Fetch for multiple points using an array
+    >>> lats = [34.05, 40.71, 35.68]
+    >>> lons = [-118.24, -74.00, 139.69]
+    >>> elevs = get_elevation_from_api(lats, lons)
+    >>> print(elevs)
+    [  86. 3968. 3939.]
+    """
+    from ..utils._dependency import import_optional_dependency
+
+    # Lazily import requests to avoid hard dependency.
+    requests = import_optional_dependency(
+        "requests",
+        extra="'requests' is required to fetch elevation data."
+    )
+    # Resolve the API name from full name or symbol.
+    resolved_api_name = _resolve_api_name(api_name)
+    api_config = ElevationAPIConfig.get_api_config(
+        resolved_api_name
+    )
+    api_url = api_config['url']
+    params_format = api_config['params_format']
+    response_key = api_config['response_key']
+
+    is_scalar = np.isscalar(latitude)
+    params = {}
+
+    # Prepare parameters based on the API's required format.
+    if params_format == 'comma_separated':
+        params = {
+            "latitude": (
+                latitude if is_scalar
+                else ",".join(map(str, latitude))
+            ),
+            "longitude": (
+                longitude if is_scalar
+                else ",".join(map(str, longitude))
+            ),
+        }
+    elif params_format == 'pipe_separated':
+        if is_scalar:
+            locations = f"{latitude},{longitude}"
+        else:
+            locations = "|".join(
+                [f"{lat},{lon}" for lat, lon in zip(
+                    latitude, longitude)]
+            )
+        params = {"locations": locations}
+
+    # For other formats like 'individual', handle them separately
+    # if necessary, or add them to the ElevationAPIConfig.
+
+    try:
+        # Make the API call.
+        response = requests.get(api_url, params=params)
+        response.raise_for_status()  # Check for HTTP errors.
+        data = response.json()
+
+        # Extract elevation using the nested key path.
+        elevations = _extract_value_from_nested_dict(
+            data, response_key
+        )
+
+        if elevations is None:
+            raise GisError(
+                "Elevation data not found in API response."
+            )
+
+        if is_scalar:
+            # Return a single float for scalar input.
+            return float(
+                elevations[0] if isinstance(elevations, list)
+                else elevations
+            )
+        else:
+            # Return a NumPy array for array input.
+            return np.array(elevations, dtype=float)
+
+    except requests.exceptions.RequestException as e:
+        logger.error(
+            f"API request to {resolved_api_name} failed: {e}"
+        )
+        # If the failed API was not the default, try fallback.
+        if resolved_api_name != ElevationAPIConfig.DEFAULT_API:
+            logger.info(
+                "Trying fallback API: "
+                f"{ElevationAPIConfig.DEFAULT_API}"
+            )
+            return get_elevation_from_api(
+                latitude, longitude,
+                ElevationAPIConfig.DEFAULT_API
+            )
+
+        # If fallback also fails or was the default, raise error.
+        raise GisError(
+            f"Failed to fetch elevation data from API: {e}"
+        ) from e
+        
+@overload
+def get_elevation_from_utm(
+    easting: float,
+    northing: float,
+    zone: str,
+    datum: str = "WGS84",
+    **kws
+) -> float:
+    ...
+
+@overload
+def get_elevation_from_utm(
+    easting: Union[Sequence[float], np.ndarray],
+    northing: Union[Sequence[float], np.ndarray],
+    zone: str,
+    datum: str = "WGS84",
+    **kws
+) -> np.ndarray:
+    ...
+
+def get_elevation_from_utm(
+    easting: Union[float, Sequence[float], np.ndarray],
+    northing: Union[float, Sequence[float], np.ndarray],
+    zone: str,
+    datum: str = "WGS84",
+    **kws
+) -> Union[float, np.ndarray]:
+    r"""Fetches elevation from sea level for UTM coordinates.
+
+    This utility first converts UTM coordinates (easting,
+    northing) to geographic latitude and longitude, then queries
+    an online API to retrieve the elevation in meters.
+
+    Parameters
+    ----------
+    easting : float or array-like
+        The UTM easting coordinate(s) in meters.
+    northing : float or array-like
+        The UTM northing coordinate(s) in meters.
+    zone : str
+        The UTM zone designator for the coordinates, including
+        the hemisphere letter (e.g., "11S", "32N").
+    datum : str, default="WGS84"
+        The geodetic datum of the UTM coordinates.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        - If the input is a single point, returns a float
+          representing the elevation in meters.
+        - If the input is an array of points, returns a NumPy
+          array of elevations.
+
+    Raises
+    ------
+    GisError
+        If the coordinate conversion or the subsequent API call
+        fails.
+
+    See Also
+    --------
+    get_elevation_from_api : The underlying function that
+                             fetches elevation data.
+    to_ll : The coordinate conversion function used internally.
+
+    Examples
+    --------
+    >>> from pycsamt.gis.utils import get_elevation_from_utm
+    >>> # Fetch elevation for a single UTM point in Los Angeles
+    >>> easting, northing, zone = 377274.0, 3762150.0, "11S"
+    >>> elevation = get_elevation_from_utm(
+    ...     easting, northing, zone
+    ... )
+    >>> print(f"Elevation: {elevation:.2f} m")
+    Elevation: 86.00 m
+    """
+    try:
+        # Step 1: Convert UTM coordinates to Latitude/Longitude.
+        # The `to_ll` function handles both scalar and array
+        # inputs automatically.
+        lat, lon = to_ll(
+            easting=easting,
+            northing=northing,
+            zone=zone,
+            datum=datum,
+            as_frame=False
+        )
+
+        # Step 2: Fetch elevation using the geographic coords.
+        # This function also handles scalar and array inputs.
+        return get_elevation_from_api(lat, lon, **kws)
+
+    except Exception as e:
+        # Catch any error from conversion or the API call.
+        logger.error(
+            f"Failed to get elevation from UTM coordinates: {e}"
+        )
+        # Raise a specific error for better error handling.
+        raise GisError(
+            "Could not process UTM coordinates to get elevation"
+        ) from e
+
+
+def calculate_azimuth(
+    easting: Union[Sequence[float], NDArray],
+    northing: Union[Sequence[float], NDArray]
+) -> NDArray:
+    r"""Calculates the forward azimuth between consecutive points.
+
+    This function takes a sequence of UTM coordinates and computes
+    the azimuth (compass direction) for the line segment starting
+    at each point and ending at the next.
+
+    Parameters
+    ----------
+    easting : array-like
+        A sequence (list, NumPy array, etc.) of the easting
+        coordinates in meters.
+    northing : array-like
+        A sequence of the northing coordinates in meters. Must be
+        the same length as ``easting``.
+
+    Returns
+    -------
+    numpy.ndarray
+        An array of azimuths in degrees (0-360), measured
+        clockwise from North. The last value is always ``NaN`` as
+        there is no subsequent point to define a direction.
+
+    Notes
+    -----
+    The azimuth at index ``i`` represents the direction of the
+    vector from point ``i`` to point ``i+1``. The calculation is
+    performed on the horizontal (2D) projection of the points;
+    elevation is not used.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> # A simple square path moving East, North, West
+    >>> easting = [0, 100, 100, 0]
+    >>> northing = [0, 0, 100, 100]
+    >>> calculate_azimuth(easting, northing)
+    array([ 90.,   0., 270.,  nan])
+    """
+    # Ensure inputs are NumPy arrays for vectorization
+    easting = np.asarray(easting, dtype=float)
+    northing = np.asarray(northing, dtype=float)
+
+    # Azimuth requires at least two points to define a direction
+    if easting.size < 2:
+        return np.full_like(easting, np.nan)
+
+    # Calculate the difference in coordinates between points
+    delta_easting = np.diff(easting)
+    delta_northing = np.diff(northing)
+
+    # Calculate the angle in radians using arctan2 for quadrant
+    # correctness. The arguments are (dy, dx) in traditional
+    # math, so we use (delta_easting, delta_northing).
+    angle_rad = np.arctan2(delta_easting, delta_northing)
+
+    # Convert radians to degrees
+    angle_deg = np.rad2deg(angle_rad)
+
+    # Normalize the angle to a 0-360 degree azimuth
+    azimuths = (angle_deg + 360) % 360
+
+    # The result should have the same shape as the input. The
+    # azimuth is assigned to the start point of each segment.
+    # The last point has no forward segment, so it is NaN.
+    result = np.full_like(easting, np.nan)
+    result[:-1] = azimuths
+
+    return result

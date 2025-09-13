@@ -159,6 +159,7 @@ class ResPhase(BaseEM):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        
         self._z: Optional[np.ndarray] = None
         self._z_err: Optional[np.ndarray] = None
 
@@ -174,7 +175,6 @@ class ResPhase(BaseEM):
             self._z_err = np.asarray(z_err_array, dtype=float)
         if freq is not None:
             self.freq = freq
-
 
     @property
     def resistivity(self) -> np.ndarray:

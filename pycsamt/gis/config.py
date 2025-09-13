@@ -129,6 +129,40 @@ class GisError(Exception):
     Base exception for GIS utilities.
     """
 
+# Create a configuration class for elevation APIs
+class ElevationAPIConfig:
+    """Configuration for elevation API services."""
+    
+    # Available elevation API endpoints
+    APIS = {
+        'open_meteo': {
+            'url': 'https://api.open-meteo.com/v1/elevation',
+            'params_format': 'comma_separated',
+            'response_key': 'elevation'
+        },
+        'open_topo_data': {
+            'url': 'https://api.opentopodata.org/v1/elevation',
+            'params_format': 'pipe_separated',
+            'response_key': 'results.elevation'
+        },
+        'usgs_ned': {
+            'url': 'https://nationalmap.gov/epqs/pqs.php',
+            'params_format': 'individual',
+            'response_key': (
+                'USGS_Elevation_Point_Query_Service.Elevation_Query'
+            )
+        }
+    }
+    
+    # Default API to use
+    DEFAULT_API = 'open_meteo'
+    
+    @classmethod
+    def get_api_config(cls, api_name=None):
+        """Get configuration for a specific API."""
+        api_name = api_name or cls.DEFAULT_API
+        return cls.APIS.get(api_name, cls.APIS[cls.DEFAULT_API])
+
 
 __all__ = [
     "HAS_GDAL",

@@ -365,24 +365,6 @@ class JCollection(JCBBase, JCollectionMixin):
                 return jf
         raise KeyError(f"site not found: {site!r}")
         
-
-    # def _resolve(self, site: str) -> JFile:
-    #     """Find item by key, site/station, stem, or filename."""
-    #     idx = getattr(self, "_index", None)
-    #     if isinstance(idx, dict) and site in idx:
-    #         return idx[site]
-    #     for jf in self:
-    #         sid = getattr(jf, "site", None)
-    #         if sid and str(sid) == str(site):
-    #             return jf
-    #     for jf in self:
-    #         p = getattr(jf, "path", None)
-    #         if p is None:
-    #             continue
-    #         if p.stem == site or p.name == site or str(p) == site:
-    #             return jf
-    #     raise KeyError(f"site not found: {site!r}")
-
     def _heads(self, jf: JFile):
         return getattr(jf, "heads", None)
 
@@ -641,11 +623,7 @@ class JCollection(JCBBase, JCollectionMixin):
             rows.append({k: row.get(k) for k in fields})
         return rows
 
-    
-    def _items(self):
-        """Internal: unified iterator over stored items."""
-        return getattr(self, "items", [])
-    
+
     @staticmethod
     def _site_of(it) -> str | None:
         # Prefer common single-file attributes
@@ -686,7 +664,7 @@ class JCollection(JCBBase, JCollectionMixin):
     def sites(self) -> list[str]:
         """Best-effort station names (one per item)."""
         out: list[str] = []
-        for it in self._items():
+        for it in self._items:
             s = self._site_of(it)
             out.append(s if s is not None else "")
         return out
@@ -695,7 +673,7 @@ class JCollection(JCBBase, JCollectionMixin):
     def latitude(self) -> np.ndarray:
         """Vector of latitudes (np.nan for missing)."""
         vals: list[float] = []
-        for it in self._items():
+        for it in self._items:
             v = self._lat_of(it)
             vals.append(np.nan if v is None else float(v))
         return np.asarray(vals, dtype=float)
@@ -704,7 +682,7 @@ class JCollection(JCBBase, JCollectionMixin):
     def longitude(self) -> np.ndarray:
         """Vector of longitudes (np.nan for missing)."""
         vals: list[float] = []
-        for it in self._items():
+        for it in self._items:
             v = self._lon_of(it)
             vals.append(np.nan if v is None else float(v))
         return np.asarray(vals, dtype=float)
@@ -794,21 +772,217 @@ class JCollection(JCBBase, JCollectionMixin):
     
         return {"successful": successful_paths, "failed": failed_items}
 
+    
+    def fetch(
+        self,
+        site: Optional[str] = None,
+        lat: Optional[float] = None,
+        lon: Optional[float] = None,
+        tol: float = 0.001,
+        first: bool = False,
+        **kwargs
+    ) -> Optional[Union[JFile, List[JFile]]]:
+        """
+        Fetches JFile objects from the collection based on specified criteria.
+    
+        This method provides a flexible way to search for J-format files
+        by site name, geographic coordinates, or any other attribute of
+        the JFile object or its nested Heads sections.
+    
+        Parameters
+        ----------
+        site : str, optional
+            The site or station name to search for. The comparison is
+            case-insensitive.
+        lat : float, optional
+            The latitude to search for, in decimal degrees.
+        lon : float, optional
+            The longitude to search for, in decimal degrees.
+        tol : float, default=0.001
+            The tolerance in decimal degrees for geographic coordinate
+            searches. A match is found if the absolute difference is
+            within this tolerance.
+        first : bool, default=False
+            If True, returns only the first matching JFile object found,
+            or None if no match is found. If False, returns a list of
+            all matching objects.
+        **kwargs : Any
+            Additional keyword arguments to match against attributes of
+            the JFile object or its nested Heads object (e.g.,
+            `acqby='Contractor'`). The attribute name is case-insensitive.
+    
+        Returns
+        -------
+        JFile or list of JFile or None
+            - If `first=True`, returns the first matching JFile or None.
+            - If `first=False`, returns a list of all matching JFile objects.
+              An empty list is returned if no matches are found.
+    
+        Examples
+        --------
+        >>> # Fetch a single site by its name
+        >>> jfile_obj = jcollection.fetch(site='S01', first=True)
+    
+        >>> # Fetch all sites where the azimuth is 0
+        >>> zero_az_files = jcollection.fetch(azimuth=0)
+    
+        >>> # Fetch all sites within a small geographic area
+        >>> area_files = jcollection.fetch(
+        ...     lat=26.05,
+        ...     lon=-10.33,
+        ...     tol=0.1
+        ... )
+        """
+        matches = []
+    
+        for jf in self:
+            is_match = True
+    
+            # --- Match by site name (case-insensitive) ---
+            if site is not None:
+                jf_site = getattr(jf, 'site', None)
+                if not (jf_site and jf_site.upper() == site.upper()):
+                    is_match = False
+    
+            # --- Match by geographic coordinates with tolerance ---
+            if lat is not None and is_match:
+                jf_lat = getattr(jf, 'lat', None)
+                if jf_lat is None or abs(jf_lat - lat) > tol:
+                    is_match = False
+    
+            if lon is not None and is_match:
+                jf_lon = getattr(jf, 'lon', None)
+                if jf_lon is None or abs(jf_lon - lon) > tol:
+                    is_match = False
+    
+            # --- Match by other arbitrary attributes (case-insensitive) ---
+            for key, value in kwargs.items():
+                if not is_match:
+                    break
+                
+                # Check for attribute directly on JFile object first
+                attr_val = getattr(jf, key.lower(), None)
+                
+                # If not found, check on the nested head and info objects
+                if attr_val is None and jf.heads and jf.heads.head:
+                    attr_val = getattr(jf.heads.head, key.lower(), None)
+                if attr_val is None and jf.heads and jf.heads.info:
+                    attr_val = getattr(jf.heads.info, key.lower(), None)
+                
+                # Perform comparison
+                if isinstance(attr_val, str) and isinstance(value, str):
+                    if attr_val.upper() != value.upper():
+                        is_match = False
+                elif attr_val != value:
+                    is_match = False
+    
+            if is_match:
+                matches.append(jf)
+    
+        if first:
+            return matches[0] if matches else None
+        
+        return matches
+    
+    def _summary_stats(self, summary_data: List[dict]) -> str:
+        """Creates a statistical summary block from summary data."""
+        if not summary_data:
+            return "  (No statistics available for an empty collection)\n"
+    
+        total_files = len(summary_data)
+        with_z = sum(1 for r in summary_data if r.get("has_z"))
+        with_r = sum(1 for r in summary_data if r.get("has_r"))
+        with_t = sum(1 for r in summary_data if r.get("has_t"))
+    
+        # Get all frequencies from all files to find the true min/max
+        all_freqs = np.concatenate([
+            jf.freq for jf in self if jf.freq is not None and jf.freq.size > 0
+        ]) if total_files > 0 else np.array([])
+        
+        lats = self.latitude[~np.isnan(self.latitude)]
+        lons = self.longitude[~np.isnan(self.longitude)]
+    
+        freq_range = (f"Min={np.min(all_freqs):.2E}, Max={np.max(all_freqs):.2E}" 
+                      if all_freqs.size > 0 else "N/A")
+        lat_range = ( 
+            f"{min(lats):.4f} to {max(lats):.4f}" 
+            if len(lats) > 0 else "N/A"
+        )
+        lon_range = ( 
+            f"{min(lons):.4f} to {max(lons):.4f}" 
+            if len(lons) > 0 else "N/A"
+        )
+    
+        lines = [
+            "  " + "-"*68,
+            "  Statistical Summary:",
+            f"    Total Sites: {total_files}",
+            f"    Component Counts: Z={with_z}, R={with_r}, T={with_t}",
+            f"    Frequency Range (Hz): {freq_range}",
+            f"    Latitude Range:       {lat_range}",
+            f"    Longitude Range:      {lon_range}",
+            "  " + "-"*68,
+        ]
+        return "\n".join(lines)
+    
+ 
+    def __str__(self) -> str:  # pragma: no cover
+        """Provides a detailed and statistical summary of the collection."""
+        summary_data = self.summary()
+        if not summary_data:
+            return "JCollection(n=0, stations=[])"
+    
+        # --- Header ---
+        title = f" JCollection Summary (Total Sites: {len(summary_data)}) "
+        width = 72
+        header = [
+            "=" * width,
+            title.center(width),
+            "=" * width
+        ]
+        
+        # --- Per-Site Details ---
+        details = ["\nSite Details:"]
+        # Calculate max station length, ensuring
+        # it's at least as wide as the header
+        max_station_len = max(
+            [len(r['station']) for r in summary_data] + [len("Station")])
+        
+        table_header = (
+            f"  {'Station'.ljust(max_station_len)} | Freqs"
+            " | Z | R | T | Lat       | Lon        | Az    "
+        )
+        table_width = len(table_header) - 2
+        details.append(table_header)
+        details.append("  " + "-" * table_width)
+    
+        for r in summary_data:
+            tip = "Y" if r["has_t"] else "N"
+            zz = "Y" if r["has_z"] else "N"
+            rr = "Y" if r["has_r"] else "N"
+            lat_str = f"{r['lat']:.4f}" if r['lat'] is not None else "N/A"
+            lon_str = f"{r['lon']:.4f}" if r['lon'] is not None else "N/A"
+            az_str = f"{r['az']:.1f}" if r['az'] is not None else "N/A"
+            
+            details.append(
+                f"  {r['station'].ljust(max_station_len)} | "
+                f"{r['n_freq']:<5} | {zz:^1} | {rr:^1} | {tip:^1} | "
+                f"{lat_str:<9} | {lon_str:<10} | {az_str}"
+            )
+        
+        details.append("  " + "-" * table_width)
+        details.append("  *Y = Yes (data present); *N = No (data not present)")
+    
+        # --- Statistical Summary ---
+        stats_str = self._summary_stats(summary_data)
+        
+        # --- Combine and Return ---
+        return "\n".join(header + [stats_str] + details)
+
     def __repr__(self) -> str:  # pragma: no cover
         return (
             f"JCollection(n={len(self)}, "
             f"stations={self.stations()!r})"
         )
 
-    def __str__(self) -> str:  # pragma: no cover
-        lines = ["JCollection"]
-        for r in self.summary():
-            tip = "Y" if r["has_t"] else "N"
-            zz = "Y" if r["has_z"] else "N"
-            rr = "Y" if r["has_r"] else "N"
-            lines.append(
-                f"  {r['station']}: nf={r['n_freq']} "
-                f"Z={zz} R={rr} T={tip} "
-                f"lat={r['lat']} lon={r['lon']} az={r['az']}"
-            )
-        return "\n".join(lines)
+

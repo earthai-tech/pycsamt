@@ -15,6 +15,7 @@ from ..exceptions import (
     FileHandlingError,
 )
 from ..log.logger import get_logger
+from ..z.resphase import ResPhase
 from ..z.z import Z
 from ..z.tipper import Tipper
 
@@ -339,7 +340,7 @@ class EDIOMixin:
             phi_e = None
 
             def _get2(prefix: str, suf: str) -> np.ndarray:
-                # e.g. "rho", "xy" → try RHOXY / FRHOXY
+                # e.g. "rho", "xy" -> try RHOXY / FRHOXY
                 for p in (self._RHO_PREF if
                           prefix == "rho" else self._PHS_PREF):
                     key = f"{p}{suf}".lower()
@@ -357,7 +358,7 @@ class EDIOMixin:
                         if key in comp:
                             a = np.asarray(comp[key], float)
                             return _nz(a, n)
-                return np.zeros(n, float)
+                return np.zeros(n, dtype=float)
 
             # XX, XY, YX, YY
             for suf, ij in zip(
@@ -411,7 +412,7 @@ class EDIOMixin:
         zr = _nz(zr, n)
         z_obj.rotation_angle = zr[::-1] if rev else zr
 
-        # ---------------- Tipper (optional)
+        # Tipper (optional)
         have_tip = any(k.startswith(("tx", "ty")) for k in comp)
         if not have_tip:
             return
@@ -577,6 +578,7 @@ class EDIFile(EDIMixin, EDIOMixin):
         self._data_start: Optional[int] = None
 
         self.Z = Z(name=None, verbose=verbose)
+        self.Res = ResPhase(name=None, verbose=verbose) 
         self.Tip = Tipper()
         
         # writer configuration
@@ -699,7 +701,7 @@ class EDIFile(EDIMixin, EDIOMixin):
                 # --- FALLBACK: build Z/Tipper from Spectra if no MT blocks
                 if (not has_tf) and getattr(spec_obj, "n_freq", 0) > 0:
                     try:
-                        z_from_sp, tip_from_sp = spec_obj.to_Z()
+                        z_from_sp, tip_from_sp = spec_obj.to_Z(estimate_error=False)
                         if z_from_sp is not None:
                             self.Z = z_from_sp
                             # ensure rho/phi are available downstream
@@ -750,7 +752,6 @@ class EDIFile(EDIMixin, EDIOMixin):
             
                 self.add_section("timeseries", ts_obj)
 
-
         # if has_tf:
         #     self.read_data()
         # only scan MT numeric blocks when we actually found them
@@ -783,9 +784,32 @@ class EDIFile(EDIMixin, EDIOMixin):
             z_obj=self.Z,
             tip_obj=self.Tip,
         )
+ 
+        # After Z is built, create and populate 
+        # the ResPhase object for API consistency.
+        if self.Z.freq is not None and self.Z.z is not None:
+            station_name = getattr(
+                head, "dataid", None
+            ) if head else self.station
+            
+            # Instantiate and populate the ResPhase container
+            self.Res = ResPhase(
+                freq=self.Z.freq, name=station_name
+                )
+            try:
+                self.Res.compute_resistivity_phase(
+                    z_array=self.Z.z,
+                    z_err_array=self.Z.z_err,
+                    freq=self.Z.freq,
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Could not compute resistivity/phase"
+                    f" for {station_name}: {e}"
+                )
+   
         return self
 
-    # headers only (without data blocks)
     def compose_headers(self) -> str:
         out: list[str] = []
         for key in (
@@ -951,6 +975,7 @@ class EDIFile(EDIMixin, EDIOMixin):
                 _append(self._emit_block("ZROT", zrot))
     
             _append(self.header_tpl.format(title="IMPEDANCES"))
+            
             for tag, i, j in (
                 ("ZXX", 0, 0),
                 ("ZXY", 0, 1),
@@ -982,7 +1007,7 @@ class EDIFile(EDIMixin, EDIOMixin):
                     )
                 )
     
-            if dtype == "emap":
+            if dtype == "emap" or dtype =="mt":
                 _append(
                     self.header_tpl.format(
                         title="RESISTIVITIES AND PHASES"

@@ -2,9 +2,6 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
-pycsamt.zonge.qc
-----------------
-
 A convenient aggregator for all Quality-Control (QC)
 components.
 

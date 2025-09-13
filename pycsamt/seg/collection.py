@@ -17,6 +17,7 @@ from typing import (
 import numpy as np
 
 from ..log.logger import get_logger
+from ..utils.handlers import columns_manager 
 from .cbase import CBBase, CoreParser, ParseMixin
 from .edi import EDIFile
 
@@ -136,6 +137,8 @@ class CollectionMixin(ParseMixin):
     def select(
         self, stations: Sequence[str]
     ) -> "EDICollection":
+        stations = columns_manager( stations, empty_as_none=False ) 
+        
         keep = {str(s) for s in stations}
         out = EDICollection(verbose=self.verbose)
         for ed in self:  # type: ignore[operator]
@@ -402,26 +405,6 @@ class EDICollection(CBBase, CollectionMixin):
                 return ed
                 
         raise KeyError(f"site not found: {site!r}")
-    
-    # def _resolve(self, site: str) -> EDIFile:
-    #     """Find item by key, station, stem or filename."""
-    #     # fast path: exact key in index, if we have one
-    #     idx = getattr(self, "_index", None)
-    #     if isinstance(idx, dict) and site in idx:
-    #         return idx[site]
-    #     # linear scan fallbacks
-    #     for ed in self:
-    #         sid = getattr(ed, "station", None)
-    #         if sid and str(sid) == str(site):
-    #             return ed
-    #     for ed in self:
-    #         p = getattr(ed, "path", None)
-    #         if p is None:
-    #             continue
-    #         if p.stem == site or p.name == site or str(p) == site:
-    #             return ed
-    #     raise KeyError(f"site not found: {site!r}")
-    
     
     def _head(self, ed: EDIFile):
         return ed.get_section("head")
@@ -721,6 +704,114 @@ class EDICollection(CBBase, CollectionMixin):
     
         return {"successful": successful_paths, "failed": failed_items}
 
+    def fetch(
+        self,
+        site: Optional[str] = None,
+        lat: Optional[float] = None,
+        lon: Optional[float] = None,
+        tol: float = 0.001,
+        first: bool = False,
+        **kwargs
+    ) -> Optional[Union[EDIFile, List[EDIFile]]]:
+        """
+        Fetches EDIFile objects based on specified criteria.
+    
+        This method provides a flexible way to search for EDI files within
+        the collection by station name, geographic coordinates, or any
+        other attribute of the EDIFile or its Head section.
+    
+        Parameters
+        ----------
+        site : str, optional
+            The station or site name to search for. The comparison is
+            case-insensitive.
+        lat : float, optional
+            The latitude to search for, in decimal degrees.
+        lon : float, optional
+            The longitude to search for, in decimal degrees.
+        tol: float, default=0.001
+            The tolerance in decimal degrees for geographic coordinate
+            searches. A match is found if the absolute difference is
+            within this tolerance.
+        first : bool, default=False
+            If True, returns only the first matching EDIFile object found,
+            or None if no match is found. If False, returns a list of
+            all matching objects.
+        **kwargs : Any
+            Additional keyword arguments to match against attributes of
+            the EDIFile object or its Head section (e.g., `acqby='Contractor'`).
+            The attribute name is case-insensitive.
+    
+        Returns
+        -------
+        EDIFile or list of EDIFile or None
+            - If `first=True`, returns the first matching EDIFile or None.
+            - If `first=False`, returns a list of all matching EDIFile objects.
+              The list will be empty if no matches are found.
+    
+        Examples
+        --------
+        >>> # Fetch a single station by name
+        >>> edi_obj = edi_collection.fetch(station='S01', first=True)
+    
+        >>> # Fetch all stations acquired by 'Zonge'
+        >>> zonge_files = edi_collection.fetch(acqby='Zonge')
+    
+        >>> # Fetch all stations within a small geographic area
+        >>> area_files = edi_collection.fetch(
+        ...     latitude=40.7128,
+        ...     longitude=-74.0060,
+        ...     tolerance=0.1
+        ... )
+        """
+        matches = []
+    
+        for edi in self:
+            head = edi.get_section("head")
+            is_match = True
+    
+            # --- Match by station name (case-insensitive) ---
+            if site is not None:
+                edi_station = getattr(edi, 'station', None)
+                if not (edi_station and edi_station.upper() == site.upper()):
+                    is_match = False
+    
+            # --- Match by geographic coordinates with tolerance ---
+            if lat is not None and is_match:
+                edi_lat = getattr(head, 'lat', None)
+                if edi_lat is None or abs(edi_lat - lat) > tol:
+                    is_match = False
+    
+            if lon is not None and is_match:
+                edi_lon = getattr(head, 'long', None)
+                if edi_lon is None or abs(edi_lon - lon) > tol:
+                    is_match = False
+    
+            # --- Match by other arbitrary attributes (case-insensitive) ---
+            for key, value in kwargs.items():
+                if not is_match:
+                    break
+                
+                # Check for attribute on EDIFile first, then on Head section
+                attr_val = getattr(edi, key.lower(), None)
+                if attr_val is None and head:
+                    attr_val = getattr(head, key.lower(), None)
+    
+                # Perform case-insensitive comparison for strings
+                if isinstance(attr_val, str) and isinstance(value, str):
+                    if attr_val.upper() != value.upper():
+                        is_match = False
+                elif attr_val != value:
+                    is_match = False
+    
+            if is_match:
+                matches.append(edi)
+    
+        if first:
+            return matches[0] if matches else None
+        
+        return matches
+
     @staticmethod
     def _site_of(it: EDIFile) -> str | None:
         """Safely extract the site/station 
@@ -779,13 +870,98 @@ class EDICollection(CBBase, CollectionMixin):
             f"stations={self.stations()!r})"
         )
 
-    def __str__(self) -> str:  # pragma: no cover
-        lines = ["EDICollection"]
-        for r in self.summary():
-            lines.append(
-                f"  {r['station']}: nf={r['n_freq']} "
-                f"tip={'Y' if r['tipper'] else 'N'} "
-                f"sp={'Y' if r['spectra'] else 'N'} "
-                f"ts={'Y' if r['ts'] else 'N'}"
-            )
+
+    def _summary_stats(self, summary_data: List[dict]) -> str:
+        """Creates a statistical summary block from summary data."""
+        if not summary_data:
+            return "  (No statistics available for an empty collection)\n"
+    
+        total_files = len(summary_data)
+        with_tipper = sum(1 for r in summary_data if r.get("tipper"))
+        with_spectra = sum(1 for r in summary_data if r.get("spectra"))
+        with_ts = sum(1 for r in summary_data if r.get("ts"))
+    
+        # Get all frequencies from all files to find the true min/max
+        all_freqs = np.concatenate([
+            edi.Z.freq for edi in self if edi.Z.freq is not None 
+            and edi.Z.freq.size > 0
+        ]) if total_files > 0 else np.array([])
+        
+        lats = self.latitude[~np.isnan(self.latitude)]
+        lons = self.longitude[~np.isnan(self.longitude)]
+    
+        freq_range = (
+            f"Min={np.min(all_freqs):.2E}, Max={np.max(all_freqs):.2E}" 
+            if all_freqs.size > 0 else "N/A"
+        )
+        lat_range =( 
+            f"{min(lats):.4f} to {max(lats):.4f}" 
+            if len(lats) > 0 else "N/A"
+        )
+        lon_range = ( 
+            f"{min(lons):.4f} to {max(lons):.4f}" 
+            if len(lons) > 0 else "N/A"
+        )
+    
+        lines = [
+            "  " + "-"*65,
+            "  Statistical Summary:",
+            f"    Total Sites: {total_files}",
+            f"    Content Counts: Tipper={with_tipper},"
+            f" Spectra={with_spectra}, TimeSeries={with_ts}",
+            f"    Frequency Range (Hz): {freq_range}",
+            f"    Latitude Range:       {lat_range}",
+            f"    Longitude Range:      {lon_range}",
+            "  " + "-"*65,
+        ]
         return "\n".join(lines)
+    
+
+    def __str__(self) -> str:  # pragma: no cover
+        """Provides a detailed and statistical summary of the collection."""
+        summary_data = self.summary()
+        if not summary_data:
+            return "EDICollection(n=0, stations=[])"
+    
+        # --- Header ---
+        title = f" EDICollection Summary (Total Sites: {len(summary_data)}) "
+        width = 70
+        header = [
+            "=" * width,
+            title.center(width),
+            "=" * width
+        ]
+    
+        # --- Per-Site Details ---
+        details = ["\nSite Details:"]
+        max_station_len = max(
+            [len(r['station']) for r in summary_data] + [len("Station")])
+        
+        table_header = (
+            f"  {'Station'.ljust(max_station_len)} | Freqs"
+            " | Tipper | Spectra | TimeSeries"
+        )
+        table_width = len(table_header) - 2
+        details.append(table_header)
+        details.append("  " + "-" * table_width)
+    
+        for r in summary_data:
+            tip = "Y" if r["tipper"] else "N"
+            sp = "Y" if r["spectra"] else "N"
+            ts = "Y" if r["ts"] else "N"
+    
+            details.append(
+                f"  {r['station'].ljust(max_station_len)} | "
+                f"{r['n_freq']:<5} | {tip:^6} | {sp:^7} | {ts:^10}"
+            )
+        
+        details.append("  " + "-" * table_width)
+        details.append(
+            "  *Y = Yes (data present); *N = No (data not present)"
+            )
+        
+        # --- Statistical Summary ---
+        stats_str = self._summary_stats(summary_data)
+    
+        # --- Combine and Return ---
+        return "\n".join(header + [stats_str] + details)

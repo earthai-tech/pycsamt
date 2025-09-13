@@ -34,7 +34,10 @@ from ..utils.validation import ensure_n_items
 from ..gis.utils import ( 
     assert_xy_coordinate_system, 
     to_ll, to_utm,
-    normalize_lat_lon
+    normalize_lat_lon, 
+    get_elevation_from_utm, 
+    get_elevation_from_api, 
+    calculate_azimuth
  )
 from .base import AVGComponentBase 
 from .utils import ( 
@@ -128,6 +131,8 @@ class Topography(AVGComponentBase):
         data: Optional[pd.DataFrame] = None,
         meta: Optional[Mapping[str, Any]] = None,
         *,
+        utm_zone: str =None, 
+        epsg: int =None, 
         name: Optional[str] = None,
         verbose: bool = False
     ) -> None:
@@ -135,6 +140,9 @@ class Topography(AVGComponentBase):
             data=data, meta=meta, name=name or "Topography",
             verbose=verbose
         )
+        self.utm_zone =utm_zone 
+        self.epsg= epsg 
+        self._azimuths: Optional[np.ndarray] = None
 
     def read(
         self,
@@ -202,9 +210,22 @@ class Topography(AVGComponentBase):
             raise TypeError("Source must be a file path or DataFrame.")
 
         self._frame = self._normalize_stn_columns(df)
+        
+        # initialize longitude and latitude 
+        self._longitude = pd.Series (
+            np.zeros((self._frame.shape[0],), dtype=float ))
+        self._latitude = pd.Series (
+            np.zeros((self._frame.shape[0],), dtype=float )
+        )
+        
+        # reset the cache when new data is loaded
+        self._azimuths = None
+    
         return self
 
-    def _normalize_stn_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _normalize_stn_columns(
+            self, df: pd.DataFrame
+        ) -> pd.DataFrame:
         """
         Find and rename columns to a canonical schema.
         """
@@ -288,8 +309,8 @@ class Topography(AVGComponentBase):
         if self._frame.empty:
             raise ProcessingError("Topography data has not been loaded.")
 
-        x_coords = self.eastings
-        y_coords = self.northings
+        x_coords = self.easting
+        y_coords = self.northing
         
         current_system = assert_xy_coordinate_system(x_coords, y_coords)
 
@@ -305,17 +326,44 @@ class Topography(AVGComponentBase):
             return
 
         if to == "ll":
-            lat, lon = to_ll(x_coords, y_coords, as_frame=False)
-            new_df = pd.DataFrame(
-                {"latitude": lat, "longitude": lon},
-                index=self._frame.index
-            )
+            if self.utm_zone is None and self.epsg is None: 
+                self._logger.error ( 
+                    "UTM zone or 'epsg' needs to be set for"
+                    " converting easting/northing"
+                    " to longitude/latitude"
+                )
+                new_df = pd.DataFrame(
+                    {"latitude": self._latitude, 
+                     "longitude": self._longitude 
+                     },
+                    index=self._frame.index
+                )
+            else:
+                lat, lon = to_ll(
+                    x_coords, y_coords, 
+                    zone =self.utm_zone, 
+                    epsg = self.epsg, 
+                    as_frame=False
+                )
+                new_df = pd.DataFrame(
+                    {"latitude": lat, "longitude": lon},
+                    index=self._frame.index
+                )
+            self._longitude = new_df['longitude']
+            self._latitude = new_df['latitude']
+            
         elif to == "utm":
-            east, north, zone = to_utm(x_coords, y_coords, as_frame=False)
+            east, north, zone = to_utm(
+                x_coords, y_coords, 
+                epsg= self.epsg, 
+                utm_zone= self.utm_zone, 
+                as_frame=False
+            )
             new_df = pd.DataFrame(
                 {"easting": east, "northing": north, "utm_zone": zone},
                 index=self._frame.index
             )
+
         else:
             raise ValueError(
                 f"Invalid target system '{to}'. Must be "
@@ -330,6 +378,7 @@ class Topography(AVGComponentBase):
                     f"Coordinates converted to '{to}' and updated "
                     "in place."
                 )
+            
             return None
         
         return pd.concat([self._frame, new_df], axis=1)
@@ -391,8 +440,8 @@ class Topography(AVGComponentBase):
 
         # Create the target grid
         grid_x, grid_y = np.mgrid[
-            self.eastings.min():self.eastings.max():complex(resolution),
-            self.northings.min():self.northings.max():complex(resolution)
+            self.easting.min():self.easting.max():complex(resolution),
+            self.northing.min():self.northing.max():complex(resolution)
         ]
 
         # Interpolate the data
@@ -434,8 +483,8 @@ class Topography(AVGComponentBase):
         if self._frame.empty or len(self._frame) < 2:
             return pd.Series(dtype=float)
 
-        dx = np.diff(self.eastings)
-        dy = np.diff(self.northings)
+        dx = np.diff(self.easting)
+        dy = np.diff(self.northing)
         steps = np.hypot(dx, dy)
         
         return pd.Series(
@@ -498,8 +547,8 @@ class Topography(AVGComponentBase):
                 "Not enough data to correct coordinates.")
             return
 
-        x = self.eastings
-        y = self.northings
+        x = self.easting
+        y = self.northing
 
         # 1. Determine the best-fit line
         m, c = np.polyfit(x, y, 1) # y = mx + c
@@ -698,18 +747,221 @@ class Topography(AVGComponentBase):
         
         return [header] + data_lines
 
+    def get_elevation_from(
+        self,
+        from_: Literal["utm", "api"] = "utm",
+        zone: Optional[str] = None,
+        datum: str = "WGS84",
+    ) -> np.ndarray:
+        r"""Fetches station elevations from an external API.
+
+        This method retrieves elevation data for each station in
+        the survey using an online service. It can operate using
+        either the existing UTM coordinates or geographic (lat/lon)
+        coordinates.
+
+        Parameters
+        ----------
+        from_ : {'utm', 'api'}, default 'utm'
+            Specifies the coordinate system to use for the API
+            query.
+            - 'utm': Uses the ``easting`` and ``northing`` columns.
+              The ``zone`` parameter is required.
+            - 'api': Uses latitude and longitude. If these are not
+              present, they are automatically calculated from the
+              UTM coordinates.
+        zone : str, optional
+            The UTM zone designator (e.g., "11S", "32N"). This is
+            **required** when ``from_`` is 'utm'.
+        datum : str, default "WGS84"
+            The geodetic datum to assume for coordinate
+            conversions.
+
+        Returns
+        -------
+        numpy.ndarray
+            An array of elevation values in meters corresponding
+            to each station.
+
+        Raises
+        ------
+        ProcessingError
+            If the topography data has not been loaded first.
+        ValueError
+            If ``from_`` is 'utm' but no ``zone`` is provided, or
+            if an invalid ``from_`` value is given.
+
+        See Also
+        --------
+        get_elevation_from_utm : Fetches elevation from UTM data.
+        get_elevation_from_api : Fetches elevation from lat/lon data.
+        convert_coords : Converts between coordinate systems.
+        """
+        # Ensure the topography data frame has been loaded first
+        if self._frame.empty:
+            raise ProcessingError(
+                "Topography data has not been loaded. "
+                "Call the .read() method first."
+            )
+
+        elevations = np.array([], dtype=float)
+        
+        zone = zone or self.utm_zone 
+        if from_ == "utm":
+            # The UTM zone is required for this operation
+            if zone is None:
+                raise ValueError(
+                    "A UTM 'zone' must be provided when "
+                    "from_='utm'."
+                )
+            # Fetch elevations using existing easting/northing
+            elevations = get_elevation_from_utm(
+                easting=self.easting,
+                northing=self.northing,
+                zone=zone,
+                datum=datum,
+            )
+
+        elif from_ == "api":
+            # Check if lat/lon data exists; if not, create it
+            if 'latitude' not in self._frame.columns or (
+                    'longitude' not in self._frame.columns):
+                if self.verbose:
+                    self._logger.info(
+                        "Latitude/Longitude not found. "
+                        "Converting from UTM."
+                    )
+                self.convert_coords(to='ll', inplace=True)
+
+            # Fetch elevations using latitude and longitude
+            elevations = get_elevation_from_api(
+                latitude=self.latitude,
+                longitude=self.longitude,
+            )
+        else:
+            raise ValueError(
+                f"Invalid 'from_' argument: '{from_}'. "
+                "Must be 'utm' or 'api'."
+            )
+
+        return elevations 
+
+    def get_azimuth(
+        self,
+        *,
+        mode: Optional[Literal["mean", "median"]] = None
+    ) -> Union[float, np.ndarray]:
+        r"""Returns the survey line azimuth(s).
+
+        This method can return the full array of segment azimuths
+        or a single aggregated value (mean or median) representing
+        the overall trend of the survey line.
+
+        Parameters
+        ----------
+        mode : {'mean', 'median'}, optional
+            Determines the return format.
+            - ``None`` (default): Returns the full NumPy array of
+              azimuths for each station segment.
+            - 'mean': Returns the circular mean of all segment
+              azimuths, providing the average direction.
+            - 'median': Returns the median of all segment azimuths.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            - If ``mode`` is ``None``, returns the full array of
+              azimuths.
+            - If ``mode`` is 'mean' or 'median', returns a single
+              float representing the aggregated value.
+
+        Notes
+        -----
+        The 'mean' is calculated using circular statistics to
+        correctly average angles (e.g., the mean of 350° and 10°
+        is 0°, not 180°). The 'median' is calculated linearly and
+        is a good approximation for relatively straight lines.
+        """
+        # Retrieve the azimuths using the caching property
+        azimuths = self.azimuth
+
+        if mode is None:
+            return azimuths
+
+        # Filter out NaN values before aggregating
+        valid_azimuths = azimuths[~np.isnan(azimuths)]
+
+        if valid_azimuths.size == 0:
+            return np.nan if mode else np.array([])
+
+        if mode == "mean":
+            # Correctly average angles using circular statistics
+            rads = np.deg2rad(valid_azimuths)
+            sin_mean = np.mean(np.sin(rads))
+            cos_mean = np.mean(np.cos(rads))
+            mean_rad = np.arctan2(sin_mean, cos_mean)
+            mean_deg = np.rad2deg(mean_rad)
+            # Normalize to 0-360 range
+            return (mean_deg + 360) % 360
+
+        if mode == "median":
+            return np.median(valid_azimuths)
+
+        raise ValueError(
+            f"Invalid mode '{mode}'. Choose from 'mean', 'median',"
+            " or None."
+        )
+
+    @property
+    def azimuth(self) -> np.ndarray:
+        r"""Calculates and returns the forward azimuths.
+
+        This property computes the azimuth for each line segment
+        (from one station to the next) along the survey line. The
+        result is cached for efficiency.
+
+        Returns
+        -------
+        numpy.ndarray
+            An array of azimuths in degrees (0-360), where the
+            azimuth at index ``i`` corresponds to the direction
+            from station ``i`` to ``i+1``.
+        """
+        # Check if the azimuths have already been calculated
+        if self._azimuths is None:
+            # Ensure there's enough data to calculate a direction
+            if self.easting.size < 2:
+                self._azimuths = np.array([], dtype=float)
+            else:
+                # If not cached, calculate and store the result
+                self._azimuths = calculate_azimuth(
+                    self.easting, self.northing
+                )
+        return self._azimuths
+
+    @property
+    def bearing(self) -> np.ndarray:
+        r"""Alias for the azimuth property.
+
+        In this context, bearing is treated as synonymous with
+        azimuth (0-360 degrees clockwise from North).
+        """
+        return self.azimuth
+    
     @property
     def stations(self) -> np.ndarray:
+        # This will be deprecated and 
         return self._frame.get(
             "station", pd.Series(dtype=float)).values
 
     @property
-    def eastings(self) -> np.ndarray:
+    def easting(self) -> np.ndarray:
         return self._frame.get(
             "easting", pd.Series(dtype=float)).values
 
     @property
-    def northings(self) -> np.ndarray:
+    def northing(self) -> np.ndarray:
+        # north for single value of northing 
         return self._frame.get(
             "northing", pd.Series(dtype=float)).values
 
@@ -717,6 +969,39 @@ class Topography(AVGComponentBase):
     def elevations(self) -> np.ndarray:
         return self._frame.get(
             "elevation", pd.Series(dtype=float)).values
+    @property 
+    def elevation (self): 
+        # use elev for single station and elevation
+        # for pd.Series or array 
+        # of multiple elevations 
+        return self.elevations 
+
+    @property
+    def latitude(self) -> np.ndarray:
+        """Exposes the latitude data as a NumPy array.
+
+        Returns
+        -------
+        numpy.ndarray
+            An array of station latitudes, or an empty array if
+            latitude data is not available in the frame.
+        """
+        return self._frame.get(
+            "latitude", self._latitude).values
+
+    @property
+    def longitude(self) -> np.ndarray:
+        """Exposes the longitude data as a NumPy array.
+
+        Returns
+        -------
+        numpy.ndarray
+            An array of station longitudes, or an empty array if
+            longitude data is not available in the frame.
+        """
+        return self._frame.get(
+            "longitude", self._longitude).values
+       
 
 def _to_float_series(s: pd.Series) -> pd.Series:
     """Coerce a Series to float, preserving NaN for non-numeric."""

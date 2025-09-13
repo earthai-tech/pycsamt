@@ -620,6 +620,11 @@ class JCBBase:
                 }
             )
         return rows
+    
+    @property 
+    def items(self):
+        """Internal: unified iterator over stored items."""
+        return getattr(self, "_items", [])
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"JCBBase(n={len(self)}, stations={self.stations()!r})"

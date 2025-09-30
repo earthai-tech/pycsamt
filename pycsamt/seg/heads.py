@@ -11,13 +11,14 @@ from typing import List, Optional, Sequence, Union, Iterable, Tuple
 
 from .. import __version__ as _PKG_VERSION
 from ..log.logger import get_logger
-from ..site.location import Location
+
 from ..gis.utils import dms_to_decimal, decimal_to_dms
 from ..exceptions import (
     HeaderError,
     EdIDataError,
     FileHandlingError,
 )
+from ._location import Location
 from .base import EDIComponentBase
 from .property import Source, Processing, Copyright, Software
 from .validation import IsEdi 

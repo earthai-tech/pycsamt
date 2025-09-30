@@ -7,6 +7,7 @@ import importlib
 
 import numpy as np
 import pytest
+from pycsamt.transformers import jedi as tr
 
 
 def _install_stubs(monkeypatch):
@@ -141,8 +142,6 @@ def _install_stubs(monkeypatch):
 
     jc_mod.JCollection = JCollection
 
-    # Import transformers now that stubs are in place
-    from pycsamt.core import transformers as tr
 
     importlib.reload(tr)
     return tr, seg_coll, seg_edi, zonge_avg, j_mod, jc_mod

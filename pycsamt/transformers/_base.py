@@ -7,8 +7,11 @@ from __future__ import annotations
 from typing import Any, Optional
 import numpy as np 
 
-from .base import TFBundle, MTBase, ensure_station
-from .config import get_config
+from ..core.base import TFBundle, MTBase, ensure_station
+from ..core.config import get_config
+from ..seg.heads import Head, Info
+from ..seg.meas import DefineMeas
+from ..seg.mtemap import MTEMAP
 
 __all__ = [
     "TransformerMixin",
@@ -509,3 +512,63 @@ class TransformerMixin(MTBase):
         )
         edi = self.emit_edi(b)
         return self.post_emit(edi, source, b)
+
+    def _ensure_head(self, ed, station: str, empty: float):
+        h = ed.get_section("head")
+        if h is None:
+            h = Head()
+            h.dataid = (station or "").strip()
+            h.stdvers = "SEG 1.0"
+            h.progvers = "PYCSAMT"
+            h.empty = float(empty)
+            h.lat = 0.0
+            h.long = 0.0
+            h.elev = 0.0
+            ed.add_section("head", h)
+            
+        return h
+    
+    
+    def _ensure_info(self, ed, survey_id: str):
+        info = ed.get_section("info")
+        if info is None:
+            info = Info()
+            info.update(
+                info_text=[
+                    f"  SURVEY ID:{survey_id or ''}",
+                    "  ROTATION=FIX",
+                ]
+            )
+            ed.add_section("info", info)
+        return info    
+
+    
+    def _ensure_definemeas(
+        self,
+        ed,
+        *,
+        units: str = "M",
+        reftype: str = "CART",
+    ):
+        dm = ed.get_section("definemeas")
+        if dm is None:
+            dm = DefineMeas()
+            dm.units = units
+            dm.reftype = reftype
+            h = ed.get_section("head")
+            if h is not None:
+                dm.reflat = getattr(h, "lat", 0.0)
+                dm.reflong = getattr(h, "long", 0.0)
+                dm.refelev = getattr(h, "elev", 0.0)
+            ed.add_section("definemeas", dm)
+            
+        return dm
+    
+    def _ensure_mtsect(self, ed, sectid: str, nfreq: int):
+        mt = ed.get_section("mtsect")
+        if mt is None:
+            mt = MTEMAP()
+            ed.add_section("mtsect", mt)
+        mt.sectid = sectid
+        mt.nfreq = int(nfreq)
+        return mt

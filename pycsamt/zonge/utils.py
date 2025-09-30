@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 #       Author: LKouadio <etanoyau@gmail.com>
 #       License: LGPL-3.0 
-"""pycsamt.zonge.utils
+
+"""
 General‑purpose helpers for **Zonge** AVG / AMTAVG files and
 accompanying *station* profiles.
 

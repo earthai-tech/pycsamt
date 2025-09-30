@@ -8,9 +8,9 @@ import pandas as pd
 from types import SimpleNamespace
 
 from pycsamt.zonge.avg import AVG
-from pycsamt.core import transformers as tr
-from pycsamt.seg.collection import EDICollection
 
+from pycsamt.seg.collection import EDICollection
+from pycsamt.transformers import jedi as tr
 
 @pytest.mark.usefixtures("modern_data_file", "stn_file_k2")
 def test_avg_with_topo_injection_adds_head(

@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from pathlib import Path
 import os
 import re
+import math 
 import copy
 import json
 import logging
@@ -83,7 +84,15 @@ class StationNamePolicy:
     custom_normalize: Callable[[str], str] = staticmethod(
         lambda s: s
     )
-
+    def _try_float(self, v) -> Optional[float]:
+        try:
+            x = float(v)
+            if math.isfinite(x):
+                return x
+        except Exception:
+            pass
+        return None
+    
     def validate(self, name: Optional[str]) -> Optional[str]:
         r"""
         Validate and normalize a name.
@@ -134,15 +143,20 @@ class StationNamePolicy:
         >>> StationNamePolicy(prefix='X').synthesize('AB-01')
         'AB01'
         """
-
         if station_id is None:
             return f"{self.prefix}UNK"
+
+        # numeric-friendly path
+        x = self._try_float(station_id)
+        if x is not None:
+            iv = int(round(x))
+            return f"{self.prefix}{iv:0{self.pad}d}"
+
+        # non-numeric fallback (compact token)
         sid = str(station_id).strip()
-        if sid.isdigit():
-            return f"{self.prefix}{int(sid):0{self.pad}d}"
         token = re.sub(r"\W+", "", sid)[: self.maxlen]
         return token or f"{self.prefix}UNK"
-
+    
     def ensure(
         self,
         name: Optional[str],
@@ -168,9 +182,24 @@ class StationNamePolicy:
         validate : Validate only, without fallback.
         synthesize : Create a name from the station id only.
         """
-        return self.validate(name) or self.synthesize(station_id)
+        s = self.validate(name)
 
+        # if name is clearly non-numeric, trust it
+        if s and not s.isdigit():
+            return s
 
+        # prefer numeric id when available (avoids 150.0->"1500")
+        x = self._try_float(station_id)
+        if x is not None:
+            iv = int(round(x))
+            # if user passed a numeric name, keep when identical
+            if s and s.isdigit() and int(s) == iv:
+                return s
+            return f"{self.prefix}{iv:0{self.pad}d}"
+
+        # last resort
+        return s or self.synthesize(station_id)
+    
 @dataclass
 class CoreConfig:
     empty: float = 1.0e32

@@ -12,10 +12,13 @@ from typing import (
     Optional,
     Sequence,
     Union,
+    Any
 )
 
 import numpy as np
 
+from ..core.config import get_config, StationNamePolicy
+from ..exceptions import SiteError 
 from ..log.logger import get_logger
 from ..utils.handlers import columns_manager 
 from .cbase import CBBase, CoreParser, ParseMixin
@@ -377,35 +380,45 @@ class EDICollection(CBBase, CollectionMixin):
             out.add(ed)
         return out
 
-    def _resolve(self, site: str) -> EDIFile:
+
+    def _resolve(self, site: str):
         """Find item by key, station, stem or filename
         (case-insensitive)."""
-        site_upper = str(site).upper()
-        
-        # Fast path: case-insensitive check on the index dictionary
+        want = str(site).upper()
+        cands = set(_site_candidates(want))
+    
+        # fast path: index keys (case-insensitive)
         for key, idx in self._index.items():
-            if str(key).upper() == site_upper:
+            if str(key).upper() in cands:
                 return self._items[idx]
-                
-        # Fallback to iterating through all items (case-insensitive)
+    
+        # scan stations
         for ed in self:
             sid = getattr(ed, "station", None)
-            if sid and str(sid).upper() == site_upper:
+            if sid and str(sid).upper() in cands:
                 return ed
-                
-        # Fallback to path matching (case-insensitive)
-        site_lower = str(site).lower()
+    
+        # scan paths
+        low = want.lower()
         for ed in self:
             p = getattr(ed, "path", None)
             if p is None:
                 continue
-            if (p.stem.lower() == site_lower or
-                p.name.lower() == site_lower or
-                str(p).lower() == site_lower):
+            if (
+                p.stem.lower() in {low} |
+                {c.lower() for c in cands}
+                or p.name.lower() == low
+                or str(p).lower() == low
+            ):
                 return ed
-                
-        raise KeyError(f"site not found: {site!r}")
     
+        all_sites = ", ".join(self.stations())
+        raise SiteError(
+            f"site not found: {site!r}. Try one of: "
+            f"{all_sites}\nHint: call "
+            "`<collection>.stations()` to list."
+        )
+
     def _head(self, ed: EDIFile):
         return ed.get_section("head")
     
@@ -711,105 +724,191 @@ class EDICollection(CBBase, CollectionMixin):
         lon: Optional[float] = None,
         tol: float = 0.001,
         first: bool = False,
-        **kwargs
-    ) -> Optional[Union[EDIFile, List[EDIFile]]]:
-        """
-        Fetches EDIFile objects based on specified criteria.
-    
-        This method provides a flexible way to search for EDI files within
-        the collection by station name, geographic coordinates, or any
-        other attribute of the EDIFile or its Head section.
-    
+        strict: bool = False,
+        policy: Optional[StationNamePolicy] = None,
+        **kwargs,
+    ) -> Optional[Union["EDIFile", List["EDIFile"]]]:
+
+        r"""
+        Fetch EDI files by station, coordinates, or other metadata.
+        
+        This method searches the collection for
+        :class:`~pycsamt.seg.edi.EDIFile` objects by
+        station name, geographic coordinates, or any
+        attribute exposed on the EDI or its ``>HEAD``
+        section.
+        
         Parameters
         ----------
-        site : str, optional
-            The station or site name to search for. The comparison is
-            case-insensitive.
+        site : str or int or float, optional
+            Station selector. Case-insensitive. Numeric-like
+            values are normalized using the active
+            :class:`~pycsamt.core.config.StationNamePolicy`
+            and station-variant expansion. Variants tried
+            include the raw token, integer form, zero-padded
+            prefix form (e.g. ``S150``), and common ``×10``
+            slips (``1500`` <-> ``150``).
         lat : float, optional
-            The latitude to search for, in decimal degrees.
+            Latitude in decimal degrees. Compared against the
+            ``>HEAD`` field ``lat`` using the tolerance
+            ``tol``.
         lon : float, optional
-            The longitude to search for, in decimal degrees.
-        tol: float, default=0.001
-            The tolerance in decimal degrees for geographic coordinate
-            searches. A match is found if the absolute difference is
-            within this tolerance.
-        first : bool, default=False
-            If True, returns only the first matching EDIFile object found,
-            or None if no match is found. If False, returns a list of
-            all matching objects.
+            Longitude in decimal degrees. Compared against the
+            ``>HEAD`` field ``long`` using the tolerance
+            ``tol``.
+        tol : float, default 0.001
+            Absolute tolerance (decimal degrees) used when
+            matching ``lat`` and ``lon``.
+        first : bool, default False
+            If ``True``, return only the first matching object
+            or ``None`` if no match (unless ``strict=True``,
+            see *Raises*). If ``False``, return a list of all
+            matches (possibly empty).
+        strict : bool, default False
+            If ``True`` and no match is found, raise
+            :class:`~pycsamt.seg.exceptions.SiteError` with a
+            helpful message suggesting
+            ``<collection>.stations()``.
+        policy : StationNamePolicy, optional
+            Custom naming policy. Defaults to
+            :func:`~pycsamt.core.config.get_config`
+            ``.station_policy``.
         **kwargs : Any
-            Additional keyword arguments to match against attributes of
-            the EDIFile object or its Head section (e.g., `acqby='Contractor'`).
-            The attribute name is case-insensitive.
-    
+            Additional attribute filters. Keys are matched
+            (case-insensitive) first on the EDI object, then
+            on its ``head`` section. String values compare in
+            a case-insensitive way; non-strings compare by
+            equality.
+        
         Returns
         -------
         EDIFile or list of EDIFile or None
-            - If `first=True`, returns the first matching EDIFile or None.
-            - If `first=False`, returns a list of all matching EDIFile objects.
-              The list will be empty if no matches are found.
-    
+            If ``first=True``, an :class:`EDIFile` or ``None``
+            when no match and ``strict=False``. If
+            ``first=False``, a list of matches (possibly
+            empty).
+        
+        Raises
+        ------
+        SiteError
+            Raised when no match is found and ``strict=True``.
+            The error message lists available stations and
+            suggests calling ``<collection>.stations()``.
+        
+        Notes
+        -----
+        - Station matching expands candidate variants using the
+          active :class:`StationNamePolicy` and a small set of
+          robust transforms (integer form, zero-padded with
+          prefix, and common ``×10`` slips).
+        - Geographic matching uses absolute tolerance on decimal
+          degrees and compares against ``>HEAD`` fields ``lat``
+          and ``long``.
+        - Arbitrary filters in ``**kwargs`` are applied after
+          station and coordinate tests. String comparisons are
+          case-insensitive; other types use equality.
+        
         Examples
         --------
-        >>> # Fetch a single station by name
-        >>> edi_obj = edi_collection.fetch(station='S01', first=True)
-    
-        >>> # Fetch all stations acquired by 'Zonge'
-        >>> zonge_files = edi_collection.fetch(acqby='Zonge')
-    
-        >>> # Fetch all stations within a small geographic area
-        >>> area_files = edi_collection.fetch(
-        ...     latitude=40.7128,
-        ...     longitude=-74.0060,
-        ...     tolerance=0.1
-        ... )
+        >>> # List available stations
+        >>> coll.stations()
+        ['S150', 'S200', 'S250', 'S300', ...]
+        
+        >>> # Fetch a single station by numeric label
+        >>> ed = coll.fetch(site=150, first=True)
+        
+        >>> # Enforce a helpful error when not found
+        >>> coll.fetch(site='S999', first=True, strict=True)
+        Traceback (most recent call last):
+            ...
+        SiteError: No station found. Try one of: ...
+        
+        >>> # Fetch by coordinates within tolerance
+        >>> ed = coll.fetch(lat=-22.37, lon=139.19, first=True)
+        
+        >>> # Filter by metadata on >HEAD (case-insensitive)
+        >>> zs = coll.fetch(acqby='Zonge')
+        
+        See Also
+        --------
+        pycsamt.core.config.StationNamePolicy
+        pycsamt.core.config.ensure_station
+        pycsamt.seg.collection.EDICollection.stations
+        pycsamt.seg.collection.EDICollection._resolve
+        
+        References
+        ----------
+        .. [1] SEG EDI 1.0 Electromagnetic Data Interchange
+               specification.
         """
-        matches = []
+
+
+        matches: List["EDIFile"] = []
+        
+        site_cands = (
+            set(_site_candidates(site, policy))
+            if site is not None else set()
+        )
     
         for edi in self:
             head = edi.get_section("head")
-            is_match = True
+            ok = True
     
-            # --- Match by station name (case-insensitive) ---
+            # --- station match (case-insensitive, with variants)
             if site is not None:
-                edi_station = getattr(edi, 'station', None)
-                if not (edi_station and edi_station.upper() == site.upper()):
-                    is_match = False
+                est = getattr(edi, "station", None)
+                if not (
+                    est and est.upper() in site_cands
+                ):
+                    ok = False
     
-            # --- Match by geographic coordinates with tolerance ---
-            if lat is not None and is_match:
-                edi_lat = getattr(head, 'lat', None)
-                if edi_lat is None or abs(edi_lat - lat) > tol:
-                    is_match = False
+            # --- geo match with tolerance
+            if lat is not None and ok:
+                hlat = getattr(head, "lat", None)
+                if hlat is None or abs(hlat - lat) > tol:
+                    ok = False
     
-            if lon is not None and is_match:
-                edi_lon = getattr(head, 'long', None)
-                if edi_lon is None or abs(edi_lon - lon) > tol:
-                    is_match = False
+            if lon is not None and ok:
+                hlon = getattr(head, "long", None)
+                if hlon is None or abs(hlon - lon) > tol:
+                    ok = False
     
-            # --- Match by other arbitrary attributes (case-insensitive) ---
-            for key, value in kwargs.items():
-                if not is_match:
+            # --- arbitrary attribute matches
+            for key, val in kwargs.items():
+                if not ok:
                     break
-                
-                # Check for attribute on EDIFile first, then on Head section
-                attr_val = getattr(edi, key.lower(), None)
-                if attr_val is None and head:
-                    attr_val = getattr(head, key.lower(), None)
+                aval = getattr(edi, key.lower(), None)
+                if aval is None and head is not None:
+                    aval = getattr(head, key.lower(), None)
+                if isinstance(aval, str) and isinstance(val, str):
+                    if aval.upper() != val.upper():
+                        ok = False
+                elif aval != val:
+                    ok = False
     
-                # Perform case-insensitive comparison for strings
-                if isinstance(attr_val, str) and isinstance(value, str):
-                    if attr_val.upper() != value.upper():
-                        is_match = False
-                elif attr_val != value:
-                    is_match = False
-    
-            if is_match:
+            if ok:
                 matches.append(edi)
     
         if first:
-            return matches[0] if matches else None
-        
+            if matches:
+                return matches[0]
+            if strict:
+                all_sites = ", ".join(self.stations())
+                raise SiteError(
+                    "No station found. Try one of: "
+                    f"{all_sites}\nHint: call "
+                    "`<collection>.stations()` to list."
+                )
+            return None
+    
+        # first=False
+        if not matches and strict:
+            all_sites = ", ".join(self.stations())
+            raise SiteError(
+                "No stations matched your query. Try one of: "
+                f"{all_sites}\nHint: call "
+                "`<collection>.stations()` to list."
+            )
         return matches
 
     @staticmethod
@@ -965,3 +1064,39 @@ class EDICollection(CBBase, CollectionMixin):
     
         # --- Combine and Return ---
         return "\n".join(header + [stats_str] + details)
+    
+
+def _site_candidates(
+    site: Any,
+    policy: Optional[StationNamePolicy] = None,
+) -> List[str]:
+    pol = policy or get_config().station_policy
+
+    def _try_float(v):
+        try:
+            return float(v)
+        except Exception:
+            return None
+
+    s = str(site).strip()
+    cands = {s.upper()}
+
+    x = _try_float(s)
+    if x is not None:
+        n = int(round(x))
+        cands.add(str(n).upper())
+        cands.add(
+            f"{pol.prefix}{n:0{pol.pad}d}".upper()
+        )
+        # common “×10” slip: try n*10 and n/10
+        cands.add(str(n * 10).upper())
+        cands.add(
+            f"{pol.prefix}{n * 10:0{pol.pad}d}".upper()
+        )
+        if n % 10 == 0:
+            m = n // 10
+            cands.add(str(m).upper())
+            cands.add(
+                f"{pol.prefix}{m:0{pol.pad}d}".upper()
+            )
+    return list(cands)

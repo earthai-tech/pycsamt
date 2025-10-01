@@ -1,19 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Re-export submodules so users/tests can do:
-#   from pycsamt.core import base as b
-#   from pycsamt.core import transformers as tr
-# from . import base
-# from . import transformers
-
-# Public transformer classes / mixins
-from ._transformers import TransformerMixin  # if present in your package
-from .transformers import AVGtoEDI, JtoEDI
-
-# Core base utilities / classes
-from .base import CoreObject, MTBase, TFBundle, to_edi
-
-# Registry primitives (low-level record/manifest/store + helpers)
+from ._transformers import TransformerMixin  
 from ._registry import (
     RegistryError,
     Record,
@@ -23,8 +10,8 @@ from ._registry import (
     Registry,
     guess_kind,
 )
-
-# High-level Registry API and packing helpers
+from .transformers import AVGtoEDI, JtoEDI
+from .base import CoreObject, MTBase, TFBundle, to_edi
 from .registry import (
     Packer,
     register_packer,
@@ -34,15 +21,11 @@ from .registry import (
     unpack_from_file,
     RegistryAPI,
 )
-
-# Bundle helpers / mixins
 from .mixins import (
     bundle_from_edi,
     BundleMixin,
     BundleContainerMixin,
 )
-
-# Core configuration & adapter registry
 from .config import (
     StationNamePolicy,
     CoreConfig,
@@ -57,10 +40,6 @@ from .config import (
 )
 
 __all__ = [
-    # Submodules
-    # "base",
-    # "transformers",
-
     # Transformers / mixins
     "TransformerMixin",
     "AVGtoEDI",

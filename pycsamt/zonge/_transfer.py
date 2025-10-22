@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import math
+import warnings 
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,9 +21,14 @@ import numpy as np
 import pandas as pd
 
 from ..log.logger import get_logger 
-from .utils import load_avg, to_xarray, AvgDataError
+from .utils import load_avg, AvgDataError
 from .schema import _CANONICAL_MAP 
-
+try:
+    from .utils import to_xarray
+except ImportError:  # pragma: no cover
+    warnings.warn(
+        "xarray is required for transferring legacy AVG."
+    )
 logger = get_logger(__name__)
 
 __all__= ['LegacyAVGBase']

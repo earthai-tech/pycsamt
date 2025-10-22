@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: GPL-3.0
+
 """
 pycsamt: A Python Toolbox for audio-magnetotellurics (AMT & CSAMT)
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from pycsamt.core import _transformers as t
+from pycsamt.transformers import _base as t
 from pycsamt.core.base import TFBundle
 from pycsamt.core.config import config_context
 

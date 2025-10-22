@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from ._transformers import TransformerMixin  
 from ._registry import (
     RegistryError,
     Record,

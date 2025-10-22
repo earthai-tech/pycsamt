@@ -36,6 +36,8 @@ __all__ = [
     "METERS_TO_KILOMETERS", "PERCENT_FACTOR",
     # zonge conventions
     "ZONGE_RHO_FACTOR",
+    # earth radius 
+    "_EARTH_R"
 ]
 # ---------------------------------------------------------------------
 # Pure mathematics
@@ -93,3 +95,8 @@ PERCENT_FACTOR:      Final[float] = 100.0
 # Factor used in legacy Zonge resistivity formula:
 #   ρₐ = (1 / (5 * f)) * |E/H|²
 ZONGE_RHO_FACTOR:    Final[float] = 0.2  # 1 / 5
+
+# ---- small geodesy helpers --------------------------------------------------
+_EARTH_R = 6_371_000.0  # meters
+
+_M_PER_DEG = 111_000.0

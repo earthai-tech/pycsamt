@@ -547,8 +547,6 @@ class Frequency(AVGComponentBase):
 
     __repr__ = __str__
 
-# helpers 
-# --------
 def _to_float(x: Any) -> float | np.floating | np.nan:
     """
     Best-effort numeric coercion for table columns.

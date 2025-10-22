@@ -255,4 +255,3 @@ def any_jc_file(jc_files: list[Path]) -> Path:
     """A single J file from the collection (first sorted)."""
     return jc_files[0]
 
-

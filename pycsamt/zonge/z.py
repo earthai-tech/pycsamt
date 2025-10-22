@@ -25,9 +25,8 @@ import pandas as pd
 
 from ..constants import MU_0, PI
 from ..exceptions import AvgDataError
-from ..utils.deps import ensure_pkg
 from ..log.logger import get_logger 
-
+from ..utils._dependency import import_optional_dependency
 from .tensor import TensorBase, _norm_comp
 from .utils import ( 
     _to_num, 
@@ -355,7 +354,6 @@ class Z(TensorBase):
                 align=align
             )
 
-    @ensure_pkg("xarray", extra="xarray is required")
     def to_xarray(
         self,
         *,
@@ -368,6 +366,12 @@ class Z(TensorBase):
         """
         Return a 3D or 4D xarray.DataArray.
         """
+        import_optional_dependency(
+            "xarray",
+            extra="xarray is required for to_xarray()",
+            errors="raise",
+        )
+        
         import xarray as xr
 
         # Use the new to_tensor method to get the data

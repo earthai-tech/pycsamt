@@ -18,7 +18,8 @@ from ..exceptions import (
     EdIDataError,
     FileHandlingError,
 )
-from ._location import Location
+from ..loc import Location
+
 from .base import EDIComponentBase
 from .property import Source, Processing, Copyright, Software
 from .validation import IsEdi 
@@ -133,7 +134,7 @@ class Head(EDIComponentBase):
 
     Attributes
     ----------
-    Location : :class:`~pycsamt.site.location.Location`
+    Location : :class:`~pycsamt.loc.Location`
         Container for geographic coordinates.  The
         :pyattr:`lat`, :pyattr:`long` and :pyattr:`elev`
         properties delegate to this object.
@@ -336,6 +337,14 @@ class Head(EDIComponentBase):
                     "Converted DMS longitude to decimal degrees."
                     )
 
+    @property
+    def lon(self) -> Optional[float]:
+        return self.long
+    
+    @lon.setter
+    def lon(self, value: Union[str, float, int, None]) -> None:
+        self.long = value 
+    
     @property
     def elev(self) -> Optional[float]:
         return self.Location.elevation

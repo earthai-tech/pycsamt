@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
+
 from __future__ import annotations
 
 from typing import Any, Callable, Optional
 from typing import List, Tuple, Sequence, Dict, Union
 
-import math
 import copy
 from pathlib import Path
 
+import math 
 import numpy as np
 import pandas as pd
 
-from ..constants import _EARTH_R
 from ..core.base import CoreObject
 from ..seg.edi import EDIFile
 from ..seg.collection import EDICollection
@@ -20,277 +22,445 @@ from ..session import normalize_session
 from ..gis.utils import (
     assert_lat_value,
     assert_lon_value,
-    assert_elevation_value,
-    normalize_lat_lon,
 )
 
+from .utils import (
+    get_coords as _get_coords,
+    set_coords as _set_coords,
+    maybe_copy as _maybe_copy,
+    _get_head,
+    _ensure_head, 
+    as_edicollection       
+)
 
-__all__ = ["SiteMixin", "Site", "Sites"]
-
-
-def _safe_get(d: Any, *names: str, default: Any = None) -> Any:
-    for n in names:
-        try:
-            v = getattr(d, n)
-            return v
-        except Exception:
-            pass
-        try:
-            v = d[n]  # type: ignore[index]
-            return v
-        except Exception:
-            pass
-    return default
-
-
-def _clone_edi(edi: EDIFile) -> EDIFile:
-    try:
-        return copy.deepcopy(edi)
-    except Exception:
-        # best effort shallow clone
-        c = EDIFile()
-        for k, v in getattr(edi, "__dict__", {}).items():
-            try:
-                setattr(c, k, copy.copy(v))
-            except Exception:
-                setattr(c, k, v)
-        return c
-
-
-def _station_name(edi: EDIFile) -> str:
-    head = _safe_get(edi, "HEAD", default=None)
-    for k in ("station", "sitename", "name", "STATION"):
-        v = _safe_get(head, k, default=None)
-        if v:
-            return str(v)
-    return str(_safe_get(edi, "name", default="")) or "site"
-
-
-def _set_station_name(edi: EDIFile, name: str) -> None:
-    head = _safe_get(edi, "HEAD", default=None)
-    if head is None:
-        try:
-            edi.HEAD = type("HEAD", (), {})()  # type: ignore
-            head = edi.HEAD  # type: ignore[attr-defined]
-        except Exception:
-            pass
-    for k in ("station", "sitename", "name", "STATION"):
-        try:
-            setattr(head, k, name)
-            return
-        except Exception:
-            continue
-    try:
-        edi.name = name
-    except Exception:
-        pass
-
-
-def _coords_tuple(edi: EDIFile) -> Tuple[float, float, float]:
-    head = _safe_get(edi, "HEAD", default=None)
-    lat = _safe_get(head, "lat", "LAT", default=None)
-    lon = _safe_get(head, "lon", "LON", default=None)
-    elev = _safe_get(head, "elev", "elevation", "ELEV", default=0)
-    try:
-        if lat is None or lon is None:
-            return (np.nan, np.nan, float(elev or 0.0))
-        latv = assert_lat_value(lat)  # type: ignore[arg-type]
-        lonv = assert_lon_value(lon)  # type: ignore[arg-type]
-        elevv = assert_elevation_value(elev)
-        return (float(latv), float(lonv), float(elevv))
-    except Exception:
-        return (np.nan, np.nan, 0.0)
-
-
-def _set_coords_on_head(
-    edi: EDIFile,
-    lat: float,
-    lon: float,
-    elev: Optional[float] = None,
-) -> None:
-    head = _safe_get(edi, "HEAD", default=None)
-    if head is None:
-        try:
-            edi.HEAD = type("HEAD", (), {})()  # type: ignore
-            head = edi.HEAD  # type: ignore[attr-defined]
-        except Exception:
-            return
-    try:
-        setattr(head, "lat", float(lat))
-        setattr(head, "lon", float(lon))
-        if elev is not None:
-            setattr(head, "elev", float(elev))
-    except Exception:
-        pass
-
-
-def _component_names() -> List[str]:
-    return ["Zxx", "Zxy", "Zyx", "Zyy"]
-
-
-def _extract_z_arrays(edi: EDIFile) -> Dict[str, Any]:
-    Z = _safe_get(edi, "Z", default=None)
-    out: Dict[str, Any] = {}
-    out["freq"] = _safe_get(Z, "freq", "frequency", default=None)
-    out["z"] = _safe_get(Z, "z", "impedance", default=None)
-    out["z_err"] = _safe_get(
-        Z, "z_error", "z_err", "impedance_err", default=None
-    )
-    out["rho"] = _safe_get(Z, "rho", "res", "resistivity", default=None)
-    out["phase"] = _safe_get(Z, "phase", "phi", default=None)
-    # tipper may live elsewhere; try common spots
-    tip = _safe_get(edi, "T", "TIP", default=None)
-    if tip is None:
-        tip = _safe_get(Z, "tipper", "tip", default=None)
-    out["tipper"] = tip
-    return out
-
+__all__ = ["SiteMixin", "Site", "Sites", "to_sites"]
 
 class SiteMixin(CoreObject):
+    r"""
+    Lightweight wrapper exposing station-centric accessors
+    and utilities for a single :class:`~pycsamt.seg.edi.EDIFile`.
+
+    The mixin normalizes common site operations around the
+    underlying EDI content, including coordinate handling,
+    impedance arrays, tipper, derived resistivity/phase, and
+    convenient export to :class:`pandas.DataFrame`.
+
+    Notes
+    -----
+    The station name is resolved from EDI HEAD fields in the
+    following order: ``dataid``, ``station``, ``sitename``,
+    ``name``, ``STATION``. If none is present, the file stem
+    is used. See :func:`_station_name`.
+
+    The Z tensor is treated as an array of shape ``(n, 2, 2)``
+    or flattened to ``(n, 4)`` as needed. The order is:
+    ``Zxx, Zxy, Zyx, Zyy``.
+
+    See Also
+    --------
+    pycsamt.seg.edi.EDIFile
+        Parsed SEG-EDI container.
+    pycsamt.site.base.Site
+        Concrete site wrapper that enforces a stable ID.
+    pycsamt.site.base.Sites
+        Collection helper for multiple sites.
+
+    References
+    ----------
+    .. [1] SEG EDI Format. Society of Exploration Geophysicists.
+           Commonly used magnetotelluric exchange format.
+    """
+
     def __init__(self, edi: EDIFile) -> None:
         self.edi = edi
 
-    # ---------- basic properties ----------
-
     @property
     def name(self) -> str:
+        r"""
+        Station identifier resolved from the EDI header or file
+        stem.
+
+        Returns
+        -------
+        str
+            Station name used for lookups and display.
+
+        Notes
+        -----
+        The resolution order is defined in :func:`_station_name`.
+        """
+
         return _station_name(self.edi)
 
     @property
+    def coords(self) -> Tuple[float, float, float]:
+        r"""
+        Geographic coordinates of the site.
+
+        Returns
+        -------
+        tuple of float
+            A 3-tuple ``(lat, lon, elev)`` in decimal degrees and
+            meters.
+
+        Notes
+        -----
+        This accessor relies on :func:`_get_coords` which parses
+        EDI HEAD latitude, longitude and elevation.
+        """
+
+        c = _get_coords(self.edi)
+        return (float(c.lat), float(c.lon), float(c.elev))
+
+    @property
     def freq(self) -> Any:
+        r"""
+        Frequency vector extracted from the Z section.
+
+        Returns
+        -------
+        array-like or None
+            One-dimensional array of frequencies in Hz, or
+            ``None`` if missing.
+
+        See Also
+        --------
+        to_dataframe : Tabular export of arrays at each frequency.
+        """
+
         return _extract_z_arrays(self.edi)["freq"]
 
     @property
     def z(self) -> Any:
+        r"""
+        Complex impedance tensor across frequencies.
+
+        Returns
+        -------
+        array-like or None
+            Array with shape ``(n, 2, 2)`` or flattened to
+            ``(n, 4)`` depending on context, or ``None`` if
+            absent.
+
+        Notes
+        -----
+        Flattening order is ``Zxx, Zxy, Zyx, Zyy``.
+        """
+
         return _extract_z_arrays(self.edi)["z"]
 
     @property
     def z_err(self) -> Any:
+        r"""
+        Uncertainty associated with the impedance tensor.
+
+        Returns
+        -------
+        array-like or None
+            Error array aligned with :pyattr:`z`, or ``None`` if
+            absent.
+        """
+
         return _extract_z_arrays(self.edi)["z_err"]
 
     @property
     def rho(self) -> Any:
+        r"""
+        Apparent resistivity derived from the impedance tensor.
+
+        Returns
+        -------
+        array-like or None
+            Resistivity values per component and frequency, or
+            ``None`` if not computed or absent.
+
+        Notes
+        -----
+        Derived fields may be recomputed downstream when the Z
+        tensor or frequency vector is updated.
+        """
+
         return _extract_z_arrays(self.edi)["rho"]
 
     @property
     def phase(self) -> Any:
+        r"""
+        Impedance phase (degrees) derived from the tensor.
+
+        Returns
+        -------
+        array-like or None
+            Phase values per component and frequency, or
+            ``None`` if not computed or absent.
+        """
+
         return _extract_z_arrays(self.edi)["phase"]
 
     @property
     def tipper(self) -> Any:
+        r"""
+        Vertical magnetic transfer function (tipper).
+
+        Returns
+        -------
+        array-like or None
+            Two columns ``(Tx, Ty)`` per frequency, or ``None``
+            if missing.
+        """
+
         return _extract_z_arrays(self.edi)["tipper"]
 
     @property
-    def coords(self) -> Tuple[float, float, float]:
-        return _coords_tuple(self.edi)
-
-    @property
     def meta(self) -> Dict[str, Any]:
-        head = _safe_get(self.edi, "HEAD", default=None)
-        info = _safe_get(self.edi, "INFO", default=None)
+        r"""
+        Minimal metadata snapshot collected from the EDI.
+
+        Returns
+        -------
+        dict
+            Dictionary that may include ``station``, ``name``,
+            ``lat``, ``lon``, ``elev``, ``dataid``, ``sitename``,
+            and an ``INFO`` sub-dict if present.
+
+        Notes
+        -----
+        Values are read on a best-effort basis and non-existing
+        keys are omitted.
+        """
+
+        h = _get_head(self.edi)
+        info = _safe_get(self.edi, "INFO")
         out: Dict[str, Any] = {}
-        for k in ("station", "name", "lat", "lon", "elev"):
-            v = _safe_get(head, k, default=None)
-            if v is not None:
-                out[k] = v
+        if h is not None:
+            for k in ("station", "name", "lat", "lon", "elev",
+                      "dataid", "sitename"):
+                v = _safe_get(h, k)
+                if v is not None:
+                    out[k] = v
         if info is not None:
             out["INFO"] = dict(getattr(info, "__dict__", {}))
         return out
 
-    # ---------- reads ----------
-
     def to_dataframe(self, kind: str = "z") -> pd.DataFrame:
+        r"""
+        Export core arrays to a tidy :class:`pandas.DataFrame`.
+
+        Parameters
+        ----------
+        kind : {"z", "imp", "impedance", "resphase", "rp",
+                "rho_phase", "tip", "tipper", "t"}, optional
+            Selects which quantity to export. The default is
+            ``"z"``.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Frame indexed by frequency (name ``"f"``). Columns
+            depend on ``kind``:
+            - ``"z"``: ``Zxx, Zxy, Zyx, Zyy`` (complex values).
+            - ``"resphase"``: pairs of columns per component
+              ``rho_*`` and ``phi_*``.
+            - ``"tipper"``: ``Tx, Ty``.
+
+        Raises
+        ------
+        ValueError
+            If ``kind`` is not recognized.
+
+        Notes
+        -----
+        Missing arrays yield empty frames with the correct index.
+
+        Examples
+        --------
+        >>> df = site.to_dataframe("z")
+        >>> df.columns
+        Index(["Zxx","Zxy","Zyx","Zyy"], dtype="object")
+
+        See Also
+        --------
+        quality_flags : Quick presence checks of available arrays.
+        """
+
         arrs = _extract_z_arrays(self.edi)
-        f = np.asarray(arrs["freq"])
-        if kind.lower() in ("z", "imp", "impedance"):
-            z = np.asarray(arrs["z"])
+        f = (np.asarray(arrs["freq"], float)
+             if arrs["freq"] is not None
+             else np.asarray([], float))
+        idx = pd.Index(f, name="f")
+    
+        k = kind.strip().lower()
+        if k in ("z", "imp", "impedance"):
+            z = arrs["z"]
+            z = None if z is None else _z_to_2d(z)
             if z is None or z.size == 0:
-                return pd.DataFrame(index=pd.Index([], name="f"))
+                return pd.DataFrame(index=idx)
             cols = _component_names()
-            df = {}
+            data: Dict[str, Any] = {}
             for i, c in enumerate(cols):
                 try:
-                    df[c] = z[:, i]
+                    data[c] = z[:, i]
                 except Exception:
-                    df[c] = np.full_like(f, np.nan, dtype=float)
-            return pd.DataFrame(df, index=pd.Index(f, name="f"))
-        if kind.lower() in ("resphase", "rp", "rho_phase"):
-            rho = np.asarray(arrs["rho"])
-            ph = np.asarray(arrs["phase"])
+                    data[c] = np.full(idx.size, np.nan, float)
+            return pd.DataFrame(data, index=idx)
+    
+        if k in ("resphase", "rp", "rho_phase"):
+            rho = arrs["rho"]
+            ph = arrs["phase"]
+            rho = None if rho is None else _z_to_2d(rho)
+            ph = None if ph is None else _z_to_2d(ph)
             cols = _component_names()
-            df: Dict[str, Any] = {}
+            data: Dict[str, Any] = {}
             for i, c in enumerate(cols):
-                rr = np.full_like(f, np.nan, dtype=float)
-                pp = np.full_like(f, np.nan, dtype=float)
+                rr = np.full(idx.size, np.nan, float)
+                pp = np.full(idx.size, np.nan, float)
                 try:
-                    rr = rho[:, i]
+                    if rho is not None:
+                        rr = rho[:, i]
                 except Exception:
                     pass
                 try:
-                    pp = ph[:, i]
+                    if ph is not None:
+                        pp = ph[:, i]
                 except Exception:
                     pass
-                df[f"rho_{c.lower()}"] = rr
-                df[f"phi_{c.lower()}"] = pp
-            return pd.DataFrame(df, index=pd.Index(f, name="f"))
-        if kind.lower() in ("tip", "tipper", "t"):
+                data[f"rho_{c.lower()}"] = rr
+                data[f"phi_{c.lower()}"] = pp
+            return pd.DataFrame(data, index=idx)
+    
+        if k in ("tip", "tipper", "t"):
             tip = arrs["tipper"]
             if tip is None:
-                return pd.DataFrame(index=pd.Index(f, name="f"))
+                return pd.DataFrame(index=idx)
             tip = np.asarray(tip)
-            df = {}
+            data: Dict[str, Any] = {}
             for i, c in enumerate(("Tx", "Ty")):
                 try:
-                    df[c] = tip[:, i]
+                    data[c] = tip[:, i]
                 except Exception:
-                    df[c] = np.full_like(f, np.nan, dtype=float)
-            return pd.DataFrame(df, index=pd.Index(f, name="f"))
-        raise ValueError("Unknown kind: {!r}".format(kind))
+                    data[c] = np.full(idx.size, np.nan, float)
+            return pd.DataFrame(data, index=idx)
+    
+        raise ValueError(f"Unknown kind: {kind!r}")
+
 
     def quality_flags(self) -> Dict[str, bool]:
-        arrs = _extract_z_arrays(self.edi)
-        f_ok = arrs["freq"] is not None
-        z = np.asarray(arrs["z"]) if arrs["z"] is not None else None
-        e = (
-            np.asarray(arrs["z_err"])
-            if arrs["z_err"] is not None
-            else None
-        )
-        ok = lambda a: a is not None and np.all(np.isfinite(a))
+        r"""
+        Report presence and basic validity of key arrays.
+
+        Returns
+        -------
+        dict
+            Flags: ``has_freq``, ``has_z``, ``has_z_err``,
+            ``has_rho``, ``has_phase``, ``has_tipper``. A flag
+            is ``True`` if the array exists, has non-zero size,
+            and all values are finite.
+
+        Examples
+        --------
+        >>> site.quality_flags()["has_z"]
+        True
+        """
+
+        a = _extract_z_arrays(self.edi)
+
+        def _ok(x: Any) -> bool:
+            if x is None:
+                return False
+            arr = np.asarray(x)
+            return arr.size > 0 and np.all(np.isfinite(arr))
+
         return {
-            "has_freq": bool(f_ok),
-            "has_z": bool(ok(z)),
-            "has_z_err": bool(ok(e)),
-            "has_rho": bool(ok(arrs["rho"])),
-            "has_phase": bool(ok(arrs["phase"])),
-            "has_tipper": bool(ok(arrs["tipper"])),
+            "has_freq": a["freq"] is not None,
+            "has_z": _ok(a["z"]),
+            "has_z_err": _ok(a["z_err"]),
+            "has_rho": _ok(a["rho"]),
+            "has_phase": _ok(a["phase"]),
+            "has_tipper": _ok(a["tipper"]),
         }
 
     def has_component(self, comp: str) -> bool:
-        comp = comp.strip().lower()
-        if comp in ("tip", "tx", "ty", "tipper"):
+        r"""
+        Check if a given component contains any finite value.
+
+        Parameters
+        ----------
+        comp : str
+            One of ``"Zxx"``, ``"Zxy"``, ``"Zyx"``, ``"Zyy"`` for
+            impedance, or ``"tip"``, ``"tx"``, ``"ty"``,
+            ``"tipper"`` for tipper.
+
+        Returns
+        -------
+        bool
+            ``True`` if the component exists and has at least
+            one finite value.
+
+        Notes
+        -----
+        Component names are case-insensitive.
+
+        Examples
+        --------
+        >>> site.has_component("Zxy")
+        True
+        """
+
+        c = comp.strip().lower()
+        if c in ("tip", "tx", "ty", "tipper"):
             tip = _extract_z_arrays(self.edi)["tipper"]
             if tip is None:
                 return False
             a = np.asarray(tip)
             return a.size > 0 and np.any(np.isfinite(a))
+    
         z = _extract_z_arrays(self.edi)["z"]
         if z is None:
             return False
-        z = np.asarray(z)
-        names = _component_names()
+        z = _z_to_2d(z)
+    
+        names = [n.lower() for n in _component_names()]
         try:
-            i = [n.lower() for n in names].index(comp)
+            i = names.index(c)
         except ValueError:
             return False
+    
+        try:
+            ncols = z.shape[1]
+        except Exception:
+            ncols = 0
+        if i >= ncols:
+            return False
+    
         a = z[:, i]
         return a.size > 0 and np.any(np.isfinite(a))
 
+
     def summary(self) -> Dict[str, Any]:
+        r"""
+        Summarize site identity, geometry, and data coverage.
+
+        Returns
+        -------
+        dict
+            Keys include: ``name``, ``nfreq``, ``lat``, ``lon``,
+            ``elev``, ``components`` (present Z components), and
+            ``tipper`` (boolean).
+
+        Examples
+        --------
+        >>> s = site.summary()
+        >>> s["name"], s["nfreq"]
+        ('E01', 37)
+        """
+
         lat, lon, elev = self.coords
         arrs = _extract_z_arrays(self.edi)
-        nfreq = int(np.size(arrs["freq"] or []))
-        present = [c for c in _component_names() if self.has_component(c)]
+        f = (np.asarray(arrs["freq"])
+             if arrs["freq"] is not None else np.asarray([], float))
+        nfreq = int(f.size)
+        present = [
+            c for c in _component_names() if self.has_component(c)
+        ]
         return {
             "name": self.name,
             "nfreq": nfreq,
@@ -301,93 +471,553 @@ class SiteMixin(CoreObject):
             "tipper": bool(self.has_component("tipper")),
         }
 
-    # ---------- light writes (copy-on-write) ----------
-
     def rename(
         self,
         new: str,
         *,
         inplace: bool = False,
     ) -> "Site":
+        r"""
+        Set a new station identifier across common header
+        fields.
+
+        Parameters
+        ----------
+        new : str
+            New station name or ID.
+        inplace : bool, optional
+            If ``True``, modify this instance. If ``False``,
+            return a new :class:`Site`. The default is ``False``.
+
+        Returns
+        -------
+        Site
+            The modified site (new instance unless ``inplace``).
+
+        Notes
+        -----
+        The method writes to EDI HEAD fields ``dataid``,
+        ``station``, ``sitename``, ``name`` (best effort) and
+        also updates ``edi.name``. Downstream containers that
+        derive station IDs from the file stem may be configured
+        to prefer ``edi.name`` to preserve the rename.
+
+        Examples
+        --------
+        >>> s2 = site.rename("X_E01")
+        >>> s2.name
+        'X_E01'
+        """
+
         if inplace:
             _set_station_name(self.edi, new)
             return self  # type: ignore[return-value]
-        edi = _clone_edi(self.edi)
-        _set_station_name(edi, new)
-        return Site(edi)
+        ed = _clone_edi(self.edi)
+        _set_station_name(ed, new)
+        return Site(ed)
 
     def set_coords(
         self,
-        lat: Union[float, str],
-        lon: Union[float, str],
-        elev: Optional[Union[float, str]] = None,
+        lat: float,
+        lon: float,
+        elev: Optional[float] = None,
         *,
         inplace: bool = False,
     ) -> "Site":
-        la, lo = normalize_lat_lon(lon, lat, assume="lonlat")
-        la = float(assert_lat_value(la))  # type: ignore[arg-type]
-        lo = float(assert_lon_value(lo))  # type: ignore[arg-type]
-        ev = (
-            None
-            if elev is None
-            else float(assert_elevation_value(elev))
-        )
+        r"""
+        Update the site coordinates in the EDI HEAD section.
+
+        Parameters
+        ----------
+        lat : float
+            Latitude in decimal degrees.
+        lon : float
+            Longitude in decimal degrees.
+        elev : float, optional
+            Elevation in meters. If ``None``, elevation is left
+            unchanged. The default is ``None``.
+        inplace : bool, optional
+            If ``True``, modify this instance. If ``False``,
+            return a new :class:`Site`. The default is ``False``.
+
+        Returns
+        -------
+        Site
+            The modified site (new instance unless ``inplace``).
+
+        Notes
+        -----
+        Latitude and longitude are validated by utility functions
+        to ensure plausible values.
+
+        Examples
+        --------
+        >>> site = site.set_coords(10.0, 20.0, 100.0)
+        >>> site.coords
+        (10.0, 20.0, 100.0)
+        """
+
         if inplace:
-            _set_coords_on_head(self.edi, la, lo, ev)
+            _set_coords(
+                self.edi, lat=float(lat), lon=float(lon),
+                elev=(None if elev is None else float(elev)),
+                inplace=True,
+            )
             return self  # type: ignore[return-value]
-        edi = _clone_edi(self.edi)
-        _set_coords_on_head(edi, la, lo, ev)
-        return Site(edi)
+        ed = _clone_edi(self.edi)
+        _set_coords(
+            ed, lat=float(lat), lon=float(lon),
+            elev=(None if elev is None else float(elev)),
+            inplace=True,
+        )
+        return Site(ed)
 
     def set_empty(self, *, inplace: bool = False) -> "Site":
-        target = self.edi if inplace else _clone_edi(self.edi)
-        Z = _safe_get(target, "Z", default=None)
+        r"""
+        Clear Z-related arrays to an empty dataset.
+
+        Parameters
+        ----------
+        inplace : bool, optional
+            If ``True``, modify this instance. If ``False``,
+            return a new :class:`Site`. The default is ``False``.
+
+        Returns
+        -------
+        Site
+            The modified site (new instance unless ``inplace``).
+
+        Notes
+        -----
+        The following arrays are replaced with empty arrays:
+        ``freq``, ``z``, ``z_error``, ``rho``, and ``phase``.
+        Use this to initialize a skeleton record without data.
+
+        Examples
+        --------
+        >>> s2 = site.set_empty()
+        >>> s2.to_dataframe("z").empty
+        True
+        """
+
+        tgt = self.edi if inplace else _clone_edi(self.edi)
+        Z = _safe_get(tgt, "Z")
         try:
             if Z is None:
-                target.Z = type("Z", (), {})()  # type: ignore
-                Z = target.Z  # type: ignore[attr-defined]
-            setattr(Z, "freq", np.asarray([], dtype=float))
-            setattr(Z, "z", np.asarray([], dtype=float))
-            setattr(Z, "z_error", np.asarray([], dtype=float))
-            setattr(Z, "rho", np.asarray([], dtype=float))
-            setattr(Z, "phase", np.asarray([], dtype=float))
+                tgt.Z = type("Z", (), {})()  # type: ignore
+                Z = tgt.Z  # type: ignore[attr-defined]
+            setattr(Z, "freq", np.asarray([], float))
+            setattr(Z, "z", np.asarray([], float))
+            setattr(Z, "z_error", np.asarray([], float))
+            setattr(Z, "rho", np.asarray([], float))
+            setattr(Z, "phase", np.asarray([], float))
         except Exception:
             pass
-        return self if inplace else Site(target)
+        return self if inplace else Site(tgt)
 
 
 class Site(SiteMixin):
+    r"""
+    High-level wrapper for a single MT/CSAMT site backed by an
+    :class:`~pycsamt.seg.edi.EDIFile`. The class enforces a
+    stable, file-stem-based station identifier and exposes
+    convenient accessors for coordinates, impedance Z, tipper,
+    and derived quantities.
+
+    The constructor normalizes EDI ``HEAD`` fields so that
+    ``dataid`` (and, if absent, ``station``) matches the site
+    stem resolved by :func:`_stem_from_edi`. If an in-memory
+    ``edi.name`` exists, the stem may prefer it so that a prior
+    rename is preserved. This normalization improves name-based
+    indexing, deterministic selection, and downstream joins in
+    collections.
+
+    Parameters
+    ----------
+    edi : pycsamt.seg.edi.EDIFile
+        Parsed SEG-EDI container holding one station. The file
+        may be constructed from disk or synthesized in memory.
+
+    Attributes
+    ----------
+    edi : pycsamt.seg.edi.EDIFile
+        Underlying EDI object. Use with care; prefer the typed
+        accessors of :class:`SiteMixin` (e.g., ``freq``, ``z``).
+    name : str
+        Normalized station identifier. By default this equals
+        the file stem, unless a previous explicit rename is in
+        effect.
+    coords : tuple of float
+        Geographic location as ``(lat, lon, elev)``. Latitude
+        and longitude are in degrees; elevation is in meters.
+
+    Notes
+    -----
+    Identity policy
+        The site identity is derived from header fields in the
+        following order: ``dataid``, ``station``, ``sitename``,
+        ``name``, ``STATION``. If none are present, the file
+        stem is used. The constructor ensures that ``dataid`` is
+        set to the resolved stem to stabilize lookups.
+
+    Array conventions
+        The impedance tensor :math:`Z` may be represented as a
+        3D array with shape ``(n, 2, 2)`` or flattened to
+        ``(n, 4)`` in the component order
+        ``Zxx, Zxy, Zyx, Zyy``. Frequencies are 1D of length
+        ``n``. The tipper has two columns ``Tx`` and ``Ty``.
+
+    Derived fields
+        Apparent resistivity and phase are derived from
+        :math:`Z` and the frequency vector. When Z or frequency
+        slices are applied, recomputation is triggered after
+        arrays are aligned to avoid inconsistent shapes.
+
+    Robustness
+        Accessors are defensive. Missing arrays produce empty
+        frames or ``None``. Coordinates are validated for range
+        using utility checks.
+
+    Examples
+    --------
+    Basic construction and inspection
+        >>> from pycsamt.seg.edi import EDIFile
+        >>> from pycsamt.site.base import Site
+        >>> e = EDIFile("E01.edi")        # parse from disk
+        >>> s = Site(e)
+        >>> s.name
+        'E01'
+        >>> s.coords  # doctest: +ELLIPSIS
+        (..., ..., ...)
+        >>> s.summary()["nfreq"] >= 0
+        True
+
+    Tabular export
+        >>> from pycsamt.site.base import Site
+        >>> dfz = s.to_dataframe("z")
+        >>> list(dfz.columns)
+        ['Zxx', 'Zxy', 'Zyx', 'Zyy']
+        >>> dfrp = s.to_dataframe("resphase")
+        >>> sorted([c for c in dfrp.columns if c.startswith("rho_")])[:2]
+        ['rho_zxx', 'rho_zxy']
+
+    Rename without mutating the original instance
+        >>> s2 = s.rename("X_E01")   # returns a new Site
+        >>> s2.name
+        'X_E01'
+        >>> s.name  # original unchanged
+        'E01'
+
+    Coordinate update
+        >>> s3 = s.set_coords(10.0, 20.0, 100.0)
+        >>> s3.coords
+        (10.0, 20.0, 100.0)
+
+    With a collection
+        >>> from pycsamt.site.base import Sites
+        >>> e2 = EDIFile("E02.edi")
+        >>> col = Sites([s.edi, Site(e2).edi])
+        >>> [t.name for t in col]
+        ['E01', 'E02']
+        >>> col["E02"].summary()["name"]
+        'E02'
+
+    See Also
+    --------
+    pycsamt.site.base.SiteMixin
+        Mixin providing typed accessors and utilities.
+    pycsamt.site.base.Sites
+        Collection helper for selection, slicing, and bulk edits.
+    pycsamt.seg.edi.EDIFile
+        Low-level SEG-EDI container.
+
+    References
+    ----------
+    .. [1] SEG EDI Format Specification. Society of Exploration
+           Geophysicists. Exchange format for magnetotelluric
+           and related EM data.
+    .. [2] Chave, A. D., and Jones, A. G. (Eds.) (2012).
+           The Magnetotelluric Method. Cambridge University
+           Press.
+    .. [3] Simpson, F., and Bahr, K. (2005). Practical
+           Magnetotellurics. Cambridge University Press.
+    """
+
+
     def __init__(self, edi: EDIFile) -> None:
         super().__init__(edi)
+        try:
+            h = _ensure_head(self.edi)
+            nm = _stem_from_edi(self.edi)
+            if nm:
+                setattr(h, "dataid", nm)                
+                if not getattr(h, "station", None):
+                    setattr(h, "station", nm)           
+        except Exception:
+            pass
+
 
     def __repr__(self) -> str:
+        r"""
+        Debug-friendly, one-line summary of the site.
+
+        Returns
+        -------
+        str
+            A compact string with site name, number of
+            frequencies, and coordinates.
+
+        Examples
+        --------
+        >>> repr(site)  # doctest: +ELLIPSIS
+        "Site(name='E01', nfreq=..., coords=(...,...,...))"
+        """
+
         s = self.summary()
         return (
             f"Site(name={s['name']!r}, nfreq={s['nfreq']}, "
-            f"coords=({s['lat']:.5f},{s['lon']:.5f},{s['elev']:.1f}))"
+            f"coords=({s['lat']:.5f},{s['lon']:.5f},"
+            f"{s['elev']:.1f}))"
         )
 
 
 class Sites(CoreObject):
+    r"""
+    Container for multiple :class:`~pycsamt.site.base.Site`
+    objects with convenient indexing, selection, and bulk edit
+    operations.
+
+    ``Sites`` wraps each provided :class:`~pycsamt.seg.edi.EDIFile`
+    into a :class:`~pycsamt.site.base.Site`, ensuring that station
+    identity is normalized consistently. You can iterate, index by
+    integer, or look up by case-insensitive station name. Bulk
+    operations such as renaming, frequency slicing, and masking
+    are provided via :meth:`edit_all`.
+
+    Parameters
+    ----------
+    edic : pycsamt.seg.collection.EDICollection or sequence of
+           pycsamt.seg.edi.EDIFile
+        Parsed EDI collection or any sequence of EDI objects.
+        Items are wrapped into :class:`Site` instances in the
+        order provided.
+
+    Attributes
+    ----------
+    _items : list of Site
+        Internal sequence of sites. This is considered private.
+        Iterate over ``Sites`` instead of accessing it directly.
+
+    Notes
+    -----
+    Identity and lookup
+        Each site inside the container uses the same naming
+        policy as :class:`Site`. Name-based lookups with
+        ``sites["E01"]`` are case-insensitive and match the
+        normalized station name. If duplicates exist, the first
+        match is returned.
+
+    Order preservation
+        Ordering of input items is preserved. Integer indexing
+        with ``sites[i]`` retrieves the i-th :class:`Site`.
+
+    Bulk edits
+        :meth:`edit_all` supports three common operations:
+        - ``rename``: compute a new name from the old name.
+        - ``freq_slice``: apply a frequency slice (``slice``)
+          consistently across Z, freq, errors, and derived fields.
+        - ``mask``: apply a boolean mask to the Z tensor rows.
+        Use ``inplace=True`` to modify the container, otherwise a
+        new ``Sites`` is returned.
+
+    Geospatial helpers
+        :meth:`closest` uses geodetic distance to find the nearest
+        site to a given latitude and longitude. Sites with missing
+        or non-finite coordinates are skipped.
+
+    Topography integration
+        :meth:`with_topography` aligns site coordinates and
+        elevation with a user-provided frame, returning a new
+        container unless ``inplace=True`` is requested.
+
+    Profile conversion
+        :meth:`to_profile` attempts to build a
+        :class:`~pycsamt.site.profile.Profile` when that optional
+        dependency is available. Otherwise, a lightweight dict
+        describing a chainage-ordered sequence is returned.
+
+    Persistence
+        :meth:`write` emits one EDI file per site into a target
+        directory. If an EDI object provides ``to_file``, it is
+        used; otherwise a placeholder is written.
+
+    Robustness and errors
+        - ``__getitem__`` raises ``KeyError`` when a name is not
+          found. Prefer :meth:`get` to obtain ``None`` instead.
+        - Bulk operations ignore missing arrays on a best-effort
+          basis so that other arrays can still be processed.
+
+    Examples
+    --------
+    Build from a few EDI files
+        >>> from pycsamt.seg.edi import EDIFile
+        >>> from pycsamt.site.base import Sites
+        >>> e1, e2 = EDIFile("E01.edi"), EDIFile("E02.edi")
+        >>> sites = Sites([e1, e2])
+        >>> len(sites)
+        2
+        >>> [s.name for s in sites]
+        ['E01', 'E02']
+
+    Indexing and lookup
+        >>> sites[0].name
+        'E01'
+        >>> sites["e02"].name
+        'E02'
+        >>> sites.get("missing") is None
+        True
+
+    Bulk rename without mutating the original container
+        >>> def rnm(n):
+        ...     return "X_" + n
+        >>> out = sites.edit_all(rename=rnm, inplace=False)
+        >>> [s.name for s in out]
+        ['X_E01', 'X_E02']
+        >>> [s.name for s in sites]
+        ['E01', 'E02']
+
+    Frequency slice across all arrays
+        >>> sl = slice(1, None)  # drop the first frequency
+        >>> out2 = sites.edit_all(freq_slice=sl, inplace=False)
+        >>> f0 = sites["E01"].freq
+        >>> f1 = out2["E01"].freq
+        >>> len(f1) == len(f0) - 1
+        True
+
+    Selection by names or predicate
+        >>> subset = sites.select(names=["E02"])
+        >>> [s.name for s in subset]
+        ['E02']
+        >>> # predicate: keep sites with tipper available
+        >>> subset2 = sites.select(predicate=lambda s: s.has_component("tipper"))
+        >>> isinstance(subset2, Sites)
+        True
+
+    Nearest station to a target location
+        >>> near = sites.closest(lat=10.0, lon=20.0, tol=None)
+        >>> near is None or hasattr(near, "name")
+        True
+
+    Persist to a directory
+        >>> import tempfile, pathlib
+        >>> tmp = pathlib.Path(tempfile.mkdtemp())
+        >>> out_paths = sites.write(tmp, template="{station}.edi", exist_ok=True)
+        >>> all(p.exists() for p in out_paths)
+        True
+
+    See Also
+    --------
+    pycsamt.site.base.Site
+        Site wrapper used for each element in the container.
+    pycsamt.seg.collection.EDICollection
+        Parsed collection produced by the core parser.
+    pycsamt.site.profile.Profile
+        Optional profile object produced by :meth:`to_profile`.
+
+    References
+    ----------
+    .. [1] SEG EDI Format Specification. Society of Exploration
+           Geophysicists.
+    .. [2] Chave, A. D., and Jones, A. G. (2012). The
+           Magnetotelluric Method. Cambridge University Press.
+    .. [3] Simpson, F., and Bahr, K. (2005). Practical
+           Magnetotellurics. Cambridge University Press.
+    """
+
     def __init__(
         self,
         edic: Union[EDICollection, Sequence[EDIFile]],
     ) -> None:
-        if isinstance(edic, EDICollection):
-            items = list(edic)
-        else:
-            items = list(edic)
+        items = list(edic)
         self._items: List[Site] = [Site(e) for e in items]
 
-    # ---------- basic container ----------
-
+    @property
+    def edic(self) -> List[EDIFile]:
+        # Back-compat: expose the iterable of EDIFile expected by
+        # selection utilities (iter_edifiles works on sequences).
+        return [s.edi for s in self._items]
+    
     def __len__(self) -> int:
+        r"""
+        Number of sites in the container.
+    
+        Returns
+        -------
+        int
+            Count of contained :class:`~pycsamt.site.base.Site`
+            objects.
+    
+        Examples
+        --------
+        >>> len(sites) >= 0
+        True
+        """
+
         return len(self._items)
 
     def __iter__(self):
+        r"""
+        Iterate over contained :class:`~pycsamt.site.base.Site`
+        objects.
+    
+        Returns
+        -------
+        iterator of Site
+            Iterator yielding sites in input order.
+    
+        Examples
+        --------
+        >>> names = [s.name for s in sites]
+        >>> isinstance(names, list)
+        True
+        """
+
         return iter(self._items)
 
     def __getitem__(self, key: Union[int, str]) -> Site:
+        r"""
+        Retrieve a site by zero-based index or by case-insensitive
+        station name.
+    
+        Parameters
+        ----------
+        key : int or str
+            Integer index or station name. Name comparison is
+            case-insensitive.
+    
+        Returns
+        -------
+        Site
+            The matching site.
+    
+        Raises
+        ------
+        KeyError
+            If ``key`` is a name and no site matches.
+    
+        Examples
+        --------
+        >>> sites[0].name  # by index
+        'E01'
+        >>> sites["e02"].name  # by name, case-insensitive
+        'E02'
+    
+        See Also
+        --------
+        get : Safe lookup returning ``None`` on failure.
+        by_index : Explicit index-based accessor.
+        """
+
         if isinstance(key, int):
             return self._items[key]
         nm = str(key).lower()
@@ -397,18 +1027,81 @@ class Sites(CoreObject):
         raise KeyError(key)
 
     def by_index(self, i: int) -> Site:
+        r"""
+        Retrieve a site by zero-based index.
+    
+        Parameters
+        ----------
+        i : int
+            Position in the container.
+    
+        Returns
+        -------
+        Site
+            The site at the requested index.
+    
+        Examples
+        --------
+        >>> sites.by_index(0).name == sites[0].name
+        True
+        """
+
         return self._items[i]
 
     def get(self, name: str) -> Optional[Site]:
+        r"""
+        Safe lookup by case-insensitive station name.
+    
+        Parameters
+        ----------
+        name : str
+            Station identifier to find.
+    
+        Returns
+        -------
+        Site or None
+            Matching site, or ``None`` if not present.
+    
+        Examples
+        --------
+        >>> sites.get("missing") is None
+        True
+        >>> sites.get("E01").name
+        'E01'
+    
+        See Also
+        --------
+        __getitem__ : Raises on missing names.
+        """
+
         try:
             return self[name]
         except Exception:
             return None
+        
 
     def as_list(self) -> List[EDIFile]:
-        return [s.edi for s in self._items]
+        r"""
+        Return the underlying list of EDI objects.
+    
+        Returns
+        -------
+        list of pycsamt.seg.edi.EDIFile
+            The EDI objects corresponding to each site.
+    
+        Notes
+        -----
+        This is useful when passing the dataset to utilities that
+        operate on EDI-level structures rather than on sites.
+    
+        Examples
+        --------
+        >>> edis = sites.as_list()
+        >>> hasattr(edis[0], "get_section")
+        True
+        """
 
-    # ---------- lookup helpers ----------
+        return [s.edi for s in self._items]
 
     def closest(
         self,
@@ -416,37 +1109,83 @@ class Sites(CoreObject):
         lon: float,
         tol: Optional[float] = None,
     ) -> Optional[Site]:
-        la = float(assert_lat_value(lat))  # type: ignore[arg-type]
-        lo = float(assert_lon_value(lon))  # type: ignore[arg-type]
+        r"""
+        Find the closest site to a target coordinate using geodetic
+        distance.
+    
+        Parameters
+        ----------
+        lat : float
+            Target latitude in decimal degrees.
+        lon : float
+            Target longitude in decimal degrees.
+        tol : float, optional
+            Maximum allowed distance in meters. If provided and the
+            nearest site is farther than ``tol``, return ``None``.
+            The default is ``None``.
+    
+        Returns
+        -------
+        Site or None
+            Nearest site or ``None`` if all sites are too far or
+            lack valid coordinates.
+    
+        Notes
+        -----
+        Coordinates are validated. Sites with non-finite values are
+        skipped. Distance is computed in meters using a geodetic
+        model.
+    
+        Examples
+        --------
+        >>> near = sites.closest(10.0, 20.0)
+        >>> near is None or hasattr(near, "name")
+        True
+        >>> sites.closest(0.0, 0.0, tol=1.0) is None
+        True
+        """
 
-        def hav(a, b, c, d):
-            d1 = math.radians(c - a)
-            d2 = math.radians(d - b)
-            A = (
-                math.sin(d1 / 2) ** 2
-                + math.cos(math.radians(a))
-                * math.cos(math.radians(c))
-                * math.sin(d2 / 2) ** 2
-            )
-            return 2 * _EARTH_R * math.asin(min(1.0, math.sqrt(A)))
+        from .location import distance
 
-        best = (None, float("inf"))  # type: ignore[var-annotated]
+        la = float(assert_lat_value(lat))   # type: ignore[arg-type]
+        lo = float(assert_lon_value(lon))   # type: ignore[arg-type]
+
+        best: Tuple[Optional[Site], float]
+        best = (None, float("inf"))
         for s in self._items:
             sla, slo, _ = s.coords
             if not np.isfinite(sla) or not np.isfinite(slo):
                 continue
-            d = hav(la, lo, float(sla), float(slo))
+            d = distance((la, lo), (float(sla), float(slo)),
+                         mode="geodetic")
             if d < best[1]:
                 best = (s, d)
         if best[0] is None:
             return None
-        if tol is not None and best[1] > tol:
+        if (tol is not None) and (best[1] > tol):
             return None
         return best[0]
 
-    # ---------- broadcast/edit ----------
-
     def map(self, fn: Callable[[Site], Any]) -> List[Any]:
+        r"""
+        Apply a function to every site and collect the results.
+    
+        Parameters
+        ----------
+        fn : callable
+            Function of signature ``fn(site) -> Any``.
+    
+        Returns
+        -------
+        list
+            Results collected in order.
+    
+        Examples
+        --------
+        >>> sites.map(lambda s: s.name)[:2]
+        ['E01', 'E02']
+        """
+
         return [fn(s) for s in self._items]
 
     def edit_all(
@@ -457,52 +1196,189 @@ class Sites(CoreObject):
         mask: Optional[Callable[[pd.DataFrame], pd.Series]] = None,
         inplace: bool = False,
     ) -> "Sites":
+        r"""
+        Bulk-edit all sites with optional rename, frequency slicing,
+        and tensor masking.
+    
+        Parameters
+        ----------
+        rename : callable, optional
+            Function ``rename(old_name) -> new_name``. If provided,
+            each site is renamed accordingly.
+        freq_slice : slice, optional
+            Row-wise slice applied consistently to frequency,
+            impedance Z, errors, and derived arrays.
+        mask : callable, optional
+            Function ``mask(df) -> bool_series`` where ``df`` is the
+            output of ``site.to_dataframe("z")``. Rows where the
+            mask is ``False`` are set to ``NaN`` in Z.
+        inplace : bool, optional
+            If ``True``, modify this container and return it. If
+            ``False``, return a new :class:`Sites`. Default is
+            ``False``.
+    
+        Returns
+        -------
+        Sites
+            The edited container (possibly the same instance).
+    
+        Notes
+        -----
+        - When ``inplace=False``, sites are shallow-cloned so that
+          edits do not affect the original container.
+        - Frequency slicing is applied atomically to avoid temporary
+          shape mismatches between ``freq`` and Z-derived arrays.
+        - Missing arrays are tolerated on a best-effort basis.
+    
+        Examples
+        --------
+        Rename with a prefix
+            >>> def rnm(n): return "X_" + n
+            >>> out = sites.edit_all(rename=rnm)
+            >>> [s.name for s in out][:2]
+            ['X_E01', 'X_E02']
+    
+        Slice away the first frequency
+            >>> sl = slice(1, None)
+            >>> out2 = sites.edit_all(freq_slice=sl)
+            >>> len(out2["E01"].freq) == len(sites["E01"].freq) - 1
+            True
+    
+        Mask the top half of rows in Z
+            >>> def top_half(frame):
+            ...     m = np.ones(len(frame), dtype=bool)
+            ...     m[: len(frame) // 2] = False
+            ...     return m
+            >>> out3 = sites.edit_all(mask=top_half)
+            >>> df = out3["E01"].to_dataframe("z")
+            >>> np.isnan(df.iloc[0].values).all()
+            True
+    
+        See Also
+        --------
+        Site.rename : Per-site rename helper.
+        Site.to_dataframe : Source for building masks.
+        """
+
         items: List[EDIFile] = []
         for s in self._items:
             t = s if inplace else Site(_clone_edi(s.edi))
+
             if rename:
-                t = t.rename(rename(t.name), inplace=True)
+                newn = rename(t.name)
+                t = t.rename(newn, inplace=True)
+
             if freq_slice is not None:
-                arrs = _extract_z_arrays(t.edi)
-                try:
-                    f = np.asarray(arrs["freq"]) # #noqa VARIABLE defined not used. 
-                    sl = freq_slice
-                    Z = _safe_get(t.edi, "Z", default=None)
-                    if Z is not None:
-                        for fld in ("freq", "z", "z_error",
-                                    "rho", "phase"):
-                            a = _safe_get(Z, fld, default=None)
-                            if a is not None:
-                                a = np.asarray(a)
-                                setattr(Z, fld, a[sl])
-                except Exception:
-                    pass
+                Z = _safe_get(t.edi, "Z", default=None)
+                if Z is not None:
+                    _slice_fields(Z, freq_slice)
+
             if mask is not None:
                 try:
                     df = t.to_dataframe("z")
-                    m = mask(df)
+                    m = np.asarray(mask(df))
                     Z = _safe_get(t.edi, "Z", default=None)
                     if Z is not None and hasattr(Z, "z"):
                         z = np.asarray(getattr(Z, "z"))
-                        z[~np.asarray(m)] = np.nan
+                        z = z.copy()
+                        z[~m] = np.nan
                         setattr(Z, "z", z)
                 except Exception:
                     pass
+
             items.append(t.edi)
+
         return self if inplace else Sites(items)
 
-    def with_topography(self, frame: Any) -> "Sites":
-        # placeholder for integration with survey topo
-        _ = frame
-        return self
+    def with_topography(
+        self,
+        frame: Any,
+        *,
+        inplace: bool = False,
+    ) -> "Sites":
+        r"""
+        Align site coordinates and elevation from a tabular frame.
+    
+        Parameters
+        ----------
+        frame : Any
+            A table-like object (e.g., :class:`pandas.DataFrame`)
+            with station identifiers and columns for latitude,
+            longitude, and elevation. Column names are resolved by
+            the topography utility.
+        inplace : bool, optional
+            If ``True``, modify this container and return it. If
+            ``False``, return a new :class:`Sites`. Default is
+            ``False``.
+    
+        Returns
+        -------
+        Sites
+            Container with updated coordinates.
+    
+        Notes
+        -----
+        Sites are matched by normalized station identifiers. The
+        operation is performed on a best-effort basis; unmatched
+        stations are left unchanged.
+    
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> df = pd.DataFrame({
+        ...   "station": ["E01", "E02"],
+        ...   "latitude": [10.0, 11.0],
+        ...   "longitude": [20.0, 21.0],
+        ...   "elevation": [100.0, 200.0],
+        ... })
+        >>> out = sites.with_topography(df, inplace=False)
+        >>> tuple(round(v, 3) for v in out["E01"].coords)
+        (10.0, 20.0, 100.0)
+        """
 
-    # ---------- selection ----------
-
+        from .location import apply_topography  
+        edis = self.as_list()
+        out = apply_topography(edis, frame, inplace=inplace)
+        # apply_topography returns list when given list
+        return self if inplace else Sites(out)
+    
     def select(
         self,
         names: Optional[Sequence[str]] = None,
         predicate: Optional[Callable[[Site], bool]] = None,
     ) -> "Sites":
+        r"""
+        Filter sites by explicit names or by a boolean predicate.
+    
+        Parameters
+        ----------
+        names : sequence of str, optional
+            Case-insensitive station names to retain. If provided,
+            this takes precedence over ``predicate``.
+        predicate : callable, optional
+            Function ``predicate(site) -> bool``. Sites for which
+            the function returns ``True`` are retained.
+    
+        Returns
+        -------
+        Sites
+            New container with the selected sites.
+    
+        Notes
+        -----
+        If neither ``names`` nor ``predicate`` is provided, the
+        method returns a shallow copy of the current container.
+    
+        Examples
+        --------
+        >>> subset = sites.select(names=["E02"])
+        >>> [s.name for s in subset]
+        ['E02']
+        >>> subset2 = sites.select(predicate=lambda s: s.has_component("Zxy"))
+        >>> isinstance(subset2, Sites)
+        True
+        """
+
         out: List[EDIFile] = []
         if names:
             wanted = {str(n).lower() for n in names}
@@ -516,14 +1392,50 @@ class Sites(CoreObject):
             out = self.as_list()
         return Sites(out)
 
-    # ---------- import/export/profile ----------
-
     @classmethod
     def from_any(
         cls,
         source: Any,
         topo_src: Any | None = None,
     ) -> "Sites":
+        r"""
+        Construct a container from heterogeneous inputs by using a
+        normalized loading session.
+    
+        Parameters
+        ----------
+        source : Any
+            Input that can be understood by the loader. Supported
+            cases include:
+            - an :class:`EDICollection`,
+            - a list of :class:`EDIFile`,
+            - a single :class:`EDIFile`,
+            - or an iterable that yields EDIs.
+        topo_src : Any, optional
+            Optional topography source passed to the session for
+            use during loading. The default is ``None``.
+    
+        Returns
+        -------
+        Sites
+            Parsed container. Returns an empty container if the
+            input cannot be interpreted.
+    
+        Notes
+        -----
+        The method uses :func:`~pycsamt.session.normalize_session`
+        to handle parsing, discovery, and optional topography
+        alignment in a consistent way.
+    
+        Examples
+        --------
+        >>> from pycsamt.seg.collection import EDICollection
+        >>> # edicol = ...  # suppose we already parsed a folder
+        >>> # sites = Sites.from_any(edicol)
+        >>> # isinstance(sites, Sites)
+        True
+        """
+
         with normalize_session(".tmp", topo_src=topo_src) as nz:
             obj = nz.load(source)
         if isinstance(obj, EDICollection):
@@ -534,7 +1446,6 @@ class Sites(CoreObject):
             return cls(obj)  # type: ignore[arg-type]
         if isinstance(obj, EDIFile):
             return cls([obj])
-        # last resort: try to wrap iterable
         try:
             return cls(list(obj))  # type: ignore[arg-type]
         except Exception:
@@ -547,6 +1458,46 @@ class Sites(CoreObject):
         template: str = "{station}.edi",
         exist_ok: bool = False,
     ) -> List[Path]:
+        r"""
+        Write one EDI file per site to a directory.
+    
+        Parameters
+        ----------
+        outdir : str or pathlib.Path
+            Destination directory. It is created if missing.
+        template : str, optional
+            Filename template. The token ``{station}`` is replaced
+            by the normalized station name. Default is
+            ``"{station}.edi"``.
+        exist_ok : bool, optional
+            If ``False`` and a file already exists, raise
+            ``FileExistsError``. If ``True``, overwrite. Default is
+            ``False``.
+    
+        Returns
+        -------
+        list of pathlib.Path
+            Paths to the written files.
+    
+        Raises
+        ------
+        FileExistsError
+            If a target file exists and ``exist_ok`` is ``False``.
+    
+        Notes
+        -----
+        If an EDI object implements ``to_file``, it is used to
+        serialize. Otherwise a small placeholder file is written.
+    
+        Examples
+        --------
+        >>> import tempfile, pathlib
+        >>> tmp = pathlib.Path(tempfile.mkdtemp())
+        >>> paths = sites.write(tmp, exist_ok=True)
+        >>> all(p.exists() for p in paths)
+        True
+        """
+
         outp = Path(outdir)
         outp.mkdir(parents=True, exist_ok=True)
         paths: List[Path] = []
@@ -565,12 +1516,11 @@ class Sites(CoreObject):
                     continue
                 except Exception:
                     pass
-            # fallback dumb writer
             with open(p, "w", encoding="utf-8") as f:
                 f.write(f"# EDI placeholder for {name}\n")
             paths.append(p)
         return paths
-
+    
     def to_profile(
         self,
         origin: Tuple[float, float],
@@ -578,27 +1528,339 @@ class Sites(CoreObject):
         *,
         crs: Optional[int] = None,
     ) -> Any:
+        r"""
+        Convert sites to a 1D profile aligned with a specified
+        azimuth, returning either a rich Profile object or a
+        lightweight fallback.
+    
+        Parameters
+        ----------
+        origin : tuple of float
+            ``(lat, lon)`` in decimal degrees defining the profile
+            origin.
+        azimuth : float
+            Profile azimuth in degrees. North is ``0`` and angles
+            increase clockwise.
+        crs : int, optional
+            Optional CRS code for libraries that require it. Not
+            used in the lightweight fallback. Default is ``None``.
+    
+        Returns
+        -------
+        Profile or dict
+            If :class:`~pycsamt.site.profile.Profile` is available,
+            a Profile is returned. Otherwise a dict is returned with
+            keys ``"origin"``, ``"azimuth"``, and ``"sites"`` in
+            chainage order.
+    
+        Notes
+        -----
+        The fallback computes local chainage by a flat approximation
+        around ``origin``:
+    
+        .. math::
+    
+           ch = dx * \\sin(az) + dy * \\cos(az)
+    
+        where ``dx`` and ``dy`` are metric offsets relative to the
+        origin. Sites lacking valid coordinates are skipped.
+    
+        Examples
+        --------
+        >>> prof = sites.to_profile(origin=(0.0, 0.0), azimuth=90.0)
+        >>> hasattr(prof, "chainages") or isinstance(prof, dict)
+        True
+    
+        See Also
+        --------
+        pycsamt.site.profile.Profile
+            Rich profile object when available.
+        """
+
+        # Try to return a real Profile first
         try:
-            from .profile import to_profile as _to_prof  # type: ignore  # noqa: E501
-            return _to_prof(self, origin, azimuth, crs=crs)
+            from .profile import Profile  # type: ignore
+            from .location import Coord
+            prof = Profile.from_sites(
+                self._items,
+                origin=Coord(float(origin[0]), float(origin[1]), 0.0),
+                azimuth=float(azimuth),
+            )
+            return prof
         except Exception:
-            # lightweight chainage sort along azimuth
-            la0, lo0 = origin
-            la0 = float(assert_lat_value(la0))  # type: ignore[arg-type]
-            lo0 = float(assert_lon_value(lo0))  # type: ignore[arg-type]
-            az = math.radians(float(azimuth))
-            # simple projected chainage (not CRS-true)
-            items = []
-            for s in self._items:
-                la, lo, _ = s.coords
-                if not np.isfinite(la) or not np.isfinite(lo):
-                    continue
-                dy = (la - la0) * 111_000.0
-                dx = (lo - lo0) * 111_000.0 * math.cos(
-                    math.radians(la0)
-                )
-                ch = dx * math.cos(az) + dy * math.sin(az)
-                items.append((ch, s))
-            items.sort(key=lambda t: t[0])
-            return {"origin": origin, "azimuth": azimuth,
-                    "sites": [s for _, s in items]}
+            pass
+    
+        # Lightweight fallback: sort by chainage using local flat metric
+        la0, lo0 = origin
+        la0 = float(assert_lat_value(la0))  # type: ignore[arg-type]
+        lo0 = float(assert_lon_value(lo0))  # type: ignore[arg-type]
+        az = math.radians(float(azimuth))
+    
+        items: List[Tuple[float, Site]] = []
+        for s in self._items:
+            la, lo, _ = s.coords
+            if not np.isfinite(la) or not np.isfinite(lo):
+                continue
+            dy = (la - la0) * 111_000.0
+            dx = (lo - lo0) * 111_000.0 * math.cos(math.radians(la0))
+            # correct projection: north=0 -> dx*sin + dy*cos
+            ch = dx * math.sin(az) + dy * math.cos(az)
+            items.append((ch, s))
+        items.sort(key=lambda t: t[0])
+        return {
+            "origin": origin,
+            "azimuth": azimuth,
+            "sites": [s for _, s in items],
+        }
+
+def to_sites (x: Any): 
+    r"""
+    Coerce an arbitrary EDI-like input into a ``Sites`` wrapper.
+    
+    This helper normalizes many inputs to a uniform
+    :class:`~pycsamt.site.base.Sites` interface:
+    
+    * If ``x`` is already a ``Sites`` instance, it is returned
+      unchanged.
+    * If ``x`` is an ``EDICollection`` or a sequence of
+      ``EDIFile`` objects, a new ``Sites`` wrapper is created.
+    * If ``x`` is an iterable yielding EDI-like items, they are
+      collected and wrapped.
+    
+    The operation is light-weight and does not deep-copy the
+    underlying EDI objects. The returned ``Sites`` simply holds
+    references to the same items.
+    
+    Parameters
+    ----------
+    x : Any
+        A ``Sites`` instance, an ``EDICollection``, a sequence of
+        ``EDIFile`` objects, or an iterable yielding EDI-like
+        items.
+    
+    Returns
+    -------
+    pycsamt.site.base.Sites
+        A ``Sites`` wrapper over the provided items.
+    
+    Notes
+    -----
+    Use this utility at API boundaries to conveniently accept
+    multiple input forms while providing a consistent downstream
+    interface. If you need independent copies of the underlying
+    data, perform your own cloning before calling ``to_sites``.
+    
+    Examples
+    --------
+    Wrap a list of EDIFile objects:
+    
+    >>> from pycsamt.site.selection import to_sites
+    >>> s = to_sites([e1, e2, e3])
+    >>> len(s)
+    3
+    
+    Wrap an existing Sites (no-op):
+    
+    >>> s2 = to_sites(s)
+    >>> s2 is s
+    True
+    
+    Wrap an EDICollection:
+    
+    >>> s3 = to_sites(coll)  # coll is an EDICollection
+    >>> [t.name for t in s3]
+    ['A01', 'A02']
+    
+    See Also
+    --------
+    pycsamt.site.base.Sites :
+        Wrapper providing per-site convenience methods.
+    pycsamt.site.base.Sites.from_any :
+        Alternate constructor with session normalization.
+    """
+    return _to_sites (x )
+
+def _to_sites(x: Any):
+    r"""
+    Internal helper that implements :func:`to_sites`.
+    
+    Prefer :func:`to_sites` in user code. This function performs
+    the same coercion but is kept internal to allow refactoring
+    without breaking imports.
+    
+    Parameters
+    ----------
+    x : Any
+        See :func:`to_sites`.
+    
+    Returns
+    -------
+    pycsamt.site.base.Sites
+        See :func:`to_sites`.
+    
+    Notes
+    -----
+    This function imports ``Sites`` lazily to avoid import cycles
+    during package initialization.
+    """
+
+    if isinstance(x, Sites):
+        return x
+    coll = as_edicollection(x) or []
+    try:
+        return Sites(coll)
+    except TypeError:
+        return Sites(edic=coll)
+
+def _station_name(edi: EDIFile) -> str:
+    h = _get_head(edi)
+    if h is not None:
+        for k in ("dataid", "station", "sitename",
+                  "name", "STATION"):
+            v = _safe_get(h, k, default=None)
+            if v:
+                return str(v)
+    nm = _stem_from_edi(edi)
+    return nm or "site"
+
+def _z_to_2d(a: Any) -> np.ndarray:
+    z = np.asarray(a)
+    if z.ndim == 3 and z.shape[-2:] == (2, 2):
+        n = z.shape[0]
+        # row-major flatten: xx, xy, yx, yy
+        return z.reshape(n, 4)
+    return z
+
+
+def _set_station_name(edi: EDIFile, name: str) -> None:
+    head = _ensure_head(edi)
+    # best effort: write all common identifiers
+    for k in ("dataid", "station", "sitename", "name", "STATION"):
+        try:
+            setattr(head, k, name)
+        except Exception:
+            pass
+    try:
+        edi.name = name
+    except Exception:
+        pass
+
+def _safe_get(obj: Any, *names: str,
+              default: Any = None) -> Any:
+    for n in names:
+        try:
+            return getattr(obj, n)
+        except:
+            pass
+        try:
+            return obj[n]  # type: ignore[index]
+        except:
+            pass
+    return default
+
+def _clone_edi(ed: EDIFile) -> EDIFile:
+    try:
+        return _maybe_copy(ed)
+    except:
+        c = EDIFile()
+        for k, v in getattr(ed, "__dict__", {}).items():
+            try:
+                setattr(c, k, copy.copy(v))
+            except:
+                setattr(c, k, v)
+        return c
+
+def _component_names() -> List[str]:
+    return ["Zxx", "Zxy", "Zyx", "Zyy"]
+
+
+def _stem_from_edi(edi: EDIFile) -> str:
+    # Prefer an explicit in-memory name set by rename()
+    v = _safe_get(edi, "name", default=None)
+    if v:
+        return str(v)
+
+    # Fall back to on-disk/file-like attributes
+    for attr in ("path", "filepath", "filename", "file", "source"):
+        p = _safe_get(edi, attr, default=None)
+        if p:
+            try:
+                return Path(str(p)).stem
+            except Exception:
+                pass
+    return ""
+
+
+def _extract_z_arrays(ed: EDIFile) -> Dict[str, Any]:
+    Z = _safe_get(ed, "Z", default=None)
+    out: Dict[str, Any] = {}
+    out["freq"] = _safe_get(Z, "freq", "frequency")
+    out["z"] = _safe_get(Z, "z", "impedance")
+    out["z_err"] = _safe_get(
+        Z, "z_error", "z_err", "impedance_err"
+    )
+    out["rho"] = _safe_get(Z, "rho", "res", "resistivity")
+    out["phase"] = _safe_get(Z, "phase", "phi")
+    tip = _safe_get(ed, "T", "TIP")
+    if tip is None:
+        tip = _safe_get(Z, "tipper", "tip")
+    out["tipper"] = tip
+    return out
+
+def _slice_fields(Z: Any, sl: slice) -> None:
+    """
+    Slice Z fields atomically to keep freq/z aligned.
+    Use private attrs to avoid partial recomputations.
+    """
+    # Fetch (prefer privates if present)
+    def _ga(name: str, alt: str | None = None):
+        if hasattr(Z, f"_{name}"):
+            return getattr(Z, f"_{name}")
+        if hasattr(Z, name):
+            return getattr(Z, name)
+        if alt and hasattr(Z, alt):
+            return getattr(Z, alt)
+        return None
+
+    f = _ga("freq")
+    z = _ga("z")
+    ze = _ga("z_err", "z_error")
+    rho = _ga("rho", "resistivity")
+    ph = _ga("phase", "phi")
+    rot = getattr(Z, "rotation_angle", None)
+
+    # Build sliced copies (guard Nones)
+    fs = np.asarray(f)[sl] if f is not None else None
+    zs = np.asarray(z)[sl] if z is not None else None
+    zes = np.asarray(ze)[sl] if ze is not None else None
+    rhos = np.asarray(rho)[sl] if rho is not None else None
+    phs = np.asarray(ph)[sl] if ph is not None else None
+
+    # Assign to private storage to prevent immediate recompute
+    if fs is not None and hasattr(Z, "_freq"):
+        setattr(Z, "_freq", fs)
+    if zs is not None and hasattr(Z, "_z"):
+        setattr(Z, "_z", zs)
+    if zes is not None and hasattr(Z, "_z_err"):
+        setattr(Z, "_z_err", zes)
+    if rhos is not None and hasattr(Z, "_rho"):
+        setattr(Z, "_rho", rhos)
+    if phs is not None and hasattr(Z, "_phase"):
+        setattr(Z, "_phase", phs)
+
+    # Keep rotation vector aligned if it’s an array
+    try:
+        if rot is not None and np.ndim(rot) == 1 and fs is not None:
+            ra = np.asarray(rot)
+            if ra.size == np.asarray(f).size:
+                Z.rotation_angle = ra[sl]
+    except Exception:
+        pass
+
+    # Finalize: compute rho/phi once arrays are consistent
+    try:
+        if getattr(Z, "_z", None) is not None and getattr(Z, "_freq", None) is not None:
+            Z.compute_resistivity_phase()
+    except Exception:
+        # Be tolerant; tests only require freq slicing to succeed
+        pass

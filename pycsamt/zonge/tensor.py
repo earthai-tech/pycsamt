@@ -32,7 +32,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from ..utils.deps import ensure_pkg 
+from ..utils._dependency import import_optional_dependency 
 from ..exceptions import AvgDataError, TensorError
 from .base import AVGComponentBase
 
@@ -331,10 +331,6 @@ class TensorBase(AVGComponentBase):
 
         return pd.DataFrame.from_records(rows)
 
-    @ensure_pkg (
-        'xarray', 
-        extra="xarray is required for to_xarray_tensor()"
-    )
     def to_xarray_tensor(
         self,
         *,
@@ -349,6 +345,11 @@ class TensorBase(AVGComponentBase):
             single-station   → (freq, e, h)
             multi-station    → (station, freq, e, h)
         """
+        import_optional_dependency(
+            "xarray",
+            extra="xarray is required for to_xarray()",
+            errors="raise",
+        )
         import xarray as xr  # type: ignore
 
         T, freqs, stations = self.to_tensor(

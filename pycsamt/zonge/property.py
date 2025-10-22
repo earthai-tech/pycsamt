@@ -23,11 +23,13 @@ Design goals
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import field, asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 import json
+
+from ..compat.python import dc 
 
 __all__ = [
     "SkipFlag",
@@ -86,7 +88,7 @@ class SkipFlag:
     __repr__ = __str__
 
 
-@dataclass(slots=True)
+@dc(slots=True)
 class Hardware:
     """
     Minimal provenance captured from banner / comment lines.
@@ -195,7 +197,7 @@ class Hardware:
         return out
 
 
-@dataclass(slots=True)
+@dc(slots=True)
 class Receiver:
     """Receiver electrode / coil metadata (``$Rx.*``)."""
 
@@ -309,7 +311,7 @@ class Receiver:
         return f"Receiver(stn={st}, len={ln}, cmp={cmp_})"
 
 
-@dataclass(slots=True)
+@dc(slots=True)
 class Transmitter:
     """Transmitter loop / bipole metadata (``$Tx.*``)."""
 
@@ -432,7 +434,7 @@ class Transmitter:
         return f"Transmitter(stn={stn}{cur}{typ})"
 
 
-@dataclass(slots=True)
+@dc(slots=True)
 class SurveyConfiguration:
     """Survey-level configuration taken from AVG headers."""
 
@@ -562,7 +564,7 @@ class SurveyConfiguration:
         data.update(self._extra)
         return json.dumps(data, indent=indent)
 
-@dataclass(slots=True)
+@dc(slots=True)
 class SurveyAnnotation:
     """Project-level annotation block (``$Job.*``)."""
 

@@ -22,7 +22,7 @@ from numbers import Integral
 from pathlib import Path
 import re
 import io
-import warnings
+import warnings # noqa
 from typing import (
     List, 
     Tuple, 
@@ -39,9 +39,10 @@ import pandas as pd
 try:
     import xarray as xr  # type: ignore
 except ImportError:  # pragma: no cover
-    warnings.warn(
-        "xarray is required for the package"
-    )
+    pass 
+    # warnings.warn(
+    #     "xarray is required for the package"
+    # )
 from ..decorators import isdf
 from ..compat.aliases import compat_alias 
 from ..gis.utils import to_utm # type: ignore
@@ -51,7 +52,8 @@ from ..exceptions import (
     StationError
   )
 from ..log.logger import get_logger
-from ..utils.deps import ensure_pkg 
+from ..utils._dependency import import_optional_dependency
+
 from .schema import ( 
     _CANONICAL_MAP,
     _CANON_TO_MODERN,
@@ -503,7 +505,7 @@ def split_by_station(
     return out
 
 
-@ensure_pkg ('xarray', extra="xarray is required for to_xarray()")
+
 @isdf
 def to_xarray(
     df: pd.DataFrame,
@@ -559,6 +561,11 @@ def to_xarray(
       (numeric columns) to ensure a single value per cell.
     * Boolean columns are preserved as data variables.
     """
+    import_optional_dependency(
+        "xarray",
+        extra="xarray is required for to_xarray()",
+        errors="raise",
+    )
     # Work on a copy; we will normalise types and sort below.
     df = df.copy()
 

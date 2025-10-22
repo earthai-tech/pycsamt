@@ -32,7 +32,7 @@ Design notes
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field, asdict
+from dataclasses import field, asdict
 from datetime import datetime, timezone
 from pathlib import Path
 import warnings
@@ -51,6 +51,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from ..compat.python import dc 
 from ..exceptions import AvgDataError
 from ..log.logger import get_logger
 from ._transfer import LegacyAVGBase
@@ -67,7 +68,7 @@ __all__ = [
     "guess_kind_from_df"
     ]
 
-@dataclass(slots=True)
+@dc(slots=True)
 class AVGFrame:
     r"""A container for a tidy AVG table and its metadata.
 
@@ -229,7 +230,7 @@ class FieldAliases:
     phase: Tuple[str, ...] = ALL_ALIASES.get("phase", ())
     
     
-@dataclass(slots=True)
+@dc(slots=True)
 class AvgRow:
     r"""A structured, format-agnostic representation of a single row.
 

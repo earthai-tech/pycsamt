@@ -32,8 +32,8 @@ from ..api.bunch import Bunch
 from ..constants import MU_0, PI
 from ..decorators import has_fit
 from ..exceptions import AvgDataError
-from ..utils.deps import ensure_pkg 
 from ..utils.validation import has_read 
+from ..utils._dependency import import_optional_dependency 
 from ._transfer import LegacyAVGBase
 from .base import AVGFrame, guess_kind_from_df
 from .config import Zonge 
@@ -1105,7 +1105,6 @@ class AVG(BaseAVG):
         obj.read(path)
         return obj
 
-    @ensure_pkg ('xarray', extra="xarray is required.")
     def to_xarray(
         self,
         *,
@@ -1164,6 +1163,11 @@ class AVG(BaseAVG):
         --------
         to_tensor : Export a single variable to a NumPy tensor.
         """
+        import_optional_dependency(
+            "xarray",
+            extra="xarray is required for to_xarray()",
+            errors="raise",
+        )
         has_read (self) 
         
         # Start with the primary data variables

@@ -35,7 +35,7 @@ import numpy as np
 import pandas as pd
 
 from ..exceptions import FrequencyError, InputError
-from ..utils.deps import ensure_pkg 
+from ..utils._dependency import import_optional_dependency 
 
 from .base import AVGComponentBase
 from .utils import to_xarray as _to_xr  
@@ -484,7 +484,6 @@ class Frequency(AVGComponentBase):
         return np.logspace(decade_start, decade_stop, n_points,
                            endpoint=True, base=10.0)
 
-    @ensure_pkg ("xarray", extra ="xarray is required for this method.")
     def to_xarray(
         self,
         *,
@@ -496,6 +495,11 @@ class Frequency(AVGComponentBase):
         variable as well, which is helpful in some consumers; the
         coordinate is still the same `freq` axis created by `coords`.
         """
+        import_optional_dependency(
+            "xarray",
+            extra="xarray is required for to_xarray()",
+            errors="raise",
+        )
      
         import xarray as xr
 

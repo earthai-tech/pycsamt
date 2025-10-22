@@ -7,14 +7,20 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pycsamt.site.location import (
-    Coord,
-    parse_lat, parse_lon, parse_elev,
-    ensure_head_coords, apply_topography,
-    project, distance, bearing, chainage_along,
-)
 from pycsamt.seg.edi import EDIFile
 
+from pycsamt.site.location import (
+    Coord,
+    parse_lat, 
+    parse_lon, 
+    parse_elev,
+    ensure_head_coords, 
+    apply_topography,
+    project, 
+    distance, 
+    bearing, 
+    chainage_along,
+)
 
 def _load_edi(p: Path) -> EDIFile:
     return EDIFile(p)  # type: ignore

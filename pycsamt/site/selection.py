@@ -282,7 +282,7 @@ def by_chainage(sites: Any, smin: float, smax: float):
             ch = getattr(ed, "chainage", None)
         try:
             v = float(ch)
-        except Exception:
+        except:
             continue
         if smin <= v <= smax:
             keep.append(ed)
@@ -295,7 +295,7 @@ def by_freq(sites: Any, fmin: float, fmax: float):
     frequency inside a closed interval.
     
     A site is kept if its frequency array ``f`` contains any
-    finite value satisfying :math:`fmin \\le f \\le fmax`. Sites
+    finite value satisfying :math:`fmin \le f \le fmax`. Sites
     with empty or non-finite frequency arrays are skipped.
     
     Parameters
@@ -370,8 +370,8 @@ def by_bbox(
     
     .. math::
     
-       minlat \\le lat \\le maxlat \\;\\;\\text{and}\\;\\;
-       minlon \\le lon \\le maxlon .
+       minlat \le lat \le maxlat \;\;\text{and}\;\;
+       minlon \le lon \le maxlon .
     
     Parameters
     ----------
@@ -595,7 +595,7 @@ def mask_large_phase_err(sites: Any, thresh: float):
         ``EDICollection``, a sequence of ``EDIFile`` objects, or
         any iterable yielding EDI-like items.
     thresh : float
-        Threshold on phase-error (same units as stored by your
+        Threshold on phase-error (same units as stored by the
         processing pipeline, usually degrees).
     
     Returns

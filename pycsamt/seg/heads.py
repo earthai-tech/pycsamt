@@ -7,6 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 import datetime as _dt
 import re
+import math
 from typing import List, Optional, Sequence, Union, Iterable, Tuple
 
 from .. import __version__ as _PKG_VERSION
@@ -18,7 +19,8 @@ from ..exceptions import (
     EdIDataError,
     FileHandlingError,
 )
-from ._location import Location
+from ..loc import Location
+
 from .base import EDIComponentBase
 from .property import Source, Processing, Copyright, Software
 from .validation import IsEdi 
@@ -133,7 +135,7 @@ class Head(EDIComponentBase):
 
     Attributes
     ----------
-    Location : :class:`~pycsamt.site.location.Location`
+    Location : :class:`~pycsamt.loc.Location`
         Container for geographic coordinates.  The
         :pyattr:`lat`, :pyattr:`long` and :pyattr:`elev`
         properties delegate to this object.
@@ -236,6 +238,7 @@ class Head(EDIComponentBase):
         "lat",
         "long",
         "elev",
+        "chainage", 
         "declination",
         "datum",
         "units",
@@ -275,7 +278,7 @@ class Head(EDIComponentBase):
         self.prospect: Optional[str] = None
         self.loc: Optional[str] = None
 
-        self.units: str = "M".lower() if False else "m"  # keep lower internally; write upper
+        self.units: str = "M".lower() if False else "m"  
         self.stdvers: str = "SEG 1.0"
         self.progvers: str = self._PROGVERS
         self.progdate: str = self._PROGDATE 
@@ -287,6 +290,8 @@ class Head(EDIComponentBase):
         self.project: Optional[str] = None
         self.survey: Optional[str] = None
         self.empty: float = 1.0e32
+
+        self.chainage: Optional[float] = None
 
         self.edi_header: Optional[List[str]] = list(
             edi_header_list) if edi_header_list else None
@@ -337,6 +342,14 @@ class Head(EDIComponentBase):
                     )
 
     @property
+    def lon(self) -> Optional[float]:
+        return self.long
+    
+    @lon.setter
+    def lon(self, value: Union[str, float, int, None]) -> None:
+        self.long = value 
+    
+    @property
     def elev(self) -> Optional[float]:
         return self.Location.elevation
 
@@ -346,6 +359,7 @@ class Head(EDIComponentBase):
             self.Location.elevation = None
         else:
             self.Location.elevation = float(value)
+            
 
     # --------- API ----------
     @classmethod
@@ -387,6 +401,14 @@ class Head(EDIComponentBase):
                 continue
             key = _norm_key(m.group("key"))
             val = _unquote(m.group("val"))
+            
+            if key == "chainage":
+                try:
+                    setattr(self, "chainage", float(val))
+                except Exception:
+                    setattr(self, "chainage", None)
+                normalized.append(f"{key.upper()}={val}")
+                continue
 
             if key == "coordsys":
                 setattr(self, "coordsys", val)
@@ -454,6 +476,13 @@ class Head(EDIComponentBase):
                 out_val = str(val)
             elif key in self._quoted_keys:
                 out_val = f'"{val}"'
+
+            elif key == "chainage":
+                try:
+                    out_val = str(float(val))
+                except:
+                    continue
+
             else:
                 out_val = str(val).upper()
 
@@ -477,6 +506,60 @@ class Head(EDIComponentBase):
         for k, v in kwargs.items():
             setattr(self, k, v)
         return self
+    
+    def compute_chainage(
+        self,
+        origin: tuple[float, float],
+        azimuth: float,
+        *,
+        set_attr: bool = True,
+    ) -> float:
+        """
+        Compute chainage (meters) along a profile defined by an
+        origin and azimuth, using a local flat metric.
+    
+        Chainage is positive in the forward profile direction and
+        negative behind the origin.
+    
+        Parameters
+        ----------
+        origin : tuple of float
+            (lat0, lon0) in decimal degrees (WGS84 assumed).
+        azimuth : float
+            Profile azimuth in degrees. North = 0, East = 90.
+        set_attr : bool, optional
+            If True, store the computed value into
+            ``self.chainage``.
+    
+        Returns
+        -------
+        float
+            Chainage in meters. Returns ``nan`` if coordinates
+            are missing.
+        """
+        
+        la0, lo0 = origin
+        if self.lat is None or self.long is None:
+            ch = float("nan")
+            if set_attr:
+                self.chainage = ch
+            return ch
+    
+        # local flat approximation
+        dy = (float(self.lat) - float(la0)) * 111_000.0
+        dx = ((float(self.long) - float(lo0)) * 111_000.0
+              * math.cos(math.radians(float(la0))))
+    
+        az = math.radians(float(azimuth))
+        # north=0 => dx*sin + dy*cos
+        ch = dx * math.sin(az) + dy * math.cos(az)
+    
+        if set_attr:
+            try:
+                self.chainage = float(ch)
+            except:
+                self.chainage = None
+        return float(ch)
 
     def __repr__(self) -> str:  # compact identity for debugging
         return f"<Head dataid={self.dataid!r} lat={self.lat} long={self.long}>"

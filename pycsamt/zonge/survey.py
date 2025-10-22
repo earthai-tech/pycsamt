@@ -21,12 +21,13 @@ from typing import (
     Union, Literal, 
 
 )
-from dataclasses import dataclass, field
+from dataclasses import field
 from pathlib import Path 
 from scipy.interpolate import griddata
 import numpy as np
 import pandas as pd
 
+from ..compat.python import dc 
 from ..exceptions import StationError, ProcessingError
 from ..log.logger import get_logger
 from ..utils.deps import import_optional_dependency
@@ -1019,7 +1020,7 @@ def _median_inc(vals: np.ndarray) -> Optional[float]:
     return None
 
 
-@dataclass(slots=True)
+@dc(slots=True)
 class Station(AVGComponentBase):
     """
     One-dimensional survey-line geometry container.

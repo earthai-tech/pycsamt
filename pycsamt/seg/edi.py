@@ -614,10 +614,17 @@ class EDIFile(EDIMixin, EDIOMixin):
                     cls = getattr(pkg, "DefineMeas")
                 obj = cls.from_file(self.path)
                 self.add_section(key, obj)
-            except Exception:
+            except:
                 pass
     
         has_tf = False
+        head = self.get_section("head")
+        if head is not None:
+            try:
+                self.chainage = getattr(head, "chainage")
+            except:
+                pass
+
         for tag, header, j in iter_sections(str(self.path)):
             name = self._tag2name(tag)
             self.add_section(name, header)

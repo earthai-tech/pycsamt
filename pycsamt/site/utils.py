@@ -8,6 +8,8 @@ from typing import (Any, Callable, Iterator, List, Optional,
                     Sequence, Tuple, Union)
 from collections import namedtuple
 from pathlib import Path
+from os import PathLike 
+
 import copy
 import math
 import re
@@ -210,30 +212,70 @@ def iter_edifiles(edic: Any) -> Iterator[EDIFile]:
                 yield it  # type: ignore
 
 
-def as_edicollection(edic: Any) -> Optional[EDICollection]:
+
+def _is_pathlike(obj: Any) -> bool:
+    return isinstance(obj, (str, bytes, Path, PathLike))
+
+
+def _is_seq_of_pathlike(x: Any) -> bool:
+    if isinstance(x, (str, bytes, Path, PathLike)):
+        return False
+    try:
+        xs = list(x)
+    except Exception:
+        return False
+    return len(xs) > 0 and all(_is_pathlike(t) for t in xs)
+
+
+def as_edicollection(
+    edic: Any,
+    *,
+    # Discovery / parsing knobs (used when edic is path-like)
+    recursive: bool = True,
+    strict: bool = False,
+    on_dup: str = "replace",
+    verbose: int = 0,
+) -> Optional["EDICollection"]:
     r"""
-    Coerce *edic* into an `EDICollection` when possible.
-    
+    Coerce *edic* into an :class:`EDICollection` when possible.
+
     Parameters
     ----------
     edic : Any
-        Single EDI object or iterable of EDI objects.
-    
+        Single/sequence of EDI objects, an existing EDICollection,
+        or path-like (file/dir/glob) input.
+    recursive : bool, default ``True``
+        When ``edic`` is path-like (or a sequence of), recurse into
+        directories while discovering files.
+    strict : bool, default ``False``
+        If ``True`` and ``edic`` is path-like, propagate read errors;
+        otherwise errors are captured in the parser.
+    on_dup : {'replace', 'keep'}, default ``'replace'``
+        Duplicate policy during path-like discovery. See
+        :meth:`EDICollection.from_sources`.
+    verbose : int, default ``0``
+        Verbosity forwarded to underlying readers.
+
     Returns
     -------
-    pycsamt.seg.collection.EDICollection or None
-        A new collection containing the input items, or None when
+    EDICollection or None
+        A new collection containing the input items, or ``None`` if
         nothing EDI-like was found.
-    
+
     Notes
     -----
-    The constructor signature of `EDICollection` varies across
-    backends. This helper tries both keyword and positional
-    forms for compatibility.
-    
+    * If *edic* is path-like → use
+      :meth:`EDICollection.from_sources(...)`.
+    * If *edic* is already an EDICollection → return it.
+    * Else → collect EDI-like items via ``iter_edifiles(edic)`` and
+      build a collection.
+
     Examples
     --------
     >>> from pycsamt.site.utils import as_edicollection
+    >>> coll = as_edicollection("data/*.edi", recursive=True)
+    >>> coll is not None
+    >>>
     >>> class E:
     ...     def get_section(self, *_): ...
     ...     Z = object()
@@ -247,21 +289,37 @@ def as_edicollection(edic: Any) -> Optional[EDICollection]:
     See Also
     --------
     iter_edifiles, is_edi_collection
+    
     References
     ----------
     .. [1] Robust factory patterns for heterogeneous inputs.
+    
+    True
     """
 
+    # 1) Path-like discovery path
+    if _is_pathlike(edic) or _is_seq_of_pathlike(edic):
+        return EDICollection.from_sources(
+            edic,
+            recursive=recursive,
+            strict=strict,
+            on_dup=on_dup,
+            verbose=verbose,
+        )
+
+    # 2) Already a collection
     if isinstance(edic, EDICollection):
         return edic
+
+    # 3) Try to iterate EDI-like objects
     items = list(iter_edifiles(edic))
     if not items:
         return None
-    try:
-        return EDICollection(items=items, verbose=0)  # type: ignore
-    except TypeError:
-        return EDICollection(items, verbose=0)  # type: ignore
 
+    try:
+        return EDICollection(items=items, verbose=verbose)  # type: ignore
+    except TypeError:
+        return EDICollection(items, verbose=verbose)  # type: ignore
 
 def station_name(ed: Any) -> str:
     r"""

@@ -9,6 +9,8 @@ from typing import List, Tuple, Sequence, Dict, Union
 
 import copy
 from pathlib import Path
+from os import PathLike
+import warnings
 
 import math 
 import numpy as np
@@ -18,7 +20,6 @@ from ..core.base import CoreObject
 from ..seg.edi import EDIFile
 from ..seg.collection import EDICollection
 from ..session import normalize_session
-
 from ..gis.utils import (
     assert_lat_value,
     assert_lon_value,
@@ -938,6 +939,9 @@ class Sites(CoreObject):
         self,
         edic: Union[EDICollection, Sequence[EDIFile]],
     ) -> None:
+        if isinstance (edic, EDIFile): 
+            edic= [edic] 
+            
         items = list(edic)
         self._items: List[Site] = [Site(e) for e in items]
 
@@ -1613,7 +1617,14 @@ class Sites(CoreObject):
             "sites": [s for _, s in items],
         }
 
-def to_sites (x: Any): 
+def to_sites (
+    x: Any, 
+    *, 
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    ): 
     r"""
     Coerce an arbitrary EDI-like input into a ``Sites`` wrapper.
     
@@ -1678,39 +1689,189 @@ def to_sites (x: Any):
     pycsamt.site.base.Sites.from_any :
         Alternate constructor with session normalization.
     """
-    return _to_sites (x )
+    return _to_sites (
+        x, recursive = recursive, 
+        on_dup =on_dup, 
+        strict= strict, 
+        verbose= verbose 
+    )
 
-def _to_sites(x: Any):
+
+def _is_pathlike(obj: Any) -> bool:
+    return isinstance(obj, (str, bytes, Path, PathLike))
+
+
+def _is_seq_of_pathlike(x: Any) -> bool:
+    if isinstance(x, (str, bytes, Path, PathLike)):
+        return False  # single path-like handled elsewhere
+    try:
+        it = iter(x)  # noqa: F841
+    except Exception:
+        return False
+    # Heuristic: non-empty and all items path-like
+    try:
+        xs = list(x)
+    except Exception:
+        return False
+    return len(xs) > 0 and all(_is_pathlike(t) for t in xs)
+
+
+def _map_on_dup_for_collection(on_dup: str) -> str:
+    """
+    EDICollection.from_sources supports {'replace', 'keep'}.
+    Map broader API to that set.
+    """
+    key = (on_dup or "replace").strip().lower()
+    if key in {"replace", "keep"}:
+        return key
+    if key in {"keep_first"}:
+        return "keep"
+    if key in {"keep_last"}:
+        return "replace"
+    if key in {"raise"}:
+        # no native support; we'll handle after construction
+        return "replace"
+    raise ValueError(
+        "Invalid on_dup policy. Allowed: "
+        "'replace', 'keep', 'keep_first', 'keep_last', 'raise'."
+    )
+
+
+def _dedup_collection_names(
+    coll, *, policy: str, verbose: int = 0
+):
+    """
+    Apply post-hoc duplicate policy ('keep_first', 'keep_last', 'raise')
+    when the collection was built from non-path inputs.
+    """
+    key = (policy or "replace").strip().lower()
+    if key in {"replace", "keep"}:
+        return coll  # already handled at load time
+    # Build index by item name
+    try:
+        items = list(coll.items.values())
+    except Exception:
+        # Fallback: assume EDICollection-like iterability
+        items = list(coll)
+
+    def _name(it, i):
+        for attr in ("station", "name", "site", "id"):
+            if hasattr(it, attr):
+                v = getattr(it, attr)
+                if isinstance(v, str) and v:
+                    return v
+        return f"site_{i}"
+
+    name_to_idx: Dict[str, int] = {}
+    names: List[str] = []
+    for i, it in enumerate(items):
+        n = _name(it, i)
+        names.append(n)
+        if key == "keep_first":
+            name_to_idx.setdefault(n, i)
+        elif key == "keep_last":
+            name_to_idx[n] = i
+        elif key == "raise":
+            if n in name_to_idx:
+                raise ValueError(
+                    f"Duplicate site '{n}' encountered with "
+                    "on_dup='raise'."
+                )
+            name_to_idx[n] = i
+
+    if verbose > 0:
+        dups = sorted({n for n in names if names.count(n) > 1})
+        if dups:
+            warnings.warn(
+                f"to_sites: duplicates {dups} handled with "
+                f"policy='{key}'.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+
+    kept = [items[i] for i in sorted(name_to_idx.values())]
+
+    # Rebuild a new collection of the same class with filtered items
+    CollCls = coll.__class__
+    try:
+        return CollCls(items=kept, verbose=getattr(coll, "verbose", 0))
+    except TypeError:
+        return CollCls(kept, verbose=getattr(coll, "verbose", 0))
+
+
+def _to_sites(
+    x: Any,
+    *,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+):
     r"""
     Internal helper that implements :func:`to_sites`.
-    
-    Prefer :func:`to_sites` in user code. This function performs
-    the same coercion but is kept internal to allow refactoring
-    without breaking imports.
-    
-    Parameters
-    ----------
-    x : Any
-        See :func:`to_sites`.
-    
-    Returns
-    -------
-    pycsamt.site.base.Sites
-        See :func:`to_sites`.
-    
-    Notes
-    -----
-    This function imports ``Sites`` lazily to avoid import cycles
-    during package initialization.
+
+    See :func:`to_sites` for parameters and behavior.
+    This version additionally recognizes path-like inputs and
+    uses EDICollection.from_sources(...) to honor discovery
+    controls (recursive/strict/on_dup/verbose).
     """
 
+    # Fast path
     if isinstance(x, Sites):
         return x
-    coll = as_edicollection(x) or []
+
+    # 1) Path-like (single or sequence) → from_sources(...)
+    if _is_pathlike(x) or _is_seq_of_pathlike(x):
+        coll_on_dup = _map_on_dup_for_collection(on_dup)
+        coll = EDICollection.from_sources(
+            x,
+            recursive=recursive,
+            strict=strict,
+            on_dup=coll_on_dup,
+            verbose=verbose,
+        )
+        # If caller asked for 'raise', enforce it now.
+        if on_dup.strip().lower() == "raise":
+            coll = _dedup_collection_names(
+                coll, policy="raise", verbose=verbose
+            )
+        # Wrap in Sites
+        try:
+            return Sites(coll)
+        except TypeError:
+            return Sites(edic=coll)
+
+    # 2) Non-path inputs → coerce to collection
+
+    try:
+        coll = as_edicollection(
+            x,
+            strict=strict,
+            verbose=verbose,
+        )
+    except TypeError:
+        coll = as_edicollection(x)
+
+    if coll is None:
+        if strict:
+            raise ValueError(
+                "to_sites(strict=True): no EDI-like items could be "
+                "coerced from the provided input."
+            )
+        coll = EDICollection(items=[], verbose=verbose)
+
+    # Enforce any post-hoc duplicate policy not covered by the collection
+    if on_dup.strip().lower() in {"keep_first", "keep_last", "raise"}:
+        coll = _dedup_collection_names(
+            coll, policy=on_dup, verbose=verbose
+        )
+
+    # Sites wrapper
     try:
         return Sites(coll)
     except TypeError:
         return Sites(edic=coll)
+
 
 def _station_name(edi: EDIFile) -> str:
     h = _get_head(edi)

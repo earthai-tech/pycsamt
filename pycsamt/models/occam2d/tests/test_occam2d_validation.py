@@ -31,7 +31,7 @@ def test_detect_model_file():
     assert detect_file_type(p) == OccamFileType.MODEL
 
 
-def test_missing_file_raises():
+def test_missing_file_returns_false():
+    # Predicate functions return False for non-existent paths (no raise)
     from pycsamt.models.occam2d.validation import is_data_file
-    with pytest.raises(ValueError):
-        is_data_file("/nonexistent/path/file.dat")
+    assert is_data_file("/nonexistent/path/file.dat") is False

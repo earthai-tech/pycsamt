@@ -4,8 +4,8 @@
 """File-format validators for Occam2D files.
 
 Each ``is_*`` function accepts a path and returns ``True`` if the file
-matches the expected Occam2D format signature, ``False`` otherwise.
-Raises ``ValueError`` when the path does not exist.
+matches the expected Occam2D format signature, ``False`` otherwise
+(including when the path does not exist).
 """
 
 from __future__ import annotations

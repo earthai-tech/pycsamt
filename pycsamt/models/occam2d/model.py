@@ -18,24 +18,38 @@ Entry points
 
 File format (OCCAM2MTMOD_1.0)
 ------------------------------
-Format:         OCCAM2MTMOD_1.0
-Model Name:     <name>
-Description:    <description>
-Mesh File:      <mesh_filename>
-Mesh Type:      PW2D
-Statics File:   none
-Prejudice File: none
-Binding Offset: <float>
-Num Layers:     <n>
-  <n_params_row>  <n_cols_row>
-  <param_codes…>
-  ...
+::
+
+    Format:           OCCAM2MTMOD_1.0
+    Model Name:       <name>
+    Description:      <description>
+    Mesh File:        <mesh_filename>
+    Mesh Type:        PW2D
+    Statics File:     none
+    Prejudice File:   none
+    Binding Offset:   <float>
+    Num Layers:       <N>
+      <n_merge>  <n_cols>
+      <n_cols integers — parameter codes for each model column>
+      ... (repeated N times)
+    NO. EXCEPTIONS:   <K>
+
+Parameter codes
+---------------
+Each integer in a layer's data row encodes the cell type:
+
+* **7** — boundary column (tied to the binding value, not a free parameter)
+* **even ≥ 2** — active column; the exact value encodes how many mesh columns
+  are merged into one model column (2 = 1:1, 4 = 2:1, …)
+
+The total cell count across all layers equals the ``Param Count`` recorded in
+the Startup / .iter file.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 
@@ -46,22 +60,153 @@ PathLike = Union[str, Path]
 
 __all__ = ["OccamModel"]
 
+_FORMAT_TAG = "OCCAM2MTMOD_1.0"
+
+# Header keyword → attribute name (upper-cased key for matching)
+_HEADER_MAP: Dict[str, str] = {
+    "FORMAT":          "format_str",
+    "MODEL NAME":      "name",
+    "DESCRIPTION":     "description",
+    "MESH FILE":       "mesh_file",
+    "MESH TYPE":       "mesh_type",
+    "STATICS FILE":    "statics_file",
+    "PREJUDICE FILE":  "prejudice_file",
+    "BINDING OFFSET":  "binding_offset",
+    "NUM LAYERS":      "n_layers",
+    "NO. EXCEPTIONS":  "n_exceptions",
+}
+
+_FLOAT_FIELDS = {"binding_offset"}
+_INT_FIELDS   = {"n_layers", "n_exceptions"}
+
+
+# -----------------------------------------------------------------------
+# Low-level parser
+# -----------------------------------------------------------------------
+
+def _parse_model(path: Path) -> dict:
+    """Parse an OCCAM2MTMOD_1.0 file.
+
+    Returns
+    -------
+    dict
+        Keys: all ``_HEADER_MAP`` values plus ``"layers"``
+        (``list[dict]`` with keys ``n_merge``, ``n_cols``, ``params``).
+
+    Raises
+    ------
+    FileNotFoundError
+    ValueError
+        If the Format tag is absent or wrong.
+    """
+    if not path.exists():
+        raise FileNotFoundError(f"Occam2DModel file not found: {path}")
+
+    result: dict = {v: None for v in _HEADER_MAP.values()}
+    result["layers"] = []
+
+    with path.open("r", errors="replace") as fh:
+        lines = [l.rstrip("\n") for l in fh]
+
+    i   = 0
+    N   = len(lines)
+
+    while i < N:
+        raw = lines[i].strip()
+        i  += 1
+
+        if not raw:
+            continue
+
+        # Header line?
+        if ":" in raw:
+            raw_key, _, raw_val = raw.partition(":")
+            key  = raw_key.strip().upper()
+            val  = raw_val.strip()
+            attr = _HEADER_MAP.get(key)
+            if attr is not None:
+                if attr in _INT_FIELDS:
+                    try:
+                        result[attr] = int(float(val))
+                    except ValueError:
+                        result[attr] = 0
+                elif attr in _FLOAT_FIELDS:
+                    try:
+                        result[attr] = float(val)
+                    except ValueError:
+                        result[attr] = 0.0
+                elif attr == "format_str":
+                    result[attr] = val
+                    if val.upper() != _FORMAT_TAG:
+                        raise ValueError(
+                            f"Expected format '{_FORMAT_TAG}', got '{val}' in {path}"
+                        )
+                else:
+                    result[attr] = val
+
+                # After Num Layers we switch to reading layer blocks
+                if attr == "n_layers" and result["n_layers"]:
+                    n_layers = result["n_layers"]
+                    for _ in range(n_layers):
+                        # Control line: n_merge  n_cols
+                        while i < N and not lines[i].strip():
+                            i += 1
+                        ctrl = lines[i].strip().split()
+                        i += 1
+                        n_merge = int(ctrl[0])
+                        n_cols  = int(ctrl[1])
+                        # Data line: n_cols integers
+                        while i < N and not lines[i].strip():
+                            i += 1
+                        params = np.array(
+                            [int(x) for x in lines[i].strip().split()],
+                            dtype=np.int32,
+                        )
+                        i += 1
+                        result["layers"].append(
+                            {"n_merge": n_merge, "n_cols": n_cols, "params": params}
+                        )
+
+    if result["format_str"] is None:
+        raise ValueError(
+            f"File does not contain a valid OCCAM2MTMOD_1.0 header: {path}"
+        )
+
+    return result
+
+
+# -----------------------------------------------------------------------
+# OccamModel
+# -----------------------------------------------------------------------
 
 class OccamModel(OccamBase):
     """Occam2D model-definition container.
 
     Attributes
     ----------
+    format_str : str
     name : str
     description : str
     mesh_file : str
-        Relative path to the mesh file (referenced inside the model file).
+        Filename of the associated mesh (referenced inside the model file).
+    mesh_type : str
+    statics_file : str
+    prejudice_file : str
     binding_offset : float
         Horizontal offset of the binding column.
     n_layers : int
-        Number of free-parameter layers.
-    param_map : np.ndarray
-        Integer array encoding which parameter index each cell belongs to.
+        Number of model layers (depth intervals).
+    layers : list[dict]
+        Per-layer parameter specification.  Each entry has keys:
+
+        ``n_merge`` : int
+            Number of mesh z-rows merged into this model layer.
+        ``n_cols`` : int
+            Number of model columns in this layer.
+        ``params`` : np.ndarray(int), shape (n_cols,)
+            Parameter codes for each column (7 = boundary, even ≥ 2 = active).
+
+    n_exceptions : int
     """
 
     def __init__(
@@ -72,13 +217,18 @@ class OccamModel(OccamBase):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.name            = name
-        self.description     = description
-        self.config          = config or OccamConfig()
-        self.mesh_file       = self.config.mesh_file
-        self.binding_offset  = 0.0
-        self.n_layers        = 0
-        self.param_map:  np.ndarray = np.empty((0,), dtype=int)
+        self.format_str:     str               = _FORMAT_TAG
+        self.name:           str               = name
+        self.description:    str               = description
+        self.config:         OccamConfig       = config or OccamConfig()
+        self.mesh_file:      str               = self.config.mesh_file
+        self.mesh_type:      str               = "PW2D"
+        self.statics_file:   str               = "none"
+        self.prejudice_file: str               = "none"
+        self.binding_offset: float             = 0.0
+        self.n_layers:       int               = 0
+        self.layers:         List[dict]        = []
+        self.n_exceptions:   int               = 0
 
     # ------------------------------------------------------------------
     # Construction
@@ -98,7 +248,7 @@ class OccamModel(OccamBase):
         # TODO: implement
         # 1. Iterate over mesh layers (excluding air layers)
         # 2. Assign contiguous parameter indices
-        # 3. Set n_layers, param_map
+        # 3. Populate self.layers, self.n_layers
         raise NotImplementedError("OccamModel.from_mesh — not yet implemented")
 
     # ------------------------------------------------------------------
@@ -106,16 +256,58 @@ class OccamModel(OccamBase):
     # ------------------------------------------------------------------
     @classmethod
     def read(cls, path: PathLike, **kwargs) -> "OccamModel":
-        """Parse an existing ``Occam2DModel`` file."""
-        # TODO: implement
-        raise NotImplementedError("OccamModel.read — not yet implemented")
+        """Parse an existing ``Occam2DModel`` file.
+
+        Parameters
+        ----------
+        path : path-like
+            Path to the ``Occam2DModel`` file.
+
+        Returns
+        -------
+        OccamModel
+
+        Raises
+        ------
+        FileNotFoundError
+            If *path* does not exist.
+        ValueError
+            If the Format tag is absent or wrong.
+        """
+        p      = Path(path)
+        parsed = _parse_model(p)
+        obj    = cls(**kwargs)
+
+        for attr in _HEADER_MAP.values():
+            val = parsed.get(attr)
+            if val is not None and hasattr(obj, attr):
+                setattr(obj, attr, val)
+
+        obj.layers = parsed["layers"]
+
+        if obj.verbose:
+            obj.logger.info(
+                "OccamModel.read: %d layers, %d total cells from %s",
+                obj.n_layers, obj.n_params, p,
+            )
+        return obj
 
     def write(self, path: PathLike) -> Path:
         """Write model to *path* in OCCAM2MTMOD_1.0 format."""
         # TODO: implement
         raise NotImplementedError("OccamModel.write — not yet implemented")
 
+    # ------------------------------------------------------------------
+    # Derived
+    # ------------------------------------------------------------------
     @property
     def n_params(self) -> int:
-        """Total number of free inversion parameters."""
-        return int(self.param_map.max()) if self.param_map.size else 0
+        """Total number of model cells (equals ``Param Count`` in the iter file)."""
+        return sum(layer["n_cols"] for layer in self.layers)
+
+    @property
+    def n_free_params(self) -> int:
+        """Number of free (non-boundary) model cells."""
+        return sum(
+            int((layer["params"] != 7).sum()) for layer in self.layers
+        )

@@ -242,14 +242,87 @@ class OccamModel(OccamBase):
     ) -> "OccamModel":
         """Build a model definition from a populated mesh.
 
-        Each non-air column of cells is assigned a unique free parameter
-        per depth layer, giving a standard smooth-model parameterisation.
+        Parameterisation
+        ----------------
+        Each active (non-air) mesh z-row becomes one model layer
+        (``n_merge = 1``).  Horizontal grouping:
+
+        * Left boundary column: code ``7`` (spans 7 mesh x-cells).
+        * Interior columns: code ``2`` (one model column per 2 mesh x-cells).
+        * Right boundary column: code ``7``.
+
+        This requires ``n_xcells`` to be even so that
+        ``(n_xcells − 14) / 2`` is an integer.  The mesh builder
+        :meth:`OccamMesh.from_data` guarantees this.
+
+        Parameters
+        ----------
+        mesh : OccamMesh
+            Populated mesh object.
+        config : OccamConfig, optional
+            Run configuration.
+
+        Returns
+        -------
+        OccamModel
+
+        Raises
+        ------
+        ValueError
+            If ``n_xcells`` < 14 or the model would have no active layers.
         """
-        # TODO: implement
-        # 1. Iterate over mesh layers (excluding air layers)
-        # 2. Assign contiguous parameter indices
-        # 3. Populate self.layers, self.n_layers
-        raise NotImplementedError("OccamModel.from_mesh — not yet implemented")
+        cfg      = config or OccamConfig()
+        obj      = cls(config=cfg, **kwargs)
+        n_xcells = mesh.n_xcells
+        n_air    = mesh.n_airlayers
+        n_active = mesh.n_zcells - n_air
+
+        if n_active <= 0:
+            raise ValueError(
+                f"OccamModel.from_mesh: no active layers "
+                f"(n_zcells={mesh.n_zcells}, n_airlayers={n_air})"
+            )
+        if n_xcells < 14:
+            raise ValueError(
+                f"OccamModel.from_mesh: n_xcells={n_xcells} < 14; "
+                "mesh too narrow for boundary columns"
+            )
+
+        # Build per-layer code array: [7, 2, 2, ..., 2, 7]
+        n_interior = (n_xcells - 14) // 2
+        remainder  = (n_xcells - 14) - 2 * n_interior
+        interior   = [2] * n_interior
+        if remainder and n_interior > 0:
+            # Absorb remainder into the last interior column (keep it even)
+            interior[-1] += remainder
+        elif remainder:
+            interior = [2 + remainder]
+        codes = np.array([7] + interior + [7], dtype=np.int32)
+
+        assert int(codes.sum()) == n_xcells, (
+            f"code sum {codes.sum()} != n_xcells {n_xcells}"
+        )
+        n_cols = len(codes)
+
+        layers: List[dict] = []
+        for _ in range(n_active):
+            layers.append({
+                "n_merge": 1,
+                "n_cols":  n_cols,
+                "params":  codes.copy(),
+            })
+
+        obj.mesh_file    = cfg.mesh_file
+        obj.n_layers     = n_active
+        obj.layers       = layers
+        obj.n_exceptions = 0
+
+        if obj.verbose:
+            obj.logger.info(
+                "OccamModel.from_mesh: %d layers, %d cols/layer, %d total params",
+                n_active, n_cols, obj.n_params,
+            )
+        return obj
 
     # ------------------------------------------------------------------
     # I/O

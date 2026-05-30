@@ -264,9 +264,38 @@ class OccamStartup(OccamBase):
 
         Sets the parameter vector to ``log10(config.initial_rho)``
         repeated ``model.n_params`` times.
+
+        Parameters
+        ----------
+        model : OccamModel
+            Populated model (must have ``n_params > 0``).
+        config : OccamConfig, optional
+            Run configuration.  Provides ``initial_rho``, file names, …
+
+        Returns
+        -------
+        OccamStartup
         """
-        # TODO: implement (Phase 3)
-        raise NotImplementedError("OccamStartup.from_model — not yet implemented")
+        cfg = config or OccamConfig()
+        obj = cls(config=cfg, **kwargs)
+
+        n = model.n_params
+        if n <= 0:
+            raise ValueError(
+                "OccamStartup.from_model: model has no parameters"
+            )
+
+        obj.n_params     = n
+        obj.param_values = np.full(n, np.log10(cfg.initial_rho), dtype=float)
+        obj.model_file   = cfg.model_file
+        obj.data_file    = cfg.data_file
+
+        if obj.verbose:
+            obj.logger.info(
+                "OccamStartup.from_model: %d params, rho0=%.1f Ω·m",
+                n, cfg.initial_rho,
+            )
+        return obj
 
     # ------------------------------------------------------------------
     # I/O

@@ -25,12 +25,13 @@ from typing import List, Optional, Union
 import numpy as np
 
 from .base       import OccamBase
+from .data       import OccamData
 from .log        import OccamLog
 from .mesh       import OccamMesh
 from .model      import OccamModel
 from .response   import OccamResponse
 from .startup    import OccamIter
-from .validation import is_log_file, is_mesh_file, is_model_file
+from .validation import is_data_file, is_log_file, is_mesh_file, is_model_file
 
 PathLike = Union[str, Path]
 
@@ -140,6 +141,7 @@ class InversionResult(OccamBase):
         self.model:     Optional[OccamModel]    = None
         self.best_iter: Optional[OccamIter]     = None
         self.response:  Optional[OccamResponse] = None
+        self.data:      Optional[OccamData]     = None
 
         self.iter_files: List[Path] = []
         self.resp_files: List[Path] = []
@@ -215,6 +217,20 @@ class InversionResult(OccamBase):
         if resp_p:
             try:
                 self.response = OccamResponse.read(resp_p)
+            except Exception:
+                pass
+
+        # --- data file ---
+        data_p = None
+        if self.best_iter is not None and getattr(self.best_iter, "data_file", None):
+            candidate = wd / self.best_iter.data_file
+            if candidate.exists():
+                data_p = candidate
+        if data_p is None:
+            data_p = _scan_one(wd, is_data_file, "*.dat")
+        if data_p:
+            try:
+                self.data = OccamData.read(data_p)
             except Exception:
                 pass
 

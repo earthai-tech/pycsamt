@@ -78,6 +78,97 @@ DATA_TYPE_CODES = {
 
 
 # -----------------------------------------------------------------------
+# Helpers for from_edi
+# -----------------------------------------------------------------------
+
+def _site_attr(site, *names):
+    """Return the first non-None attribute from *names* on *site*."""
+    for n in names:
+        v = getattr(site, n, None)
+        if v is not None:
+            return v
+    return None
+
+
+def _unique_freqs(all_freqs: list, rtol: float = 0.01) -> np.ndarray:
+    """Merge near-duplicate frequencies (within *rtol* relative tolerance)."""
+    arr = np.sort(np.unique(np.asarray(all_freqs, dtype=float)))[::-1]
+    if arr.size == 0:
+        return arr
+    merged = [float(arr[0])]
+    for f in arr[1:]:
+        if abs(f - merged[-1]) / max(abs(f), abs(merged[-1]), 1e-30) > rtol:
+            merged.append(float(f))
+    return np.array(merged, dtype=float)
+
+
+def _normalise_source(source) -> list:
+    """Return a flat list of duck-typed site items from any accepted source."""
+    # Sites (pycsamt.site.base.Sites): has _items → iterate directly
+    if hasattr(source, "_items"):
+        return list(source)
+    # EDICollection: has .edic → list of EDIFile; wrap lazily
+    if hasattr(source, "edic"):
+        try:
+            from pycsamt.site.base import Site
+            return [Site(e) for e in source.edic]
+        except Exception:
+            return list(source.edic)
+    # Assume already iterable of site-like objects
+    return list(source)
+
+
+def _compute_offsets(items: list):
+    """Return (names, offsets_m) sorted by profile chainage.
+
+    Tries Profile.from_sites first; falls back to simple lat/lon offset
+    when the profile module is unavailable.
+    """
+    # Station names
+    names = []
+    for it in items:
+        n = getattr(it, "name", None)
+        if n is None:
+            n = _site_attr(it, "station", "dataid") or f"S{len(names):03d}"
+        names.append(str(n))
+
+    # Try full Profile machinery
+    try:
+        from pycsamt.site.profile import Profile
+        prof = Profile.from_sites(items)
+        offsets = [float(prof.chainages.get(n, float("nan"))) for n in names]
+        if all(np.isfinite(offsets)):
+            return names, offsets
+    except Exception:
+        pass
+
+    # Fallback: compute Euclidean offset from lat/lon
+    lats, lons = [], []
+    for it in items:
+        c = getattr(it, "coords", None)
+        if callable(c):
+            c = c()
+        if c is not None and len(c) >= 2:
+            lats.append(float(c[0])); lons.append(float(c[1]))
+        else:
+            lats.append(float("nan")); lons.append(float("nan"))
+
+    lat0 = next((v for v in lats if np.isfinite(v)), 0.0)
+    lon0 = next((v for v in lons if np.isfinite(v)), 0.0)
+    _M_PER_DEG = 111_195.0
+    offsets = []
+    for lat, lon in zip(lats, lons):
+        if np.isfinite(lat) and np.isfinite(lon):
+            dx = (lon - lon0) * _M_PER_DEG * np.cos(np.radians(lat0))
+            dy = (lat - lat0) * _M_PER_DEG
+            offsets.append(float(np.sqrt(dx * dx + dy * dy)) * np.sign(dx + dy))
+        else:
+            offsets.append(float(len(offsets)) * 1000.0)   # 1 km spacing
+
+    return names, offsets
+
+
+# -----------------------------------------------------------------------
 # Low-level parser
 # -----------------------------------------------------------------------
 
@@ -266,21 +357,154 @@ class OccamData(OccamBase):
     ) -> "OccamData":
         """Build an ``OccamData`` from an ``EDICollection`` or ``Sites``.
 
+        Pycsamt convention
+        ------------------
+        TE mode → Z_xy component: ``rho[:, 0, 1]``, ``phase[:, 0, 1]``
+        TM mode → Z_yx component: ``rho[:, 1, 0]``, ``phase[:, 1, 0]``
+
+        PhsTM is normalised to the first quadrant by adding 180° (Z_yx
+        phase is typically in the third quadrant for passive MT).
+
         Parameters
         ----------
-        source : EDICollection | Sites
-            Loaded EDI data (single source of truth).
+        source : Sites | EDICollection | iterable
+            Loaded EDI data.  Any object whose iteration yields site-like
+            items with ``.name``, ``.freq``, ``.rho``, ``.phase`` (and
+            optionally ``.coords`` for profile ordering) is accepted.
         modes : list[str], optional
-            Subset of ``["TE", "TM", "Tipper"]``.  Default from config.
+            Subset of ``["TE", "TM"]``.  Default from ``config.modes``.
         config : OccamConfig, optional
             Run configuration (error floors, frequency band, …).
+        title : str
+            Written into the data file header.
+
+        Returns
+        -------
+        OccamData
         """
-        # TODO: implement
-        # 1. Extract TFBundle / z arrays from source
-        # 2. Apply frequency band and error-floor filters from config
-        # 3. Compute profile offsets from station coordinates
-        # 4. Populate self.sites, self.offsets, self.frequencies, self.data_blocks
-        raise NotImplementedError("OccamData.from_edi — not yet implemented")
+        cfg   = config or OccamConfig()
+        modes = modes or cfg.modes
+
+        # ---- normalise source to a list of duck-typed site items ---------
+        items = _normalise_source(source)
+        if not items:
+            raise ValueError("OccamData.from_edi: no sites in source")
+
+        # ---- profile sort → chainages (offsets in metres) ----------------
+        names, offsets = _compute_offsets(items)
+
+        # sort by chainage
+        order = np.argsort(offsets)
+        names   = [names[i]   for i in order]
+        offsets = [offsets[i] for i in order]
+        items   = [items[i]   for i in order]
+
+        # ---- global frequency list ---------------------------------------
+        all_freqs: list[float] = []
+        for it in items:
+            f = _site_attr(it, "freq")
+            if f is not None:
+                all_freqs.extend(np.asarray(f, dtype=float).ravel().tolist())
+
+        if not all_freqs:
+            raise ValueError("OccamData.from_edi: no frequency data found in source")
+
+        freqs = _unique_freqs(all_freqs)
+        if cfg.freq_min is not None:
+            freqs = freqs[freqs >= cfg.freq_min]
+        if cfg.freq_max is not None:
+            freqs = freqs[freqs <= cfg.freq_max]
+        freqs = np.sort(freqs)[::-1]   # descending (Occam convention)
+
+        if freqs.size == 0:
+            raise ValueError(
+                "OccamData.from_edi: no frequencies in the specified band "
+                f"[{cfg.freq_min}, {cfg.freq_max}]"
+            )
+
+        # ---- mode → (row, col, rho_code, phs_code) ----------------------
+        _MODE_MAP = {
+            "TE": (0, 1, 1, 2),
+            "TM": (1, 0, 5, 6),
+        }
+        mode_spec = {m: _MODE_MAP[m] for m in modes if m in _MODE_MAP}
+        if not mode_spec:
+            raise ValueError(f"OccamData.from_edi: no valid modes in {modes}")
+
+        # ---- build data rows ---------------------------------------------
+        _ln10 = float(np.log(10.0))
+        data_rows: list[list] = []
+
+        for si, (name, site) in enumerate(zip(names, items)):
+            s_freq    = _site_attr(site, "freq")
+            s_rho     = _site_attr(site, "rho")
+            s_phs     = _site_attr(site, "phase")
+            s_rho_err = _site_attr(site, "rho_err", "z_err")
+            s_phs_err = _site_attr(site, "phase_err")
+
+            if s_freq is None or s_rho is None or s_phs is None:
+                continue
+
+            s_freq = np.asarray(s_freq, dtype=float)
+            s_rho  = np.asarray(s_rho,  dtype=float)
+            s_phs  = np.asarray(s_phs,  dtype=float)
+
+            rho_err_arr = np.asarray(s_rho_err, dtype=float) if s_rho_err is not None else None
+            phs_err_arr = np.asarray(s_phs_err, dtype=float) if s_phs_err is not None else None
+
+            for fi, f in enumerate(freqs):
+                # Match global frequency within 1 % tolerance
+                fdiff = np.abs(s_freq - f) / np.maximum(np.abs(s_freq), np.abs(f))
+                mi    = int(np.argmin(fdiff))
+                if fdiff[mi] > 0.01:
+                    continue
+
+                for mode_name, (ri, ci, rho_code, phs_code) in mode_spec.items():
+                    rho_val = float(s_rho[mi, ri, ci]) if s_rho.ndim == 3 else float(s_rho[mi])
+                    phs_val = float(s_phs[mi, ri, ci]) if s_phs.ndim == 3 else float(s_phs[mi])
+
+                    if not (np.isfinite(rho_val) and rho_val > 0):
+                        continue
+                    if not np.isfinite(phs_val):
+                        continue
+
+                    # Normalise TM phase to 1st quadrant: phase_yx + 180°
+                    if rho_code == 5:
+                        phs_val = phs_val + 180.0
+
+                    log_rho = float(np.log10(rho_val))
+
+                    # Rho error (stored as delta_log10_rho)
+                    if rho_err_arr is not None and rho_err_arr.ndim == 3:
+                        re = float(rho_err_arr[mi, ri, ci])
+                        rel_err = (re / rho_val) if (np.isfinite(re) and re > 0) else cfg.error_floor_rho
+                    else:
+                        rel_err = cfg.error_floor_rho
+                    rho_err = max(rel_err, cfg.error_floor_rho) / _ln10
+
+                    # Phase error (stored in degrees)
+                    if phs_err_arr is not None and phs_err_arr.ndim == 3:
+                        pe = float(phs_err_arr[mi, ri, ci])
+                        phs_err = max(abs(pe), cfg.error_floor_phase) if np.isfinite(pe) else cfg.error_floor_phase
+                    else:
+                        phs_err = cfg.error_floor_phase
+
+                    data_rows.append([si + 1, fi + 1, rho_code, log_rho, rho_err])
+                    data_rows.append([si + 1, fi + 1, phs_code, phs_val, phs_err])
+
+        obj = cls(title=title, config=cfg, **kwargs)
+        obj.sites       = names
+        obj.offsets     = np.array(offsets, dtype=float)
+        obj.frequencies = freqs
+        if data_rows:
+            obj.data_blocks = np.array(data_rows, dtype=float)
+
+        if obj.verbose:
+            obj.logger.info(
+                "OccamData.from_edi: %d sites, %d freqs, %d data blocks",
+                obj.n_sites, obj.n_frequencies, obj.n_data,
+            )
+        return obj
 
     # ------------------------------------------------------------------
     # I/O

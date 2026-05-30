@@ -183,18 +183,96 @@ class OccamMesh(OccamBase):
     ) -> "OccamMesh":
         """Build a mesh from station positions encoded in *data*.
 
+        The mesh uses the standard Occam2D PW2D layout:
+
+        * 7 horizontal padding cells on each side (geometric expansion),
+          matching the boundary-column code ``7`` used by
+          :meth:`OccamModel.from_mesh`.
+        * Station-zone cells with width ``≈ config.cell_size_horizontal``.
+        * ``config.n_airlayers`` thin air rows at the top.
+        * ``config.n_layers`` active rows with geometric depth growth.
+
         Parameters
         ----------
         data : OccamData
-            Populated data object (station offsets required).
+            Populated data object (``data.offsets`` required).
         config : OccamConfig, optional
             Mesh parameters (n_layers, cell sizes, padding, …).
+
+        Returns
+        -------
+        OccamMesh
         """
-        # TODO: implement
-        # 1. Derive x-cell widths from station offsets + padding
-        # 2. Build z-cell thicknesses with geometric growth (depth_scale)
-        # 3. Prepend n_airlayers air rows
-        raise NotImplementedError("OccamMesh.from_data — not yet implemented")
+        cfg = config or OccamConfig()
+        obj = cls(config=cfg, **kwargs)
+
+        offsets = np.sort(np.asarray(data.offsets, dtype=float))
+        if offsets.size == 0:
+            raise ValueError("OccamMesh.from_data: data has no station offsets")
+
+        cell_h  = cfg.cell_size_horizontal
+        n_pad   = 7   # fixed: matches boundary code 7 in OccamModel.from_mesh
+
+        # ---- station-zone x-cells ----------------------------------------
+        station_widths: list[float] = []
+        if offsets.size == 1:
+            station_widths = [cell_h]
+        else:
+            for i in range(len(offsets) - 1):
+                gap    = float(offsets[i + 1] - offsets[i])
+                n_cell = max(1, round(gap / cell_h))
+                w      = gap / n_cell
+                station_widths.extend([w] * n_cell)
+
+        # Ensure even count so that (n_xcells - 14) is even for code-2 interior cols
+        if len(station_widths) % 2 != 0:
+            station_widths.append(station_widths[-1] if station_widths else cell_h)
+
+        # ---- horizontal padding (7 cells each side, geometrically expanding)
+        pad = [cell_h * float(2 ** (k + 1)) for k in range(n_pad)]
+        left_pad  = list(reversed(pad))   # widest cell at outer edge
+        right_pad = pad
+
+        x_widths = np.array(left_pad + station_widths + right_pad, dtype=float)
+
+        # ---- vertical cells ----------------------------------------------
+        n_air    = cfg.n_airlayers
+        n_active = cfg.n_layers
+        air_h    = cfg.cell_size_vertical_top
+
+        air_w = [air_h] * n_air
+        z_w: list[float] = []
+        thick = float(cfg.cell_size_vertical_top)
+        for _ in range(n_active):
+            z_w.append(thick)
+            thick *= cfg.depth_scale
+
+        z_widths = np.array(air_w + z_w, dtype=float)
+
+        # ---- char matrix (4 rows per z-cell) ----------------------------
+        n_xcells = len(x_widths)
+        n_zcells = len(z_widths)
+        cell_rows: list[str] = []
+        for iz in range(n_zcells):
+            row = ("0" if iz < n_air else "?") * n_xcells
+            for _ in range(4):
+                cell_rows.append(row)
+
+        # ---- populate object --------------------------------------------
+        obj.comment     = "MESH FILE Created by pycsamt.models.occam2d"
+        obj.x_widths    = x_widths
+        obj.z_widths    = z_widths
+        obj.x_nodes     = np.concatenate([[0.0], np.cumsum(x_widths)])
+        obj.z_nodes     = np.concatenate([[0.0], np.cumsum(z_widths)])
+        obj.cell_rows   = cell_rows
+        obj.n_airlayers = n_air
+
+        if obj.verbose:
+            obj.logger.info(
+                "OccamMesh.from_data: %d×%d cells (%d airlayers) from %d stations",
+                n_xcells, n_zcells, n_air, offsets.size,
+            )
+        return obj
 
     # ------------------------------------------------------------------
     # I/O
@@ -257,7 +335,7 @@ class OccamMesh(OccamBase):
         def _write_floats(vals: np.ndarray, per_row: int = 8) -> None:
             for i in range(0, len(vals), per_row):
                 chunk = vals[i: i + per_row]
-                lines.append("  " + "  ".join(f"{v:8.1f}" for v in chunk) + "\n")
+                lines.append("  " + "  ".join(f"{v:10.4f}" for v in chunk) + "\n")
 
         _write_floats(self.x_widths)
         lines.append("\n")

@@ -4,7 +4,7 @@
 import pytest
 from pathlib import Path
 
-DATA_DIR  = Path(__file__).parents[5] / "data" / "occam2D"
+DATA_DIR  = Path(__file__).parents[4] / "data" / "occam2D"
 MESH_FILE = DATA_DIR / "Occam2DMesh"
 
 

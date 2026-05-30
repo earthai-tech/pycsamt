@@ -343,7 +343,7 @@ class CoreParser(ParseMixin):
         for ed in edis:
             sid = getattr(ed, "station", None)
             if not sid:
-                sid = ed._fast_station(ed.path) if ed.path else None 
+                sid = self._fast_station(ed.path) if ed.path else None
             sid = sid or (str(ed.path) if ed.path else "-")
 
             if sid in by_station and self.on_dup == "keep":

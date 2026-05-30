@@ -13,8 +13,6 @@ from .config import StationNamePolicy, get_config, get_adapter
 
 __all__ = [
     "TFBundle",
-    "CoreObject", 
-    "MTBase", 
     "SupportsToBundle",
     "SupportsFromBundle",
     "ensure_station",

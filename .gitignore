@@ -168,3 +168,8 @@ data/
 data/edis
 
 
+
+# ModEM and Occam2D external source distributions (reference only — not committed)
+ModEMv626/
+Occam2dmt_MATLAB/
+OCCAM2DMT_B3_O/

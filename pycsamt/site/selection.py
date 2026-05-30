@@ -212,7 +212,7 @@ def by_index(sites: Any, indices: Iterable[int] | int):
             if k in set(norm)]
     return _new_sites(s, keep)
 
-def by_ (sites: Any, smin: float, smax: float):
+def by_chainage(sites: Any, smin: float, smax: float):
     r"""
     Select sites whose stored chainage falls within a closed
     interval.

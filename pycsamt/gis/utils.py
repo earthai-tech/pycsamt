@@ -71,7 +71,7 @@ else:
 logger = get_logger(__name__)
 
 
-Arr1D = NDArray[np.float_]
+Arr1D = NDArray[np.float64]
 Obj1D = NDArray[object]
 
 __all__ = [

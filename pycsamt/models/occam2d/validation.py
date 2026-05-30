@@ -77,12 +77,15 @@ def is_data_file(path: PathLike) -> bool:
 def is_mesh_file(path: PathLike) -> bool:
     """Return True if *path* is an Occam2DMesh file."""
     try:
-        lines = _first_lines(path, 2)
+        lines = _first_lines(path, 3)
     except ValueError:
         return False
-    # Mesh files begin with two integers (nx_cols, nz_rows) or a comment
-    if lines:
-        tokens = lines[0].split()
+    for ln in lines:
+        # Comment line always starts with MESH FILE
+        if "MESH FILE" in ln:
+            return True
+        # Control line: first two tokens are integers (could be line 1 or 2)
+        tokens = ln.split()
         if len(tokens) >= 2 and all(t.lstrip("-").isdigit() for t in tokens[:2]):
             return True
     return False
@@ -145,7 +148,13 @@ def is_log_file(path: PathLike) -> bool:
         lines = _first_lines(path, 5)
     except ValueError:
         return False
-    return any("OCCAM ITERATION" in ln or "FMINOCC" in ln for ln in lines)
+    return any(
+        "OCCAM ITERATION" in ln
+        or "** ITERATION" in ln
+        or "FMINOCC" in ln
+        or "STARTING R.M.S." in ln
+        for ln in lines
+    )
 
 
 def detect_file_type(path: PathLike) -> str:

@@ -239,9 +239,36 @@ class OccamMesh(OccamBase):
         return obj
 
     def write(self, path: PathLike) -> Path:
-        """Write mesh to *path* in PW2D format."""
-        # TODO: implement
-        raise NotImplementedError("OccamMesh.write — not yet implemented")
+        """Write mesh to *path* in PW2D format.
+
+        Returns the resolved path.
+        """
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+
+        n_h = self.n_xcells + 1   # num_h_nodes
+        n_v = self.n_zcells + 1   # num_v_nodes
+        comment = self.comment or "MESH FILE Created by pycsamt"
+
+        lines: list[str] = []
+        lines.append(f"{comment}\n")
+        lines.append(f"   0  {n_h}  {n_v}  {self.n_airlayers}  0  2\n")
+
+        def _write_floats(vals: np.ndarray, per_row: int = 8) -> None:
+            for i in range(0, len(vals), per_row):
+                chunk = vals[i: i + per_row]
+                lines.append("  " + "  ".join(f"{v:8.1f}" for v in chunk) + "\n")
+
+        _write_floats(self.x_widths)
+        lines.append("\n")
+        _write_floats(self.z_widths)
+        lines.append("    0\n")
+        for row in self.cell_rows:
+            lines.append(row + "\n")
+
+        with p.open("w") as fh:
+            fh.writelines(lines)
+        return p
 
     # ------------------------------------------------------------------
     # Convenience

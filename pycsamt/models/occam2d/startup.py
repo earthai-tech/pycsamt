@@ -310,9 +310,11 @@ class OccamStartup(OccamBase):
         return obj
 
     def write(self, path: PathLike) -> Path:
-        """Write startup file to *path* in OCCAMITER_FLEX format."""
-        # TODO: implement (Phase 3)
-        raise NotImplementedError("OccamStartup.write — not yet implemented")
+        """Write startup file to *path* in OCCAMITER_FLEX format.
+
+        Returns the resolved path.
+        """
+        return _write_iter_flex(self, Path(path))
 
 
 # -----------------------------------------------------------------------
@@ -413,6 +415,13 @@ class OccamIter(OccamBase):
             )
         return obj
 
+    def write(self, path: PathLike) -> Path:
+        """Write ``.iter`` file to *path* in OCCAMITER_FLEX format.
+
+        Returns the resolved path.
+        """
+        return _write_iter_flex(self, Path(path))
+
     # ------------------------------------------------------------------
     # Derived
     # ------------------------------------------------------------------
@@ -434,6 +443,70 @@ class OccamIter(OccamBase):
             "mean":   float(np.nanmean(v)),
             "median": float(np.nanmedian(v)),
         }
+
+
+# -----------------------------------------------------------------------
+# Shared writer (used by both OccamStartup.write and OccamIter.write)
+# -----------------------------------------------------------------------
+
+# Ordered write sequence: (file keyword, attribute name, value type)
+_WRITE_ORDER = [
+    ("Format",             "format_str",         "str"),
+    ("Description",        "description",        "str"),
+    ("Model File",         "model_file",         "str"),
+    ("Data File",          "data_file",          "str"),
+    ("Date/Time",          "datetime_str",       "str"),
+    ("Iterations to run",  "max_iterations",     "int"),
+    ("Target Misfit",      "target_misfit",      "float"),
+    ("Roughness Type",     "roughness_type",     "int"),
+    ("Diagonal Penalties", "diagonal_penalties", "int"),
+    ("Stepsize Cut Count", "stepsize_cut_count", "int"),
+    ("Debug Level",        "debug_level",        "int"),
+    ("Iteration",          "iteration",          "int"),
+    ("Lagrange Value",     "lagrange_value",     "float"),
+    ("Roughness Value",    "roughness_value",    "float"),
+    ("Misfit Value",       "misfit_value",       "float"),
+    ("Misfit Reached",     "misfit_reached",     "int"),
+    ("Param Count",        "n_params",           "int"),
+]
+
+_KEY_WIDTH = 20   # columns reserved for "Key:" + padding
+
+
+def _write_iter_flex(obj: OccamBase, path: Path) -> Path:
+    """Serialise an OCCAMITER_FLEX object to *path*."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines: list[str] = []
+
+    for kw, attr, vtype in _WRITE_ORDER:
+        val = getattr(obj, attr, None)
+        if val is None:
+            val = 0
+        key_str = f"{kw}:"
+        pad      = max(1, _KEY_WIDTH - len(key_str))
+        if vtype == "int":
+            val_str = str(int(val))
+        elif vtype == "float":
+            val_str = str(float(val))
+        else:
+            val_str = str(val)
+        lines.append(f"{key_str}{' ' * pad}{val_str}\n")
+
+        if attr == "stepsize_cut_count":
+            # Insert comment lines between Stepsize Cut Count and Debug Level
+            lines.append("!Model Limits:      none\n")
+            lines.append("!Model Value Steps: none\n")
+
+    # Param block: 4 values per line
+    pv = getattr(obj, "param_values", np.array([]))
+    for i in range(0, len(pv), 4):
+        chunk = pv[i: i + 4]
+        lines.append("  " + "    ".join(f"{v:.4f}" for v in chunk) + "\n")
+
+    with path.open("w") as fh:
+        fh.writelines(lines)
+
+    return path
 
 
 # -----------------------------------------------------------------------

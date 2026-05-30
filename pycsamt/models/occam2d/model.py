@@ -293,9 +293,43 @@ class OccamModel(OccamBase):
         return obj
 
     def write(self, path: PathLike) -> Path:
-        """Write model to *path* in OCCAM2MTMOD_1.0 format."""
-        # TODO: implement
-        raise NotImplementedError("OccamModel.write — not yet implemented")
+        """Write model to *path* in OCCAM2MTMOD_1.0 format.
+
+        Returns the resolved path.
+        """
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+
+        _W = 18   # width for the keyword field including colon
+
+        def _kv(kw: str, val) -> str:
+            key = f"{kw}:"
+            return f"{key:<{_W}}{val}\n"
+
+        lines: list[str] = [
+            _kv("Format",          self.format_str),
+            _kv("Model Name",      self.name),
+            _kv("Description",     self.description),
+            _kv("Mesh File",       self.mesh_file),
+            _kv("Mesh Type",       self.mesh_type),
+            _kv("Statics File",    self.statics_file),
+            _kv("Prejudice File",  self.prejudice_file),
+            _kv("Binding Offset",  f"{self.binding_offset:.1f}"),
+            _kv("Num Layers",      self.n_layers),
+        ]
+
+        for layer in self.layers:
+            n_merge  = layer["n_merge"]
+            n_cols   = layer["n_cols"]
+            params   = layer["params"]
+            lines.append(f"     {n_merge}   {n_cols}\n")
+            lines.append("    " + "    ".join(str(v) for v in params) + "\n")
+
+        lines.append(f"NO. EXCEPTIONS:   {self.n_exceptions}\n")
+
+        with p.open("w") as fh:
+            fh.writelines(lines)
+        return p
 
     # ------------------------------------------------------------------
     # Derived

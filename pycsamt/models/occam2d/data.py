@@ -329,9 +329,42 @@ class OccamData(OccamBase):
         return obj
 
     def write(self, path: PathLike) -> Path:
-        """Write the data file to *path* in OCCAM2MTDATA_1.0 format."""
-        # TODO: implement
-        raise NotImplementedError("OccamData.write — not yet implemented")
+        """Write the data file to *path* in OCCAM2MTDATA_1.0 format.
+
+        Returns the resolved path.
+        """
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+
+        lines: list[str] = [
+            f"FORMAT:           {self.format_str}\n",
+            f"TITLE:            {self.title}\n",
+            f"SITES:            {self.n_sites}\n",
+        ]
+        for s in self.sites:
+            lines.append(f"   {s}\n")
+
+        lines.append("OFFSETS (M):\n")
+        for off in self.offsets:
+            lines.append(f"   {off:.1f}\n")
+
+        lines.append(f"FREQUENCIES:      {self.n_frequencies}\n")
+        for f in self.frequencies:
+            lines.append(f"   {f:.7e}\n")
+
+        lines.append(f"DATA BLOCKS:      {self.n_data}\n")
+        lines.append("SITE  FREQ  TYPE   DATUM    ERROR\n")
+        for row in self.data_blocks:
+            s_i = int(row[0])
+            f_i = int(row[1])
+            t_c = int(row[2])
+            dat = row[3]
+            err = row[4]
+            lines.append(f"{s_i:5d} {f_i:5d} {t_c:5d} {dat:12.4f} {err:12.4f}\n")
+
+        with p.open("w") as fh:
+            fh.writelines(lines)
+        return p
 
     # ------------------------------------------------------------------
     # Convenience

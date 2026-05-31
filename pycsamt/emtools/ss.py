@@ -1111,3 +1111,386 @@ def plot_ss_radar(
     ax.legend(loc="lower left", bbox_to_anchor=(0.02, 0.02),
               frameon=False, fontsize=8)
     return ax
+
+
+# ========= Near-surface effect detection (lei2017) ======================== #
+
+_TYPE_COLORS: Dict[str, str] = {
+    "clean":        "#2ca02c",   # green
+    "static":       "#1f77b4",   # blue
+    "near_surface": "#ff7f0e",   # orange
+    "mixed":        "#d62728",   # red
+}
+
+_NS_COLS = [
+    "station", "n_hf", "n_lf",
+    "sigma_hf", "sigma_lf", "ns_index",
+    "slope_hf", "slope_lf", "gradient_delta",
+    "ss_delta_log10", "ns_flag", "ss_flag", "distortion_type",
+]
+
+
+def _unwrap_ns(ed: Any) -> Any:
+    """Unwrap a Sites-level Site wrapper to its underlying EDI-like object."""
+    edi = getattr(ed, "edi", None)
+    if edi is not None and hasattr(edi, "Z"):
+        return edi
+    return ed
+
+
+def _log_slope(log_f: np.ndarray, log_rho: np.ndarray) -> float:
+    """Median d(log10 ρ)/d(log10 f) via finite differences."""
+    if log_f.size < 2:
+        return float("nan")
+    dlr = np.diff(log_rho)
+    dlf = np.diff(log_f)
+    valid = np.abs(dlf) > 1e-10
+    if not valid.any():
+        return float("nan")
+    return float(np.nanmedian(dlr[valid] / dlf[valid]))
+
+
+def _ama_residuals_ns(
+    FR: List[np.ndarray],
+    LR: List[np.ndarray],
+    *,
+    half_window: int,
+    weights: str,
+) -> List[np.ndarray]:
+    """Per-frequency log10ρ residuals vs AMA spatial trend for every site."""
+    n = len(FR)
+    out = []
+    for i in range(n):
+        fr = FR[i]
+        lr = LR[i]
+        nbr_ids = _neighbors(i, n, half_window)
+        t = np.full(fr.size, np.nan, dtype=float)
+        if nbr_ids:
+            dist = np.array([abs(j - i) for j in nbr_ids], dtype=float)
+            w = _w_of_dist(dist, weights, half_window)
+            for kf, f in enumerate(fr):
+                vals = np.array(
+                    [LR[j][_nearest_idx(FR[j], np.array([f]))[0]]
+                     for j in nbr_ids],
+                    dtype=float,
+                )
+                rr = np.repeat(vals, np.maximum(1, (w * 100).astype(int)))
+                t[kf] = np.nanmedian(rr)
+        out.append(lr - t)
+    return out
+
+
+def detect_near_surface(
+    sites: Any,
+    *,
+    f_split: float = 1.0,
+    pband: Optional[Tuple[float, float]] = None,
+    ns_threshold: float = 2.0,
+    ss_threshold: float = 0.1,
+    sort_by: str = "lon",
+    half_window: int = 3,
+    weights: str = "tri",
+    max_skew: Optional[float] = 6.0,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> pd.DataFrame:
+    """
+    Detect and classify near-surface distortion in CSAMT/MT apparent
+    resistivity curves.
+
+    Distinguishes between two types of distortion:
+
+    * **Static effect** — frequency-independent multiplicative shift of the
+      whole ρ_a curve.  Addressable by AMA/LOESS static-shift correction.
+    * **Near-surface effect** — frequency-dependent distortion concentrated
+      at high frequencies (f ≥ *f_split*), caused by shallow inhomogeneities.
+      *Not* correctable by conventional static-shift methods; 2-D inversion
+      is recommended.
+
+    Three per-station diagnostics are computed from the residuals of the
+    ρ_a curve relative to an AMA spatial trend:
+
+    1. **NS index**  η = σ_HF / σ_LF — spread ratio between the
+       high-frequency (f ≥ *f_split*) and low-frequency bands.  η >> 1 is
+       the hallmark of near-surface contamination.
+
+    2. **Gradient delta**  Δγ = |slope_HF − slope_LF| — absolute difference
+       of the log-log slope d(log ρ_a)/d(log f) between the two bands.
+
+    3. **Static shift**  δ = median(log10 ρ_a − AMA trend) — classic AMA
+       shift estimate over the full frequency range.
+
+    Classification:
+
+    ===================  ===========================
+    ``"clean"``          η ≤ ns_threshold, |δ| ≤ ss_threshold
+    ``"static"``         η ≤ ns_threshold, |δ| > ss_threshold
+    ``"near_surface"``   η > ns_threshold, |δ| ≤ ss_threshold
+    ``"mixed"``          η > ns_threshold, |δ| > ss_threshold
+    ===================  ===========================
+
+    Parameters
+    ----------
+    sites : path, EDI-like, Sites, or iterable
+        Any input accepted by
+        :func:`~pycsamt.emtools._core.ensure_sites`.
+    f_split : float, default=1.0
+        Frequency boundary in Hz separating the HF (f ≥ f_split) from
+        the LF (f < f_split) band.
+    pband : (float, float) or None
+        Period band ``(lo_s, hi_s)`` pre-filter applied before
+        all computations.
+    ns_threshold : float, default=2.0
+        η > this → near-surface flag.
+    ss_threshold : float, default=0.1
+        |δ| > this (log10 units) → static-shift flag.
+    sort_by : {"lon", "lat", "name"}, default="lon"
+        Station ordering for the AMA spatial trend.
+    half_window : int, default=3
+        Number of neighbouring stations each side in the AMA trend.
+    weights : {"tri", "gauss", "uniform"}, default="tri"
+        Spatial weighting for the AMA trend.
+    max_skew : float or None, default=6.0
+        Phase-tensor skew ceiling; data above this are excluded.
+    recursive, on_dup, strict, verbose
+        Forwarded to :func:`~pycsamt.emtools._core.ensure_sites`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per station with columns:
+        ``station``, ``n_hf``, ``n_lf``,
+        ``sigma_hf``, ``sigma_lf``, ``ns_index``,
+        ``slope_hf``, ``slope_lf``, ``gradient_delta``,
+        ``ss_delta_log10``, ``ns_flag``, ``ss_flag``, ``distortion_type``.
+
+    References
+    ----------
+    Lei et al. (2017), "The non-static effect of near-surface
+    inhomogeneity on CSAMT data", *Geophysics*.
+    """
+    S = ensure_sites(
+        sites,
+        recursive=recursive, on_dup=on_dup,
+        strict=strict, verbose=verbose,
+    )
+    pt = build_phase_tensor_table(
+        S, recursive=False, on_dup=on_dup,
+        strict=False, verbose=verbose,
+    )
+
+    items = _order_sites(S, sort_by=sort_by)
+    ST: List[str] = []
+    FR: List[np.ndarray] = []
+    LR: List[np.ndarray] = []
+
+    for i, ed in enumerate(items):
+        ed = _unwrap_ns(ed)
+        st = _name(ed, i)
+        Z, z, fr = _get_z_block(ed)
+        if Z is None:
+            continue
+        rho = _rho_det_from_z(z, fr)
+        per = 1.0 / fr
+        m = np.isfinite(rho)
+        if pband is not None:
+            lo, hi = pband
+            m &= (per >= lo) & (per <= hi)
+        if max_skew is not None and not pt.empty:
+            sdf = pt[pt["station"] == st]
+            if not sdf.empty:
+                p_ref = sdf["period"].to_numpy()
+                sk = np.abs(sdf["skew"].to_numpy())
+                idx = _nearest_idx(1.0 / fr, p_ref)
+                m &= sk[idx] <= float(max_skew)
+        fr1 = fr[m]
+        lr1 = np.log10(np.maximum(rho[m], 1e-24))
+        if fr1.size == 0:
+            continue
+        ST.append(st)
+        FR.append(fr1)
+        LR.append(lr1)
+
+    if not ST:
+        return pd.DataFrame(columns=_NS_COLS)
+
+    residuals = _ama_residuals_ns(FR, LR,
+                                  half_window=half_window, weights=weights)
+    rows = []
+    for i, (st, fr, lr, delta) in enumerate(zip(ST, FR, LR, residuals)):
+        hf = fr >= f_split
+        lf = ~hf
+
+        d_hf = delta[hf]
+        d_lf = delta[lf]
+
+        σ_hf = float(np.nanstd(d_hf)) if d_hf.size >= 2 else float("nan")
+        σ_lf = float(np.nanstd(d_lf)) if d_lf.size >= 2 else float("nan")
+        η = (σ_hf / (σ_lf + 1e-12)
+             if np.isfinite(σ_hf) and np.isfinite(σ_lf)
+             else float("nan"))
+
+        slope_hf = _log_slope(
+            np.log10(np.maximum(fr[hf], 1e-24)), lr[hf]
+        )
+        slope_lf = _log_slope(
+            np.log10(np.maximum(fr[lf], 1e-24)), lr[lf]
+        )
+        grad_delta = (abs(slope_hf - slope_lf)
+                      if np.isfinite(slope_hf) and np.isfinite(slope_lf)
+                      else float("nan"))
+
+        fin = delta[np.isfinite(delta)]
+        ss_delta = float(np.nanmedian(fin)) if fin.size else float("nan")
+
+        ns_flag = bool(np.isfinite(η) and η > ns_threshold)
+        ss_flag = bool(np.isfinite(ss_delta) and abs(ss_delta) > ss_threshold)
+
+        dtype = (
+            "mixed"        if ns_flag and ss_flag else
+            "near_surface" if ns_flag else
+            "static"       if ss_flag else
+            "clean"
+        )
+
+        rows.append({
+            "station":        st,
+            "n_hf":           int(hf.sum()),
+            "n_lf":           int(lf.sum()),
+            "sigma_hf":       σ_hf,
+            "sigma_lf":       σ_lf,
+            "ns_index":       float(η)          if np.isfinite(η)          else float("nan"),
+            "slope_hf":       float(slope_hf)   if np.isfinite(slope_hf)   else float("nan"),
+            "slope_lf":       float(slope_lf)   if np.isfinite(slope_lf)   else float("nan"),
+            "gradient_delta": float(grad_delta) if np.isfinite(grad_delta) else float("nan"),
+            "ss_delta_log10": ss_delta,
+            "ns_flag":        ns_flag,
+            "ss_flag":        ss_flag,
+            "distortion_type": dtype,
+        })
+
+    return pd.DataFrame(rows, columns=_NS_COLS)
+
+
+def plot_ns_detection(
+    sites: Any,
+    *,
+    f_split: float = 1.0,
+    pband: Optional[Tuple[float, float]] = None,
+    ns_threshold: float = 2.0,
+    ss_threshold: float = 0.1,
+    sort_by: str = "lon",
+    half_window: int = 3,
+    weights: str = "tri",
+    max_skew: Optional[float] = 6.0,
+    show_ss: bool = True,
+    figsize: Tuple[float, float] = (9.0, 4.5),
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    ax: Optional[plt.Axes] = None,
+) -> plt.Axes:
+    """
+    Bar chart of the NS index per station, colored by distortion type.
+
+    Each bar height is η = σ_HF / σ_LF.  A dashed line marks
+    *ns_threshold*.  An optional secondary y-axis shows the static-shift
+    estimate δ (log10 units) as a stem plot.
+
+    Parameters
+    ----------
+    sites : path, EDI-like, Sites, or iterable
+    f_split : float, default=1.0
+        HF/LF split frequency in Hz.
+    pband : (float, float) or None
+    ns_threshold, ss_threshold : float
+    sort_by : {"lon", "lat", "name"}
+    half_window, weights, max_skew
+        Forwarded to :func:`detect_near_surface`.
+    show_ss : bool, default=True
+        If True and ax has room, overlay static-shift δ as a grey
+        stem plot on a secondary y-axis.
+    figsize : (float, float), default=(9, 4.5)
+    recursive, on_dup, strict, verbose
+        Forwarded to :func:`~pycsamt.emtools._core.ensure_sites`.
+    ax : matplotlib.axes.Axes, optional
+        Draw on existing axes.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+    """
+    import matplotlib.patches as mpatches
+
+    df = detect_near_surface(
+        sites,
+        f_split=f_split,
+        pband=pband,
+        ns_threshold=ns_threshold,
+        ss_threshold=ss_threshold,
+        sort_by=sort_by,
+        half_window=half_window,
+        weights=weights,
+        max_skew=max_skew,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+
+    if df.empty:
+        ax.text(0.5, 0.5, "no data", ha="center", va="center",
+                transform=ax.transAxes)
+        return ax
+
+    x = np.arange(len(df))
+    colors = [_TYPE_COLORS[t] for t in df["distortion_type"]]
+    ax.bar(x, df["ns_index"].fillna(0).values,
+           color=colors, width=0.7, edgecolor="0.3", linewidth=0.5)
+    ax.axhline(ns_threshold, color="k", lw=1.2, ls="--")
+
+    # secondary axis for static-shift δ
+    if show_ss and "ss_delta_log10" in df.columns:
+        ax2 = ax.twinx()
+        ax2.stem(
+            x,
+            df["ss_delta_log10"].fillna(0).values,
+            linefmt="0.55",
+            markerfmt="D",
+            basefmt="none",
+        )
+        ax2.axhline(0, color="0.6", lw=0.7, ls=":")
+        ax2.set_ylabel("δ (log10 ρ_a shift)", fontsize=8, color="0.4")
+        ax2.tick_params(axis="y", labelcolor="0.4")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(df["station"], rotation=45, ha="right", fontsize=8)
+    ax.set_ylabel("NS index  η = σ_HF / σ_LF")
+    ax.set_xlabel("Station")
+    ax.set_title(
+        f"Near-surface effect detection  "
+        f"(f_split = {f_split} Hz,  η threshold = {ns_threshold})"
+    )
+    ax.grid(axis="y", alpha=0.25)
+
+    present = df["distortion_type"].unique()
+    patches = [
+        mpatches.Patch(
+            color=_TYPE_COLORS[k],
+            label=k.replace("_", " ").title(),
+        )
+        for k in ("clean", "static", "near_surface", "mixed")
+        if k in present
+    ]
+    patches.append(
+        plt.Line2D([0], [0], color="k", ls="--", lw=1.2,
+                   label=f"η threshold ({ns_threshold})")
+    )
+    ax.legend(handles=patches, fontsize=8, loc="upper right", framealpha=0.85)
+    return ax

@@ -89,10 +89,19 @@ def __getattr__(name):
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
+# Backend API — always importable, no ML framework required
+from pycsamt.backends import (
+    get_backend, set_backend, auto_detect,
+    list_backends, get_backend_instance,
+)
+
 # Public API
 __all__ = [
     "__version__",
     "is_installing",
+    # backend control
+    "get_backend", "set_backend", "auto_detect",
+    "list_backends", "get_backend_instance",
 ] + _optional_modules
 
 

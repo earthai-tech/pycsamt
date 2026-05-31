@@ -55,10 +55,6 @@ from .._base import BaseEMNet, EMCheckpoint
 
 __all__ = ["EMInverter1D"]
 
-# Architecture registry: name → factory callable (n_features, n_out, **kw)
-_ARCH_REGISTRY: Dict[str, Any] = {}
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # from_pretrained helper (module-level to avoid class-level redefinition)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -66,39 +62,9 @@ _ARCH_REGISTRY: Dict[str, Any] = {}
 def _load_pretrained(name: str, cache_dir: Optional[str] = None) -> "EMInverter1D":
     """Download (if needed) and load a pre-trained checkpoint."""
     from .._zoo import download_checkpoint, get_pretrained_info
-    info = get_pretrained_info(name)
+    get_pretrained_info(name)  # validates name early
     fpath = download_checkpoint(name, cache_dir=cache_dir)
-    obj = EMInverter1D.load(fpath)
-    return obj
-
-
-def _register(name, fn):
-    _ARCH_REGISTRY[name.lower()] = fn
-
-
-def _lazy_register():
-    """Populate registry on first use (avoids eager torch import)."""
-    if _ARCH_REGISTRY:
-        return
-
-    def _cnn1d(n_features, n_out, **kw):
-        from ..nets.cnn1d import CNN1DNet
-        return CNN1DNet(n_features, n_out, **kw).build()
-
-    def _resnet(n_features, n_out, **kw):
-        from ..nets.resnet import ResNet1DNet
-        return ResNet1DNet(n_features, n_out, **kw).build()
-
-    def _fcn(n_features, n_out, **kw):
-        from ..nets.fcn import FCN1DNet
-        return FCN1DNet(n_features, n_out, **kw).build()
-
-    _register("cnn1d", _cnn1d)
-    _register("cnn", _cnn1d)
-    _register("resnet", _resnet)
-    _register("resnet1d", _resnet)
-    _register("fcn", _fcn)
-    _register("fcn1d", _fcn)
+    return EMInverter1D.load(fpath)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -209,7 +175,7 @@ class EMInverter1D(BaseEMNet):
         self
         """
         from ..training.dataset import EMDataset
-        from ..training.trainer import EMTrainer
+        from pycsamt.backends import get_backend, get_backend_instance
 
         # ── Load data ────────────────────────────────────────────────────
         ds = self._load_dataset(X, y)
@@ -228,22 +194,36 @@ class EMInverter1D(BaseEMNet):
 
         # ── Build network ────────────────────────────────────────────────
         self._network = self._build_network()
+        backend_name = get_backend()
+        self._meta["backend"] = backend_name
 
         # ── Train ────────────────────────────────────────────────────────
-        device = self._resolve_device()
-        trainer = EMTrainer(
-            self._network,
-            lr=lr,
-            patience=patience,
-            batch_size=batch_size,
-            device=device,
-            grad_clip=grad_clip,
-            verbose=verbose,
-        )
-        trainer.fit(train_ds, val_ds, epochs=epochs)
-        self._history = trainer.history
-        self._meta["best_epoch"] = trainer.best_epoch
-        self._meta["best_val_loss"] = trainer.best_val_loss
+        if backend_name == "torch":
+            from ..training.trainer import EMTrainer
+            device = self._resolve_device()
+            trainer = EMTrainer(
+                self._network,
+                lr=lr,
+                patience=patience,
+                batch_size=batch_size,
+                device=device,
+                grad_clip=grad_clip,
+                verbose=verbose,
+            )
+            trainer.fit(train_ds, val_ds, epochs=epochs)
+            self._history = trainer.history
+            self._meta["best_epoch"] = trainer.best_epoch
+            self._meta["best_val_loss"] = trainer.best_val_loss
+        else:
+            be = get_backend_instance()
+            self._history = be.train(
+                self._network,
+                train_ds.X, train_ds.y,
+                val_ds.X, val_ds.y,
+                epochs=epochs, batch_size=batch_size, lr=lr,
+                patience=patience, grad_clip=grad_clip, verbose=verbose,
+            )
+
         self._meta["n_features"] = self._n_features
         self._meta["n_out"] = self._n_out
         self._is_fitted = True
@@ -276,19 +256,23 @@ class EMInverter1D(BaseEMNet):
             ``as_log_rho=False``).
         """
         self._check_fitted()
-        import torch
+        backend_name = self._meta.get("backend", "torch")
 
         X_arr = self._coerce_input(
             X, include_phase=self.include_phase, log_rho=True
         )
         X_norm = self._em_dataset.x_norm.transform(X_arr)
 
-        device = self._resolve_device()
-        net = self._network.to(device).eval()
-
-        with torch.no_grad():
-            t = torch.from_numpy(X_norm.astype(np.float32)).to(device)
-            y_norm = net(t).cpu().numpy()
+        if backend_name == "torch":
+            import torch
+            device = self._resolve_device()
+            net = self._network.to(device).eval()
+            with torch.no_grad():
+                t = torch.from_numpy(X_norm.astype(np.float32)).to(device)
+                y_norm = net(t).cpu().numpy()
+        else:
+            from pycsamt.backends import get_backend_instance
+            y_norm = get_backend_instance().predict(self._network, X_norm)
 
         # Inverse-normalise → [log10(ρ), log10(h)] or [log10(ρ), h]
         y_raw = self._em_dataset.y_norm.inverse_transform(y_norm)
@@ -340,13 +324,8 @@ class EMInverter1D(BaseEMNet):
 
     def save(self, path: Union[str, Path]) -> None:
         """Save weights + normaliser + hyperparameters to *path*."""
-        import torch
-        device = self._resolve_device()
-        weights = {
-            k: v.cpu().numpy()
-            for k, v in self._network.to(device).state_dict().items()
-        }
-        # Store normaliser as JSON-friendly dicts
+        from pycsamt.backends import get_backend_instance
+        weights = get_backend_instance().get_weights(self._network)
         meta = dict(self._meta)
         if self._em_dataset is not None:
             meta["x_norm"] = self._em_dataset.x_norm.to_dict()
@@ -365,8 +344,8 @@ class EMInverter1D(BaseEMNet):
     @classmethod
     def load(cls, path: Union[str, Path]) -> "EMInverter1D":
         """Load a saved inverter from *path*."""
-        import torch
         from ..training.dataset import Normalizer, EMDataset
+        from pycsamt.backends import set_backend, get_backend_instance
 
         ckpt = EMCheckpoint.load(path)
         p = ckpt.params
@@ -389,10 +368,11 @@ class EMInverter1D(BaseEMNet):
             obj._em_dataset._n_layers = ckpt.meta.get("n_layers_ds")
             obj._em_dataset._log_thickness = ckpt.meta.get("log_thickness", True)
 
-        # Rebuild and load network
+        # Restore backend, rebuild network, and load weights
+        backend_name = ckpt.meta.get("backend", "torch")
+        set_backend(backend_name)
         obj._network = obj._build_network()
-        state = {k: torch.from_numpy(v) for k, v in ckpt.weights.items()}
-        obj._network.load_state_dict(state)
+        get_backend_instance().set_weights(obj._network, ckpt.weights)
         obj._history = ckpt.history
         obj._meta = ckpt.meta
         obj._is_fitted = bool(ckpt.weights)
@@ -444,23 +424,20 @@ class EMInverter1D(BaseEMNet):
     # ─── BaseEMNet hooks ──────────────────────────────────────────────────
 
     def _build_network(self):
-        """Instantiate the PyTorch module from the chosen architecture."""
+        """Instantiate the network via the active backend."""
         if self._n_features is None:
             raise RuntimeError(
                 "Cannot build network before n_features is known.  "
                 "Call fit() first (n_features is inferred from training data)."
             )
-        _lazy_register()
-        arch = self.arch.lower()
-        if arch not in _ARCH_REGISTRY:
-            raise ValueError(
-                f"Unknown architecture {self.arch!r}.  "
-                f"Available: {list(_ARCH_REGISTRY)}"
-            )
-        net = _ARCH_REGISTRY[arch](
-            self._n_features, self._n_out, **self._net_kwargs
-        )
-        return net
+        from pycsamt.backends import get_backend_instance
+        spec = {
+            "arch": self.arch,
+            "n_features": self._n_features,
+            "n_out": self._n_out,
+            **self._net_kwargs,
+        }
+        return get_backend_instance().build(spec)
 
     def _get_params(self) -> dict:
         p = super()._get_params()

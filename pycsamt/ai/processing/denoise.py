@@ -258,8 +258,9 @@ class EMDenoiser(BaseEMProcessor):
 
     Parameters
     ----------
-    n_freqs : int
-        Number of frequency channels in the input.
+    n_freqs : int or None, default None
+        Number of frequency channels in the input.  When ``None``,
+        inferred from ``X.shape[2]`` on the first call to :meth:`fit`.
     n_components : {4, 8}, default 4
         Feature channels per frequency: 4 = off-diagonal :math:`Z_{xy}`,
         :math:`Z_{yx}` amplitudes and phases; 8 = all four tensor
@@ -274,6 +275,9 @@ class EMDenoiser(BaseEMProcessor):
 
     Notes
     -----
+    When neither PyTorch nor TensorFlow is available the denoiser falls
+    back to a per-channel Gaussian smoothing filter (requires scipy).
+
     Call :func:`prepare_z_features` to convert a site collection to the
     ``(n_samples, n_components, n_freqs)`` array expected here.
 
@@ -281,7 +285,7 @@ class EMDenoiser(BaseEMProcessor):
     --------
     >>> import numpy as np
     >>> X_clean = np.random.randn(200, 4, 32).astype("float32")
-    >>> den = EMDenoiser(n_freqs=32, n_components=4)
+    >>> den = EMDenoiser()
     >>> den.fit(X_clean, epochs=5, verbose=False)   # doctest: +SKIP
     EMDenoiser(n_freqs=32, n_components=4)
     >>> X_denoised = den.transform(X_clean)          # doctest: +SKIP
@@ -289,20 +293,21 @@ class EMDenoiser(BaseEMProcessor):
 
     def __init__(
         self,
-        n_freqs: int,
+        n_freqs: Optional[int] = None,
         n_components: int = 4,
         *,
         channels: Tuple[int, ...] = (64, 128, 64),
         dropout: float = 0.1,
         device: Optional[str] = None,
     ) -> None:
-        self.n_freqs = int(n_freqs)
+        self.n_freqs = None if n_freqs is None else int(n_freqs)
         self.n_components = int(n_components)
         self.channels = tuple(channels)
         self.dropout = float(dropout)
         self.device = device
 
         self._network: Any = None
+        self._use_numpy: bool = False
         self._is_fitted: bool = False
         self._backend_name: Optional[str] = None
         self._x_mean: Optional[np.ndarray] = None
@@ -350,6 +355,18 @@ class EMDenoiser(BaseEMProcessor):
         rng = np.random.default_rng(seed)
         X = np.asarray(X, dtype=np.float32)
 
+        if X.ndim != 3:
+            raise ValueError(
+                f"X must be 3-D (n_samples, n_components, n_freqs), got shape {X.shape}"
+            )
+
+        if self.n_freqs is None:
+            self.n_freqs = X.shape[2]
+        elif X.shape[2] != self.n_freqs:
+            raise ValueError(
+                f"Expected n_freqs={self.n_freqs}, got {X.shape[2]}"
+            )
+
         self._x_mean = X.mean(axis=(0, 2), keepdims=True)
         self._x_std = X.std(axis=(0, 2), keepdims=True) + 1e-8
         Xn = (X - self._x_mean) / self._x_std
@@ -360,16 +377,24 @@ class EMDenoiser(BaseEMProcessor):
         val_idx, trn_idx = idx[:n_val], idx[n_val:]
         Xtr, Xva = Xn[trn_idx], Xn[val_idx]
 
-        self._backend_name = active_backend()
-
-        if self._backend_name == "tensorflow":
-            self._fit_tensorflow(
-                Xtr, Xva, noise_level, epochs, batch_size, lr, rng, verbose
-            )
-        else:
-            self._fit_torch(
-                Xtr, Xva, noise_level, epochs, batch_size, lr, rng, verbose
-            )
+        try:
+            self._backend_name = active_backend()
+            if self._backend_name == "tensorflow":
+                self._fit_tensorflow(
+                    Xtr, Xva, noise_level, epochs, batch_size, lr, rng, verbose
+                )
+            elif self._backend_name != "none":
+                self._fit_torch(
+                    Xtr, Xva, noise_level, epochs, batch_size, lr, rng, verbose
+                )
+            else:
+                raise RuntimeError("no backend")
+            self._use_numpy = False
+        except (RuntimeError, ImportError):
+            self._backend_name = "numpy"
+            self._use_numpy = True
+            if verbose:
+                print("  EMDenoiser (scipy Gaussian fallback) — no DL backend found.")
 
         self._is_fitted = True
         return self
@@ -393,7 +418,13 @@ class EMDenoiser(BaseEMProcessor):
         X = np.asarray(X, dtype=np.float32)
         Xn = (X - self._x_mean) / self._x_std
 
-        if self._backend_name == "tensorflow":
+        if self._use_numpy:
+            try:
+                from scipy.ndimage import gaussian_filter1d
+                out = gaussian_filter1d(Xn, sigma=1.5, axis=-1)
+            except ImportError:
+                out = Xn.copy()
+        elif self._backend_name == "tensorflow":
             Xn_tf = Xn.transpose(0, 2, 1)  # → (batch, n_freqs, n_components)
             out_tf = self._network.predict(Xn_tf, verbose=0).astype(np.float32)
             out = out_tf.transpose(0, 2, 1)  # → (batch, n_components, n_freqs)
@@ -541,7 +572,7 @@ class EMDenoiser(BaseEMProcessor):
 
     def _get_params(self) -> Dict[str, Any]:
         return {
-            "n_freqs": self.n_freqs,
+            "n_freqs": self.n_freqs,   # may still be None if save() called before fit()
             "n_components": self.n_components,
             "channels": list(self.channels),
             "dropout": self.dropout,

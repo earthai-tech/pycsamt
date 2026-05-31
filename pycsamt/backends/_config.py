@@ -25,7 +25,7 @@ from typing import Optional
 
 __all__ = ["BackendConfig"]
 
-_VALID_NAMES = frozenset({"torch", "tensorflow", "auto"})
+_VALID_NAMES = frozenset({"torch", "tensorflow", "auto", "none"})
 _LOCK = threading.Lock()
 
 
@@ -116,18 +116,11 @@ class BackendConfig:
 
     @staticmethod
     def _auto_detect() -> str:
-        """Return the first available framework; raise if none found."""
+        """Return the first available framework, or ``'none'`` if none found."""
         from ._detect import detect_available_backends
         available = detect_available_backends()
         if not available:
-            raise RuntimeError(
-                "No AI/ML backend found in this environment.\n"
-                "Install at least one of:\n"
-                "  pip install torch          # PyTorch\n"
-                "  pip install tensorflow     # TensorFlow/Keras\n"
-                "Then call pycsamt.set_backend('torch') or "
-                "pycsamt.set_backend('tensorflow')."
-            )
+            return "none"
         return available[0]
 
     def write_config_file(self, name: str) -> None:

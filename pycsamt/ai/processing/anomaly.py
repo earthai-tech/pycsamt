@@ -139,9 +139,10 @@ class AnomalyDetector(BaseEMProcessor):
 
     Parameters
     ----------
-    n_features : int
+    n_features : int or None, default None
         Feature vector length per site
-        (typically ``n_freqs × n_components``).
+        (typically ``n_freqs × n_components``).  When ``None``,
+        inferred from ``X.shape[1]`` on the first call to :meth:`fit`.
     latent_dim : int, default 32
         Bottleneck dimension of the autoencoder.
     channels : tuple of int, default (128, 64)
@@ -162,7 +163,7 @@ class AnomalyDetector(BaseEMProcessor):
     --------
     >>> import numpy as np
     >>> X = np.random.randn(100, 120).astype("float32")
-    >>> det = AnomalyDetector(n_features=120, latent_dim=16)
+    >>> det = AnomalyDetector(latent_dim=16)
     >>> det.fit(X, epochs=10, verbose=False)          # doctest: +SKIP
     AnomalyDetector(n_features=120, latent_dim=16)
     >>> scores = det.transform(X)                     # doctest: +SKIP
@@ -171,14 +172,14 @@ class AnomalyDetector(BaseEMProcessor):
 
     def __init__(
         self,
-        n_features: int,
+        n_features: Optional[int] = None,
         latent_dim: int = 32,
         *,
         channels: Tuple[int, ...] = (128, 64),
         threshold_percentile: float = 95.0,
         device: Optional[str] = None,
     ) -> None:
-        self.n_features = int(n_features)
+        self.n_features = None if n_features is None else int(n_features)
         self.latent_dim = int(latent_dim)
         self.channels = tuple(channels)
         self.threshold_percentile = float(threshold_percentile)
@@ -228,6 +229,13 @@ class AnomalyDetector(BaseEMProcessor):
         """
         X = np.asarray(X, dtype=np.float32)
         X = np.where(np.isfinite(X), X, 0.0)
+
+        if self.n_features is None:
+            self.n_features = X.shape[1]
+        elif X.shape[1] != self.n_features:
+            raise ValueError(
+                f"Expected n_features={self.n_features}, got {X.shape[1]}"
+            )
 
         self._x_mean = X.mean(axis=0, keepdims=True)
         self._x_std = X.std(axis=0, keepdims=True) + 1e-8
@@ -499,7 +507,8 @@ class AnomalyDetector(BaseEMProcessor):
     def __repr__(self) -> str:
         status = "fitted" if self._is_fitted else "unfitted"
         backend = self._backend_name or ("pca" if self._use_pca else "torch")
+        nf = self.n_features if self.n_features is not None else "?"
         return (
-            f"AnomalyDetector(n_features={self.n_features}, "
+            f"AnomalyDetector(n_features={nf}, "
             f"latent_dim={self.latent_dim}, {backend}, {status})"
         )

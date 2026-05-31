@@ -68,12 +68,8 @@ def get_backend() -> str:
     Returns
     -------
     name : str
-        ``'torch'`` or ``'tensorflow'``.
-
-    Raises
-    ------
-    RuntimeError
-        If no backend is installed and auto-detection fails.
+        ``'torch'``, ``'tensorflow'``, or ``'none'`` when no DL framework
+        is installed.
 
     Examples
     --------
@@ -164,18 +160,15 @@ def list_backends() -> Dict[str, bool]:
 def get_backend_instance() -> Any:
     """
     Return the concrete :class:`~pycsamt.backends._base.NeuralBackend`
-    instance for the active backend.
+    instance for the active backend, or ``None`` when no DL framework is
+    installed.
 
     Returns
     -------
-    backend : NeuralBackend
-        Either :class:`~pycsamt.backends._torch.TorchBackend` or
-        :class:`~pycsamt.backends._tensorflow.TensorFlowBackend`.
-
-    Raises
-    ------
-    RuntimeError
-        If no backend is available.
+    backend : NeuralBackend or None
+        :class:`~pycsamt.backends._torch.TorchBackend`,
+        :class:`~pycsamt.backends._tensorflow.TensorFlowBackend`, or
+        ``None`` when no framework is available.
     """
     name = get_backend()
     if name == "torch":
@@ -184,4 +177,6 @@ def get_backend_instance() -> Any:
     if name == "tensorflow":
         from ._tensorflow import TensorFlowBackend
         return TensorFlowBackend()
+    if name == "none":
+        return None
     raise RuntimeError(f"Unknown backend {name!r}")

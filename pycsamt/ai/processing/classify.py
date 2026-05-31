@@ -594,8 +594,14 @@ class DimensionalityClassifier(BaseEMProcessor):
             X_arr = np.asarray(X, dtype=np.float32)
             X_arr = np.where(np.isfinite(X_arr), X_arr, 0.0)
             if y is None:
-                raise ValueError("y (labels) must be provided when X is an array.")
-            y_arr = np.asarray(y, dtype=int)
+                # Auto-generate rule-based labels from feature columns 0 (beta_abs)
+                # and 1 (ellipt_abs) — matches the canonical feature vector layout.
+                if X_arr.shape[1] >= 2:
+                    y_arr = _rule_labels(X_arr[:, 0], X_arr[:, 1])
+                else:
+                    y_arr = np.zeros(len(X_arr), dtype=int)
+            else:
+                y_arr = np.asarray(y, dtype=int)
             strike_arr = (
                 np.asarray(strike, dtype=float) if strike is not None else None
             )

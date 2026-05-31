@@ -165,11 +165,15 @@ class AugmentStaticShift(_BaseAugmenter):
 
     def __init__(
         self,
-        shift_range: Tuple[float, float] = (0.3, 3.0),
+        shift_range: Union[float, Tuple[float, float]] = (0.3, 3.0),
         n_amp_features: Optional[int] = None,
         per_sample: bool = True,
     ) -> None:
-        self.shift_range = tuple(shift_range)
+        if np.isscalar(shift_range):
+            # Interpret scalar s as ±s log-decades: linear range (10^-s, 10^+s).
+            s = abs(float(shift_range))
+            shift_range = (10.0 ** -s, 10.0 ** s)
+        self.shift_range = tuple(float(v) for v in shift_range)
         self.n_amp_features = n_amp_features
         self.per_sample = bool(per_sample)
 

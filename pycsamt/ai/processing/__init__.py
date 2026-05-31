@@ -3,27 +3,36 @@
 pycsamt.ai.processing
 =====================
 
-ML-based EM data preparation and QC.
+ML-based EM data preparation and quality control.
 
-Planned modules (Phase 3)
---------------------------
-denoise.py
-    :class:`EMDenoiser` — deep learning noise suppression on impedance
-    tensor data.  Replaces or supplements conventional robust processing
-    (Egbert 1997).
+Phase 3 modules
+---------------
+:class:`~pycsamt.ai.processing.denoise.EMDenoiser`
+    Convolutional autoencoder for MT impedance tensor denoising.
+    Suppresses broadband Gaussian noise and narrowband artefacts while
+    preserving the smooth spectral shape of the true signal.
 
-qc.py
-    :class:`EMQCScorer` — automated per-frequency QC scoring that
-    detects and flags noise bursts, static shifts, near-field
-    contamination, and galvanic distortion.
+:class:`~pycsamt.ai.processing.qc.EMQCScorer`
+    Automated per-(site, frequency) QC scoring.  Combines hard SNR /
+    Swift-skew thresholds with an IsolationForest anomaly model.
 
-anomaly.py
-    :class:`AnomalyDetector` — unsupervised anomaly detection on
-    tensor data across a profile (autoencoder-based).
+:class:`~pycsamt.ai.processing.anomaly.AnomalyDetector`
+    Profile-level unsupervised anomaly detection using a fully-connected
+    autoencoder (PCA fallback when PyTorch is unavailable).
 
-classify.py
-    :class:`DimensionalityClassifier` — classifies MT data as 1-D,
-    2-D, or 3-D; also predicts strike direction.
-    Replaces heuristic phase tensor / skew thresholds.
+:class:`~pycsamt.ai.processing.classify.DimensionalityClassifier`
+    MLP classifier that labels MT observations as 1-D, 2-D, or 3-D and
+    predicts the geoelectric strike direction for 2-D sites.
 """
-__all__: list = []
+from .denoise import EMDenoiser, prepare_z_features
+from .qc import EMQCScorer
+from .anomaly import AnomalyDetector
+from .classify import DimensionalityClassifier
+
+__all__ = [
+    "EMDenoiser",
+    "prepare_z_features",
+    "EMQCScorer",
+    "AnomalyDetector",
+    "DimensionalityClassifier",
+]

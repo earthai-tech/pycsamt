@@ -41,6 +41,12 @@ from .plot import (
     plot_compare, plot_profile_pair,
     plot_convergence, plot_lr_schedule,
 )
+from .processing import (
+    EMDenoiser, prepare_z_features,
+    EMQCScorer,
+    AnomalyDetector,
+    DimensionalityClassifier,
+)
 
 __all__ = [
     # base
@@ -58,4 +64,9 @@ __all__ = [
     "em_context", "add_colorbar",
     "plot_compare", "plot_profile_pair",
     "plot_convergence", "plot_lr_schedule",
+    # processing (Phase 3)
+    "EMDenoiser", "prepare_z_features",
+    "EMQCScorer",
+    "AnomalyDetector",
+    "DimensionalityClassifier",
 ]

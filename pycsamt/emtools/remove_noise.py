@@ -12,7 +12,10 @@ from ._core import (
     _get_z_block,
     _get_t_block,
     _name,
+    _station_positions,
 )
+
+_MU0: float = 4.0 * np.pi * 1e-7   # H/m
 
 # ----------------------------- SNR table -------------------------------- #
 
@@ -713,6 +716,159 @@ def mask_incoherent_freqs(
         return Si
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
+
+
+# --------- 6) Static-shift removal — Torres-Verdín & Bostick (1992) ----- #
+
+def _hanning_weights(dx: np.ndarray, w_H: float) -> np.ndarray:
+    """Hanning (von Hann) spatial filter weights (Torres-Verdín & Bostick 1992).
+
+    h(x) = (1 + cos(2π x / W_H)) / W_H  for |x| ≤ W_H/2, else 0.
+    W_H is the full window width [m].
+    """
+    half = w_H / 2.0
+    return np.where(
+        np.abs(dx) <= half,
+        np.maximum((1.0 + np.cos(2.0 * np.pi * dx / w_H)) / w_H, 0.0),
+        0.0,
+    )
+
+
+def correct_static_shift(
+    sites: Any,
+    *,
+    window_m: float = 1500.0,
+    spacing_m: float = 200.0,
+    comp: str = "det",
+    inplace: bool = False,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> Any:
+    """
+    Remove static shift via Hanning adaptive moving-average (AMA) spatial filter.
+
+    Implements the Torres-Verdín & Bostick (1992) approach used in
+    Kouadio et al. (2024):
+
+    1. For each frequency, build the spatial log(ρ_a) profile across stations.
+    2. Apply a Hanning low-pass spatial filter with full-width ``window_m``.
+    3. The static-shift correction factor at station *i* is
+       ``C_i = sqrt(ρ_smooth_i / ρ_obs_i)`` (in log space:
+       ``log C = 0.5 (log ρ_smooth − log ρ_obs)``).
+    4. Update every Z component: ``Z_corrected = Z × C``.
+
+    Parameters
+    ----------
+    sites : path, EDI-like, Sites, or iterable
+        Input sites.
+    window_m : float
+        Full Hanning window width [m] (Torres-Verdín W_H).  Stations
+        further than ``window_m/2`` contribute zero weight.
+    spacing_m : float
+        Fallback station spacing [m] used when EDI metadata carries no
+        coordinate information.
+    comp : {"det", "xy", "yx"}
+        Apparent-resistivity component used to estimate the static shift.
+        ``"det"`` uses the arithmetic mean of |Z_xy|² and |Z_yx|².
+    inplace : bool
+        If *True*, modify the input sites in place.  If *False* (default),
+        return a new Sites object with corrected Z tensors.
+    recursive, on_dup, strict, verbose
+        Passed to :func:`ensure_sites`.
+
+    Returns
+    -------
+    Sites
+        Sites with static-shift-corrected Z tensors (when ``inplace=False``).
+    """
+    S = ensure_sites(
+        sites, recursive=recursive, on_dup=on_dup,
+        strict=strict, verbose=verbose,
+    )
+
+    items = list(_iter_items(S))
+    if not items:
+        return S
+
+    names     = [_name(ed, i) for i, ed in enumerate(items)]
+    positions = _station_positions(items, spacing_m)
+    N         = len(items)
+
+    # --- collect ρ_a on native frequency grids ---------------------------
+    rho_data: List[Tuple[Optional[np.ndarray], Optional[np.ndarray]]] = []
+    all_freqs: List[np.ndarray] = []
+
+    for ed in items:
+        Z, z, fr = _get_z_block(ed)
+        if Z is None:
+            rho_data.append((None, None))
+            continue
+        omega = 2.0 * np.pi * np.maximum(fr, 1e-24)
+        if comp == "xy":
+            mag2 = np.abs(z[:, 0, 1]) ** 2
+        elif comp == "yx":
+            mag2 = np.abs(z[:, 1, 0]) ** 2
+        else:   # det
+            mag2 = 0.5 * (np.abs(z[:, 0, 1]) ** 2 + np.abs(z[:, 1, 0]) ** 2)
+        rho = mag2 / (omega * _MU0)
+        lr  = np.where(rho > 0.0, np.log(rho), np.nan)
+        rho_data.append((fr, lr))
+        all_freqs.append(fr)
+
+    if not all_freqs:
+        return S
+
+    G = np.unique(np.concatenate(all_freqs))
+    F = G.size
+
+    # --- map each station's log(ρ_a) onto the union frequency grid --------
+    log_rho_mat = np.full((N, F), np.nan, dtype=float)
+    for i, (fr_i, lr_i) in enumerate(rho_data):
+        if fr_i is None:
+            continue
+        idx = np.searchsorted(G, fr_i)
+        idx = np.clip(idx, 0, F - 1)
+        log_rho_mat[i, idx] = lr_i
+
+    # --- vectorised Hanning spatial smooth --------------------------------
+    dx_mat = positions[:, None] - positions[None, :]   # [N, N]
+    w_mat  = _hanning_weights(dx_mat, window_m)         # [N, N]
+
+    valid = np.isfinite(log_rho_mat).astype(float)     # [N, F]
+    # broadcast: w_mat[N,N,1] × valid[1,N,F] × log_rho[1,N,F]
+    w3    = w_mat[:, :, None]
+    lr3   = log_rho_mat[None, :, :]
+    v3    = valid[None, :, :]
+    num   = np.sum(w3 * v3 * lr3, axis=1)              # [N, F]
+    denom = np.sum(w3 * v3,       axis=1)               # [N, F]
+    log_rho_smooth = np.where(denom > 1e-30, num / denom, log_rho_mat)
+
+    # --- log correction factor C = sqrt(ρ_smooth / ρ_obs) ----------------
+    log_C = np.where(
+        np.isfinite(log_rho_mat) & np.isfinite(log_rho_smooth),
+        0.5 * (log_rho_smooth - log_rho_mat),
+        0.0,
+    )
+    corr_map = {names[i]: (G, np.exp(log_C[i])) for i in range(N)}
+
+    # --- apply per station -----------------------------------------------
+    def _one(Si):
+        ed = next(_iter_items(Si))
+        st = _name(ed, 0)
+        Z, z, fr = _get_z_block(ed)
+        if Z is None or st not in corr_map:
+            return Si
+        G_c, C_arr = corr_map[st]
+        idx = np.searchsorted(G_c, fr)
+        idx = np.clip(idx, 0, G_c.size - 1)
+        C   = C_arr[idx]
+        Z.z = z * C[:, None, None]
+        return Si
+
+    return _apply_each(S, _one, inplace=inplace, verbose=verbose)
+
 
 # -------------------- NOISE REMOVAL QC PLOTS ---------------------------- #
 

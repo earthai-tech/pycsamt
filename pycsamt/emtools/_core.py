@@ -12,8 +12,11 @@ from pycsamt.site.base import Sites
 
 
 def _wrap_one(ed):
-    from ._input import ensure_sites
-    return ensure_sites([ed], recursive=False, strict=False)
+    # For Sites-wrapped Site objects, unwrap to the underlying EDI item so
+    # that ensure_sites can build a proper single-item Sites around it.
+    edi = getattr(ed, "edi", None)
+    item = edi if (edi is not None and getattr(edi, "Z", None) is not None) else ed
+    return ensure_sites([item], recursive=False, strict=False)
 
 
 def _sites_from_items(items, verbose=0):
@@ -31,18 +34,21 @@ def _apply_each(
     inplace: bool,
     verbose: int = 0,
 ) -> Sites:
-    if inplace:
-        for ed in _iter_items(sites):
-            Si = _wrap_one(ed)
-            fn(Si)  # fn must honor inplace=True internally
-        return sites
-    out_items = []
-    for ed in _iter_items(sites):
+    # Collect EDI-level items so that _sites_from_items can rebuild a Sites.
+    # For Sites-wrapped Site objects (site.edi = original EDI), we unwrap to
+    # the EDI so that EDICollection.add can find site.station / site.path.
+    def _raw(ed):
+        edi = getattr(ed, "edi", None)
+        return edi if (edi is not None and getattr(edi, "Z", None) is not None) else ed
+
+    items_in = list(_iter_items(sites))
+    for ed in items_in:
         Si = _wrap_one(ed)
-        So = fn(Si)
-        it = next(_iter_items(So))
-        out_items.append(it)
-    return _sites_from_items(out_items, verbose=verbose)
+        fn(Si)  # fn modifies Z.z in-place on the underlying EDI item
+    if inplace:
+        return sites
+    raw = [_raw(ed) for ed in items_in]
+    return _sites_from_items(raw, verbose=verbose)
 
 
 
@@ -60,6 +66,14 @@ def _iter_items(sites: Any) -> Iterable[Any]:
 
 
 def _name(ed: Any, i: int) -> str:
+    # For Sites-wrapped Site objects the real station name lives in ed.edi.
+    # Check that path first so the generic Site.name = "site" is not picked up.
+    edi = getattr(ed, "edi", None)
+    if edi is not None:
+        for k in ("station", "id"):
+            v = getattr(edi, k, None)
+            if isinstance(v, str) and v:
+                return v
     for k in ("station", "name", "site", "id"):
         v = getattr(ed, k, None)
         if isinstance(v, str) and v:
@@ -116,7 +130,15 @@ def _get_z_block(
     *,
     with_errors: bool = False,
 ) -> tuple:
-    Z = _first_attr(ed, ("Z", "z"))
+    # Prefer uppercase-Z wrapper (EDIFile, _FakeZ).  If not found, try the
+    # Sites-wrapped Site pattern where the real wrapper lives at ed.edi.Z.
+    Z = _first_attr(ed, ("Z",))
+    if Z is None:
+        edi = getattr(ed, "edi", None)
+        if edi is not None:
+            Z = _first_attr(edi, ("Z",))
+    if Z is None:
+        Z = _first_attr(ed, ("z",))   # last resort: raw array
     if Z is None:
         return (None, None, None) if not with_errors else (
             None, None, None, None
@@ -195,6 +217,55 @@ def _get_t_block(
         return T, t, fr, te
     t, fr = _trim_to_min(t, fr)
     return T, t, fr
+
+
+def _station_positions(eds, spacing_m: float = 200.0) -> np.ndarray:
+    """
+    Return station positions [m] projected along the survey line.
+
+    Tries ``east``/``north`` (or ``x``/``y``, ``easting``/``northing``)
+    attributes on each EDI object and projects onto the bearing from the
+    first to the last valid station.  Falls back to integer spacing when
+    no coordinate metadata is found.
+    """
+    coords = []
+    for ed in eds:
+        e = None
+        for attr in ("east", "x", "easting"):
+            v = getattr(ed, attr, None)
+            if v is not None:
+                try:
+                    e = float(v); break
+                except (TypeError, ValueError):
+                    pass
+        n = None
+        for attr in ("north", "y", "northing"):
+            v = getattr(ed, attr, None)
+            if v is not None:
+                try:
+                    n = float(v); break
+                except (TypeError, ValueError):
+                    pass
+        coords.append((e, n) if e is not None and n is not None else None)
+
+    valid = [(i, c) for i, c in enumerate(coords) if c is not None]
+    if len(valid) < 2:
+        return np.arange(len(coords), dtype=float) * spacing_m
+
+    pts = np.array([list(c) for _, c in valid], dtype=float)
+    origin = pts[0]
+    direction = pts[-1] - origin
+    norm = float(np.linalg.norm(direction))
+    if norm < 1.0:
+        return np.arange(len(coords), dtype=float) * spacing_m
+
+    direction /= norm
+    positions = np.arange(len(coords), dtype=float) * spacing_m
+    for idx, c in valid:
+        positions[idx] = float(
+            np.dot(np.array(list(c), dtype=float) - origin, direction)
+        )
+    return positions
 
 
 def ensure_sites(

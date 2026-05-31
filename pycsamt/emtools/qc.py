@@ -13,6 +13,7 @@ from ._core import (
     _get_z_block,
     _get_t_block,
     _name,
+    _station_positions,
 )
 from .tensor import build_phase_tensor_table
 
@@ -168,6 +169,103 @@ def qc_flags(
     out = tb.copy()
     out["flags"] = flags
     return out
+
+
+# -------------------- confidence profile (Kouadio et al. 2024 Fig. 3) --- #
+
+def plot_confidence_profile(
+    sites: Any,
+    *,
+    ci_hi: float = 0.95,
+    ci_lo: float = 0.50,
+    spacing_m: float = 200.0,
+    figsize: Tuple[float, float] = (9.0, 4.0),
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    ax: Optional[plt.Axes] = None,
+) -> plt.Axes:
+    """
+    Profile confidence-index (CI) scatter plot along the survey line.
+
+    Reproduces the Fig. 3 style from Kouadio et al. (2024): one dot per
+    station coloured green (CI ≥ ``ci_hi``), pink (``ci_lo`` ≤ CI < ``ci_hi``),
+    or red (CI < ``ci_lo``), with dashed threshold lines.
+
+    CI is the fraction of frequencies with a valid (finite) Z tensor at
+    each station — ``n_ok / n_freq`` from :func:`build_qc_table`.
+
+    Parameters
+    ----------
+    sites : path, EDI-like, Sites, or iterable
+        Input sites.
+    ci_hi : float
+        Upper CI threshold (default 0.95 — "safe", green).
+    ci_lo : float
+        Lower CI threshold (default 0.50 — "recoverable", pink).
+    spacing_m : float
+        Fallback station spacing [m] used when no coordinate metadata is
+        available on the EDI objects.
+    figsize : tuple
+        Figure size when a new figure is created.
+    recursive, on_dup, strict, verbose
+        Passed to :func:`ensure_sites`.
+    ax : matplotlib.axes.Axes or None
+        Axes to draw on; created if *None*.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+    """
+    S = ensure_sites(
+        sites, recursive=recursive, on_dup=on_dup,
+        strict=strict, verbose=verbose,
+    )
+    tb = build_qc_table(
+        S, include_skew=False, recursive=False,
+        on_dup=on_dup, strict=False, verbose=verbose,
+    )
+
+    items     = list(_iter_items(S))
+    positions = _station_positions(items, spacing_m)
+    names     = [_name(ed, i) for i, ed in enumerate(items)]
+
+    xs, ys, cs = [], [], []
+    for k, name in enumerate(names):
+        row = tb[tb["station"] == name]
+        if row.empty:
+            continue
+        ci = float(row["frac_ok"].values[0])
+        xs.append(float(positions[k]))
+        ys.append(ci)
+        if ci >= ci_hi:
+            cs.append("#2ca02c")      # green
+        elif ci >= ci_lo:
+            cs.append("#ff9999")      # pink
+        else:
+            cs.append("#d62728")      # red
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+
+    if xs:
+        ax.scatter(xs, ys, c=cs, s=60, zorder=3, edgecolors="none")
+
+    ax.axhline(
+        ci_hi, ls="--", color="#2ca02c", lw=1.2,
+        label=f"CI = {ci_hi:.2f} (safe)",
+    )
+    ax.axhline(
+        ci_lo, ls="--", color="#ff9999", lw=1.2,
+        label=f"CI = {ci_lo:.2f} (recoverable)",
+    )
+    ax.set_ylim(-0.05, 1.10)
+    ax.set_xlabel("Distance along profile (m)")
+    ax.set_ylabel("Confidence index (CI)")
+    ax.legend(fontsize=8)
+    ax.grid(True, ls=":", alpha=0.4)
+    return ax
 
 
 # ----------------------------- coverage plot ----------------------------- #

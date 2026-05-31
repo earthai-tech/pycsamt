@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from ._input import ensure_sites
+from ._core import ensure_sites
 
 
 # ------------------------- small helpers --------------------------------- #

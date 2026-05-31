@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from .compat.aliases import install_compat_aliases
+from pycsamt.compat.aliases import install_compat_aliases
 
-from .utils.em import (
+from pycsamt.utils.em import (
     check_em_kind,
     extract_z_list,
     parse_tensor,

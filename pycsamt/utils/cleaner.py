@@ -474,6 +474,6 @@ def ismissing(
         missing = list(np.nonzero(~mask)[0])
     else:  # mask
         missing = ~mask
-    return filled, missing[0] if filled.shape[0] == 1 else filled
+    return filled, missing
 
     

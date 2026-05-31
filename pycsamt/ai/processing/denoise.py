@@ -32,17 +32,19 @@ Input tensor shape
 """
 from __future__ import annotations
 
+import copy
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
 from .._base import BaseEMProcessor, EMCheckpoint
+from .._backend_utils import resolve_device, get_weights, set_weights, active_backend
 
 __all__ = ["EMDenoiser", "prepare_z_features"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Input preparation helper (no torch dependency)
+# Input preparation helper (no torch / TF dependency)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def prepare_z_features(
@@ -95,7 +97,6 @@ def prepare_z_features(
         if freq_grid is None:
             freq_grid = fr
 
-        log10e = np.log10(np.e)  # unused, use log10 directly
         comps: List[np.ndarray] = []
 
         def _amp(z_comp: np.ndarray) -> np.ndarray:
@@ -107,7 +108,6 @@ def prepare_z_features(
         def _phase(z_comp: np.ndarray) -> np.ndarray:
             return np.degrees(np.angle(z_comp))
 
-        # off-diagonal (always included)
         comps += [_amp(z[:, 0, 1]), _phase(z[:, 0, 1])]  # Zxy
         comps += [_amp(z[:, 1, 0]), _phase(z[:, 1, 0])]  # Zyx
 
@@ -117,7 +117,6 @@ def prepare_z_features(
 
         mat = np.stack(comps, axis=0)  # (n_comp, n_freqs_site)
 
-        # Interpolate to common freq grid
         if freq_grid is not fr:
             mat_interp = np.full((mat.shape[0], len(freq_grid)), np.nan)
             for ci in range(mat.shape[0]):
@@ -137,27 +136,27 @@ def prepare_z_features(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Internal network builder (lazy torch import)
+# Network builders — PyTorch (channels-first) and TensorFlow (channels-last)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _build_cae(
+def _build_cae_torch(
     n_components: int,
     n_freqs: int,
     channels: Tuple[int, ...],
     dropout: float,
 ) -> Any:
-    """Build a 1-D convolutional autoencoder (CAE) module."""
+    """1-D CAE using PyTorch Conv1d (channels-first)."""
     try:
         import torch.nn as nn
     except ImportError as exc:
         raise ImportError("PyTorch is required for EMDenoiser") from exc
 
     mid = max(n_freqs // 4, 4)
+    ch = list(channels)
 
     class _CAE(nn.Module):
         def __init__(self) -> None:
             super().__init__()
-            ch = list(channels)
             self.encoder = nn.Sequential(
                 nn.Conv1d(n_components, ch[0], 5, padding=2),
                 nn.BatchNorm1d(ch[0]),
@@ -188,6 +187,62 @@ def _build_cae(
     return _CAE()
 
 
+def _build_cae_tf(
+    n_components: int,
+    n_freqs: int,
+    channels: Tuple[int, ...],
+    dropout: float,
+) -> Any:
+    """
+    1-D CAE using Keras Conv1D (channels-last).
+
+    Input / output convention: ``(batch, n_freqs, n_components)``.
+    Data is transposed by the caller from/to the canonical
+    ``(batch, n_components, n_freqs)`` form.
+    """
+    try:
+        import tensorflow as tf
+        from tensorflow.keras import layers, Model
+    except ImportError as exc:
+        raise ImportError("TensorFlow is required for EMDenoiser (TF backend)") from exc
+
+    ch = list(channels)
+    # pool_size ≈ n_freqs//(n_freqs//4) = 4; safe default for common grid sizes
+    pool = max(1, n_freqs // max(n_freqs // 4, 4))
+
+    inp = tf.keras.Input(shape=(n_freqs, n_components), name="input")
+
+    # Encoder
+    x = layers.Conv1D(ch[0], 5, padding="same")(inp)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(0.1)(x)
+    x = layers.Conv1D(ch[1], 3, padding="same")(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(0.1)(x)
+    x = layers.AveragePooling1D(pool_size=pool, padding="same")(x)
+    x = layers.Conv1D(ch[2], 3, padding="same")(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(0.1)(x)
+    x = layers.SpatialDropout1D(dropout)(x)
+
+    # Decoder
+    x = layers.Conv1D(ch[1], 3, padding="same")(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(0.1)(x)
+    x = layers.UpSampling1D(pool)(x)
+    x = layers.Conv1D(ch[0], 5, padding="same")(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(0.1)(x)
+    out = layers.Conv1D(n_components, 5, padding="same", name="output")(x)
+
+    # Trim or pad to exact n_freqs in case pool arithmetic leaves ±1 off
+    out = layers.Lambda(
+        lambda t, nf=n_freqs: t[:, :nf, :], name="trim"
+    )(out)
+
+    return Model(inp, out, name="cae")
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # EMDenoiser
 # ─────────────────────────────────────────────────────────────────────────────
@@ -198,7 +253,8 @@ class EMDenoiser(BaseEMProcessor):
 
     The network is trained on clean (or synthetic) impedance data by
     adding controlled noise and learning to reconstruct the original
-    signal.  It can then be applied to field data to suppress noise.
+    signal.  Supports both PyTorch and TensorFlow backends via
+    :mod:`pycsamt.backends`.
 
     Parameters
     ----------
@@ -213,7 +269,8 @@ class EMDenoiser(BaseEMProcessor):
     dropout : float, default 0.1
         Dropout probability in the encoder bottleneck.
     device : str or None
-        ``"cpu"``, ``"cuda"``, ``"mps"``, or ``None`` for auto-detect.
+        ``"cpu"``, ``"cuda"``, ``"mps"``, ``"/GPU:0"``, or ``None``
+        for auto-detect via the active backend.
 
     Notes
     -----
@@ -247,6 +304,7 @@ class EMDenoiser(BaseEMProcessor):
 
         self._network: Any = None
         self._is_fitted: bool = False
+        self._backend_name: Optional[str] = None
         self._x_mean: Optional[np.ndarray] = None
         self._x_std: Optional[np.ndarray] = None
         self._history: Dict[str, list] = {}
@@ -289,30 +347,85 @@ class EMDenoiser(BaseEMProcessor):
         -------
         self
         """
-        try:
-            import torch
-            import torch.nn as nn
-            from torch.utils.data import TensorDataset, DataLoader
-        except ImportError as exc:
-            raise ImportError("PyTorch is required for EMDenoiser.fit") from exc
-
         rng = np.random.default_rng(seed)
         X = np.asarray(X, dtype=np.float32)
 
-        # normalise per channel (axis 0 = samples)
         self._x_mean = X.mean(axis=(0, 2), keepdims=True)
         self._x_std = X.std(axis=(0, 2), keepdims=True) + 1e-8
         Xn = (X - self._x_mean) / self._x_std
 
-        # train / val split
         n = len(Xn)
         idx = rng.permutation(n)
         n_val = max(1, int(n * val_frac))
         val_idx, trn_idx = idx[:n_val], idx[n_val:]
         Xtr, Xva = Xn[trn_idx], Xn[val_idx]
 
-        dev = self._resolve_device()
-        self._network = _build_cae(
+        self._backend_name = active_backend()
+
+        if self._backend_name == "tensorflow":
+            self._fit_tensorflow(
+                Xtr, Xva, noise_level, epochs, batch_size, lr, rng, verbose
+            )
+        else:
+            self._fit_torch(
+                Xtr, Xva, noise_level, epochs, batch_size, lr, rng, verbose
+            )
+
+        self._is_fitted = True
+        return self
+
+    def transform(self, X: np.ndarray) -> np.ndarray:
+        """
+        Apply the trained denoiser.
+
+        Parameters
+        ----------
+        X : ndarray, shape (n_samples, n_components, n_freqs)
+            Noisy impedance data.
+
+        Returns
+        -------
+        X_denoised : ndarray, same shape as input
+        """
+        if not self._is_fitted:
+            raise RuntimeError("Call fit() before transform().")
+
+        X = np.asarray(X, dtype=np.float32)
+        Xn = (X - self._x_mean) / self._x_std
+
+        if self._backend_name == "tensorflow":
+            Xn_tf = Xn.transpose(0, 2, 1)  # → (batch, n_freqs, n_components)
+            out_tf = self._network.predict(Xn_tf, verbose=0).astype(np.float32)
+            out = out_tf.transpose(0, 2, 1)  # → (batch, n_components, n_freqs)
+        else:
+            import torch
+            dev = next(self._network.parameters()).device
+            self._network.eval()
+            with torch.no_grad():
+                t = torch.from_numpy(Xn).to(dev)
+                out = self._network(t).cpu().numpy()
+
+        return out * self._x_std + self._x_mean
+
+    # ─── internal training paths ──────────────────────────────────────────
+
+    def _fit_torch(
+        self,
+        Xtr: np.ndarray,
+        Xva: np.ndarray,
+        noise_level: float,
+        epochs: int,
+        batch_size: int,
+        lr: float,
+        rng: np.random.Generator,
+        verbose: bool,
+    ) -> None:
+        import torch
+        import torch.nn as nn
+        from torch.utils.data import TensorDataset, DataLoader
+
+        dev = resolve_device(self.device)
+        self._network = _build_cae_torch(
             self.n_components, self.n_freqs, self.channels, self.dropout
         ).to(dev)
 
@@ -321,25 +434,21 @@ class EMDenoiser(BaseEMProcessor):
             opt, factor=0.5, patience=7, min_lr=1e-6
         )
         mse = nn.MSELoss()
-
         per_ch_std = Xtr.std(axis=(0, 2), keepdims=True)
 
         def _make_noisy(batch: np.ndarray) -> "torch.Tensor":
             noise = rng.normal(0.0, noise_level, batch.shape).astype(np.float32)
-            noise *= per_ch_std  # scale noise per channel
+            noise *= per_ch_std
             return torch.from_numpy(batch + noise).to(dev)
 
         tr_ds = TensorDataset(torch.from_numpy(Xtr))
-        va_ds = TensorDataset(torch.from_numpy(Xva))
-
         best_val, best_state = np.inf, None
         train_losses, val_losses = [], []
 
         for ep in range(1, epochs + 1):
             self._network.train()
-            loader = DataLoader(tr_ds, batch_size=batch_size, shuffle=True)
             ep_loss = 0.0
-            for (xb,) in loader:
+            for (xb,) in DataLoader(tr_ds, batch_size=batch_size, shuffle=True):
                 xb = xb.to(dev)
                 noisy = _make_noisy(xb.cpu().numpy())
                 pred = self._network(noisy)
@@ -362,51 +471,71 @@ class EMDenoiser(BaseEMProcessor):
 
             if v_loss < best_val:
                 best_val = v_loss
-                import copy
                 best_state = copy.deepcopy(self._network.state_dict())
 
             if verbose and (ep % max(1, epochs // 10) == 0 or ep == 1):
-                print(
-                    f"  Epoch {ep:>4d}/{epochs}  "
-                    f"train={ep_loss:.5f}  val={v_loss:.5f}"
-                )
+                print(f"  Epoch {ep:>4d}/{epochs}  "
+                      f"train={ep_loss:.5f}  val={v_loss:.5f}")
 
         if best_state is not None:
             self._network.load_state_dict(best_state)
-
         self._history = {"train_loss": train_losses, "val_loss": val_losses}
-        self._is_fitted = True
-        return self
 
-    def transform(self, X: np.ndarray) -> np.ndarray:
-        """
-        Apply the trained denoiser.
+    def _fit_tensorflow(
+        self,
+        Xtr: np.ndarray,
+        Xva: np.ndarray,
+        noise_level: float,
+        epochs: int,
+        batch_size: int,
+        lr: float,
+        rng: np.random.Generator,
+        verbose: bool,
+    ) -> None:
+        import tensorflow as tf
 
-        Parameters
-        ----------
-        X : ndarray, shape (n_samples, n_components, n_freqs)
-            Noisy impedance data.
+        # Keras Conv1D is channels-last: (batch, n_freqs, n_components)
+        Xtr_tf = Xtr.transpose(0, 2, 1)
+        Xva_tf = Xva.transpose(0, 2, 1)
 
-        Returns
-        -------
-        X_denoised : ndarray, same shape as input
-        """
-        if not self._is_fitted:
-            raise RuntimeError("Call fit() before transform().")
+        per_ch_std = Xtr.std(axis=(0, 2), keepdims=True)  # (1, n_comp, 1)
 
-        try:
-            import torch
-        except ImportError as exc:
-            raise ImportError("PyTorch is required for EMDenoiser.transform") from exc
+        def _add_noise(X_chlast: np.ndarray) -> np.ndarray:
+            noise = rng.normal(0.0, noise_level, X_chlast.shape).astype(np.float32)
+            # per_ch_std is (1, n_comp, 1); transpose to (1, 1, n_comp) for channels-last
+            noise *= per_ch_std.transpose(0, 2, 1)
+            return X_chlast + noise
 
-        X = np.asarray(X, dtype=np.float32)
-        Xn = (X - self._x_mean) / self._x_std
-        dev = next(self._network.parameters()).device
-        self._network.eval()
-        with torch.no_grad():
-            t = torch.from_numpy(Xn).to(dev)
-            out = self._network(t).cpu().numpy()
-        return out * self._x_std + self._x_mean
+        dev = resolve_device(self.device)
+        with tf.device(dev):
+            self._network = _build_cae_tf(
+                self.n_components, self.n_freqs, self.channels, self.dropout
+            )
+            self._network.compile(
+                optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
+                loss="mse",
+            )
+            Xtr_noisy = _add_noise(Xtr_tf)
+            hist = self._network.fit(
+                Xtr_noisy, Xtr_tf,
+                validation_data=(_add_noise(Xva_tf), Xva_tf),
+                epochs=epochs,
+                batch_size=batch_size,
+                callbacks=[
+                    tf.keras.callbacks.EarlyStopping(
+                        monitor="val_loss", patience=10,
+                        restore_best_weights=True, min_delta=1e-6,
+                    ),
+                    tf.keras.callbacks.ReduceLROnPlateau(
+                        monitor="val_loss", factor=0.5, patience=7, min_lr=1e-6,
+                    ),
+                ],
+                verbose=1 if verbose else 0,
+            )
+        self._history = {
+            "train_loss": hist.history["loss"],
+            "val_loss": hist.history["val_loss"],
+        }
 
     # ─── serialisation ────────────────────────────────────────────────────
 
@@ -420,40 +549,33 @@ class EMDenoiser(BaseEMProcessor):
         }
 
     def _get_weights(self) -> Dict[str, np.ndarray]:
-        if self._network is None:
-            return {}
-        weights = {
-            k: v.cpu().numpy()
-            for k, v in self._network.state_dict().items()
-        }
+        out: Dict[str, np.ndarray] = {}
         if self._x_mean is not None:
-            weights["_x_mean"] = self._x_mean
-            weights["_x_std"] = self._x_std
-        return weights
+            out["_x_mean"] = self._x_mean
+            out["_x_std"] = self._x_std
+        if self._backend_name is not None:
+            out["_backend"] = np.array(self._backend_name)
+        if self._network is not None:
+            for k, v in get_weights(self._network).items():
+                out[k] = v
+        return out
 
     def _load_weights(self, weights: Dict[str, np.ndarray]) -> None:
-        import torch
-        self._network = _build_cae(
-            self.n_components, self.n_freqs, self.channels, self.dropout
-        )
         self._x_mean = weights.pop("_x_mean", None)
         self._x_std = weights.pop("_x_std", None)
-        state = {k: torch.from_numpy(v) for k, v in weights.items()}
-        self._network.load_state_dict(state)
-        self._is_fitted = True
+        backend_blob = weights.pop("_backend", None)
+        self._backend_name = str(backend_blob) if backend_blob is not None else "torch"
 
-    def _resolve_device(self) -> str:
-        if self.device is not None:
-            return self.device
-        try:
-            import torch
-            if torch.cuda.is_available():
-                return "cuda"
-            if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-                return "mps"
-        except ImportError:
-            pass
-        return "cpu"
+        if self._backend_name == "tensorflow":
+            self._network = _build_cae_tf(
+                self.n_components, self.n_freqs, self.channels, self.dropout
+            )
+        else:
+            self._network = _build_cae_torch(
+                self.n_components, self.n_freqs, self.channels, self.dropout
+            )
+        set_weights(self._network, weights)
+        self._is_fitted = True
 
     def __repr__(self) -> str:
         status = "fitted" if self._is_fitted else "unfitted"

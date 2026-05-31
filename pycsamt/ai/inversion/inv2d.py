@@ -44,25 +44,9 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 
 from .._base import BaseEMNet, EMCheckpoint
+from .._backend_utils import resolve_device, get_weights, set_weights, active_backend
 
 __all__ = ["EMInverter2D"]
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Architecture registry (populated lazily)
-# ─────────────────────────────────────────────────────────────────────────────
-
-_ARCH_REGISTRY_2D: Dict[str, Any] = {}
-
-
-def _lazy_register_2d() -> None:
-    if _ARCH_REGISTRY_2D:
-        return
-    from ..nets.unet import UNet2DNet
-
-    def _unet(n_comp, n_out, **kw):
-        return UNet2DNet(n_in=n_comp, n_out=n_out, **kw).build()
-
-    _ARCH_REGISTRY_2D["unet"] = _unet
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -119,14 +103,15 @@ class EMInverter2D(BaseEMNet):
         self._x_std: Optional[float] = None
         self._y_mean: Optional[float] = None
         self._y_std: Optional[float] = None
+        self._backend_name: Optional[str] = None
 
     # ─── BaseEMNet interface ──────────────────────────────────────────────
 
     def _build_network(self) -> Any:
-        _lazy_register_2d()
-        return _ARCH_REGISTRY_2D[self.arch](
-            self.n_components, 1, **self._net_kwargs
-        )
+        from pycsamt.backends import get_backend_instance
+        spec = {"arch": "unet2d", "n_in": self.n_components, "n_out": 1,
+                **self._net_kwargs}
+        return get_backend_instance().build(spec)
 
     def fit(
         self,
@@ -158,17 +143,9 @@ class EMInverter2D(BaseEMNet):
         -------
         self
         """
-        try:
-            import torch
-            import torch.nn as nn
-            from torch.utils.data import TensorDataset, DataLoader
-        except ImportError as exc:
-            raise ImportError("PyTorch is required for EMInverter2D.fit") from exc
-
         X = np.asarray(X, dtype=np.float32)
         y = np.asarray(y, dtype=np.float32)
 
-        # Normalise inputs/targets globally (simpler than per-channel for 2D)
         self._x_mean = float(np.nanmean(X))
         self._x_std = float(np.nanstd(X)) + 1e-8
         self._y_mean = float(np.nanmean(y))
@@ -177,17 +154,48 @@ class EMInverter2D(BaseEMNet):
         Xn = (X - self._x_mean) / self._x_std
         yn = (y - self._y_mean) / self._y_std
 
-        # Add channel dim to y: (n, n_depth, n_sta) → (n, 1, n_depth, n_sta)
-        yn = yn[:, np.newaxis, :, :]
-
         rng = np.random.default_rng(seed)
         n = len(Xn)
         idx = rng.permutation(n)
         n_val = max(1, int(n * val_frac))
         vi, ti = idx[:n_val], idx[n_val:]
 
-        dev = self._resolve_device()
-        self._network = self._build_network().to(dev)
+        self._backend_name = active_backend()
+        self._network = self._build_network()
+
+        if self._backend_name == "tensorflow":
+            hist, best_val = self._fit_tensorflow(
+                Xn[ti], yn[ti], Xn[vi], yn[vi],
+                epochs=epochs, batch_size=batch_size, lr=lr,
+                patience=patience, verbose=verbose,
+            )
+        else:
+            hist, best_val = self._fit_torch(
+                Xn[ti], yn[ti], Xn[vi], yn[vi],
+                epochs=epochs, batch_size=batch_size, lr=lr,
+                patience=patience, grad_clip=grad_clip, verbose=verbose,
+            )
+
+        self._history = hist
+        self._meta["best_val_loss"] = float(best_val)
+        self._is_fitted = True
+        return self
+
+    # ─── internal training paths ──────────────────────────────────────────
+
+    def _fit_torch(self, Xtr, ytr, Xva, yva, *,
+                   epochs, batch_size, lr, patience, grad_clip, verbose):
+        import torch
+        import torch.nn as nn
+        from torch.utils.data import TensorDataset, DataLoader
+
+        # channels-first: (n, n_comp, n_freqs, n_sta) — already correct
+        # target: add channel dim → (n, 1, n_depth, n_sta)
+        ytr = ytr[:, np.newaxis, :, :]
+        yva = yva[:, np.newaxis, :, :]
+
+        dev = resolve_device(self.device)
+        self._network = self._network.to(dev)
 
         opt = torch.optim.Adam(self._network.parameters(), lr=lr)
         sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -195,38 +203,30 @@ class EMInverter2D(BaseEMNet):
         )
         mse = nn.MSELoss()
 
-        Xtr = torch.from_numpy(Xn[ti])
-        ytr = torch.from_numpy(yn[ti])
-        tr_ds = TensorDataset(Xtr, ytr)
+        tr_ds = TensorDataset(torch.from_numpy(Xtr), torch.from_numpy(ytr))
+        Xva_t = torch.from_numpy(Xva).to(dev)
+        yva_t = torch.from_numpy(yva).to(dev)
 
-        Xva = torch.from_numpy(Xn[vi]).to(dev)
-        yva = torch.from_numpy(yn[vi]).to(dev)
-
-        best_val, best_state = np.inf, None
+        best_val, best_state, no_improve = np.inf, None, 0
         train_losses, val_losses = [], []
-        no_improve = 0
 
         for ep in range(1, epochs + 1):
             self._network.train()
-            loader = DataLoader(tr_ds, batch_size=batch_size, shuffle=True)
             ep_loss = 0.0
-            for xb, yb in loader:
+            for xb, yb in DataLoader(tr_ds, batch_size=batch_size, shuffle=True):
                 xb, yb = xb.to(dev), yb.to(dev)
-                pred = self._network(xb)
-                loss = mse(pred, yb)
+                loss = mse(self._network(xb), yb)
                 opt.zero_grad()
                 loss.backward()
                 if grad_clip:
-                    torch.nn.utils.clip_grad_norm_(
-                        self._network.parameters(), grad_clip
-                    )
+                    nn.utils.clip_grad_norm_(self._network.parameters(), grad_clip)
                 opt.step()
                 ep_loss += loss.item() * len(xb)
-            ep_loss /= len(ti)
+            ep_loss /= len(Xtr)
 
             self._network.eval()
             with torch.no_grad():
-                v_loss = mse(self._network(Xva), yva).item()
+                v_loss = mse(self._network(Xva_t), yva_t).item()
 
             sched.step(v_loss)
             train_losses.append(ep_loss)
@@ -240,10 +240,8 @@ class EMInverter2D(BaseEMNet):
                 no_improve += 1
 
             if verbose and (ep % max(1, epochs // 10) == 0 or ep == 1):
-                print(
-                    f"  EMInverter2D  ep {ep:>4d}/{epochs}  "
-                    f"train={ep_loss:.5f}  val={v_loss:.5f}"
-                )
+                print(f"  EMInverter2D  ep {ep:>4d}/{epochs}  "
+                      f"train={ep_loss:.5f}  val={v_loss:.5f}")
 
             if no_improve >= patience:
                 if verbose:
@@ -253,10 +251,46 @@ class EMInverter2D(BaseEMNet):
         if best_state is not None:
             self._network.load_state_dict(best_state)
 
-        self._history = {"train_loss": train_losses, "val_loss": val_losses}
-        self._meta["best_val_loss"] = float(best_val)
-        self._is_fitted = True
-        return self
+        return {"train_loss": train_losses, "val_loss": val_losses}, best_val
+
+    def _fit_tensorflow(self, Xtr, ytr, Xva, yva, *,
+                        epochs, batch_size, lr, patience, verbose):
+        import tensorflow as tf
+
+        # TF UNet2D expects channels-last: (n, n_freqs, n_sta, n_comp) / (n, n_depth, n_sta, 1)
+        Xtr_tf = Xtr.transpose(0, 2, 3, 1)   # (n, n_freqs, n_sta, n_comp)
+        Xva_tf = Xva.transpose(0, 2, 3, 1)
+        ytr_tf = ytr[:, :, :, np.newaxis]     # (n, n_depth, n_sta, 1)
+        yva_tf = yva[:, :, :, np.newaxis]
+
+        dev = resolve_device(self.device)
+        with tf.device(dev):
+            self._network.compile(
+                optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
+                loss="mse",
+            )
+            hist = self._network.fit(
+                Xtr_tf, ytr_tf,
+                validation_data=(Xva_tf, yva_tf),
+                epochs=epochs,
+                batch_size=batch_size,
+                callbacks=[
+                    tf.keras.callbacks.EarlyStopping(
+                        monitor="val_loss", patience=patience,
+                        restore_best_weights=True, min_delta=1e-6,
+                    ),
+                    tf.keras.callbacks.ReduceLROnPlateau(
+                        monitor="val_loss", factor=0.5,
+                        patience=max(5, patience // 3), min_lr=1e-6,
+                    ),
+                ],
+                verbose=1 if verbose else 0,
+            )
+        best_val = min(hist.history["val_loss"])
+        return {
+            "train_loss": hist.history["loss"],
+            "val_loss": hist.history["val_loss"],
+        }, best_val
 
     def predict(
         self,
@@ -280,26 +314,28 @@ class EMInverter2D(BaseEMNet):
         """
         if not self._is_fitted:
             raise RuntimeError("Call fit() before predict().")
-        try:
-            import torch
-        except ImportError as exc:
-            raise ImportError("PyTorch is required for EMInverter2D.predict") from exc
 
         X = np.asarray(X, dtype=np.float32)
         Xn = (X - self._x_mean) / self._x_std
 
-        dev = next(self._network.parameters()).device
-        self._network.eval()
+        if self._backend_name == "tensorflow":
+            # channels-last: (n, n_freqs, n_sta, n_comp)
+            Xn_tf = Xn.transpose(0, 2, 3, 1)
+            out_tf = self._network.predict(Xn_tf, verbose=0)  # (n, n_depth, n_sta, 1)
+            y_norm = out_tf.squeeze(-1)  # (n, n_depth, n_sta)
+        else:
+            import torch
+            dev = next(self._network.parameters()).device
+            self._network.eval()
+            batch_size = 16
+            outs = []
+            for i in range(0, len(Xn), batch_size):
+                xb = torch.from_numpy(Xn[i:i + batch_size]).to(dev)
+                with torch.no_grad():
+                    pred = self._network(xb).squeeze(1).cpu().numpy()
+                outs.append(pred)
+            y_norm = np.concatenate(outs, axis=0)
 
-        batch_size = 16
-        outs = []
-        for i in range(0, len(Xn), batch_size):
-            xb = torch.from_numpy(Xn[i:i + batch_size]).to(dev)
-            with torch.no_grad():
-                pred = self._network(xb).squeeze(1).cpu().numpy()
-            outs.append(pred)
-
-        y_norm = np.concatenate(outs, axis=0)
         y_log = y_norm * self._y_std + self._y_mean  # (n, n_depth, n_sta)
 
         if as_log_rho:
@@ -324,22 +360,27 @@ class EMInverter2D(BaseEMNet):
     def _get_weights(self) -> Dict[str, np.ndarray]:
         out: Dict[str, np.ndarray] = {}
         if self._network is not None:
-            for k, v in self._network.state_dict().items():
-                out[k] = v.cpu().numpy()
+            out.update(get_weights(self._network))
         for attr in ("_x_mean", "_x_std", "_y_mean", "_y_std"):
             val = getattr(self, attr, None)
             if val is not None:
                 out[attr] = np.array([val])
+        if self._backend_name:
+            out["_backend"] = np.array(self._backend_name)
         return out
 
     def _load_weights(self, weights: Dict[str, np.ndarray]) -> None:
-        import torch
+        backend_name = str(weights.pop("_backend", np.array("torch")))
+        self._backend_name = backend_name
+
+        from pycsamt.backends import set_backend
+        set_backend(backend_name)
+
         for attr in ("_x_mean", "_x_std", "_y_mean", "_y_std"):
             if attr in weights:
                 setattr(self, attr, float(weights.pop(attr)[0]))
         self._network = self._build_network()
-        state = {k: torch.from_numpy(v) for k, v in weights.items()}
-        self._network.load_state_dict(state)
+        set_weights(self._network, weights)
         self._is_fitted = True
 
     def __repr__(self) -> str:

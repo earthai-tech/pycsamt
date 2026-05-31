@@ -32,12 +32,12 @@ JointInverter(modalities=2, fitted)
 from __future__ import annotations
 
 import copy
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 
 from .._base import BaseEMNet, EMCheckpoint
+from .._backend_utils import resolve_device, get_weights, set_weights, active_backend
 from ..training.dataset import Normalizer
 
 __all__ = ["JointInverter"]
@@ -94,20 +94,23 @@ class JointInverter(BaseEMNet):
         self._n_out = 2 * n_layers - 1  # n_layers rho + (n_layers-1) thick
         self._x_norms: List[Optional[Normalizer]] = [None] * len(n_features_list)
         self._y_norm: Optional[Normalizer] = None
+        self._backend_name: Optional[str] = None
 
     # ─── BaseEMNet interface ──────────────────────────────────────────────
 
     def _build_network(self) -> Any:
-        from ..nets.drcnn import DRCNNNet
-        return DRCNNNet(
-            n_features_list=self.n_features_list,
-            n_out=self._n_out,
-            growth_rate=self.growth_rate,
-            n_layers=self.n_dense_layers,
-            hidden_dim=self.hidden_dim,
-            dropout=self.dropout,
+        from pycsamt.backends import get_backend_instance
+        spec = {
+            "arch": "drcnn",
+            "n_features_list": list(self.n_features_list),
+            "n_out": self._n_out,
+            "growth_rate": self.growth_rate,
+            "n_dense_layers": self.n_dense_layers,
+            "hidden_dim": self.hidden_dim,
+            "dropout": self.dropout,
             **self._net_kwargs,
-        ).build()
+        }
+        return get_backend_instance().build(spec)
 
     def fit(
         self,
@@ -141,17 +144,9 @@ class JointInverter(BaseEMNet):
         -------
         self
         """
-        try:
-            import torch
-            import torch.nn as nn
-            from torch.utils.data import TensorDataset, DataLoader
-        except ImportError as exc:
-            raise ImportError("PyTorch is required for JointInverter.fit") from exc
-
         X_arrs = [np.asarray(Xm, dtype=np.float32) for Xm in X_list]
         y_arr = np.asarray(y, dtype=np.float32)
 
-        # Normalise each modality independently
         self._x_norms = []
         X_normed = []
         for Xm in X_arrs:
@@ -159,7 +154,6 @@ class JointInverter(BaseEMNet):
             self._x_norms.append(norm)
             X_normed.append(norm.transform(Xm).astype(np.float32))
 
-        # Normalise targets (apply log10 to thickness columns)
         y_proc = y_arr.copy()
         if self.log_thickness and y_proc.shape[1] > self.n_layers:
             y_proc[:, self.n_layers:] = np.log10(
@@ -174,9 +168,38 @@ class JointInverter(BaseEMNet):
         n_val = max(1, int(n * val_frac))
         vi, ti = idx[:n_val], idx[n_val:]
 
-        dev = self._resolve_device()
-        self._network = self._build_network().to(dev)
+        self._backend_name = active_backend()
+        self._network = self._build_network()
 
+        if self._backend_name == "tensorflow":
+            hist, best_val = self._fit_tensorflow(
+                X_normed, yn, ti, vi,
+                epochs=epochs, batch_size=batch_size, lr=lr,
+                patience=patience, verbose=verbose,
+            )
+        else:
+            dev = resolve_device(self.device)
+            self._network = self._network.to(dev)
+            hist, best_val = self._fit_torch(
+                X_normed, yn, ti, vi,
+                epochs=epochs, batch_size=batch_size, lr=lr,
+                patience=patience, grad_clip=grad_clip, verbose=verbose,
+            )
+
+        self._history = hist
+        self._meta["best_val_loss"] = float(best_val)
+        self._is_fitted = True
+        return self
+
+    # ─── internal training paths ──────────────────────────────────────────
+
+    def _fit_torch(self, X_normed, yn, ti, vi, *,
+                   epochs, batch_size, lr, patience, grad_clip, verbose):
+        import torch
+        import torch.nn as nn
+        from torch.utils.data import TensorDataset, DataLoader
+
+        dev = next(self._network.parameters()).device
         opt = torch.optim.Adam(self._network.parameters(), lr=lr)
         sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
             opt, factor=0.5, patience=max(5, patience // 3), min_lr=1e-6
@@ -196,9 +219,8 @@ class JointInverter(BaseEMNet):
 
         for ep in range(1, epochs + 1):
             self._network.train()
-            loader = DataLoader(tr_ds, batch_size=batch_size, shuffle=True)
             ep_loss = 0.0
-            for *xbs, yb in loader:
+            for *xbs, yb in DataLoader(tr_ds, batch_size=batch_size, shuffle=True):
                 xbs = [t.to(dev) for t in xbs]
                 yb = yb.to(dev)
                 pred = self._network(*xbs)
@@ -206,17 +228,14 @@ class JointInverter(BaseEMNet):
                 opt.zero_grad()
                 loss.backward()
                 if grad_clip:
-                    torch.nn.utils.clip_grad_norm_(
-                        self._network.parameters(), grad_clip
-                    )
+                    nn.utils.clip_grad_norm_(self._network.parameters(), grad_clip)
                 opt.step()
                 ep_loss += loss.item() * len(yb)
             ep_loss /= len(ti)
 
             self._network.eval()
             with torch.no_grad():
-                v_pred = self._network(*va_inputs)
-                v_loss = mse(v_pred, yva).item()
+                v_loss = mse(self._network(*va_inputs), yva).item()
 
             sched.step(v_loss)
             train_losses.append(ep_loss)
@@ -230,10 +249,8 @@ class JointInverter(BaseEMNet):
                 no_improve += 1
 
             if verbose and (ep % max(1, epochs // 10) == 0 or ep == 1):
-                print(
-                    f"  JointInverter  ep {ep:>4d}/{epochs}  "
-                    f"train={ep_loss:.5f}  val={v_loss:.5f}"
-                )
+                print(f"  JointInverter  ep {ep:>4d}/{epochs}  "
+                      f"train={ep_loss:.5f}  val={v_loss:.5f}")
             if no_improve >= patience:
                 if verbose:
                     print(f"  Early stop at epoch {ep}")
@@ -242,10 +259,44 @@ class JointInverter(BaseEMNet):
         if best_state is not None:
             self._network.load_state_dict(best_state)
 
-        self._history = {"train_loss": train_losses, "val_loss": val_losses}
-        self._meta["best_val_loss"] = float(best_val)
-        self._is_fitted = True
-        return self
+        return {"train_loss": train_losses, "val_loss": val_losses}, best_val
+
+    def _fit_tensorflow(self, X_normed, yn, ti, vi, *,
+                        epochs, batch_size, lr, patience, verbose):
+        import tensorflow as tf
+
+        Xtr_list = [Xm[ti] for Xm in X_normed]
+        Xva_list = [Xm[vi] for Xm in X_normed]
+        yn_tr, yn_va = yn[ti], yn[vi]
+
+        dev = resolve_device(self.device)
+        with tf.device(dev):
+            self._network.compile(
+                optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
+                loss="mse",
+            )
+            hist = self._network.fit(
+                Xtr_list, yn_tr,
+                validation_data=(Xva_list, yn_va),
+                epochs=epochs,
+                batch_size=batch_size,
+                callbacks=[
+                    tf.keras.callbacks.EarlyStopping(
+                        monitor="val_loss", patience=patience,
+                        restore_best_weights=True, min_delta=1e-6,
+                    ),
+                    tf.keras.callbacks.ReduceLROnPlateau(
+                        monitor="val_loss", factor=0.5,
+                        patience=max(5, patience // 3), min_lr=1e-6,
+                    ),
+                ],
+                verbose=1 if verbose else 0,
+            )
+        best_val = min(hist.history["val_loss"])
+        return {
+            "train_loss": hist.history["loss"],
+            "val_loss": hist.history["val_loss"],
+        }, best_val
 
     def predict(
         self,
@@ -269,10 +320,6 @@ class JointInverter(BaseEMNet):
         """
         if not self._is_fitted:
             raise RuntimeError("Call fit() before predict().")
-        try:
-            import torch
-        except ImportError as exc:
-            raise ImportError("PyTorch is required for JointInverter.predict") from exc
 
         if isinstance(X_list, np.ndarray):
             X_list = [X_list]
@@ -282,25 +329,25 @@ class JointInverter(BaseEMNet):
             for norm, Xm in zip(self._x_norms, X_list)
         ]
 
-        dev = next(self._network.parameters()).device
-        self._network.eval()
+        if self._backend_name == "tensorflow":
+            y_norm = self._network.predict(X_normed, verbose=0)
+        else:
+            import torch
+            dev = next(self._network.parameters()).device
+            self._network.eval()
+            n = len(X_normed[0])
+            outs = []
+            for i in range(0, n, 256):
+                inputs = [
+                    torch.from_numpy(Xm[i:i + 256]).to(dev)
+                    for Xm in X_normed
+                ]
+                with torch.no_grad():
+                    outs.append(self._network(*inputs).cpu().numpy())
+            y_norm = np.concatenate(outs, axis=0)
 
-        batch_size = 256
-        n = len(X_normed[0])
-        outs = []
-        for i in range(0, n, batch_size):
-            inputs = [
-                torch.from_numpy(Xm[i:i + batch_size]).to(dev)
-                for Xm in X_normed
-            ]
-            with torch.no_grad():
-                pred = self._network(*inputs).cpu().numpy()
-            outs.append(pred)
-
-        y_norm = np.concatenate(outs, axis=0)
         y_pred = self._y_norm.inverse_transform(y_norm)
 
-        # Undo log10 on thickness columns
         if self.log_thickness and y_pred.shape[1] > self.n_layers:
             y_pred[:, self.n_layers:] = 10.0 ** y_pred[:, self.n_layers:]
 
@@ -326,8 +373,7 @@ class JointInverter(BaseEMNet):
     def _get_weights(self) -> Dict[str, np.ndarray]:
         out: Dict[str, np.ndarray] = {}
         if self._network is not None:
-            for k, v in self._network.state_dict().items():
-                out[k] = v.cpu().numpy()
+            out.update(get_weights(self._network))
         for i, norm in enumerate(self._x_norms):
             if norm is not None:
                 d = norm.to_dict()
@@ -337,10 +383,17 @@ class JointInverter(BaseEMNet):
             d = self._y_norm.to_dict()
             out["_ynorm_mean"] = np.array(d["mean"])
             out["_ynorm_std"] = np.array(d["std"])
+        if self._backend_name:
+            out["_backend"] = np.array(self._backend_name)
         return out
 
     def _load_weights(self, weights: Dict[str, np.ndarray]) -> None:
-        import torch
+        backend_name = str(weights.pop("_backend", np.array("torch")))
+        self._backend_name = backend_name
+
+        from pycsamt.backends import set_backend
+        set_backend(backend_name)
+
         self._x_norms = []
         for i in range(len(self.n_features_list)):
             km, ks = f"_xnorm_{i}_mean", f"_xnorm_{i}_std"
@@ -356,8 +409,7 @@ class JointInverter(BaseEMNet):
             self._y_norm.mean = weights.pop("_ynorm_mean")
             self._y_norm.std = weights.pop("_ynorm_std")
         self._network = self._build_network()
-        state = {k: torch.from_numpy(v) for k, v in weights.items()}
-        self._network.load_state_dict(state)
+        set_weights(self._network, weights)
         self._is_fitted = True
 
     def __repr__(self) -> str:

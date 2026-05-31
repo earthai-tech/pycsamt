@@ -69,22 +69,15 @@ if _missing_deps:
 from .utils.generic import ensure_package # Noqa 
 
 
-# Optional submodules fallback 
-_optional_modules = ["geodrill"]
-for mod in _optional_modules:
-    try:
-        globals()[mod] = importlib.import_module(f"pycsamt.{mod}")
-    except ImportError:
-        dummy = types.ModuleType(f"pycsamt.{mod}")
-        sys.modules[f"pycsamt.{mod}"] = dummy
-        globals()[mod] = dummy
+# interp: geological interpretation and export (replaces geodrill from v1)
+from . import interp  # noqa: F401
 
-# __getattr__ for install hints
+# __getattr__ for clean error on removed v1 modules
 def __getattr__(name):
-    if name in _optional_modules:
-        raise ImportError(
-            f"Optional submodule 'pycsamt.{name}' is not installed. "
-            f"Install via: pip install pycsamt[{name}]"
+    if name == "geodrill":
+        raise AttributeError(
+            "'geodrill' was removed in pycsamt v2. "
+            "Use 'pycsamt.interp' instead."
         )
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
@@ -102,7 +95,8 @@ __all__ = [
     # backend control
     "get_backend", "set_backend", "auto_detect",
     "list_backends", "get_backend_instance",
-] + _optional_modules
+    "interp",
+]
 
 
 

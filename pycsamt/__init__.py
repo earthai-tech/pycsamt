@@ -72,6 +72,9 @@ from .utils.generic import ensure_package # Noqa
 # interp: geological interpretation and export (replaces geodrill from v1)
 from . import interp  # noqa: F401
 
+# tdem: time-domain EM → frequency-domain (EDICollection) conversion
+from . import tdem  # noqa: F401
+
 # __getattr__ for clean error on removed v1 modules
 def __getattr__(name):
     if name == "geodrill":
@@ -96,6 +99,7 @@ __all__ = [
     "get_backend", "set_backend", "auto_detect",
     "list_backends", "get_backend_instance",
     "interp",
+    "tdem",
 ]
 
 

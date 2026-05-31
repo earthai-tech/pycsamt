@@ -5704,25 +5704,20 @@ def plot_confidence_in(
     # format clabel for error 
     clab=r"resistivity ($\Omega$.m)" if 'res' in tensor else (
         r'phase ($\degree$)' if 'ph' in tensor else tensor )
-    # --plot 
-    if view =='2d': 
-        from ..view import plot2d
-        ar2d = remove_outliers(rerr, fill_value=np.nan
-                              ) if drop_outliers else rerr 
-       
-        ax = plot2d (
-              ar2d,
-              cmap ='binary', 
-              cb_label =f"Error in {clab}", 
-              top_label =top_label , 
-              rotate_xlabel = rotate_xlabel , 
-              distance = distance , 
-              y = np.log10 (freqs), 
-              fig_size  = figsize ,
-              fig_dpi = dpi , 
-              font_size =fontsize,
-              )
-        
+    # --plot
+    if view == '2d':
+        import matplotlib.pyplot as _plt
+        ar2d = remove_outliers(rerr, fill_value=np.nan) if drop_outliers else rerr
+        x2d = np.arange(ar2d.shape[1]) * convert_value_in(distance)
+        y2d = np.log10(freqs)
+        fig, ax = _plt.subplots(figsize=figsize, dpi=dpi)
+        pcm = ax.pcolormesh(x2d, y2d, ar2d, cmap='binary', shading='auto')
+        cb = fig.colorbar(pcm, ax=ax, pad=0.02)
+        cb.set_label(f"Error in {clab}", fontsize=fontsize)
+        ax.set_xlabel(top_label or 'Distance (m)', fontsize=fontsize)
+        ax.set_ylabel('log$_{10}$(frequency / Hz)', fontsize=fontsize)
+        ax.tick_params(labelsize=fontsize)
+
     else: 
         fig, ax = plt.subplots(figsize = figsize,  dpi = dpi ,
                                )

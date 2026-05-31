@@ -28,8 +28,8 @@ Quick start (requires PyTorch)
 """
 
 from ._base import BaseEMNet, BaseEMProcessor, EMCheckpoint
-from .inversion import EMInverter1D
-from .nets import CNN1DNet, ResNet1DNet, FCN1DNet
+from .inversion import EMInverter1D, EMInverter2D, JointInverter
+from .nets import CNN1DNet, ResNet1DNet, FCN1DNet, UNet2DNet, DRCNNNet
 from .training import (
     Normalizer, EMDataset, EMTrainer,
     rmse, mae, r2, relative_rmse,
@@ -40,6 +40,9 @@ from .plot import (
     em_context, add_colorbar,
     plot_compare, plot_profile_pair,
     plot_convergence, plot_lr_schedule,
+    plot_section, plot_section_pair, plot_pseudo_section,
+    plot_confusion_matrix, plot_residuals, plot_layer_errors,
+    plot_uncertainty_bands, plot_feature_importance,
 )
 from .processing import (
     EMDenoiser, prepare_z_features,
@@ -52,9 +55,9 @@ __all__ = [
     # base
     "BaseEMNet", "BaseEMProcessor", "EMCheckpoint",
     # inversion
-    "EMInverter1D",
+    "EMInverter1D", "EMInverter2D", "JointInverter",
     # nets
-    "CNN1DNet", "ResNet1DNet", "FCN1DNet",
+    "CNN1DNet", "ResNet1DNet", "FCN1DNet", "UNet2DNet", "DRCNNNet",
     # training
     "Normalizer", "EMDataset", "EMTrainer",
     "rmse", "mae", "r2", "relative_rmse",
@@ -64,6 +67,10 @@ __all__ = [
     "em_context", "add_colorbar",
     "plot_compare", "plot_profile_pair",
     "plot_convergence", "plot_lr_schedule",
+    # section & diagnostics (Phase 4)
+    "plot_section", "plot_section_pair", "plot_pseudo_section",
+    "plot_confusion_matrix", "plot_residuals", "plot_layer_errors",
+    "plot_uncertainty_bands", "plot_feature_importance",
     # processing (Phase 3)
     "EMDenoiser", "prepare_z_features",
     "EMQCScorer",

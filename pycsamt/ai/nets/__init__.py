@@ -12,5 +12,7 @@ inside each ``build()`` call.
 from .cnn1d import CNN1DNet
 from .resnet import ResNet1DNet
 from .fcn import FCN1DNet
+from .unet import UNet2DNet
+from .drcnn import DRCNNNet
 
-__all__ = ["CNN1DNet", "ResNet1DNet", "FCN1DNet"]
+__all__ = ["CNN1DNet", "ResNet1DNet", "FCN1DNet", "UNet2DNet", "DRCNNNet"]

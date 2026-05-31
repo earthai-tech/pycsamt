@@ -48,8 +48,8 @@ from .._base import BaseEMProcessor
 
 __all__ = ["DimensionalityClassifier"]
 
-_FEATURE_COLS = ["beta_abs", "ellipt_abs", "phi_min", "phi_max",
-                 "logrho_det", "tip_amp"]
+# Columns from pycsamt.emtools.dimensionality.phase_features_table
+_FEATURE_COLS = ["beta_abs", "ellipt_abs", "logrho_det", "phi_det", "tip_amp"]
 _N_FEATURES = len(_FEATURE_COLS)
 
 

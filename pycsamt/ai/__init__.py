@@ -5,63 +5,57 @@
 pycsamt.ai
 ==========
 
-Artificial intelligence and machine learning for electromagnetic data
-processing and inversion.
+Artificial intelligence and machine learning for EM data processing
+and inversion.
 
-This package introduces AI-based workflows as a core component of
-pycsamt v2.  It is structured around five capability areas:
+Phase 2 additions
+-----------------
+* :class:`~pycsamt.ai.inversion.inv1d.EMInverter1D` — full 1-D inversion
+  pipeline (data loading → normalisation → training → prediction)
+* :mod:`~pycsamt.ai.nets` — CNN1D, ResNet1D, FCN1D architectures
+* :mod:`~pycsamt.ai.training` — EMDataset, EMTrainer, metrics
+* :mod:`~pycsamt.ai.plot` — EMStyle, plot_compare, plot_convergence
 
-``nets/``
-    Neural network architectures (CNN, ResNet, U-Net, DRCNN, FCN).
-
-``inversion/``
-    High-level 1-D and 2-D inversion workflows that consume
-    :class:`~pycsamt.z.z.Z` objects or
-    :class:`~pycsamt.forward.em1d.ForwardResponse` and return
-    subsurface resistivity models.
-
-``processing/``
-    ML-based data preparation: denoising, automated QC scoring,
-    anomaly detection, and dimensionality/strike classification.
-
-``training/``
-    Framework-agnostic training utilities: :class:`EMDataset`,
-    training loop with early stopping, EM-aware augmentation, and
-    evaluation metrics.
-
-``plot/``
-    Unified, publication-quality visualisation with a shared
-    :class:`~pycsamt.ai.plot._style.EMStyle` context manager.
-
-Dependencies
-------------
-The core abstract classes in this package (:mod:`pycsamt.ai._base`)
-require only NumPy.  PyTorch (or TensorFlow) is imported **lazily**
-inside concrete network classes and is only needed when a network is
-actually instantiated or trained.
-
-References
-----------
-Papers in ``related-works/ml/`` that informed the architecture design:
-
-* Puzyrev & Swidinsky (2021) — 1D CNN inversion for CSEM and TEM
-* Liu et al. (2021) — 18-layer ResNet for AMT inversion
-* Moghadas (2020) — FCN for EMI inversion
-* Oh et al. (2019, 2020) — CNN/U-Net for CSEM salt delineation
-* Guo et al. (2021) — DRCNN for joint AMT+seismic inversion
-
-Quick start (Phase 2+)
-----------------------
+Quick start (requires PyTorch)
+------------------------------
+>>> from pycsamt.forward.batch import generate_dataset
 >>> from pycsamt.ai.inversion import EMInverter1D
->>> inv = EMInverter1D(arch='resnet', n_layers=6, solver='mt1d')
->>> inv.fit('mt1d_train.npz', epochs=50)
->>> model = inv.predict(z_obj)
+>>> ds = generate_dataset(n_samples=2_000, seed=0, n_layers=5)
+>>> inv = EMInverter1D(arch="resnet", n_layers=5)
+>>> inv.fit(ds, epochs=30)
+>>> # Predict on new Z objects or ForwardResponse
+>>> y_pred = inv.predict(X_test)
 """
 
 from ._base import BaseEMNet, BaseEMProcessor, EMCheckpoint
+from .inversion import EMInverter1D
+from .nets import CNN1DNet, ResNet1DNet, FCN1DNet
+from .training import (
+    Normalizer, EMDataset, EMTrainer,
+    rmse, mae, r2, relative_rmse,
+    depth_rmse, layer_rmse, masked_mse_loss, summarise,
+)
+from .plot import (
+    EMStyle, EM_COLORS, EM_CMAPS, EM_FIGSIZE,
+    em_context, add_colorbar,
+    plot_compare, plot_profile_pair,
+    plot_convergence, plot_lr_schedule,
+)
 
 __all__ = [
-    "BaseEMNet",
-    "BaseEMProcessor",
-    "EMCheckpoint",
+    # base
+    "BaseEMNet", "BaseEMProcessor", "EMCheckpoint",
+    # inversion
+    "EMInverter1D",
+    # nets
+    "CNN1DNet", "ResNet1DNet", "FCN1DNet",
+    # training
+    "Normalizer", "EMDataset", "EMTrainer",
+    "rmse", "mae", "r2", "relative_rmse",
+    "depth_rmse", "layer_rmse", "masked_mse_loss", "summarise",
+    # plot
+    "EMStyle", "EM_COLORS", "EM_CMAPS", "EM_FIGSIZE",
+    "em_context", "add_colorbar",
+    "plot_compare", "plot_profile_pair",
+    "plot_convergence", "plot_lr_schedule",
 ]

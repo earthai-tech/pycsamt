@@ -379,18 +379,9 @@ class BaseEMNet(ABC):
         pass
 
     def _resolve_device(self) -> str:
-        """Pick compute device: user choice → CUDA → MPS → CPU."""
-        if self.device is not None:
-            return self.device
-        try:
-            import torch
-            if torch.cuda.is_available():
-                return "cuda"
-            if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-                return "mps"
-        except ImportError:
-            pass
-        return "cpu"
+        """Pick compute device via the active backend."""
+        from ._backend_utils import resolve_device
+        return resolve_device(self.device)
 
     # ─── dunder ───────────────────────────────────────────────────────────
 

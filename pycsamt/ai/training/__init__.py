@@ -12,6 +12,10 @@ from .metrics import (
     depth_rmse, layer_rmse,
     masked_mse_loss, summarise,
 )
+from .augment import (
+    AugmentNoise, AugmentStaticShift, AugmentFreqDrop,
+    AugmentMixup, Compose, RandomApply,
+)
 
 __all__ = [
     "Normalizer", "EMDataset",
@@ -19,4 +23,6 @@ __all__ = [
     "rmse", "mae", "r2", "relative_rmse",
     "depth_rmse", "layer_rmse",
     "masked_mse_loss", "summarise",
+    "AugmentNoise", "AugmentStaticShift", "AugmentFreqDrop",
+    "AugmentMixup", "Compose", "RandomApply",
 ]

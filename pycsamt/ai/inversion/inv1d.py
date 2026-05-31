@@ -59,6 +59,19 @@ __all__ = ["EMInverter1D"]
 _ARCH_REGISTRY: Dict[str, Any] = {}
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# from_pretrained helper (module-level to avoid class-level redefinition)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _load_pretrained(name: str, cache_dir: Optional[str] = None) -> "EMInverter1D":
+    """Download (if needed) and load a pre-trained checkpoint."""
+    from .._zoo import download_checkpoint, get_pretrained_info
+    info = get_pretrained_info(name)
+    fpath = download_checkpoint(name, cache_dir=cache_dir)
+    obj = EMInverter1D.load(fpath)
+    return obj
+
+
 def _register(name, fn):
     _ARCH_REGISTRY[name.lower()] = fn
 
@@ -384,6 +397,49 @@ class EMInverter1D(BaseEMNet):
         obj._meta = ckpt.meta
         obj._is_fitted = bool(ckpt.weights)
         return obj
+
+    # ─── model zoo ────────────────────────────────────────────────────────
+
+    @classmethod
+    def from_pretrained(
+        cls,
+        name: str,
+        *,
+        cache_dir: Optional[str] = None,
+    ) -> "EMInverter1D":
+        """
+        Load a pre-trained model from the pycsamt model zoo.
+
+        Pre-trained weights are hosted at
+        https://github.com/earthai-tech/pycsamt-models
+        and are downloaded to ``~/.pycsamt/model_zoo/`` on first call.
+
+        Parameters
+        ----------
+        name : str
+            Model identifier.  Call
+            :func:`~pycsamt.ai._zoo.list_pretrained` to see available
+            models.
+        cache_dir : str or None
+            Override the default download directory.
+
+        Returns
+        -------
+        EMInverter1D
+
+        Raises
+        ------
+        KeyError
+            If *name* is not in the model zoo registry.
+        RuntimeError
+            If the download fails (weights not yet publicly available).
+
+        Examples
+        --------
+        >>> from pycsamt.ai.inversion import EMInverter1D
+        >>> inv = EMInverter1D.from_pretrained("mt1d-resnet-5layer-v1")  # doctest: +SKIP
+        """
+        return _load_pretrained(name, cache_dir=cache_dir)
 
     # ─── BaseEMNet hooks ──────────────────────────────────────────────────
 

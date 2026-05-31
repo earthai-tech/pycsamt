@@ -28,12 +28,15 @@ Quick start (requires PyTorch)
 """
 
 from ._base import BaseEMNet, BaseEMProcessor, EMCheckpoint
-from .inversion import EMInverter1D, EMInverter2D, JointInverter
+from .inversion import EMInverter1D, EMInverter2D, JointInverter, EnsembleInverter
+from ._zoo import list_pretrained, get_pretrained_info, download_checkpoint
 from .nets import CNN1DNet, ResNet1DNet, FCN1DNet, UNet2DNet, DRCNNNet
 from .training import (
     Normalizer, EMDataset, EMTrainer,
     rmse, mae, r2, relative_rmse,
     depth_rmse, layer_rmse, masked_mse_loss, summarise,
+    AugmentNoise, AugmentStaticShift, AugmentFreqDrop,
+    AugmentMixup, Compose, RandomApply,
 )
 from .plot import (
     EMStyle, EM_COLORS, EM_CMAPS, EM_FIGSIZE,
@@ -55,13 +58,18 @@ __all__ = [
     # base
     "BaseEMNet", "BaseEMProcessor", "EMCheckpoint",
     # inversion
-    "EMInverter1D", "EMInverter2D", "JointInverter",
+    "EMInverter1D", "EMInverter2D", "JointInverter", "EnsembleInverter",
+    # model zoo
+    "list_pretrained", "get_pretrained_info", "download_checkpoint",
     # nets
     "CNN1DNet", "ResNet1DNet", "FCN1DNet", "UNet2DNet", "DRCNNNet",
     # training
     "Normalizer", "EMDataset", "EMTrainer",
     "rmse", "mae", "r2", "relative_rmse",
     "depth_rmse", "layer_rmse", "masked_mse_loss", "summarise",
+    # augmentation (Phase 5)
+    "AugmentNoise", "AugmentStaticShift", "AugmentFreqDrop",
+    "AugmentMixup", "Compose", "RandomApply",
     # plot
     "EMStyle", "EM_COLORS", "EM_CMAPS", "EM_FIGSIZE",
     "em_context", "add_colorbar",

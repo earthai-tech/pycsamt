@@ -81,7 +81,10 @@ class TestEMDataset(unittest.TestCase):
         ds = EMDataset(fds)
         self.assertEqual(len(ds), len(fds.X))
 
-    @unittest.skipUnless(_has_backend(), "no DL backend — torch required for __getitem__")
+    @unittest.skipUnless(
+        __import__("importlib").util.find_spec("torch") is not None,
+        "torch required for EMDataset.__getitem__",
+    )
     def test_getitem_shapes(self):
         from pycsamt.ai.training.dataset import EMDataset
         fds = self._make_forward_ds(n_layers=3, n_freqs=10)

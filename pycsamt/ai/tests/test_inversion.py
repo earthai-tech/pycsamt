@@ -94,8 +94,8 @@ class TestEMInverter1DWithBackend(unittest.TestCase):
         from pycsamt.ai.inversion.inv1d import EMInverter1D
         inv = EMInverter1D(arch="cnn1d", n_layers=3)
         inv.fit(self.ds, epochs=4, verbose=False)
-        self.assertIn("train_loss", inv.history_)
-        self.assertGreater(len(inv.history_["train_loss"]), 0)
+        self.assertIn("train_loss", inv._history)
+        self.assertGreater(len(inv._history["train_loss"]), 0)
 
     def test_ensemble_predict_shape(self):
         from pycsamt.ai.inversion.inv1d import EMInverter1D
@@ -103,7 +103,7 @@ class TestEMInverter1DWithBackend(unittest.TestCase):
         base = EMInverter1D(arch="cnn1d", n_layers=3)
         ens = EnsembleInverter(base_estimator=base, n_estimators=2)
         ens.fit(self.ds, epochs=3, verbose=False)
-        mean, std = ens.predict(self.ds.X[:6])
+        mean, std = ens.predict_with_uncertainty(self.ds.X[:6])
         self.assertEqual(mean.shape[0], 6)
         self.assertEqual(std.shape[0], 6)
 

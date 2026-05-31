@@ -1,62 +1,195 @@
-# _pycsamt_: A package for audio-frequency magnetotellurics
+<div align="center">
+  <img src="docs/source/_static/pycsamt_logo.svg" alt="pyCSAMT logo" width="320"/>
+</div>
 
-[![Documentation Status](https://readthedocs.org/projects/pycsamt/badge/?version=latest)](https://pycsamt.readthedocs.io/en/latest/?badge=latest) [![Build Status](https://travis-ci.com/WEgeophysics/pyCSAMT.svg?branch=master)](https://travis-ci.com/WEgeophysics/pyCSAMT) 
-  ![GitHub](https://img.shields.io/github/license/WEgeophysics/pycsamt?color=blue&label=licence&logo=GNU&logoColor=red) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/WEgeophysics/pyCSAMT?color=orange) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5674430.svg)](https://doi.org/10.5281/zenodo.5674430)
-  [![PyPI version](https://badge.fury.io/py/pycsamt.svg)](https://badge.fury.io/py/pycsamt)
+<h1 align="center">pyCSAMT v2</h1>
 
-## Overview 
+<p align="center">
+  <strong>Python toolkit for audio-frequency magnetotelluric (MT / AMT / CSAMT / CSEM) data processing, inversion, and geological interpretation</strong>
+</p>
 
-  * **Purpose**
-    
-    Previously, the software was intended for controlled source audio-frequency magnetotelluric (CSAMT) data processing (hereinafter the suffix CSAMT) and mostly related
-    to the groundwater exploration. The recent development is focused on the audio-magnetotelluric(AMT) methods. Indeed, the AMT methods are used broadly in diverse of exploration problems such as mineral, hydrocarbon,  groundwater resources, as well as the fault-zone mapping above the 1km depth. 
-    _pycsamt_ is designed to bring a piece of solution to the problems encountered by using AMT methods. It contains steps of AMT data processing and deals with [OCCAM2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html) of [DeGroot-Hedlin and Constable, 1990](https://doi.org/10.1190/1.1442303) , 
-    the [MT2DInvMatlab](https://doi.org/10.1016/j.cageo.2008.10.010)  of [Lee et al., 2009](https://doi.org/10.1016/j.cageo.2008.10.010) and [ModEM](https://sites.google.com/site/modularem/download) of [Kelbert et al., 2014](https://doi.org/10.1016/j.cageo.2014.01.010)
-    for the modeling purpose.
-    
-    It also provides processing tools for filtering and processing data( the trimming moving-average (MA), the fixed dipole-length MA ([Zonge International Engineering (Zonge, 2000)]( http://www.zonge.com/legacy/PDF_DatPro/Astatic.pdf )), the adaptative MA ( [Torres-verdìn and Bostick, 1992](https://doi.org/10.1190/1.2400625)). These filters are mostly used for fast removing the static effect especially in electromagnetic-array profiling survey. Some others filters such as "simple" for outliers removal and "PCA" can also be applied upstream for a particular data where the interferences are very strong (e.g. intenses humman activities, power lines, ...). Moreover, the  "Savitzky-Golay" filter is also added to remove high-frequency noise from data since it has the advantage of preserving the original shape and features of the signal better than other types of filtering approaches such as MA techniques (simple, exponential, cumulative, weight). 
-    
- * **Note**
- 
-    For long periods or MT methods (below 1Hz), it is recommended to visit other suitable softwares such as  [MTpy](https://github.com/MTgeophysics/mtpy.git), [FEMT2D](https://github.com/ruboerner/FEMT2D), [razorback](https://github.com/BRGM/razorback) or consult the [MTNet](https://www.mtnet.info/main/source.html) website. Nonetheless, the sofware has a feature to generate outputs/objects for other external modeling softwares such as [MTpy](https://github.com/MTgeophysics/mtpy), [OasisMontaj](http://updates.geosoft.com/downloads/files/how-to-guides/Oasis_montaj_Gridding.pdf) and [GoldenSoftware](https://www.goldensoftware.com/products/surfer).
+<p align="center">
+  <a href="https://pypi.org/project/pycsamt/"><img alt="PyPI" src="https://img.shields.io/pypi/v/pycsamt?color=orange"/></a>
+  <a href="https://pycsamt.readthedocs.io"><img alt="Docs" src="https://img.shields.io/readthedocs/pycsamt?label=docs"/></a>
+  <a href="https://github.com/earthai-tech/pycsamt/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/earthai-tech/pycsamt/ci.yml?label=CI"/></a>
+  <a href="https://opensource.org/licenses/LGPL-3.0"><img alt="License" src="https://img.shields.io/badge/license-LGPL--3.0-blue"/></a>
+  <a href="https://www.python.org/downloads/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/pycsamt"/></a>
+</p>
 
+---
 
-## Documentation 
+## Overview
 
-* [Installation Guide](https://pycsamt.readthedocs.io/en/latest/installation.html?highlight=installation)
-* [API Documentation](https://pycsamt.readthedocs.io/en/latest/)
-* [Home Page](https://github.com/WEgeophysics/pyCSAMT/wiki)
-* [User Guide](https://github.com/WEgeophysics/pyCSAMT/blob/develop/docs/pyCSAMT%20User%20Guide.pdf)
+**pyCSAMT v2** is a complete rewrite of the original pyCSAMT library, designed to support the full lifecycle of electromagnetic (EM) survey data from field acquisition to geological interpretation.
 
-## Credits
+| Scope | Supported methods |
+|-------|------------------|
+| Controlled-source AMT | CSAMT, CSEM |
+| Natural-source MT | AMT, broadband MT |
+| Inversion targets | 1-D, 2-D resistivity models |
+| AI-assisted inversion | Physics-informed CNN (DRCNN), joint multi-survey |
 
-We use or link some third-party software (beside the usual tool stack: [Numba](https://numba.pydata.org/), [Numpy](https://numpy.org/), [Scipy](https://scipy.org/), [SumPy](https://www.sympy.org/en/index.html), [Matplotlib](https://matplotlib.org/)) and are grateful for all the work made by the authors of these awesome open-source tools:
-* [MTpy](https://github.com/MTgeophysics/mtpy.git)
-* [Occam2D](https://marineemlab.ucsd.edu/Projects/Occam/index.html)
-* [ModEM](https://sites.google.com/site/modularem/)
-* Zonge Engineering softwares:
-    - [AMTAVG](http://www.zonge.com/legacy/DatPro.html/)
-    - [ASTATIC](http://www.zonge.com/legacy/PDF_DatPro/Astatic.pdf)
+### Key modules
 
-## System requirements 
+| Package | Purpose |
+|---------|---------|
+| `pycsamt.io` | EDI / AVG / J read-write; `EDICollection` batch loader |
+| `pycsamt.processing` | Static-shift correction, phase tensor, Z decomposition |
+| `pycsamt.models` | OCCAM2D and ModEM I/O; forward modelling helpers |
+| `pycsamt.inversion` | Inversion wrappers (`Occam2DInv`, `ModEMInv`) |
+| `pycsamt.forward` | 1-D / 2-D analytic and finite-difference forward solvers |
+| `pycsamt.ai` | Dual-backend (PyTorch / TensorFlow) deep-learning inversion |
+| `pycsamt.interp` | Post-inversion interpretation: stratigraphic logs, calibration, export |
 
-* Python 3.7+ 
+---
 
-## Citations 
+## Quick start
 
- We'd much appreciate if you consider citing the toolbox as a contribution in a published work:
+```python
+import pycsamt
 
-> *Kouadio, K.L., Liu, R., Mi, B., Liu, C., 2022. pyCSAMT: An alternative Python toolbox for groundwater exploration using controlled source audio-frequency magnetotelluric. J. Appl. Geophys. 201, 104647. https://doi.org/10.1016/j.jappgeo.2022.104647.*
-> 
+# --- Load a set of EDI files ---
+from pycsamt.io import EDICollection
+coll = EDICollection.from_dir("data/edi/")
+print(coll)          # EDICollection(n_sites=47, freq_range=[0.001, 10000] Hz)
 
-A case study using the software can also be found  in the paper below: 
+# --- Run OCCAM2D inversion ---
+from pycsamt.models import OccamModel
+model = OccamModel(n_layers=60, target_rms=1.0)
+result = model.fit(coll)
 
-> *Kouadio, L. K., Liu, R., Malory, A. O., Liu, W., Liu, C., (2023). A novel approach for water reservoir mapping using controlled source audio - frequency magnetotelluric in Xingning area , Hunan Province, China. Geophys. Prospect., https://doi.org/10.1111/1365-2478.13385*
->
+# --- Interpret the 2-D resistivity model ---
+from pycsamt.interp import ResistivityModel, ModelCalibrator
+rm = ResistivityModel.from_occam2d(result)
+cal = ModelCalibrator(ptol=0.30, verbose=True).fit(rm)
 
-## Contributors
+# Export pseudostratigraphic logs for Oasis Montaj
+from pycsamt.interp import export
+export.to_oasis_montaj_xyz(cal.stratigraphic_logs(), "output/profile.xyz")
+```
 
-1. Department of Geophysics, School of  Info-physics and Geomatics Engineering, [Central South University](https://en.csu.edu.cn/), China. 
-2. Laboratoire de Geologie Ressources Minerales et Energetiques, UFR des Sciences de la Terre et des Ressources Minières, [Université Félix Houphouët-Boigny]( https://www.univ-fhb.edu.ci/index.php/ufr-strm/), Cote d'Ivoire.
+---
 
-* Developer: 1, 2- Kouadio Laurent,  <etanoyau@gmail.com> / <lkouao@csu.edu.cn>.
+## Installation
+
+### Stable release (PyPI)
+
+```bash
+pip install pycsamt
+```
+
+### With deep-learning support
+
+```bash
+# PyTorch backend
+pip install "pycsamt[torch]"
+
+# TensorFlow backend
+pip install "pycsamt[tensorflow]"
+
+# Both backends + geospatial extras
+pip install "pycsamt[torch,tensorflow,geo]"
+```
+
+### Development install
+
+```bash
+git clone https://github.com/earthai-tech/pycsamt.git
+cd pycsamt
+pip install -e ".[dev]"
+```
+
+---
+
+## AI-assisted inversion
+
+pyCSAMT v2 ships a dual-backend deep learning module that can be switched between
+PyTorch and TensorFlow at runtime:
+
+```python
+from pycsamt.backends import set_backend
+set_backend("torch")          # or "tensorflow"
+
+from pycsamt.ai.inversion import Inv2DNet
+net = Inv2DNet(n_stations=30, n_depth=60, n_freq=54)
+net.fit(X_train, y_train, epochs=200)
+rho_pred = net.predict(X_test)
+net.save("inv2d_checkpoint.npz")
+```
+
+---
+
+## Geological interpretation
+
+The `pycsamt.interp` package converts raw inversion resistivity grids into
+actionable lithological products:
+
+```python
+from pycsamt.interp import ResistivityModel, ModelCalibrator, RockDatabase
+from pycsamt.interp.plot import PlotStratigraphicLog
+
+rm  = ResistivityModel.from_occam2d(result)
+cal = ModelCalibrator(ptol=0.25).fit(rm)
+
+logs = cal.stratigraphic_logs(db=RockDatabase.default())
+PlotStratigraphicLog(logs[0]).plot()
+```
+
+Supported export formats: **Oasis Montaj XYZ**, **CSV**, **LAS 2.0**, **VTK**.
+
+---
+
+## Documentation
+
+Full documentation is hosted at **<https://pycsamt.readthedocs.io>** (under construction for v2).
+
+---
+
+## Citation
+
+If you use pyCSAMT in your research, please cite:
+
+```bibtex
+@article{Kouadio2022,
+  author  = {Kouadio, K. Laurent and Liu, Rong and Liu, Chum-ning and
+             Mi, Binbin and Malory, Albert O.},
+  title   = {pyCSAMT: An open-source Python library for controlled source
+             audio-frequency magnetotelluric data processing and
+             pseudostratigraphic log generation},
+  journal = {Journal of Applied Geophysics},
+  year    = {2022},
+  volume  = {201},
+  pages   = {104647},
+  doi     = {10.1016/j.jappgeo.2022.104647},
+}
+
+@article{Kouadio2023,
+  author  = {Kouadio, K. Laurent and others},
+  title   = {Recovering the electrical resistivity from MT data using a
+             deep resistivity convolutional neural network},
+  journal = {Journal of Geophysical Research: Solid Earth},
+  year    = {2023},
+  doi     = {10.1029/2023JB027538},
+}
+```
+
+---
+
+## Contributing
+
+Contributions are welcome — see [CONTRIBUTING](docs/source/contributing.rst) for guidelines.
+Bug reports and feature requests: <https://github.com/earthai-tech/pycsamt/issues>
+
+---
+
+## License
+
+pyCSAMT is distributed under the **GNU Lesser General Public License v3.0 or later**.
+See [LICENSE.md](LICENSE.md) for the full text.
+
+---
+
+<p align="center">
+  Developed by <a href="https://github.com/earthai-tech">earthai-tech</a> &nbsp;|&nbsp;
+  Lead: <a href="mailto:etanoyau@gmail.com">Kouadio K. Laurent</a>
+</p>

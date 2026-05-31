@@ -1,6 +1,189 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
+requires      = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
+
+# ---------------------------------------------------------------------------
+# Project metadata  (PEP 621)
+# ---------------------------------------------------------------------------
+[project]
+name        = "pycsamt"
+dynamic     = ["version"]
+description = "Python toolkit for audio-frequency magnetotelluric (MT/AMT/CSAMT/CSEM) data processing, inversion, and geological interpretation"
+readme      = "README.md"
+license     = { text = "LGPL-3.0-or-later" }
+requires-python = ">=3.9"
+
+authors = [
+    { name = "Kouadio K. Laurent", email = "etanoyau@gmail.com" },
+]
+maintainers = [
+    { name = "Kouadio K. Laurent", email = "etanoyau@gmail.com" },
+]
+
+keywords = [
+    "magnetotelluric", "electromagnetic", "geophysics",
+    "MT", "AMT", "CSAMT", "CSEM",
+    "inversion", "deep-learning", "resistivity",
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "numpy>=1.22",
+    "scipy>=1.8",
+    "matplotlib>=3.5",
+    "pandas>=1.4",
+    "pyyaml>=5.4",
+    "tqdm>=4.60",
+]
+
+# ---------------------------------------------------------------------------
+# Optional dependency groups
+# ---------------------------------------------------------------------------
+[project.optional-dependencies]
+
+# AI / ML back-ends (choose one or both)
+torch = [
+    "torch>=1.13",
+]
+tensorflow = [
+    "tensorflow>=2.10",
+]
+
+# Scientific extras
+geo = [
+    "pyproj>=3.3",
+    "xarray>=2022.6",
+]
+
+# Development & testing
+dev = [
+    "pytest>=7.2",
+    "pytest-cov>=4.0",
+    "ruff>=0.4",
+    "pre-commit>=3.0",
+]
+
+# Documentation build
+docs = [
+    "sphinx>=7.2",
+    "pydata-sphinx-theme>=0.15",
+    "numpydoc>=1.7",
+    "myst-parser>=2.0",
+    "sphinx-copybutton>=0.5",
+    "sphinx-design>=0.5",
+    "sphinx-autobuild>=2024.2",
+]
+
+# Everything
+full = [
+    "pycsamt[torch,tensorflow,geo,dev,docs]",
+]
+
+# ---------------------------------------------------------------------------
+# Project URLs
+# ---------------------------------------------------------------------------
+[project.urls]
+Homepage        = "https://github.com/earthai-tech/pycsamt"
+Documentation   = "https://pycsamt.readthedocs.io"
+"Bug Tracker"   = "https://github.com/earthai-tech/pycsamt/issues"
+"Source Code"   = "https://github.com/earthai-tech/pycsamt"
+Changelog       = "https://pycsamt.readthedocs.io/en/latest/changelog.html"
+
+# ---------------------------------------------------------------------------
+# Entry points  (v2 CLI — to be implemented)
+# ---------------------------------------------------------------------------
+# [project.scripts]
+# pycsamt = "pycsamt.cli:main"
+
+# ---------------------------------------------------------------------------
+# Setuptools configuration
+# ---------------------------------------------------------------------------
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = { attr = "pycsamt.__version__" }
+
+[tool.setuptools.packages.find]
+where   = ["."]
+include = ["pycsamt*"]
+exclude = [
+    "pycsamt.*_v1*",
+    "pycsamt.geodrill*",
+    "pycsamt.gui_v1*",
+    "pycsamt.cli_v1*",
+    "pycsamt.modeling_v1*",
+    "pycsamt.plot_v1*",
+    "pycsamt.processing_v1*",
+    "pycsamt._core_v1*",
+    "pycsamt.utils_v1*",
+    "pycsamt.geodrill_v2*",
+    "pycsamt.view*",
+]
+
+[tool.setuptools.package-data]
+"pycsamt" = [
+    "log/p.configlog.yml",
+    "metadata/*.json",
+    "metadata/*.yml",
+    "models/occam2d/_source/*",
+    "models/modem/_source/**/*",
+    "data/occam2d/*",
+    "data/3edis/*.edi",
+    "data/inversionFiles/*",
+]
+
+# ---------------------------------------------------------------------------
+# Tool configuration
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "7.2"
+addopts    = "-ra -q --tb=short"
+testpaths  = ["pycsamt"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501", "B008"]
+exclude = [
+    "*_v1*",
+    "geodrill*",
+    "geodrill_v2*",
+    "gui_v1*",
+    "cli_v1*",
+    "modeling_v1*",
+    "plot_v1*",
+    "processing_v1*",
+    "_core_v1*",
+    "utils_v1*",
+    "view*",
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.coverage.run]
+source = ["pycsamt"]
+omit   = [
+    "*_v1*", "*geodrill*", "*gui_v1*", "*cli_v1*",
+    "*modeling_v1*", "*plot_v1*", "*processing_v1*",
+    "*_core_v1*", "*utils_v1*", "*view*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false

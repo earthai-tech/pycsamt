@@ -1,107 +1,107 @@
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
-# License: GPL-3.0
+# License: LGPL-3.0
 """
-pycsamt: A Python Toolbox for audio-magnetotellurics (AMT & CSAMT)
-
-Provides fast & robust data processing, signal recovery, and
-**drilling-location optimization** for AMT and CSAMT surveys.
+pycsamt v2 — Python toolbox for audio-magnetotellurics (AMT & CSAMT).
 
 Documentation: https://pycsamt.readthedocs.io/en/latest/
 Source:        https://github.com/WEgeophysics/pycsamt
 """
 
-import sys
-import warnings
 import importlib
-import types
+import warnings
 
-# Version
+# ── Version ──────────────────────────────────────────────────────────────────
 try:
-    from importlib.metadata import version
-    __version__ = version(__name__)
+    from importlib.metadata import version as _pkg_version
+    __version__ = _pkg_version(__name__)
 except Exception:
     __version__ = "2.0.0"
 
-# Configure logging early
-
+# ── Logging ───────────────────────────────────────────────────────────────────
 from pycsamt.log._config import init_logging
-init_logging()  # loads p.configlog.yml or falls back to basicConfig
+init_logging()
 
-
-# Dependency resolution
-_required_dependencies = [
-    ("numpy", None),
-    ("pandas", None),
-    ("scipy", None),
-    ("matplotlib", None),
-    ("tqdm", None),
-    ("scikit-learn", "sklearn"),
-    ("numba", None),
-    ("mtpy", None),
-    ("pyyaml", None),
+# ── Hard-dependency check ────────────────────────────────────────────────────
+_required = [
+    ("numpy",       "numpy"),
+    ("pandas",      "pandas"),
+    ("scipy",       "scipy"),
+    ("matplotlib",  "matplotlib"),
+    ("tqdm",        "tqdm"),
+    ("scikit-learn","sklearn"),
 ]
-_missing_deps = []
-
-def _lazy_import(module, alias=None):
-    """Lazily load a module to defer import time."""
-    def _loader():
-        return importlib.import_module(module)
-    globals()[alias or module] = _loader
-
-for pkg, alias in _required_dependencies:
+_missing = []
+for _pkg_name, _import_name in _required:
     try:
-        if alias:
-            _lazy_import(alias, alias)
-        else:
-            _lazy_import(pkg)
-    except ImportError as e:
-        _missing_deps.append(f"{pkg}: {e}")
+        importlib.import_module(_import_name)
+    except ImportError:
+        _missing.append(_pkg_name)
 
-if _missing_deps:
+if _missing:
     warnings.warn(
-        "Missing pycsamt dependencies; some features may be unavailable:\n"
-        + "\n".join(_missing_deps),
-        ImportWarning
+        "pycsamt: some dependencies are not installed; "
+        "affected features will raise ImportError at use time:\n  "
+        + ", ".join(_missing),
+        ImportWarning,
+        stacklevel=2,
     )
+del _required, _pkg_name, _import_name, _missing
 
-# Expose installer utility for on-the-fly fixes
-from .utils.generic import ensure_package # Noqa 
+# ── Eagerly loaded subpackages ────────────────────────────────────────────────
+# Only the two packages that are always needed at the module level are loaded
+# here; everything else is imported on demand by the user.
+from . import interp  # noqa: F401  geological interpretation / export
+from . import tdem    # noqa: F401  time-domain EM → EDICollection
 
-
-# interp: geological interpretation and export (replaces geodrill from v1)
-from . import interp  # noqa: F401
-
-# tdem: time-domain EM → frequency-domain (EDICollection) conversion
-from . import tdem  # noqa: F401
-
-# __getattr__ for clean error on removed v1 modules
-def __getattr__(name):
-    if name == "geodrill":
-        raise AttributeError(
-            "'geodrill' was removed in pycsamt v2. "
-            "Use 'pycsamt.interp' instead."
-        )
-    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
-
-
-# Backend API — always importable, no ML framework required
+# ── Backend API ───────────────────────────────────────────────────────────────
 from pycsamt.backends import (
-    get_backend, set_backend, auto_detect,
-    list_backends, get_backend_instance,
+    auto_detect,
+    get_backend,
+    get_backend_instance,
+    list_backends,
+    set_backend,
 )
 
-# Public API
+# ── Graceful errors for removed v1 names ─────────────────────────────────────
+_REMOVED = {
+    "geodrill":    "Use 'pycsamt.interp' instead.",
+    "bases":       "Removed in v2 (was an internal v1 serialisation helper).",
+    "_csamtpylog": "Removed in v2; use 'pycsamt.log.logger.get_logger'.",
+    "_path":       "Removed in v2; use standard pathlib paths.",
+}
+
+
+def __getattr__(name: str):
+    if name in _REMOVED:
+        raise AttributeError(
+            f"'pycsamt.{name}' was removed in pycsamt v2.  {_REMOVED[name]}"
+        )
+    raise AttributeError(f"module 'pycsamt' has no attribute {name!r}")
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
 __all__ = [
     "__version__",
-    "is_installing",
-    # backend control
-    "get_backend", "set_backend", "auto_detect",
-    "list_backends", "get_backend_instance",
+    # subpackages (importable as `import pycsamt.seg` etc.)
+    "ai",
+    "backends",
+    "emtools",
+    "forward",
+    "gis",
     "interp",
+    "io",
+    "jones",
+    "models",
+    "seg",
+    "site",
     "tdem",
+    "z",
+    "zonge",
+    # backend helpers
+    "auto_detect",
+    "get_backend",
+    "get_backend_instance",
+    "list_backends",
+    "set_backend",
 ]
-
-
-
-

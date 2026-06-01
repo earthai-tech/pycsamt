@@ -12,6 +12,7 @@ from ._style import (
 from .compare import plot_compare, plot_profile_pair
 from .convergence import plot_convergence, plot_lr_schedule
 from .section import plot_section, plot_section_pair, plot_pseudo_section
+from .inversion import plot_inversion_result_2d
 from .diagnostics import (
     plot_confusion_matrix,
     plot_residuals,
@@ -26,6 +27,7 @@ __all__ = [
     "plot_compare", "plot_profile_pair",
     "plot_convergence", "plot_lr_schedule",
     "plot_section", "plot_section_pair", "plot_pseudo_section",
+    "plot_inversion_result_2d",
     "plot_confusion_matrix", "plot_residuals", "plot_layer_errors",
     "plot_uncertainty_bands", "plot_feature_importance",
 ]

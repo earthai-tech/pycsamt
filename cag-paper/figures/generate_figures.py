@@ -37,13 +37,12 @@ if PKGROOT not in sys.path:
     sys.path.insert(0, PKGROOT)
 
 # ─── package API ──────────────────────────────────────────────────────────────
-from pycsamt.ai.plot._style import (
-    EMStyle, EM_COLORS, EM_CMAPS, em_context,
-)
+from pycsamt.ai.plot._style import EMStyle, em_context
 from pycsamt.ai.plot import (
     plot_pseudo_section,
     plot_section,
     plot_uncertainty_bands,
+    plot_inversion_result_2d,
 )
 from pycsamt.ai.processing import EMQCScorer
 from pycsamt.ai.processing.plot import plot_qc_scores, plot_qc_summary
@@ -336,7 +335,7 @@ def fig2_survey_map():
                                  gridspec_kw={"width_ratios": [3, 1]})
         ax, axin = axes
 
-        for i, (prof, col) in enumerate(zip(PROFILES, PCOL)):
+        for prof, col in zip(PROFILES, PCOL):
             mask = np.array(all_profiles) == prof
             lons_p = all_lons[mask]
             lats_p = all_lats[mask]
@@ -643,161 +642,76 @@ def fig6_nn_section():
     rng2 = np.random.default_rng(1234)
 
     N_DEPTH, N_ST = 32, 30
-    depths   = np.linspace(0.0, 1500.0, N_DEPTH)        # m
-    stations = np.arange(N_ST) * 0.5                     # km (15 km profile)
+    depths   = np.linspace(0.0, 1500.0, N_DEPTH)   # m
+    stations = np.arange(N_ST) * 0.5               # km  (15 km profile)
 
     xn = np.linspace(0, 1, N_ST)
     dn = np.linspace(0, 1, N_DEPTH)
     XX, DD = np.meshgrid(xn, dn)
 
     # ── true 2-D geology ─────────────────────────────────────────────────── #
-    # Layered earth: shallow cap / conductive basin / resistive host / basement
-    log_true = 2.5 + 1.2 * DD                                  # resistive gradient
-    log_true[DD < 0.08] *= 0.85                                 # thin weathered cap
-    basin  = np.exp(-((XX - 0.40) ** 2) / 0.025) \
-           * np.exp(-((DD - 0.30) ** 2) / 0.015)
-    log_true -= 1.7 * basin                                     # conductive sedimentary basin
-    hydro   = np.exp(-((XX - 0.78) ** 2) / 0.012) \
-            * np.exp(-((DD - 0.78) ** 2) / 0.022)
-    log_true -= 1.0 * hydro                                     # deep conductive zone
+    log_true = 2.5 + 1.2 * DD
+    log_true[DD < 0.08] *= 0.85
+    basin = (np.exp(-((XX - 0.40) ** 2) / 0.025)
+             * np.exp(-((DD - 0.30) ** 2) / 0.015))
+    log_true -= 1.7 * basin
+    hydro = (np.exp(-((XX - 0.78) ** 2) / 0.012)
+             * np.exp(-((DD - 0.78) ** 2) / 0.022))
+    log_true -= 1.0 * hydro
     log_true = np.clip(log_true, 0.6, 4.1)
-
-    # fault at x≈0.65 — shift right-side section upward by ~60 m
-    fault_col = int(N_ST * 0.65)
-    shift_rows = 2
-    log_true[:, fault_col:] = np.roll(log_true[:, fault_col:], -shift_rows, axis=0)
+    fault_col  = int(N_ST * 0.65)
+    log_true[:, fault_col:] = np.roll(log_true[:, fault_col:], -2, axis=0)
 
     # ── U-Net prediction: smoothed true + spatially-correlated noise ──────── #
     log_pred = _gauss_blur_2d(log_true, sigma_d=1.8, sigma_s=2.2)
     noise    = _gauss_blur_2d(rng2.standard_normal((N_DEPTH, N_ST)), 1.5, 1.5) * 0.11
     log_pred = np.clip(log_pred + noise, 0.6, 4.1)
 
-    misfit = log_pred - log_true   # signed Δlog₁₀ρ
-
     # ── synthetic training curves ─────────────────────────────────────────── #
     epochs = np.arange(1, 101)
     def _curve(seed, noise_amp=0.004):
         r = np.random.default_rng(seed)
-        return 0.68 * np.exp(-epochs / 20.0) + 0.038 \
-             + r.standard_normal(len(epochs)) * noise_amp
+        return (0.68 * np.exp(-epochs / 20.0) + 0.038
+                + r.standard_normal(len(epochs)) * noise_amp)
     train_loss = _curve(0)
     val_loss   = _curve(1, 0.008) * 1.07
 
-    # ── per-station RMSE ──────────────────────────────────────────────────── #
-    rmse_st = np.sqrt(np.mean(misfit ** 2, axis=0))
+    # ── delegate all rendering to the API ────────────────────────────────── #
+    fault_km = float(stations[fault_col])
+    basin_km = float(stations[int(N_ST * 0.40)])
+    basin_dm = float(depths[int(N_DEPTH * 0.30)])
+    hydro_km = float(stations[int(N_ST * 0.78)])
+    hydro_dm = float(depths[int(N_DEPTH * 0.78)])
 
-    # ── pcolormesh edges ──────────────────────────────────────────────────── #
-    dz    = depths[1] - depths[0]
-    dx    = stations[1] - stations[0]
-    d_edg = np.append(depths - dz / 2, depths[-1] + dz / 2)
-    s_edg = np.append(stations - dx / 2, stations[-1] + dx / 2)
-
-    # ── layout ────────────────────────────────────────────────────────────── #
-    VMIN, VMAX = 0.65, 4.05
-    dlim = float(np.abs(misfit).max()) * 1.05
-
-    with em_context():
-        fig = plt.figure(figsize=(14, 9))
-        gs  = fig.add_gridspec(
-            2, 3, height_ratios=[2.5, 1.2], hspace=0.40, wspace=0.36,
-        )
-        ax_true = fig.add_subplot(gs[0, 0])
-        ax_pred = fig.add_subplot(gs[0, 1])
-        ax_diff = fig.add_subplot(gs[0, 2])
-        ax_conv = fig.add_subplot(gs[1, :2])
-        ax_rmse = fig.add_subplot(gs[1, 2])
-
-        # shared section drawing helper
-        def _draw(ax, data, vmin, vmax, cmap, title):
-            im = ax.pcolormesh(
-                s_edg, d_edg, data,
-                cmap=cmap, vmin=vmin, vmax=vmax, shading="flat",
-            )
-            ax.invert_yaxis()
-            ax.set_title(title, fontsize=9, pad=4)
-            ax.set_xlabel("Distance (km)", fontsize=8)
-            ax.set_ylabel("Depth (m)", fontsize=8)
-            ax.tick_params(labelsize=7)
-            ax.plot(stations, np.zeros(N_ST), "v", ms=3.5,
-                    color="#333333", zorder=5, clip_on=False)
-            return im
-
-        im_t = _draw(ax_true, log_true, VMIN, VMAX,
-                     EM_CMAPS["resistivity"], "(a) True synthetic model")
-        im_p = _draw(ax_pred, log_pred, VMIN, VMAX,
-                     EM_CMAPS["resistivity"], "(b) EMInverter2D  U-Net prediction")
-        im_d = _draw(ax_diff, misfit, -dlim, dlim,
-                     EM_CMAPS["misfit"], r"(c) Misfit  $\Delta\log_{10}\rho$")
-
-        # shared colorbar for (a) and (b)
-        cb_r = fig.colorbar(im_t, ax=[ax_true, ax_pred],
-                            shrink=0.88, pad=0.02, fraction=0.022)
-        cb_r.set_label(r"$\log_{10}(\rho)$  (Ω·m)", fontsize=8)
-        cb_r.ax.tick_params(labelsize=7)
-        cb_d = fig.colorbar(im_d, ax=ax_diff, shrink=0.88, pad=0.02, fraction=0.044)
-        cb_d.set_label(r"$\Delta\log_{10}(\rho)$", fontsize=8)
-        cb_d.ax.tick_params(labelsize=7)
-
-        # geological annotations on (a)
-        bx_km = stations[int(N_ST * 0.40)]
-        bx_dm = depths[int(N_DEPTH * 0.30)]
-        ax_true.annotate(
-            "Conductive\nbasin",
-            xy=(bx_km, bx_dm),
-            xytext=(bx_km - 3.2, bx_dm - 180),
-            fontsize=7, color="white",
-            arrowprops=dict(arrowstyle="->", color="white", lw=0.8),
-            bbox=dict(fc="#1a1a1a", ec="none", alpha=0.55, pad=2),
-        )
-        fx_km = stations[fault_col]
-        ax_true.axvline(fx_km, color="#eeeeee", lw=0.9, ls="--", alpha=0.75)
-        ax_true.text(fx_km + 0.15, depths[-1] * 0.90, "Fault",
-                     fontsize=6.5, color="white", rotation=90, va="bottom")
-        hx_km = stations[int(N_ST * 0.78)]
-        hd_m  = depths[int(N_DEPTH * 0.78)]
-        ax_true.annotate(
-            "Deep\nconductor",
-            xy=(hx_km, hd_m),
-            xytext=(hx_km + 0.9, hd_m - 250),
-            fontsize=7, color="white",
-            arrowprops=dict(arrowstyle="->", color="white", lw=0.8),
-            bbox=dict(fc="#1a1a1a", ec="none", alpha=0.55, pad=2),
-        )
-
-        # (d) training convergence
-        ax_conv.semilogy(epochs, train_loss, color=EM_COLORS["primary"],
-                         lw=1.6, label="Train MSE")
-        ax_conv.semilogy(epochs, val_loss, color=EM_COLORS["secondary"],
-                         lw=1.6, ls="--", label="Validation MSE")
-        ax_conv.axhline(0.04, color="#aaaaaa", lw=0.8, ls=":", alpha=0.8)
-        ax_conv.text(epochs[-1] * 0.95, 0.043, "target", fontsize=6.5,
-                     color="#888888", ha="right", va="bottom")
-        ax_conv.set_xlabel("Epoch", fontsize=8)
-        ax_conv.set_ylabel("MSE  (log scale)", fontsize=8)
-        ax_conv.set_title("(d) Training convergence — EMInverter2D (U-Net)", fontsize=9)
-        ax_conv.legend(fontsize=7, framealpha=0.7)
-        ax_conv.tick_params(labelsize=7)
-        ax_conv.set_xlim(1, len(epochs))
-
-        # (e) per-station RMSE
-        bar_c = [EM_COLORS["error"] if r > 0.12 else EM_COLORS["primary"]
-                 for r in rmse_st]
-        ax_rmse.bar(stations, rmse_st, width=dx * 0.70,
-                    color=bar_c, edgecolor="none", alpha=0.85)
-        ax_rmse.axhline(0.10, color=EM_COLORS["secondary"],
-                        lw=1.1, ls="--", label="10 % target")
-        ax_rmse.set_xlabel("Distance (km)", fontsize=8)
-        ax_rmse.set_ylabel(r"RMSE  ($\Delta\log_{10}\rho$)", fontsize=8)
-        ax_rmse.set_title("(e) Per-station prediction RMSE", fontsize=9)
-        ax_rmse.legend(fontsize=7, framealpha=0.7)
-        ax_rmse.tick_params(labelsize=7)
-        ax_rmse.set_xlim(s_edg[0], s_edg[-1])
-
-        fig.suptitle(
-            "Fig. 6 – EMInverter2D (U-Net)  2-D resistivity inversion — profile L22PLT",
-            fontsize=10, fontweight="bold", y=1.002,
-        )
-        save(fig, "fig6_nn_section")
+    fig = plot_inversion_result_2d(
+        log_pred,
+        log_true=log_true,
+        depths=depths,
+        stations=stations,
+        vmin=0.65, vmax=4.05,
+        train_loss=train_loss,
+        val_loss=val_loss,
+        convergence_target=0.04,
+        convergence_target_label="target",
+        rmse_threshold=0.12,
+        rmse_threshold_label="10 % target",
+        fault_positions=[fault_km],
+        annotations=[
+            {
+                "text": "Conductive\nbasin",
+                "xy":     (basin_km, basin_dm),
+                "xytext": (basin_km - 3.2, basin_dm - 180),
+            },
+            {
+                "text": "Deep\nconductor",
+                "xy":     (hydro_km, hydro_dm),
+                "xytext": (hydro_km + 0.9, hydro_dm - 250),
+            },
+        ],
+        title_convergence="(d) Training convergence — EMInverter2D (U-Net)",
+        suptitle="Fig. 6 – EMInverter2D (U-Net)  2-D resistivity inversion — profile L22PLT",
+    )
+    save(fig, "fig6_nn_section")
 
 
 # ═════════════════════════════════════════════════════════════════════════════

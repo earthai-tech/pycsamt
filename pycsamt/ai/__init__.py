@@ -28,9 +28,12 @@ Quick start (requires PyTorch)
 """
 
 from ._base import BaseEMNet, BaseEMProcessor, EMCheckpoint
-from .inversion import EMInverter1D, EMInverter2D, JointInverter, EnsembleInverter
+from .inversion import (
+    EMInverter1D, EMInverter2D, GCNInverter3D, JointInverter, EnsembleInverter,
+    ConformalPredictor, PosteriorCalibrator,
+)
 from ._zoo import list_pretrained, get_pretrained_info, download_checkpoint
-from .nets import CNN1DNet, ResNet1DNet, FCN1DNet, UNet2DNet, DRCNNNet
+from .nets import CNN1DNet, ResNet1DNet, FCN1DNet, UNet2DNet, DRCNNNet, GCNNet, build_adjacency
 from .training import (
     Normalizer, EMDataset, EMTrainer,
     rmse, mae, r2, relative_rmse,
@@ -58,11 +61,15 @@ __all__ = [
     # base
     "BaseEMNet", "BaseEMProcessor", "EMCheckpoint",
     # inversion
-    "EMInverter1D", "EMInverter2D", "JointInverter", "EnsembleInverter",
+    "EMInverter1D", "EMInverter2D", "GCNInverter3D",
+    "JointInverter", "EnsembleInverter",
+    # calibrated UQ
+    "ConformalPredictor", "PosteriorCalibrator",
     # model zoo
     "list_pretrained", "get_pretrained_info", "download_checkpoint",
     # nets
     "CNN1DNet", "ResNet1DNet", "FCN1DNet", "UNet2DNet", "DRCNNNet",
+    "GCNNet", "build_adjacency",
     # training
     "Normalizer", "EMDataset", "EMTrainer",
     "rmse", "mae", "r2", "relative_rmse",

@@ -42,6 +42,11 @@ import numpy as np
 
 __all__ = ["EnsembleInverter"]
 
+# lazy import so calibration module is not pulled in unless used
+def _get_calibrators():
+    from .calibration import ConformalPredictor, PosteriorCalibrator
+    return ConformalPredictor, PosteriorCalibrator
+
 
 class EnsembleInverter:
     """
@@ -87,6 +92,8 @@ class EnsembleInverter:
 
         self._members: List[Any] = []
         self._is_fitted: bool = False
+        self._conformal: Optional[Any] = None       # ConformalPredictor
+        self._posterior_cal: Optional[Any] = None   # PosteriorCalibrator
 
     # ─── fit ──────────────────────────────────────────────────────────────
 
@@ -162,24 +169,37 @@ class EnsembleInverter:
     def predict_with_uncertainty(
         self,
         X: np.ndarray,
+        _use_calibrated: bool = True,
         **kwargs,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Return (mean, std) ensemble prediction.
 
+        If :meth:`calibrate` has been called, the returned ``std`` is the
+        *calibrated* standard deviation from the
+        :class:`~pycsamt.ai.inversion.calibration.PosteriorCalibrator`
+        (i.e. the Gaussianization-flow recalibrated sigma).  Pass
+        ``_use_calibrated=False`` to retrieve the raw inter-member std.
+
         Parameters
         ----------
         X : ndarray (n_samples, n_features)
+        _use_calibrated : bool
+            When ``True`` (default) and a calibrator is attached, return
+            calibrated sigma.  Internal flag — not part of the public API.
 
         Returns
         -------
         mean : ndarray (n_samples, n_params)
         std : ndarray (n_samples, n_params)
-            Inter-member standard deviation — a measure of epistemic
-            uncertainty.
+            Calibrated or raw inter-member standard deviation.
         """
         preds = self._all_predictions(X, **kwargs)  # (M, n, p)
-        return preds.mean(axis=0), preds.std(axis=0, ddof=min(1, len(preds) - 1))
+        mean  = preds.mean(axis=0)
+        std   = preds.std(axis=0, ddof=min(1, len(preds) - 1))
+        if _use_calibrated and self._posterior_cal is not None:
+            std = self._posterior_cal.calibrated_std(std)
+        return mean, std
 
     def predict_quantiles(
         self,
@@ -205,6 +225,147 @@ class EnsembleInverter:
             float(qi): np.quantile(preds, qi, axis=0)
             for qi in q
         }
+
+    # ─── calibrated uncertainty ───────────────────────────────────────────
+
+    def calibrate(
+        self,
+        X_cal: np.ndarray,
+        y_cal: np.ndarray,
+        *,
+        alpha: float = 0.10,
+    ) -> "EnsembleInverter":
+        """
+        Attach a :class:`~pycsamt.ai.inversion.calibration.ConformalPredictor`
+        and a :class:`~pycsamt.ai.inversion.calibration.PosteriorCalibrator`
+        fitted on a held-out calibration set.
+
+        After calling this method:
+
+        * :meth:`predict_intervals` returns conformal prediction bands with
+          guaranteed :math:`\\ge 1-\\alpha` marginal coverage
+          (Vovk et al. 2005).
+        * :meth:`predict_posterior` returns calibrated posterior samples via
+          the Gaussianization normalising flow (Kuleshov et al. 2018).
+        * :meth:`predict_with_uncertainty` returns the calibrated standard
+          deviation instead of the raw inter-member std.
+
+        Parameters
+        ----------
+        X_cal : ndarray, shape (n_cal, n_features)
+            Calibration inputs (must not overlap with the training set).
+        y_cal : ndarray, shape (n_cal, n_params)
+            True parameter vectors for the calibration inputs.
+        alpha : float
+            Default significance level for conformal intervals.
+
+        Returns
+        -------
+        self
+        """
+        self._check_fitted()
+        ConformalPredictor, PosteriorCalibrator = _get_calibrators()
+
+        cp = ConformalPredictor(self, alpha=alpha)
+        cp.calibrate(X_cal, y_cal)
+        self._conformal = cp
+
+        mean, sigma = self.predict_with_uncertainty(X_cal, _use_calibrated=False)
+        pc = PosteriorCalibrator()
+        pc.fit(y_cal, mean, sigma)
+        self._posterior_cal = pc
+
+        return self
+
+    def predict_intervals(
+        self,
+        X: np.ndarray,
+        alpha: Optional[float] = None,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Conformal prediction intervals with guaranteed marginal coverage.
+
+        Requires a prior call to :meth:`calibrate`.
+
+        Parameters
+        ----------
+        X : ndarray, shape (n_samples, n_features)
+        alpha : float or None
+            Significance level.  Defaults to the value used in
+            :meth:`calibrate`.
+
+        Returns
+        -------
+        center : ndarray, shape (n_samples, n_params)
+        lower  : ndarray, shape (n_samples, n_params)
+        upper  : ndarray, shape (n_samples, n_params)
+        """
+        if self._conformal is None:
+            raise RuntimeError(
+                "Conformal predictor not attached.  Call calibrate() first."
+            )
+        return self._conformal.predict_intervals(X, alpha=alpha)
+
+    def predict_posterior(
+        self,
+        X: np.ndarray,
+        n_samples: int = 500,
+        rng: Optional[np.random.Generator] = None,
+    ) -> np.ndarray:
+        """
+        Draw calibrated posterior samples via the Gaussianization normalising
+        flow (Kuleshov et al. 2018).
+
+        Requires a prior call to :meth:`calibrate`.
+
+        Parameters
+        ----------
+        X : ndarray, shape (n_pts, n_features)
+        n_samples : int
+            Number of posterior draws per input point.
+        rng : numpy.random.Generator or None
+
+        Returns
+        -------
+        draws : ndarray, shape (n_samples, n_pts, n_params)
+        """
+        if self._posterior_cal is None:
+            raise RuntimeError(
+                "Posterior calibrator not attached.  Call calibrate() first."
+            )
+        mean, sigma = self.predict_with_uncertainty(X, _use_calibrated=False)
+        return self._posterior_cal.predict_posterior(
+            mean, sigma, n_samples=n_samples, rng=rng
+        )
+
+    def coverage_diagnostics(
+        self,
+        X_test: np.ndarray,
+        y_test: np.ndarray,
+        alphas: Optional[Sequence[float]] = None,
+    ) -> Dict[float, float]:
+        """
+        Per-alpha empirical coverage table (requires prior :meth:`calibrate`).
+
+        Useful for a reliability diagram: nominal coverage ``1-alpha`` on the
+        x-axis, actual coverage on the y-axis.  A perfectly calibrated
+        predictor lies on the diagonal.
+
+        Parameters
+        ----------
+        X_test : ndarray
+        y_test : ndarray
+        alphas : sequence of float or None
+
+        Returns
+        -------
+        diag : dict {alpha: actual_coverage}
+        """
+        if self._conformal is None:
+            raise RuntimeError(
+                "Conformal predictor not attached.  Call calibrate() first."
+            )
+        return self._conformal.coverage_diagnostics(X_test, y_test, alphas=alphas)
 
     def score(
         self,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """OccamMesh — build and parse the Occam2DMesh file.
@@ -33,11 +32,11 @@ Mesh file format (PW2D)
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Union
 
 import numpy as np
 
-from .base   import OccamBase
+from .base import OccamBase
 from .config import OccamConfig
 
 PathLike = Union[str, Path]
@@ -135,30 +134,113 @@ def _parse_mesh(path: Path) -> dict:
 # -----------------------------------------------------------------------
 
 class OccamMesh(OccamBase):
-    """Occam2D mesh container.
+    r"""Represent the Occam2D PW2D finite-element mesh.
+
+    ``OccamMesh`` stores the two-dimensional grid consumed by
+    the Occam2D forward solver. Horizontal cell widths define
+    the profile direction. Vertical widths define air and
+    earth layers, and character rows mark whether cells are
+    fixed, air, or boundary cells in the PW2D mesh format.
+
+    Node coordinates are cumulative sums of cell widths:
+
+    .. math::
+
+        x_j = \sum_{i=0}^{j-1} \Delta x_i,
+        \qquad
+        z_k = \sum_{i=0}^{k-1} \Delta z_i.
+
+    Depth :math:`z` is positive downward. Mesh construction
+    uses station offsets from :class:`OccamData`, horizontal
+    padding on both profile ends, optional air layers, and a
+    geometrically expanding earth-layer thickness sequence.
+
+    Parameters
+    ----------
+    config : OccamConfig, optional
+        Configuration object controlling the number of active
+        layers, number of air layers, near-surface cell sizes,
+        depth scaling, and horizontal padding. If omitted, a
+        default :class:`OccamConfig` is created.
+    verbose : int or bool, default 0
+        Verbosity level inherited from :class:`OccamBase`.
+        Positive values enable progress messages through the
+        instance logger.
+    logger : logging.Logger, optional
+        Logger used for progress and diagnostic messages. If
+        omitted, a class-specific PyCSAMT logger is created.
 
     Attributes
     ----------
     comment : str
-        First line of the mesh file (provenance comment).
-    x_widths : np.ndarray, shape (n_xcells,)
+        First line of the mesh file, usually a provenance
+        comment beginning with ``"MESH FILE"``.
+    x_widths : numpy.ndarray of float, shape (n_xcells,)
         Horizontal cell widths in metres.
-    z_widths : np.ndarray, shape (n_zcells,)
+    z_widths : numpy.ndarray of float, shape (n_zcells,)
         Vertical layer thicknesses in metres.
-    x_nodes : np.ndarray, shape (n_xcells+1,)
-        Cumulative horizontal node positions (leading 0).
-    z_nodes : np.ndarray, shape (n_zcells+1,)
-        Cumulative depth node positions (leading 0, positive down).
+    x_nodes : numpy.ndarray of float, shape (n_xcells + 1,)
+        Cumulative horizontal node positions in metres.
+    z_nodes : numpy.ndarray of float, shape (n_zcells + 1,)
+        Cumulative depth node positions in metres, positive
+        downward.
     cell_rows : list[str]
-        Raw character rows from the mesh file; each character encodes the
-        cell type at that column position (``'?'`` = free parameter).
+        Raw PW2D cell-type rows. Each character encodes the
+        cell type at one horizontal position. The ``"?"``
+        character marks cells that may contribute to free
+        inversion parameters.
     n_airlayers : int
         Number of rows treated as air layers.
+
+    Notes
+    -----
+    The mesh file stores widths rather than absolute node
+    coordinates. :attr:`x_nodes` and :attr:`z_nodes` are
+    reconstructed by cumulative summation when reading or
+    building a mesh. The generated mesh uses seven padding
+    cells on each side to match the boundary-column code used
+    by :meth:`OccamModel.from_mesh`.
+
+    See Also
+    --------
+    OccamData
+        Provides station offsets used to build the mesh.
+    OccamModel.from_mesh
+        Converts mesh cells into inversion-parameter columns.
+    InputBuilder
+        Builds data, mesh, model, and startup files together.
+
+    Examples
+    --------
+    Build a mesh from an Occam data file:
+
+    >>> from pycsamt.models.occam2d import OccamData
+    >>> from pycsamt.models.occam2d import OccamMesh
+    >>> data = OccamData.read("occam_run/OccamDataFile.dat")
+    >>> mesh = OccamMesh.from_data(data)
+    >>> mesh.write("occam_run/Occam2DMesh")
+
+    Read an existing PW2D mesh:
+
+    >>> from pycsamt.models.occam2d import OccamMesh
+    >>> mesh = OccamMesh.read("occam_run/Occam2DMesh")
+    >>> mesh.n_xcells, mesh.n_zcells
+
+    References
+    ----------
+    .. [1] deGroot-Hedlin, C., and Constable, S.,
+       "Occam's inversion to generate smooth, two-dimensional
+       models from magnetotelluric data", Geophysics, 55(12),
+       1613-1624, 1990.
+    .. [2] Constable, S. C., Parker, R. L., and Constable,
+       C. G., "Occam's inversion: A practical algorithm for
+       generating smooth models from electromagnetic sounding
+       data", Geophysics, 52(3), 289-300, 1987.
     """
 
     def __init__(
         self,
-        config: Optional[OccamConfig] = None,
+        config: OccamConfig | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -168,7 +250,7 @@ class OccamMesh(OccamBase):
         self.z_widths:     np.ndarray  = np.array([])
         self.x_nodes:      np.ndarray  = np.array([])
         self.z_nodes:      np.ndarray  = np.array([])
-        self.cell_rows:    List[str]   = []
+        self.cell_rows:    list[str]   = []
         self.n_airlayers:  int         = self.config.n_airlayers
 
     # ------------------------------------------------------------------
@@ -177,31 +259,67 @@ class OccamMesh(OccamBase):
     @classmethod
     def from_data(
         cls,
-        data: "OccamData",  # noqa: F821
-        config: Optional[OccamConfig] = None,
+        data: OccamData,  # noqa: F821
+        config: OccamConfig | None = None,
         **kwargs,
-    ) -> "OccamMesh":
-        """Build a mesh from station positions encoded in *data*.
+    ) -> OccamMesh:
+        """Build a PW2D mesh from Occam data offsets.
 
-        The mesh uses the standard Occam2D PW2D layout:
+        The method creates a finite-element mesh spanning the
+        profile described by ``data.offsets``. It uses seven
+        padding cells on each side, station-zone cells near
+        the configured horizontal cell size, optional air
+        layers, and geometrically expanding earth layers.
 
-        * 7 horizontal padding cells on each side (geometric expansion),
-          matching the boundary-column code ``7`` used by
-          :meth:`OccamModel.from_mesh`.
-        * Station-zone cells with width ``≈ config.cell_size_horizontal``.
-        * ``config.n_airlayers`` thin air rows at the top.
-        * ``config.n_layers`` active rows with geometric depth growth.
+        The horizontal padding is chosen to match the boundary
+        columns used by :meth:`OccamModel.from_mesh`. Interior
+        station-zone cells are adjusted so the number of cells
+        remains compatible with the model parameter grouping.
 
         Parameters
         ----------
         data : OccamData
-            Populated data object (``data.offsets`` required).
+            Populated data object. Its ``offsets`` array must
+            contain station chainages in metres. Offsets are
+            sorted before mesh construction.
         config : OccamConfig, optional
-            Mesh parameters (n_layers, cell sizes, padding, …).
+            Configuration object controlling mesh geometry.
+            The builder uses ``cell_size_horizontal``,
+            ``n_airlayers``, ``n_layers``,
+            ``cell_size_vertical_top``, and ``depth_scale``.
+            If omitted, a default :class:`OccamConfig` is
+            created.
+        **kwargs
+            Additional keyword arguments forwarded to the
+            ``OccamMesh`` constructor. Use this for
+            ``verbose`` or ``logger``.
 
         Returns
         -------
         OccamMesh
+            Mesh object ready to be written as ``Occam2DMesh``
+            or passed to :meth:`OccamModel.from_mesh`.
+
+        Raises
+        ------
+        ValueError
+            Raised when the data object contains no station
+            offsets.
+
+        See Also
+        --------
+        OccamData.from_edi
+            Creates the offsets used by this method.
+        OccamModel.from_mesh
+            Builds the inversion-parameter mapping.
+
+        Examples
+        --------
+        >>> from pycsamt.models.occam2d import OccamData
+        >>> from pycsamt.models.occam2d import OccamMesh
+        >>> data = OccamData.read("OccamDataFile.dat")
+        >>> mesh = OccamMesh.from_data(data)
+        >>> mesh.n_airlayers
         """
         cfg = config or OccamConfig()
         obj = cls(config=cfg, **kwargs)
@@ -278,24 +396,45 @@ class OccamMesh(OccamBase):
     # I/O
     # ------------------------------------------------------------------
     @classmethod
-    def read(cls, path: PathLike, **kwargs) -> "OccamMesh":
-        """Parse an existing ``Occam2DMesh`` PW2D file.
+    def read(cls, path: PathLike, **kwargs) -> OccamMesh:
+        """Read an existing ``Occam2DMesh`` PW2D file.
+
+        The reader parses the comment line, control line,
+        horizontal widths, vertical widths, air-layer count,
+        and cell-type character rows. Node arrays are rebuilt
+        from cumulative sums of widths.
 
         Parameters
         ----------
         path : path-like
-            Path to the ``Occam2DMesh`` file.
+            Path to the mesh file. The value may be a string,
+            :class:`pathlib.Path`, or any object accepted by
+            :class:`pathlib.Path`.
+        **kwargs
+            Additional keyword arguments forwarded to the
+            ``OccamMesh`` constructor before parsed values are
+            attached. Use this for ``config``, ``verbose``, or
+            ``logger``.
 
         Returns
         -------
         OccamMesh
+            Parsed mesh container with widths, nodes, and cell
+            rows populated.
 
         Raises
         ------
         FileNotFoundError
-            If *path* does not exist.
+            Raised when ``path`` does not exist.
         ValueError
-            If the control line cannot be parsed.
+            Raised when the file is too short or the control
+            line cannot be parsed.
+
+        Examples
+        --------
+        >>> from pycsamt.models.occam2d import OccamMesh
+        >>> mesh = OccamMesh.read("occam_run/Occam2DMesh")
+        >>> mesh.x_nodes.shape
         """
         p   = Path(path)
         d   = _parse_mesh(p)
@@ -317,9 +456,37 @@ class OccamMesh(OccamBase):
         return obj
 
     def write(self, path: PathLike) -> Path:
-        """Write mesh to *path* in PW2D format.
+        """Write this mesh in PW2D format.
 
-        Returns the resolved path.
+        The writer serializes the current comment, control
+        values, horizontal widths, vertical widths, and
+        cell-type rows to the native Occam2D mesh format.
+        Parent directories are created before writing.
+
+        Parameters
+        ----------
+        path : path-like
+            Destination path for the mesh file. The value may
+            be a string, :class:`pathlib.Path`, or any object
+            accepted by :class:`pathlib.Path`.
+
+        Returns
+        -------
+        pathlib.Path
+            Path to the file that was written.
+
+        See Also
+        --------
+        OccamMesh.read
+            Parses mesh files written by this method.
+        InputBuilder.build
+            Calls this method during input-file generation.
+
+        Examples
+        --------
+        >>> from pycsamt.models.occam2d import OccamMesh
+        >>> mesh = OccamMesh.read("source/Occam2DMesh")
+        >>> written = mesh.write("copy/Occam2DMesh")
         """
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)

@@ -32,6 +32,8 @@ from .plot import (
     plot_qc_scores,
     plot_qc_heatmap,
     plot_qc_feature_heatmap,
+    plot_qc_score_distribution,
+    plot_qc_score_spread,
     plot_qc_summary,
 )
 
@@ -44,5 +46,7 @@ __all__ = [
     "plot_qc_scores",
     "plot_qc_heatmap",
     "plot_qc_feature_heatmap",
+    "plot_qc_score_distribution",
+    "plot_qc_score_spread",
     "plot_qc_summary",
 ]

@@ -49,6 +49,7 @@ __all__ = [
     "EM_CMAPS",
     "EM_FIGSIZE",
     "em_context",
+    "StationTickConfig",
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -174,6 +175,169 @@ def em_context(**overrides):
     """
     with EMStyle(overrides):
         yield
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Station-axis tick configuration
+# ─────────────────────────────────────────────────────────────────────────────
+
+class StationTickConfig:
+    """
+    Reusable configuration for station-indexed x-axis tick spacing.
+
+    Prevents label overlap automatically when many stations are displayed.
+    All plot functions that draw a station axis accept either individual
+    ``tick_label_rotation`` / ``tick_fontsize`` / ``tick_every`` keyword
+    arguments *or* a pre-built ``StationTickConfig`` instance.
+
+    Parameters
+    ----------
+    every : int or ``"auto"``, default ``"auto"``
+        Show every *n*-th tick label.  ``"auto"`` picks the smallest
+        'nice' step (1, 2, 5, 10, 20, 25, 50, …) that prevents label
+        overlap given the figure width and label character length.
+    rotation : float, default ``45.0``
+        Tick-label rotation in degrees.
+    fontsize : int, default ``7``
+        Tick-label font size.
+    fmt : str, default ``"{}"``
+        ``str.format`` template applied to each *visible* label.
+        Use ``"{:02d}"`` to zero-pad integer indices, for example.
+
+    Examples
+    --------
+    >>> from pycsamt.ai.plot._style import StationTickConfig
+    >>> cfg = StationTickConfig(every=5, rotation=30, fontsize=8)
+    >>> cfg.apply(ax, x_positions, station_labels)
+
+    Automatic mode (default) chooses the step at render time:
+
+    >>> cfg_auto = StationTickConfig()          # every="auto"
+    >>> cfg_auto.compute_every(128, figwidth_in=11.0)
+    5
+    """
+
+    #: Nice step sequence for automatic spacing
+    _NICE_STEPS = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000]
+
+    def __init__(
+        self,
+        every: "Union[int, str]" = "auto",
+        rotation: float = 45.0,
+        fontsize: int = 7,
+        fmt: str = "{}",
+    ) -> None:
+        self.every    = every
+        self.rotation = rotation
+        self.fontsize = fontsize
+        self.fmt      = fmt
+
+    # ── public ────────────────────────────────────────────────────────────
+
+    def compute_every(
+        self,
+        n_stations: int,
+        figwidth_in: float = 10.0,
+        max_label_len: int = 4,
+    ) -> int:
+        """
+        Return the minimum tick step that prevents label overlap.
+
+        Parameters
+        ----------
+        n_stations : int
+        figwidth_in : float
+            Total figure width in inches.
+        max_label_len : int
+            Character length of the widest label string.
+
+        Returns
+        -------
+        step : int
+        """
+        if isinstance(self.every, int):
+            return max(1, self.every)
+
+        # Available horizontal space (leave ≈15 % for margins / colorbars)
+        avail_in = figwidth_in * 0.82
+        space_per_station = avail_in / max(n_stations, 1)
+
+        # Projected label footprint at given rotation
+        # char_width ≈ fontsize × 0.006 in (empirical for 7-8 pt sans-serif)
+        char_w   = self.fontsize * 0.006
+        r        = abs(float(self.rotation))
+        r_rad    = r * 3.14159 / 180.0
+        lbl_w    = char_w * max(max_label_len, 2)
+        lbl_h    = self.fontsize * 0.014           # line height
+        eff_w    = lbl_w * abs(__import__("math").sin(r_rad)) \
+                 + lbl_h * abs(__import__("math").cos(r_rad)) \
+                 + 0.025   # small padding
+
+        if space_per_station >= eff_w:
+            return 1
+
+        needed = eff_w / space_per_station
+        for step in self._NICE_STEPS:
+            if step >= needed:
+                return step
+        return int(needed) + 1
+
+    def apply(
+        self,
+        ax: "plt.Axes",
+        positions: "np.ndarray",
+        labels: "List[str]",
+        xlabel: str = "",
+        xlim: "Optional[Tuple[float, float]]" = None,
+    ) -> None:
+        """
+        Set x-ticks on *ax*, showing only every ``compute_every``-th label.
+
+        Invisible ticks are set to an empty string so the tick mark is
+        still drawn; only the label is hidden.
+
+        Parameters
+        ----------
+        ax : Axes
+        positions : ndarray
+            x-positions of the ticks (usually ``np.arange(n_st)``).
+        labels : list of str
+            Full label for every tick position.
+        xlabel : str
+            Optional x-axis label text.
+        xlim : (lo, hi) or None
+            Passed to ``ax.set_xlim`` when provided.
+        """
+        import numpy as _np
+        import matplotlib.pyplot as _plt  # noqa: F401 — ensure plt available
+
+        n  = len(labels)
+        fw = ax.figure.get_figwidth() if ax.figure is not None else 10.0
+        ml = max((len(str(lbl)) for lbl in labels), default=4)
+        every = self.compute_every(n, fw, ml)
+
+        tick_labels = [
+            self.fmt.format(lbl) if (i % every == 0) else ""
+            for i, lbl in enumerate(labels)
+        ]
+        ha = "right" if self.rotation > 20 else "center"
+        ax.set_xticks(positions)
+        ax.set_xticklabels(
+            tick_labels,
+            rotation=self.rotation,
+            ha=ha,
+            fontsize=self.fontsize,
+        )
+        if xlim is not None:
+            ax.set_xlim(*xlim)
+        if xlabel:
+            ax.set_xlabel(xlabel, fontsize=8)
+
+    def __repr__(self) -> str:
+        return (
+            f"StationTickConfig(every={self.every!r}, "
+            f"rotation={self.rotation}, fontsize={self.fontsize})"
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

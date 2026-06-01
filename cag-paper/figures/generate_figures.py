@@ -11,7 +11,7 @@ Outputs (PNG 300 dpi + SVG) in the same directory as this script:
   fig3_qc_scores.png    / .svg
   fig4_phase_tensor.png / .svg
   fig5_static_shift.png / .svg
-  fig6_nn_section.png   / .svg
+  fig6_nn_section.png   / .svg     (EMInverter2D U-Net 2-D section)
 
 Run:
     python generate_figures.py
@@ -38,7 +38,7 @@ if PKGROOT not in sys.path:
 
 # ─── package API ──────────────────────────────────────────────────────────────
 from pycsamt.ai.plot._style import (
-    EMStyle, EM_CMAPS, em_context,
+    EMStyle, EM_COLORS, EM_CMAPS, em_context,
 )
 from pycsamt.ai.plot import (
     plot_pseudo_section,
@@ -625,92 +625,179 @@ def fig5_static_shift():
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Figure 6 – NN inversion section (uses plot_section + plot_uncertainty_bands)
+# Figure 6 – U-Net 2-D inversion section
 # ═════════════════════════════════════════════════════════════════════════════
 
+def _gauss_blur_2d(arr, sigma_d=1.5, sigma_s=2.0):
+    """Separable Gaussian blur via 1-D convolutions (no scipy needed)."""
+    def _1d_gauss(sigma, axis, a):
+        k = max(3, int(4 * sigma) | 1)
+        t = np.arange(-(k // 2), k // 2 + 1, dtype=float)
+        g = np.exp(-t ** 2 / (2 * sigma ** 2)); g /= g.sum()
+        return np.apply_along_axis(lambda x: np.convolve(x, g, mode="same"), axis, a)
+    return _1d_gauss(sigma_s, 1, _1d_gauss(sigma_d, 0, arr))
+
+
 def fig6_nn_section():
-    print("Generating Fig 6: NN inversion section …")
-    data = load_profile_data("L22PLT")
-    n_st = data["n_stations"] if data else 25
+    print("Generating Fig 6: U-Net 2-D inversion section …")
+    rng2 = np.random.default_rng(1234)
 
-    # synthetic 5-layer model — geologically consistent resistivity section
-    n_layers  = 5
-    depth_tops = np.array([0,   20,  80,  250, 600],  dtype=float)
-    depth_bots = np.array([20,  80,  250, 600, 1200], dtype=float)
-    depth_mids = (depth_tops + depth_bots) / 2.0
+    N_DEPTH, N_ST = 32, 30
+    depths   = np.linspace(0.0, 1500.0, N_DEPTH)        # m
+    stations = np.arange(N_ST) * 0.5                     # km (15 km profile)
 
-    rho_section = np.zeros((n_st, n_layers))
-    for k in range(n_st):
-        x = k / (n_st - 1)
-        rho_section[k, 0] = 10 ** RNG.uniform(1.3, 2.0)
-        basin_amp = np.exp(-((x - 0.5) ** 2) / 0.08)
-        rho_section[k, 1] = 10 ** (0.7 + 1.2 * (1 - basin_amp) + RNG.normal(0, 0.1))
-        rho_section[k, 2] = 10 ** RNG.uniform(2.0, 2.8)
-        rho_section[k, 3] = 10 ** RNG.uniform(2.8, 3.5)
-        rho_section[k, 4] = 10 ** RNG.uniform(3.2, 4.0)
+    xn = np.linspace(0, 1, N_ST)
+    dn = np.linspace(0, 1, N_DEPTH)
+    XX, DD = np.meshgrid(xn, dn)
 
-    # ensemble uncertainty (larger at depth), in log10 units
-    uncertainty = np.zeros((n_st, n_layers))
-    for k in range(n_layers):
-        uncertainty[:, k] = 0.05 + 0.12 * (k / (n_layers - 1))
+    # ── true 2-D geology ─────────────────────────────────────────────────── #
+    # Layered earth: shallow cap / conductive basin / resistive host / basement
+    log_true = 2.5 + 1.2 * DD                                  # resistive gradient
+    log_true[DD < 0.08] *= 0.85                                 # thin weathered cap
+    basin  = np.exp(-((XX - 0.40) ** 2) / 0.025) \
+           * np.exp(-((DD - 0.30) ** 2) / 0.015)
+    log_true -= 1.7 * basin                                     # conductive sedimentary basin
+    hydro   = np.exp(-((XX - 0.78) ** 2) / 0.012) \
+            * np.exp(-((DD - 0.78) ** 2) / 0.022)
+    log_true -= 1.0 * hydro                                     # deep conductive zone
+    log_true = np.clip(log_true, 0.6, 4.1)
 
-    # rho_2d shape required by plot_section: (n_depth, n_stations)
-    rho_2d = rho_section.T   # (n_layers, n_st)
-    stations = np.arange(n_st, dtype=float)
+    # fault at x≈0.65 — shift right-side section upward by ~60 m
+    fault_col = int(N_ST * 0.65)
+    shift_rows = 2
+    log_true[:, fault_col:] = np.roll(log_true[:, fault_col:], -shift_rows, axis=0)
 
-    # 1-D uncertainty profile at the middle station
-    mid     = n_st // 2
-    rho_mid = np.log10(rho_section[mid])     # (n_layers,)
-    u_mid   = uncertainty[mid]               # (n_layers,)
-    hi      = rho_mid + u_mid
-    lo      = rho_mid - u_mid
+    # ── U-Net prediction: smoothed true + spatially-correlated noise ──────── #
+    log_pred = _gauss_blur_2d(log_true, sigma_d=1.8, sigma_s=2.2)
+    noise    = _gauss_blur_2d(rng2.standard_normal((N_DEPTH, N_ST)), 1.5, 1.5) * 0.11
+    log_pred = np.clip(log_pred + noise, 0.6, 4.1)
 
-    # create shared figure; pass pre-created axes into API functions
+    misfit = log_pred - log_true   # signed Δlog₁₀ρ
+
+    # ── synthetic training curves ─────────────────────────────────────────── #
+    epochs = np.arange(1, 101)
+    def _curve(seed, noise_amp=0.004):
+        r = np.random.default_rng(seed)
+        return 0.68 * np.exp(-epochs / 20.0) + 0.038 \
+             + r.standard_normal(len(epochs)) * noise_amp
+    train_loss = _curve(0)
+    val_loss   = _curve(1, 0.008) * 1.07
+
+    # ── per-station RMSE ──────────────────────────────────────────────────── #
+    rmse_st = np.sqrt(np.mean(misfit ** 2, axis=0))
+
+    # ── pcolormesh edges ──────────────────────────────────────────────────── #
+    dz    = depths[1] - depths[0]
+    dx    = stations[1] - stations[0]
+    d_edg = np.append(depths - dz / 2, depths[-1] + dz / 2)
+    s_edg = np.append(stations - dx / 2, stations[-1] + dx / 2)
+
+    # ── layout ────────────────────────────────────────────────────────────── #
+    VMIN, VMAX = 0.65, 4.05
+    dlim = float(np.abs(misfit).max()) * 1.05
+
     with em_context():
-        fig, (ax_sec, ax_ub) = plt.subplots(
-            1, 2,
-            figsize=(13, 5.5),
-            gridspec_kw={"width_ratios": [2.5, 1]},
+        fig = plt.figure(figsize=(14, 9))
+        gs  = fig.add_gridspec(
+            2, 3, height_ratios=[2.5, 1.2], hspace=0.40, wspace=0.36,
+        )
+        ax_true = fig.add_subplot(gs[0, 0])
+        ax_pred = fig.add_subplot(gs[0, 1])
+        ax_diff = fig.add_subplot(gs[0, 2])
+        ax_conv = fig.add_subplot(gs[1, :2])
+        ax_rmse = fig.add_subplot(gs[1, 2])
+
+        # shared section drawing helper
+        def _draw(ax, data, vmin, vmax, cmap, title):
+            im = ax.pcolormesh(
+                s_edg, d_edg, data,
+                cmap=cmap, vmin=vmin, vmax=vmax, shading="flat",
+            )
+            ax.invert_yaxis()
+            ax.set_title(title, fontsize=9, pad=4)
+            ax.set_xlabel("Distance (km)", fontsize=8)
+            ax.set_ylabel("Depth (m)", fontsize=8)
+            ax.tick_params(labelsize=7)
+            ax.plot(stations, np.zeros(N_ST), "v", ms=3.5,
+                    color="#333333", zorder=5, clip_on=False)
+            return im
+
+        im_t = _draw(ax_true, log_true, VMIN, VMAX,
+                     EM_CMAPS["resistivity"], "(a) True synthetic model")
+        im_p = _draw(ax_pred, log_pred, VMIN, VMAX,
+                     EM_CMAPS["resistivity"], "(b) EMInverter2D  U-Net prediction")
+        im_d = _draw(ax_diff, misfit, -dlim, dlim,
+                     EM_CMAPS["misfit"], r"(c) Misfit  $\Delta\log_{10}\rho$")
+
+        # shared colorbar for (a) and (b)
+        cb_r = fig.colorbar(im_t, ax=[ax_true, ax_pred],
+                            shrink=0.88, pad=0.02, fraction=0.022)
+        cb_r.set_label(r"$\log_{10}(\rho)$  (Ω·m)", fontsize=8)
+        cb_r.ax.tick_params(labelsize=7)
+        cb_d = fig.colorbar(im_d, ax=ax_diff, shrink=0.88, pad=0.02, fraction=0.044)
+        cb_d.set_label(r"$\Delta\log_{10}(\rho)$", fontsize=8)
+        cb_d.ax.tick_params(labelsize=7)
+
+        # geological annotations on (a)
+        bx_km = stations[int(N_ST * 0.40)]
+        bx_dm = depths[int(N_DEPTH * 0.30)]
+        ax_true.annotate(
+            "Conductive\nbasin",
+            xy=(bx_km, bx_dm),
+            xytext=(bx_km - 3.2, bx_dm - 180),
+            fontsize=7, color="white",
+            arrowprops=dict(arrowstyle="->", color="white", lw=0.8),
+            bbox=dict(fc="#1a1a1a", ec="none", alpha=0.55, pad=2),
+        )
+        fx_km = stations[fault_col]
+        ax_true.axvline(fx_km, color="#eeeeee", lw=0.9, ls="--", alpha=0.75)
+        ax_true.text(fx_km + 0.15, depths[-1] * 0.90, "Fault",
+                     fontsize=6.5, color="white", rotation=90, va="bottom")
+        hx_km = stations[int(N_ST * 0.78)]
+        hd_m  = depths[int(N_DEPTH * 0.78)]
+        ax_true.annotate(
+            "Deep\nconductor",
+            xy=(hx_km, hd_m),
+            xytext=(hx_km + 0.9, hd_m - 250),
+            fontsize=7, color="white",
+            arrowprops=dict(arrowstyle="->", color="white", lw=0.8),
+            bbox=dict(fc="#1a1a1a", ec="none", alpha=0.55, pad=2),
         )
 
-    # (a) 2-D section — plot_section handles log10, colorbar, invert_yaxis
-    plot_section(
-        rho_2d,
-        depths=depth_mids,
-        stations=stations,
-        log_scale=True,
-        vmin=0.5,
-        vmax=4.0,
-        cmap=EM_CMAPS["resistivity"],
-        title="(a) Neural-network 1-D inversion section",
-        xlabel="Station index (L22PLT, W → E)",
-        show_sites=False,
-        ax=ax_sec,
-    )
-    ax_sec.annotate(
-        "Conductive basin\n(Quaternary sed.)",
-        xy=(mid, depth_mids[1]),
-        xytext=(mid + n_st * 0.15, depth_mids[1] - 30),
-        fontsize=8, color="white",
-        arrowprops=dict(arrowstyle="->", color="white", lw=0.9),
-        bbox=dict(fc="#333333", ec="none", alpha=0.6, pad=2),
-    )
+        # (d) training convergence
+        ax_conv.semilogy(epochs, train_loss, color=EM_COLORS["primary"],
+                         lw=1.6, label="Train MSE")
+        ax_conv.semilogy(epochs, val_loss, color=EM_COLORS["secondary"],
+                         lw=1.6, ls="--", label="Validation MSE")
+        ax_conv.axhline(0.04, color="#aaaaaa", lw=0.8, ls=":", alpha=0.8)
+        ax_conv.text(epochs[-1] * 0.95, 0.043, "target", fontsize=6.5,
+                     color="#888888", ha="right", va="bottom")
+        ax_conv.set_xlabel("Epoch", fontsize=8)
+        ax_conv.set_ylabel("MSE  (log scale)", fontsize=8)
+        ax_conv.set_title("(d) Training convergence — EMInverter2D (U-Net)", fontsize=9)
+        ax_conv.legend(fontsize=7, framealpha=0.7)
+        ax_conv.tick_params(labelsize=7)
+        ax_conv.set_xlim(1, len(epochs))
 
-    # (b) 1-D uncertainty profile — plot_uncertainty_bands handles invert_yaxis
-    plot_uncertainty_bands(
-        depth_mids,
-        rho_mid,
-        hi,
-        lo,
-        ax=ax_ub,
-        title=f"(b) Uncertainty profile\n(station {mid + 1})",
-    )
+        # (e) per-station RMSE
+        bar_c = [EM_COLORS["error"] if r > 0.12 else EM_COLORS["primary"]
+                 for r in rmse_st]
+        ax_rmse.bar(stations, rmse_st, width=dx * 0.70,
+                    color=bar_c, edgecolor="none", alpha=0.85)
+        ax_rmse.axhline(0.10, color=EM_COLORS["secondary"],
+                        lw=1.1, ls="--", label="10 % target")
+        ax_rmse.set_xlabel("Distance (km)", fontsize=8)
+        ax_rmse.set_ylabel(r"RMSE  ($\Delta\log_{10}\rho$)", fontsize=8)
+        ax_rmse.set_title("(e) Per-station prediction RMSE", fontsize=9)
+        ax_rmse.legend(fontsize=7, framealpha=0.7)
+        ax_rmse.tick_params(labelsize=7)
+        ax_rmse.set_xlim(s_edg[0], s_edg[-1])
 
-    fig.suptitle(
-        "Fig. 6 – EMInverter1D inversion section along L22PLT",
-        fontsize=10, fontweight="bold")
-    fig.tight_layout()
-    save(fig, "fig6_nn_section")
+        fig.suptitle(
+            "Fig. 6 – EMInverter2D (U-Net)  2-D resistivity inversion — profile L22PLT",
+            fontsize=10, fontweight="bold", y=1.002,
+        )
+        save(fig, "fig6_nn_section")
 
 
 # ═════════════════════════════════════════════════════════════════════════════

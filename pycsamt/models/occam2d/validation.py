@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """File-format validators for Occam2D files.
@@ -6,6 +5,12 @@
 Each ``is_*`` function accepts a path and returns ``True`` if the file
 matches the expected Occam2D format signature, ``False`` otherwise
 (including when the path does not exist).
+
+The validators are intentionally lightweight. They read only the first
+few non-empty lines and look for stable Occam2D signatures such as
+``OCCAM2MTDATA_1.0``, ``OCCAM2MTMOD_1.0``, ``OCCAMITER_FLEX``, mesh
+control lines, or log iteration markers. They are useful when scanning
+an inversion directory before choosing the appropriate parser.
 """
 
 from __future__ import annotations
@@ -40,6 +45,16 @@ _SIGNATURES: dict[str, str] = {
 
 
 class OccamFileType:
+    """String constants returned by :func:`detect_file_type`.
+
+    Attributes
+    ----------
+    DATA, MESH, MODEL, STARTUP, ITER, RESPONSE, LOG : str
+        Known Occam2D file categories.
+    UNKNOWN : str
+        Returned when no validator recognizes a file.
+    """
+
     DATA     = "data"
     MESH     = "mesh"
     MODEL    = "model"
@@ -66,7 +81,19 @@ def _first_lines(path: PathLike, n: int = 5) -> list[str]:
 
 
 def is_data_file(path: PathLike) -> bool:
-    """Return True if *path* is an Occam2DMT data file."""
+    """Return whether ``path`` is an Occam2D data file.
+
+    Parameters
+    ----------
+    path : path-like
+        Candidate file path. Missing files return ``False``.
+
+    Returns
+    -------
+    bool
+        ``True`` when an early non-empty line contains the
+        ``OCCAM2MTDATA`` format tag.
+    """
     try:
         lines = _first_lines(path, 3)
     except ValueError:
@@ -75,7 +102,20 @@ def is_data_file(path: PathLike) -> bool:
 
 
 def is_mesh_file(path: PathLike) -> bool:
-    """Return True if *path* is an Occam2DMesh file."""
+    """Return whether ``path`` is an Occam2D mesh file.
+
+    Parameters
+    ----------
+    path : path-like
+        Candidate file path. Missing files return ``False``.
+
+    Returns
+    -------
+    bool
+        ``True`` when the file looks like an ``Occam2DMesh``
+        file, either by a ``MESH FILE`` comment or by an early
+        numeric control line.
+    """
     try:
         lines = _first_lines(path, 3)
     except ValueError:
@@ -92,7 +132,19 @@ def is_mesh_file(path: PathLike) -> bool:
 
 
 def is_model_file(path: PathLike) -> bool:
-    """Return True if *path* is an Occam2DModel file."""
+    """Return whether ``path`` is an Occam2D model file.
+
+    Parameters
+    ----------
+    path : path-like
+        Candidate file path. Missing files return ``False``.
+
+    Returns
+    -------
+    bool
+        ``True`` when an early non-empty line contains the
+        ``OCCAM2MTMOD`` model-format tag.
+    """
     try:
         lines = _first_lines(path, 3)
     except ValueError:
@@ -101,7 +153,19 @@ def is_model_file(path: PathLike) -> bool:
 
 
 def is_startup_file(path: PathLike) -> bool:
-    """Return True if *path* is a Startup file (iteration == 0)."""
+    """Return whether ``path`` is an Occam2D startup file.
+
+    Parameters
+    ----------
+    path : path-like
+        Candidate file path. Missing files return ``False``.
+
+    Returns
+    -------
+    bool
+        ``True`` when the file has the ``OCCAMITER_FLEX`` tag
+        and an ``Iteration: 0`` header.
+    """
     try:
         lines = _first_lines(path, 15)
     except ValueError:
@@ -116,7 +180,19 @@ def is_startup_file(path: PathLike) -> bool:
 
 
 def is_iter_file(path: PathLike) -> bool:
-    """Return True if *path* is an Occam .iter file (iteration > 0)."""
+    """Return whether ``path`` is an Occam2D iteration file.
+
+    Parameters
+    ----------
+    path : path-like
+        Candidate file path. Missing files return ``False``.
+
+    Returns
+    -------
+    bool
+        ``True`` when the file has the ``OCCAMITER_FLEX`` tag
+        and an ``Iteration`` value greater than zero.
+    """
     try:
         lines = _first_lines(path, 15)
     except ValueError:
@@ -134,7 +210,19 @@ def is_iter_file(path: PathLike) -> bool:
 
 
 def is_response_file(path: PathLike) -> bool:
-    """Return True if *path* is an Occam response (.resp) file."""
+    """Return whether ``path`` is an Occam2D response file.
+
+    Parameters
+    ----------
+    path : path-like
+        Candidate file path. Missing files return ``False``.
+
+    Returns
+    -------
+    bool
+        ``True`` when the early lines contain a response
+        marker such as ``OCCAM2MTRESP`` or ``RESPONSE``.
+    """
     try:
         lines = _first_lines(path, 3)
     except ValueError:
@@ -143,7 +231,19 @@ def is_response_file(path: PathLike) -> bool:
 
 
 def is_log_file(path: PathLike) -> bool:
-    """Return True if *path* is an Occam log file."""
+    """Return whether ``path`` is an Occam2D log file.
+
+    Parameters
+    ----------
+    path : path-like
+        Candidate file path. Missing files return ``False``.
+
+    Returns
+    -------
+    bool
+        ``True`` when early lines contain common Occam log
+        markers such as ``** ITERATION`` or ``FMINOCC``.
+    """
     try:
         lines = _first_lines(path, 5)
     except ValueError:
@@ -158,7 +258,44 @@ def is_log_file(path: PathLike) -> bool:
 
 
 def detect_file_type(path: PathLike) -> str:
-    """Return an ``OccamFileType`` constant for *path*, or ``'unknown'``."""
+    """Detect the Occam2D file type represented by ``path``.
+
+    The detector applies the public validators in a fixed
+    order and returns a string constant from
+    :class:`OccamFileType`. Missing or unrecognized files
+    return ``OccamFileType.UNKNOWN``.
+
+    Parameters
+    ----------
+    path : path-like
+        Candidate file path. The value may be a string,
+        :class:`pathlib.Path`, or any object accepted by
+        :class:`pathlib.Path`.
+
+    Returns
+    -------
+    str
+        One of ``"data"``, ``"mesh"``, ``"model"``,
+        ``"startup"``, ``"iter"``, ``"response"``, ``"log"``,
+        or ``"unknown"``.
+
+    See Also
+    --------
+    is_data_file
+        Recognizes Occam data files.
+    is_startup_file
+        Distinguishes startup files from non-zero iterations.
+    is_iter_file
+        Recognizes non-zero Occam iteration files.
+
+    Examples
+    --------
+    >>> from pycsamt.models.occam2d.validation import (
+    ...     detect_file_type,
+    ... )
+    >>> detect_file_type("occam_run/Occam2DMesh")
+    'mesh'
+    """
     for fn, typ in [
         (is_data_file,     OccamFileType.DATA),
         (is_model_file,    OccamFileType.MODEL),

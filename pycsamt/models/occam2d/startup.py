@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """OccamStartup and OccamIter — Startup / .iter file handling.
@@ -51,11 +50,11 @@ from __future__ import annotations
 
 import datetime
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Union
 
 import numpy as np
 
-from .base   import OccamBase
+from .base import OccamBase
 from .config import OccamConfig
 
 PathLike = Union[str, Path]
@@ -69,7 +68,7 @@ _FORMAT_TAG = "OCCAMITER_FLEX"
 # -----------------------------------------------------------------------
 
 # Canonical key map: upper-cased header keyword → attribute name
-_KEY_MAP: Dict[str, str] = {
+_KEY_MAP: dict[str, str] = {
     "FORMAT":             "format_str",
     "DESCRIPTION":        "description",
     "MODEL FILE":         "model_file",
@@ -107,15 +106,15 @@ def _parse_iter_flex(path: Path) -> dict:
     Returns
     -------
     dict
-        Keys matching ``_KEY_MAP`` values plus ``"param_values"``
-        (``np.ndarray`` of log₁₀ resistivity, length ``n_params``).
+        Keys matching ``_KEY_MAP`` values plus
+        ``"param_values"`` as an array of log10 resistivity.
 
     Raises
     ------
     FileNotFoundError
         If *path* does not exist.
     ValueError
-        If the file does not contain a valid OCCAMITER_FLEX header.
+        If the file lacks a valid OCCAMITER_FLEX header.
     """
     if not path.exists():
         raise FileNotFoundError(f"OCCAMITER_FLEX file not found: {path}")
@@ -196,35 +195,137 @@ def _parse_iter_flex(path: Path) -> dict:
 # -----------------------------------------------------------------------
 
 class OccamStartup(OccamBase):
-    """Occam2D startup (iteration-0) file.
+    r"""Represent an Occam2D startup control file.
+
+    ``OccamStartup`` stores the iteration-zero
+    ``OCCAMITER_FLEX`` file passed to the Occam2D executable.
+    It defines run controls, file references, inversion
+    options, and the initial model vector. Unlike ``.iter``
+    files produced by the solver, a valid startup file has
+    ``Iteration: 0``.
+
+    The startup parameter vector is initialized as a uniform
+    half-space:
+
+    .. math::
+
+        m_i = \log_{10}(\rho_0),
+        \qquad i = 1, \ldots, N_p.
+
+    Here :math:`\rho_0` is ``config.initial_rho`` and
+    :math:`N_p` is the number of model parameters defined by
+    :class:`OccamModel`.
+
+    Parameters
+    ----------
+    config : OccamConfig, optional
+        Configuration object providing file names, inversion
+        controls, starting resistivity, target misfit,
+        roughness settings, and debug level. If omitted, a
+        default :class:`OccamConfig` is created.
+    description : str, default "startup created by pycsamt"
+        Description written to the ``Description`` header.
+        Use it to record the purpose or provenance of the run.
+    verbose : int or bool, default 0
+        Verbosity level inherited from :class:`OccamBase`.
+        Positive values enable progress messages through the
+        instance logger.
+    logger : logging.Logger, optional
+        Logger used for progress and diagnostic messages. If
+        omitted, a class-specific PyCSAMT logger is created.
 
     Attributes
     ----------
+    format_str : str
+        File format tag, always ``"OCCAMITER_FLEX"``.
     description : str
+        Human-readable startup description.
     model_file : str
+        Model file name referenced by the startup file.
     data_file : str
+        Data file name referenced by the startup file.
     datetime_str : str
+        Creation or file timestamp string.
     max_iterations : int
+        Maximum number of iterations requested from Occam2D.
     target_misfit : float
+        Target normalized RMS misfit.
     roughness_type : int
+        Roughness penalty type written to the startup file.
     diagonal_penalties : int
+        Flag controlling diagonal roughness penalties.
     stepsize_cut_count : int
+        Maximum number of step-size cuts in a line search.
     debug_level : int
+        Debug verbosity passed to the Fortran executable.
     iteration : int
         Always 0 for a valid Startup file.
     lagrange_value : float
-        Initial Lagrange multiplier (written as ``Lagrange Value``).
+        Initial Lagrange multiplier written as
+        ``Lagrange Value``.
     roughness_value : float
+        Initial roughness value written before the first run.
     misfit_value : float
+        Initial misfit value written before the first run.
     misfit_reached : bool
+        Whether the target misfit has already been reached.
+        Startup files normally use ``False``.
     n_params : int
-    param_values : np.ndarray, shape (n_params,)
-        Log₁₀ resistivity values; uniform ``log10(initial_rho)`` at startup.
+        Number of model parameters. This must match the model
+        file and the length of :attr:`param_values`.
+    param_values : numpy.ndarray of float, shape (n_params,)
+        Initial log10-resistivity values. Values are uniform
+        after :meth:`from_model` and equal to
+        ``log10(config.initial_rho)``.
+
+    Notes
+    -----
+    ``OccamStartup`` writes the same flexible iteration format
+    that Occam later uses for ``.iter`` files. The distinction
+    is semantic: startup files carry ``Iteration: 0`` and are
+    input to the solver, while ``OccamIter`` files carry
+    non-zero iteration numbers and are output from the solver.
+
+    See Also
+    --------
+    OccamModel
+        Provides the parameter count for the startup vector.
+    OccamIter
+        Reads iteration files produced after running Occam2D.
+    OccamRunner
+        Launches the executable with this startup file.
+
+    Examples
+    --------
+    Build a startup file from a model definition:
+
+    >>> from pycsamt.models.occam2d import OccamModel
+    >>> from pycsamt.models.occam2d import OccamStartup
+    >>> model = OccamModel.read("occam_run/Occam2DModel")
+    >>> startup = OccamStartup.from_model(model)
+    >>> startup.write("occam_run/Startup")
+
+    Read an existing startup file:
+
+    >>> from pycsamt.models.occam2d import OccamStartup
+    >>> startup = OccamStartup.read("occam_run/Startup")
+    >>> startup.n_params
+
+    References
+    ----------
+    .. [1] Constable, S. C., Parker, R. L., and Constable,
+       C. G., "Occam's inversion: A practical algorithm for
+       generating smooth models from electromagnetic sounding
+       data", Geophysics, 52(3), 289-300, 1987.
+    .. [2] deGroot-Hedlin, C., and Constable, S.,
+       "Occam's inversion to generate smooth, two-dimensional
+       models from magnetotelluric data", Geophysics, 55(12),
+       1613-1624, 1990.
     """
 
     def __init__(
         self,
-        config: Optional[OccamConfig] = None,
+        config: OccamConfig | None = None,
         description: str = "startup created by pycsamt",
         **kwargs,
     ):
@@ -256,25 +357,66 @@ class OccamStartup(OccamBase):
     @classmethod
     def from_model(
         cls,
-        model: "OccamModel",  # noqa: F821
-        config: Optional[OccamConfig] = None,
+        model: OccamModel,  # noqa: F821
+        config: OccamConfig | None = None,
         **kwargs,
-    ) -> "OccamStartup":
-        """Build a startup from a populated model object.
+    ) -> OccamStartup:
+        r"""Build a startup object from a model definition.
 
-        Sets the parameter vector to ``log10(config.initial_rho)``
-        repeated ``model.n_params`` times.
+        The method uses ``model.n_params`` to size the startup
+        vector and fills every entry with the log10 value of
+        starting half-space resistivity:
+
+        .. math::
+
+            m_i = \log_{10}(\rho_0),
+            \qquad i = 1,\ldots,N_p.
+
+        This produces the standard smooth-inversion initial
+        model: a homogeneous half-space whose value is later
+        updated by the Occam solver.
 
         Parameters
         ----------
         model : OccamModel
-            Populated model (must have ``n_params > 0``).
+            Populated model-definition object. It must contain
+            at least one parameter so the vector can be
+            sized consistently with the ``Occam2DModel`` file.
         config : OccamConfig, optional
-            Run configuration.  Provides ``initial_rho``, file names, …
+            Configuration object providing ``initial_rho``,
+            model and data file names, iteration controls, and
+            inversion settings. If omitted, a default
+            :class:`OccamConfig` is created.
+        **kwargs
+            Additional keyword arguments forwarded to the
+            ``OccamStartup`` constructor. Use this for
+            ``description``, ``verbose``, or ``logger``.
 
         Returns
         -------
         OccamStartup
+            Startup object with ``n_params`` and uniform
+            ``param_values`` populated.
+
+        Raises
+        ------
+        ValueError
+            Raised when ``model.n_params`` is not positive.
+
+        See Also
+        --------
+        OccamStartup.write
+            Serializes the generated startup object.
+        OccamModel
+            Supplies the parameter count used here.
+
+        Examples
+        --------
+        >>> from pycsamt.models.occam2d import OccamModel
+        >>> from pycsamt.models.occam2d import OccamStartup
+        >>> model = OccamModel.read("occam_run/Occam2DModel")
+        >>> startup = OccamStartup.from_model(model)
+        >>> startup.param_values.shape
         """
         cfg = config or OccamConfig()
         obj = cls(config=cfg, **kwargs)
@@ -301,24 +443,44 @@ class OccamStartup(OccamBase):
     # I/O
     # ------------------------------------------------------------------
     @classmethod
-    def read(cls, path: PathLike, **kwargs) -> "OccamStartup":
-        """Parse a Startup file (``Iteration: 0``).
+    def read(cls, path: PathLike, **kwargs) -> OccamStartup:
+        """Read an Occam2D startup file.
+
+        The reader parses an ``OCCAMITER_FLEX`` file and then
+        validates that its ``Iteration`` header is zero. Use
+        :meth:`OccamIter.read` for non-zero iteration files
+        produced by the solver.
 
         Parameters
         ----------
         path : path-like
-            Path to the Startup file.
+            Path to the startup file. The value may be a
+            string, :class:`pathlib.Path`, or any object
+            accepted by :class:`pathlib.Path`.
+        **kwargs
+            Additional keyword arguments forwarded to the
+            ``OccamStartup`` constructor before parsed values
+            are attached.
 
         Returns
         -------
         OccamStartup
+            Parsed startup object with header fields and
+            parameter vector populated.
 
         Raises
         ------
         FileNotFoundError
-            If *path* does not exist.
+            Raised when ``path`` does not exist.
         ValueError
-            If the file is not OCCAMITER_FLEX or ``Iteration`` ≠ 0.
+            Raised when the file is not ``OCCAMITER_FLEX`` or
+            has a non-zero iteration number.
+
+        Examples
+        --------
+        >>> from pycsamt.models.occam2d import OccamStartup
+        >>> startup = OccamStartup.read("occam_run/Startup")
+        >>> startup.iteration
         """
         p = Path(path)
         parsed = _parse_iter_flex(p)
@@ -339,9 +501,25 @@ class OccamStartup(OccamBase):
         return obj
 
     def write(self, path: PathLike) -> Path:
-        """Write startup file to *path* in OCCAMITER_FLEX format.
+        """Write this startup file in ``OCCAMITER_FLEX`` format.
 
-        Returns the resolved path.
+        Parameters
+        ----------
+        path : path-like
+            Destination path for the startup file. Parent
+            directories are created when needed.
+
+        Returns
+        -------
+        pathlib.Path
+            Path to the file that was written.
+
+        See Also
+        --------
+        OccamStartup.read
+            Parses files written by this method.
+        OccamRunner
+            Passes the written startup file to the executable.
         """
         return _write_iter_flex(self, Path(path))
 
@@ -351,33 +529,105 @@ class OccamStartup(OccamBase):
 # -----------------------------------------------------------------------
 
 class OccamIter(OccamBase):
-    """Reader for Occam ``.iter`` files (``Iteration: N ≥ 1``).
+    r"""Represent an Occam2D iteration file.
+
+    ``OccamIter`` reads ``OCCAMITER_FLEX`` files written by
+    the Occam2D executable after one or more inversion
+    iterations. These files have the same structural format as
+    ``Startup`` but carry ``Iteration`` values greater than
+    zero and store the accepted model vector.
+
+    The parameter vector is stored in log10-resistivity units.
+    Physical resistivity is recovered as
+
+    .. math::
+
+        \rho_i = 10^{m_i},
+
+    where :math:`m_i` is the stored value for parameter
+    :math:`i`.
+
+    Parameters
+    ----------
+    verbose : int or bool, default 0
+        Verbosity level inherited from :class:`OccamBase`.
+        Positive values enable progress messages through the
+        instance logger.
+    logger : logging.Logger, optional
+        Logger used for progress and diagnostic messages. If
+        omitted, a class-specific PyCSAMT logger is created.
 
     Attributes
     ----------
     format_str : str
+        File format tag, usually ``"OCCAMITER_FLEX"``.
     description : str
+        Iteration description written by Occam.
     model_file : str
+        Model file referenced by this iteration.
     data_file : str
+        Data file referenced by this iteration.
     datetime_str : str
+        Date and time string written by Occam.
     max_iterations : int
+        Iteration limit stored in the file.
     target_misfit : float
+        Target normalized RMS misfit.
     roughness_type : int
+        Roughness penalty type.
     diagonal_penalties : int
+        Diagonal penalty flag.
     stepsize_cut_count : int
+        Maximum number of line-search step-size cuts.
     debug_level : int
+        Debug verbosity setting.
     iteration : int
-        Iteration number (≥ 1).
+        Iteration number. Valid ``.iter`` files use values
+        greater than zero.
     lagrange_value : float
         Lagrange multiplier accepted at this iteration.
     roughness_value : float
+        Model roughness value reported by Occam.
     misfit_value : float
-        Normalised RMS misfit at this iteration.
+        Normalized RMS misfit at this iteration.
     misfit_reached : bool
         ``True`` if the target misfit was achieved.
     n_params : int
-    param_values : np.ndarray, shape (n_params,)
-        Log₁₀ resistivity values at this iteration.
+        Number of model parameters.
+    param_values : numpy.ndarray of float, shape (n_params,)
+        Accepted log10-resistivity values for this iteration.
+
+    See Also
+    --------
+    OccamStartup
+        Represents the corresponding iteration-zero file.
+    InversionResult
+        Selects iteration files from a run directory.
+    OccamResponse
+        Reads the response file for the same iteration.
+
+    Examples
+    --------
+    Read an iteration file and convert to resistivity:
+
+    >>> from pycsamt.models.occam2d import OccamIter
+    >>> iteration = OccamIter.read("occam_run/ITER17.iter")
+    >>> rho = iteration.to_resistivity()
+
+    Inspect log10-resistivity statistics:
+
+    >>> iteration.log10_rho_stats
+
+    References
+    ----------
+    .. [1] Constable, S. C., Parker, R. L., and Constable,
+       C. G., "Occam's inversion: A practical algorithm for
+       generating smooth models from electromagnetic sounding
+       data", Geophysics, 52(3), 289-300, 1987.
+    .. [2] deGroot-Hedlin, C., and Constable, S.,
+       "Occam's inversion to generate smooth, two-dimensional
+       models from magnetotelluric data", Geophysics, 55(12),
+       1613-1624, 1990.
     """
 
     def __init__(self, **kwargs):
@@ -405,25 +655,44 @@ class OccamIter(OccamBase):
     # I/O
     # ------------------------------------------------------------------
     @classmethod
-    def read(cls, path: PathLike, **kwargs) -> "OccamIter":
-        """Parse an ``.iter`` file at *path*.
+    def read(cls, path: PathLike, **kwargs) -> OccamIter:
+        """Read an Occam2D ``.iter`` file.
+
+        The reader parses an ``OCCAMITER_FLEX`` file and
+        validates that the ``Iteration`` value is non-zero.
+        Startup files should be loaded with
+        :meth:`OccamStartup.read`.
 
         Parameters
         ----------
         path : path-like
-            Path to the ``.iter`` file.
+            Path to the iteration file. The value may be a
+            string, :class:`pathlib.Path`, or any object
+            accepted by :class:`pathlib.Path`.
+        **kwargs
+            Additional keyword arguments forwarded to the
+            ``OccamIter`` constructor before parsed values are
+            attached.
 
         Returns
         -------
         OccamIter
+            Parsed iteration object with header fields and
+            parameter vector populated.
 
         Raises
         ------
         FileNotFoundError
-            If *path* does not exist.
+            Raised when ``path`` does not exist.
         ValueError
-            If the file is not OCCAMITER_FLEX or ``Iteration`` == 0
-            (use ``OccamStartup.read()`` for the Startup file).
+            Raised when the file is not ``OCCAMITER_FLEX`` or
+            has ``Iteration: 0``.
+
+        Examples
+        --------
+        >>> from pycsamt.models.occam2d import OccamIter
+        >>> iteration = OccamIter.read("ITER17.iter")
+        >>> iteration.misfit_value
         """
         p = Path(path)
         parsed = _parse_iter_flex(p)
@@ -445,9 +714,18 @@ class OccamIter(OccamBase):
         return obj
 
     def write(self, path: PathLike) -> Path:
-        """Write ``.iter`` file to *path* in OCCAMITER_FLEX format.
+        """Write this iteration in ``OCCAMITER_FLEX`` format.
 
-        Returns the resolved path.
+        Parameters
+        ----------
+        path : path-like
+            Destination path for the iteration file. Parent
+            directories are created when needed.
+
+        Returns
+        -------
+        pathlib.Path
+            Path to the file that was written.
         """
         return _write_iter_flex(self, Path(path))
 
@@ -455,14 +733,22 @@ class OccamIter(OccamBase):
     # Derived
     # ------------------------------------------------------------------
     def to_resistivity(self) -> np.ndarray:
-        """Return resistivity model (Ω·m) from log₁₀ param_values."""
+        r"""Return resistivity values from log10 parameters.
+
+        Returns
+        -------
+        numpy.ndarray of float
+            Resistivity values in ohm metres computed as
+            :math:`10^m`, where :math:`m` is each element of
+            :attr:`param_values`.
+        """
         if not self.param_values.size:
             return np.array([])
         return 10.0 ** self.param_values
 
     @property
     def log10_rho_stats(self) -> dict:
-        """Basic statistics of the log₁₀ resistivity parameter vector."""
+        """Return summary statistics for log10 resistivity."""
         if not self.param_values.size:
             return {}
         v = self.param_values

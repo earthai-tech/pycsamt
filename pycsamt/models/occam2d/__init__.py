@@ -1,49 +1,52 @@
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
-"""
-pycsamt.models.occam2d
-======================
+r"""
+Python interface to the Occam2DMT inversion workflow.
 
-Python interface to the Occam2DMT v3.0 inversion code.
+The :mod:`pycsamt.models.occam2d` subpackage builds, runs, reads, and
+plots two-dimensional magnetotelluric and CSAMT inversions using the
+Occam smooth-model approach [1]_, [2]_. The inversion seeks a model
+that fits the data to a target normalized RMS while minimizing
+roughness.
 
-Typical workflow
+.. math::
+
+    \phi_d =
+    \sqrt{\\frac{1}{N}\sum_{i=1}^{N} r_i^2},
+    \qquad
+    \rho_i = 10^{m_i}.
+
+Typical Workflow
 ----------------
-1. Load EDI files via ``Sites`` or ``EDICollection`` (single source of truth).
-2. Build all Occam input files with ``InputBuilder``.
-3. Run the inversion with ``OccamRunner`` (calls the compiled Fortran binary).
-4. Load and visualise results with ``InversionResult``.
+1. Load EDI files with :class:`pycsamt.site.Sites`.
+2. Build input files with :class:`InputBuilder`.
+3. Run the Fortran executable with :class:`OccamRunner`.
+4. Load results with :class:`InversionResult`.
+5. Plot models, responses, pseudosections, and misfit curves.
 
-Quick start
------------
->>> from pycsamt.models.occam2d import InputBuilder, OccamRunner, InversionResult
+Examples
+--------
+>>> from pycsamt.models.occam2d import (
+...     InputBuilder, OccamRunner, InversionResult,
+... )
 >>> from pycsamt.site import Sites
->>>
->>> sites   = Sites.from_dir("path/to/edi/")
->>> builder = InputBuilder(sites, workdir="occam_run/")
->>> builder.build(modes=["TE", "TM"], n_layers=30, cell_size=100.)
->>>
->>> runner  = OccamRunner(workdir="occam_run/")
->>> runner.run(max_iter=100, target_misfit=1.0)
->>>
->>> result  = InversionResult(workdir="occam_run/")
+>>> sites = Sites.from_dir("edi")
+>>> InputBuilder(sites, workdir="occam_run").build()
+>>> OccamRunner("occam_run").run(target_misfit=1.0)
+>>> result = InversionResult("occam_run")
 >>> result.plot_model()
-
-Fortran source
---------------
-The Occam2DMT v3.0 Fortran source lives in ``_source/``.
-Compile once with::
-
-    cd pycsamt/models/occam2d/_source
-    make FC90=gfortran
-
-or let ``OccamRunner`` compile it automatically on first use.
 
 References
 ----------
-- Constable, Parker & Constable (1987) Geophysics 52, 289-300.
-- deGroot-Hedlin & Constable (1990) Geophysics 55, 1613-1624.
-- http://marineemlab.ucsd.edu/Projects/Occam/2DMT/
+.. [1] Constable, S. C., Parker, R. L., and Constable, C. G.,
+   "Occam's inversion: A practical algorithm for generating
+   smooth models from electromagnetic sounding data", Geophysics,
+   52(3), 289-300, 1987.
+.. [2] deGroot-Hedlin, C., and Constable, S.,
+   "Occam's inversion to generate smooth, two-dimensional models
+   from magnetotelluric data", Geophysics, 55(12), 1613-1624,
+   1990.
 """
 
 from .builder  import InputBuilder

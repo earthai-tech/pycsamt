@@ -96,19 +96,81 @@ class _OccamPlotBase(OccamBase):
 # ---------------------------------------------------------------------------
 
 class PlotMisfit(_OccamPlotBase):
-    """RMS misfit vs iteration plot.
+    r"""Plot Occam2D convergence metrics by iteration.
 
-    Equivalent to ``plotOccamIterMisfit.m``.
+    ``PlotMisfit`` visualizes the convergence history stored
+    in an :class:`~pycsamt.models.occam2d.OccamLog`
+    attached to an
+    :class:`~pycsamt.models.occam2d.InversionResult`.
+    It replaces the MATLAB ``plotOccamIterMisfit.m`` view.
+
+    The main curve is the normalized root-mean-square data
+    misfit:
+
+    .. math::
+
+        \mathrm{RMS} =
+        \sqrt{\frac{1}{N}\sum_{i=1}^{N} r_i^2},
+
+    Here :math:`r_i` is the weighted residual for datum ``i``.
+    A run is commonly acceptable when the RMS approaches the
+    target value of 1.0 [1]_.
 
     Parameters
     ----------
     result : InversionResult
-    show_roughness : bool
-        Add a secondary y-axis for roughness.
-    show_lagrange : bool
-        Add a third panel for the Lagrange multiplier.
-    target_line : bool
-        Draw a horizontal dashed line at misfit = 1.0.
+        Loaded inversion result. It must expose ``log`` with
+        ``iterations``, ``rms``, ``roughness``, ``lagrange``,
+        and ``n_iter`` attributes.
+    show_roughness : bool, default True
+        If ``True``, add a secondary y-axis for roughness.
+        Roughness is plotted on a log scale because it can
+        vary by several orders of magnitude.
+    show_lagrange : bool, default False
+        If ``True``, add a lower panel for the accepted
+        Lagrange multiplier at each iteration.
+    target_line : bool, default True
+        If ``True``, draw a dashed line at RMS equal
+        to 1.0.
+    figsize : tuple of float, optional
+        Matplotlib figure size passed through the shared base.
+        If omitted, the number of panels controls the size.
+    cmap : str, default "jet_r"
+        Stored for consistency with other plot classes.
+        It is not used by this line plot.
+    dpi : int, default 100
+        Figure resolution in dots per inch.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Figure containing the convergence plot.
+
+    Raises
+    ------
+    RuntimeError
+        If ``result.log`` is missing or has no iterations.
+
+    See Also
+    --------
+    OccamLog
+        Parses convergence values from the Occam log file.
+    InversionResult.plot_misfit
+        Convenience wrapper that instantiates this class.
+
+    Examples
+    --------
+    >>> from pycsamt.models.occam2d import InversionResult
+    >>> from pycsamt.models.occam2d import PlotMisfit
+    >>> result = InversionResult("occam_run")
+    >>> fig = PlotMisfit(result, show_lagrange=True).plot()
+
+    References
+    ----------
+    .. [1] Constable, S. C., Parker, R. L., and Constable,
+       C. G., "Occam's inversion: A practical algorithm for
+       generating smooth models from electromagnetic sounding
+       data", Geophysics, 52(3), 289-300, 1987.
     """
 
     def __init__(
@@ -191,28 +253,92 @@ class PlotMisfit(_OccamPlotBase):
 # ---------------------------------------------------------------------------
 
 class PlotModel(_OccamPlotBase):
-    """2-D resistivity model plot.
+    r"""Plot a two-dimensional Occam resistivity model.
 
-    Equivalent to ``plotOccam2DMT.m``.
+    ``PlotModel`` displays the selected iteration model from
+    :class:`~pycsamt.models.occam2d.InversionResult` as a
+    depth section. It replaces ``plotOccam2DMT.m``, and the
+    companion profile extractor replaces
+    ``ExtractOccam2DMTProfile.m``.
+
+    Occam iteration files store model parameters as
+    :math:`\log_{10}` resistivity. The plot converts them back
+    to ohm metres before drawing:
+
+    .. math::
+
+        \rho(x, z) = 10^{m(x, z)}.
+
+    The mesh is centered around the profile midpoint.
+    Depth is positive downward.
 
     Parameters
     ----------
     result : InversionResult
-    rho_min, rho_max : float
-        Colour-scale limits (Ω·m).
-    depth_max : float
-        Maximum depth to display (m).
-    show_stations : bool
-        Overlay station triangles on the surface.
-    profile_distance_unit : str
-        ``'m'`` or ``'km'``.
+        Loaded result containing ``rho_2d`` and ``mesh``.
+        Station markers are drawn when ``result.data.offsets``
+        is available.
+    rho_min, rho_max : float, default 1.0, 1000.0
+        Color-scale limits in ohm metres. They are passed to
+        :class:`matplotlib.colors.LogNorm`; both values must
+        be positive.
+    depth_max : float, optional
+        Maximum display depth in metres. If omitted, the full
+        mesh depth is shown.
+    show_stations : bool, default True
+        If ``True``, overlay station triangles at the surface
+        using the offsets stored in the data file.
+    profile_distance_unit : {"m", "km"}, default "km"
+        Unit used on the horizontal axis and by
+        :meth:`extract_profile`.
+    figsize : tuple of float, optional
+        Matplotlib figure size. The default suits a profile
+        section.
+    cmap : str, default "jet_r"
+        Colormap used for the resistivity image.
+    dpi : int, default 100
+        Figure resolution in dots per inch.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Figure containing the resistivity model section.
+
+    Raises
+    ------
+    RuntimeError
+        If the result does not contain ``rho_2d``.
 
     Methods
     -------
-    plot() → Figure
-    extract_profile(x0, x1) → (x, z, rho)
-        Extract a vertical profile between horizontal positions x0 and x1.
-        Reimplements ``ExtractOccam2DMTProfile.m``.
+    plot()
+        Return the model section as a Matplotlib figure.
+    extract_profile(x0, x1)
+        Extract centered coordinates, depth centers, and the
+        log10-resistivity grid between ``x0`` and ``x1``.
+
+    See Also
+    --------
+    InversionResult
+        Reconstructs ``rho_2d`` from Occam output files.
+    PlotSounding1D
+        Extracts model columns at station positions.
+
+    Examples
+    --------
+    >>> from pycsamt.models.occam2d import InversionResult
+    >>> from pycsamt.models.occam2d import PlotModel
+    >>> result = InversionResult("occam_run")
+    >>> fig = PlotModel(result, depth_max=2000).plot()
+    >>> plotter = PlotModel(result)
+    >>> x, z, log_rho = plotter.extract_profile(-1.0, 1.0)
+
+    References
+    ----------
+    .. [1] deGroot-Hedlin, C., and Constable, S.,
+       "Occam's inversion to generate smooth, two-dimensional
+       models from magnetotelluric data", Geophysics, 55(12),
+       1613-1624, 1990.
     """
 
     def __init__(
@@ -306,14 +432,15 @@ class PlotModel(_OccamPlotBase):
     ) -> tuple:
         """Extract (x_centers, z_centers, rho_subset) between x0 and x1.
 
-        Coordinates use the same unit as ``profile_distance_unit``.
-        x0 / x1 are in the centred profile frame (profile midpoint = 0).
+        Coordinates use ``profile_distance_unit``.
+        ``x0`` and ``x1`` are in the centered profile frame.
 
         Returns
         -------
         tuple
             ``(x_centers, z_centers, rho_2d_subset)`` where
-            *rho_2d_subset* has shape ``(n_zcells, n_cols_in_range)``.
+            ``rho_2d_subset`` has shape
+            ``(n_zcells, n_cols_in_range)``.
         """
         result = self.result
         if result is None or result.rho_2d is None:
@@ -338,27 +465,84 @@ class PlotModel(_OccamPlotBase):
 # ---------------------------------------------------------------------------
 
 class PlotResponse(_OccamPlotBase):
-    """Observed vs predicted response plot.
+    r"""Plot observed and modeled Occam response curves.
 
-    Equivalent to ``plotOccam2DMTResponse.m``.
+    ``PlotResponse`` compares observed data from the Occam
+    file with modeled values from an Occam ``.resp`` file. It
+    replaces ``plotOccam2DMTResponse.m``.
 
-    Plots apparent resistivity and phase as a function of period for
-    selected stations.  TE and/or TM modes shown as different colours.
-    Observed data are plotted as symbols, predicted as lines.
+    Apparent-resistivity rows are stored as log10 values.
+    They are converted before plotting:
+
+    .. math::
+
+        \rho_a = 10^{d_\rho}.
+
+    Phase rows are plotted in degrees. The frequency index in
+    the table is mapped back to physical frequency when
+    corresponding :class:`OccamData` object is available.
 
     Parameters
     ----------
     result : InversionResult
-    stations : list[str] or None
-        Station names to plot.  ``None`` → evenly-sampled up to
-        *max_stations* stations.
-    modes : list[str]
-        Subset of ``["TE", "TM"]``.
-    period_axis : bool
-        Use period (s) on the x-axis (default ``True``).
-    max_stations : int
-        Upper cap on the number of station columns when *stations* is
+        Loaded result containing ``response`` and ideally
+        ``data``. The response must expose the seven-column
+        table.
+    stations : list of str, list of int, or None, default None
+        Stations to plot. Strings are matched against
+        ``result.data.sites``. Integers are one-based site
+        indices when names are unavailable. If ``None``,
+        stations are sampled from the response table.
+    modes : list of str, optional
+        Electromagnetic modes to draw. Supported values are
+        ``"TE"`` and ``"TM"``.
+    period_axis : bool, default True
+        Reserved for interface clarity. The implementation
+        uses period when frequencies are available and indices
+        otherwise.
+    max_stations : int, default 9
+        Maximum number of station columns when ``stations`` is
         ``None``.
+    figsize : tuple of float, optional
+        Figure size. If omitted, width scales with station
+        count.
+    cmap : str, default "jet_r"
+        Stored for a consistent interface. It is not used
+        by this curve plot.
+    dpi : int, default 100
+        Figure resolution in dots per inch.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Figure with apparent-resistivity and phase panels.
+
+    Raises
+    ------
+    RuntimeError
+        If response data are missing, modes are absent,
+        or no stations can be selected.
+
+    See Also
+    --------
+    PlotResponseGrid
+        Compact version designed for many stations.
+    OccamResponse
+        Reader for the ``.resp`` file used by this plot.
+
+    Examples
+    --------
+    >>> from pycsamt.models.occam2d import InversionResult
+    >>> from pycsamt.models.occam2d import PlotResponse
+    >>> result = InversionResult("occam_run")
+    >>> fig = PlotResponse(result, modes=["TM"]).plot()
+
+    References
+    ----------
+    .. [1] deGroot-Hedlin, C., and Constable, S.,
+       "Occam's inversion to generate smooth, two-dimensional
+       models from magnetotelluric data", Geophysics, 55(12),
+       1613-1624, 1990.
     """
 
     def __init__(
@@ -512,17 +696,62 @@ class PlotResponse(_OccamPlotBase):
 # ---------------------------------------------------------------------------
 
 class PlotPseudo(_OccamPlotBase):
-    """Pseudosection of observed apparent resistivity / phase.
+    r"""Plot an Occam observed-data pseudosection.
 
-    Equivalent to ``plotOccam2DMTPseudo.m``.
+    ``PlotPseudo`` displays one data component from the Occam
+    data file as a station-period view. It is the Python
+    replacement for ``plotOccam2DMTPseudo.m``.
+
+    The horizontal axis is station offset in kilometres when
+    offsets are available. The vertical axis is
+    :math:`\log_{10}(T)`, where :math:`T = 1/f` is period in
+    seconds. Apparent resistivity is converted from log10
+    storage to ohm metres; phase data remain in degrees.
 
     Parameters
     ----------
     result : InversionResult
-    mode : str
-        ``'TE'`` or ``'TM'``.
-    data_type : str
-        ``'rho'`` (apparent resistivity) or ``'phase'``.
+        Loaded result containing an :class:`OccamData` object
+        with data blocks, offsets, and frequencies.
+    mode : {"TE", "TM"}, default "TM"
+        Electromagnetic mode to display. ``"TE"`` maps to
+        codes 1 and 2; ``"TM"`` maps to codes 5 and 6.
+    data_type : {"rho", "phase"}, default "rho"
+        Quantity to display. ``"rho"`` selects apparent
+        resistivity; ``"phase"`` selects phase.
+    figsize : tuple of float, optional
+        Matplotlib figure size.
+    cmap : str, default "jet_r"
+        Colormap used for the pseudosection.
+    dpi : int, default 100
+        Figure resolution in dots per inch.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Pseudosection figure.
+
+    Raises
+    ------
+    RuntimeError
+        If no data blocks are available or the selected type
+        is not present.
+    ValueError
+        If ``mode`` and ``data_type`` are unsupported.
+
+    See Also
+    --------
+    OccamData
+        Provides the data block for the pseudosection.
+    PlotSiteMisfit
+        Builds a residual pseudosection from response values.
+
+    Examples
+    --------
+    >>> from pycsamt.models.occam2d import InversionResult
+    >>> from pycsamt.models.occam2d import PlotPseudo
+    >>> result = InversionResult("occam_run")
+    >>> fig = PlotPseudo(result, mode="TE").plot()
     """
 
     def __init__(
@@ -646,26 +875,72 @@ class PlotPseudo(_OccamPlotBase):
 # ---------------------------------------------------------------------------
 
 class PlotSounding1D(_OccamPlotBase):
-    """1-D resistivity–depth profiles extracted from the 2-D model.
+    r"""Plot station-centered 1-D profiles from a 2-D Occam model.
 
-    For each selected station the vertical column of the 2-D model nearest
-    to the station offset is plotted as a log ρ vs depth profile.
+    ``PlotSounding1D`` samples the reconstructed 2-D
+    resistivity grid at the mesh column nearest each station.
+    The result is a set of resistivity-depth curves to compare
+    vertical structure below stations.
+
+    The plotted resistivity is converted from the log10 grid:
+
+    .. math::
+
+        \rho(z) = 10^{m(z)}.
+
+    Air layers are omitted using ``result.mesh.n_airlayers``.
 
     Parameters
     ----------
     result : InversionResult
-    stations : list[str] or None
-        Station names to plot.  ``None`` → all stations up to
-        *max_stations*.
-    max_stations : int
-        Upper cap when *stations* is ``None``.
+        Loaded result containing ``rho_2d``, ``mesh``, and
+        ``data.offsets``.
+    stations : list of str or None, default None
+        Station names to plot. If ``None``, stations are
+        sampled from all available offsets.
+    max_stations : int, default 16
+        Maximum station profiles when ``stations`` is
+        ``None``.
     depth_max : float, optional
-        Maximum depth to display (m).
-    rho_min, rho_max : float
-        Horizontal axis limits (Ω·m).
-    overlay : bool
-        If ``True`` overlay all profiles on one axes instead of a panel
-        per station.
+        Maximum plotted depth. If omitted, mesh depth
+        controls the lower limit.
+    rho_min, rho_max : float, default 1.0, 1000.0
+        Horizontal resistivity-axis limits in ohm metres.
+    overlay : bool, default False
+        If ``True``, draw selected profiles on one axis. If
+        ``False``, draw one panel per station.
+    figsize : tuple of float, optional
+        Figure size. Defaults depend on station count.
+    cmap : str, default "jet_r"
+        Stored for interface consistency. Overlay plots use a
+        tabular Matplotlib colormap internally.
+    dpi : int, default 100
+        Figure resolution in dots per inch.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Resistivity-depth profile figure.
+
+    Raises
+    ------
+    RuntimeError
+        If ``rho_2d`` is missing, station offsets are missing,
+        or station selection is empty.
+
+    See Also
+    --------
+    PlotModel.extract_profile
+        Extracts a horizontal interval from the same grid.
+    InversionResult
+        Provides the reconstructed model grid.
+
+    Examples
+    --------
+    >>> from pycsamt.models.occam2d import InversionResult
+    >>> from pycsamt.models.occam2d import PlotSounding1D
+    >>> result = InversionResult("occam_run")
+    >>> fig = PlotSounding1D(result, overlay=True).plot()
     """
 
     def __init__(
@@ -803,23 +1078,69 @@ class PlotSounding1D(_OccamPlotBase):
 # ---------------------------------------------------------------------------
 
 class PlotSiteMisfit(_OccamPlotBase):
-    """Per-site RMS misfit breakdown.
+    r"""Plot per-site Occam response misfit diagnostics.
 
-    Two-panel figure:
+    ``PlotSiteMisfit`` summarizes the fit between observed and
+    modeled values at each station. The top panel is a
+    bar chart of RMS residual by station and data type. The
+    optional lower panel is a residual pseudosection.
 
-    * **Top** — grouped bar chart of per-site, per-data-type RMS.
-    * **Bottom** — pseudosection-style normalised-residual map
-      ((obs − pred) / error) on a log-period × station grid.
+    Residuals are normalized by the error column in the Occam
+    response table:
+
+    .. math::
+
+        r_i = \frac{d_i^{obs} - d_i^{pred}}{\sigma_i}.
+
+    Per-site RMS values use these normalized residuals. If a
+    response error is non-positive, that residual is ignored.
 
     Parameters
     ----------
     result : InversionResult
-    modes : list[str]
-        Subset of ``["TE", "TM"]``.
-    show_residual_map : bool
-        Draw the second (residual map) panel.
-    rms_target : float
-        Dashed target-RMS line in the bar panel.
+        Loaded result containing ``response``. Station labels
+        and frequencies come from ``result.data``.
+    modes : list of str, optional
+        Modes included in the summary. Supported values are
+        ``"TE"`` and ``"TM"``. If omitted, both are used.
+    show_residual_map : bool, default True
+        If ``True``, draw the normalized residual map
+        under the bar chart.
+    rms_target : float, default 1.0
+        Target RMS value drawn in the bar panel.
+        Use ``None`` to omit the target line.
+    figsize : tuple of float, optional
+        Figure size. Defaults scale with station count.
+    cmap : str, default "jet_r"
+        Stored for the shared interface. The residual map uses
+        a diverging colormap.
+    dpi : int, default 100
+        Figure resolution in dots per inch.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Figure containing per-site RMS diagnostics.
+
+    Raises
+    ------
+    RuntimeError
+        If response data are missing or requested type codes
+        are absent.
+
+    See Also
+    --------
+    OccamResponse.misfit_per_site
+        Returns a simpler per-site RMS dictionary.
+    PlotResponseGrid
+        Shows observed and modeled curves for many stations.
+
+    Examples
+    --------
+    >>> from pycsamt.models.occam2d import InversionResult
+    >>> from pycsamt.models.occam2d import PlotSiteMisfit
+    >>> result = InversionResult("occam_run")
+    >>> fig = PlotSiteMisfit(result).plot()
     """
 
     def __init__(
@@ -1002,22 +1323,66 @@ class PlotSiteMisfit(_OccamPlotBase):
 # ---------------------------------------------------------------------------
 
 class PlotResponseGrid(_OccamPlotBase):
-    """Compact all-station observed vs predicted response grid.
+    r"""Plot a compact grid of observed and modeled responses.
 
-    Each station occupies one column of 2 stacked axes (ρ_a on top, phase
-    below).  TE and TM are shown as different colours.  The per-site RMS
-    misfit is annotated in each panel title.
+    ``PlotResponseGrid`` is designed to scan many stations.
+    Each station uses two axes: apparent resistivity above and
+    phase below. Observed values are drawn as points and
+    modeled values as lines. Titles include per-site RMS when
+    response errors are available.
+
+    Apparent-resistivity values are converted from log10 Occam
+    storage before plotting:
+
+    .. math::
+
+        \rho_a = 10^{d_\rho}.
 
     Parameters
     ----------
     result : InversionResult
-    stations : list[str] or None
-        Station names to plot.  ``None`` → all stations up to
-        *max_stations*.
-    n_cols : int
-        Number of station columns in the grid layout.
-    modes : list[str]
-    max_stations : int
+        Loaded result with ``response`` and ideally ``data``.
+    stations : list of str or None, default None
+        Station names to include. If omitted, station indices
+        sampled from the response table.
+    n_cols : int, default 5
+        Maximum number of station columns in each grid row.
+    modes : list of str, optional
+        Modes to draw. Use ``"TE"``, ``"TM"``, or both.
+    max_stations : int, default 25
+        Maximum station count included when ``stations`` is
+        ``None``.
+    figsize : tuple of float, optional
+        Figure size. Defaults scale with columns and rows.
+    cmap : str, default "jet_r"
+        Stored for interface consistency. It is unused by this
+        curve plot.
+    dpi : int, default 100
+        Figure resolution in dots per inch.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Compact response-grid figure.
+
+    Raises
+    ------
+    RuntimeError
+        If response data or station choices are missing.
+
+    See Also
+    --------
+    PlotResponse
+        Larger response panels for a smaller station subset.
+    PlotSiteMisfit
+        Per-site residual summary from the response table.
+
+    Examples
+    --------
+    >>> from pycsamt.models.occam2d import InversionResult
+    >>> from pycsamt.models.occam2d import PlotResponseGrid
+    >>> result = InversionResult("occam_run")
+    >>> fig = PlotResponseGrid(result, n_cols=4).plot()
     """
 
     def __init__(

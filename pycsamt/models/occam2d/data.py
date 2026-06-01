@@ -49,6 +49,7 @@ import numpy as np
 
 from .base   import OccamBase
 from .config import OccamConfig
+from .doc import _occam_param_docs as _params
 
 PathLike = Union[str, Path]
 
@@ -91,7 +92,7 @@ def _site_attr(site, *names):
 
 
 def _unique_freqs(all_freqs: list, rtol: float = 0.01) -> np.ndarray:
-    """Merge near-duplicate frequencies (within *rtol* relative tolerance)."""
+    """Merge near-duplicate frequencies within tolerance."""
     arr = np.sort(np.unique(np.asarray(all_freqs, dtype=float)))[::-1]
     if arr.size == 0:
         return arr
@@ -103,7 +104,7 @@ def _unique_freqs(all_freqs: list, rtol: float = 0.01) -> np.ndarray:
 
 
 def _normalise_source(source) -> list:
-    """Return a flat list of duck-typed site items from any accepted source."""
+    """Return a flat list of site-like items."""
     # Sites (pycsamt.site.base.Sites): has _items → iterate directly
     if hasattr(source, "_items"):
         return list(source)
@@ -121,8 +122,7 @@ def _normalise_source(source) -> list:
 def _compute_offsets(items: list):
     """Return (names, offsets_m) sorted by profile chainage.
 
-    Tries Profile.from_sites first; falls back to simple lat/lon offset
-    when the profile module is unavailable.
+    Try ``Profile.from_sites`` first, then simple coordinates.
     """
     # Station names
     names = []
@@ -149,9 +149,11 @@ def _compute_offsets(items: list):
         if callable(c):
             c = c()
         if c is not None and len(c) >= 2:
-            lats.append(float(c[0])); lons.append(float(c[1]))
+            lats.append(float(c[0]))
+            lons.append(float(c[1]))
         else:
-            lats.append(float("nan")); lons.append(float("nan"))
+            lats.append(float("nan"))
+            lons.append(float("nan"))
 
     lat0 = next((v for v in lats if np.isfinite(v)), 0.0)
     lon0 = next((v for v in lons if np.isfinite(v)), 0.0)
@@ -178,9 +180,9 @@ def _parse_data(path: Path) -> dict:
     Returns
     -------
     dict with keys:
-        format_str, title, sites (list[str]), offsets (list[float]),
-        frequencies (list[float]), data_rows (list[list]) where each
-        row is [site_idx, freq_idx, type_code, datum, error].
+        format_str, title, sites, offsets, frequencies, and
+        data_rows. Each row is [site_idx, freq_idx, type_code,
+        datum, error].
 
     Raises
     ------
@@ -192,7 +194,7 @@ def _parse_data(path: Path) -> dict:
         raise FileNotFoundError(f"OccamDataFile not found: {path}")
 
     with path.open("r", errors="replace") as fh:
-        lines = [l.rstrip("\n") for l in fh]
+        lines = [line.rstrip("\n") for line in fh]
 
     result: dict = {
         "format_str":  None,
@@ -310,24 +312,6 @@ def _parse_data(path: Path) -> dict:
 # -----------------------------------------------------------------------
 
 class OccamData(OccamBase):
-    """Occam2DMT data file container.
-
-    Attributes
-    ----------
-    format_str : str
-    title : str
-        Free-text title written into the file header.
-    sites : list[str]
-        Ordered station names.
-    offsets : np.ndarray, shape (n_sites,)
-        Horizontal profile offsets in metres.
-    frequencies : np.ndarray, shape (n_freq,)
-        Frequencies in Hz (descending order, as Occam expects).
-    data_blocks : np.ndarray, shape (n_data, 5)
-        Columns: site_index (1-based), freq_index (1-based), type_code,
-        value, error.
-    """
-
     def __init__(
         self,
         title: str = "pycsamt Occam2D data file",
@@ -355,33 +339,6 @@ class OccamData(OccamBase):
         title: str = "pycsamt Occam2D data file",
         **kwargs,
     ) -> "OccamData":
-        """Build an ``OccamData`` from an ``EDICollection`` or ``Sites``.
-
-        Pycsamt convention
-        ------------------
-        TE mode → Z_xy component: ``rho[:, 0, 1]``, ``phase[:, 0, 1]``
-        TM mode → Z_yx component: ``rho[:, 1, 0]``, ``phase[:, 1, 0]``
-
-        PhsTM is normalised to the first quadrant by adding 180° (Z_yx
-        phase is typically in the third quadrant for passive MT).
-
-        Parameters
-        ----------
-        source : Sites | EDICollection | iterable
-            Loaded EDI data.  Any object whose iteration yields site-like
-            items with ``.name``, ``.freq``, ``.rho``, ``.phase`` (and
-            optionally ``.coords`` for profile ordering) is accepted.
-        modes : list[str], optional
-            Subset of ``["TE", "TM"]``.  Default from ``config.modes``.
-        config : OccamConfig, optional
-            Run configuration (error floors, frequency band, …).
-        title : str
-            Written into the data file header.
-
-        Returns
-        -------
-        OccamData
-        """
         cfg   = config or OccamConfig()
         modes = modes or cfg.modes
 
@@ -511,24 +468,6 @@ class OccamData(OccamBase):
     # ------------------------------------------------------------------
     @classmethod
     def read(cls, path: PathLike, **kwargs) -> "OccamData":
-        """Parse an existing ``OccamDataFile.dat``.
-
-        Parameters
-        ----------
-        path : path-like
-            Path to the data file.
-
-        Returns
-        -------
-        OccamData
-
-        Raises
-        ------
-        FileNotFoundError
-            If *path* does not exist.
-        ValueError
-            If the Format tag is absent or wrong.
-        """
         p      = Path(path)
         parsed = _parse_data(p)
         obj    = cls(**kwargs)
@@ -553,10 +492,6 @@ class OccamData(OccamBase):
         return obj
 
     def write(self, path: PathLike) -> Path:
-        """Write the data file to *path* in OCCAM2MTDATA_1.0 format.
-
-        Returns the resolved path.
-        """
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
 
@@ -611,3 +546,278 @@ class OccamData(OccamBase):
         if not self.data_blocks.size:
             return np.array([], dtype=int)
         return np.unique(self.data_blocks[:, 2].astype(int))
+
+
+OccamData.__doc__ = rf"""
+Represent an Occam2D magnetotelluric data file.
+
+``OccamData`` stores the station list, profile offsets,
+global frequency table, data-type codes, datum values, and
+uncertainty values written to ``OccamDataFile.dat``. The
+object is both a container for parsed files and the product
+of EDI conversion by :meth:`from_edi`.
+
+The Occam2D data file uses one row for each datum. Apparent
+resistivity is stored in logarithmic form, while phase is
+stored in degrees:
+
+.. math::
+
+    d_\rho = \log_{{10}}(\rho_a),
+    \qquad
+    \sigma_d = \frac{{\sigma_\rho}}{{\ln(10)}} .
+
+For PyCSAMT EDI arrays, TE mode is taken from
+:math:`Z_{{xy}}` and TM mode is taken from :math:`Z_{{yx}}`.
+TM phase is shifted by :math:`180^\circ` so passive-MT
+:math:`Z_{{yx}}` phases are written in the first quadrant.
+
+Parameters
+----------
+{_params.data.title}
+{_params.common.config}
+{_params.common.verbose}
+{_params.common.logger}
+
+Attributes
+----------
+format_str : str
+    Occam format tag. The current writer uses
+    ``"OCCAM2MTDATA_1.0"``.
+title : str
+    Free-text title written to the data-file header.
+config : OccamConfig
+    Configuration used for default modes, frequency limits,
+    and error floors during EDI conversion.
+sites : list of str
+    Station names ordered along the profile. The same order is
+    used by mesh construction and all one-based site indices.
+offsets : numpy.ndarray of float, shape (n_sites,)
+    Station chainages in metres. Values are sorted from low to
+    high during :meth:`from_edi`.
+frequencies : numpy.ndarray of float, shape (n_frequencies,)
+    Global frequency table in hertz, sorted from high to low
+    as expected by Occam2D.
+data_blocks : numpy.ndarray of float, shape (n_data, 5)
+    Data rows with columns ``site_index``, ``freq_index``,
+    ``type_code``, ``datum``, and ``error``. Indices are
+    one-based because they are written directly to Occam
+    files.
+
+Notes
+-----
+Occam2D type codes distinguish both data kind and component.
+The common MT rows are ``1`` for ``RhoTE``, ``2`` for
+``PhsTE``, ``5`` for ``RhoTM``, and ``6`` for ``PhsTM``.
+Additional impedance and tipper codes are exposed through
+``DATA_TYPE_CODES`` for readers and future writers.
+
+See Also
+--------
+OccamConfig
+    Supplies default modes, frequency bounds, and error
+    floors.
+OccamMesh.from_data
+    Builds mesh geometry from station offsets in
+    ``OccamData``.
+OccamResponse
+    Reads modeled responses and residuals for the same rows.
+InputBuilder
+    Coordinates writing data, mesh, model, and startup files.
+
+Examples
+--------
+Build a data file from EDI sites and write it to disk:
+
+>>> from pycsamt.models.occam2d import OccamData
+>>> from pycsamt.site import Sites
+>>> sites = Sites.from_dir("edi")
+>>> data = OccamData.from_edi(sites, modes=["TE", "TM"])
+>>> data.write("occam_run/OccamDataFile.dat")
+
+Create a synthetic container for tests or scripted workflows:
+
+>>> import numpy as np
+>>> from pycsamt.models.occam2d import OccamData
+>>> data = OccamData(title="synthetic profile")
+>>> data.sites = ["S00", "S01"]
+>>> data.offsets = np.array([0.0, 1000.0])
+>>> data.frequencies = np.array([100.0, 10.0])
+>>> data.data_blocks = np.array([[1, 1, 1, 2.0, 0.05]])
+
+Read an existing Occam data file:
+
+>>> from pycsamt.models.occam2d import OccamData
+>>> data = OccamData.read("occam_run/OccamDataFile.dat")
+>>> data.n_sites, data.n_frequencies, data.n_data
+
+References
+----------
+.. [1] deGroot-Hedlin, C., and Constable, S.,
+   "Occam's inversion to generate smooth, two-dimensional
+   models from magnetotelluric data", Geophysics, 55(12),
+   1613-1624, 1990.
+.. [2] Constable, S. C., Parker, R. L., and Constable,
+   C. G., "Occam's inversion: A practical algorithm for
+   generating smooth models from electromagnetic sounding
+   data", Geophysics, 52(3), 289-300, 1987.
+"""
+
+OccamData.from_edi.__func__.__doc__ = rf"""
+Build an Occam data object from EDI-derived stations.
+
+This constructor normalizes the accepted input source to a
+list of site-like objects, estimates station chainages,
+merges all available frequencies into a common descending
+frequency table, applies frequency limits, and writes TE/TM
+apparent-resistivity and phase rows using Occam type codes.
+
+The EDI arrays are interpreted with the convention
+
+.. math::
+
+    \mathrm{{TE}} = Z_{{xy}},
+    \qquad
+    \mathrm{{TM}} = Z_{{yx}} .
+
+For each accepted apparent-resistivity value :math:`\rho_a`,
+the stored datum is :math:`\log_{{10}}(\rho_a)`. The
+relative resistivity floor is converted to log10 uncertainty
+by :math:`\sigma_d=\sigma_\rho/\ln(10)`. Phase rows use
+degree errors and the TM phase is shifted by
+:math:`180^\circ`.
+
+Parameters
+----------
+{_params.data.source}
+{_params.data.modes}
+{_params.common.config}
+{_params.data.title}
+**kwargs
+    Additional keyword arguments passed to the ``OccamData``
+    constructor. This is commonly used for ``verbose`` or
+    ``logger`` when progress messages are desired.
+
+Returns
+-------
+OccamData
+    Populated data object ready to be written as an
+    ``OCCAM2MTDATA_1.0`` file.
+
+Raises
+------
+ValueError
+    Raised when the source has no sites, no frequency arrays,
+    no frequencies remain after filtering, or no requested
+    mode is supported.
+
+See Also
+--------
+OccamConfig
+    Provides default modes, frequency bounds, and error
+    floors.
+OccamData.write
+    Serializes the returned object to ``OccamDataFile.dat``.
+OccamMesh.from_data
+    Uses the returned station offsets to build mesh geometry.
+
+Examples
+--------
+Build TE and TM rows from a site collection:
+
+>>> from pycsamt.models.occam2d import OccamData
+>>> from pycsamt.site import Sites
+>>> sites = Sites.from_dir("edi")
+>>> data = OccamData.from_edi(sites, modes=["TE", "TM"])
+
+Restrict the frequency range through ``OccamConfig``:
+
+>>> from pycsamt.models.occam2d import OccamConfig
+>>> from pycsamt.models.occam2d import OccamData
+>>> cfg = OccamConfig(freq_min=0.1, freq_max=1000.0)
+>>> data = OccamData.from_edi(sites, config=cfg)
+
+Use only TM data with stronger phase floor:
+
+>>> cfg = OccamConfig(modes=["TM"], error_floor_phase=1.0)
+>>> data = OccamData.from_edi(sites, config=cfg)
+
+References
+----------
+.. [1] deGroot-Hedlin, C., and Constable, S.,
+   "Occam's inversion to generate smooth, two-dimensional
+   models from magnetotelluric data", Geophysics, 55(12),
+   1613-1624, 1990.
+"""
+
+OccamData.read.__func__.__doc__ = rf"""
+Read an existing ``OCCAM2MTDATA_1.0`` file.
+
+The parser reads the format tag, title, station names,
+offsets, frequency table, and numeric data block. Site and
+frequency indices are kept in the one-based form used by
+Occam2D so a read-write round trip preserves the original
+file structure.
+
+Parameters
+----------
+{_params.common.path}
+**kwargs
+    Additional keyword arguments forwarded to the
+    ``OccamData`` constructor before parsed values are
+    attached. Use this for ``config``, ``verbose``, or
+    ``logger``.
+
+Returns
+-------
+OccamData
+    Parsed data-file container with arrays populated from
+    ``path``.
+
+Raises
+------
+FileNotFoundError
+    Raised when ``path`` does not exist.
+ValueError
+    Raised when the format tag is missing or not
+    ``"OCCAM2MTDATA_1.0"``.
+
+Examples
+--------
+>>> from pycsamt.models.occam2d import OccamData
+>>> data = OccamData.read("occam_run/OccamDataFile.dat")
+>>> data.type_codes
+"""
+
+OccamData.write.__doc__ = rf"""
+Write this object as an ``OCCAM2MTDATA_1.0`` file.
+
+The writer serializes the current title, station list,
+offsets, frequency table, and data rows using the Occam2D
+text layout.
+Parent directories are created before writing. The method does
+not modify the object, so it can be used repeatedly for
+round-trip checks or alternative run directories.
+
+Parameters
+----------
+{_params.common.path}
+
+Returns
+-------
+pathlib.Path
+    Path to the file that was written.
+
+See Also
+--------
+OccamData.read
+    Parses a file written by this method.
+InputBuilder.build
+    Calls this method as part of complete input generation.
+
+Examples
+--------
+>>> from pycsamt.models.occam2d import OccamData
+>>> data = OccamData.read("source/OccamDataFile.dat")
+>>> written = data.write("copy/OccamDataFile.dat")
+"""

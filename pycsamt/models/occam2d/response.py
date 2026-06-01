@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """OccamResponse — read Occam2D response (.resp) files.
@@ -31,7 +30,7 @@ Entry point
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 
@@ -81,23 +80,107 @@ def _parse_response(path: Path) -> np.ndarray:
 # -----------------------------------------------------------------------
 
 class OccamResponse(OccamBase):
-    """Occam2D response-file container.
+    r"""Represent an Occam2D response file.
+
+    ``OccamResponse`` stores the forward response written by
+    the Occam2D executable for one inversion iteration. The
+    response table has one row per datum and seven columns:
+    site index, frequency index, type code, error-floor value,
+    observed datum, modeled datum, and weighted residual.
+
+    The response residual is already weighted by the data
+    uncertainty used by Occam. The global RMS misfit is
+    therefore computed directly from the residual column:
+
+    .. math::
+
+        \mathrm{RMS}
+        =
+        \sqrt{
+            \frac{1}{N}
+            \sum_{i=1}^{N} r_i^2
+        },
+
+    where :math:`r_i` is the weighted residual for datum
+    :math:`i` and :math:`N` is the number of response rows.
+    Values near one are often consistent with data errors that
+    are neither under-estimated nor over-estimated [1]_.
+
+    Parameters
+    ----------
+    verbose : int or bool, default 0
+        Verbosity level inherited from :class:`OccamBase`.
+        Positive values enable progress messages through the
+        instance logger.
+    logger : logging.Logger, optional
+        Logger used for progress and diagnostic messages. If
+        omitted, a class-specific PyCSAMT logger is created.
 
     Attributes
     ----------
-    data : np.ndarray, shape (n_data, 7)
-        Full raw table from the ``.resp`` file.  Columns:
-        site_index, freq_index, type_code, error_floor,
-        observed, modeled, residual.
-    observed : np.ndarray, shape (n_data,)
-        Observed data values (column 4).
-    modeled : np.ndarray, shape (n_data,)
-        Forward-model predictions (column 5).
-    residuals : np.ndarray, shape (n_data,)
-        Weighted residuals (column 6).
+    data : numpy.ndarray of float, shape (n_data, 7)
+        Full raw table from the ``.resp`` file. Columns are
+        ``site_index``, ``freq_index``, ``type_code``,
+        ``error_floor``, ``observed``, ``modeled``, and
+        ``residual``.
+    observed : numpy.ndarray of float, shape (n_data,)
+        Observed data values from column 4. Values follow the
+        datum convention of ``OccamData``: log10 apparent
+        resistivity for rho rows and degrees for phase rows.
+    modeled : numpy.ndarray of float, shape (n_data,)
+        Forward-model predictions from column 5, ordered in
+        the same row order as ``observed``.
+    residuals : numpy.ndarray of float, shape (n_data,)
+        Weighted residuals from column 6. These values are the
+        residuals used to compute :attr:`rms`.
     rms : float
-        RMS of the weighted residuals,
-        ``sqrt(mean(residuals ** 2))``.
+        Root-mean-square weighted residual for all response
+        rows. Empty objects use ``0.0``.
+
+    Notes
+    -----
+    Response files do not include a header. The parser accepts
+    any line with seven numeric columns and skips non-numeric
+    lines. Site and frequency indices are one-based to match
+    the Occam data file.
+
+    See Also
+    --------
+    OccamData
+        Defines the observed data rows and type codes.
+    InversionResult
+        Loads the response for a selected iteration.
+    Plot2D.response
+        Visualizes observed and modeled response curves.
+
+    Examples
+    --------
+    Read a response file and inspect its global RMS:
+
+    >>> from pycsamt.models.occam2d import OccamResponse
+    >>> response = OccamResponse.read("occam_run/RESP17.resp")
+    >>> response.rms
+
+    Summarize misfit by station and frequency index:
+
+    >>> response.misfit_per_site()
+    >>> response.misfit_per_frequency()
+
+    Select phase rows by Occam type code:
+
+    >>> phase_tm = response.data[response.data[:, 2] == 6]
+    >>> phase_tm.shape[0]
+
+    References
+    ----------
+    .. [1] deGroot-Hedlin, C., and Constable, S.,
+       "Occam's inversion to generate smooth, two-dimensional
+       models from magnetotelluric data", Geophysics, 55(12),
+       1613-1624, 1990.
+    .. [2] Constable, S. C., Parker, R. L., and Constable,
+       C. G., "Occam's inversion: A practical algorithm for
+       generating smooth models from electromagnetic sounding
+       data", Geophysics, 52(3), 289-300, 1987.
     """
 
     def __init__(self, **kwargs):
@@ -115,27 +198,62 @@ class OccamResponse(OccamBase):
     def read(
         cls,
         path: PathLike,
-        data_fn: Optional[PathLike] = None,
+        data_fn: PathLike | None = None,
         **kwargs,
-    ) -> "OccamResponse":
-        """Parse a ``.resp`` file.
+    ) -> OccamResponse:
+        """Read an Occam2D response file.
+
+        The reader parses seven-column numeric rows from a
+        response file produced by the Occam2D executable. The
+        first three columns are stored in the raw table as
+        floats because the file itself is numeric text, but
+        convenience properties expose site, frequency, and
+        type codes as integers.
 
         Parameters
         ----------
         path : path-like
-            Path to the ``.resp`` file.
+            Path to the response file. The value may be a
+            string, :class:`pathlib.Path`, or any object
+            accepted by :class:`pathlib.Path`.
         data_fn : path-like, optional
-            Unused; reserved for future cross-checking with the data file.
+            Optional data-file path reserved for consistency
+            checks between observed data rows and response
+            rows. It is currently accepted for API stability
+            but is not used by the parser.
+        **kwargs
+            Additional keyword arguments forwarded to the
+            ``OccamResponse`` constructor. Use this for
+            ``verbose`` or ``logger``.
 
         Returns
         -------
         OccamResponse
+            Parsed response container with raw data, observed
+            values, modeled values, residuals, and global RMS
+            populated.
 
         Raises
         ------
         FileNotFoundError
+            Raised when ``path`` does not exist.
         ValueError
-            If no valid data rows can be parsed.
+            Raised when no valid seven-column numeric response
+            rows can be parsed.
+
+        See Also
+        --------
+        OccamResponse.misfit_per_site
+            Computes station-index RMS values from residuals.
+        OccamResponse.misfit_per_frequency
+            Computes frequency-index RMS values.
+
+        Examples
+        --------
+        >>> from pycsamt.models.occam2d import OccamResponse
+        >>> response = OccamResponse.read("RESP17.resp")
+        >>> response.n_data
+        >>> response.type_codes
         """
         p   = Path(path)
         arr = _parse_response(p)
@@ -182,7 +300,33 @@ class OccamResponse(OccamBase):
     # Derived per-site / per-frequency misfit
     # ------------------------------------------------------------------
     def misfit_per_site(self) -> dict[int, float]:
-        """Return per-site RMS misfit keyed by 1-based site index."""
+        r"""Return RMS misfit for each site index.
+
+        The returned values are computed from the weighted
+        residual column:
+
+        .. math::
+
+            \mathrm{RMS}_s =
+            \sqrt{
+                \frac{1}{N_s}
+                \sum_{i \in s} r_i^2
+            }.
+
+        Returns
+        -------
+        dict of int to float
+            Mapping from one-based site index to RMS weighted
+            residual. Empty response objects return an empty
+            dictionary.
+
+        Examples
+        --------
+        >>> from pycsamt.models.occam2d import OccamResponse
+        >>> response = OccamResponse.read("RESP17.resp")
+        >>> per_site = response.misfit_per_site()
+        >>> per_site[1]
+        """
         if not self.data.size:
             return {}
         result: dict[int, float] = {}
@@ -192,7 +336,33 @@ class OccamResponse(OccamBase):
         return result
 
     def misfit_per_frequency(self) -> dict[int, float]:
-        """Return per-frequency RMS misfit keyed by 1-based frequency index."""
+        r"""Return RMS misfit for each frequency index.
+
+        The returned values group residuals by Occam's
+        one-based frequency index:
+
+        .. math::
+
+            \mathrm{RMS}_f =
+            \sqrt{
+                \frac{1}{N_f}
+                \sum_{i \in f} r_i^2
+            }.
+
+        Returns
+        -------
+        dict of int to float
+            Mapping from one-based frequency index to RMS
+            weighted residual. Empty response objects return
+            an empty dictionary.
+
+        Examples
+        --------
+        >>> from pycsamt.models.occam2d import OccamResponse
+        >>> response = OccamResponse.read("RESP17.resp")
+        >>> per_freq = response.misfit_per_frequency()
+        >>> max(per_freq.values())
+        """
         if not self.data.size:
             return {}
         result: dict[int, float] = {}

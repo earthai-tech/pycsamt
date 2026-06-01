@@ -40,6 +40,7 @@ from typing import Union
 import numpy as np
 
 from .base import OccamBase
+from .doc import _occam_param_docs as _params
 
 PathLike = Union[str, Path]
 
@@ -49,7 +50,7 @@ _NAN = float("nan")
 
 
 def _parse_float(line: str) -> float:
-    """Return the float after the last '=' on *line*, or NaN on failure."""
+    """Return the float after the last equals sign."""
     try:
         return float(line.rsplit("=", 1)[1].strip())
     except (ValueError, IndexError):
@@ -57,33 +58,6 @@ def _parse_float(line: str) -> float:
 
 
 class OccamLog(OccamBase):
-    """Occam2D log-file container.
-
-    One entry per iteration in every array; arrays are aligned so that
-    ``iterations[i]``, ``rms[i]``, ``roughness[i]``, etc. all describe
-    the same iteration.
-
-    Attributes
-    ----------
-    iterations : np.ndarray[int], shape (n_iter,)
-        Iteration numbers (1-based, as written by Occam).
-    rms : np.ndarray[float], shape (n_iter,)
-        Achieved RMS misfit at the end of each iteration.
-        (The last "AND IS = …" value before ROUGHNESS IS for that block.)
-    roughness : np.ndarray[float], shape (n_iter,)
-        Roughness value (deGroot-Hedlin measure).  ``NaN`` for the last
-        iteration when the run ended without writing ROUGHNESS IS.
-    lagrange : np.ndarray[float], shape (n_iter,)
-        Lagrange multiplier (µ) at the accepted step of each iteration.
-        Sourced from "MINIMUM TOL FROM fminocc IS AT MU" or
-        "INTERCEPT IS AT MU".
-    stepsize : np.ndarray[float], shape (n_iter,)
-        Stepsize value written at the end of each iteration.  ``NaN``
-        if the run ended without writing STEPSIZE IS.
-    n_iter : int
-        Total number of parsed iterations.
-    """
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.iterations: np.ndarray = np.array([], dtype=int)
@@ -97,27 +71,6 @@ class OccamLog(OccamBase):
     # ------------------------------------------------------------------
     @classmethod
     def read(cls, path: PathLike, **kwargs) -> "OccamLog":
-        """Parse an Occam log file at *path*.
-
-        Reads the file line-by-line using a state machine:  a new
-        "** ITERATION **" line triggers saving the previous iteration's
-        accumulated values.  The final iteration is saved after the loop.
-
-        Parameters
-        ----------
-        path : path-like
-            Path to the Occam log file (e.g. ``LogFile.logfile``).
-
-        Returns
-        -------
-        OccamLog
-            Populated instance with one array entry per iteration.
-
-        Raises
-        ------
-        FileNotFoundError
-            If *path* does not exist.
-        """
         p = Path(path)
         if not p.exists():
             raise FileNotFoundError(f"Occam log file not found: {p}")
@@ -259,3 +212,144 @@ class OccamLog(OccamBase):
             f"(RMS {self.rms[self.best_iteration - 1]:.4f}) | "
             f"converged: {self.converged}"
         )
+
+
+OccamLog.__doc__ = rf"""
+Represent an Occam2D convergence log.
+
+``OccamLog`` parses the text log written by the Occam2D
+Fortran executable. The file records one block per inversion
+iteration, including accepted misfit, model roughness,
+Lagrange multiplier, and line-search step size. Parsed arrays
+align by index, so ``iterations[i]``, ``rms[i]``,
+``roughness[i]``, ``lagrange[i]``, and ``stepsize[i]``
+describe the same iteration.
+
+The main convergence statistic is the normalized RMS data
+misfit. If :math:`r_i` are weighted residuals for :math:`N`
+data, the reported quantity is commonly interpreted as
+
+.. math::
+
+    \phi_d =
+    \sqrt{{\frac{{1}}{{N}}\sum_{{i=1}}^N r_i^2}} .
+
+An inversion is usually considered well weighted when
+:math:`\phi_d \approx 1`. The practical target still depends
+on error estimates and modeling assumptions [1]_.
+
+Parameters
+----------
+{_params.common.verbose}
+{_params.common.logger}
+
+Attributes
+----------
+iterations : ndarray of int, shape (n_iter,)
+    One-based iteration numbers parsed from ``** ITERATION``
+    blocks. The values are preserved as written by Occam.
+rms : ndarray of float, shape (n_iter,)
+    Accepted normalized RMS misfit for each iteration. When
+    an iteration contains repeated search steps, the parser
+    keeps the last ``AND IS =`` value in that block.
+roughness : ndarray of float, shape (n_iter,)
+    Model roughness reported by Occam. The final entry may be
+    ``nan`` when a run stops before writing ``ROUGHNESS IS``.
+lagrange : ndarray of float, shape (n_iter,)
+    Accepted Lagrange multiplier, :math:`\mu`, for each
+    iteration. Values are read from ``MINIMUM TOL FROM`` or
+    ``INTERCEPT IS AT MU`` lines.
+stepsize : ndarray of float, shape (n_iter,)
+    Accepted step size for each iteration. The final entry may
+    be ``nan`` if convergence problems stop the run early.
+
+Notes
+-----
+The parser is intentionally tolerant of Occam2D log variants.
+It ignores intermediate ``TOFMU`` search lines and keeps the
+last accepted values in each iteration block. This behavior
+matches logs where divergence problems trigger repeated
+Lagrange searches before a step is accepted.
+
+See Also
+--------
+OccamRunner
+    Produces the log file by launching the executable.
+InversionResult
+    Loads logs with model, iteration, and response files.
+Plot2D.misfit
+    Visualizes RMS convergence from an ``OccamLog`` object.
+
+Examples
+--------
+Read a log and inspect the best iteration:
+
+>>> from pycsamt.models.occam2d import OccamLog
+>>> log = OccamLog.read("occam_run/LogFile.logfile")
+>>> log.best_iteration
+
+Check whether the inversion reached the common RMS target:
+
+>>> log.converged
+
+Print a compact report for scripts:
+
+>>> log.summary()
+
+References
+----------
+.. [1] Constable, S. C., Parker, R. L., and Constable,
+   C. G., "Occam's inversion: A practical algorithm for
+   generating smooth models from electromagnetic sounding
+   data", Geophysics, 52(3), 289-300, 1987.
+.. [2] deGroot-Hedlin, C., and Constable, S.,
+   "Occam's inversion to generate smooth, two-dimensional
+   models from magnetotelluric data", Geophysics, 55(12),
+   1613-1624, 1990.
+"""
+
+OccamLog.read.__func__.__doc__ = rf"""
+Read an Occam2D log file.
+
+The reader scans the file line by line with a small state
+machine. A ``** ITERATION`` line starts a new block and saves
+the previous block. Within each block, the last accepted RMS,
+roughness, Lagrange multiplier, and step size are retained.
+
+This is useful for logs where Occam cuts the step size or
+repeats the Lagrange search. Intermediate trial values are not
+stored because they do not describe the accepted model.
+
+Parameters
+----------
+{_params.common.path}
+**kwargs
+    Additional keyword arguments forwarded to the ``OccamLog``
+    constructor. Use this for ``verbose`` or ``logger`` when
+    integrating the parser into a larger workflow.
+
+Returns
+-------
+OccamLog
+    Parsed convergence-log container with one array entry per
+    completed iteration block.
+
+Raises
+------
+FileNotFoundError
+    Raised when ``path`` does not exist.
+
+See Also
+--------
+OccamLog.summary
+    Returns a short text summary of convergence.
+OccamLog.best_iteration
+    Reports the iteration with the lowest finite RMS misfit.
+
+Examples
+--------
+>>> from pycsamt.models.occam2d import OccamLog
+>>> log = OccamLog.read("occam_run/LogFile.logfile")
+>>> log.n_iter
+>>> log.rms[-1]
+"""

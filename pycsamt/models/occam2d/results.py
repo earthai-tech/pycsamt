@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """InversionResult — unified post-inversion access layer.
@@ -20,17 +19,17 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Union
 
 import numpy as np
 
-from .base       import OccamBase
-from .data       import OccamData
-from .log        import OccamLog
-from .mesh       import OccamMesh
-from .model      import OccamModel
-from .response   import OccamResponse
-from .startup    import OccamIter
+from .base import OccamBase
+from .data import OccamData
+from .log import OccamLog
+from .mesh import OccamMesh
+from .model import OccamModel
+from .response import OccamResponse
+from .startup import OccamIter
 from .validation import is_data_file, is_log_file, is_mesh_file, is_model_file
 
 PathLike = Union[str, Path]
@@ -44,7 +43,7 @@ def _iter_number(path: Path) -> int:
     return int(m.group()) if m else -1
 
 
-def _scan_one(wd: Path, predicate, glob_pat: str) -> Optional[Path]:
+def _scan_one(wd: Path, predicate, glob_pat: str) -> Path | None:
     """Return the first file matching *predicate* under *wd*."""
     for p in sorted(wd.glob(glob_pat)):
         if predicate(p):
@@ -63,9 +62,9 @@ def _build_rho_2d(
 ) -> np.ndarray:
     """Return a (n_zcells, n_xcells) array of log₁₀-resistivity.
 
-    The mapping follows the PW2D convention: each column code in a layer
-    gives the number of mesh x-cells that column spans; n_merge gives
-    the number of mesh z-rows the layer covers.
+    The PW2D mapping uses each column code as the number of
+    mesh x-cells spanned. ``n_merge`` gives the number of
+    mesh z-rows covered by a model layer.
     """
     n_z = mesh.n_zcells   # 31
     n_x = mesh.n_xcells   # 576
@@ -97,55 +96,148 @@ def _build_rho_2d(
 # -----------------------------------------------------------------------
 
 class InversionResult(OccamBase):
-    """Post-inversion result container.
+    r"""Load and summarize a completed Occam2D inversion run.
+
+    ``InversionResult`` is the post-processing access layer
+    for an Occam2D working directory. It scans the directory
+    for input and output files, loads the selected iteration,
+    matches the response file, reads the log, and builds a
+    two-dimensional log10-resistivity grid on the mesh.
+
+    The reconstruction maps the iteration parameter vector to
+    model layers and mesh cells. If :math:`m_j` is the
+    log10-resistivity value assigned to model parameter
+    :math:`j`, then the physical resistivity represented by a
+    cell in that parameter group is
+
+    .. math::
+
+        \rho_j = 10^{m_j}.
+
+    The stored :attr:`rho_2d` array keeps :math:`m_j`, not
+    :math:`\rho_j`, because Occam iteration files store
+    log10-resistivity values.
 
     Parameters
     ----------
-    workdir : path-like
-        Directory produced by an ``OccamRunner`` run.
-    iteration : int or None
-        Which iteration to load.  ``None`` → load the last (highest)
-        numbered ``.iter`` file.
+    workdir : path-like, default "."
+        Directory produced by an Occam2D run. It should
+        contain an ``Occam2DMesh`` file, an ``Occam2DModel``
+        file, a data file, a log file, ``.iter`` files, and
+        matching ``.resp`` files.
+    iteration : int or None, default None
+        Iteration number to load. If ``None``, the highest
+        numbered ``.iter`` file is selected. If the requested
+        iteration is unavailable, the loader falls back to the
+        last available iteration file.
+    verbose : int or bool, default 0
+        Verbosity level inherited from :class:`OccamBase`.
+        Positive values enable progress messages through the
+        instance logger.
+    logger : logging.Logger, optional
+        Logger used for progress and diagnostic messages. If
+        omitted, a class-specific PyCSAMT logger is created.
 
     Attributes
     ----------
-    workdir : Path
-    log : OccamLog
-    mesh : OccamMesh
-    model : OccamModel
-    best_iter : OccamIter
-        The selected (or last) iteration.
-    response : OccamResponse
-        Response matching the selected iteration.
-    iter_files : list[Path]
-        All ``.iter`` files found, sorted by iteration number.
-    resp_files : list[Path]
-        All ``.resp`` files found, sorted by iteration number.
-    rho_2d : np.ndarray, shape (n_zcells, n_xcells)
-        Log₁₀-resistivity on the mesh grid (NaN for cells outside
-        the model domain).
+    workdir : pathlib.Path
+        Directory scanned by the loader.
+    log : OccamLog or None
+        Parsed convergence log when a log file is found.
+    mesh : OccamMesh or None
+        Parsed finite-element mesh.
+    model : OccamModel or None
+        Parsed model-parameter definition.
+    best_iter : OccamIter or None
+        Selected iteration file. The name is kept for backward
+        compatibility; it may be the requested iteration or
+        last available iteration.
+    response : OccamResponse or None
+        Response file matching the selected iteration when
+        available. If no exact match exists, the loader falls
+        back to the last response file.
+    data : OccamData or None
+        Parsed observed-data file when available.
+    iter_files : list of pathlib.Path
+        All ``.iter`` files found in ``workdir``, sorted by
+        embedded iteration number.
+    resp_files : list of pathlib.Path
+        All ``.resp`` files found in ``workdir``, sorted by
+        embedded iteration number.
+    rho_2d : numpy.ndarray of float or None
+        Log10-resistivity grid with shape
+        ``(mesh.n_zcells, mesh.n_xcells)``. Cells outside the
+        model domain are stored as ``nan``.
+
+    Notes
+    -----
+    The loader is deliberately tolerant. Missing optional
+    files leave corresponding attributes as ``None`` instead
+    of failing immediately. A missing working directory still
+    raises :class:`NotADirectoryError` because there is no
+    useful scan to perform.
+
+    See Also
+    --------
+    OccamRunner
+        Runs the executable that produces result files.
+    OccamLog
+        Parses convergence information loaded here.
+    OccamResponse
+        Parses modeled responses and weighted residuals.
+    PlotModel
+        Visualizes the reconstructed model grid.
+
+    Examples
+    --------
+    Load the latest available iteration:
+
+    >>> from pycsamt.models.occam2d import InversionResult
+    >>> result = InversionResult(workdir="occam_run")
+    >>> result.final_rms
+
+    Load a specific iteration and export the model grid:
+
+    >>> result = InversionResult("occam_run", iteration=17)
+    >>> result.iter2dat("occam_run/final_model.dat")
+
+    Access loaded components directly:
+
+    >>> result.mesh.n_xcells
+    >>> result.response.rms
+
+    References
+    ----------
+    .. [1] deGroot-Hedlin, C., and Constable, S.,
+       "Occam's inversion to generate smooth, two-dimensional
+       models from magnetotelluric data", Geophysics, 55(12),
+       1613-1624, 1990.
+    .. [2] Constable, S. C., Parker, R. L., and Constable,
+       C. G., "Occam's inversion: A practical algorithm for
+       generating smooth models from electromagnetic sounding
+       data", Geophysics, 52(3), 289-300, 1987.
     """
 
     def __init__(
         self,
         workdir: PathLike = ".",
-        iteration: Optional[int] = None,
+        iteration: int | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.workdir    = Path(workdir)
         self._iteration = iteration
 
-        self.log:       Optional[OccamLog]      = None
-        self.mesh:      Optional[OccamMesh]     = None
-        self.model:     Optional[OccamModel]    = None
-        self.best_iter: Optional[OccamIter]     = None
-        self.response:  Optional[OccamResponse] = None
-        self.data:      Optional[OccamData]     = None
+        self.log:       OccamLog | None      = None
+        self.mesh:      OccamMesh | None     = None
+        self.model:     OccamModel | None    = None
+        self.best_iter: OccamIter | None     = None
+        self.response:  OccamResponse | None = None
+        self.data:      OccamData | None     = None
 
-        self.iter_files: List[Path] = []
-        self.resp_files: List[Path] = []
-        self.rho_2d:     Optional[np.ndarray] = None
+        self.iter_files: list[Path] = []
+        self.resp_files: list[Path] = []
+        self.rho_2d:     np.ndarray | None = None
 
         self._load()
 
@@ -253,28 +345,51 @@ class InversionResult(OccamBase):
     # iter2dat (Bo Yang's post-processing format)
     # ------------------------------------------------------------------
     def iter2dat(self, output_file: PathLike) -> Path:
-        """Write an ``iter2dat``-style ASCII model file.
+        r"""Write the selected model as a three-column ASCII file.
 
-        Columns: ``x_center  z_center  log10_rho``
+        The exported file contains one row for each finite
+        cell in :attr:`rho_2d`. Columns are ``x_center``,
+        ``z_center``, and ``log10_rho``. Horizontal
+        coordinates are centered around the profile midpoint
+        and depths are positive downward.
 
-        x is centred so the profile midpoint is at x = 0.
-        z is positive downward (depth in metres).
+        This format is useful for external plotting tools and
+        for workflows that expect Bo Yang-style ``iter2dat``
+        output. The values remain in log10-resistivity units:
+
+        .. math::
+
+            m = \log_{10}(\rho).
 
         Parameters
         ----------
         output_file : path-like
-            Output path for the ``.dat`` file.
+            Destination path for the exported ASCII model.
+            Parent directories are created when needed.
 
         Returns
         -------
-        Path
-            The written file path.
+        pathlib.Path
+            Path to the file that was written.
 
         Raises
         ------
         RuntimeError
-            If the result has not been fully loaded (missing mesh, model,
-            or iter file).
+            Raised when the result is not fully loaded and the
+            mesh or reconstructed grid is unavailable.
+
+        See Also
+        --------
+        InversionResult.rho_2d
+            Grid used to generate the exported values.
+        PlotModel
+            Visualizes the same reconstructed model grid.
+
+        Examples
+        --------
+        >>> from pycsamt.models.occam2d import InversionResult
+        >>> result = InversionResult("occam_run")
+        >>> out = result.iter2dat("occam_run/final_model.dat")
         """
         if self.rho_2d is None or self.mesh is None:
             raise RuntimeError(
@@ -316,22 +431,22 @@ class InversionResult(OccamBase):
     # Plotting (delegates to plot.py)
     # ------------------------------------------------------------------
     def plot_model(self, **kwargs):
-        """Plot the 2-D resistivity model (delegates to ``PlotModel``)."""
+        """Plot the reconstructed 2-D resistivity model."""
         from .plot import PlotModel
         return PlotModel(result=self, **kwargs).plot()
 
     def plot_response(self, **kwargs):
-        """Plot observed vs predicted response (delegates to ``PlotResponse``)."""
+        """Plot observed and modeled response curves."""
         from .plot import PlotResponse
         return PlotResponse(result=self, **kwargs).plot()
 
     def plot_misfit(self, **kwargs):
-        """Plot RMS misfit vs iteration (delegates to ``PlotMisfit``)."""
+        """Plot RMS misfit as a function of iteration."""
         from .plot import PlotMisfit
         return PlotMisfit(result=self, **kwargs).plot()
 
     def plot_pseudo(self, **kwargs):
-        """Plot pseudosection of observed data (delegates to ``PlotPseudo``)."""
+        """Plot an observed-data pseudosection."""
         from .plot import PlotPseudo
         return PlotPseudo(result=self, **kwargs).plot()
 
@@ -347,9 +462,11 @@ class InversionResult(OccamBase):
 
     @property
     def n_iterations(self) -> int:
+        """Number of iteration files discovered in ``workdir``."""
         return len(self.iter_files)
 
     def summary(self) -> str:
+        """Return a short text summary of the loaded inversion."""
         return (
             f"InversionResult\n"
             f"  workdir    : {self.workdir}\n"

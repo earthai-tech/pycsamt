@@ -48,6 +48,8 @@ from pycsamt.ai.processing import EMQCScorer
 from pycsamt.emtools import (
     plot_phase_tensor_psection,
     plot_phase_tensor_summary,
+    plot_ss_summary,
+    plot_ss_1d_curves,
 )
 
 # ─── constants ────────────────────────────────────────────────────────────────
@@ -560,10 +562,17 @@ def fig4_phase_tensor():
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Figure 5 – Static-shift correction (uses plot_pseudo_section API, two panels)
+# Figure 5 – Static-shift correction (emtools API: plot_ss_summary)
 # ═════════════════════════════════════════════════════════════════════════════
 
 def fig5_static_shift():
+    """
+    Static-shift correction figure.
+
+    Calls :func:`plot_ss_summary` (4-panel overview) and
+    :func:`plot_ss_1d_curves` (per-station 1-D curves) from
+    ``pycsamt.emtools``, both operating directly on pre-built log₁₀ ρ arrays.
+    """
     print("Generating Fig 5: static-shift correction …")
     data = load_profile_data("L26PLT")
     if data is None:
@@ -573,58 +582,50 @@ def fig5_static_shift():
         logRho = RNG.uniform(1.5, 3.2, (n_st, n_f))
         data   = dict(freqs=freqs, logRho=logRho, n_stations=n_st)
 
-    freqs    = data["freqs"]        # (n_f,) ascending
-    logRho   = data["logRho"]       # (n_st, n_f)
-    n_st     = data["n_stations"]
+    freqs  = data["freqs"]   # (n_f,) ascending Hz
+    logRho = data["logRho"]  # (n_st, n_f)
+    n_st   = data["n_stations"]
 
-    # synthetic station-dependent static shifts
-    RNG2   = np.random.default_rng(7)
-    shift  = RNG2.normal(0, 0.45, n_st)
+    # synthetic station-dependent static shifts (log10 scale)
+    RNG2           = np.random.default_rng(7)
+    shift          = RNG2.normal(0, 0.45, n_st)
     logRho_shifted = logRho + shift[:, np.newaxis]
 
-    # correct via spatial averaging at ~50 Hz
-    ref_idx = np.argmin(np.abs(freqs - 50))
-    col_before = logRho_shifted[:, ref_idx]
-    col_before = np.where(np.isfinite(col_before), col_before, np.nanmean(col_before))
-    s_hat = col_before - np.nanmean(col_before)
+    # correct via profile-mean spatial averaging at ~50 Hz
+    ref_idx        = np.argmin(np.abs(freqs - 50))
+    col_ref        = logRho_shifted[:, ref_idx]
+    col_ref        = np.where(np.isfinite(col_ref), col_ref, np.nanmean(col_ref))
+    s_hat          = col_ref - np.nanmean(col_ref)
     logRho_corrected = logRho_shifted - s_hat[:, np.newaxis]
 
-    # convert from log10 to linear so plot_pseudo_section applies log10 internally
-    rho_shifted   = np.maximum(10.0 ** logRho_shifted,   1e-3)   # (n_st, n_f)
-    rho_corrected = np.maximum(10.0 ** logRho_corrected, 1e-3)
+    station_labels = [f"S{i:02d}" for i in range(n_st)]
 
-    # shared colour limits (in log10 space)
-    all_log = np.concatenate([logRho_shifted.ravel(), logRho_corrected.ravel()])
-    all_log = all_log[np.isfinite(all_log)]
-    vmin_log = max(0.5, np.percentile(all_log, 2))
-    vmax_log = min(4.5, np.percentile(all_log, 98))
-
-    # create figure with two rows; pass pre-created axes to plot_pseudo_section
+    # ── 4-panel summary figure ─────────────────────────────────────────────
     with em_context():
-        fig, axes = plt.subplots(2, 1, figsize=(11, 8), sharex=True, sharey=True)
+        fig_sum = plot_ss_summary(
+            logRho_shifted,
+            logRho_corrected,
+            freqs=freqs,
+            station_labels=station_labels,
+            suptitle="Fig. 5 – Static-shift correction along L26PLT",
+            tick_label_rotation=55.0,
+        )
+    save(fig_sum, "fig5_static_shift")
 
-    stations = np.arange(n_st, dtype=float)
-    common = dict(
-        freqs=freqs,
-        stations=stations,
-        log_rho=True,
-        cmap="RdYlBu_r",
-        vmin=vmin_log,
-        vmax=vmax_log,
-        component="xy",
-    )
-    # plot_pseudo_section returns the figure (same object both calls)
-    plot_pseudo_section(rho_shifted.T,   ax=axes[0],
-                        title="(a) Before static-shift correction", **common)
-    plot_pseudo_section(rho_corrected.T, ax=axes[1],
-                        title="(b) After static-shift correction",  **common)
-
-    axes[-1].set_xlabel("Station index (L26PLT)", fontsize=9)
-    fig.suptitle(
-        "Fig. 5 – Apparent-resistivity pseudosection along L26PLT",
-        fontsize=10, fontweight="bold")
-    fig.tight_layout()
-    save(fig, "fig5_static_shift")
+    # ── per-station 1-D curves (representative subset) ─────────────────────
+    # show every 4th station to give a clean 2×4 grid
+    subset = list(range(0, n_st, max(1, n_st // 8)))[:8]
+    with em_context():
+        fig_1d = plot_ss_1d_curves(
+            logRho_shifted,
+            logRho_corrected,
+            freqs=freqs,
+            stations=subset,
+            station_labels=station_labels,
+            n_cols=4,
+            title="Fig. 5b – Per-station static-shift curves (L26PLT)",
+        )
+    save(fig_1d, "fig5b_static_shift_1d")
 
 
 # ═════════════════════════════════════════════════════════════════════════════

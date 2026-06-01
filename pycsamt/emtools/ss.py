@@ -807,6 +807,685 @@ def plot_ss_delta_profile(
     ax.set_xticklabels(labs, rotation=90)
     return ax
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Publication-quality static-shift comparison plots
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── internal rendering helpers ─────────────────────────────────────────────── #
+
+def _ss_sort_freqs(
+    freqs: np.ndarray, *arrays: np.ndarray
+) -> Tuple[np.ndarray, ...]:
+    """Return (sorted_freqs, sorted_arr1, …) all ascending in Hz."""
+    order = np.argsort(freqs)
+    return (freqs[order],) + tuple(a[:, order] for a in arrays)
+
+
+def _logT_edges(freqs: np.ndarray) -> np.ndarray:
+    """Cell boundary positions in log10-period space (sorted ascending Hz)."""
+    lT = np.log10(1.0 / np.asarray(freqs, float))
+    n  = lT.size
+    if n > 1:
+        d      = np.diff(lT)
+        e      = np.empty(n + 1)
+        e[0]   = lT[0]   - 0.5 * abs(d[0])
+        e[1:-1] = lT[:-1] + 0.5 * d
+        e[-1]  = lT[-1]  + 0.5 * abs(d[-1])
+    else:
+        e = np.array([lT[0] - 0.5, lT[0] + 0.5])
+    return e
+
+
+def _x_edges(x_centres: np.ndarray) -> np.ndarray:
+    n = x_centres.size
+    if n == 1:
+        return np.array([x_centres[0] - 0.5, x_centres[0] + 0.5])
+    e = np.empty(n + 1)
+    e[0]    = x_centres[0]  - 0.5 * (x_centres[1]    - x_centres[0])
+    e[1:-1] = 0.5 * (x_centres[:-1] + x_centres[1:])
+    e[-1]   = x_centres[-1] + 0.5 * (x_centres[-1]   - x_centres[-2])
+    return e
+
+
+def _pcolor_lT(
+    ax: plt.Axes,
+    data: np.ndarray,       # (n_f, n_st)
+    freqs: np.ndarray,
+    x_centres: np.ndarray,
+    vmin: float,
+    vmax: float,
+    *,
+    cmap: str = "RdYlBu_r",
+    period_up: bool = True,
+) -> Any:
+    """Render one panel with pcolormesh on a log10-period y-axis."""
+    ye = _logT_edges(freqs)
+    xe = _x_edges(x_centres)
+    X, Y = np.meshgrid(xe, ye)
+    qm = ax.pcolormesh(
+        X, Y, data,
+        cmap=cmap, vmin=vmin, vmax=vmax,
+        shading="flat", rasterized=True,
+    )
+    if period_up:
+        ax.invert_yaxis()
+    return qm
+
+
+def _set_lT_yticks(
+    ax: plt.Axes,
+    freqs: np.ndarray,
+    *,
+    n: int = 7,
+    fontsize: int = 7,
+    ylabel: str = "Period (s)",
+) -> None:
+    lT   = np.log10(1.0 / freqs)
+    pos  = np.linspace(lT.min(), lT.max(), n)
+    labs = []
+    for v in pos:
+        r = round(v)
+        labs.append(
+            f"$10^{{{r}}}$" if abs(r - v) < 0.04 else f"$10^{{{v:.1f}}}$"
+        )
+    ax.set_yticks(pos)
+    ax.set_yticklabels(labs, fontsize=fontsize)
+    if ylabel:
+        ax.set_ylabel(ylabel, fontsize=8)
+
+
+def _set_station_xticks(
+    ax: plt.Axes,
+    n_st: int,
+    labels: List[str],
+    *,
+    rotation: float = 45.0,
+    fontsize: int = 7,
+    xlabel: str = "",
+) -> None:
+    x  = np.arange(n_st, dtype=float)
+    ha = "right" if rotation > 20 else "center"
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=rotation, ha=ha, fontsize=fontsize)
+    ax.set_xlim(-0.5, n_st - 0.5)
+    if xlabel:
+        ax.set_xlabel(xlabel, fontsize=8)
+
+
+def _joint_clim(
+    *arrays: np.ndarray,
+    pct: Tuple[float, float] = (2.0, 98.0),
+    hard_min: float = 0.5,
+    hard_max: float = 4.5,
+) -> Tuple[float, float]:
+    flat = np.concatenate([a.ravel() for a in arrays])
+    fin  = flat[np.isfinite(flat)]
+    if not fin.size:
+        return hard_min, hard_max
+    return (
+        max(float(np.percentile(fin, pct[0])), hard_min),
+        min(float(np.percentile(fin, pct[1])), hard_max),
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+def plot_ss_comparison_psection(
+    logRho_before: np.ndarray,
+    logRho_after: np.ndarray,
+    *,
+    freqs: np.ndarray,
+    station_labels: Optional[List[str]] = None,
+    show_delta: bool = True,
+    cmap: str = "RdYlBu_r",
+    delta_cmap: str = "RdBu_r",
+    clim: Optional[Tuple[float, float]] = None,
+    clim_pct: Tuple[float, float] = (2.0, 98.0),
+    delta_vlim: Optional[float] = None,
+    delta_vlim_pct: float = 95.0,
+    period_up: bool = True,
+    title_before: str = "(a) Before static-shift correction",
+    title_after: str = "(b) After static-shift correction",
+    title_delta: str = r"(c) Correction amplitude $\Delta\log_{10}\rho$",
+    suptitle: str = "",
+    xlabel: str = "Station",
+    ylabel: str = "Period (s)",
+    n_yticks: int = 7,
+    colorbar_label: str = r"$\log_{10}\,\rho_a$ (Ω·m)",
+    delta_colorbar_label: str = r"$\Delta\log_{10}\rho$",
+    tick_label_rotation: float = 45.0,
+    tick_fontsize: int = 7,
+    figsize: Optional[Tuple[float, float]] = None,
+    axes: Optional[Any] = None,
+) -> plt.Figure:
+    """
+    Two- or three-panel pseudo-section comparison for static-shift correction.
+
+    The *before* and *after* panels share a colour scale so that the
+    station-dependent vertical offsets are directly visible.  The optional
+    third panel shows the pointwise difference
+    Δ log₁₀ ρ = after − before on a diverging scale, making the spatial
+    pattern of the correction explicit.
+
+    Parameters
+    ----------
+    logRho_before : ndarray, shape ``(n_st, n_f)``
+        Log₁₀ apparent resistivity *before* static-shift correction (Ω·m).
+    logRho_after : ndarray, shape ``(n_st, n_f)``
+        Log₁₀ apparent resistivity *after* static-shift correction (Ω·m).
+    freqs : ndarray, shape ``(n_f,)``
+        Frequency array in Hz.  Need not be sorted.
+    station_labels : list of str or None
+        X-axis tick labels.  Defaults to ``"0", "1", …``.
+    show_delta : bool, default ``True``
+        Append a third panel showing Δ log₁₀ ρ.
+    cmap : str, default ``"RdYlBu_r"``
+        Colormap for the before/after panels.
+    delta_cmap : str, default ``"RdBu_r"``
+        Diverging colormap for the Δ panel.
+    clim : (vmin, vmax) or None
+        Explicit colour limits (log₁₀ Ω·m) shared by the before/after panels.
+    clim_pct : (lo, hi), default ``(2.0, 98.0)``
+        Percentile bounds for automatic *clim*.
+    delta_vlim : float or None
+        Symmetric limit ``(−δ, +δ)`` for the Δ panel.  When ``None``,
+        derived from *delta_vlim_pct* of ``|Δ|``.
+    delta_vlim_pct : float, default ``95.0``
+    period_up : bool, default ``True``
+        Long period at the top of each panel (MT convention).
+    title_before, title_after, title_delta : str
+        Per-panel titles.  Pass ``""`` to suppress.
+    suptitle : str
+        Figure-level title.
+    xlabel, ylabel : str
+        Axis labels.
+    n_yticks : int, default ``7``
+        Number of log-period y-ticks.
+    colorbar_label, delta_colorbar_label : str
+    tick_label_rotation : float, default ``45.0``
+        Station tick rotation (degrees).
+    tick_fontsize : int, default ``7``
+    figsize : (w, h) or None
+        Override automatic size.
+    axes : sequence of Axes or None
+        Pre-created axes (length 2 without delta, 3 with).
+
+    Returns
+    -------
+    fig : :class:`matplotlib.figure.Figure`
+    """
+    logRho_before = np.asarray(logRho_before, dtype=float)
+    logRho_after  = np.asarray(logRho_after,  dtype=float)
+    freqs         = np.asarray(freqs, dtype=float).ravel()
+
+    n_st = logRho_before.shape[0]
+    freqs, logRho_before, logRho_after = _ss_sort_freqs(
+        freqs, logRho_before, logRho_after
+    )
+
+    if station_labels is None:
+        station_labels = [str(i) for i in range(n_st)]
+    x_centres = np.arange(n_st, dtype=float)
+
+    n_panels = 3 if show_delta else 2
+    if axes is None:
+        if figsize is None:
+            figsize = (11.0, 3.8 * n_panels)
+        fig, axes = plt.subplots(
+            n_panels, 1,
+            figsize=figsize,
+            sharex=True,
+            gridspec_kw={"hspace": 0.42},
+        )
+    else:
+        axes = list(axes)
+        fig  = axes[0].get_figure()
+
+    # ── shared colour limits ───────────────────────────────────────────────
+    if clim is None:
+        vmin, vmax = _joint_clim(logRho_before, logRho_after, pct=clim_pct)
+    else:
+        vmin, vmax = float(clim[0]), float(clim[1])
+
+    # ── before panel ──────────────────────────────────────────────────────
+    qm_b = _pcolor_lT(
+        axes[0], logRho_before.T, freqs, x_centres, vmin, vmax,
+        cmap=cmap, period_up=period_up,
+    )
+    if title_before:
+        axes[0].set_title(title_before, fontsize=9, fontweight="bold", pad=3)
+    _set_lT_yticks(axes[0], freqs, n=n_yticks,
+                   fontsize=tick_fontsize, ylabel=ylabel)
+
+    # ── after panel ───────────────────────────────────────────────────────
+    _pcolor_lT(
+        axes[1], logRho_after.T, freqs, x_centres, vmin, vmax,
+        cmap=cmap, period_up=period_up,
+    )
+    if title_after:
+        axes[1].set_title(title_after, fontsize=9, fontweight="bold", pad=3)
+    _set_lT_yticks(axes[1], freqs, n=n_yticks,
+                   fontsize=tick_fontsize, ylabel=ylabel)
+
+    # shared colorbar spanning the two main panels
+    cb_main = fig.colorbar(
+        qm_b,
+        ax=[axes[0], axes[1]],
+        fraction=0.018, pad=0.01, aspect=35,
+    )
+    cb_main.set_label(colorbar_label, fontsize=8)
+    cb_main.ax.tick_params(labelsize=7)
+
+    # ── delta panel ───────────────────────────────────────────────────────
+    if show_delta:
+        delta = logRho_after - logRho_before
+        fin_d = np.abs(delta)[np.isfinite(delta)]
+        if delta_vlim is None:
+            delta_vlim = (
+                float(np.percentile(fin_d, delta_vlim_pct))
+                if fin_d.size else 0.5
+            )
+        qm_d = _pcolor_lT(
+            axes[2], delta.T, freqs, x_centres,
+            -delta_vlim, delta_vlim,
+            cmap=delta_cmap, period_up=period_up,
+        )
+        if title_delta:
+            axes[2].set_title(title_delta, fontsize=9, fontweight="bold", pad=3)
+        _set_lT_yticks(axes[2], freqs, n=n_yticks,
+                       fontsize=tick_fontsize, ylabel=ylabel)
+        cb_d = fig.colorbar(
+            qm_d, ax=axes[2], fraction=0.018, pad=0.01, aspect=30,
+        )
+        cb_d.set_label(delta_colorbar_label, fontsize=8)
+        cb_d.ax.tick_params(labelsize=7)
+
+    # ── x-axis ticks (bottom panel; shared via sharex) ────────────────────
+    _set_station_xticks(
+        axes[-1], n_st, station_labels,
+        rotation=tick_label_rotation,
+        fontsize=tick_fontsize,
+        xlabel=xlabel,
+    )
+
+    if suptitle:
+        fig.suptitle(suptitle, fontsize=10, fontweight="bold", y=1.005)
+
+    return fig
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+def plot_ss_1d_curves(
+    logRho_before: np.ndarray,
+    logRho_after: np.ndarray,
+    *,
+    freqs: np.ndarray,
+    stations: Optional[Any] = None,
+    station_labels: Optional[List[str]] = None,
+    n_cols: int = 4,
+    max_stations: int = 16,
+    color_before: str = "#2c7bb6",
+    color_after: str = "#d7191c",
+    ls_before: str = "--",
+    ls_after: str = "-",
+    marker_before: str = "o",
+    marker_after: str = "s",
+    marker_size: float = 3.0,
+    lw: float = 1.2,
+    log_period: bool = True,
+    show_shift_annotation: bool = True,
+    annotation_fontsize: int = 7,
+    ylabel: str = r"$\log_{10}\,\rho_a$ (Ω·m)",
+    xlabel: str = "Period (s)",
+    figsize: Optional[Tuple[float, float]] = None,
+    title: str = "",
+    legend_loc: str = "best",
+    show_grid: bool = True,
+) -> plt.Figure:
+    """
+    Per-station 1-D apparent-resistivity curves: before and after correction.
+
+    Lays out a grid of subplots (one per selected station) each showing
+    the before/after sounding curves on a period x-axis.  A small annotation
+    reports the mean correction amplitude Δ per station, making it easy to
+    spot outliers.
+
+    Parameters
+    ----------
+    logRho_before : ndarray, shape ``(n_st, n_f)``
+    logRho_after  : ndarray, shape ``(n_st, n_f)``
+    freqs : ndarray, shape ``(n_f,)``  Hz.
+    stations : list of int, list of str, or None
+        Stations to display.  Integers are row indices into *logRho_before*.
+        Strings are matched against *station_labels*.  ``None`` → all
+        stations, capped at *max_stations*.
+    station_labels : list of str or None
+        Label for each row.  Defaults to ``"0", "1", …``.
+    n_cols : int, default ``4``
+        Subplot grid columns.
+    max_stations : int, default ``16``
+        Cap when *stations* is ``None``.
+    color_before : str, default ``"#2c7bb6"`` (blue)
+    color_after  : str, default ``"#d7191c"`` (red)
+    ls_before : str, default ``"--"``
+    ls_after  : str, default ``"-"``
+    marker_before, marker_after : str
+    marker_size : float, default ``3.0``
+    lw : float, default ``1.2``
+    log_period : bool, default ``True``
+        Log-scale period x-axis.
+    show_shift_annotation : bool, default ``True``
+        Print mean Δ log₁₀ ρ in the lower-right corner of each subplot.
+    annotation_fontsize : int, default ``7``
+    ylabel, xlabel : str
+    figsize : (w, h) or None
+    title : str
+        Figure-level title.
+    legend_loc : str, default ``"best"``
+        Legend location (first subplot only).
+    show_grid : bool, default ``True``
+
+    Returns
+    -------
+    fig : :class:`matplotlib.figure.Figure`
+    """
+    logRho_before = np.asarray(logRho_before, dtype=float)
+    logRho_after  = np.asarray(logRho_after,  dtype=float)
+    freqs         = np.asarray(freqs, dtype=float).ravel()
+    n_st_total    = logRho_before.shape[0]
+
+    if station_labels is None:
+        station_labels = [str(i) for i in range(n_st_total)]
+
+    # ── resolve station selection ─────────────────────────────────────────
+    if stations is None:
+        idx = list(range(min(n_st_total, max_stations)))
+    else:
+        idx = []
+        for s in stations:
+            if isinstance(s, (int, np.integer)):
+                if 0 <= int(s) < n_st_total:
+                    idx.append(int(s))
+            else:
+                try:
+                    idx.append(station_labels.index(str(s)))
+                except ValueError:
+                    pass
+        if not idx:
+            idx = list(range(min(n_st_total, max_stations)))
+
+    n_shown = len(idx)
+    n_rows  = max(1, int(np.ceil(n_shown / n_cols)))
+    if figsize is None:
+        figsize = (n_cols * 3.2, n_rows * 2.8)
+
+    fig, axes_grid = plt.subplots(
+        n_rows, n_cols,
+        figsize=figsize,
+        squeeze=False,
+    )
+    axes_flat = axes_grid.ravel()
+
+    # sort periods ascending for clean curves
+    order  = np.argsort(1.0 / freqs)
+    per_s  = (1.0 / freqs)[order]
+
+    for k, si in enumerate(idx):
+        ax = axes_flat[k]
+        rb = logRho_before[si][order]
+        ra = logRho_after[si][order]
+        fin = np.isfinite(rb) & np.isfinite(ra)
+
+        ax.plot(
+            per_s[fin], rb[fin],
+            color=color_before, ls=ls_before, lw=lw,
+            marker=marker_before, ms=marker_size,
+            label="before",
+        )
+        ax.plot(
+            per_s[fin], ra[fin],
+            color=color_after, ls=ls_after, lw=lw,
+            marker=marker_after, ms=marker_size,
+            label="after",
+        )
+
+        if log_period:
+            ax.set_xscale("log")
+
+        ax.set_title(station_labels[si], fontsize=8, fontweight="bold", pad=2)
+
+        if show_shift_annotation and np.any(fin):
+            delta_mean = float(np.nanmean(ra[fin] - rb[fin]))
+            sign = "+" if delta_mean >= 0 else ""
+            ax.text(
+                0.97, 0.04,
+                f"Δ={sign}{delta_mean:.2f}",
+                transform=ax.transAxes,
+                ha="right", va="bottom",
+                fontsize=annotation_fontsize,
+                color="#555555",
+                bbox=dict(fc="white", ec="none", alpha=0.7, pad=1.5),
+            )
+
+        if show_grid:
+            ax.grid(True, which="both", alpha=0.2, lw=0.5)
+
+        ax.tick_params(labelsize=7)
+        ax.set_xlabel(xlabel, fontsize=7)
+        ax.set_ylabel(ylabel, fontsize=7)
+
+        if k == 0:
+            ax.legend(loc=legend_loc, fontsize=7, framealpha=0.8)
+
+    for k in range(n_shown, len(axes_flat)):
+        axes_flat[k].set_visible(False)
+
+    if title:
+        fig.suptitle(title, fontsize=10, fontweight="bold", y=1.01)
+
+    fig.tight_layout()
+    return fig
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+def plot_ss_summary(
+    logRho_before: np.ndarray,
+    logRho_after: np.ndarray,
+    *,
+    freqs: np.ndarray,
+    station_labels: Optional[List[str]] = None,
+    cmap: str = "RdYlBu_r",
+    delta_cmap: str = "RdBu_r",
+    clim: Optional[Tuple[float, float]] = None,
+    clim_pct: Tuple[float, float] = (2.0, 98.0),
+    delta_vlim: Optional[float] = None,
+    delta_vlim_pct: float = 95.0,
+    period_up: bool = True,
+    n_yticks: int = 7,
+    tick_label_rotation: float = 45.0,
+    tick_fontsize: int = 7,
+    colorbar_label: str = r"$\log_{10}\,\rho_a$ (Ω·m)",
+    shift_bar_color: str = "#4c72b0",
+    shift_bar_neg_color: str = "#c44e52",
+    shift_robust: str = "median",
+    suptitle: str = "",
+    figsize: Optional[Tuple[float, float]] = None,
+) -> plt.Figure:
+    """
+    Four-panel summary figure for static-shift correction.
+
+    Layout::
+
+        ┌──────────────┬──────────────┐
+        │  (a) Before  │  (b) After   │  shared y-axis · shared colorbar
+        ├──────────────┴──────────────┤
+        │  (c) Δ log₁₀ ρ section     │  diverging colorbar
+        ├──────────────────────────── ┤
+        │  (d) Per-station shift bar  │  positive/negative coloured bars
+        └─────────────────────────────┘
+
+    Parameters
+    ----------
+    logRho_before : ndarray, shape ``(n_st, n_f)``
+    logRho_after  : ndarray, shape ``(n_st, n_f)``
+    freqs : ndarray, shape ``(n_f,)``  Hz.
+    station_labels : list of str or None
+        X-axis tick labels for all panels.
+    cmap : str, default ``"RdYlBu_r"``
+    delta_cmap : str, default ``"RdBu_r"``
+    clim, clim_pct : see :func:`plot_ss_comparison_psection`.
+    delta_vlim, delta_vlim_pct : see :func:`plot_ss_comparison_psection`.
+    period_up : bool, default ``True``
+    n_yticks : int, default ``7``
+    tick_label_rotation : float, default ``45.0``
+    tick_fontsize : int, default ``7``
+    colorbar_label : str
+    shift_bar_color : str
+        Bar colour for positive per-station shifts (default blue).
+    shift_bar_neg_color : str
+        Bar colour for negative shifts (default red).
+    shift_robust : ``"median"`` | ``"mean"``
+        Aggregation used to reduce per-frequency shifts to a scalar per
+        station for panel (d).
+    suptitle : str
+        Figure-level title.
+    figsize : (w, h) or None
+
+    Returns
+    -------
+    fig : :class:`matplotlib.figure.Figure`
+    """
+    logRho_before = np.asarray(logRho_before, dtype=float)
+    logRho_after  = np.asarray(logRho_after,  dtype=float)
+    freqs         = np.asarray(freqs, dtype=float).ravel()
+
+    n_st = logRho_before.shape[0]
+    freqs, logRho_before, logRho_after = _ss_sort_freqs(
+        freqs, logRho_before, logRho_after
+    )
+
+    if station_labels is None:
+        station_labels = [str(i) for i in range(n_st)]
+    x_centres = np.arange(n_st, dtype=float)
+
+    if figsize is None:
+        figsize = (13.0, 14.0)
+
+    fig = plt.figure(figsize=figsize)
+    gs  = fig.add_gridspec(
+        3, 2,
+        height_ratios=[1, 1, 0.55],
+        hspace=0.46,
+        wspace=0.20,
+    )
+    ax_before = fig.add_subplot(gs[0, 0])
+    ax_after  = fig.add_subplot(gs[0, 1], sharey=ax_before)
+    ax_delta  = fig.add_subplot(gs[1, :])
+    ax_bar    = fig.add_subplot(gs[2, :])
+
+    # ── colour limits ──────────────────────────────────────────────────────
+    if clim is None:
+        vmin, vmax = _joint_clim(logRho_before, logRho_after, pct=clim_pct)
+    else:
+        vmin, vmax = float(clim[0]), float(clim[1])
+
+    # ── (a) before ────────────────────────────────────────────────────────
+    qm_b = _pcolor_lT(
+        ax_before, logRho_before.T, freqs, x_centres, vmin, vmax,
+        cmap=cmap, period_up=period_up,
+    )
+    ax_before.set_title("(a) Before correction",
+                        fontsize=9, fontweight="bold", pad=3)
+    _set_lT_yticks(ax_before, freqs, n=n_yticks,
+                   fontsize=tick_fontsize, ylabel="Period (s)")
+    _set_station_xticks(
+        ax_before, n_st, station_labels,
+        rotation=tick_label_rotation, fontsize=tick_fontsize,
+        xlabel="Station",
+    )
+
+    # ── (b) after ─────────────────────────────────────────────────────────
+    _pcolor_lT(
+        ax_after, logRho_after.T, freqs, x_centres, vmin, vmax,
+        cmap=cmap, period_up=period_up,
+    )
+    ax_after.set_title("(b) After correction",
+                       fontsize=9, fontweight="bold", pad=3)
+    _set_lT_yticks(ax_after, freqs, n=n_yticks, fontsize=tick_fontsize, ylabel="")
+    ax_after.tick_params(axis="y", labelleft=False)
+    _set_station_xticks(
+        ax_after, n_st, station_labels,
+        rotation=tick_label_rotation, fontsize=tick_fontsize,
+        xlabel="Station",
+    )
+
+    # shared colorbar for (a)+(b)
+    cb_main = fig.colorbar(
+        qm_b, ax=[ax_before, ax_after], fraction=0.015, pad=0.01, aspect=35,
+    )
+    cb_main.set_label(colorbar_label, fontsize=8)
+    cb_main.ax.tick_params(labelsize=7)
+
+    # ── (c) delta section (full-width) ────────────────────────────────────
+    delta = logRho_after - logRho_before
+    fin_d = np.abs(delta)[np.isfinite(delta)]
+    if delta_vlim is None:
+        delta_vlim = float(np.percentile(fin_d, delta_vlim_pct)) if fin_d.size else 0.5
+    qm_d = _pcolor_lT(
+        ax_delta, delta.T, freqs, x_centres,
+        -delta_vlim, delta_vlim,
+        cmap=delta_cmap, period_up=period_up,
+    )
+    ax_delta.set_title(
+        r"(c) Correction amplitude  $\Delta\log_{10}\rho$ (after − before)",
+        fontsize=9, fontweight="bold", pad=3,
+    )
+    _set_lT_yticks(ax_delta, freqs, n=n_yticks,
+                   fontsize=tick_fontsize, ylabel="Period (s)")
+    _set_station_xticks(
+        ax_delta, n_st, station_labels,
+        rotation=tick_label_rotation, fontsize=tick_fontsize,
+        xlabel="Station",
+    )
+    cb_d = fig.colorbar(qm_d, ax=ax_delta, fraction=0.015, pad=0.01, aspect=30)
+    cb_d.set_label(r"$\Delta\log_{10}\rho$", fontsize=8)
+    cb_d.ax.tick_params(labelsize=7)
+
+    # ── (d) per-station shift bar chart ───────────────────────────────────
+    delta_per_st = np.where(np.isfinite(delta), delta, np.nan)
+    if shift_robust == "median":
+        shift_vals = np.nanmedian(delta_per_st, axis=1)
+    else:
+        shift_vals = np.nanmean(delta_per_st, axis=1)
+
+    bar_colors = [
+        shift_bar_color if v >= 0 else shift_bar_neg_color
+        for v in shift_vals
+    ]
+    ax_bar.bar(x_centres, shift_vals, color=bar_colors, width=0.75, alpha=0.85)
+    ax_bar.axhline(0.0, color="0.4", lw=0.8, ls="--")
+    ax_bar.set_title(
+        r"(d) Per-station shift  $\langle\Delta\log_{10}\rho\rangle$",
+        fontsize=9, fontweight="bold", pad=3,
+    )
+    ax_bar.set_ylabel(r"$\Delta\log_{10}\rho$ (dex)", fontsize=8)
+    ax_bar.grid(True, axis="y", alpha=0.25, lw=0.5)
+    ax_bar.tick_params(labelsize=tick_fontsize)
+    _set_station_xticks(
+        ax_bar, n_st, station_labels,
+        rotation=tick_label_rotation, fontsize=tick_fontsize,
+        xlabel="Station",
+    )
+
+    if suptitle:
+        fig.suptitle(suptitle, fontsize=11, fontweight="bold", y=1.005)
+
+    return fig
+
+
 # ------------------- one-shot QC wrappers (sites in) -------------------- #
 
 def _select_kwargs(kws: Dict[str, Any], allowed: set) -> Dict[str, Any]:
@@ -949,6 +1628,121 @@ def ss_qc_profile(
         ax=ax,
     )
     return (ax, S1) if return_sites else ax
+
+
+def ss_comparison_psection(
+    sites: Any,
+    *,
+    method: str = "ama",
+    return_sites: bool = False,
+    station_labels: Optional[List[str]] = None,
+    show_delta: bool = True,
+    cmap: str = "RdYlBu_r",
+    delta_cmap: str = "RdBu_r",
+    clim: Optional[Tuple[float, float]] = None,
+    clim_pct: Tuple[float, float] = (2.0, 98.0),
+    delta_vlim: Optional[float] = None,
+    delta_vlim_pct: float = 95.0,
+    period_up: bool = True,
+    suptitle: str = "",
+    tick_label_rotation: float = 45.0,
+    tick_fontsize: int = 7,
+    figsize: Optional[Tuple[float, float]] = None,
+    verbose: int = 0,
+    **corr: Any,
+) -> Any:
+    """
+    Correct *sites* for static shift and plot a comparison pseudo-section.
+
+    A convenience wrapper that combines :func:`~pycsamt.emtools.correct_ss_ama`
+    (or the chosen *method*) with :func:`plot_ss_comparison_psection`.
+
+    Parameters
+    ----------
+    sites : any
+        EDI paths, glob pattern, or :class:`~pycsamt.site.base.Sites`
+        accepted by :func:`~pycsamt.emtools.ensure_sites`.
+    method : ``"ama"`` | ``"loess"`` | ``"bilateral"`` | ``"refmedian"``
+        Static-shift estimator.
+    return_sites : bool, default ``False``
+        When ``True``, return ``(fig, corrected_sites)`` instead of *fig*.
+    **corr :
+        Forwarded to the correction estimator.
+
+    Returns
+    -------
+    fig : :class:`matplotlib.figure.Figure`
+        Or ``(fig, corrected_sites)`` when *return_sites* is ``True``.
+
+    See Also
+    --------
+    plot_ss_comparison_psection : Lower-level function that accepts pre-built
+        arrays directly.
+    """
+    S0 = ensure_sites(sites, recursive=True, strict=False, verbose=verbose)
+    S1 = _correct_sites(S0, method, **corr)
+
+    items0 = list(_iter_items(S0))
+    items1 = list(_iter_items(S1))
+
+    labels = [_name(e, k) for k, e in enumerate(items0)]
+    n_st   = len(labels)
+
+    # collect rho_det arrays from each site pair
+    all_f: set = set()
+    rho0_map: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
+    rho1_map: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
+
+    for k, (e0, e1) in enumerate(zip(items0, items1)):
+        _, z0, fr0 = _get_z_block(e0)
+        _, z1, fr1 = _get_z_block(e1)
+        if z0 is None:
+            continue
+        st = labels[k]
+        rho0_map[st] = (_rho_det_from_z(z0, fr0), fr0)
+        rho1_map[st] = (_rho_det_from_z(z1, fr1), fr1)
+        all_f.update(fr0.tolist())
+
+    if not all_f:
+        fig, ax = plt.subplots(figsize=(8, 3))
+        ax.text(0.5, 0.5, "No Z-tensor data found in sites",
+                ha="center", va="center")
+        return (fig, S1) if return_sites else fig
+
+    freqs_union = np.array(sorted(all_f))
+    n_f         = freqs_union.size
+    logRho_b    = np.full((n_st, n_f), np.nan)
+    logRho_a    = np.full((n_st, n_f), np.nan)
+
+    for k, st in enumerate(labels):
+        if st not in rho0_map:
+            continue
+        rho0, fr0 = rho0_map[st]
+        rho1, fr1 = rho1_map[st]
+        j0 = _nearest_idx(freqs_union, fr0)
+        j1 = _nearest_idx(freqs_union, fr1)
+        logRho_b[k, j0] = np.log10(np.maximum(rho0, 1e-24))
+        logRho_a[k, j1] = np.log10(np.maximum(rho1, 1e-24))
+
+    fig = plot_ss_comparison_psection(
+        logRho_b, logRho_a,
+        freqs=freqs_union,
+        station_labels=station_labels if station_labels is not None else labels,
+        show_delta=show_delta,
+        cmap=cmap,
+        delta_cmap=delta_cmap,
+        clim=clim,
+        clim_pct=clim_pct,
+        delta_vlim=delta_vlim,
+        delta_vlim_pct=delta_vlim_pct,
+        period_up=period_up,
+        suptitle=suptitle,
+        tick_label_rotation=tick_label_rotation,
+        tick_fontsize=tick_fontsize,
+        figsize=figsize,
+    )
+    return (fig, S1) if return_sites else fig
+
 
 # ---------------------- Static-shift radar (polar) ---------------------- #
 

@@ -200,6 +200,7 @@ from .tensor import (
     plot_dimensionality_psection,
     plot_phase_tensor_rose,
     plot_phase_tensor_map,
+    plot_phase_tensor_summary,
     phase_tensor_legend,
     plot_dimensionality_grid,
     plot_theta_stability_stripe,

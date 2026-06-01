@@ -1,13 +1,16 @@
 
-from __future__ import annotations 
+from __future__ import annotations
 
-from typing import Optional, Tuple, List, Any
+from typing import Dict, Optional, Tuple, List, Any
 import numpy as np
 
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 from matplotlib.patches import Ellipse
-from matplotlib import colors as mcolors
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 from pycsamt.site.base import Sites
@@ -485,81 +488,375 @@ def build_phase_tensor_table(
     return pd.concat(dfs, ignore_index=True)
 
 
+# ─── Plotting helpers ─────────────────────────────────────────────────────────
+
+# Human-readable labels for each c_by specifier
+_C_LABEL: Dict[str, str] = {
+    "skew":     "Skew β (°)",
+    "beta":     "Skew β (°)",
+    "alpha":    "α (°)",
+    "theta":    "Strike θ (°)",
+    "ellipt":   "Ellipticity",
+    "s1":       "φ_max (s.v.)",
+    "s2":       "φ_min (s.v.)",
+    "|skew|":   "|β| (°)",
+    "|beta|":   "|β| (°)",
+    "|theta|":  "|θ| (°)",
+    "|alpha|":  "|α| (°)",
+    "phi_mean": "Φ̄ = (φ_max+φ_min)/2",
+    "phi_max":  "φ_max (tan units)",
+    "phi_min":  "φ_min (tan units)",
+}
+
+# Symmetric c_by quantities (vmin = -vmax enforced by default)
+_SYMMETRIC_C: frozenset = frozenset(("skew", "beta", "alpha", "|skew|", "|beta|"))
+
+
+def _resolve_cvals(df: pd.DataFrame, c_by: str) -> Tuple[np.ndarray, str]:
+    """Return ``(colour_array, colorbar_label)`` for a *c_by* specifier."""
+    if c_by.startswith("|") and c_by.endswith("|"):
+        inner = c_by[1:-1]
+        col = (df[inner] if inner in df.columns else df["skew"]).to_numpy(float)
+        return np.abs(col), _C_LABEL.get(c_by, f"|{inner}|")
+    if c_by == "phi_mean":
+        return (0.5 * (df["s1"].to_numpy(float) + df["s2"].to_numpy(float)),
+                _C_LABEL["phi_mean"])
+    if c_by == "phi_max":
+        return df["s1"].to_numpy(float), _C_LABEL["phi_max"]
+    if c_by == "phi_min":
+        return df["s2"].to_numpy(float), _C_LABEL["phi_min"]
+    col_name = c_by if c_by in df.columns else "skew"
+    return df[col_name].to_numpy(float), _C_LABEL.get(c_by, c_by)
+
+
+def _attach_cbar(
+    ax: plt.Axes,
+    mappable,
+    label: str,
+    *,
+    size: str = "3%",
+    pad: float = 0.06,
+    labelsize: int = 9,
+    ticksize: int = 8,
+) -> None:
+    """Attach a right-side colorbar to *ax* via make_axes_locatable."""
+    div = make_axes_locatable(ax)
+    cax = div.append_axes("right", size=size, pad=pad)
+    cb = ax.get_figure().colorbar(mappable, cax=cax)
+    cb.set_label(label, fontsize=labelsize)
+    cb.ax.tick_params(labelsize=ticksize)
+
+
 # ------------------------------ plotting --------------------------------- #
 
 def plot_phase_tensor_psection(
     sites: Any,
     *,
+    # ── data selection ────────────────────────────────────────────────────
+    stations: Optional[List[str]] = None,
+    period_range: Optional[Tuple[float, float]] = None,
+    # ── y-axis ────────────────────────────────────────────────────────────
     axis_y: str = "logperiod",
-    scale: float = 0.12,
+    period_up: bool = True,
+    # ── ellipse sizing ────────────────────────────────────────────────────
+    scale: float = 0.85,
+    normalise_by: str = "cell",
+    s1_ref: Optional[float] = None,
+    # ── colour ────────────────────────────────────────────────────────────
     c_by: str = "skew",
-    figsize: Tuple[float, float] = (9.0, 5.0),
+    cmap: str = "RdBu_r",
+    clim: Optional[Tuple[float, float]] = None,
+    clim_pct: Tuple[float, float] = (5.0, 95.0),
+    symmetric_clim: bool = True,
+    # ── aesthetics ────────────────────────────────────────────────────────
+    edgecolor: str = "k",
+    linewidth: float = 0.2,
+    alpha: float = 0.92,
+    # ── overlays ─────────────────────────────────────────────────────────
+    skew_threshold: Optional[float] = 3.0,
+    mark_3d: bool = True,
+    ref_ellipse: bool = True,
+    # ── labels & layout ───────────────────────────────────────────────────
+    title: str = "",
+    xlabel: str = "",
+    ylabel: str = "",
+    tick_label_rotation: float = 45.0,
+    figsize: Tuple[float, float] = (10.0, 5.5),
+    # ── standard emtools ──────────────────────────────────────────────────
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
     ax: Optional[plt.Axes] = None,
 ) -> plt.Axes:
-    df = build_phase_tensor_table(
-        sites,
-        recursive=recursive,
-        on_dup=on_dup,
-        strict=strict,
-        verbose=verbose,
-    )
-    if df.empty:
-        if ax is None:
-            _, ax = plt.subplots(figsize=figsize)
-        ax.text(0.5, 0.5, "no phase tensor",
-                ha="center", va="center")
-        return ax
-    st_list = list(df["station"].unique())
-    st_map = {s: i for i, s in enumerate(st_list)}
-    x = df["station"].map(st_map).to_numpy()
-    if axis_y == "logperiod":
-        y = np.log10(df["period"].to_numpy())
-        ylab = "LogPeriod (s)"
+    """
+    Phase-tensor ellipse pseudo-section (Caldwell et al. 2004 style).
+
+    Each cell ``(station × period)`` is drawn as an ellipse whose shape,
+    orientation, and fill colour encode phase-tensor invariants:
+
+    * **major axis** ∝ φ_max  (s1 eigenvalue — mean phase level)
+    * **minor axis** ∝ φ_min  (s2 eigenvalue — minimum phase)
+    * **aspect ratio** = φ_min / φ_max (1 = isotropic / 1-D)
+    * **rotation** = θ (geoelectric strike, CCW from E)
+    * **fill colour** controlled by *c_by* (default: skew angle β)
+
+    Parameters
+    ----------
+    sites : any
+        EDI paths, glob pattern, :class:`~pycsamt.site.base.Sites`, or any
+        input accepted by :func:`~pycsamt.emtools.ensure_sites`.
+    stations : list of str or None
+        Restrict to a subset of station names.
+    period_range : (T_min, T_max) in seconds or None
+        Restrict the period range plotted.
+    axis_y : ``"logperiod"`` | ``"logfreq"``
+        Y-axis quantity.  ``"logperiod"`` is the MT convention.
+    period_up : bool, default ``True``
+        When ``True`` (MT convention) long period (low frequency) is at the
+        top of the figure; ``False`` flips the y-axis.
+    scale : float, default ``0.85``
+        Fraction of each cell occupied by the *reference* ellipse
+        (the one with s1 = s1_ref).  Values above 1 cause overlap.
+    normalise_by : ``"cell"`` | ``"unity"`` | ``"abs"``
+        Sizing strategy:
+
+        ``"cell"``
+            Sizes are normalised so the 90th-percentile s1 fills *scale*
+            of its cell.  Preserves relative size information.
+        ``"unity"``
+            s1_ref = 1.0 (tan 45° = 1-D half-space reference).  A 45°
+            phase tensor is drawn as a circle filling *scale* of its cell.
+        ``"abs"``
+            Raw: width = scale × s1, height = scale × s2 in data units
+            (legacy behaviour).
+    s1_ref : float or None
+        Override the reference s1 for ``"cell"`` and ``"unity"`` modes.
+    c_by : str, default ``"skew"``
+        Column name or derived quantity to map to fill colour.  Supported
+        values: ``"skew"``, ``"beta"``, ``"alpha"``, ``"theta"``,
+        ``"ellipt"``, ``"s1"``, ``"s2"``, ``"|skew|"``, ``"|beta|"``,
+        ``"|theta|"``, ``"phi_mean"``, ``"phi_max"``, ``"phi_min"``.
+    cmap : str, default ``"RdBu_r"``
+        Matplotlib colormap name.
+    clim : (vmin, vmax) or None
+        Explicit colour limits.  When ``None``, derived from *clim_pct*.
+    clim_pct : (lo, hi), default ``(5.0, 95.0)``
+        Percentile limits used when *clim* is ``None``.
+    symmetric_clim : bool, default ``True``
+        Enforce vmin = −vmax for skew-like quantities.
+    edgecolor : str, default ``"k"``
+        Ellipse border colour.  Set to ``"none"`` to suppress borders.
+    linewidth : float, default ``0.2``
+        Ellipse border width (pts).  3-D cells receive 3 × this width when
+        *mark_3d* is ``True``.
+    alpha : float, default ``0.92``
+        Ellipse fill opacity.
+    skew_threshold : float or None, default ``3.0``
+        |β| threshold (degrees) separating 1-D/2-D from 3-D structure.
+        Used to cap *clim* symmetrically when *clim* is ``None``, and to
+        highlight 3-D cells with a thicker border when *mark_3d* is ``True``.
+    mark_3d : bool, default ``True``
+        Draw a thicker border on ellipses where |β| > *skew_threshold*.
+    ref_ellipse : bool, default ``True``
+        Draw a labelled reference circle (φ_max = φ_min = s1_ref, β = 0°)
+        in the upper-right corner as a scale indicator.
+    title, xlabel, ylabel : str
+        Axes title and axis labels.  Sensible defaults are used when empty.
+    tick_label_rotation : float, default ``45.0``
+        Station-name tick rotation in degrees.
+    figsize : (width, height), default ``(10.0, 5.5)``
+        Figure size (ignored when *ax* is provided).
+    recursive, on_dup, strict, verbose : see :func:`ensure_sites`.
+    ax : :class:`~matplotlib.axes.Axes` or None
+        If provided, draw into this axes and return it; otherwise create a
+        new figure.
+
+    Returns
+    -------
+    ax : :class:`~matplotlib.axes.Axes`
+
+    See Also
+    --------
+    build_phase_tensor_table : Underlying data computation.
+    plot_phase_tensor_summary : 3-panel figure combining ellipses,
+        dimensionality, and skew distribution.
+    plot_phase_tensor_map : Geographic map view.
+    """
+    if isinstance(sites, pd.DataFrame):
+        df = sites
     else:
-        y = df["period"].to_numpy()
-        ylab = "Period (s)"
-    w = scale * df["s1"].to_numpy()
-    h = scale * df["s2"].to_numpy()
-    ang = df["theta"].to_numpy()
-    cval = df.get(c_by, df["skew"]).to_numpy()
+        df = build_phase_tensor_table(
+            sites,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
+
+    # ── data selection ────────────────────────────────────────────────────
+    if not df.empty and stations is not None:
+        df = df[df["station"].isin(stations)]
+    if not df.empty and period_range is not None:
+        lo, hi = float(period_range[0]), float(period_range[1])
+        df = df[(df["period"] >= lo) & (df["period"] <= hi)]
+
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
-    vmin = np.nanpercentile(cval, 5)
-    vmax = np.nanpercentile(cval, 95)
-    norm = plt.Normalize(vmin=vmin, vmax=vmax)
-    cmap = plt.get_cmap("coolwarm")
-    for xi, yi, wi, hi, ai, ci in zip(
-        x, y, w, h, ang, cval
-    ):
-        if not np.all(np.isfinite([xi, yi, wi, hi, ai, ci])):
+
+    if df.empty:
+        ax.text(0.5, 0.5, "no phase tensor data", ha="center", va="center",
+                transform=ax.transAxes)
+        return ax
+
+    # ── station ordering & y-axis ─────────────────────────────────────────
+    st_list = list(dict.fromkeys(df["station"].tolist()))   # preserve order
+    st_map: Dict[str, int] = {s: i for i, s in enumerate(st_list)}
+    n_st = len(st_list)
+
+    if axis_y == "logperiod":
+        df = df.copy()
+        df["_y"] = np.log10(df["period"].to_numpy(float))
+        ylab = ylabel or r"$\log_{10}(T)$ (s)"
+    else:
+        df = df.copy()
+        df["_y"] = np.log10(np.maximum(df["freq"].to_numpy(float), 1e-30))
+        ylab = ylabel or r"$\log_{10}(f)$ (Hz)"
+
+    # ── cell dimensions in data coordinates ───────────────────────────────
+    y_unique = np.unique(df["_y"].to_numpy(float))
+    cell_y = float(np.nanmedian(np.abs(np.diff(y_unique)))) if len(y_unique) > 1 else 1.0
+    cell_x = 1.0  # one station spacing
+
+    # ── ellipse-size normalisation reference ──────────────────────────────
+    s1_vals = df["s1"].to_numpy(float)
+    if normalise_by == "cell":
+        if s1_ref is not None:
+            ref = float(s1_ref)
+        else:
+            finite_s1 = s1_vals[np.isfinite(s1_vals)]
+            ref = float(np.nanpercentile(finite_s1, 90)) if len(finite_s1) else 1.0
+        ref = max(ref, 1e-9)
+    elif normalise_by == "unity":
+        ref = float(s1_ref) if s1_ref is not None else 1.0
+        ref = max(ref, 1e-9)
+    else:  # "abs" — legacy: w = scale × s1 in raw data units
+        ref = None
+
+    # ── colour values & limits ────────────────────────────────────────────
+    cvals, cbar_label = _resolve_cvals(df, c_by)
+    finite_c = cvals[np.isfinite(cvals)]
+
+    if clim is not None:
+        vmin, vmax = float(clim[0]), float(clim[1])
+    elif skew_threshold is not None and c_by in ("skew", "beta"):
+        vmin, vmax = -float(skew_threshold), float(skew_threshold)
+    else:
+        lo_pct, hi_pct = clim_pct
+        vmin = float(np.nanpercentile(finite_c, lo_pct)) if len(finite_c) else -1.0
+        vmax = float(np.nanpercentile(finite_c, hi_pct)) if len(finite_c) else  1.0
+        if symmetric_clim and c_by in _SYMMETRIC_C:
+            vlim = max(abs(vmin), abs(vmax))
+            vmin, vmax = -vlim, vlim
+
+    norm = Normalize(vmin=vmin, vmax=vmax)
+    cm   = plt.get_cmap(cmap)
+
+    # ── extract arrays for the drawing loop ───────────────────────────────
+    x_arr  = df["station"].map(st_map).to_numpy(float)
+    y_arr  = df["_y"].to_numpy(float)
+    s1_arr = df["s1"].to_numpy(float)
+    s2_arr = df["s2"].to_numpy(float)
+    th_arr = df["theta"].to_numpy(float)
+    # skew values for mark_3d (always needed even if c_by != "skew")
+    skew_arr = df["skew"].to_numpy(float) if "skew" in df.columns else np.zeros(len(df))
+
+    # ── draw ellipses ─────────────────────────────────────────────────────
+    for xi, yi, s1i, s2i, thi, ci, beti in zip(
+            x_arr, y_arr, s1_arr, s2_arr, th_arr, cvals, skew_arr):
+        if not np.all(np.isfinite([xi, yi, s1i, s2i, thi, ci])):
             continue
-        e = Ellipse(
+
+        if ref is not None:
+            w = min(scale * cell_x * s1i / ref, 0.99 * cell_x)
+            h = min(scale * cell_y * s2i / ref, 0.99 * cell_y)
+        else:
+            w = scale * s1i
+            h = scale * s2i
+
+        is_3d = (skew_threshold is not None and mark_3d
+                 and np.isfinite(beti) and abs(beti) > skew_threshold)
+        lw_i = linewidth * 3.0 if is_3d else linewidth
+
+        ax.add_patch(Ellipse(
             (xi, yi),
-            width=wi,
-            height=hi,
-            angle=ai,
-            fill=True,
-            lw=0.5,
-        )
-        e.set_facecolor(cmap(norm(ci)))
-        e.set_edgecolor("k")
-        ax.add_patch(e)
-    ax.set_xlim(-0.5, len(st_list) - 0.5)
-    ymin = np.nanmin(y) if np.isfinite(y).any() else 0.0
-    ymax = np.nanmax(y) if np.isfinite(y).any() else 1.0
-    pad = 0.02 * (ymax - ymin + 1e-9)
-    ax.set_ylim(ymin - pad, ymax + pad)
-    ax.set_xlabel("Station")
-    ax.set_ylabel(ylab)
-    ax.set_xticks(np.arange(len(st_list)))
-    ax.set_xticklabels(st_list, rotation=90)
-    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
-    cb = plt.colorbar(sm, ax=ax)
-    cb.set_label(c_by)
+            width=w, height=h, angle=thi,
+            facecolor=cm(norm(ci)),
+            edgecolor=edgecolor,
+            linewidth=lw_i,
+            alpha=alpha,
+            zorder=3,
+        ))
+
+    # ── axes limits and ticks ─────────────────────────────────────────────
+    ax.set_xlim(-0.6, n_st - 0.4)
+
+    y_all  = y_arr[np.isfinite(y_arr)]
+    y_lo   = float(np.nanmin(y_all)) if len(y_all) else 0.0
+    y_hi   = float(np.nanmax(y_all)) if len(y_all) else 1.0
+    margin = max(0.5 * cell_y, 0.02 * (y_hi - y_lo + 1e-9))
+
+    if period_up:
+        ax.set_ylim(y_lo - margin, y_hi + margin)  # long period at top ✓
+    else:
+        ax.set_ylim(y_hi + margin, y_lo - margin)  # short period at top
+
+    # x-ticks: station names
+    ax.set_xticks(np.arange(n_st))
+    ax.set_xticklabels(st_list, rotation=tick_label_rotation,
+                       ha="right", fontsize=8)
+
+    # y-ticks: integer log10 values
+    y_int = np.arange(int(np.floor(y_lo)), int(np.ceil(y_hi)) + 1)
+    ax.set_yticks(y_int)
+    ax.set_yticklabels([str(int(v)) for v in y_int], fontsize=8)
+
+    ax.set_xlabel(xlabel or "Station", fontsize=9)
+    ax.set_ylabel(ylab, fontsize=9)
+    if title:
+        ax.set_title(title, fontsize=10)
+    ax.grid(True, ls=":", lw=0.4, color="#cccccc", alpha=0.7, zorder=0)
+
+    # ── colorbar ─────────────────────────────────────────────────────────
+    sm = ScalarMappable(cmap=cm, norm=norm)
+    sm.set_array([])
+    _attach_cbar(ax, sm, cbar_label)
+
+    # ── optional overlays ─────────────────────────────────────────────────
+    # Annotation boxes: 1-D/2-D vs 3-D text
+    if skew_threshold is not None and c_by in ("skew", "beta"):
+        ax.text(0.02, 0.98, f"|β| < {skew_threshold:.0f}° → 1-D/2-D",
+                transform=ax.transAxes, fontsize=7.5, va="top",
+                color="#2166ac",
+                bbox=dict(fc="white", ec="none", alpha=0.75))
+        ax.text(0.02, 0.91, f"|β| ≥ {skew_threshold:.0f}° → 3-D",
+                transform=ax.transAxes, fontsize=7.5, va="top",
+                color="#b2182b",
+                bbox=dict(fc="white", ec="none", alpha=0.75))
+
+    # Reference ellipse (circle with s1 = s1_ref = "45° 1-D response")
+    if ref_ellipse and ref is not None:
+        rx = n_st - 1 - 0.05 * (n_st - 1)   # near right edge
+        ry = y_hi - 1.5 * cell_y             # near top
+        rw = scale * cell_x                  # reference circle width
+        rh = scale * cell_y                  # reference circle height
+        ax.add_patch(Ellipse(
+            (rx, ry), width=rw, height=rh, angle=0.0,
+            fill=False, edgecolor="k", linewidth=0.8, zorder=5,
+        ))
+        ax.text(rx, ry - rh * 0.6,
+                f"φ = s₁_ref", ha="center", va="top", fontsize=6.5)
+
     return ax
 
 
@@ -935,6 +1232,224 @@ def plot_phase_tensor_map(
     cb.set_label(c_by)
     return ax
 
+
+
+def plot_phase_tensor_summary(
+    sites: Any,
+    *,
+    stations: Optional[List[str]] = None,
+    period_range: Optional[Tuple[float, float]] = None,
+    scale: float = 0.85,
+    c_by: str = "skew",
+    cmap: str = "RdBu_r",
+    clim: Optional[Tuple[float, float]] = None,
+    skew_threshold: float = 3.0,
+    ellipt_threshold: float = 0.2,
+    figsize: Tuple[float, float] = (12.0, 9.0),
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> plt.Figure:
+    """
+    Three-panel phase-tensor summary figure.
+
+    Panels
+    ------
+    **(a)** Ellipse pseudo-section — the full :func:`plot_phase_tensor_psection`
+        with all cell-size normalisations.
+    **(b)** Dimensionality classification grid — 1-D (white), 2-D (grey),
+        3-D (red), derived from *skew_threshold* and *ellipt_threshold*.
+    **(c)** Skew–ellipticity density hexbin — joint distribution over all
+        ``(station, period)`` cells, with contours at 20 / 50 / 80 % of the
+        peak density.
+
+    Parameters
+    ----------
+    sites : any
+        Passed directly to :func:`build_phase_tensor_table`.
+    stations : list of str or None
+        Restrict to a station subset (applied to all panels).
+    period_range : (T_min, T_max) or None
+        Period window in seconds (applied to all panels).
+    scale : float, default ``0.85``
+        Passed to panel (a) — fraction of each cell to fill.
+    c_by : str, default ``"skew"``
+        Colour quantity for panel (a); see :func:`plot_phase_tensor_psection`.
+    cmap : str, default ``"RdBu_r"``
+        Colourmap for panel (a).
+    clim : (vmin, vmax) or None
+        Explicit colour limits for panel (a).
+    skew_threshold : float, default ``3.0``
+        |β| threshold (°) for 1-D/2-D vs 3-D in panels (a) and (b).
+    ellipt_threshold : float, default ``0.2``
+        Ellipticity threshold for 1-D vs 2-D in panel (b).
+    figsize : (width, height), default ``(12.0, 9.0)``
+    recursive, on_dup, strict, verbose : see :func:`ensure_sites`.
+
+    Returns
+    -------
+    fig : :class:`~matplotlib.figure.Figure`
+    """
+    df = build_phase_tensor_table(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+
+    # Apply filters once; pass the already-filtered data to sub-functions
+    if not df.empty and stations is not None:
+        df = df[df["station"].isin(stations)]
+    if not df.empty and period_range is not None:
+        lo, hi = float(period_range[0]), float(period_range[1])
+        df = df[(df["period"] >= lo) & (df["period"] <= hi)]
+
+    # ── layout: 2 rows × 2 cols; row-0 spans both columns ────────────────
+    import matplotlib.gridspec as gridspec
+    fig = plt.figure(figsize=figsize)
+    gs  = gridspec.GridSpec(
+        2, 2,
+        figure=fig,
+        height_ratios=[1.5, 1.0],
+        hspace=0.38, wspace=0.35,
+    )
+    ax_ell  = fig.add_subplot(gs[0, :])   # (a) full-width ellipse section
+    ax_dim  = fig.add_subplot(gs[1, 0])   # (b) dimensionality grid
+    ax_den  = fig.add_subplot(gs[1, 1])   # (c) skew-ellipticity density
+
+    # ── panel (a): ellipse pseudo-section ────────────────────────────────
+    if df.empty:
+        ax_ell.text(0.5, 0.5, "no phase tensor data",
+                    ha="center", va="center", transform=ax_ell.transAxes)
+    else:
+        plot_phase_tensor_psection(
+            df,                     # pass pre-filtered DataFrame directly
+            scale=scale,
+            c_by=c_by,
+            cmap=cmap,
+            clim=clim,
+            skew_threshold=skew_threshold,
+            mark_3d=True,
+            ref_ellipse=True,
+            title="(a) Phase-tensor ellipse pseudo-section",
+            recursive=False,
+            ax=ax_ell,
+        )
+
+    # ── panel (b): dimensionality grid ────────────────────────────────────
+    if df.empty:
+        ax_dim.text(0.5, 0.5, "no data", ha="center", va="center",
+                    transform=ax_dim.transAxes)
+    else:
+        _draw_dim_grid(df, ax_dim, skew_threshold=skew_threshold,
+                       ellipt_threshold=ellipt_threshold)
+        ax_dim.set_title("(b) Dimensionality (1-D/2-D/3-D)", fontsize=9)
+
+    # ── panel (c): skew–ellipticity density ───────────────────────────────
+    if df.empty:
+        ax_den.text(0.5, 0.5, "no data", ha="center", va="center",
+                    transform=ax_den.transAxes)
+    else:
+        _draw_skew_ellipt_density(df, ax_den, skew_threshold=skew_threshold,
+                                   ellipt_threshold=ellipt_threshold)
+        ax_den.set_title("(c) Skew–ellipticity distribution", fontsize=9)
+
+    return fig
+
+
+def _draw_dim_grid(
+    df: pd.DataFrame,
+    ax: plt.Axes,
+    *,
+    skew_threshold: float = 3.0,
+    ellipt_threshold: float = 0.2,
+) -> None:
+    """Internal helper: draw the dimensionality heatmap onto *ax*."""
+    df = df.copy()
+    df["_logp"] = np.log10(df["period"].to_numpy(float))
+    a = np.abs(df["skew"].to_numpy(float))
+    e = np.abs(df["ellipt"].to_numpy(float))
+    lab = np.full(len(df), 2, dtype=int)          # default: 3-D
+    lab[(a <= skew_threshold) & (e <= ellipt_threshold)] = 0   # 1-D
+    lab[(a <= skew_threshold) & (e  > ellipt_threshold)] = 1   # 2-D
+    df["_dim"] = lab
+
+    st_list = list(dict.fromkeys(df["station"].tolist()))
+    st_map  = {s: i for i, s in enumerate(st_list)}
+
+    piv = df.pivot_table(
+        index="_logp", columns="station", values="_dim", aggfunc="median",
+    )
+    piv = piv.reindex(columns=st_list).sort_index()
+    Z = piv.to_numpy(dtype=float).T          # (n_st, n_logp)
+
+    cmap_d = mcolors.ListedColormap(["#f7f7f7", "#969696", "#d6604d"])
+    bounds = [-0.5, 0.5, 1.5, 2.5]
+    norm_d = mcolors.BoundaryNorm(bounds, cmap_d.N)
+
+    ax.imshow(Z, aspect="auto", origin="lower", interpolation="nearest",
+              cmap=cmap_d, norm=norm_d)
+    ax.set_xlabel("Station", fontsize=8)
+    ax.set_ylabel(r"$\log_{10}(T)$ (s)", fontsize=8)
+    n_st = len(st_list)
+    ax.set_xticks(np.arange(n_st))
+    ax.set_xticklabels(st_list, rotation=45, ha="right", fontsize=7)
+    n_logp = Z.shape[1]
+    y_ticks = np.linspace(0, n_logp - 1, num=min(6, n_logp))
+    y_vals  = np.linspace(piv.index.min(), piv.index.max(), num=min(6, n_logp))
+    ax.set_yticks(y_ticks)
+    ax.set_yticklabels([f"{v:.1f}" for v in y_vals], fontsize=7)
+
+    from matplotlib.patches import Patch
+    ax.legend(
+        handles=[
+            Patch(fc="#f7f7f7", ec="k", lw=0.5, label="1-D"),
+            Patch(fc="#969696", ec="k", lw=0.5, label="2-D"),
+            Patch(fc="#d6604d", ec="k", lw=0.5, label="3-D"),
+        ],
+        fontsize=7, framealpha=0.9, loc="lower right",
+        title=f"|β|≤{skew_threshold:.0f}°,ε≤{ellipt_threshold:.2f}", title_fontsize=6,
+    )
+
+
+def _draw_skew_ellipt_density(
+    df: pd.DataFrame,
+    ax: plt.Axes,
+    *,
+    skew_threshold: float = 3.0,
+    ellipt_threshold: float = 0.2,
+    gridsize: int = 30,
+) -> None:
+    """Internal helper: draw |β|–ellipticity hexbin density onto *ax*."""
+    a = np.abs(df["skew"].to_numpy(float))
+    e = np.abs(df["ellipt"].to_numpy(float))
+    fin = np.isfinite(a) & np.isfinite(e)
+    if not fin.any():
+        ax.text(0.5, 0.5, "no data", ha="center", va="center",
+                transform=ax.transAxes)
+        return
+
+    ax.hexbin(a[fin], e[fin], gridsize=gridsize, mincnt=1,
+              cmap="YlOrRd", linewidths=0.0)
+    # contour at 20 / 50 / 80 % of peak density
+    nx = ny = gridsize
+    H, xe, ye = np.histogram2d(a[fin], e[fin], bins=[nx, ny])
+    if H.max() > 0:
+        Xc = 0.5 * (xe[1:] + xe[:-1])
+        Yc = 0.5 * (ye[1:] + ye[:-1])
+        levs = [H.max() * f for f in (0.20, 0.50, 0.80)]
+        ax.contour(Xc, Yc, H.T, levels=levs, colors="k", linewidths=0.6)
+
+    # threshold lines
+    ax.axvline(skew_threshold, color="#b2182b", lw=1.0, ls="--",
+               label=f"|β|={skew_threshold:.0f}°")
+    ax.axhline(ellipt_threshold, color="#2166ac", lw=1.0, ls="--",
+               label=f"ε={ellipt_threshold:.2f}")
+    ax.set_xlabel("|β| (°)", fontsize=8)
+    ax.set_ylabel("Ellipticity", fontsize=8)
+    ax.legend(fontsize=7, framealpha=0.9)
 
 
 def phase_tensor_legend(

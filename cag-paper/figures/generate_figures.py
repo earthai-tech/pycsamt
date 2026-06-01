@@ -22,6 +22,7 @@ import re
 import sys
 import glob
 import warnings
+from typing import Dict
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -45,6 +46,7 @@ from pycsamt.ai.plot import (
     plot_uncertainty_bands,
 )
 from pycsamt.ai.processing import EMQCScorer
+from pycsamt.ai.processing.plot import plot_qc_scores, plot_qc_summary
 from pycsamt.emtools import (
     plot_phase_tensor_psection,
     plot_phase_tensor_summary,
@@ -388,13 +390,22 @@ def fig2_survey_map():
 # ═════════════════════════════════════════════════════════════════════════════
 
 def fig3_qc_scores():
+    """
+    Per-station QC bar chart + 3-panel summary.
+
+    Calls :func:`~pycsamt.ai.processing.plot.plot_qc_scores` (bar chart) and
+    :func:`~pycsamt.ai.processing.plot.plot_qc_summary` (combined figure)
+    from ``pycsamt.ai.processing.plot``.
+    """
     print("Generating Fig 3: QC scores …")
 
     scorer = EMQCScorer(use_ml=False, snr_threshold=3.0, skew_threshold=0.3)
     scorer.fit(np.zeros((1, 5)))   # no-op for rule_only; marks scorer as fitted
 
-    # ── compute per-station median QC score from real EDI data ───────────────
-    profile_data = []   # [(prof, col, sc_array), ...]
+    # ── build per-profile score dict ─────────────────────────────────────────
+    profile_colors: Dict[str, str] = {}
+    scores_dict:    Dict[str, np.ndarray] = {}
+
     for prof, col in zip(PROFILES, PCOL):
         edis = sorted(glob.glob(os.path.join(DATADIR, prof, "*.edi")))
         n = len(edis) if edis else 25
@@ -403,54 +414,39 @@ def fig3_qc_scores():
             feat = _edi_to_qc_features(path)
             if feat is not None and len(feat) > 0:
                 sc[j] = float(np.nanmedian(scorer.transform(feat)))
-        # fall back to synthetic distribution if EDIs carry no impedance data
         if np.all(np.isnan(sc)):
             sc = np.clip(RNG.beta(6, 1.5, n) * 0.5 + RNG.uniform(0.3, 0.5, n),
                          0.05, 1.0)
             bad = RNG.choice(n, size=max(1, n // 8), replace=False)
             sc[bad] = RNG.uniform(0.05, 0.38, len(bad))
-        profile_data.append((prof, col, sc))
+        scores_dict[prof]    = sc
+        profile_colors[prof] = col
 
-    # ── draw bar chart using em_context for consistent style ─────────────────
-    with em_context():
-        fig, ax = plt.subplots(figsize=(10, 4))
-        offset = 0
-        for i, (prof, col, sc) in enumerate(profile_data):
-            n = len(sc)
-            idx = np.arange(offset, offset + n)
-            sc_plot = np.nan_to_num(sc, nan=0.5)
-            ax.bar(idx, sc_plot, color=col, width=0.8,
-                   edgecolor="none", alpha=0.85, zorder=2)
-            if i < len(PROFILES) - 1:
-                ax.axvline(offset + n - 0.5, color="gray",
-                           lw=0.6, ls="--", alpha=0.6)
-            ax.text(offset + n / 2 - 0.5, 1.02, prof, ha="center",
-                    va="bottom", fontsize=8, color=col, fontweight="bold")
-            offset += n
+    # ── Fig 3a: bar chart via plot_qc_scores ─────────────────────────────────
+    fig_bar, ax = plt.subplots(figsize=(11, 4.4))
+    plot_qc_scores(
+        scores_dict,
+        profile_colors=profile_colors,
+        score_threshold=scorer.score_threshold,
+        title="Fig. 3 – Per-station QC scores  (128-station WILLY dataset)",
+        xlabel="Station index (grouped by profile)",
+        tick_label_rotation=0.0,   # indices → no rotation needed
+        show_scatter=False,        # no per-freq data available in this path
+        show_zone_labels=True,
+        ax=ax,
+    )
+    fig_bar.tight_layout()
+    save(fig_bar, "fig3_qc_scores")
 
-        ax.axhline(scorer.score_threshold, color="#c0392b",
-                   lw=1.3, ls="--", zorder=3)
-        ax.axhspan(0, scorer.score_threshold, color="#fde8e8",
-                   alpha=0.3, zorder=0)
-
-        ax.set_xlim(-1, offset)
-        ax.set_ylim(0, 1.12)
-        ax.set_xlabel("Station index (grouped by profile)", fontsize=9)
-        ax.set_ylabel("QC score", fontsize=9)
-        ax.set_title(
-            "Fig. 3 – Per-station QC scores for the 128-station WILLY dataset",
-            fontsize=9, fontweight="bold")
-        ax.grid(True, axis="y", ls=":", lw=0.4, color="gray", alpha=0.5)
-
-        handles = [mpatches.Patch(fc=col, label=prof)
-                   for prof, col, _ in profile_data]
-        handles.append(plt.Line2D(
-            [], [], color="#c0392b", ls="--",
-            label=f"Review threshold ({scorer.score_threshold:.1f})"))
-        ax.legend(handles=handles, loc="lower right",
-                  fontsize=7.5, framealpha=0.9)
-        fig.tight_layout()
-    save(fig, "fig3_qc_scores")
+    # ── Fig 3b: 3-panel summary via plot_qc_summary ───────────────────────────
+    fig_sum = plot_qc_summary(
+        scores_dict,
+        profile_colors=profile_colors,
+        score_threshold=scorer.score_threshold,
+        show_scatter=False,
+        suptitle="Fig. 3b – QC score summary  (WILLY dataset, 5 profiles)",
+    )
+    save(fig_sum, "fig3b_qc_summary")
 
 
 # ═════════════════════════════════════════════════════════════════════════════

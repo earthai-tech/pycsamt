@@ -28,6 +28,12 @@ from .denoise import EMDenoiser, prepare_z_features
 from .qc import EMQCScorer
 from .anomaly import AnomalyDetector
 from .classify import DimensionalityClassifier
+from .plot import (
+    plot_qc_scores,
+    plot_qc_heatmap,
+    plot_qc_feature_heatmap,
+    plot_qc_summary,
+)
 
 __all__ = [
     "EMDenoiser",
@@ -35,4 +41,8 @@ __all__ = [
     "EMQCScorer",
     "AnomalyDetector",
     "DimensionalityClassifier",
+    "plot_qc_scores",
+    "plot_qc_heatmap",
+    "plot_qc_feature_heatmap",
+    "plot_qc_summary",
 ]

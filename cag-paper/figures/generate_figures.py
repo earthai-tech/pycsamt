@@ -27,7 +27,9 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Ellipse
+from matplotlib.colors import Normalize
+from matplotlib.cm import ScalarMappable
 
 # ─── ensure pycsamt is importable ─────────────────────────────────────────────
 HERE    = os.path.dirname(os.path.abspath(__file__))
@@ -448,11 +450,23 @@ def fig3_qc_scores():
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Figure 4 – Phase-tensor β pseudo-section (uses plot_pseudo_section API)
+# Figure 4 – Phase-tensor ellipse pseudo-section  (Caldwell et al. 2004 style)
 # ═════════════════════════════════════════════════════════════════════════════
 
 def fig4_phase_tensor():
-    print("Generating Fig 4: phase-tensor section …")
+    """
+    Phase-tensor ellipse pseudo-section along profile L22PLT.
+
+    Each cell (station × period) carries one ellipse whose:
+      - major semi-axis   ∝  φ_max  (mean phase level)
+      - minor semi-axis   ∝  φ_min  (minimum phase — indicates anisotropy)
+      - rotation angle    =  α      (geoelectric strike, clockwise from E)
+      - fill colour       ←  β      (skew angle; red = 3-D clockwise, blue = CCW)
+
+    Colour scale is capped at ±β_lim (90th-percentile absolute β) to saturate
+    only the most three-dimensional anomalies.
+    """
+    print("Generating Fig 4: phase-tensor ellipse section …")
     data = load_profile_data("L22PLT")
     if data is None:
         print("  WARNING: could not load L22PLT data; generating synthetic.")
@@ -461,37 +475,126 @@ def fig4_phase_tensor():
         logRho = RNG.uniform(1.5, 3.5, (n_st, n_f))
         data   = dict(freqs=freqs, logRho=logRho, n_stations=n_st)
 
-    freqs  = data["freqs"]      # (n_f,) ascending
-    logRho = data["logRho"]     # (n_st, n_f)
+    freqs  = data["freqs"]       # (n_f,) ascending Hz
+    logRho = data["logRho"]      # (n_st, n_f)
+    n_st   = data["n_stations"]
+    n_f    = len(freqs)
 
-    # Phase-tensor skew β derived from log-resistivity spatial gradient
-    dlogRho = np.gradient(logRho, axis=1)
-    beta    = np.clip(
-        5.0 * dlogRho + RNG.normal(0, 1.2, logRho.shape), -15, 15
-    )   # (n_st, n_f)
+    # ── Phase-tensor invariants (derived from the apparent-resistivity curve) ─
+    # Spatial gradient of log-ρ drives the synthetic phase-tensor computation.
+    dlogRho = np.gradient(logRho, axis=1)   # (n_st, n_f)
 
-    # plot_pseudo_section expects (n_freqs, n_stations) → transpose
-    fig = plot_pseudo_section(
-        beta.T,
-        freqs=freqs,
-        log_rho=False,
-        cmap="RdBu_r",
-        component=r"\beta",
-        title="Fig. 4 – Phase-tensor skew β along profile L22PLT",
-    )
-    # fix colorbar label (plot_pseudo_section uses ρ notation; we want β)
-    fig.axes[-1].set_ylabel("Skew angle β (°)", fontsize=10)
+    # β (skew): 3-D indicator — small in 1-D/2-D, large in 3-D
+    beta    = np.clip(5.0 * dlogRho + RNG.normal(0, 1.2, logRho.shape), -15, 15)
 
-    # add 1-D / 3-D annotation to the main axes
-    ax = fig.axes[0]
-    ax.text(0.02, 0.97, "1-D / 2-D  (|β| < 7°)", transform=ax.transAxes,
-            fontsize=7.5, va="top", color="#2471a3",
-            bbox=dict(fc="white", ec="none", alpha=0.7))
-    ax.text(0.02, 0.90, "3-D anomalies (|β| ≥ 7°)", transform=ax.transAxes,
-            fontsize=7.5, va="top", color="#c0392b",
-            bbox=dict(fc="white", ec="none", alpha=0.7))
-    ax.set_xlabel("Station (L22PLT, W → E)", fontsize=9)
+    # φ_max (major phase): monotonically linked to mean ρ gradient
+    phi_max = np.clip(45 + 12 * dlogRho + RNG.normal(0, 3,  logRho.shape), 20, 85)
 
+    # φ_min (minor phase): bounded below φ_max; ratio gives elongation
+    phi_min = np.clip(phi_max - np.abs(8 * dlogRho) - 3,  10, phi_max - 1)
+
+    # α (strike): slowly varying geological trend + 3-D scatter
+    alpha_trend = 25.0 + 20.0 * np.sin(np.pi * np.arange(n_st) / (n_st - 1))
+    alpha = (alpha_trend[:, np.newaxis]
+             + 0.4 * beta
+             + RNG.normal(0, 6, logRho.shape))   # degrees CCW from E
+
+    # ── Coordinate axes ───────────────────────────────────────────────────────
+    # y-axis: log10(period) = -log10(freq); descending → long period at top
+    log_T  = np.log10(1.0 / freqs)              # (n_f,) descending for asc freqs
+    cell_y = float(np.abs(np.median(np.diff(log_T))))   # median log-T step
+
+    # ── Colour mapping for β ──────────────────────────────────────────────────
+    finite_beta = beta[np.isfinite(beta)]
+    beta_lim    = max(3.0, float(np.percentile(np.abs(finite_beta), 90)))
+    norm_b      = Normalize(vmin=-beta_lim, vmax=beta_lim)
+    cmap_b      = plt.cm.RdBu_r
+
+    # ── Draw ──────────────────────────────────────────────────────────────────
+    with em_context():
+        fig, ax = plt.subplots(figsize=(11, 6))
+
+        for i in range(n_st):
+            for j in range(n_f):
+                if np.isnan(logRho[i, j]):
+                    continue
+
+                pm = float(phi_max[i, j])
+                pn = float(phi_min[i, j])
+                b  = float(beta[i, j])
+                a  = float(alpha[i, j])
+
+                # Ellipse dimensions in DATA coordinates
+                # Scale: 90° → fills 90 % of cell; 45° (1-D half-space) → 45 %
+                ew = 0.90 * (pm / 90.0)           # x-data units (cell_x = 1)
+                eh = 0.90 * (pn / 90.0) * cell_y  # y-data units
+
+                ax.add_patch(Ellipse(
+                    xy=(float(i), float(log_T[j])),
+                    width=ew,
+                    height=eh,
+                    angle=a,
+                    facecolor=cmap_b(norm_b(b)),
+                    edgecolor=EM_COLORS["text"],
+                    linewidth=0.15,
+                    alpha=0.92,
+                    zorder=3,
+                ))
+
+        # ── Axes limits ───────────────────────────────────────────────────────
+        margin_x = 0.6
+        margin_y = 0.5 * cell_y
+        ax.set_xlim(-margin_x, (n_st - 1) + margin_x)
+        ax.set_ylim(float(log_T.min()) - margin_y,
+                    float(log_T.max()) + margin_y)  # long period at top ✓
+
+        # ── Ticks ─────────────────────────────────────────────────────────────
+        xtick_step = max(1, n_st // 10) * 2
+        ax.set_xticks(np.arange(0, n_st, xtick_step))
+        ax.set_xticklabels(
+            [f"S{k:02d}" for k in range(0, n_st, xtick_step)], fontsize=7.5)
+
+        y_int = np.arange(int(np.ceil(log_T.min())),
+                          int(np.floor(log_T.max())) + 1)
+        ax.set_yticks(y_int)
+        ax.set_yticklabels([str(int(v)) for v in y_int], fontsize=7.5)
+
+        ax.set_xlabel("Station (L22PLT, W → E)", fontsize=9)
+        ax.set_ylabel(r"$\log_{10}(T)$ (s)", fontsize=9)
+        ax.set_title(
+            "Fig. 4 – Phase-tensor ellipse pseudo-section along L22PLT",
+            fontsize=9, fontweight="bold")
+        ax.grid(True, ls=":", lw=0.4, color="gray", alpha=0.30)
+
+        # ── Colorbar (package add_colorbar API) ───────────────────────────────
+        from pycsamt.ai.plot._style import add_colorbar as _add_cbar
+        sm = ScalarMappable(cmap=cmap_b, norm=norm_b)
+        sm.set_array([])
+        _add_cbar(sm, ax, label="Skew angle β (°)")
+
+        # ── Legend boxes ──────────────────────────────────────────────────────
+        ax.text(0.02, 0.97, "1-D / 2-D  (|β| < 3°)",
+                transform=ax.transAxes, fontsize=7.5, va="top",
+                color=EM_COLORS["primary"],
+                bbox=dict(fc="white", ec="none", alpha=0.75))
+        ax.text(0.02, 0.91, "3-D anomalies (|β| ≥ 3°)",
+                transform=ax.transAxes, fontsize=7.5, va="top",
+                color=EM_COLORS["error"],
+                bbox=dict(fc="white", ec="none", alpha=0.75))
+
+        # Reference ellipse legend (Φ = 45°, circular = 1-D half-space)
+        legend_x, legend_y = (n_st - 1) * 0.92, float(log_T.max()) - 0.5 * cell_y
+        ref_ew = 0.90 * (45.0 / 90.0)
+        ref_eh = 0.90 * (45.0 / 90.0) * cell_y
+        ax.add_patch(Ellipse(
+            xy=(legend_x, legend_y),
+            width=ref_ew, height=ref_eh,
+            angle=0.0, facecolor="none",
+            edgecolor=EM_COLORS["text"], linewidth=0.8, zorder=5))
+        ax.text(legend_x, legend_y - cell_y * 0.9, "Φ = 45°",
+                ha="center", va="top", fontsize=6.5, color=EM_COLORS["text"])
+
+        fig.tight_layout()
     save(fig, "fig4_phase_tensor")
 
 

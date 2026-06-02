@@ -11,9 +11,11 @@ from .inv3d import GCNInverter3D
 from .joint import JointInverter
 from .ensemble import EnsembleInverter
 from .calibration import ConformalPredictor, PosteriorCalibrator
+from .config import InversionConfig
 
 __all__ = [
     "EMInverter1D", "EMInverter2D", "GCNInverter3D",
     "JointInverter", "EnsembleInverter",
     "ConformalPredictor", "PosteriorCalibrator",
+    "InversionConfig",
 ]

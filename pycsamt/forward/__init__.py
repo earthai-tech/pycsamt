@@ -63,6 +63,9 @@ from .config import ForwardConfig
 from .grid2d import Grid2D, make_padding
 from .em2d import MT2DForward, ForwardResponse2D
 from .config2d import ForwardConfig2D
+from .grid3d import Grid3D
+from .em3d import MT3DForward, ForwardResponse3D
+from .config3d import ForwardConfig3D
 from .plot import (
     plot_response_1d,
     plot_model_1d,
@@ -98,9 +101,14 @@ __all__ = [
     # batch 3-D
     "generate_dataset_3d",
     "SurveyDataset3D",
+    # 3-D grid and solver
+    "Grid3D",
+    "MT3DForward",
+    "ForwardResponse3D",
     # configuration
     "ForwardConfig",
     "ForwardConfig2D",
+    "ForwardConfig3D",
     # plotting
     "plot_response_1d",
     "plot_model_1d",

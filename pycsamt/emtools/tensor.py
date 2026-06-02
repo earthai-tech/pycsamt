@@ -1383,7 +1383,9 @@ def _draw_dim_grid(
         index="_logp", columns="station", values="_dim", aggfunc="median",
     )
     piv = piv.reindex(columns=st_list).sort_index()
-    Z = piv.to_numpy(dtype=float).T          # (n_st, n_logp)
+    # piv has shape (n_logp, n_stations); do NOT transpose so that
+    # imshow maps x → stations and y → log-periods.
+    Z = piv.to_numpy(dtype=float)            # (n_logp, n_st)
 
     cmap_d = mcolors.ListedColormap(["#f7f7f7", "#969696", "#d6604d"])
     bounds = [-0.5, 0.5, 1.5, 2.5]
@@ -1396,7 +1398,7 @@ def _draw_dim_grid(
     n_st = len(st_list)
     ax.set_xticks(np.arange(n_st))
     ax.set_xticklabels(st_list, rotation=45, ha="right", fontsize=7)
-    n_logp = Z.shape[1]
+    n_logp = Z.shape[0]   # shape[0] = n_logp now that .T is removed
     y_ticks = np.linspace(0, n_logp - 1, num=min(6, n_logp))
     y_vals  = np.linspace(piv.index.min(), piv.index.max(), num=min(6, n_logp))
     ax.set_yticks(y_ticks)

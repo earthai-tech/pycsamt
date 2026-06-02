@@ -654,7 +654,9 @@ def plot_apparent_depth_psection(
         aggfunc=agg,
     )
     piv = piv.sort_index()
-    Zm = piv.to_numpy(dtype=float).T
+    # piv has shape (n_periods, n_stations); do NOT transpose so that
+    # imshow maps x → stations and y → periods.
+    Zm = piv.to_numpy(dtype=float)
     if log_color:
         Zplot = np.log10(np.maximum(Zm, 1e-3))
         cblab = "log10 depth (m)"
@@ -671,10 +673,10 @@ def plot_apparent_depth_psection(
     )
     ax.set_xlabel("station")
     ax.set_ylabel(ykey)
-    ax.set_xticks(np.arange(Zplot.shape[0]))
+    ax.set_xticks(np.arange(Zplot.shape[1]))   # shape[1] = n_stations
     ax.set_xticklabels(piv.columns, rotation=90)
-    yt = np.linspace(0, Zplot.shape[1] - 1,
-                     num=min(8, Zplot.shape[1]))
+    yt = np.linspace(0, Zplot.shape[0] - 1,
+                     num=min(8, Zplot.shape[0]))  # shape[0] = n_periods
     yv = np.linspace(piv.index.min(), piv.index.max(),
                      num=min(8, len(piv.index)))
     ax.set_yticks(yt)

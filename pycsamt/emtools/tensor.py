@@ -26,6 +26,7 @@ from ._core import (
     _apply_each
 )
 from ..api._rose_style import RoseStyle, resolve_rose_style, _UNSET
+from ..api.style import PYCSAMT_STYLE
 
 _BACKWARD_SINCE = "2.0.0"
 _BACKWARD_REMOVE = "2.17.0"
@@ -560,23 +561,23 @@ def plot_phase_tensor_psection(
     axis_y: str = "logperiod",
     period_up: bool = True,
     # ── ellipse sizing ────────────────────────────────────────────────────
-    scale: float = 0.85,
-    normalise_by: str = "cell",
+    scale          = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.scale
+    normalise_by   = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.normalise_by
     s1_ref: Optional[float] = None,
     # ── colour ────────────────────────────────────────────────────────────
-    c_by: str = "skew",
-    cmap: str = "RdBu_r",
+    c_by           = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.c_by
+    cmap           = _UNSET,   # default: auto from c_by via resolve_cmap()
     clim: Optional[Tuple[float, float]] = None,
-    clim_pct: Tuple[float, float] = (5.0, 95.0),
-    symmetric_clim: bool = True,
+    clim_pct       = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.clim_pct
+    symmetric_clim = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.resolve_symmetric_clim()
     # ── aesthetics ────────────────────────────────────────────────────────
-    edgecolor: str = "k",
-    linewidth: float = 0.2,
-    alpha: float = 0.92,
+    edgecolor      = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.edgecolor
+    linewidth      = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.linewidth
+    alpha          = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.alpha
     # ── overlays ─────────────────────────────────────────────────────────
-    skew_threshold: Optional[float] = 3.0,
-    mark_3d: bool = True,
-    ref_ellipse: bool = True,
+    skew_threshold = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
+    mark_3d        = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.mark_3d
+    ref_ellipse    = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.show_ref
     # ── labels & layout ───────────────────────────────────────────────────
     title: str = "",
     xlabel: str = "",
@@ -694,6 +695,21 @@ def plot_phase_tensor_psection(
             strict=strict,
             verbose=verbose,
         )
+
+    # ── resolve visual style from PYCSAMT_STYLE.pt_ellipse ──────────────
+    _es = PYCSAMT_STYLE.pt_ellipse
+    if scale          is _UNSET: scale          = _es.scale
+    if normalise_by   is _UNSET: normalise_by   = _es.normalise_by
+    if c_by           is _UNSET: c_by           = _es.c_by
+    if cmap           is _UNSET: cmap           = _es.copy(c_by=c_by).resolve_cmap()
+    if clim_pct       is _UNSET: clim_pct       = _es.clim_pct
+    if symmetric_clim is _UNSET: symmetric_clim = _es.copy(c_by=c_by).resolve_symmetric_clim()
+    if edgecolor      is _UNSET: edgecolor      = _es.edgecolor
+    if linewidth      is _UNSET: linewidth      = _es.linewidth
+    if alpha          is _UNSET: alpha          = _es.alpha
+    if skew_threshold is _UNSET: skew_threshold = _es.skew_threshold
+    if mark_3d        is _UNSET: mark_3d        = _es.mark_3d
+    if ref_ellipse    is _UNSET: ref_ellipse    = _es.show_ref
 
     # ── data selection ────────────────────────────────────────────────────
     if not df.empty and stations is not None:
@@ -1572,8 +1588,8 @@ def plot_phase_tensor_map(
     sites: Any,
     *,
     period: float = 10.0,
-    scale: float = 0.15,
-    c_by: str = "skew",
+    scale: float = 0.15,           # geographic scale — not from pt_ellipse
+    c_by           = _UNSET,       # default: PYCSAMT_STYLE.pt_ellipse.c_by
     figsize: Tuple[float, float] = (8.0, 6.0),
     recursive: bool = True,
     on_dup: str = "replace",
@@ -1581,6 +1597,10 @@ def plot_phase_tensor_map(
     verbose: int = 0,
     ax: Optional[plt.Axes] = None,
 ) -> plt.Axes:
+    # ── resolve visual style from PYCSAMT_STYLE.pt_ellipse ──────────────
+    _es = PYCSAMT_STYLE.pt_ellipse
+    if c_by is _UNSET: c_by = _es.c_by
+
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -1670,11 +1690,11 @@ def plot_phase_tensor_summary(
     *,
     stations: Optional[List[str]] = None,
     period_range: Optional[Tuple[float, float]] = None,
-    scale: float = 0.85,
-    c_by: str = "skew",
-    cmap: str = "RdBu_r",
+    scale          = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.scale
+    c_by           = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.c_by
+    cmap           = _UNSET,   # default: auto from c_by via resolve_cmap()
     clim: Optional[Tuple[float, float]] = None,
-    skew_threshold: float = 3.0,
+    skew_threshold = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
     ellipt_threshold: float = 0.2,
     figsize: Tuple[float, float] = (12.0, 9.0),
     recursive: bool = True,
@@ -1722,6 +1742,13 @@ def plot_phase_tensor_summary(
     -------
     fig : :class:`~matplotlib.figure.Figure`
     """
+    # ── resolve visual style from PYCSAMT_STYLE.pt_ellipse ──────────────
+    _es = PYCSAMT_STYLE.pt_ellipse
+    if scale          is _UNSET: scale          = _es.scale
+    if c_by           is _UNSET: c_by           = _es.c_by
+    if cmap           is _UNSET: cmap           = _es.copy(c_by=c_by).resolve_cmap()
+    if skew_threshold is _UNSET: skew_threshold = _es.skew_threshold
+
     df = build_phase_tensor_table(
         sites,
         recursive=recursive,

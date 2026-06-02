@@ -14,6 +14,8 @@ from ._core import (
     _name,
 )
 from .tensor import build_phase_tensor_table
+from ..api._rose_style import _UNSET
+from ..api.style import PYCSAMT_STYLE
 
 
 def _rho_det_from_z(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
@@ -741,9 +743,10 @@ def plot_ss_station_curves(
         ma = np.isfinite(ra)
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
+    _cs = PYCSAMT_STYLE.correction
     ax.set_xscale("log")
-    ax.plot(pb[mb], rb[mb], "o-", lw=1.4, label="before")
-    ax.plot(pa[ma], ra[ma], "s-", lw=1.4, label="after")
+    ax.plot(pb[mb], rb[mb], **_cs.before.plot_kwargs(ms=3.5))
+    ax.plot(pa[ma], ra[ma], **_cs.after.plot_kwargs(ms=3.5))
     ax.set_xlabel("Period (s)")
     ax.set_ylabel("ρ_det (Ω·m)")
     ax.set_title(str(station))
@@ -1126,14 +1129,14 @@ def plot_ss_1d_curves(
     station_labels: Optional[List[str]] = None,
     n_cols: int = 4,
     max_stations: int = 16,
-    color_before: str = "#2c7bb6",
-    color_after: str = "#d7191c",
-    ls_before: str = "--",
-    ls_after: str = "-",
-    marker_before: str = "o",
-    marker_after: str = "s",
-    marker_size: float = 3.0,
-    lw: float = 1.2,
+    color_before   = _UNSET,   # default: PYCSAMT_STYLE.correction.before.color
+    color_after    = _UNSET,   # default: PYCSAMT_STYLE.correction.after.color
+    ls_before      = _UNSET,   # default: PYCSAMT_STYLE.correction.before.ls
+    ls_after       = _UNSET,   # default: PYCSAMT_STYLE.correction.after.ls
+    marker_before  = _UNSET,   # default: PYCSAMT_STYLE.correction.before.marker
+    marker_after   = _UNSET,   # default: PYCSAMT_STYLE.correction.after.marker
+    marker_size    = _UNSET,   # default: PYCSAMT_STYLE.correction.before.ms
+    lw             = _UNSET,   # default: PYCSAMT_STYLE.correction.before.lw
     log_period: bool = True,
     show_shift_annotation: bool = True,
     annotation_fontsize: int = 7,
@@ -1191,6 +1194,17 @@ def plot_ss_1d_curves(
     -------
     fig : :class:`matplotlib.figure.Figure`
     """
+    # ── resolve visual style from PYCSAMT_STYLE.correction ───────────────
+    _cs = PYCSAMT_STYLE.correction
+    if color_before  is _UNSET: color_before  = _cs.before.color
+    if color_after   is _UNSET: color_after   = _cs.after.color
+    if ls_before     is _UNSET: ls_before     = _cs.before.ls
+    if ls_after      is _UNSET: ls_after      = _cs.after.ls
+    if marker_before is _UNSET: marker_before = _cs.before.marker
+    if marker_after  is _UNSET: marker_after  = _cs.after.marker
+    if marker_size   is _UNSET: marker_size   = _cs.before.ms
+    if lw            is _UNSET: lw            = _cs.before.lw
+
     logRho_before = np.asarray(logRho_before, dtype=float)
     logRho_after  = np.asarray(logRho_after,  dtype=float)
     freqs         = np.asarray(freqs, dtype=float).ravel()
@@ -1799,11 +1813,11 @@ def plot_ss_radar(
     radial: str = "log10rho",  # log10rho|rho
     theta_axis: str = "logperiod",  # logperiod|period|freq
     fill_between: bool = False,
-    colors: Tuple[str, str] = ("#1f77b4", "#d62728"),
-    marker: str = "o",
-    ms: float = 2.5,
-    lw: float = 1.2,
-    ls: str = "-",
+    colors         = _UNSET,   # default: (mt.xy.color, mt.yx.color)
+    marker         = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.marker
+    ms             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ms
+    lw             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.lw
+    ls             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ls
     figsize: Tuple[float, float] = (4.8, 4.8),
     recursive: bool = True,
     on_dup: str = "replace",
@@ -1812,6 +1826,14 @@ def plot_ss_radar(
     eps: float = 1e-24, 
     ax: Optional[plt.Axes] = None,
 ) -> plt.Axes:
+    # ── resolve visual style from PYCSAMT_STYLE.mt ───────────────────────
+    _mt = PYCSAMT_STYLE.mt
+    if colors is _UNSET: colors = (_mt.xy.color, _mt.yx.color)
+    if marker is _UNSET: marker = _mt.xy.marker
+    if ms     is _UNSET: ms     = _mt.xy.ms
+    if lw     is _UNSET: lw     = _mt.xy.lw
+    if ls     is _UNSET: ls     = _mt.xy.ls
+
     S = ensure_sites(
         sites, recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,

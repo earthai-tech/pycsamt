@@ -13,15 +13,29 @@ from ._core import (
 )
 
 from ..utils.plot import plot_errorbar
+from ..api._rose_style import _UNSET
+from ..api.style import PYCSAMT_STYLE
 
 
 # ------------------------------- helpers -------------------------------- #
 
+def _style_col() -> dict:
+    """Return component → color dict from the current PYCSAMT_STYLE.mt."""
+    mt = PYCSAMT_STYLE.mt
+    return {
+        "xy": mt.xy.color,
+        "yx": mt.yx.color,
+        "xx": mt.xx.color,
+        "yy": mt.yy.color,
+    }
+
+
+# legacy alias kept so that any direct caller outside this module still works
 _COL = {
-    "xy": "#1f77b4",  # blue
-    "yx": "#d62728",  # red
-    "xx": "#2ca02c",  # green
-    "yy": "#9467bd",  # purple
+    "xy": "#1f77b4",
+    "yx": "#d62728",
+    "xx": "#2ca02c",
+    "yy": "#9467bd",
 }
 
 _IDX = {"x": 0, "y": 1}
@@ -91,11 +105,11 @@ def plot_sites_panels(
     hspace: float = 0.08,
     height_ratio: Tuple[int, int] = (2, 1),
     figsize_scale: Tuple[float, float] = (2.6, 2.6),
-    colors: Optional[Dict[str, str]] = None,
-    marker: str = "o",
-    ms: float = 2.5,
-    lw: float = 1.2,
-    ls: str = "-",
+    colors: Optional[Dict[str, str]] = None,  # None → from PYCSAMT_STYLE.mt
+    marker         = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.marker
+    ms             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ms
+    lw             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.lw
+    ls             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ls
     show_error_bars: bool = True,
     show_legend: bool = False,
     title_fmt: str = "{station}",
@@ -107,6 +121,13 @@ def plot_sites_panels(
     strict: bool = False,
     verbose: int = 0,
 ):
+    # ── resolve visual style from PYCSAMT_STYLE.mt ───────────────────────
+    _mt = PYCSAMT_STYLE.mt
+    if marker is _UNSET: marker = _mt.xy.marker
+    if ms     is _UNSET: ms     = _mt.xy.ms
+    if lw     is _UNSET: lw     = _mt.xy.lw
+    if ls     is _UNSET: ls     = _mt.xy.ls
+
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -115,7 +136,7 @@ def plot_sites_panels(
         verbose=verbose,
     )
     comps = tuple(c.lower() for c in components)
-    cmap = {**_COL, **(colors or {})}
+    cmap = {**_style_col(), **(colors or {})}
     # gather stations
     items = []
     for i, ed in enumerate(_iter_items(S)):
@@ -277,11 +298,11 @@ def plot_sites_compare(
     hspace: float = 0.06,
     height_ratio: Tuple[int, int] = (2, 1),
     figsize_scale: Tuple[float, float] = (3.0, 3.0),
-    colors: Optional[Dict[str, str]] = None,
-    marker: str = "o",
-    ms: float = 2.5,
-    lw: float = 1.2,
-    ls: str = "-",
+    colors: Optional[Dict[str, str]] = None,  # None → from PYCSAMT_STYLE.mt
+    marker         = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.marker
+    ms             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ms
+    lw             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.lw
+    ls             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ls
     show_error_bars: bool = True,
     labels: Tuple[str, str] = ("raw", "after"),
     title_group_fmt: str = "{station}",
@@ -295,8 +316,15 @@ def plot_sites_compare(
     strict: bool = False,
     verbose: int = 0,
 ):
+    # ── resolve visual style from PYCSAMT_STYLE.mt ───────────────────────
+    _mt = PYCSAMT_STYLE.mt
+    if marker is _UNSET: marker = _mt.xy.marker
+    if ms     is _UNSET: ms     = _mt.xy.ms
+    if lw     is _UNSET: lw     = _mt.xy.lw
+    if ls     is _UNSET: ls     = _mt.xy.ls
+
     comps = tuple(c.lower() for c in components)
-    cmap = {**_COL, **(colors or {})}
+    cmap = {**_style_col(), **(colors or {})}
     pairs = _pair_by_station(sites, new_sites)
     if stations:
         keep = set(stations)
@@ -506,15 +534,15 @@ def plot_sites_fit_grid(
     group_hspace: float = 0.18,
     height_ratio: Tuple[int, int] = (2, 1),
     figsize_scale: Tuple[float, float] = (4.0, 3.0),
-    colors_meas: Optional[Dict[str, str]] = None,
-    color_fit_te: str = "#2ca02c",   # green
-    color_fit_tm: str = "#e377c2",   # magenta
-    marker: str = "o",
-    ms: float = 2.5,
-    lw: float = 1.4,
-    ls_meas: str = "-",
-    lw_fit: float = 2.0,
-    ls_fit: str = "-",
+    colors_meas: Optional[Dict[str, str]] = None,  # None → PYCSAMT_STYLE.mt
+    color_fit_te   = _UNSET,   # default: PYCSAMT_STYLE.mt.te.color
+    color_fit_tm   = _UNSET,   # default: PYCSAMT_STYLE.mt.tm.color
+    marker         = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.marker
+    ms             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ms
+    lw             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.lw
+    ls_meas        = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ls
+    lw_fit: float  = 2.0,
+    ls_fit: str    = "-",
     show_error_bars: bool = True,
     show_mode_legend: bool = True,
     title_group_fmt: str = "{station}",
@@ -526,8 +554,17 @@ def plot_sites_fit_grid(
     strict: bool = False,
     verbose: int = 0,
 ):
+    # ── resolve visual style from PYCSAMT_STYLE.mt ───────────────────────
+    _mt = PYCSAMT_STYLE.mt
+    if color_fit_te is _UNSET: color_fit_te = _mt.te.color
+    if color_fit_tm is _UNSET: color_fit_tm = _mt.tm.color
+    if marker       is _UNSET: marker       = _mt.xy.marker
+    if ms           is _UNSET: ms           = _mt.xy.ms
+    if lw           is _UNSET: lw           = _mt.xy.lw
+    if ls_meas      is _UNSET: ls_meas      = _mt.xy.ls
+
     comps = tuple(c.lower() for c in components)
-    cmap = {**_COL, **(colors_meas or {})}
+    cmap = {**_style_col(), **(colors_meas or {})}
     pairs = _pairs_meas_pred(sites, pred_sites)
     if stations:
         keep = set(stations)

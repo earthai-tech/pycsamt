@@ -900,7 +900,7 @@ def plot_phase_tensor_skewmap(
         aggfunc=agg,
     )
     piv = piv.sort_index()
-    Z = piv.to_numpy(dtype=float).T
+    Z = piv.to_numpy(dtype=float)        # (n_logp, n_st) — no transpose
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     im = ax.imshow(
@@ -1006,7 +1006,7 @@ def plot_ellipticity_psection(
         aggfunc=agg,
     )
     piv = piv.sort_index()
-    Z = piv.to_numpy(dtype=float).T
+    Z = piv.to_numpy(dtype=float)        # (n_logp, n_st) — no transpose
     im = ax.imshow(
         Z,
         aspect="auto",
@@ -1015,9 +1015,9 @@ def plot_ellipticity_psection(
     )
     ax.set_xlabel("Station")
     ax.set_ylabel("LogPeriod (s)")
-    ax.set_xticks(np.arange(Z.shape[0]))
+    ax.set_xticks(np.arange(Z.shape[1]))          # shape[1] = n_stations
     ax.set_xticklabels(piv.columns, rotation=90)
-    yt = np.linspace(0, Z.shape[1] - 1, num=min(8, Z.shape[1]))
+    yt = np.linspace(0, Z.shape[0] - 1, num=min(8, Z.shape[0]))  # shape[0] = n_logp
     yvals = np.linspace(piv.index.min(), piv.index.max(),
                         num=min(8, len(piv.index)))
     ax.set_yticks(yt)
@@ -1069,7 +1069,7 @@ def plot_dimensionality_psection(
         aggfunc="median",
     )
     piv = piv.sort_index()
-    Z = piv.to_numpy(dtype=float).T
+    Z = piv.to_numpy(dtype=float)        # (n_logp, n_st) — no transpose
     im = ax.imshow(
         Z,
         aspect="auto",
@@ -1078,9 +1078,9 @@ def plot_dimensionality_psection(
     )
     ax.set_xlabel("Station")
     ax.set_ylabel("LogPeriod (s)")
-    ax.set_xticks(np.arange(Z.shape[0]))
+    ax.set_xticks(np.arange(Z.shape[1]))          # shape[1] = n_stations
     ax.set_xticklabels(piv.columns, rotation=90)
-    yt = np.linspace(0, Z.shape[1] - 1, num=min(8, Z.shape[1]))
+    yt = np.linspace(0, Z.shape[0] - 1, num=min(8, Z.shape[0]))  # shape[0] = n_logp
     yvals = np.linspace(piv.index.min(), piv.index.max(),
                         num=min(8, len(piv.index)))
     ax.set_yticks(yt)
@@ -1957,7 +1957,7 @@ def plot_dimensionality_grid(
         aggfunc="median",
     )
     piv = piv.sort_index()
-    Z = piv.to_numpy(dtype=float).T
+    Z = piv.to_numpy(dtype=float)        # (n_logp, n_st) — no transpose
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     im = ax.imshow(
@@ -1970,7 +1970,7 @@ def plot_dimensionality_grid(
     ax.set_ylabel("LogPeriod (s)")
     ax.set_xticks(np.arange(len(piv.columns)))
     ax.set_xticklabels(piv.columns, rotation=90)
-    yt = np.linspace(0, Z.shape[1] - 1, num=min(8, Z.shape[1]))
+    yt = np.linspace(0, Z.shape[0] - 1, num=min(8, Z.shape[0]))  # shape[0] = n_logp
     yv = np.linspace(piv.index.min(), piv.index.max(),
                      num=min(8, len(piv.index)))
     ax.set_yticks(yt)

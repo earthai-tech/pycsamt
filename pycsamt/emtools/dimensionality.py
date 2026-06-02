@@ -642,8 +642,10 @@ def plot_dim_confidence_grid(
         values="conf",
         aggfunc="median",
     ).reindex(index=piv_d.index, columns=piv_d.columns)
-    D = piv_d.to_numpy(dtype=float).T
-    C = piv_c.to_numpy(dtype=float).T
+    # piv_d / piv_c have shape (n_logp, n_stations); no transpose so that
+    # imshow maps x → stations, y → log-periods.
+    D = piv_d.to_numpy(dtype=float)
+    C = piv_c.to_numpy(dtype=float)
     # map classes to colors; alpha from confidence
     pal = {
         0: (0.20, 0.60, 0.20),
@@ -668,9 +670,9 @@ def plot_dim_confidence_grid(
     )
     ax.set_xlabel("Station")
     ax.set_ylabel("LogPeriod (s)")
-    ax.set_xticks(np.arange(D.shape[0]))
+    ax.set_xticks(np.arange(D.shape[1]))          # shape[1] = n_stations
     ax.set_xticklabels(piv_d.columns, rotation=90)
-    yt = np.linspace(0, D.shape[1] - 1, num=min(8, D.shape[1]))
+    yt = np.linspace(0, D.shape[0] - 1, num=min(8, D.shape[0]))  # shape[0] = n_logp
     yv = np.linspace(piv_d.index.min(), piv_d.index.max(),
                      num=min(8, len(piv_d.index)))
     ax.set_yticks(yt)

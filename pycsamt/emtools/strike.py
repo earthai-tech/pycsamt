@@ -1126,6 +1126,11 @@ def plot_strike_mapsticks(
             continue
         lat = getattr(ed, "lat", None) or getattr(ed, "latitude", None)
         lon = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
+        if (lat is None or lon is None):
+            _head = getattr(getattr(ed, "edi", None), "sections", {}).get("head")
+            if _head is not None:
+                lat = lat or getattr(_head, "lat", None)
+                lon = lon or getattr(_head, "long", None) or getattr(_head, "lon", None)
         if lat is None or lon is None:
             continue
         a = float(row["ang"].iloc[0]) % 180.0

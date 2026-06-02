@@ -58,8 +58,8 @@ from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple
 
 import numpy as np
 
-# ── Import RoseStyle from emtools (single source of truth) ────────────────────
-from pycsamt.emtools._rose_style import (
+# ── RoseStyle lives here in api — no cross-package import needed ──────────────
+from ._rose_style import (
     RoseStyle,
     resolve_rose_style,
     _PRESETS as _ROSE_PRESETS,
@@ -414,7 +414,7 @@ class PyCSAMTStyle:
 
     Holds three style sub-objects:
 
-    * :attr:`rose` — :class:`~pycsamt.emtools._rose_style.RoseStyle`
+    * :attr:`rose` — :class:`~pycsamt.api._rose_style.RoseStyle`
     * :attr:`multiline` — :class:`MultilineStyle`
     * :attr:`mt` — :class:`MTComponentStyle`
 

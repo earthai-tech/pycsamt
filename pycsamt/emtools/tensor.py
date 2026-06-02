@@ -25,7 +25,7 @@ from ._core import (
     _get_z_block,
     _apply_each
 )
-from ._rose_style import RoseStyle, resolve_rose_style, _UNSET
+from ..api._rose_style import RoseStyle, resolve_rose_style, _UNSET
 
 _BACKWARD_SINCE = "2.0.0"
 _BACKWARD_REMOVE = "2.17.0"

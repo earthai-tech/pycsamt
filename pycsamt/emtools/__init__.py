@@ -7,8 +7,8 @@ organised by workflow stage.
 """
 from __future__ import annotations
 
-# ─── Rose diagram style system ────────────────────────────────────────────────
-from ._rose_style import RoseStyle, resolve_rose_style
+# ─── Rose diagram style system (canonical: pycsamt.api._rose_style) ──────────
+from ..api._rose_style import RoseStyle, resolve_rose_style
 
 # ─── Input helpers ────────────────────────────────────────────────────────────
 from ._core import ensure_sites

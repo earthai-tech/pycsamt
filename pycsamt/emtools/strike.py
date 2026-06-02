@@ -22,7 +22,7 @@ from ._core import (
 )
 from ..site import edit as _edit
 from .tensor import build_phase_tensor_table
-from ._rose_style import RoseStyle, resolve_rose_style, _UNSET
+from ..api._rose_style import RoseStyle, resolve_rose_style, _UNSET
 
 # -------------------------- small helpers ------------------------------- #
 

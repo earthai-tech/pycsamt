@@ -12,10 +12,12 @@ from .joint import JointInverter
 from .ensemble import EnsembleInverter
 from .calibration import ConformalPredictor, PosteriorCalibrator
 from .config import InversionConfig
+from .run_config import RunConfig
 
 __all__ = [
     "EMInverter1D", "EMInverter2D", "GCNInverter3D",
     "JointInverter", "EnsembleInverter",
     "ConformalPredictor", "PosteriorCalibrator",
     "InversionConfig",
+    "RunConfig",
 ]

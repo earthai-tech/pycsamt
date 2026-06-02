@@ -47,6 +47,7 @@ Style sections
 * :class:`RoseStyle` — rose diagram visuals (bars, rings, compass, mean line)
 * :class:`MultilineStyle` — gradient or cycle coloring for multi-line plots
 * :class:`MTComponentStyle` — consistent per-component colors (XY/YX/XX/YY/TE/TM)
+* :class:`CorrectionStyle` — before/after pair for any 1-D correction workflow
 """
 from __future__ import annotations
 
@@ -406,17 +407,104 @@ class MTComponentStyle:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# CorrectionStyle
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@dataclass
+class CorrectionStyle:
+    """Consistent before/after visual pair for any 1-D correction workflow.
+
+    Every correction plot in pyCSAMT (static-shift, near-field, noise
+    removal, …) uses the same two-curve convention so that users can read
+    results at a glance across all figures:
+
+    * **before** — blue dashed line with hollow markers
+    * **after**  — red solid line with hollow markers
+
+    The two colours deliberately mirror :attr:`MTComponentStyle.xy` (blue)
+    and :attr:`MTComponentStyle.yx` (red) so the whole package stays visually
+    coherent.
+
+    Attributes
+    ----------
+    before : _MTComp
+        Style for the uncorrected / original curve.
+    after : _MTComp
+        Style for the corrected curve.
+
+    Examples
+    --------
+    Use directly in a plot function::
+
+        cs = PYCSAMT_STYLE.correction
+        ax.plot(period, rho_before, **cs.before.plot_kwargs())
+        ax.plot(period, rho_after,  **cs.after.plot_kwargs())
+
+    Override just the line-width for one call::
+
+        kw_before = cs.before.plot_kwargs(lw=2.0)
+
+    Change the before colour package-wide::
+
+        PYCSAMT_STYLE.correction.before.color = "#005a9e"
+
+    Use dotted-path configure::
+
+        configure_style(
+            correction__before__color = "#005a9e",
+            correction__after__color  = "#9b0000",
+        )
+    """
+
+    before: _MTComp = field(default_factory=lambda: _MTComp(
+        color="#1f77b4",   # matplotlib blue — same as mt.xy
+        ls="--",           # dashed → visually "unfinished / before"
+        lw=1.5,
+        marker="o",
+        ms=4.0,
+        mfc="white",       # hollow markers for both curves
+        mew=1.2,
+        alpha=0.85,
+        label="before",
+    ))
+    after: _MTComp = field(default_factory=lambda: _MTComp(
+        color="#d62728",   # matplotlib red — same as mt.yx
+        ls="-",            # solid → visually "settled / after"
+        lw=1.5,
+        marker="o",
+        ms=4.0,
+        mfc="white",
+        mew=1.2,
+        alpha=0.90,
+        label="after",
+    ))
+
+    def copy(self) -> "CorrectionStyle":
+        """Return a deep copy."""
+        return copy.deepcopy(self)
+
+    def __repr__(self) -> str:  # noqa: D105
+        return (
+            f"CorrectionStyle(\n"
+            f"  before={self.before!r},\n"
+            f"  after={self.after!r}\n"
+            f")"
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # PyCSAMTStyle — main container
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class PyCSAMTStyle:
     """Global visual-style container for pyCSAMT.
 
-    Holds three style sub-objects:
+    Holds four style sub-objects:
 
     * :attr:`rose` — :class:`~pycsamt.api._rose_style.RoseStyle`
     * :attr:`multiline` — :class:`MultilineStyle`
     * :attr:`mt` — :class:`MTComponentStyle`
+    * :attr:`correction` — :class:`CorrectionStyle`
 
     The module-level singleton :data:`PYCSAMT_STYLE` is the recommended
     entry point; import it and mutate it in your script or notebook before
@@ -461,9 +549,10 @@ class PyCSAMTStyle:
             self.use(preset)
 
     def _init_defaults(self) -> None:
-        self.rose      = RoseStyle()
-        self.multiline = MultilineStyle()
-        self.mt        = MTComponentStyle()
+        self.rose       = RoseStyle()
+        self.multiline  = MultilineStyle()
+        self.mt         = MTComponentStyle()
+        self.correction = CorrectionStyle()
 
     # ── named presets ─────────────────────────────────────────────────────────
 
@@ -473,9 +562,10 @@ class PyCSAMTStyle:
         Parameters
         ----------
         preset : str
-            ``"pycsamt"``  — default: gradient bars, NESW compass, blue/red MT.
-            ``"publication"`` — grayscale, degree compass, open markers, tight.
-            ``"dark"``     — dark-background optimised colours.
+            ``"pycsamt"``     — default: gradient bars, NESW compass,
+            blue/red MT, blue-dashed / red-solid correction pair.
+            ``"publication"`` — grayscale, degree compass, open markers.
+            ``"dark"``        — dark-background optimised colours.
 
         Raises
         ------
@@ -498,10 +588,21 @@ class PyCSAMTStyle:
         # mt
         if "mt" in spec:
             self._apply_mt(spec["mt"])
+        # correction
+        if "correction" in spec:
+            self._apply_correction(spec["correction"])
 
     def _apply_mt(self, mt_spec: Dict[str, Any]) -> None:
         for comp_name, attrs in mt_spec.items():
             comp = getattr(self.mt, comp_name, None)
+            if comp is None:
+                continue
+            for k, v in attrs.items():
+                setattr(comp, k, v)
+
+    def _apply_correction(self, corr_spec: Dict[str, Any]) -> None:
+        for curve_name, attrs in corr_spec.items():   # "before" / "after"
+            comp = getattr(self.correction, curve_name, None)
             if comp is None:
                 continue
             for k, v in attrs.items():
@@ -566,9 +667,10 @@ class PyCSAMTStyle:
         >>> with PYCSAMT_STYLE.context("publication", mt__xy__lw=2.0):
         ...     fig = plot_phase_tensor_rose(sites)
         """
-        saved_rose      = copy.deepcopy(self.rose)
-        saved_multiline = copy.deepcopy(self.multiline)
-        saved_mt        = copy.deepcopy(self.mt)
+        saved_rose       = copy.deepcopy(self.rose)
+        saved_multiline  = copy.deepcopy(self.multiline)
+        saved_mt         = copy.deepcopy(self.mt)
+        saved_correction = copy.deepcopy(self.correction)
         try:
             if preset is not None:
                 self.use(preset)
@@ -576,9 +678,10 @@ class PyCSAMTStyle:
                 self.configure(**kw)
             yield self
         finally:
-            self.rose      = saved_rose
-            self.multiline = saved_multiline
-            self.mt        = saved_mt
+            self.rose       = saved_rose
+            self.multiline  = saved_multiline
+            self.mt         = saved_mt
+            self.correction = saved_correction
 
     # ── reset ─────────────────────────────────────────────────────────────────
 
@@ -591,18 +694,26 @@ class PyCSAMTStyle:
     def summary(self) -> str:
         """Return a human-readable summary of the current style."""
         lines = ["PyCSAMTStyle"]
-        lines.append(f"  rose.bar_style        = {self.rose.bar_style!r}")
-        lines.append(f"  rose.cmap             = {self.rose.cmap!r}")
-        lines.append(f"  rose.compass_labels   = {self.rose.compass_labels!r}")
-        lines.append(f"  rose.show_mean        = {self.rose.show_mean}")
-        lines.append(f"  rose.show_secondary   = {self.rose.show_secondary}")
-        lines.append(f"  multiline.mode        = {self.multiline.mode!r}")
-        lines.append(f"  multiline.base_color  = {self.multiline.base_color!r}")
-        lines.append(f"  multiline.dark/light  = {self.multiline.dark}/{self.multiline.light}")
+        lines.append(f"  rose.bar_style          = {self.rose.bar_style!r}")
+        lines.append(f"  rose.cmap               = {self.rose.cmap!r}")
+        lines.append(f"  rose.compass_labels     = {self.rose.compass_labels!r}")
+        lines.append(f"  rose.show_mean          = {self.rose.show_mean}")
+        lines.append(f"  rose.show_secondary     = {self.rose.show_secondary}")
+        lines.append(f"  multiline.mode          = {self.multiline.mode!r}")
+        lines.append(f"  multiline.base_color    = {self.multiline.base_color!r}")
+        lines.append(f"  multiline.dark/light    = {self.multiline.dark}/{self.multiline.light}")
         lines.append(f"  mt.xy  color={self.mt.xy.color!r}  marker={self.mt.xy.marker!r}")
         lines.append(f"  mt.yx  color={self.mt.yx.color!r}  marker={self.mt.yx.marker!r}")
         lines.append(f"  mt.te  color={self.mt.te.color!r}  ls={self.mt.te.ls!r}")
         lines.append(f"  mt.tm  color={self.mt.tm.color!r}  ls={self.mt.tm.ls!r}")
+        b = self.correction.before
+        a = self.correction.after
+        lines.append(
+            f"  correction.before  color={b.color!r}  ls={b.ls!r}  label={b.label!r}"
+        )
+        lines.append(
+            f"  correction.after   color={a.color!r}  ls={a.ls!r}  label={a.label!r}"
+        )
         return "\n".join(lines)
 
     def __repr__(self) -> str:  # noqa: D105
@@ -640,6 +751,13 @@ _register_preset("pycsamt", {
         "det": dict(color="#7f7f7f", ls="-",  lw=1.3, marker="D", ms=3.5,
                     mfc="white", label="det"),
     },
+    # blue-dashed / red-solid — matches fig5b_static_shift_1d convention
+    "correction": {
+        "before": dict(color="#1f77b4", ls="--", lw=1.5, marker="o", ms=4.0,
+                       mfc="white", mew=1.2, alpha=0.85, label="before"),
+        "after":  dict(color="#d62728", ls="-",  lw=1.5, marker="o", ms=4.0,
+                       mfc="white", mew=1.2, alpha=0.90, label="after"),
+    },
 })
 
 # "publication" — grayscale / BW-friendly for journals
@@ -665,6 +783,13 @@ _register_preset("publication", {
         "det": dict(color="#777777", ls=":",  lw=1.3, marker="D", ms=3.5,
                     mfc="white", label="det"),
     },
+    # BW-friendly: distinguish before/after by linestyle only
+    "correction": {
+        "before": dict(color="#444444", ls="--", lw=1.5, marker="o", ms=4.0,
+                       mfc="white", mew=1.2, alpha=0.85, label="before"),
+        "after":  dict(color="#000000", ls="-",  lw=1.5, marker="o", ms=4.0,
+                       mfc="black", mew=1.2, alpha=0.92, label="after"),
+    },
 })
 
 # "dark" — optimised for dark-background Jupyter / presentation slides
@@ -689,6 +814,13 @@ _register_preset("dark", {
                     mfc="#ff7675", label="TM"),
         "det": dict(color="#dfe6e9", ls="-",  lw=1.5, marker="D", ms=4.0,
                     mfc="#dfe6e9", label="det"),
+    },
+    # light blue / light red — readable on dark background
+    "correction": {
+        "before": dict(color="#74b9ff", ls="--", lw=2.0, marker="o", ms=4.5,
+                       mfc="#74b9ff", mew=1.2, alpha=0.85, label="before"),
+        "after":  dict(color="#ff7675", ls="-",  lw=2.0, marker="o", ms=4.5,
+                       mfc="#ff7675", mew=1.2, alpha=0.92, label="after"),
     },
 })
 
@@ -761,6 +893,7 @@ __all__ = [
     "MTComponentStyle",
     "_MTComp",
     "RoseStyle",
+    "CorrectionStyle",
     # singleton + helpers
     "PYCSAMT_STYLE",
     "use_style",

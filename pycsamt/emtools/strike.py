@@ -991,6 +991,8 @@ def plot_strike_ribbon(
     *,
     method: str = "sweep",  # sweep|pt|consensus
     win: int = 5,
+    show_colorbar: bool = True,
+    cbar_ticks: list | None = None,   # None → [0, 45, 90, 135, 180]
     figsize: tuple[float, float] = (9.0, 4.2),
     recursive: bool = True,
     on_dup: str = "replace",
@@ -1076,6 +1078,32 @@ def plot_strike_ribbon(
     yv = np.linspace(ygrid.min(), ygrid.max(), num=yt.size)
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yv])
+
+    # ── colorbar: hue → strike angle (0–180°) ────────────────────────────
+    if show_colorbar:
+        from matplotlib.cm import ScalarMappable
+        from matplotlib.colors import Normalize
+        sm = ScalarMappable(
+            cmap=plt.get_cmap("hsv"),
+            norm=Normalize(vmin=0.0, vmax=180.0),
+        )
+        sm.set_array([])
+        fig = ax.get_figure()
+        cb = fig.colorbar(sm, ax=ax, shrink=0.82, pad=0.015, aspect=22)
+        cb.set_label("Strike angle (°)", fontsize=8)
+        tks = cbar_ticks if cbar_ticks is not None else [0, 45, 90, 135, 180]
+        cb.set_ticks(tks)
+        cb.ax.tick_params(labelsize=7)
+        # saturation key: white = high variance, saturated = stable
+        ax.text(
+            1.18, 0.02,
+            "Saturation → stability",
+            transform=ax.transAxes,
+            fontsize=6.5, color="0.40",
+            ha="center", va="bottom",
+            rotation=90,
+        )
+
     return ax
 
 

@@ -360,7 +360,7 @@ save(
 
 # 22  Phase-tensor θ rose grid — one rose per frequency decade
 save(
-    plot_theta_rose_grid(L22, figsize=(13, 9)),
+    plot_theta_rose_grid(L22),
     "fig22_theta_rose_grid.png",
     "Fig 22 — Phase-tensor θ rose grid by frequency decade  (L22PLT)",
 )

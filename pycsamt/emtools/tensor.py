@@ -2190,13 +2190,55 @@ def plot_theta_rose_grid(
     sites: Any,
     *,
     n_bands: int = 6,
-    figsize: Tuple[float, float] = (10.0, 4.5),
+    figsize: Tuple[float, float] = (13.0, 3.8),
     bins: int = 24,
+    style: "str | RoseStyle | None" = "pycsamt",
+    panel_title_fontsize: float = 7.5,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-):
+) -> plt.Figure:
+    """Phase-tensor θ rose grid — one pycsamt-styled rose per frequency decade.
+
+    Draws *n_bands* polar rose diagrams side by side, each covering one
+    equal-log-width period band.  Each rose applies axial symmetry (0–180°
+    mirrored to 180–360°) and is rendered using the active
+    :class:`~pycsamt.api._rose_style.RoseStyle`.
+
+    Parameters
+    ----------
+    sites : any
+        Input accepted by :func:`~pycsamt.emtools._core.ensure_sites`.
+    n_bands : int, default ``6``
+        Number of equal-log-width period bands.
+    figsize : (width, height), default ``(13.0, 3.8)``
+        Figure size in inches.  Constrained layout is used internally so
+        an external ``fig.suptitle`` fits without producing blank space.
+    bins : int, default ``24``
+        Number of bins over 0–180° (mirrored to 360°).
+    style : str, :class:`~pycsamt.api._rose_style.RoseStyle`, or None
+        Rose visual style.  Strings resolved via
+        :func:`~pycsamt.api._rose_style.resolve_rose_style`.
+    panel_title_fontsize : float, default ``7.5``
+        Font size for the period-band label above each panel.
+    recursive, on_dup, strict, verbose
+        Passed to :func:`~pycsamt.emtools._core.ensure_sites`.
+
+    Returns
+    -------
+    :class:`matplotlib.figure.Figure`
+    """
+    # ── resolve rose style ────────────────────────────────────────────────
+    rs = resolve_rose_style(style)
+
+    # ── axial mean helper ─────────────────────────────────────────────────
+    def _axial_mean(a_deg: np.ndarray) -> float:
+        rad = np.radians(2.0 * a_deg)
+        mu = np.degrees(np.arctan2(np.nanmean(np.sin(rad)),
+                                   np.nanmean(np.cos(rad)))) / 2.0
+        return float(mu % 180.0)
+
     df = build_phase_tensor_table(
         sites,
         recursive=recursive,
@@ -2207,29 +2249,148 @@ def plot_theta_rose_grid(
     if df.empty:
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(111, polar=True)
-        ax.text(0.5, 0.5, "no phase tensor",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no phase tensor", ha="center", va="center")
         return fig
+
     p = df["period"].to_numpy()
-    lo = float(np.nanmin(p))
-    hi = float(np.nanmax(p))
-    lo = max(lo, 1e-6)
-    edges = np.logspace(np.log10(lo), np.log10(hi), n_bands + 1)
-    bins = int(max(8, bins))
-    fig = plt.figure(figsize=figsize)
+    lo_g = float(np.nanmin(p[p > 0])) if np.any(p > 0) else 1e-6
+    hi_g = float(np.nanmax(p))
+    edges = np.logspace(np.log10(lo_g), np.log10(hi_g), n_bands + 1)
+
+    bins_ = int(max(12, bins))
+    edges_deg = np.linspace(0.0, 180.0, bins_ + 1)
+    dw = np.radians(180.0 / bins_)
+    ang_mid = np.radians(0.5 * (edges_deg[1:] + edges_deg[:-1]))
+
+    # ── constrained_layout avoids blank space when suptitle is added ─────
+    fig = plt.figure(figsize=figsize, constrained_layout=True)
+
     for i in range(n_bands):
         ax = fig.add_subplot(1, n_bands, i + 1, polar=True)
         m = (p >= edges[i]) & (p < edges[i + 1])
-        th = np.radians(df.loc[m, "theta"].to_numpy())
-        th = (th + 2 * np.pi) % (2 * np.pi)
-        edges_a = np.linspace(0, 2 * np.pi, bins + 1)
-        h, _ = np.histogram(th, bins=edges_a)
-        ang = 0.5 * (edges_a[1:] + edges_a[:-1])
-        ax.bar(ang, h, width=edges_a[1] - edges_a[0])
+        th_deg = df.loc[m, "theta"].to_numpy(float) % 180.0
+        n_obs = int(np.sum(m))
+
+        # histogram — 0–180°, mirrored for axial symmetry
+        hist, _ = np.histogram(th_deg, bins=edges_deg)
+        rmax = float(hist.max()) if hist.max() > 0 else 1.0
+
+        # ── polar setup ───────────────────────────────────────────────────
         ax.set_theta_zero_location("N")
         ax.set_theta_direction(-1)
-        ax.set_title(f"[{edges[i]:.2g},{edges[i+1]:.2g}]s",
-                     fontsize=8)
-    fig.tight_layout()
+        ax.set_yticklabels([])
+        ax.set_yticks([])
+        ax.yaxis.grid(False)
+        ax.xaxis.grid(False)
+        ax.set_frame_on(False)
+
+        # ── bars with axial symmetry (0–180° + mirror 180–360°) ──────────
+        if rs.bar_style == "gradient":
+            cm_ = plt.get_cmap(rs.cmap)
+            for a, h in zip(ang_mid, hist):
+                col = cm_(h / rmax) if rmax > 0 else cm_(0.5)
+                for a_plot in (a, a + np.pi):
+                    ax.bar(a_plot, h, width=dw,
+                           color=col,
+                           edgecolor=rs.bar_edgecolor,
+                           linewidth=rs.bar_edgelw,
+                           alpha=rs.bar_alpha)
+        else:  # solid
+            for a, h in zip(ang_mid, hist):
+                for a_plot in (a, a + np.pi):
+                    ax.bar(a_plot, h, width=dw,
+                           color=rs.bar_color,
+                           edgecolor=rs.bar_edgecolor,
+                           linewidth=rs.bar_edgelw,
+                           alpha=rs.bar_alpha)
+
+        # ── concentric rings ──────────────────────────────────────────────
+        step = rmax / rs.n_rings
+        r_levels = [step * k for k in range(1, rs.n_rings + 1)]
+        theta_full = np.linspace(0, 2 * np.pi, 360)
+        for rv in r_levels:
+            ax.plot(theta_full, np.full_like(theta_full, rv),
+                    color=rs.ring_color, ls=rs.ring_ls,
+                    lw=rs.ring_lw, zorder=0)
+
+        # ring count labels (outermost ring only to avoid clutter)
+        lbl_theta = np.radians(rs.ring_label_angle)
+        ax.text(lbl_theta, r_levels[-1],
+                rs.ring_label_fmt.format(r_levels[-1]),
+                ha="center", va="center",
+                fontsize=rs.ring_label_fontsize,
+                color=rs.ring_label_color, zorder=5)
+
+        # ── radial spokes ─────────────────────────────────────────────────
+        n_spokes = int(round(360.0 / rs.spoke_every))
+        spoke_angles = np.radians(np.arange(n_spokes) * rs.spoke_every)
+        for sa in spoke_angles:
+            ax.plot([sa, sa], [0, rmax],
+                    color=rs.spoke_color, ls=rs.spoke_ls,
+                    lw=rs.spoke_lw, zorder=0)
+
+        # ── outer bold ring ────────────────────────────────────────────────
+        ax.spines["polar"].set_linewidth(rs.outer_ring_lw)
+        ax.spines["polar"].set_edgecolor(rs.outer_ring_color)
+        ax.set_ylim(0, rmax * 1.08)
+
+        # ── compass / degree labels ───────────────────────────────────────
+        spoke_degs = np.arange(n_spokes) * rs.spoke_every
+        if rs.compass_labels == "NESW":
+            _card = {0: "N", 90: "E", 180: "S", 270: "W"}
+            lbl_list = [_card.get(int(d) % 360, "") for d in spoke_degs]
+        elif rs.compass_labels == "degrees":
+            lbl_list = [f"{int(d)}°" for d in spoke_degs]
+        else:
+            lbl_list = [""] * n_spokes
+        ax.set_thetagrids(spoke_degs, labels=lbl_list,
+                          fontsize=rs.compass_fontsize)
+        for lbl in ax.get_xticklabels():
+            lbl.set_color(rs.compass_color)
+            lbl.set_fontweight(rs.compass_fontweight)
+
+        # ── mean direction line ───────────────────────────────────────────
+        if rs.show_mean and n_obs > 0:
+            mu = _axial_mean(th_deg)
+            mu_r = np.radians(mu)
+            sec_lw = rs.mean_lw if rs.secondary_lw is None else rs.secondary_lw
+            sec_col = rs.mean_color if rs.secondary_color is None else rs.secondary_color
+            for ang_pt in (mu_r, mu_r + np.pi):
+                ax.plot([ang_pt, ang_pt], [0, rmax],
+                        color=rs.mean_color, lw=rs.mean_lw,
+                        ls=rs.mean_ls, zorder=6)
+            if rs.show_secondary:
+                for ang_pt in (mu_r + np.pi / 2, mu_r - np.pi / 2):
+                    ax.plot([ang_pt, ang_pt], [0, rmax],
+                            color=sec_col, lw=sec_lw,
+                            ls=rs.secondary_ls, zorder=6)
+
+        # ── panel annotation: period range + n ────────────────────────────
+        if rs.show_annotation and n_obs > 0:
+            mu_str = ""
+            if rs.show_mean and n_obs > 0:
+                mu = _axial_mean(th_deg)
+                mu_str = f"θ̄={mu:.0f}°"
+            n_str = f"  n={n_obs}" if rs.show_n else ""
+            ax.text(
+                *rs.annotation_pos,
+                mu_str + n_str,
+                transform=ax.transAxes,
+                fontsize=rs.annotation_fontsize,
+                ha="left", va="top",
+                bbox=dict(fc=rs.annotation_bg,
+                          ec=rs.annotation_ec,
+                          alpha=0.80, pad=1.5,
+                          boxstyle="round,pad=0.3"),
+                zorder=10,
+            )
+
+        # ── panel title: period band ───────────────────────────────────────
+        ax.set_title(
+            f"[{edges[i]:.2g}, {edges[i+1]:.2g}]s",
+            fontsize=panel_title_fontsize,
+            pad=8,
+        )
+
     return fig
 

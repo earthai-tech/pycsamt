@@ -25,6 +25,7 @@ from ._core import (
     _get_z_block,
     _apply_each
 )
+from ._rose_style import RoseStyle, resolve_rose_style, _UNSET
 
 _BACKWARD_SINCE = "2.0.0"
 _BACKWARD_REMOVE = "2.17.0"
@@ -1093,64 +1094,60 @@ def plot_dimensionality_psection(
 def plot_phase_tensor_rose(
     sites: Any,
     *,
-    # ── data selection ──────────────────────────────────────────────────────
+    # ── visual style ─────────────────────────────────────────────────────
+    style: "str | RoseStyle | None" = "pycsamt",
+    # ── data selection ───────────────────────────────────────────────────
     band: Optional[Tuple[float, float]] = None,
     freq_bands: Optional[List[Tuple[float, float]]] = None,
     band_labels: Optional[List[str]] = None,
     band_colors: Optional[List] = None,
-    # ── histogram ───────────────────────────────────────────────────────────
+    # ── histogram ────────────────────────────────────────────────────────
     bins: int = 36,
-    # ── bar style ───────────────────────────────────────────────────────────
-    bar_style: str = "gradient",
-    bar_color: str = "#4e79a7",
-    bar_edgecolor: str = "none",
-    bar_edgelw: float = 0.4,
-    bar_alpha: float = 0.88,
-    cmap: str = "plasma",
-    # ── outer ring ──────────────────────────────────────────────────────────
-    outer_ring_lw: float = 2.5,
-    outer_ring_color: str = "0.12",
-    # ── concentric rings ────────────────────────────────────────────────────
-    n_rings: int = 4,
-    ring_color: str = "0.72",
-    ring_ls: str = ":",
-    ring_lw: float = 0.8,
-    ring_labels: Optional[List[float]] = None,
-    ring_label_angle: float = 22.5,
-    ring_label_fontsize: float = 7.0,
-    ring_label_color: str = "0.30",
-    ring_label_fmt: str = "{:.0f}",
-    # ── spokes ──────────────────────────────────────────────────────────────
-    spoke_every: float = 45.0,
-    spoke_color: str = "0.72",
-    spoke_ls: str = ":",
-    spoke_lw: float = 0.8,
-    # ── compass labels ──────────────────────────────────────────────────────
-    compass_labels: str = "NESW",
-    compass_fontsize: float = 8.5,
-    compass_color: str = "0.15",
-    compass_fontweight: str = "bold",
-    # ── mean direction ──────────────────────────────────────────────────────
-    show_mean: bool = True,
-    mean_color: str = "crimson",
-    mean_lw: float = 2.2,
-    mean_ls: str = "-",
-    show_secondary: bool = True,
-    secondary_ls: str = "--",
-    secondary_lw: Optional[float] = None,
-    secondary_color: Optional[str] = None,
-    # ── annotation box ──────────────────────────────────────────────────────
-    show_annotation: bool = True,
-    annotation_pos: Tuple[float, float] = (0.05, 0.95),
-    annotation_fontsize: float = 8.0,
-    annotation_bg: str = "white",
-    annotation_ec: str = "0.25",
-    show_n: bool = True,
-    # ── layout ──────────────────────────────────────────────────────────────
+    # ── visual overrides (sentinel → taken from *style*) ─────────────────
+    bar_style=_UNSET,
+    bar_color=_UNSET,
+    bar_alpha=_UNSET,
+    bar_edgecolor=_UNSET,
+    bar_edgelw=_UNSET,
+    cmap=_UNSET,
+    outer_ring_lw=_UNSET,
+    outer_ring_color=_UNSET,
+    n_rings=_UNSET,
+    ring_color=_UNSET,
+    ring_ls=_UNSET,
+    ring_lw=_UNSET,
+    ring_labels=_UNSET,
+    ring_label_angle=_UNSET,
+    ring_label_fontsize=_UNSET,
+    ring_label_color=_UNSET,
+    ring_label_fmt=_UNSET,
+    spoke_every=_UNSET,
+    spoke_color=_UNSET,
+    spoke_ls=_UNSET,
+    spoke_lw=_UNSET,
+    compass_labels=_UNSET,
+    compass_fontsize=_UNSET,
+    compass_color=_UNSET,
+    compass_fontweight=_UNSET,
+    show_mean=_UNSET,
+    mean_color=_UNSET,
+    mean_lw=_UNSET,
+    mean_ls=_UNSET,
+    show_secondary=_UNSET,
+    secondary_ls=_UNSET,
+    secondary_lw=_UNSET,
+    secondary_color=_UNSET,
+    show_annotation=_UNSET,
+    annotation_pos=_UNSET,
+    annotation_fontsize=_UNSET,
+    annotation_bg=_UNSET,
+    annotation_ec=_UNSET,
+    show_n=_UNSET,
+    # ── layout ───────────────────────────────────────────────────────────
     figsize: Tuple[float, float] = (5.5, 5.5),
     title: str = "",
     title_fontsize: float = 10.0,
-    # ── core ────────────────────────────────────────────────────────────────
+    # ── core ─────────────────────────────────────────────────────────────
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -1304,6 +1301,49 @@ def plot_phase_tensor_rose(
     ...     ring_label_angle=15.0,
     ... )
     """
+    # ── resolve style → fill _UNSET visual params ─────────────────────────
+    rs = resolve_rose_style(style)
+    def _v(val, attr): return getattr(rs, attr) if val is _UNSET else val
+    bar_style        = _v(bar_style,        "bar_style")
+    bar_color        = _v(bar_color,        "bar_color")
+    bar_alpha        = _v(bar_alpha,        "bar_alpha")
+    bar_edgecolor    = _v(bar_edgecolor,    "bar_edgecolor")
+    bar_edgelw       = _v(bar_edgelw,       "bar_edgelw")
+    cmap             = _v(cmap,             "cmap")
+    outer_ring_lw    = _v(outer_ring_lw,    "outer_ring_lw")
+    outer_ring_color = _v(outer_ring_color, "outer_ring_color")
+    n_rings          = _v(n_rings,          "n_rings")
+    ring_color       = _v(ring_color,       "ring_color")
+    ring_ls          = _v(ring_ls,          "ring_ls")
+    ring_lw          = _v(ring_lw,          "ring_lw")
+    ring_labels      = _v(ring_labels,      "ring_labels")
+    ring_label_angle = _v(ring_label_angle, "ring_label_angle")
+    ring_label_fontsize = _v(ring_label_fontsize, "ring_label_fontsize")
+    ring_label_color = _v(ring_label_color, "ring_label_color")
+    ring_label_fmt   = _v(ring_label_fmt,   "ring_label_fmt")
+    spoke_every      = _v(spoke_every,      "spoke_every")
+    spoke_color      = _v(spoke_color,      "spoke_color")
+    spoke_ls         = _v(spoke_ls,         "spoke_ls")
+    spoke_lw         = _v(spoke_lw,         "spoke_lw")
+    compass_labels   = _v(compass_labels,   "compass_labels")
+    compass_fontsize = _v(compass_fontsize, "compass_fontsize")
+    compass_color    = _v(compass_color,    "compass_color")
+    compass_fontweight = _v(compass_fontweight, "compass_fontweight")
+    show_mean        = _v(show_mean,        "show_mean")
+    mean_color       = _v(mean_color,       "mean_color")
+    mean_lw          = _v(mean_lw,          "mean_lw")
+    mean_ls          = _v(mean_ls,          "mean_ls")
+    show_secondary   = _v(show_secondary,   "show_secondary")
+    secondary_color  = _v(secondary_color,  "secondary_color")
+    secondary_ls     = _v(secondary_ls,     "secondary_ls")
+    secondary_lw     = _v(secondary_lw,     "secondary_lw")
+    show_annotation  = _v(show_annotation,  "show_annotation")
+    annotation_pos   = _v(annotation_pos,   "annotation_pos")
+    annotation_fontsize = _v(annotation_fontsize, "annotation_fontsize")
+    annotation_bg    = _v(annotation_bg,    "annotation_bg")
+    annotation_ec    = _v(annotation_ec,    "annotation_ec")
+    show_n           = _v(show_n,           "show_n")
+
     # ── axial mean helper (local, avoids import cycle with strike.py) ──────
     def _axial_mean(a_deg: np.ndarray) -> float:
         """Circular mean for axial (0–180°) data, returned in [0,180°)."""

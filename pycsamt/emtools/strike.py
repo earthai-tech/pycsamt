@@ -1,7 +1,7 @@
 # pycsamt/emtools/strike.py
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple 
+from typing import Any, Dict, List, Optional, Tuple
 
 import re
 import matplotlib.pyplot as plt
@@ -22,6 +22,7 @@ from ._core import (
 )
 from ..site import edit as _edit
 from .tensor import build_phase_tensor_table
+from ._rose_style import RoseStyle, resolve_rose_style, _UNSET
 
 # -------------------------- small helpers ------------------------------- #
 
@@ -493,6 +494,9 @@ def plot_strike_rose_by_line(
 def plot_strike_rose(
     sites: Any,
     *,
+    # ── visual style ─────────────────────────────────────────────────────
+    style: "str | RoseStyle | None" = "pycsamt",
+    # ── data / algorithm ─────────────────────────────────────────────────
     groups: Optional[Dict[str, List[str]]] = None,
     group_key: Optional[str] = None,
     band: Optional[Tuple[float, float]] = None,
@@ -502,38 +506,54 @@ def plot_strike_rose(
     method: str = "consensus",
     bins: int = 36,
     weight: str = "inv_iqr",
-    bar_style: str = "gradient",
-    bar_color: str = "#e53935",
-    bar_edgecolor: str = "none",
-    bar_edgelw: float = 0.4,
-    cmap: str = "YlOrRd",
-    outer_ring_lw: float = 2.5,
-    outer_ring_color: str = "0.15",
-    n_rings: int = 3,
-    ring_color: str = "0.75",
-    ring_ls: str = ":",
-    spoke_every: float = 45.0,
-    compass_labels: str = "NESW",
-    compass_fontsize: float = 8.0,
-    compass_color: str = "0.2",
-    mean_color: str = "crimson",
-    mean_lw: float = 2.2,
-    mean_ls: str = "-",
-    show_secondary: bool = True,
-    secondary_color: Optional[str] = None,
-    secondary_ls: str = "--",
-    secondary_lw: Optional[float] = None,
-    annotation_pos: Tuple[float, float] = (0.05, 0.92),
-    annotation_fontsize: float = 8.0,
-    annotation_bg: str = "white",
-    annotation_ec: str = "0.25",
-    show_n_stations: bool = True,
+    # ── visual overrides (None-like sentinel → taken from *style*) ───────
+    bar_style=_UNSET,
+    bar_color=_UNSET,
+    bar_alpha=_UNSET,
+    bar_edgecolor=_UNSET,
+    bar_edgelw=_UNSET,
+    cmap=_UNSET,
+    outer_ring_lw=_UNSET,
+    outer_ring_color=_UNSET,
+    n_rings=_UNSET,
+    ring_color=_UNSET,
+    ring_ls=_UNSET,
+    ring_lw=_UNSET,
+    ring_labels=_UNSET,
+    ring_label_angle=_UNSET,
+    ring_label_fontsize=_UNSET,
+    ring_label_color=_UNSET,
+    ring_label_fmt=_UNSET,
+    spoke_every=_UNSET,
+    spoke_color=_UNSET,
+    spoke_ls=_UNSET,
+    spoke_lw=_UNSET,
+    compass_labels=_UNSET,
+    compass_fontsize=_UNSET,
+    compass_color=_UNSET,
+    compass_fontweight=_UNSET,
+    show_mean=_UNSET,
+    mean_color=_UNSET,
+    mean_lw=_UNSET,
+    mean_ls=_UNSET,
+    show_secondary=_UNSET,
+    secondary_color=_UNSET,
+    secondary_ls=_UNSET,
+    secondary_lw=_UNSET,
+    show_annotation=_UNSET,
+    annotation_pos=_UNSET,
+    annotation_fontsize=_UNSET,
+    annotation_bg=_UNSET,
+    annotation_ec=_UNSET,
+    show_n_stations=_UNSET,
+    # ── layout ───────────────────────────────────────────────────────────
     subplot_size: float = 3.2,
     n_cols: Optional[int] = None,
     figsize: Optional[Tuple[float, float]] = None,
     suptitle: str = "",
     suptitle_fontsize: float = 10.0,
     tight_layout: bool = True,
+    # ── core ─────────────────────────────────────────────────────────────
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -672,6 +692,49 @@ def plot_strike_rose(
     ...     band_labels=["Short period", "Long period"],
     ... )
     """
+    # ── resolve style → fill _UNSET visual params ─────────────────────────
+    rs = resolve_rose_style(style)
+    def _v(val, attr): return getattr(rs, attr) if val is _UNSET else val
+    bar_style        = _v(bar_style,        "bar_style")
+    bar_color        = _v(bar_color,        "bar_color")
+    bar_alpha        = _v(bar_alpha,        "bar_alpha")
+    bar_edgecolor    = _v(bar_edgecolor,    "bar_edgecolor")
+    bar_edgelw       = _v(bar_edgelw,       "bar_edgelw")
+    cmap             = _v(cmap,             "cmap")
+    outer_ring_lw    = _v(outer_ring_lw,    "outer_ring_lw")
+    outer_ring_color = _v(outer_ring_color, "outer_ring_color")
+    n_rings          = _v(n_rings,          "n_rings")
+    ring_color       = _v(ring_color,       "ring_color")
+    ring_ls          = _v(ring_ls,          "ring_ls")
+    ring_lw          = _v(ring_lw,          "ring_lw")
+    ring_labels      = _v(ring_labels,      "ring_labels")
+    ring_label_angle = _v(ring_label_angle, "ring_label_angle")
+    ring_label_fontsize = _v(ring_label_fontsize, "ring_label_fontsize")
+    ring_label_color = _v(ring_label_color, "ring_label_color")
+    ring_label_fmt   = _v(ring_label_fmt,   "ring_label_fmt")
+    spoke_every      = _v(spoke_every,      "spoke_every")
+    spoke_color      = _v(spoke_color,      "spoke_color")
+    spoke_ls         = _v(spoke_ls,         "spoke_ls")
+    spoke_lw         = _v(spoke_lw,         "spoke_lw")
+    compass_labels   = _v(compass_labels,   "compass_labels")
+    compass_fontsize = _v(compass_fontsize, "compass_fontsize")
+    compass_color    = _v(compass_color,    "compass_color")
+    compass_fontweight = _v(compass_fontweight, "compass_fontweight")
+    show_mean        = _v(show_mean,        "show_mean")
+    mean_color       = _v(mean_color,       "mean_color")
+    mean_lw          = _v(mean_lw,          "mean_lw")
+    mean_ls          = _v(mean_ls,          "mean_ls")
+    show_secondary   = _v(show_secondary,   "show_secondary")
+    secondary_color  = _v(secondary_color,  "secondary_color")
+    secondary_ls     = _v(secondary_ls,     "secondary_ls")
+    secondary_lw     = _v(secondary_lw,     "secondary_lw")
+    show_annotation  = _v(show_annotation,  "show_annotation")
+    annotation_pos   = _v(annotation_pos,   "annotation_pos")
+    annotation_fontsize = _v(annotation_fontsize, "annotation_fontsize")
+    annotation_bg    = _v(annotation_bg,    "annotation_bg")
+    annotation_ec    = _v(annotation_ec,    "annotation_ec")
+    show_n_stations  = _v(show_n_stations,  "show_n")
+
     S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
                      strict=strict, verbose=verbose)
 
@@ -829,35 +892,47 @@ def plot_strike_rose(
         # ---- mean direction line ----------------------------------------
         mu = _axial_mean_deg(ang, w_arr)
         mu_rad = np.radians(mu)
-        ax.plot([mu_rad, mu_rad], [0.0, rline],
-                color=mean_color, lw=mean_lw, ls=mean_ls,
-                solid_capstyle="round", zorder=5)
-        if show_secondary:
-            sc = secondary_color or mean_color
-            sl = secondary_lw if secondary_lw is not None else mean_lw
-            ax.plot([mu_rad + np.pi, mu_rad + np.pi], [0.0, rline],
-                    color=sc, lw=sl, ls=secondary_ls,
+        if show_mean:
+            ax.plot([mu_rad, mu_rad], [0.0, rline],
+                    color=mean_color, lw=mean_lw, ls=mean_ls,
                     solid_capstyle="round", zorder=5)
+            if show_secondary:
+                sc = secondary_color or mean_color
+                sl = secondary_lw if secondary_lw is not None else mean_lw
+                ax.plot([mu_rad + np.pi, mu_rad + np.pi], [0.0, rline],
+                        color=sc, lw=sl, ls=secondary_ls,
+                        solid_capstyle="round", zorder=5)
 
         # ---- annotation box (strike angle + optional station count) -----
-        txt = f"{mu:.1f}°"
-        if show_n_stations:
-            txt += f"\nn={n_sta}"
-        ax.text(
-            annotation_pos[0], annotation_pos[1], txt,
-            transform=ax.transAxes,
-            fontsize=annotation_fontsize, va="top", ha="left",
-            bbox=dict(boxstyle="round,pad=0.25",
-                      fc=annotation_bg, ec=annotation_ec, lw=0.7),
-            zorder=6,
-        )
+        if show_annotation:
+            txt = f"{mu:.1f}°"
+            if show_n_stations:
+                txt += f"\nn={n_sta}"
+            ax.text(
+                annotation_pos[0], annotation_pos[1], txt,
+                transform=ax.transAxes,
+                fontsize=annotation_fontsize, va="top", ha="left",
+                bbox=dict(boxstyle="round,pad=0.25",
+                          fc=annotation_bg, ec=annotation_ec, lw=0.7),
+                zorder=6,
+            )
 
-        # ---- radial scale -----------------------------------------------
+        # ---- radial scale (rings + optional count labels) ---------------
         ax.set_rmax(rline * 1.18)
-        ring_vals = (np.linspace(0.0, rmax, n_rings + 1)[1:]
-                     if n_rings > 0 else np.array([]))
-        ax.set_yticks(ring_vals)
+        if ring_labels is not None:
+            r_levels = [float(v) for v in ring_labels]
+        else:
+            step = rmax / max(1, n_rings)
+            r_levels = [step * k for k in range(1, n_rings + 1)] if n_rings > 0 else []
+        ax.set_yticks(r_levels)
         ax.set_yticklabels([])
+        # text annotations at ring_label_angle
+        lbl_theta = np.radians(ring_label_angle)
+        for rv in r_levels:
+            ax.text(lbl_theta, rv, ring_label_fmt.format(rv),
+                    ha="center", va="center",
+                    fontsize=ring_label_fontsize,
+                    color=ring_label_color, zorder=5)
 
         # ---- angular ticks / compass labels -----------------------------
         spoke_angles = np.arange(0.0, 360.0, float(spoke_every))
@@ -872,12 +947,14 @@ def plot_strike_rose(
         ax.set_thetagrids(spoke_angles, labels=lbls)
         ax.tick_params(axis="x", labelsize=compass_fontsize,
                        labelcolor=compass_color, pad=4)
+        for lbl in ax.get_xticklabels():
+            lbl.set_fontweight(compass_fontweight)
 
         # ---- grid styling -----------------------------------------------
         ax.yaxis.grid(True, color=ring_color, linestyle=ring_ls,
-                      linewidth=0.5, alpha=0.8)
-        ax.xaxis.grid(True, color=ring_color, linestyle=ring_ls,
-                      linewidth=0.5, alpha=0.6)
+                      linewidth=ring_lw, alpha=0.8)
+        ax.xaxis.grid(True, color=spoke_color, linestyle=spoke_ls,
+                      linewidth=spoke_lw, alpha=0.7)
 
         # ---- bold outer ring --------------------------------------------
         ax.spines["polar"].set_linewidth(outer_ring_lw)

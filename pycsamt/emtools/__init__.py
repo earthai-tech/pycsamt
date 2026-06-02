@@ -7,6 +7,9 @@ organised by workflow stage.
 """
 from __future__ import annotations
 
+# ─── Rose diagram style system ────────────────────────────────────────────────
+from ._rose_style import RoseStyle, resolve_rose_style
+
 # ─── Input helpers ────────────────────────────────────────────────────────────
 from ._core import ensure_sites
 
@@ -279,6 +282,9 @@ from .legacy import (
 )
 
 __all__ = [
+    # rose style
+    "RoseStyle",
+    "resolve_rose_style",
     # input helpers
     "ensure_sites",
     # survey design

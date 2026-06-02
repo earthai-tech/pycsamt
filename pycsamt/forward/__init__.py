@@ -63,6 +63,14 @@ from .config import ForwardConfig
 from .grid2d import Grid2D, make_padding
 from .em2d import MT2DForward, ForwardResponse2D
 from .config2d import ForwardConfig2D
+from .plot import (
+    plot_response_1d,
+    plot_model_1d,
+    plot_response_and_model_1d,
+    plot_model_2d,
+    plot_pseudosection_2d,
+    plot_response_profiles,
+)
 
 __all__ = [
     # solvers 1-D
@@ -93,4 +101,11 @@ __all__ = [
     # configuration
     "ForwardConfig",
     "ForwardConfig2D",
+    # plotting
+    "plot_response_1d",
+    "plot_model_1d",
+    "plot_response_and_model_1d",
+    "plot_model_2d",
+    "plot_pseudosection_2d",
+    "plot_response_profiles",
 ]

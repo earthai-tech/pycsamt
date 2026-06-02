@@ -1093,7 +1093,7 @@ def plot_dimensionality_psection(
 def plot_phase_tensor_rose(
     sites: Any,
     *,
-    band: Tuple[float, float] = (1.0, 10.0),
+    band: Optional[Tuple[float, float]] = None,
     bins: int = 24,
     figsize: Tuple[float, float] = (5.0, 5.0),
     recursive: bool = True,
@@ -1118,8 +1118,13 @@ def plot_phase_tensor_rose(
         ax.text(0.5, 0.5, "no phase tensor",
                 ha="center", va="center")
         return ax
-    lo, hi = band
-    sel = (df["period"] >= lo) & (df["period"] <= hi)
+    if band is not None:
+        lo, hi = band
+        sel = (df["period"] >= lo) & (df["period"] <= hi)
+        band_label = f"[{lo},{hi}] s"
+    else:
+        sel = np.ones(len(df), dtype=bool)
+        band_label = "all periods"
     th = np.radians(df.loc[sel, "theta"].to_numpy())
     th = (th + 2 * np.pi) % (2 * np.pi)
     if ax is None:
@@ -1134,7 +1139,7 @@ def plot_phase_tensor_rose(
     ax.bar(ang, hist, width=edges[1] - edges[0])
     ax.set_theta_zero_location("N")
     ax.set_theta_direction(-1)
-    ax.set_title(f"theta rose [{lo},{hi}] s")
+    ax.set_title(f"θ rose  {band_label}")
     return ax
 
 def plot_phase_tensor_map(

@@ -1093,15 +1093,226 @@ def plot_dimensionality_psection(
 def plot_phase_tensor_rose(
     sites: Any,
     *,
+    # ── data selection ──────────────────────────────────────────────────────
     band: Optional[Tuple[float, float]] = None,
-    bins: int = 24,
-    figsize: Tuple[float, float] = (5.0, 5.0),
+    freq_bands: Optional[List[Tuple[float, float]]] = None,
+    band_labels: Optional[List[str]] = None,
+    band_colors: Optional[List] = None,
+    # ── histogram ───────────────────────────────────────────────────────────
+    bins: int = 36,
+    # ── bar style ───────────────────────────────────────────────────────────
+    bar_style: str = "gradient",
+    bar_color: str = "#4e79a7",
+    bar_edgecolor: str = "none",
+    bar_edgelw: float = 0.4,
+    bar_alpha: float = 0.88,
+    cmap: str = "plasma",
+    # ── outer ring ──────────────────────────────────────────────────────────
+    outer_ring_lw: float = 2.5,
+    outer_ring_color: str = "0.12",
+    # ── concentric rings ────────────────────────────────────────────────────
+    n_rings: int = 4,
+    ring_color: str = "0.72",
+    ring_ls: str = ":",
+    ring_lw: float = 0.8,
+    ring_labels: Optional[List[float]] = None,
+    ring_label_angle: float = 22.5,
+    ring_label_fontsize: float = 7.0,
+    ring_label_color: str = "0.30",
+    ring_label_fmt: str = "{:.0f}",
+    # ── spokes ──────────────────────────────────────────────────────────────
+    spoke_every: float = 45.0,
+    spoke_color: str = "0.72",
+    spoke_ls: str = ":",
+    spoke_lw: float = 0.8,
+    # ── compass labels ──────────────────────────────────────────────────────
+    compass_labels: str = "NESW",
+    compass_fontsize: float = 8.5,
+    compass_color: str = "0.15",
+    compass_fontweight: str = "bold",
+    # ── mean direction ──────────────────────────────────────────────────────
+    show_mean: bool = True,
+    mean_color: str = "crimson",
+    mean_lw: float = 2.2,
+    mean_ls: str = "-",
+    show_secondary: bool = True,
+    secondary_ls: str = "--",
+    secondary_lw: Optional[float] = None,
+    secondary_color: Optional[str] = None,
+    # ── annotation box ──────────────────────────────────────────────────────
+    show_annotation: bool = True,
+    annotation_pos: Tuple[float, float] = (0.05, 0.95),
+    annotation_fontsize: float = 8.0,
+    annotation_bg: str = "white",
+    annotation_ec: str = "0.25",
+    show_n: bool = True,
+    # ── layout ──────────────────────────────────────────────────────────────
+    figsize: Tuple[float, float] = (5.5, 5.5),
+    title: str = "",
+    title_fontsize: float = 10.0,
+    # ── core ────────────────────────────────────────────────────────────────
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
     ax: Optional[plt.Axes] = None,
 ) -> plt.Axes:
+    """Publication-quality phase-tensor θ rose diagram.
+
+    Bars are drawn with axial symmetry — 0–180° mirrored to 180–360° —
+    reflecting the inherent 180° ambiguity of the phase-tensor principal
+    axis direction.
+
+    Parameters
+    ----------
+    sites : any
+        EDI paths, objects, or collection accepted by
+        :func:`~pycsamt.emtools._core.ensure_sites`.
+    band : (lo_s, hi_s) or None
+        Period window in seconds.  ``None`` uses all available periods.
+    freq_bands : list of (lo_s, hi_s), optional
+        Sub-bands for ``bar_style="bands"`` — one stacked bar colour per
+        band.
+    band_labels : list[str], optional
+        Legend labels for each entry in *freq_bands*.
+    band_colors : list, optional
+        Colours for each *freq_bands* entry.  Defaults to ``tab10``.
+    bins : int
+        Number of bins over 0–180°, mirrored to 360°.  Default ``36``
+        gives 5° bins.
+    bar_style : {"gradient", "solid", "bands"}
+        ``"gradient"`` colours bars by height via *cmap*;
+        ``"solid"`` uses *bar_color* uniformly;
+        ``"bands"`` stacks one colour per period sub-band.
+    bar_color : str
+        Bar fill colour for ``bar_style="solid"``.
+    bar_edgecolor : str
+        Bar edge colour (``"none"`` → no edge).
+    bar_edgelw : float
+        Bar edge line-width.
+    bar_alpha : float
+        Bar opacity (0–1).
+    cmap : str
+        Colormap for ``bar_style="gradient"``.
+    outer_ring_lw : float
+        Line-width of the bold outer bounding circle.
+    outer_ring_color : str
+        Colour of the outer circle.
+    n_rings : int
+        Number of concentric reference rings.
+    ring_color : str
+        Colour of concentric rings and spokes.
+    ring_ls : str
+        Line-style of concentric rings.
+    ring_lw : float
+        Line-width of concentric rings.
+    ring_labels : list[float], optional
+        Explicit count values to annotate on the rings (e.g.
+        ``[25, 50, 75, 100]``).  ``None`` → evenly spaced from
+        ``rmax / n_rings`` to ``rmax``.
+    ring_label_angle : float
+        Clockwise angle from North (degrees) at which ring count labels
+        are placed.  Default ``22.5``.
+    ring_label_fontsize : float
+        Font size for ring count labels.
+    ring_label_color : str
+        Colour for ring count labels.
+    ring_label_fmt : str
+        Format string for ring labels, e.g. ``"{:.0f}"``.
+    spoke_every : float
+        Angular spacing (degrees) between radial spokes.
+    spoke_color : str
+        Colour of radial spokes.
+    spoke_ls : str
+        Line-style of radial spokes.
+    spoke_lw : float
+        Line-width of radial spokes.
+    compass_labels : {"NESW", "degrees", "none"}
+        Perimeter labels.  ``"NESW"`` shows cardinal directions;
+        ``"degrees"`` shows degree values; ``"none"`` hides all.
+    compass_fontsize : float
+        Font size for perimeter labels.
+    compass_color : str
+        Colour for perimeter labels.
+    compass_fontweight : str
+        Font weight for perimeter labels.
+    show_mean : bool
+        Draw the axial mean direction as a line through the centre.
+    mean_color : str
+        Colour of the mean-direction line.
+    mean_lw : float
+        Line-width of the mean-direction line.
+    mean_ls : str
+        Line-style of the mean-direction line.
+    show_secondary : bool
+        Draw the 180°-conjugate mean line.
+    secondary_ls : str
+        Line-style of the conjugate line.
+    secondary_lw : float, optional
+        Line-width of the conjugate line; defaults to *mean_lw*.
+    secondary_color : str, optional
+        Colour of the conjugate line; defaults to *mean_color*.
+    show_annotation : bool
+        Show a text box with the mean θ and station/pair count.
+    annotation_pos : (float, float)
+        Axes-fraction ``(x, y)`` for the annotation box.
+    annotation_fontsize : float
+        Font size of the annotation text.
+    annotation_bg : str
+        Background colour of the annotation box.
+    annotation_ec : str
+        Edge colour of the annotation box.
+    show_n : bool
+        Append ``n = N`` to the annotation text.
+    figsize : (float, float)
+        Figure size in inches.
+    title : str
+        Axes title (set via ``ax.set_title``).
+    title_fontsize : float
+        Font size for *title*.
+    recursive, on_dup, strict, verbose
+        Passed to :func:`~pycsamt.emtools._core.ensure_sites`.
+    ax : matplotlib.axes.Axes, optional
+        Pre-existing polar axes to draw into.  Created when ``None``.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+        The polar axes containing the rose diagram.
+
+    Examples
+    --------
+    Default gradient style, all periods:
+
+    >>> from pycsamt.emtools import plot_phase_tensor_rose
+    >>> ax = plot_phase_tensor_rose("path/to/edis/", figsize=(6, 6))
+
+    Frequency-band decomposition (stacked):
+
+    >>> ax = plot_phase_tensor_rose(
+    ...     sites,
+    ...     bar_style="bands",
+    ...     freq_bands=[(1e-4, 1e-2), (1e-2, 1e0)],
+    ...     band_labels=["Short period", "Long period"],
+    ... )
+
+    Custom ring count labels:
+
+    >>> ax = plot_phase_tensor_rose(
+    ...     sites,
+    ...     ring_labels=[25, 50, 75, 100],
+    ...     ring_label_angle=15.0,
+    ... )
+    """
+    # ── axial mean helper (local, avoids import cycle with strike.py) ──────
+    def _axial_mean(a_deg: np.ndarray) -> float:
+        """Circular mean for axial (0–180°) data, returned in [0,180°)."""
+        rad = np.radians(2.0 * a_deg)
+        mu = np.degrees(np.arctan2(np.nanmean(np.sin(rad)),
+                                   np.nanmean(np.cos(rad)))) / 2.0
+        return float(mu % 180.0)
+
+    # ── build phase-tensor table ───────────────────────────────────────────
     df = build_phase_tensor_table(
         sites,
         recursive=recursive,
@@ -1109,37 +1320,212 @@ def plot_phase_tensor_rose(
         strict=strict,
         verbose=verbose,
     )
+
+    if ax is None:
+        _, ax = plt.subplots(subplot_kw=dict(polar=True), figsize=figsize)
+
     if df.empty:
-        if ax is None:
-            _, ax = plt.subplots(
-                subplot_kw=dict(polar=True),
-                figsize=figsize,
-            )
-        ax.text(0.5, 0.5, "no phase tensor",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no phase tensor data",
+                ha="center", va="center", transform=ax.transAxes)
         return ax
+
+    # ── period filtering ───────────────────────────────────────────────────
     if band is not None:
-        lo, hi = band
+        lo, hi = float(band[0]), float(band[1])
         sel = (df["period"] >= lo) & (df["period"] <= hi)
-        band_label = f"[{lo},{hi}] s"
+        band_label = f"{lo:.4g}–{hi:.4g} s"
     else:
         sel = np.ones(len(df), dtype=bool)
-        band_label = "all periods"
-    th = np.radians(df.loc[sel, "theta"].to_numpy())
-    th = (th + 2 * np.pi) % (2 * np.pi)
-    if ax is None:
-        _, ax = plt.subplots(
-            subplot_kw=dict(polar=True),
-            figsize=figsize,
-        )
-    bins = int(max(8, bins))
-    edges = np.linspace(0, 2 * np.pi, bins + 1)
-    hist, _ = np.histogram(th, bins=edges)
-    ang = 0.5 * (edges[1:] + edges[:-1])
-    ax.bar(ang, hist, width=edges[1] - edges[0])
+        p = df["period"]
+        band_label = f"{p.min():.4g}–{p.max():.4g} s"
+
+    # ── histogram over 0–180° ─────────────────────────────────────────────
+    bins_ = int(max(12, bins))
+    edges_deg = np.linspace(0.0, 180.0, bins_ + 1)
+    dw = np.radians(180.0 / bins_)
+
+    use_bands = bar_style == "bands" and bool(freq_bands)
+
+    if use_bands:
+        n_fb = len(freq_bands)  # type: ignore[arg-type]
+        _bc: List = (list(band_colors) if band_colors is not None
+                     else list(plt.get_cmap("tab10")(np.linspace(0, 0.8, n_fb))))
+        _bl: List[str] = (list(band_labels) if band_labels is not None
+                          else [f"{lo_:.4g}–{hi_:.4g} s"
+                                for lo_, hi_ in freq_bands])  # type: ignore
+        hists: List[np.ndarray] = []
+        for fb in freq_bands:  # type: ignore[union-attr]
+            lo_, hi_ = float(fb[0]), float(fb[1])
+            sel_fb = (df["period"] >= lo_) & (df["period"] <= hi_)
+            th_fb = df.loc[sel_fb, "theta"].to_numpy(float) % 180.0
+            h, _ = np.histogram(th_fb, bins=edges_deg)
+            hists.append(h)
+        hist_total = np.sum(hists, axis=0)
+    else:
+        th_raw = df.loc[sel, "theta"].to_numpy(float) % 180.0
+        hist_total, _ = np.histogram(th_raw, bins=edges_deg)
+
+    rmax = float(hist_total.max()) if hist_total.max() > 0 else 1.0
+    ang_mid = np.radians(0.5 * (edges_deg[1:] + edges_deg[:-1]))
+
+    # ── polar setup ───────────────────────────────────────────────────────
     ax.set_theta_zero_location("N")
     ax.set_theta_direction(-1)
-    ax.set_title(f"θ rose  {band_label}")
+
+    # hide default radial ticks/labels; we draw our own
+    ax.set_yticklabels([])
+    ax.set_yticks([])
+    ax.yaxis.grid(False)
+    ax.xaxis.grid(False)
+    ax.set_frame_on(False)
+
+    # ── draw bars (0–180° and mirror 180–360°) ────────────────────────────
+    def _draw_bars(ang_c: np.ndarray, heights: np.ndarray, color,
+                   bottom: float = 0.0) -> None:
+        for a, h in zip(ang_c, heights):
+            for a_plot in (a, a + np.pi):      # axial symmetry
+                ax.bar(
+                    a_plot, h, width=dw,
+                    bottom=bottom,
+                    color=color,
+                    edgecolor=bar_edgecolor,
+                    linewidth=bar_edgelw,
+                    alpha=bar_alpha,
+                )
+
+    if use_bands:
+        bottoms = np.zeros(bins_)
+        for h, col in zip(hists, _bc):
+            _draw_bars(ang_mid, h, col, bottom=0.0)
+            # stacked: accumulate actual bottom for next band
+            bottoms += h
+        # legend
+        from matplotlib.patches import Patch as _Patch
+        ax.legend(
+            handles=[_Patch(fc=c, label=l, alpha=bar_alpha)
+                     for c, l in zip(_bc, _bl)],
+            loc="lower left",
+            bbox_to_anchor=(1.05, 0.0),
+            fontsize=max(6, annotation_fontsize - 1),
+            framealpha=0.9,
+        )
+    elif bar_style == "gradient":
+        cm_ = plt.get_cmap(cmap)
+        for a, h in zip(ang_mid, hist_total):
+            col = cm_(h / rmax) if rmax > 0 else cm_(0.5)
+            for a_plot in (a, a + np.pi):
+                ax.bar(
+                    a_plot, h, width=dw,
+                    color=col,
+                    edgecolor=bar_edgecolor,
+                    linewidth=bar_edgelw,
+                    alpha=bar_alpha,
+                )
+    else:  # solid
+        _draw_bars(ang_mid, hist_total, bar_color)
+
+    # ── concentric rings ──────────────────────────────────────────────────
+    if ring_labels is not None:
+        r_levels = [float(v) for v in ring_labels]
+    else:
+        step = rmax / n_rings
+        r_levels = [step * k for k in range(1, n_rings + 1)]
+
+    theta_full = np.linspace(0, 2 * np.pi, 360)
+    for rv in r_levels:
+        ax.plot(theta_full, np.full_like(theta_full, rv),
+                color=ring_color, ls=ring_ls, lw=ring_lw, zorder=0)
+
+    # ring count annotations
+    lbl_theta = np.radians(ring_label_angle)
+    for rv in r_levels:
+        ax.text(
+            lbl_theta, rv,
+            ring_label_fmt.format(rv),
+            ha="center", va="center",
+            fontsize=ring_label_fontsize,
+            color=ring_label_color,
+            zorder=5,
+        )
+
+    # ── radial spokes ─────────────────────────────────────────────────────
+    n_spokes = int(round(360.0 / spoke_every))
+    spoke_angles = np.radians(np.arange(n_spokes) * spoke_every)
+    for sa in spoke_angles:
+        ax.plot([sa, sa], [0, rmax],
+                color=spoke_color, ls=spoke_ls, lw=spoke_lw, zorder=0)
+
+    # ── outer ring ────────────────────────────────────────────────────────
+    ax.spines["polar"].set_linewidth(outer_ring_lw)
+    ax.spines["polar"].set_edgecolor(outer_ring_color)
+    ax.set_ylim(0, rmax * 1.08)
+
+    # ── compass labels ────────────────────────────────────────────────────
+    n_spk = int(round(360.0 / spoke_every))
+    spoke_degs = np.arange(n_spk) * spoke_every
+    if compass_labels == "NESW":
+        _card = {0: "N", 90: "E", 180: "S", 270: "W"}
+        lbl_list = [_card.get(int(d) % 360, "") for d in spoke_degs]
+    elif compass_labels == "degrees":
+        lbl_list = [f"{int(d)}°" for d in spoke_degs]
+    else:
+        lbl_list = [""] * n_spk
+
+    ax.set_thetagrids(
+        spoke_degs, labels=lbl_list,
+        fontsize=compass_fontsize,
+    )
+    for lbl in ax.get_xticklabels():
+        lbl.set_color(compass_color)
+        lbl.set_fontweight(compass_fontweight)
+
+    # ── mean direction ────────────────────────────────────────────────────
+    th_all = df.loc[sel, "theta"].to_numpy(float) % 180.0
+    mu = _axial_mean(th_all) if len(th_all) > 0 else 0.0
+    sec_lw  = secondary_lw  if secondary_lw  is not None else mean_lw
+    sec_col = secondary_color if secondary_color is not None else mean_color
+
+    if show_mean and len(th_all) > 0:
+        mu_r = np.radians(mu)
+        # draw full diameter: two radii (center→rim) in opposite directions
+        for ang_pt in (mu_r, mu_r + np.pi):
+            ax.plot([ang_pt, ang_pt], [0, rmax],
+                    color=mean_color, lw=mean_lw, ls=mean_ls,
+                    solid_capstyle="round", zorder=10)
+
+        if show_secondary:
+            mu90 = np.radians(mu + 90.0)
+            for ang_pt in (mu90, mu90 + np.pi):
+                ax.plot([ang_pt, ang_pt], [0, rmax],
+                        color=sec_col, lw=sec_lw, ls=secondary_ls,
+                        solid_capstyle="round", zorder=9)
+
+    # ── annotation box ────────────────────────────────────────────────────
+    if show_annotation and len(th_all) > 0:
+        txt = f"θ̄ = {mu:.1f}°"
+        if show_n:
+            txt += f"\nn = {len(th_all)}"
+        ax.text(
+            annotation_pos[0], annotation_pos[1], txt,
+            transform=ax.transAxes,
+            fontsize=annotation_fontsize,
+            va="top", ha="left",
+            bbox=dict(
+                boxstyle="round,pad=0.3",
+                fc=annotation_bg,
+                ec=annotation_ec,
+                lw=0.8,
+            ),
+            zorder=20,
+        )
+
+    # ── title ─────────────────────────────────────────────────────────────
+    if title:
+        ax.set_title(title, fontsize=title_fontsize, pad=14)
+    else:
+        ax.set_title(f"Phase-tensor θ rose  ({band_label})",
+                     fontsize=title_fontsize, pad=14)
+
     return ax
 
 def plot_phase_tensor_map(

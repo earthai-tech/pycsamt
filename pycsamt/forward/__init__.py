@@ -58,7 +58,8 @@ from .noise import (
     add_gaussian_noise,
     add_noise,
 )
-from .batch import generate_dataset, ForwardDataset
+from .batch import generate_dataset, ForwardDataset, generate_dataset_3d, SurveyDataset3D
+from .config import ForwardConfig
 
 __all__ = [
     # solvers
@@ -75,7 +76,12 @@ __all__ = [
     "MultiplicativeNoise",
     "add_gaussian_noise",
     "add_noise",
-    # batch
+    # batch 1-D
     "generate_dataset",
     "ForwardDataset",
+    # batch 3-D
+    "generate_dataset_3d",
+    "SurveyDataset3D",
+    # configuration
+    "ForwardConfig",
 ]

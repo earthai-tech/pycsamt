@@ -42,7 +42,7 @@ _DEMO_DIR = os.path.dirname(os.path.abspath(__file__))
 _ROOT      = os.path.dirname(os.path.dirname(_DEMO_DIR))
 sys.path.insert(0, _ROOT)
 
-OUT_DIR = os.path.join(_DEMO_DIR, "figures")
+OUT_DIR = os.path.join(_DEMO_DIR, "figures", "forward")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 # ── forward imports ──────────────────────────────────────────────────────────

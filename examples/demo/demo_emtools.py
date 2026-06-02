@@ -28,7 +28,6 @@ import matplotlib
 matplotlib.use("Agg")           # headless — no display required
 import matplotlib.pyplot as plt
 import matplotlib.cm as mcm
-import numpy as np
 
 warnings.filterwarnings("ignore")
 
@@ -38,12 +37,18 @@ _ROOT      = os.path.dirname(os.path.dirname(_DEMO_DIR))
 sys.path.insert(0, _ROOT)
 
 DATA_ROOT  = os.path.join(_ROOT, "data", "AMT", "WILLY_DATA")
-OUT_DIR    = os.path.join(_DEMO_DIR, "figures")
+OUT_DIR    = os.path.join(_DEMO_DIR, "figures", "emtools")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 # ── emtools imports ─────────────────────────────────────────────────────────
 from pycsamt.emtools._core       import ensure_sites, _iter_items, _name
 from pycsamt.emtools.inspect     import plot_coverage
+from pycsamt.emtools.qc          import (
+    plot_confidence_band_summary,
+    plot_confidence_profile,
+    plot_frequency_confidence_psection,
+    plot_station_confidence_dashboard,
+)
 from pycsamt.emtools.frequency   import (
     plot_coverage_quality_heatmap,
     plot_apparent_depth_psection,
@@ -70,18 +75,21 @@ from pycsamt.emtools.strike         import (
     plot_strike_profile,
     plot_strike_mapsticks,
 )
+from pycsamt.emtools.plot           import plot_raw_sites_1d
+from pycsamt.api.control            import PYCSAMT_CONTROL
 
 DPI = 150
+N_FIGURES = 0
 
 # ── helper ──────────────────────────────────────────────────────────────────
 def save(obj, name: str, title: str = "") -> None:
-    """Accept a Figure *or* an Axes, optionally add a suptitle, then save."""
+    """Accept a Figure *or* an Axes, then save it to the gallery."""
+    global N_FIGURES
     fig = obj if isinstance(obj, plt.Figure) else obj.get_figure()
-    if title:
-        fig.suptitle(title, y=1.02, fontsize=10, fontweight="normal")
     path = os.path.join(OUT_DIR, name)
     fig.savefig(path, dpi=DPI, bbox_inches="tight")
     plt.close(fig)
+    N_FIGURES += 1
     print(f"  ✔  {name}")
 
 
@@ -129,10 +137,99 @@ save(
     "Fig 03 — Apparent-depth pseudo-section  (L22PLT)",
 )
 
+save(
+    plot_confidence_profile(
+        L22,
+        method="composite",
+        figsize=(12, 4.2),
+        ci_hi=0.90,
+        ci_lo=0.50,
+    ),
+    "fig03b_station_confidence_composite.png",
+    "Fig 03b — Composite station-confidence profile  (L22PLT)",
+)
+
+save(
+    plot_frequency_confidence_psection(
+        L22,
+        method="composite",
+        figsize=(12, 4.8),
+        ci_hi=0.90,
+        ci_lo=0.50,
+    ),
+    "fig03c_frequency_confidence_section.png",
+    "Fig 03c — Frequency-confidence pseudo-section  (L22PLT)",
+)
+
+save(
+    plot_confidence_band_summary(
+        L22,
+        method="composite",
+        figsize=(8.5, 4.0),
+        ci_hi=0.90,
+        ci_lo=0.50,
+    ),
+    "fig03d_confidence_period_summary.png",
+    "Fig 03d — Period-band confidence summary  (L22PLT)",
+)
+
+save(
+    plot_station_confidence_dashboard(
+        L22,
+        station="22-14BF",
+        method="composite",
+        figsize=(10.5, 6.0),
+        ci_hi=0.90,
+        ci_lo=0.50,
+    ),
+    "fig03e_station_confidence_dashboard.png",
+    "Fig 03e — Frequency-confidence dashboard  (22-14BF)",
+)
+
 # ────────────────────────────────────────────────────────────────────────────
 # Section 2 — Apparent resistivity & phase (direct from Z tensor)
 # ────────────────────────────────────────────────────────────────────────────
 print("\n── Section 2 — Apparent resistivity & phase ──")
+
+raw_panel_stations = ["22-1BF", "22-14BF", "22-24BF"]
+
+with PYCSAMT_CONTROL.context(
+    phase__range=(-180.0, 180.0),
+    rho__view="log10",
+    x__view="log10_period",
+):
+    save(
+        plot_raw_sites_1d(
+            L22,
+            stations=raw_panel_stations,
+            components=("xx", "xy", "yx", "yy"),
+            raw=True,
+            ncols_groups=3,
+            figsize_scale=(4.2, 3.2),
+            show_component_legend=True,
+        ),
+        "fig04_raw_1d_station_panels.png",
+        "Fig 04 — Raw 1-D rho/phase panels  (L22PLT)",
+    )
+
+with PYCSAMT_CONTROL.context(
+    phase__range=(-90.0, 90.0),
+    rho__view="log10",
+    x__view="period",
+):
+    save(
+        plot_raw_sites_1d(
+            L22,
+            stations=raw_panel_stations,
+            components=("xy", "yx"),
+            raw=False,
+            ncols_groups=3,
+            figsize_scale=(3.2, 3.0),
+            show_component_legend=True,
+        ),
+        "fig04b_component_style_1d_panels.png",
+        "Fig 04b — Component-coloured 1-D rho/phase panels  (L22PLT)",
+    )
 
 # Build ρa / φ overlay directly from Site.rho / Site.phase / Site.freq
 # (all 25 L22PLT stations, XY component)
@@ -367,5 +464,5 @@ save(
 
 # ────────────────────────────────────────────────────────────────────────────
 print("\n" + "━" * 62)
-print(f"  22 figures saved →  {OUT_DIR}")
+print(f"  {N_FIGURES} figures saved →  {OUT_DIR}")
 print("━" * 62)

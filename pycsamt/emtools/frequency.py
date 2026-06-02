@@ -8,6 +8,8 @@ from ._core import (
     ensure_sites,
     _apply_each,
     _iter_items,
+    _get_z_block,
+    _get_t_block,
 )
 
 # re-use package editors when it saves code
@@ -66,28 +68,6 @@ def _interp_complex(
     return out.squeeze()
 
 
-def _get_z_block(ed: Any):
-    Z = getattr(ed, "Z", None) or getattr(ed, "z", None)
-    if Z is None:
-        return None, None, None
-    z = getattr(Z, "z", None)
-    # ze = getattr(Z, "z_err", None)
-    fr = getattr(Z, "freq", None)
-    if not isinstance(z, np.ndarray) or not isinstance(fr, np.ndarray):
-        return None, None, None
-    return Z, z, fr
-
-
-def _get_t_block(ed: Any):
-    T = getattr(ed, "Tipper", None) or getattr(ed, "tipper", None)
-    if T is None:
-        return None, None, None
-    t = getattr(T, "tipper", None)
-    # te = getattr(T, "tipper_err", None)
-    fr = getattr(T, "freq", None)
-    if not isinstance(t, np.ndarray) or not isinstance(fr, np.ndarray):
-        return None, None, None
-    return T, t, fr
 
 
 def _set_block_freq(obj: Any, fr: np.ndarray) -> None:

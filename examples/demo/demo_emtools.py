@@ -48,7 +48,6 @@ from pycsamt.emtools.frequency   import (
     plot_coverage_quality_heatmap,
     plot_apparent_depth_psection,
 )
-from pycsamt.emtools.tf          import plot_tipper_hodograms
 from pycsamt.emtools.impedance   import plot_phasor_wheel, plot_determinant_track
 from pycsamt.emtools.tensor      import (
     plot_phase_tensor_psection,
@@ -69,6 +68,7 @@ from pycsamt.emtools.strike         import (
     plot_strike_rose,
     plot_strike_ribbon,
     plot_strike_profile,
+    plot_strike_mapsticks,
 )
 
 DPI = 150
@@ -161,12 +161,15 @@ save(fig, "fig04_rhoa_phi.png")
 # ────────────────────────────────────────────────────────────────────────────
 # Section 3 — Tipper & impedance diagnostics
 # ────────────────────────────────────────────────────────────────────────────
-print("\n── Section 3 — Tipper & impedance diagnostics ──")
+print("\n── Section 3 — Impedance diagnostics & station map ──")
 
+# Note: WILLY_DATA EDI files contain no Hz/tipper component, so
+# plot_tipper_hodograms is replaced with plot_strike_mapsticks which
+# places per-station strike sticks on a lon/lat map.
 save(
-    plot_tipper_hodograms(L22, figsize=(12, 5)),
-    "fig05_tipper_hodograms.png",
-    "Fig 05 — Tipper hodograms  (L22PLT)",
+    plot_strike_mapsticks(L22, method="consensus", figsize=(6, 6)),
+    "fig05_strike_mapsticks.png",
+    "Fig 05 — Geoelectric strike map-sticks  (L22PLT)",
 )
 
 save(

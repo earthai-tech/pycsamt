@@ -60,16 +60,24 @@ from .noise import (
 )
 from .batch import generate_dataset, ForwardDataset, generate_dataset_3d, SurveyDataset3D
 from .config import ForwardConfig
+from .grid2d import Grid2D, make_padding
+from .em2d import MT2DForward, ForwardResponse2D
+from .config2d import ForwardConfig2D
 
 __all__ = [
-    # solvers
+    # solvers 1-D
     "MT1DForward",
     "TEM1DForward",
     "CSAMT1DForward",
     "ForwardResponse",
+    # solvers 2-D
+    "MT2DForward",
+    "ForwardResponse2D",
     # models
     "LayeredModel",
     "GEOLOGY_PRIORS",
+    "Grid2D",
+    "make_padding",
     # noise
     "GaussianNoise",
     "FieldRealisticNoise",
@@ -84,4 +92,5 @@ __all__ = [
     "SurveyDataset3D",
     # configuration
     "ForwardConfig",
+    "ForwardConfig2D",
 ]

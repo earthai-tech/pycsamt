@@ -74,6 +74,12 @@ References
 from ._base      import ResistivityModel
 from .borehole   import Borehole, Interval
 from .calibrate  import ModelCalibrator
+from .hydro      import (
+    AquiferZone,
+    HydroGeophysicalModel,
+    HydroInterpreter,
+    HydroUnit,
+)
 from .lithology  import RockDatabase, RockEntry, Layer, StratigraphicLog
 from .           import export
 from .           import plot
@@ -86,6 +92,11 @@ __all__ = [
     "Interval",
     # calibration
     "ModelCalibrator",
+    # hydrogeology
+    "AquiferZone",
+    "HydroGeophysicalModel",
+    "HydroInterpreter",
+    "HydroUnit",
     # lithology
     "RockDatabase",
     "RockEntry",

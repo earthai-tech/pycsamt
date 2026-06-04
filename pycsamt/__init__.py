@@ -52,6 +52,7 @@ del _required, _pkg_name, _import_name, _missing
 # Only the two packages that are always needed at the module level are loaded
 # here; everything else is imported on demand by the user.
 from . import interp  # noqa: F401  geological interpretation / export
+from . import inversion  # noqa: F401  physics-based EM inversion API
 from . import tdem    # noqa: F401  time-domain EM → EDICollection
 
 # ── Backend API ───────────────────────────────────────────────────────────────
@@ -90,6 +91,7 @@ __all__ = [
     "forward",
     "gis",
     "interp",
+    "inversion",
     "io",
     "jones",
     "models",

@@ -31,6 +31,8 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 
+from pycsamt.api.section import PYCSAMT_SECTION, SectionStyle
+
 from .base import OccamBase
 
 __all__ = [
@@ -41,6 +43,8 @@ __all__ = [
     "PlotSounding1D",
     "PlotSiteMisfit",
     "PlotResponseGrid",
+    "PlotStation1DFit",
+    "plot_station_1d_fit",
 ]
 
 # Data-type code metadata: code → (short_name, colorbar_label, is_rho)
@@ -89,6 +93,13 @@ class _OccamPlotBase(OccamBase):
         raise NotImplementedError(
             f"{self.__class__.__name__}.plot — not yet implemented"
         )
+
+
+def _resolve_section_style(section: str | SectionStyle) -> SectionStyle:
+    """Return a copied section style for Occam2D section plots."""
+    if isinstance(section, SectionStyle):
+        return section.copy()
+    return PYCSAMT_SECTION.style_for(str(section)).copy()
 
 
 # ---------------------------------------------------------------------------
@@ -349,6 +360,7 @@ class PlotModel(_OccamPlotBase):
         depth_max: Optional[float] = None,
         show_stations: bool = True,
         profile_distance_unit: str = "km",
+        section: str | SectionStyle = "inversion",
         **kwargs,
     ):
         super().__init__(result=result, **kwargs)
@@ -357,6 +369,7 @@ class PlotModel(_OccamPlotBase):
         self.depth_max             = depth_max
         self.show_stations         = show_stations
         self.profile_distance_unit = profile_distance_unit
+        self.section_style         = _resolve_section_style(section)
 
     def plot(self):
         """Return a pcolormesh Figure of the 2-D resistivity model.
@@ -397,10 +410,20 @@ class PlotModel(_OccamPlotBase):
         zi_max    = int(np.searchsorted(zn, depth_max))
         zi_max    = min(zi_max + 1, len(zn))
 
-        figsize = self.figsize or (12, 5)
+        rho_sub = np.ma.masked_invalid(rho_lin[:zi_max - 1, :])
+        data_obj = getattr(result, "data", None)
+        n_stations = (
+            int(data_obj.offsets.size)
+            if data_obj is not None and getattr(data_obj, "offsets", None) is not None
+            else rho_sub.shape[1]
+        )
+        figsize = self.figsize or self.section_style.figsize_for(
+            n_stations=n_stations,
+            n_y=rho_sub.shape[0],
+            colorbar=True,
+        )
         fig, ax  = plt.subplots(figsize=figsize, dpi=self.dpi)
 
-        rho_sub = np.ma.masked_invalid(rho_lin[:zi_max - 1, :])
         im = ax.pcolormesh(
             xn_plot, zn[:zi_max], rho_sub,
             cmap=self.cmap,
@@ -408,17 +431,21 @@ class PlotModel(_OccamPlotBase):
             shading="flat",
         )
 
-        ax.set_ylim(float(zn[zi_max - 1]), 0.0)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel("Depth (m)")
         iter_n = getattr(getattr(result, "best_iter", None), "iteration", "?")
-        ax.set_title(f"Occam2D resistivity model  [iter {iter_n}]")
-
-        cb = fig.colorbar(im, ax=ax, pad=0.02)
-        cb.set_label("Resistivity (Ω·m)")
+        self.section_style.apply_axis(
+            ax,
+            xlabel=xlabel,
+            ylabel="Depth (m)",
+            title=f"Occam2D resistivity model  [iter {iter_n}]",
+        )
+        ax.set_ylim(float(zn[zi_max - 1]), 0.0)
+        self.section_style.add_colorbar(
+            im,
+            ax,
+            label="Resistivity (Ω·m)",
+        )
 
         if self.show_stations:
-            data_obj = getattr(result, "data", None)
             if data_obj is not None and data_obj.offsets.size > 0:
                 sta_x = (data_obj.offsets - x_shift) / x_off_scale
                 ax.plot(sta_x, np.zeros_like(sta_x), "v", color="k",
@@ -1535,3 +1562,446 @@ class PlotResponseGrid(_OccamPlotBase):
         fig.suptitle(f"Response grid  [iter {iter_n}]", fontsize="small")
         fig.tight_layout()
         return fig
+
+
+# ---------------------------------------------------------------------------
+# PlotStation1DFit  —  single-station ρa/φ fit  +  1-D model column
+# ---------------------------------------------------------------------------
+
+def _station_idx(result, station) -> int:
+    """Return 1-based station index from a name or 1-based integer."""
+    data_obj = getattr(result, "data", None)
+    if isinstance(station, str):
+        if data_obj is not None and data_obj.sites:
+            try:
+                return data_obj.sites.index(station) + 1
+            except ValueError:
+                raise ValueError(
+                    f"Station {station!r} not found.  "
+                    f"Available: {data_obj.sites}"
+                )
+        raise RuntimeError("No site names in data — pass an integer index.")
+    return int(station)
+
+
+def _extract_fit_data(result, site_1b: int):
+    """Return per-mode arrays needed for ρa/φ panels.
+
+    Returns
+    -------
+    dict  mode_name → {"x": periods, "obs": observed,
+                        "mod": modeled, "err": error}
+    """
+    response = getattr(result, "response", None)
+    data_obj = getattr(result, "data",     None)
+    if response is None or response.n_data == 0:
+        return {}
+
+    rd    = response.data                                  # (n, 7)
+    db    = data_obj.data_blocks if data_obj else None     # (n, 5) or None
+    freqs = data_obj.frequencies if data_obj else None
+
+    site_mask_r = rd[:, 0].astype(int) == site_1b
+    site_mask_d = (db[:, 0].astype(int) == site_1b) if db is not None else None
+
+    out = {}
+    mode_pairs = {"TE": (_TE_RHO, _TE_PHS), "TM": (_TM_RHO, _TM_PHS)}
+
+    for mode, (rho_code, phs_code) in mode_pairs.items():
+        mode_dict = {}
+        for key, code in (("rho", rho_code), ("phs", phs_code)):
+            mask_r = site_mask_r & (rd[:, 2].astype(int) == code)
+            if not mask_r.any():
+                continue
+            sub_r  = rd[mask_r]
+            fi_0   = np.clip(sub_r[:, 1].astype(int) - 1, 0,
+                             (len(freqs) - 1) if freqs is not None else 0)
+            x_vals = (1.0 / freqs[fi_0]
+                      if freqs is not None and freqs.size > 0
+                      else sub_r[:, 1].astype(float))
+            obs    = sub_r[:, 4]
+            mod    = sub_r[:, 5]
+
+            # error from data_blocks (same site / freq / type)
+            err = np.full(len(obs), np.nan)
+            if db is not None and site_mask_d is not None:
+                mask_d = site_mask_d & (db[:, 2].astype(int) == code)
+                if mask_d.any():
+                    sub_d  = db[mask_d]
+                    fi_d   = sub_d[:, 1].astype(int)
+                    fi_r   = sub_r[:, 1].astype(int)
+                    for k, fv in enumerate(fi_r):
+                        match = sub_d[fi_d == fv]
+                        if match.size:
+                            err[k] = float(match[0, 4])
+
+            order   = np.argsort(x_vals)
+            mode_dict[key] = dict(
+                x   = x_vals[order],
+                obs = obs[order],
+                mod = mod[order],
+                err = err[order],
+            )
+        if mode_dict:
+            out[mode] = mode_dict
+    return out
+
+
+def _extract_1d_column(result, site_1b: int):
+    """Return (z_top_km, z_bot_km, rho_lin) at the station's model column."""
+    mesh    = getattr(result, "mesh",    None)
+    rho_2d  = getattr(result, "rho_2d", None)
+    data_obj = getattr(result, "data",  None)
+
+    if mesh is None or rho_2d is None or data_obj is None:
+        return None, None, None
+    if data_obj.offsets is None or data_obj.offsets.size == 0:
+        return None, None, None
+
+    x_off    = float(data_obj.offsets[site_1b - 1])
+    x_nodes  = mesh.x_nodes
+    x_cen    = (x_nodes[:-1] + x_nodes[1:]) / 2.0
+    col_idx  = int(np.argmin(np.abs(x_cen - x_off)))
+
+    z_nodes  = mesh.z_nodes          # (n_z+1,) in metres
+    z_top_km = z_nodes[:-1] / 1000.0
+    z_bot_km = z_nodes[1:]  / 1000.0
+
+    rho_col  = rho_2d[:, col_idx]
+    rho_lin  = np.where(np.isfinite(rho_col), 10.0 ** rho_col, np.nan)
+    return z_top_km, z_bot_km, rho_lin
+
+
+class PlotStation1DFit(_OccamPlotBase):
+    """Single-station ρa/φ fit with 1-D resistivity model column.
+
+    Produces the three-panel layout used in MTPy's single-station
+    inversion view:
+
+    * **Left top** — apparent resistivity ρa (Ω·m) vs period (s),
+      log–log axes.  Observed data points carry error bars; the
+      forward-model prediction is a dashed line.
+    * **Left bottom** — phase φ (°) vs period (s), semilog-x axes.
+    * **Right** — 1-D resistivity profile extracted from the 2-D model
+      at the station's horizontal position, plotted as a step function
+      with depth increasing downward.
+
+    Parameters
+    ----------
+    result : InversionResult
+        Loaded inversion result.
+    station : int or str, default 1
+        Station to plot.  Pass a 1-based integer index or a station
+        name string (e.g. ``"S07"``).
+    modes : list of {"TE", "TM"}, default ["TE", "TM"]
+        Which modes to include.
+    depth_max : float or None
+        Clip depth axis at this value (km).  ``None`` uses the full
+        model depth.
+    rho_lim : (vmin, vmax) or None
+        Apparent-resistivity y-axis limits.  ``None`` → auto.
+    phase_lim : (lo, hi), default (0, 90)
+        Phase y-axis limits in degrees.
+    rho_depth_lim : (vmin, vmax) or None
+        Resistivity axis limits for the 1-D model panel.
+        ``None`` → auto.
+    figsize : (width, height), default (10, 5.5)
+    dpi : int, default 100
+    title : str
+        Override the auto-derived title.
+    mode_colors : dict, optional
+        ``{"TE": color, "TM": color}``.  Defaults to
+        ``{"TE": "C0", "TM": "C3"}``.
+
+    Examples
+    --------
+    >>> from pycsamt.models.occam2d import InversionResult, PlotStation1DFit
+    >>> result = InversionResult("path/to/occam2d/")
+    >>> fig = PlotStation1DFit(result, station="S07").plot()
+    >>> fig.savefig("S07_1d_fit.png", dpi=150)
+
+    Or use the convenience wrapper::
+
+    >>> from pycsamt.models.occam2d.plot import plot_station_1d_fit
+    >>> fig = plot_station_1d_fit(result, station=7)
+    """
+
+    def __init__(
+        self,
+        result=None,
+        station: "int | str" = 1,
+        modes: Optional[List[str]] = None,
+        depth_max: Optional[float] = None,
+        rho_lim: Optional[Tuple[float, float]] = None,
+        phase_lim: Tuple[float, float] = (0.0, 90.0),
+        rho_depth_lim: Optional[Tuple[float, float]] = None,
+        title: str = "",
+        mode_colors: Optional[dict] = None,
+        max_rho_err: float = 0.5,
+        max_phs_err: float = 20.0,
+        **kwargs,
+    ):
+        super().__init__(result=result, **kwargs)
+        self.station       = station
+        self.modes         = modes or ["TE", "TM"]
+        self.depth_max     = depth_max
+        self.rho_lim       = rho_lim
+        self.phase_lim     = phase_lim
+        self.rho_depth_lim = rho_depth_lim
+        self.title         = title
+        self.mode_colors   = mode_colors or {"TE": "C0", "TM": "C3"}
+        self.max_rho_err   = max_rho_err   # cap on log10(rho) error bar half-width
+        self.max_phs_err   = max_phs_err   # cap on phase error bar (degrees)
+
+    def plot(self):
+        """Return the three-panel Figure.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+        """
+        import matplotlib.pyplot as plt
+        import matplotlib.gridspec as gridspec
+
+        result = self.result
+        if result is None:
+            raise RuntimeError("PlotStation1DFit: no InversionResult attached.")
+
+        site_1b   = _station_idx(result, self.station)
+        fit_data  = _extract_fit_data(result, site_1b)
+        z_top, z_bot, rho_1d = _extract_1d_column(result, site_1b)
+
+        # ── figure layout: 2 rows × 2 cols; right col spans both rows ───────
+        fig = plt.figure(
+            figsize=self.figsize or (10.0, 5.5),
+            dpi=self.dpi,
+        )
+        gs = gridspec.GridSpec(
+            2, 2,
+            figure=fig,
+            width_ratios=[2.2, 1.0],
+            hspace=0.06,
+            wspace=0.35,
+        )
+        ax_rho = fig.add_subplot(gs[0, 0])
+        ax_phs = fig.add_subplot(gs[1, 0], sharex=ax_rho)
+        ax_mod = fig.add_subplot(gs[:, 1])
+
+        iter_n = getattr(getattr(result, "best_iter", None), "iteration", "?")
+
+        # ── ρa and φ panels ─────────────────────────────────────────────────
+        for mode in self.modes:
+            if mode not in fit_data:
+                continue
+            col    = self.mode_colors.get(mode, "C0")
+            md     = fit_data[mode]
+
+            # ── apparent resistivity ──────────────────────────────────────
+            if "rho" in md:
+                d = md["rho"]
+                x, obs_r, mod_r, err_r = d["x"], d["obs"], d["mod"], d["err"]
+                obs_lin = np.where(np.isfinite(obs_r), 10.0 ** obs_r, np.nan)
+                mod_lin = np.where(np.isfinite(mod_r), 10.0 ** mod_r, np.nan)
+
+                # cap log-space error, then convert to linear error bars
+                err_r_cap = np.where(
+                    np.isfinite(err_r),
+                    np.clip(np.abs(err_r), 0.0, self.max_rho_err),
+                    np.nan,
+                )
+                if np.any(np.isfinite(err_r_cap) & (err_r_cap > 0)):
+                    yerr_lo = obs_lin - np.where(
+                        np.isfinite(err_r_cap),
+                        10.0 ** (obs_r - err_r_cap), obs_lin,
+                    )
+                    yerr_hi = np.where(
+                        np.isfinite(err_r_cap),
+                        10.0 ** (obs_r + err_r_cap), obs_lin,
+                    ) - obs_lin
+                    yerr = np.vstack([yerr_lo, yerr_hi])
+                else:
+                    yerr = None
+
+                ax_rho.errorbar(
+                    x, obs_lin, yerr=yerr,
+                    fmt="o", ms=4.5, color=col,
+                    elinewidth=0.9, capsize=2, capthick=0.8,
+                    label=f"Obs$_{{\\rm {mode}}}$",
+                    zorder=4,
+                )
+                ax_rho.plot(
+                    x, mod_lin, "--", color=col, lw=1.5,
+                    label=f"Mod$_{{\\rm {mode}}}$ {iter_n}",
+                    zorder=3,
+                )
+
+            # ── phase ─────────────────────────────────────────────────────
+            if "phs" in md:
+                d = md["phs"]
+                x, obs_p, mod_p, err_p = d["x"], d["obs"], d["mod"], d["err"]
+                # cap phase error at max_phs_err degrees
+                err_p_cap = np.where(
+                    np.isfinite(err_p),
+                    np.clip(np.abs(err_p), 0.0, self.max_phs_err),
+                    np.nan,
+                )
+                yerr = (np.where(np.isfinite(err_p_cap), err_p_cap, 0.0)
+                        if np.any(np.isfinite(err_p_cap) & (err_p_cap > 0))
+                        else None)
+
+                ax_phs.errorbar(
+                    x, obs_p, yerr=yerr,
+                    fmt="o", ms=4.5, color=col,
+                    elinewidth=0.9, capsize=2, capthick=0.8,
+                    zorder=4,
+                )
+                ax_phs.plot(x, mod_p, "--", color=col, lw=1.5, zorder=3)
+
+        # ── ρa axis styling ───────────────────────────────────────────────
+        ax_rho.set_xscale("log")
+        ax_rho.set_yscale("log")
+        ax_rho.set_ylabel(r"App. Res. (Ω·m)", fontsize=9)
+        ax_rho.grid(True, which="both", alpha=0.25, linewidth=0.5)
+        ax_rho.grid(True, which="major", alpha=0.45, linewidth=0.7)
+        ax_rho.legend(fontsize=7.5, framealpha=0.85, loc="best")
+        if self.rho_lim:
+            ax_rho.set_ylim(*self.rho_lim)
+        plt.setp(ax_rho.get_xticklabels(), visible=False)
+
+        # ── phase axis styling ────────────────────────────────────────────
+        ax_phs.set_xscale("log")
+        ax_phs.set_xlabel("Period (s)", fontsize=9)
+        ax_phs.set_ylabel("Phase (deg)", fontsize=9)
+        ax_phs.set_ylim(*self.phase_lim)
+        ax_phs.grid(True, which="both", alpha=0.25, linewidth=0.5)
+        ax_phs.grid(True, which="major", alpha=0.45, linewidth=0.7)
+        ax_phs.yaxis.set_major_locator(
+            plt.MultipleLocator(10) if (self.phase_lim[1] - self.phase_lim[0]) > 30
+            else plt.MultipleLocator(5)
+        )
+
+        # ── 1-D model profile ─────────────────────────────────────────────
+        if z_top is not None and rho_1d is not None:
+            depth_max_km = (self.depth_max if self.depth_max is not None
+                            else float(z_bot[-1]))
+            # staircase: for each layer draw a horizontal segment then vertical
+            for zt, zb, rho in zip(z_top, z_bot, rho_1d):
+                if zt > depth_max_km:
+                    break
+                zb_clip = min(float(zb), depth_max_km)
+                if np.isfinite(rho) and rho > 0:
+                    ax_mod.plot([rho, rho], [zt, zb_clip],
+                                color="#2ca02c", lw=1.8, zorder=3)
+            # connect layers vertically
+            valid = [(zt, zb, rho) for zt, zb, rho in zip(z_top, z_bot, rho_1d)
+                     if np.isfinite(rho) and rho > 0 and zt <= depth_max_km]
+            for k in range(len(valid) - 1):
+                _, _, r0 = valid[k]
+                _, z1, r1 = valid[k + 1]
+                ax_mod.plot([r0, r1], [z1, z1],
+                            color="#2ca02c", lw=1.8, zorder=3)
+
+            ax_mod.set_xscale("log")
+            ax_mod.set_ylim(depth_max_km, 0.0)
+            if self.rho_depth_lim:
+                ax_mod.set_xlim(*self.rho_depth_lim)
+            ax_mod.set_xlabel(r"Resistivity (Ω·m)", fontsize=9)
+            ax_mod.set_ylabel("Depth (km)",          fontsize=9)
+            ax_mod.yaxis.set_label_position("right")
+            ax_mod.yaxis.tick_right()
+            ax_mod.grid(True, which="both", alpha=0.25, linewidth=0.5)
+            ax_mod.grid(True, which="major", alpha=0.45, linewidth=0.7)
+        else:
+            ax_mod.text(0.5, 0.5, "no model\navailable",
+                        ha="center", va="center",
+                        transform=ax_mod.transAxes, color="0.55")
+
+        # ── figure title ──────────────────────────────────────────────────
+        data_obj = getattr(result, "data", None)
+        st_name  = (
+            data_obj.sites[site_1b - 1]
+            if (data_obj and data_obj.sites
+                and site_1b - 1 < len(data_obj.sites))
+            else f"S{site_1b:03d}"
+        )
+        fig.suptitle(
+            self.title or f"Station {st_name}  —  iter {iter_n}",
+            fontsize=10, fontweight="bold", y=1.01,
+        )
+        fig.tight_layout()
+        return fig
+
+
+def plot_station_1d_fit(
+    result,
+    station: "int | str" = 1,
+    *,
+    modes: Optional[List[str]] = None,
+    depth_max: Optional[float] = None,
+    rho_lim: Optional[Tuple[float, float]] = None,
+    phase_lim: Tuple[float, float] = (0.0, 90.0),
+    rho_depth_lim: Optional[Tuple[float, float]] = None,
+    title: str = "",
+    mode_colors: Optional[dict] = None,
+    max_rho_err: float = 0.5,
+    max_phs_err: float = 20.0,
+    figsize: Optional[Tuple[float, float]] = None,
+    dpi: int = 100,
+) -> "plt.Figure":
+    """Convenience wrapper around :class:`PlotStation1DFit`.
+
+    Plots the observed vs modelled ρa / phase curves together with the
+    1-D resistivity column extracted from the 2-D inversion model at
+    the requested station.
+
+    Parameters
+    ----------
+    result : InversionResult
+    station : int or str
+        1-based integer index or station name (e.g. ``"S07"``).
+    modes : list of {"TE", "TM"} or None
+        Modes to plot.  Default ``["TE", "TM"]``.
+    depth_max : float or None
+        Clip depth axis (km).
+    rho_lim : (vmin, vmax) or None
+        ρa y-axis limits.
+    phase_lim : (lo, hi), default (0, 90)
+        Phase y-axis limits in degrees.
+    rho_depth_lim : (vmin, vmax) or None
+        Resistivity axis limits for the model panel.
+    title : str
+        Override the auto title.
+    mode_colors : dict or None
+        ``{"TE": color, "TM": color}``.
+    figsize : (float, float) or None
+    dpi : int
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+
+    Examples
+    --------
+    >>> from pycsamt.models.occam2d import InversionResult
+    >>> from pycsamt.models.occam2d.plot import plot_station_1d_fit
+    >>> result = InversionResult("data/occam2D/")
+    >>> fig = plot_station_1d_fit(result, station="S07", depth_max=20.0)
+    >>> fig.savefig("S07_fit.png", dpi=150, bbox_inches="tight")
+    """
+    import matplotlib.pyplot as plt
+
+    return PlotStation1DFit(
+        result        = result,
+        station       = station,
+        modes         = modes,
+        depth_max     = depth_max,
+        rho_lim       = rho_lim,
+        phase_lim     = phase_lim,
+        rho_depth_lim = rho_depth_lim,
+        title         = title,
+        mode_colors   = mode_colors,
+        max_rho_err   = max_rho_err,
+        max_phs_err   = max_phs_err,
+        figsize       = figsize,
+        dpi           = dpi,
+    ).plot()

@@ -24,13 +24,40 @@ ModelObject = ModEmModel2D | ModEmModel3D
 
 __all__ = ["InversionResult"]
 
-# Stem patterns ModEM uses for model files
+# Stem patterns ModEM uses for model files (old convention: m0, m1, mi)
 _MODEL_STEM_RE = re.compile(r"^m(\d+|i)$", re.IGNORECASE)
+# Iteration number in real ModEM output names: Modular_NLCG_NNN
+_MODEM_ITER_RE = re.compile(r"_(\d+)$")
 
 
 def _stem(p: Path) -> str:
     """Return a ModEM stem stripped of known generated suffixes."""
     return p.stem.split("_")[0]
+
+
+def _modem_iter_num(path: Path) -> int | None:
+    """Extract trailing iteration number from a path stem, or ``None``."""
+    m = _MODEM_ITER_RE.search(path.stem)
+    return int(m.group(1)) if m else None
+
+
+def _detect_mode_from_rho(path: Path) -> str:
+    """Return '3d' or '2d' by peeking at the grid-dimensions control line."""
+    try:
+        with path.open("r", errors="replace") as fh:
+            for ln in fh:
+                stripped = ln.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                parts = stripped.split()
+                n_int = sum(
+                    1 for tok in parts
+                    if tok.lstrip("-").isdigit()
+                )
+                return "3d" if n_int >= 3 else "2d"
+    except OSError:
+        pass
+    return "2d"
 
 
 class InversionResult(ModEmBase):
@@ -69,10 +96,14 @@ class InversionResult(ModEmBase):
         wd = self.workdir
 
         # -- detect mode -----------------------------------------------
-        if list(wd.glob("*.ws")):
+        ws_files = sorted(wd.glob("*.ws"))
+        rho_files = sorted(wd.glob("*.rho"))
+        if ws_files:
             self.mode = "3d"
-        elif list(wd.glob("*.rho")):
-            self.mode = "2d"
+        elif rho_files:
+            # Read the header of the first .rho file to detect 2D vs 3D —
+            # real ModEM 3D output uses .rho with WS-format headers.
+            self.mode = _detect_mode_from_rho(rho_files[0])
 
         # -- log -------------------------------------------------------
         log_files = sorted(wd.glob("*.log"))
@@ -99,45 +130,107 @@ class InversionResult(ModEmBase):
                 pass
 
         # -- models ----------------------------------------------------
-        ext = "*.ws" if self.mode == "3d" else "*.rho"
-        model_cls = ModEmModel3D if self.mode == "3d" else ModEmModel2D
-        for mf in sorted(wd.glob(ext)):
-            st = mf.stem
-            # Accept m0, m1, and mi; reject data-model hybrids.
-            if not _MODEL_STEM_RE.match(_stem(mf)):
+        if self.mode == "3d":
+            model_files = sorted(wd.glob("*.rho")) + sorted(wd.glob("*.ws"))
+            model_cls: type = ModEmModel3D
+        else:
+            model_files = sorted(wd.glob("*.rho"))
+            model_cls = ModEmModel2D
+
+        for mf in model_files:
+            old_stem = _stem(mf)
+            # Old convention: m0, m1, mi
+            if _MODEL_STEM_RE.match(old_stem):
+                try:
+                    self.models[old_stem] = model_cls.read(mf)
+                except Exception:
+                    pass
+            else:
+                # Real ModEM output: Modular_NLCG_NNN.rho
+                n = _modem_iter_num(mf)
+                if n is not None:
+                    key = f"iter_{n:04d}"
+                    try:
+                        self.models[key] = model_cls.read(mf)
+                    except Exception:
+                        pass
+
+        # Resolve initial / final from old convention
+        self.model_initial = self.models.get("m0")
+        if "mi" in self.models:
+            self.model_final = self.models["mi"]
+        elif any(re.match(r"m\d+", k) for k in self.models):
+            def _old_sort(k: str) -> int:
+                mm = re.match(r"m(\d+)", k)
+                return int(mm.group(1)) if mm else -1
+            old_keys = [k for k in self.models if re.match(r"m\d+", k)]
+            self.model_final = self.models[max(old_keys, key=_old_sort)]
+
+        # Resolve initial / final from real ModEM naming (iter_NNNN keys)
+        iter_keys = sorted(
+            [k for k in self.models if k.startswith("iter_")]
+        )
+        if iter_keys and self.model_initial is None:
+            self.model_initial = self.models[iter_keys[0]]
+        if iter_keys and self.model_final is None:
+            self.model_final = self.models[iter_keys[-1]]
+
+        # -- data files ------------------------------------------------
+        _ERR_SENTINEL = 1e10   # ModEM uses 2e15 to mark masked/unused data
+
+        # Priority 1: non-numbered dat files with genuine measurement errors
+        # (e.g. RERUN-*.dat, the actual input data supplied to the inversion).
+        # These are preferred over the Modular_NLCG_NNN.dat files, which store
+        # forward-response values and typically carry error = 2e15 (sentinel).
+        for df in sorted(wd.glob("*.dat")):
+            if _modem_iter_num(df) is not None:
+                continue
+            if _stem(df) in ("d0", "di", "pr"):
                 continue
             try:
-                m = model_cls.read(mf)
-                self.models[st] = m
+                candidate = ModEmData.read(df)
+                has_real = any(
+                    row[8] < _ERR_SENTINEL
+                    for blk in candidate.blocks
+                    for row in blk["rows"][:20]
+                )
+                if has_real and self.data_obs is None:
+                    self.data_obs = candidate
             except Exception:
                 pass
 
-        self.model_initial = self.models.get("m0")
-        # prefer "mi" (final), otherwise the highest numbered model
-        if "mi" in self.models:
-            self.model_final = self.models["mi"]
-        elif self.models:
-
-            def _sort_key(k: str) -> int:
-                m = re.match(r"m(\d+)", k)
-                return int(m.group(1)) if m else -1
-
-            last = max(self.models, key=_sort_key)
-            self.model_final = self.models[last]
-
-        # -- data files ------------------------------------------------
+        # Priority 2: old-convention stems
         for df in sorted(wd.glob("*.dat")):
             st = _stem(df)
-            if st == "d0":
+            if st == "d0" and self.data_obs is None:
                 try:
                     self.data_obs = ModEmData.read(df)
                 except Exception:
                     pass
-            elif st in ("di", "pr"):
+            elif st in ("di", "pr") and self.data_pred is None:
                 try:
                     self.data_pred = ModEmData.read(df)
                 except Exception:
                     pass
+
+        # Priority 3: numbered Modular_NLCG_NNN.dat files.
+        # Lowest iteration → obs fallback; highest → predicted response.
+        numbered_dats: list[tuple[int, Path]] = []
+        for df in sorted(wd.glob("*.dat")):
+            n = _modem_iter_num(df)
+            if n is not None:
+                numbered_dats.append((n, df))
+        numbered_dats.sort(key=lambda x: x[0])
+        if numbered_dats and self.data_obs is None:
+            try:
+                self.data_obs = ModEmData.read(numbered_dats[0][1])
+            except Exception:
+                pass
+        if numbered_dats and self.data_pred is None:
+            try:
+                self.data_pred = ModEmData.read(numbered_dats[-1][1])
+            except Exception:
+                pass
 
         if self.verbose:
             self.logger.info(

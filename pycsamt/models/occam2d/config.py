@@ -1,19 +1,178 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Default configuration for Occam2D inputs.
 
-``OccamConfig`` holds every tuneable parameter that ``InputBuilder`` and
-``OccamRunner`` need.  Override individual fields when constructing or pass
-the config object explicitly.
+``OccamConfig`` holds every tuneable parameter that
+``InputBuilder`` and ``OccamRunner`` need. Override individual
+fields when constructing or pass the config object explicitly.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from pathlib import Path
+
+from ..config_io import (
+    ConfigParameter,
+    read_config_file,
+    write_config_template,
+)
 
 __all__ = ["OccamConfig"]
+
+
+_OCCAM_CONFIG_SCHEMA = [
+    ConfigParameter(
+        "modes",
+        "Electromagnetic modes written to the Occam data file. "
+        "Use 'TE' for Zxy, 'TM' for Zyx, or both modes when "
+        "both apparent resistivity and phase curves should be "
+        "exported.",
+        "Data Options",
+    ),
+    ConfigParameter(
+        "error_floor_rho",
+        "Relative apparent-resistivity error floor. A value of "
+        "0.05 means five percent and is converted to the log10 "
+        "data units used by Occam.",
+        "Data Options",
+    ),
+    ConfigParameter(
+        "error_floor_phase",
+        "Minimum absolute phase uncertainty in degrees. This "
+        "prevents phase rows with very small source errors from "
+        "dominating the normalized misfit.",
+        "Data Options",
+    ),
+    ConfigParameter(
+        "freq_min",
+        "Optional lower frequency limit in hertz. Frequencies "
+        "below this value are excluded when building data from "
+        "EDI-like sources.",
+        "Data Options",
+    ),
+    ConfigParameter(
+        "freq_max",
+        "Optional upper frequency limit in hertz. Frequencies "
+        "above this value are excluded when building data from "
+        "EDI-like sources.",
+        "Data Options",
+    ),
+    ConfigParameter(
+        "n_layers",
+        "Number of active earth layers in the Occam model. "
+        "Larger values allow more vertical structure but "
+        "increase the inversion parameter count.",
+        "Mesh Options",
+    ),
+    ConfigParameter(
+        "n_airlayers",
+        "Number of air layers above the earth model. These "
+        "layers help represent the air-earth boundary.",
+        "Mesh Options",
+    ),
+    ConfigParameter(
+        "cell_size_horizontal",
+        "Target horizontal cell width in metres near stations. "
+        "Smaller values provide finer lateral detail and larger "
+        "meshes.",
+        "Mesh Options",
+    ),
+    ConfigParameter(
+        "cell_size_vertical_top",
+        "Thickness in metres of the top earth layer and current "
+        "air-layer cells.",
+        "Mesh Options",
+    ),
+    ConfigParameter(
+        "depth_scale",
+        "Geometric multiplier applied to layer thickness with "
+        "depth. Values greater than one make deeper layers "
+        "progressively thicker.",
+        "Mesh Options",
+    ),
+    ConfigParameter(
+        "n_padding_x",
+        "Number of horizontal padding cells added on each side "
+        "of the survey profile.",
+        "Mesh Options",
+    ),
+    ConfigParameter(
+        "max_iterations",
+        "Maximum number of Occam inversion iterations requested "
+        "in the startup file.",
+        "Startup Options",
+    ),
+    ConfigParameter(
+        "target_misfit",
+        "Target normalized RMS misfit. Values near one are "
+        "typical when data errors are realistic.",
+        "Startup Options",
+    ),
+    ConfigParameter(
+        "roughness_type",
+        "Roughness penalty type passed to Occam. The standard "
+        "gradient penalty commonly uses value 1.",
+        "Startup Options",
+    ),
+    ConfigParameter(
+        "diagonal_penalties",
+        "Flag controlling diagonal roughness penalties in the "
+        "startup file. A value of 0 disables them.",
+        "Startup Options",
+    ),
+    ConfigParameter(
+        "stepsize_cut_count",
+        "Maximum number of Lagrange step-size reductions "
+        "allowed during a line-search stage.",
+        "Startup Options",
+    ),
+    ConfigParameter(
+        "debug_level",
+        "Debug verbosity level passed to the Occam executable.",
+        "Startup Options",
+    ),
+    ConfigParameter(
+        "initial_rho",
+        "Starting half-space resistivity in ohm metres. The "
+        "startup vector is initialized as log10(initial_rho).",
+        "Startup Options",
+    ),
+    ConfigParameter(
+        "lagrange_start",
+        "Initial Lagrange multiplier written to the startup "
+        "file.",
+        "Startup Options",
+    ),
+    ConfigParameter(
+        "data_file",
+        "Data filename written inside the Occam2D run "
+        "directory.",
+        "File Options",
+    ),
+    ConfigParameter(
+        "mesh_file",
+        "Mesh filename written inside the Occam2D run "
+        "directory.",
+        "File Options",
+    ),
+    ConfigParameter(
+        "model_file",
+        "Model-definition filename written inside the run "
+        "directory.",
+        "File Options",
+    ),
+    ConfigParameter(
+        "startup_file",
+        "Startup filename passed to the Occam executable.",
+        "File Options",
+    ),
+    ConfigParameter(
+        "binary_name",
+        "Occam2D executable name or path used by the runner.",
+        "Binary",
+    ),
+]
 
 
 @dataclass
@@ -130,6 +289,26 @@ class OccamConfig:
     common data and mesh fields. Overrides update the same
     ``OccamConfig`` instance stored on the builder.
 
+    Source-Of-Truth Files
+    ---------------------
+    Users can generate an editable configuration file before
+    building an Occam2D run. Python is the default template
+    format because it supports rich inline comments and can be
+    read safely by :meth:`from_file` using literal parsing.
+    YAML templates also keep comments. JSON templates store
+    explanations in a ``"_schema"`` metadata block and editable
+    values under ``"config"`` because standard JSON has no
+    comment syntax.
+
+    The recommended workflow is:
+
+    1. Generate a template with :meth:`write_template`.
+    2. Edit values in the generated file.
+    3. Load the edited file with :meth:`from_file` or
+       :meth:`read`.
+    4. Pass the resulting configuration to builders and
+       runners.
+
     See Also
     --------
     InputBuilder
@@ -167,6 +346,19 @@ class OccamConfig:
     >>> cfg.cell_size_vertical_top = 5.0
     >>> cfg.depth_scale = 1.15
 
+    Generate a documented source-of-truth template:
+
+    >>> path = OccamConfig.write_template("occam2d_config.py")
+    >>> cfg = OccamConfig.from_file(path)
+    >>> cfg.binary_name
+    'Occam2D'
+
+    Use YAML when the configuration will be edited outside
+    Python:
+
+    >>> OccamConfig.write_template("occam2d_config.yml")
+    PosixPath('occam2d_config.yml')
+
     References
     ----------
     .. [1] Constable, S. C., Parker, R. L., and Constable,
@@ -180,11 +372,11 @@ class OccamConfig:
     """
 
     # --- data file ---
-    modes: List[str] = field(default_factory=lambda: ["TE", "TM"])
+    modes: list[str] = field(default_factory=lambda: ["TE", "TM"])
     error_floor_rho: float = 0.05
     error_floor_phase: float = 0.5
-    freq_min: Optional[float] = None
-    freq_max: Optional[float] = None
+    freq_min: float | None = None
+    freq_max: float | None = None
 
     # --- mesh ---
     n_layers: int = 30
@@ -212,3 +404,93 @@ class OccamConfig:
 
     # --- binary ---
     binary_name: str = "Occam2D"
+
+    def to_template(
+        self,
+        path: str | Path = "occam2d_config.py",
+        *,
+        fmt: str | None = None,
+    ) -> Path:
+        """Write this configuration as an editable template.
+
+        Parameters
+        ----------
+        path : path-like, default "occam2d_config.py"
+            Destination file. If the path has no suffix, the
+            suffix is inferred from ``fmt`` and defaults to
+            ``.py``.
+        fmt : {"py", "json", "yml", "yaml"}, optional
+            Template format. Python and YAML templates include
+            comments. JSON templates include a ``"_schema"``
+            metadata block because standard JSON does not
+            support comments.
+
+        Returns
+        -------
+        pathlib.Path
+            Path of the generated source-of-truth file.
+        """
+        return write_config_template(
+            path,
+            self,
+            _OCCAM_CONFIG_SCHEMA,
+            fmt=fmt,
+            title="Occam2D source-of-truth configuration",
+        )
+
+    @classmethod
+    def write_template(
+        cls,
+        path: str | Path = "occam2d_config.py",
+        *,
+        fmt: str | None = None,
+    ) -> Path:
+        """Write a default editable Occam2D configuration file.
+
+        Parameters
+        ----------
+        path : path-like, default "occam2d_config.py"
+            Destination file. Suffixes ``.py``, ``.json``,
+            ``.yml``, and ``.yaml`` select the output format.
+        fmt : {"py", "json", "yml", "yaml"}, optional
+            Explicit output format. When omitted, the suffix of
+            ``path`` is used; paths without a suffix produce a
+            Python template.
+
+        Returns
+        -------
+        pathlib.Path
+            Path of the generated template.
+        """
+        return cls().to_template(path, fmt=fmt)
+
+    @classmethod
+    def from_file(
+        cls,
+        path: str | Path,
+        *,
+        strict: bool = True,
+    ) -> OccamConfig:
+        """Create a configuration from a source-of-truth file.
+
+        Parameters
+        ----------
+        path : path-like
+            Python, JSON, YML, or YAML configuration file
+            generated by :meth:`write_template` or following
+            the same structure.
+        strict : bool, default True
+            If ``True``, unknown editable keys raise
+            :class:`ValueError`. If ``False``, unknown keys are
+            ignored. Metadata keys beginning with ``"_"`` are
+            always ignored.
+
+        Returns
+        -------
+        OccamConfig
+            Configuration populated from edited file values.
+        """
+        values = read_config_file(path, cls, strict=strict)
+        return cls(**values)
+
+    read = from_file

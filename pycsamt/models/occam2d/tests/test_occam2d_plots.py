@@ -67,7 +67,6 @@ def test_misfit_no_roughness(result):
 
 def test_misfit_no_log_raises():
     from pycsamt.models.occam2d.plot import PlotMisfit
-    from pycsamt.models.occam2d.results import InversionResult
     # Construct a minimal result with no log
     class _FakeResult:
         log = None
@@ -83,6 +82,13 @@ def test_model_returns_figure(result):
     from pycsamt.models.occam2d.plot import PlotModel
     fig = PlotModel(result=result).plot()
     assert hasattr(fig, "savefig")
+
+
+def test_model_dynamic_section_returns_figure(result):
+    from pycsamt.models.occam2d.plot import PlotModel
+    fig = PlotModel(result=result, section="dynamic").plot()
+    assert hasattr(fig, "savefig")
+    assert len(fig.axes) >= 2
 
 
 def test_model_no_stations(result):

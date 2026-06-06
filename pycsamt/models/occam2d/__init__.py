@@ -59,7 +59,8 @@ from .startup  import OccamStartup, OccamIter
 from .response import OccamResponse
 from .log      import OccamLog
 from .plot     import (PlotModel, PlotResponse, PlotPseudo, PlotMisfit,
-                       PlotSounding1D, PlotSiteMisfit, PlotResponseGrid)
+                       PlotSounding1D, PlotSiteMisfit, PlotResponseGrid,
+                       PlotStation1DFit, plot_station_1d_fit)
 from .config   import OccamConfig
 
 __all__ = [

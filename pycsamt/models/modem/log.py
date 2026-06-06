@@ -25,12 +25,12 @@ _RE_COMPLETED = re.compile(
     r"Completed\s+NLCG\s+iteration\s+(\d+)", re.IGNORECASE
 )
 _RE_WITH = re.compile(
-    r"with:\s+f=([\d.E+\-]+)\s+m2=([\d.E+\-]+)\s+rms=\s*([\d.E+\-]+)"
+    r"with:\s+f=\s*([\d.E+\-]+)\s+m2=\s*([\d.E+\-]+)\s+rms=\s*([\d.E+\-]+)"
     r"\s+lambda=\s*([\d.E+\-]+)\s+alpha=\s*([\d.E+\-]+)",
     re.IGNORECASE,
 )
 _RE_START = re.compile(
-    r"START:\s+f=([\d.E+\-]+)\s+m2=([\d.E+\-]+)\s+rms=\s*([\d.E+\-]+)"
+    r"START:\s+f=\s*([\d.E+\-]+)\s+m2=\s*([\d.E+\-]+)\s+rms=\s*([\d.E+\-]+)"
     r"\s+lambda=\s*([\d.E+\-]+)\s+alpha=\s*([\d.E+\-]+)",
     re.IGNORECASE,
 )

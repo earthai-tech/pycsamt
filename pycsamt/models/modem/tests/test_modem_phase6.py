@@ -2,7 +2,6 @@
 """Phase 6 tests — PlotMisfit, PlotModel2D, PlotModel3D, PlotResponse, PlotPseudo."""
 
 import pytest
-import numpy as np
 from pathlib import Path
 
 matplotlib = pytest.importorskip("matplotlib")
@@ -63,6 +62,15 @@ def test_plot_model2d_returns_figure(result_2d):
     import matplotlib.figure
     fig = PlotModel2D(result=result_2d, which="final").plot()
     assert isinstance(fig, matplotlib.figure.Figure)
+    matplotlib.pyplot.close(fig)
+
+
+def test_plot_model2d_dynamic_section(result_2d):
+    from pycsamt.models.modem.plot import PlotModel2D
+    import matplotlib.figure
+    fig = PlotModel2D(result=result_2d, section="dynamic").plot()
+    assert isinstance(fig, matplotlib.figure.Figure)
+    assert len(fig.axes) >= 2
     matplotlib.pyplot.close(fig)
 
 

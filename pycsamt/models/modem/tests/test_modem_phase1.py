@@ -65,6 +65,47 @@ class TestModEmConfig:
         assert cfg.covariance_file.endswith(".cov")
         assert cfg.control_file.endswith(".inv")
 
+    def test_write_and_read_python_template(self, tmp_path):
+        from pycsamt.models.modem.config import ModEmConfig
+        path = ModEmConfig.write_template(tmp_path / "modem_config.py")
+        text = path.read_text()
+        assert "CONFIG = {" in text
+        assert "Workflow dimensionality" in text
+        cfg = ModEmConfig.from_file(path)
+        assert cfg.mode == "3d"
+
+    def test_write_and_read_json_template(self, tmp_path):
+        from pycsamt.models.modem.config import ModEmConfig
+        path = ModEmConfig.write_template(tmp_path / "modem_config.json")
+        text = path.read_text()
+        assert '"_schema"' in text
+        assert '"config"' in text
+        cfg = ModEmConfig.from_file(path)
+        assert cfg.binary_name == "Mod3DMT"
+
+    def test_write_and_read_yaml_template(self, tmp_path):
+        from pycsamt.models.modem.config import ModEmConfig
+        path = ModEmConfig.write_template(tmp_path / "modem_config.yml")
+        text = path.read_text()
+        assert "# ---- Dimensionality ----" in text
+        cfg = ModEmConfig.from_file(path)
+        assert cfg.n_procs == 4
+
+    def test_to_template_uses_instance_values(self, tmp_path):
+        from pycsamt.models.modem.config import ModEmConfig
+        cfg = ModEmConfig(mode="2d", n_procs=12)
+        path = cfg.to_template(tmp_path / "custom.py")
+        loaded = ModEmConfig.read(path)
+        assert loaded.mode == "2d"
+        assert loaded.n_procs == 12
+
+    def test_from_file_rejects_unknown_keys(self, tmp_path):
+        from pycsamt.models.modem.config import ModEmConfig
+        path = tmp_path / "bad.py"
+        path.write_text("CONFIG = {'mode': '3d', 'bad_key': 1}\n")
+        with pytest.raises(ValueError, match="bad_key"):
+            ModEmConfig.from_file(path)
+
 
 # ---------------------------------------------------------------------------
 # Validation — against real example files

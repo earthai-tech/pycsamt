@@ -11,10 +11,289 @@ subpackage.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
+from ..config_io import (
+    ConfigParameter,
+    read_config_file,
+    write_config_template,
+)
 from .doc import _modem_param_docs as _params
 
 __all__ = ["ModEmConfig"]
+
+
+_MODEM_CONFIG_SCHEMA = [
+    ConfigParameter(
+        "mode",
+        "Workflow dimensionality. Use '2d' for Mod2DMT files "
+        "and '3d' for Mod3DMT files with optional covariance.",
+        "Dimensionality",
+    ),
+    ConfigParameter(
+        "component_type",
+        "ModEM data component family, for example "
+        "'Full_Impedance', 'Off_Diagonal_Impedance', "
+        "'TE_Impedance', or 'TM_Impedance'.",
+        "Data Options",
+    ),
+    ConfigParameter(
+        "sign_convention",
+        "Time-harmonic sign convention recorded in the data "
+        "header. It must match the convention used when "
+        "impedance tensors were processed.",
+        "Data Options",
+    ),
+    ConfigParameter(
+        "units",
+        "Impedance units written to the ModEM data header. "
+        "Keep this consistent with the numerical impedance "
+        "values stored in the data file.",
+        "Data Options",
+    ),
+    ConfigParameter(
+        "error_floor_z",
+        "Relative impedance error floor as a fraction of |Z|. "
+        "Larger values reduce the influence of very small "
+        "formal errors during inversion.",
+        "Data Options",
+    ),
+    ConfigParameter(
+        "error_floor_z_floor",
+        "Absolute lower bound for impedance errors after the "
+        "relative floor is applied.",
+        "Data Options",
+    ),
+    ConfigParameter(
+        "freq_min",
+        "Optional lower frequency limit in hertz. Frequencies "
+        "below this value are excluded when data are built.",
+        "Data Options",
+    ),
+    ConfigParameter(
+        "freq_max",
+        "Optional upper frequency limit in hertz. Frequencies "
+        "above this value are excluded when data are built.",
+        "Data Options",
+    ),
+    ConfigParameter(
+        "nx_2d",
+        "Number of core horizontal cells in a 2-D model before "
+        "lateral padding is added.",
+        "2-D Grid",
+    ),
+    ConfigParameter(
+        "nz_2d",
+        "Number of active earth layers in a 2-D model. Air "
+        "layers are counted separately.",
+        "2-D Grid",
+    ),
+    ConfigParameter(
+        "n_airlayers_2d",
+        "Number of high-resistivity air layers above the earth "
+        "in 2-D models.",
+        "2-D Grid",
+    ),
+    ConfigParameter(
+        "cell_size_h_2d",
+        "Nominal horizontal cell width in metres near the 2-D "
+        "station zone.",
+        "2-D Grid",
+    ),
+    ConfigParameter(
+        "cell_size_v_top_2d",
+        "Thickness in metres of the shallowest 2-D earth layer.",
+        "2-D Grid",
+    ),
+    ConfigParameter(
+        "depth_scale_2d",
+        "Geometric growth factor for 2-D layer thicknesses with "
+        "depth.",
+        "2-D Grid",
+    ),
+    ConfigParameter(
+        "n_padding_x_2d",
+        "Number of lateral padding cells added to each side of "
+        "the 2-D model.",
+        "2-D Grid",
+    ),
+    ConfigParameter(
+        "nx",
+        "Number of core cells along the 3-D x direction before "
+        "padding.",
+        "3-D Grid",
+    ),
+    ConfigParameter(
+        "ny",
+        "Number of core cells along the 3-D y direction before "
+        "padding.",
+        "3-D Grid",
+    ),
+    ConfigParameter(
+        "nz",
+        "Number of active earth layers in the 3-D model.",
+        "3-D Grid",
+    ),
+    ConfigParameter(
+        "n_airlayers",
+        "Number of high-resistivity air layers above the 3-D "
+        "earth model.",
+        "3-D Grid",
+    ),
+    ConfigParameter(
+        "cell_size_h",
+        "Nominal horizontal 3-D core cell width in metres.",
+        "3-D Grid",
+    ),
+    ConfigParameter(
+        "cell_size_v_top",
+        "Thickness in metres of the shallowest 3-D earth layer.",
+        "3-D Grid",
+    ),
+    ConfigParameter(
+        "depth_scale",
+        "Geometric growth factor for 3-D layer thicknesses with "
+        "depth.",
+        "3-D Grid",
+    ),
+    ConfigParameter(
+        "n_padding_xy",
+        "Number of padding cells added around the 3-D horizontal "
+        "core region.",
+        "3-D Grid",
+    ),
+    ConfigParameter(
+        "smooth_x",
+        "Covariance smoothing weight in the x direction for 3-D "
+        "regularization.",
+        "Covariance",
+    ),
+    ConfigParameter(
+        "smooth_y",
+        "Covariance smoothing weight in the y direction for 3-D "
+        "regularization.",
+        "Covariance",
+    ),
+    ConfigParameter(
+        "smooth_z",
+        "Covariance smoothing weight in the vertical direction "
+        "for 3-D regularization.",
+        "Covariance",
+    ),
+    ConfigParameter(
+        "n_smooth_iter",
+        "Number of smoothing passes written to the 3-D "
+        "covariance file.",
+        "Covariance",
+    ),
+    ConfigParameter(
+        "max_iterations",
+        "Maximum number of nonlinear conjugate-gradient "
+        "iterations allowed by the control file.",
+        "Inversion Control",
+    ),
+    ConfigParameter(
+        "target_rms",
+        "Target normalized RMS misfit. Lower values demand a "
+        "tighter fit and may increase model structure.",
+        "Inversion Control",
+    ),
+    ConfigParameter(
+        "initial_lambda",
+        "Initial damping or regularization trade-off parameter "
+        "used by the inversion search.",
+        "Inversion Control",
+    ),
+    ConfigParameter(
+        "lambda_divisor",
+        "Factor used by ModEM to reduce lambda during trade-off "
+        "searches.",
+        "Inversion Control",
+    ),
+    ConfigParameter(
+        "initial_alpha",
+        "Initial line-search step in model units.",
+        "Inversion Control",
+    ),
+    ConfigParameter(
+        "rms_diff_tol",
+        "Small RMS-change tolerance used to decide when progress "
+        "has stalled.",
+        "Inversion Control",
+    ),
+    ConfigParameter(
+        "lambda_exit",
+        "Lower lambda threshold used as an exit criterion.",
+        "Inversion Control",
+    ),
+    ConfigParameter(
+        "initial_rho",
+        "Starting half-space resistivity in ohm metres. Must be "
+        "positive because models are commonly written in log "
+        "resistivity.",
+        "Initial Model",
+    ),
+    ConfigParameter(
+        "data_file",
+        "Default ModEM data filename used by configured "
+        "workflows.",
+        "File Names",
+    ),
+    ConfigParameter(
+        "model_file",
+        "Default ModEM model filename used by configured "
+        "workflows.",
+        "File Names",
+    ),
+    ConfigParameter(
+        "covariance_file",
+        "Default covariance filename for 3-D runs.",
+        "File Names",
+    ),
+    ConfigParameter(
+        "control_file",
+        "Default inversion-control filename.",
+        "File Names",
+    ),
+    ConfigParameter(
+        "log_file",
+        "Default ModEM nonlinear conjugate-gradient log filename.",
+        "File Names",
+    ),
+    ConfigParameter(
+        "output_stem",
+        "Stem used by ModEM when naming model and response "
+        "outputs from an inversion.",
+        "File Names",
+    ),
+    ConfigParameter(
+        "binary_2d",
+        "Name or path of the 2-D ModEM executable.",
+        "Binary And MPI",
+    ),
+    ConfigParameter(
+        "binary_3d",
+        "Name or path of the 3-D ModEM executable.",
+        "Binary And MPI",
+    ),
+    ConfigParameter(
+        "use_mpi",
+        "Whether the runner should launch ModEM through an MPI "
+        "command.",
+        "Binary And MPI",
+    ),
+    ConfigParameter(
+        "n_procs",
+        "Number of MPI processes requested when MPI execution is "
+        "enabled.",
+        "Binary And MPI",
+    ),
+    ConfigParameter(
+        "mpi_command",
+        "MPI launcher command, commonly 'mpirun' or 'mpiexec'.",
+        "Binary And MPI",
+    ),
+]
 
 
 @dataclass
@@ -95,6 +374,112 @@ class ModEmConfig:
     def binary_name(self) -> str:
         """Return the executable name implied by :attr:`mode`."""
         return self.binary_3d if self.is_3d else self.binary_2d
+
+    def to_template(
+        self,
+        path: str | Path = "modem_config.py",
+        *,
+        fmt: str | None = None,
+    ) -> Path:
+        """Write this configuration as an editable template.
+
+        Parameters
+        ----------
+        path : path-like, default "modem_config.py"
+            Destination file. If the path has no suffix, the
+            suffix is inferred from ``fmt`` and defaults to
+            ``.py``.
+        fmt : {"py", "json", "yml", "yaml"}, optional
+            Template format. Python and YAML templates include
+            comments. JSON templates include a ``"_schema"``
+            documentation block because standard JSON does not
+            support comments.
+
+        Returns
+        -------
+        pathlib.Path
+            Path of the generated template.
+        """
+        return write_config_template(
+            path,
+            self,
+            _MODEM_CONFIG_SCHEMA,
+            fmt=fmt,
+            title="ModEM source-of-truth configuration",
+        )
+
+    @classmethod
+    def write_template(
+        cls,
+        path: str | Path = "modem_config.py",
+        *,
+        fmt: str | None = None,
+    ) -> Path:
+        """Write a default editable ModEM configuration file.
+
+        Parameters
+        ----------
+        path : path-like, default "modem_config.py"
+            Destination file. Suffixes ``.py``, ``.json``,
+            ``.yml``, and ``.yaml`` select the output format.
+        fmt : {"py", "json", "yml", "yaml"}, optional
+            Explicit output format. When omitted, the suffix of
+            ``path`` is used; paths without a suffix produce a
+            Python template.
+
+        Returns
+        -------
+        pathlib.Path
+            Path of the generated source-of-truth file.
+
+        Examples
+        --------
+        >>> from pycsamt.models.modem.config import ModEmConfig
+        >>> path = ModEmConfig.write_template("modem_config.py")
+        >>> path.name
+        'modem_config.py'
+        """
+        return cls().to_template(path, fmt=fmt)
+
+    @classmethod
+    def from_file(
+        cls,
+        path: str | Path,
+        *,
+        strict: bool = True,
+    ) -> ModEmConfig:
+        """Create a configuration from a source-of-truth file.
+
+        Parameters
+        ----------
+        path : path-like
+            Python, JSON, YML, or YAML configuration file
+            generated by :meth:`write_template` or following
+            the same structure.
+        strict : bool, default True
+            If ``True``, unknown editable keys raise
+            :class:`ValueError`. If ``False``, unknown keys are
+            ignored. Metadata keys starting with ``"_"`` are
+            always ignored.
+
+        Returns
+        -------
+        ModEmConfig
+            Configuration populated from edited file values.
+
+        Examples
+        --------
+        >>> from pycsamt.models.modem.config import ModEmConfig
+        >>> ModEmConfig.write_template("modem_config.json")
+        PosixPath('modem_config.json')
+        >>> cfg = ModEmConfig.from_file("modem_config.json")
+        >>> cfg.binary_name
+        'Mod3DMT'
+        """
+        values = read_config_file(path, cls, strict=strict)
+        return cls(**values)
+
+    read = from_file
 
 
 ModEmConfig.__doc__ = rf"""
@@ -237,6 +622,27 @@ impedance families and use the ``*_2d`` grid fields. For 3-D
 workflows, use full, off-diagonal, determinant, or vertical
 component families and the 3-D grid/covariance fields.
 
+Source-Of-Truth Files
+---------------------
+Users can generate an editable configuration file before
+building or running a model. Python is the default format
+because it supports rich inline comments and can still be read
+safely by :meth:`from_file` using literal parsing. YAML files
+also keep comments. JSON files cannot contain comments, so the
+generated JSON template stores explanations in a ``"_schema"``
+metadata block and editable values under ``"config"``.
+
+The recommended workflow is:
+
+1. Generate a template with :meth:`write_template`.
+2. Edit the values in the generated file.
+3. Load the edited file with :meth:`from_file` or
+   :meth:`read`.
+4. Pass the resulting configuration to builders and runners.
+
+The same reusable configuration I/O layer is designed for
+other model subpackages, including Occam2D.
+
 See Also
 --------
 InputBuilder
@@ -296,6 +702,19 @@ Configure an MPI-enabled 3-D run:
 ...     n_procs=16,
 ...     binary_3d="Mod3DMT_MPI",
 ... )
+
+Generate a documented source-of-truth file and read it back:
+
+>>> path = ModEmConfig.write_template("modem_config.py")
+>>> cfg = ModEmConfig.from_file(path)
+>>> cfg.mode
+'3d'
+
+Generate a JSON template for environments where JSON is easier
+to exchange:
+
+>>> ModEmConfig.write_template("modem_config.json")
+PosixPath('modem_config.json')
 
 References
 ----------

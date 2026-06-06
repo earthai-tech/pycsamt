@@ -256,5 +256,166 @@ class TestGenerateDataset(unittest.TestCase):
         np.testing.assert_array_equal(ds.y, ds2.y)
 
 
+class TestSurveyDataset3D(unittest.TestCase):
+    """Container tests — no DL backend required."""
+
+    @classmethod
+    def setUpClass(cls):
+        from pycsamt.forward.batch import generate_dataset_3d
+        cls.ds = generate_dataset_3d(
+            n_surveys=20,
+            n_stations=9,
+            n_layers=3,
+            freqs=np.logspace(0, 3, 10),
+            corr_length=2000.0,
+            seed=7,
+            verbose=False,
+        )
+
+    def test_X_shape(self):
+        ds = self.ds
+        self.assertEqual(ds.X.shape, (20, 9, 20))   # 10 freqs × 2 (rho+phase)
+
+    def test_y_shape(self):
+        ds = self.ds
+        # n_layers=3 → 3 rho + 2 thick = 5
+        self.assertEqual(ds.y.shape, (20, 9, 5))
+
+    def test_coords_shape(self):
+        self.assertEqual(self.ds.coords.shape, (9, 2))
+
+    def test_n_surveys_property(self):
+        self.assertEqual(self.ds.n_surveys, 20)
+
+    def test_n_stations_property(self):
+        self.assertEqual(self.ds.n_stations, 9)
+
+    def test_n_features_property(self):
+        self.assertEqual(self.ds.n_features, 20)
+
+    def test_n_params_property(self):
+        self.assertEqual(self.ds.n_params, 5)
+
+    def test_dtype_float32(self):
+        self.assertEqual(self.ds.X.dtype, np.float32)
+        self.assertEqual(self.ds.y.dtype, np.float32)
+
+    def test_repr_contains_class(self):
+        self.assertIn("SurveyDataset3D", repr(self.ds))
+
+    def test_len(self):
+        self.assertEqual(len(self.ds), 20)
+
+    def test_split_totals(self):
+        train, val, test = self.ds.split(val_frac=0.2, test_frac=0.1, seed=0)
+        self.assertEqual(len(train) + len(val) + len(test), 20)
+
+    def test_split_coords_shared(self):
+        train, val, _ = self.ds.split(seed=0)
+        np.testing.assert_array_equal(train.coords, self.ds.coords)
+        np.testing.assert_array_equal(val.coords, self.ds.coords)
+
+    def test_save_load_roundtrip(self):
+        import tempfile, os
+        from pycsamt.forward.batch import SurveyDataset3D
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "ds3d.npz")
+            self.ds.save(path)
+            ds2 = SurveyDataset3D.load(path)
+        np.testing.assert_array_equal(self.ds.X, ds2.X)
+        np.testing.assert_array_equal(self.ds.y, ds2.y)
+        np.testing.assert_array_equal(self.ds.coords, ds2.coords)
+
+    def test_freqs_preserved(self):
+        self.assertIsNotNone(self.ds.freqs)
+        self.assertEqual(len(self.ds.freqs), 10)
+
+
+class TestGenerateDataset3D(unittest.TestCase):
+    """Shape and content tests for generate_dataset_3d."""
+
+    def _gen(self, **kw):
+        from pycsamt.forward.batch import generate_dataset_3d
+        defaults = dict(
+            n_surveys=10, n_stations=4, n_layers=3,
+            freqs=np.logspace(0, 3, 8),
+            corr_length=1500., seed=0, verbose=False,
+        )
+        defaults.update(kw)
+        return generate_dataset_3d(**defaults)
+
+    def test_x_feature_no_phase(self):
+        ds = self._gen(include_phase=False)
+        # No phase: n_features = n_freqs = 8
+        self.assertEqual(ds.n_features, 8)
+
+    def test_x_feature_with_phase(self):
+        ds = self._gen(include_phase=True)
+        self.assertEqual(ds.n_features, 16)  # 2 × 8
+
+    def test_target_dimension(self):
+        ds = self._gen(n_layers=5)
+        # 5 rho + 4 thick = 9
+        self.assertEqual(ds.n_params, 9)
+
+    def test_grid_layout(self):
+        ds = self._gen(n_stations=16, station_layout="grid")
+        self.assertEqual(ds.coords.shape[0], 16)
+
+    def test_random_layout(self):
+        ds = self._gen(n_stations=12, station_layout="random")
+        self.assertEqual(ds.coords.shape[0], 12)
+
+    def test_invalid_layout_raises(self):
+        from pycsamt.forward.batch import generate_dataset_3d
+        with self.assertRaises(ValueError):
+            generate_dataset_3d(
+                n_surveys=2, n_stations=4, station_layout="hexagonal",
+                freqs=np.logspace(0, 2, 5), seed=0, verbose=False,
+            )
+
+    def test_invalid_solver_raises(self):
+        from pycsamt.forward.batch import generate_dataset_3d
+        with self.assertRaises(ValueError):
+            generate_dataset_3d(
+                n_surveys=2, n_stations=4, solver="tem1d",
+                freqs=np.logspace(0, 2, 5), seed=0, verbose=False,
+            )
+
+    def test_deterministic_with_seed(self):
+        ds1 = self._gen(seed=42)
+        ds2 = self._gen(seed=42)
+        np.testing.assert_array_equal(ds1.X, ds2.X)
+
+    def test_different_seeds_differ(self):
+        ds1 = self._gen(seed=1)
+        ds2 = self._gen(seed=2)
+        self.assertFalse(np.allclose(ds1.X, ds2.X))
+
+    def test_no_nan_in_output(self):
+        ds = self._gen()
+        self.assertFalse(np.any(np.isnan(ds.X)))
+        self.assertFalse(np.any(np.isnan(ds.y)))
+
+    def test_corr_length_effect(self):
+        """High corr_length → adjacent stations more similar than low corr_length."""
+        ds_lo = self._gen(corr_length=10., n_surveys=50)
+        ds_hi = self._gen(corr_length=9000., n_surveys=50)
+        # Variance of (station_0 - station_1) in y[:, 0, :] vs y[:, 1, :]
+        diff_lo = ds_lo.y[:, 0, :] - ds_lo.y[:, 1, :]
+        diff_hi = ds_hi.y[:, 0, :] - ds_hi.y[:, 1, :]
+        # High corr_length should give smaller inter-station variance
+        self.assertLess(diff_hi.var(), diff_lo.var())
+
+    def test_gcn_pipeline_shapes(self):
+        """generate_dataset_3d → build_adjacency → GCNInverter3D compatible shapes."""
+        from pycsamt.ai.nets.gcn import build_adjacency
+        ds = self._gen(n_surveys=10, n_stations=9, n_layers=3)
+        A = build_adjacency(ds.coords, radius=5000.)
+        self.assertEqual(A.shape, (9, 9))
+        self.assertEqual(ds.X.shape, (10, 9, ds.n_features))
+        self.assertEqual(ds.y.shape, (10, 9, 5))
+
+
 if __name__ == "__main__":
     unittest.main()

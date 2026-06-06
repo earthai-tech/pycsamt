@@ -14,5 +14,9 @@ from .resnet import ResNet1DNet
 from .fcn import FCN1DNet
 from .unet import UNet2DNet
 from .drcnn import DRCNNNet
+from .gcn import GCNNet, build_adjacency
 
-__all__ = ["CNN1DNet", "ResNet1DNet", "FCN1DNet", "UNet2DNet", "DRCNNNet"]
+__all__ = [
+    "CNN1DNet", "ResNet1DNet", "FCN1DNet", "UNet2DNet", "DRCNNNet",
+    "GCNNet", "build_adjacency",
+]

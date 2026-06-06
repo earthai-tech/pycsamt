@@ -11,10 +11,12 @@ from typing import Optional
 
 import numpy as np
 
+from pycsamt.api.property import PyCSAMTObject
+
 __all__ = ["SquareWaveform", "RampWaveform", "HalfSineWaveform", "CustomWaveform"]
 
 
-class _WaveformBase:
+class _WaveformBase(PyCSAMTObject):
     """Shared interface for all waveform types."""
 
     def current_at(self, t: np.ndarray) -> np.ndarray:
@@ -47,7 +49,7 @@ class _WaveformBase:
         return 0.5 / self.base_frequency
 
 
-@dataclass
+@dataclass(repr=False)
 class SquareWaveform(_WaveformBase):
     r"""
     Ideal square-wave transmitter current (zero ramp time).
@@ -75,6 +77,8 @@ class SquareWaveform(_WaveformBase):
 
     base_frequency: float = 25.0
     duty_cycle: float = 0.5
+    verbose: int = 0
+    logger: object | None = None
 
     def current_at(self, t: np.ndarray) -> np.ndarray:
         t = np.asarray(t, float)
@@ -85,7 +89,7 @@ class SquareWaveform(_WaveformBase):
         return np.where(t_mod < on_time, 1.0, 0.0)
 
 
-@dataclass
+@dataclass(repr=False)
 class RampWaveform(_WaveformBase):
     r"""
     Transmitter current with a finite linear ramp on switch-off.
@@ -120,6 +124,8 @@ class RampWaveform(_WaveformBase):
     ramp_off: float = 1e-4
     ramp_on: float = 0.0
     duty_cycle: float = 0.5
+    verbose: int = 0
+    logger: object | None = None
 
     def current_at(self, t: np.ndarray) -> np.ndarray:
         t = np.asarray(t, float)
@@ -134,7 +140,7 @@ class RampWaveform(_WaveformBase):
         return I
 
 
-@dataclass
+@dataclass(repr=False)
 class HalfSineWaveform(_WaveformBase):
     r"""
     Half-sine transmitter current (used by some CSEM / airborne systems).
@@ -153,6 +159,8 @@ class HalfSineWaveform(_WaveformBase):
     """
 
     base_frequency: float = 30.0
+    verbose: int = 0
+    logger: object | None = None
 
     def current_at(self, t: np.ndarray) -> np.ndarray:
         t = np.asarray(t, float)
@@ -189,10 +197,14 @@ class CustomWaveform(_WaveformBase):
         i_waveform,
         *,
         base_frequency: float = 25.0,
+        verbose: int = 0,
+        logger: object | None = None,
     ) -> None:
         self._t = np.asarray(t_waveform, float)
         self._I = np.asarray(i_waveform, float)
         self._base_frequency = float(base_frequency)
+        self.verbose = int(verbose)
+        self.logger = logger
         if self._t.shape != self._I.shape or self._t.ndim != 1:
             raise ValueError("t_waveform and i_waveform must be 1-D arrays of equal length")
 

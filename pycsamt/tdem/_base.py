@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -7,15 +6,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional, Tuple
 
 import numpy as np
+
+from pycsamt.api.property import PyCSAMTObject
 
 __all__ = ["TEMSounding"]
 
 
-@dataclass
-class TEMSounding:
+@dataclass(repr=False)
+class TEMSounding(PyCSAMTObject):
     r"""
     Container for a single time-domain EM (TEM) sounding.
 
@@ -148,21 +148,34 @@ class TEMSounding:
     rx_turns: int = 1
     offset: float = 0.0
     loop_shape: str = "square"
-    loop_dims: Tuple[float, ...] = field(default_factory=lambda: (100.0,))
+    loop_dims: tuple[float, ...] = field(default_factory=lambda: (100.0,))
 
     station_name: str = ""
     x: float = 0.0
     y: float = 0.0
     elevation: float = 0.0
 
-    error: Optional[np.ndarray] = None
-    waveform: Optional[object] = None
+    error: np.ndarray | None = None
+    waveform: object | None = None
+    rx_position: tuple[float, float] | None = None
+    """2-D receiver offset ``(rx, ry)`` in metres from the loop centre.
+    When set, it overrides the scalar ``offset`` for the Biot-Savart
+    in-loop correction.  ``None`` (default) falls back to ``(offset, 0)``."""
+    rx_offset: tuple[float, float] | None = None
+    """Alias for ``rx_position`` kept for reader and transform callers."""
+    verbose: int = 0
+    logger: object | None = None
 
     def __post_init__(self) -> None:
         self.time_gates = np.asarray(self.time_gates, dtype=float)
         self.data = np.asarray(self.data, dtype=float)
         if self.error is not None:
             self.error = np.asarray(self.error, dtype=float)
+        if self.rx_position is None and self.rx_offset is not None:
+            self.rx_position = self.rx_offset
+        if self.rx_position is not None and self.offset <= 0.0:
+            rx, ry = self.rx_position
+            self.offset = float(np.hypot(rx, ry))
 
         if self.time_gates.ndim != 1:
             raise ValueError("time_gates must be 1-D")
@@ -171,7 +184,10 @@ class TEMSounding:
                 f"data shape {self.data.shape} must match "
                 f"time_gates shape {self.time_gates.shape}"
             )
-        if self.error is not None and self.error.shape != self.time_gates.shape:
+        if (
+            self.error is not None
+            and self.error.shape != self.time_gates.shape
+        ):
             raise ValueError("error shape must match time_gates shape")
 
         valid_dtypes = {"dBdt", "dHdt", "voltage", "normalized_voltage"}
@@ -225,11 +241,11 @@ class TEMSounding:
         data,
         *,
         current: float,
-        loop_side: Optional[float] = None,
-        loop_radius: Optional[float] = None,
-        tx_area: Optional[float] = None,
+        loop_side: float | None = None,
+        loop_radius: float | None = None,
+        tx_area: float | None = None,
         **kwargs,
-    ) -> "TEMSounding":
+    ) -> TEMSounding:
         """
         Convenience constructor — supply either ``loop_side``,
         ``loop_radius``, or ``tx_area`` directly.
@@ -276,3 +292,7 @@ class TEMSounding:
             f"t=[{self.time_gates.min():.2e}, {self.time_gates.max():.2e}] s, "
             f"moment={self.moment:.3g} A·m²)"
         )
+
+    def __str__(self) -> str:
+        """Return the compact sounding representation."""
+        return self.__repr__()

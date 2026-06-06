@@ -64,6 +64,8 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
+from pycsamt.api.property import PyCSAMTObject
+
 from ._base import TEMSounding
 
 __all__ = [
@@ -985,7 +987,7 @@ _CONFIG_IN_LOOP = "in_loop"
 _CONFIG_OFFSET  = "offset"
 
 
-class LateTimeTransform:
+class LateTimeTransform(PyCSAMTObject):
     r"""
     Convert TEM soundings to frequency-domain apparent impedance using
     the late-time apparent-resistivity approximation.
@@ -1060,6 +1062,8 @@ class LateTimeTransform:
         loop_geometry_correction: bool = True,
         in_loop_n_iter: int = 3,
         waveform_correction: bool = True,
+        verbose: int = 0,
+        logger: object | None = None,
     ) -> None:
         self.freq_convention = freq_convention
         self.phase_mode = phase_mode
@@ -1067,6 +1071,8 @@ class LateTimeTransform:
         self.loop_geometry_correction = loop_geometry_correction
         self.in_loop_n_iter = int(in_loop_n_iter)
         self.waveform_correction = bool(waveform_correction)
+        self.verbose = int(verbose)
+        self.logger = logger
 
     # ── loop-config detection ────────────────────────────────────────────
 
@@ -1311,7 +1317,7 @@ def _kramers_kronig_re(
 # FourierTransform
 # ---------------------------------------------------------------------------
 
-class FourierTransform:
+class FourierTransform(PyCSAMTObject):
     r"""
     Rigorous TDEM → MT impedance via numerical Fourier cosine transform
     and Kramers-Kronig reconstruction (Meju 1996; Christensen 1990).
@@ -1391,6 +1397,8 @@ class FourierTransform:
         n_interp: int = 400,
         waveform_correction: bool = True,
         drop_nan: bool = True,
+        verbose: int = 0,
+        logger: object | None = None,
     ) -> None:
         self.n_freq              = int(n_freq)
         self.freq_min            = freq_min
@@ -1399,6 +1407,8 @@ class FourierTransform:
         self.n_interp            = int(n_interp)
         self.waveform_correction = bool(waveform_correction)
         self.drop_nan            = bool(drop_nan)
+        self.verbose             = int(verbose)
+        self.logger              = logger
 
     # ── frequency grids ──────────────────────────────────────────────────
 
@@ -1534,7 +1544,7 @@ class FourierTransform:
 # TEMtoEDI — high-level dispatcher
 # ---------------------------------------------------------------------------
 
-class TEMtoEDI:
+class TEMtoEDI(PyCSAMTObject):
     r"""
     Convert one or more TEM soundings to a
     :class:`~pycsamt.seg.collection.EDICollection`.
@@ -1590,19 +1600,26 @@ class TEMtoEDI:
         loop_geometry_correction: bool = True,
         out_dir: Union[str, "Path"] = "edi_out/tem",
         verbose: int = 0,
+        logger: object | None = None,
     ) -> None:
         self.method  = method.lower()
         self.out_dir = out_dir
-        self.verbose = verbose
+        self.verbose = int(verbose)
+        self.logger = logger
 
         if self.method == "late_time":
             self._transformer = LateTimeTransform(
                 freq_convention=freq_convention,
                 phase_mode=phase_mode,
                 loop_geometry_correction=loop_geometry_correction,
+                verbose=verbose,
+                logger=logger,
             )
         elif self.method == "fourier":
-            self._transformer = FourierTransform()
+            self._transformer = FourierTransform(
+                verbose=verbose,
+                logger=logger,
+            )
         else:
             raise ValueError(
                 f"Unknown method '{method}'. Use 'late_time' or 'fourier'."

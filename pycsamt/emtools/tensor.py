@@ -23,6 +23,7 @@ from ._core import (
     _iter_items,
     _name,
     _get_z_block,
+    _get_t_block,
     _apply_each
 )
 from ..api._rose_style import RoseStyle, resolve_rose_style, _UNSET
@@ -1588,99 +1589,503 @@ def plot_phase_tensor_map(
     sites: Any,
     *,
     period: float = 10.0,
-    scale: float = 0.15,           # geographic scale — not from pt_ellipse
-    c_by           = _UNSET,       # default: PYCSAMT_STYLE.pt_ellipse.c_by
-    figsize: Tuple[float, float] = (8.0, 6.0),
+    # ── ellipse style (honours PhaseTensorEllipseStyle) ───────────────
+    scale          = _UNSET,
+    normalise_by   = _UNSET,
+    s1_ref         = _UNSET,
+    c_by           = _UNSET,
+    cmap           = _UNSET,
+    clim: Optional[Tuple[float, float]]            = None,
+    clim_pct       = _UNSET,
+    symmetric_clim = _UNSET,
+    alpha          = _UNSET,
+    edgecolor      = _UNSET,
+    linewidth      = _UNSET,
+    skew_threshold = _UNSET,
+    mark_3d        = _UNSET,
+    lw_3d_factor   = _UNSET,
+    ref_ellipse    = _UNSET,
+    # ── tipper arrows ─────────────────────────────────────────────────
+    show_tipper: bool = True,
+    tipper_convention: str = "parkinson",
+    tipper_component: str = "real",
+    tipper_scale: Optional[float] = None,
+    tipper_color: str = "k",
+    tipper_lw: float = 1.4,
+    # ── optional background grid ──────────────────────────────────────
+    bg_grid: Optional[Dict[str, Any]] = None,
+    # ── map decoration ────────────────────────────────────────────────
+    station_labels: bool = True,
+    station_marker: str = "v",
+    station_ms: float = 5.0,
+    station_color: str = "k",
+    label_fontsize: float = 7.0,
+    title: str = "",
+    colorbar_label: Optional[str] = None,
+    # ── coordinate override (station → (lat, lon)) ────────────────────
+    coords: Optional[Dict[str, Tuple[float, float]]] = None,
+    # ── layout ────────────────────────────────────────────────────────
+    figsize: Tuple[float, float] = (9.0, 7.0),
+    # ── core ──────────────────────────────────────────────────────────
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
     ax: Optional[plt.Axes] = None,
 ) -> plt.Axes:
-    # ── resolve visual style from PYCSAMT_STYLE.pt_ellipse ──────────────
-    _es = PYCSAMT_STYLE.pt_ellipse
-    if c_by is _UNSET: c_by = _es.c_by
+    """Publication-quality phase-tensor map at a single period.
 
-    S = ensure_sites(
-        sites,
-        recursive=recursive,
-        on_dup=on_dup,
-        strict=strict,
-        verbose=verbose,
-    )
+    Renders each station as a phase-tensor ellipse positioned at its
+    geographic coordinates.  The ellipse shape encodes the phase-tensor
+    principal values (φ_max, φ_min) and orientation (θ); fill colour
+    encodes an additional scalar (default: skewness β).  Induction arrows
+    can be overlaid when tipper data are available, and an optional
+    background field (gravity, resistivity, …) may be drawn behind the
+    ellipses.
+
+    Parameters
+    ----------
+    sites : any
+        EDI paths, objects, or collection accepted by
+        :func:`~pycsamt.emtools._core.ensure_sites`.
+    period : float
+        Target period (s).  The nearest available period in the data is
+        used for each station independently.
+    scale : float or _UNSET
+        Maximum ellipse semi-axis in geographic units (degrees).
+        ``_UNSET`` → auto-derived from the median inter-station spacing.
+    normalise_by : ``"cell"`` | ``"unity"`` | ``"abs"``
+        Size normalisation strategy, see
+        :class:`~pycsamt.api.style.PhaseTensorEllipseStyle`.
+    s1_ref : float or None
+        Manual reference s1 used with ``normalise_by="cell"``/``"unity"``.
+    c_by : str
+        Scalar quantity to map to fill colour.  Recognised values:
+        ``"skew"``, ``"beta"``, ``"|skew|"``, ``"theta"``,
+        ``"ellipt"``, ``"phi_mean"``, ``"phi_max"``, ``"phi_min"``,
+        ``"s1"``, ``"s2"``, ``"alpha"``.  Defaults to
+        ``PYCSAMT_STYLE.pt_ellipse.c_by``.
+    cmap : str or None
+        Matplotlib colormap.  Auto-selected from *c_by* when ``None``
+        (same logic as :class:`~pycsamt.api.style.PhaseTensorEllipseStyle`).
+    clim : (vmin, vmax) or None
+        Explicit colour limits.  ``None`` → derived from *clim_pct*.
+    clim_pct : (lo, hi)
+        Percentile window for automatic colour limits.
+    symmetric_clim : bool
+        Force vmin = −vmax (useful for diverging quantities).
+    alpha : float
+        Ellipse fill opacity.
+    edgecolor : str
+        Ellipse border colour.
+    linewidth : float
+        Normal ellipse border width (pts).
+    skew_threshold : float or None
+        |β| above which a cell is flagged as 3-D.
+    mark_3d : bool
+        Draw thicker borders on 3-D flagged ellipses.
+    lw_3d_factor : float
+        Line-width multiplier for 3-D flagged borders.
+    ref_ellipse : bool
+        Draw a reference circle in the lower-left corner as a scale bar.
+    show_tipper : bool
+        Overlay induction arrows when tipper data are found.
+    tipper_convention : ``"parkinson"`` | ``"wiese"``
+        Parkinson: arrow toward anomaly (negated real T);
+        Wiese: arrow along real T.
+    tipper_component : ``"real"`` | ``"imag"`` | ``"both"``
+        Which tipper component to draw.
+    tipper_scale : float or None
+        Arrow length = tipper_scale × *scale*.  Auto-derived when ``None``.
+    tipper_color : str
+        Arrow colour (real component).  Imaginary component uses
+        ``mcolors.to_rgba(tipper_color, 0.55)``.
+    tipper_lw : float
+        Arrow line-width.
+    bg_grid : dict or None
+        Optional background field drawn behind ellipses::
+
+            bg_grid = dict(
+                lons   = 1D or 2D longitude array,
+                lats   = 1D or 2D latitude array,
+                values = 2D array (shape matches meshgrid of lons × lats),
+                cmap   = "RdYlGn",     # colormap
+                clim   = (vmin, vmax), # or None → auto
+                alpha  = 0.55,         # opacity
+                label  = "Gravity (gu)",
+            )
+
+    station_labels : bool
+        Annotate each station position with its name.
+    station_marker : str
+        Marker style for station positions (default ``"v"``).
+    station_ms : float
+        Marker size.
+    station_color : str
+        Marker and label colour.
+    label_fontsize : float
+        Font size for station labels.
+    title : str
+        Axes title.
+    colorbar_label : str or None
+        Override the automatic colorbar label derived from *c_by*.
+    coords : dict[str, (lat, lon)] or None
+        Explicit station coordinates.  When ``None`` the function reads
+        ``ed.coords`` (a ``(lat, lon, elev)`` tuple) from each Site object.
+    figsize : (float, float)
+        Figure size in inches.
+    recursive, on_dup, strict, verbose
+        Passed to :func:`~pycsamt.emtools._core.ensure_sites`.
+    ax : matplotlib.axes.Axes or None
+        Pre-existing axes to draw into.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+
+    Examples
+    --------
+    Default skew-coloured map:
+
+    >>> from pycsamt.emtools import plot_phase_tensor_map
+    >>> ax = plot_phase_tensor_map(sites, period=10.0)
+
+    Ellipticity coloured, with tipper arrows:
+
+    >>> ax = plot_phase_tensor_map(
+    ...     sites, period=10.0,
+    ...     c_by="ellipt", cmap="viridis",
+    ...     show_tipper=True, tipper_convention="parkinson",
+    ... )
+
+    With a gravity background:
+
+    >>> ax = plot_phase_tensor_map(
+    ...     sites, period=10.0,
+    ...     bg_grid=dict(lons=g_lon, lats=g_lat, values=g_bouguer,
+    ...                  cmap="RdYlGn", alpha=0.45, label="Gravity (gu)"),
+    ... )
+    """
+    from ..api.plot import add_colorbar
+    import matplotlib.colors as _mc
+
+    # ── 1. resolve style ──────────────────────────────────────────────────
+    _es = PYCSAMT_STYLE.pt_ellipse
+    def _sv(v, attr): return getattr(_es, attr) if v is _UNSET else v
+    normalise_by   = _sv(normalise_by,   "normalise_by")
+    s1_ref_        = _sv(s1_ref,         "s1_ref")
+    c_by           = _sv(c_by,           "c_by")
+    cmap_          = _sv(cmap,           "cmap")
+    clim_pct       = _sv(clim_pct,       "clim_pct")
+    symmetric_clim = _sv(symmetric_clim, "symmetric_clim")
+    alpha_         = _sv(alpha,          "alpha")
+    edgecolor_     = _sv(edgecolor,      "edgecolor")
+    linewidth_     = _sv(linewidth,      "linewidth")
+    skew_threshold_= _sv(skew_threshold, "skew_threshold")
+    mark_3d_       = _sv(mark_3d,        "mark_3d")
+    lw_3d_factor_  = _sv(lw_3d_factor,   "lw_3d_factor")
+    ref_ellipse_   = _sv(ref_ellipse,     "show_ref")
+
+    # auto-resolve cmap from c_by when None
+    if cmap_ is None:
+        cmap_ = _es.copy(c_by=c_by).resolve_cmap()
+    # honour natural symmetric_clim for diverging quantities
+    sym = symmetric_clim and _es.copy(c_by=c_by).resolve_symmetric_clim()
+
+    # ── 2. load data ──────────────────────────────────────────────────────
+    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
+                     strict=strict, verbose=verbose)
     df = build_phase_tensor_table(
-        S,
-        recursive=False,
-        on_dup=on_dup,
-        strict=False,
-        verbose=verbose,
+        S, recursive=False, on_dup=on_dup, strict=False, verbose=verbose,
     )
-    if c_by in ("rho_det", "phi_det"):
-        df = _attach_det_metrics(df, S)
     if ax is None:
-        _, ax = plt.subplots(figsize=figsize)
+        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+
     if df.empty:
-        ax.text(0.5, 0.5, "no phase tensor",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no phase tensor data",
+                ha="center", va="center", transform=ax.transAxes)
         return ax
-    # coords
-    coords = {}
-    for i, ed in enumerate(_iter_items(S)):
-        st = _name(ed, i)
-        lat = getattr(ed, "lat", None) or getattr(ed, "latitude", None)
-        lon = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
-        try:
-            if lat is None or lon is None:
+
+    # ── 3. station coordinates ────────────────────────────────────────────
+    if coords is None:
+        coords = {}
+        for i, ed in enumerate(_iter_items(S)):
+            st = _name(ed, i)
+            # preferred: ed.coords → (lat, lon, elev)
+            c = getattr(ed, "coords", None)
+            if c is not None and len(c) >= 2 and c[0] is not None and c[1] is not None:
+                coords[st] = (float(c[0]), float(c[1]))
                 continue
-            coords[st] = (float(lat), float(lon))
-        except Exception:
-            continue
+            # fallback: ed.meta
+            meta = getattr(ed, "meta", {}) or {}
+            lat = meta.get("lat") or meta.get("latitude")
+            lon = meta.get("lon") or meta.get("longitude") or meta.get("long")
+            if lat is not None and lon is not None:
+                coords[st] = (float(lat), float(lon))
+
     if not coords:
-        ax.text(0.5, 0.5, "no coords",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no geographic coordinates in EDI data\n"
+                "pass coords={station: (lat, lon)} to override",
+                ha="center", va="center", transform=ax.transAxes,
+                fontsize=9, style="italic", color="0.45")
         return ax
-    # one row per station nearest to target period
-    rows = []
+
+    # ── 4. select nearest period per station ─────────────────────────────
+    rows: List[Any] = []
     for st, sdf in df.groupby("station"):
         if st not in coords:
             continue
         p = sdf["period"].to_numpy()
-        i = int(np.nanargmin(np.abs(p - period)))
-        rows.append(sdf.iloc[i])
+        idx = int(np.nanargmin(np.abs(p - period)))
+        rows.append(sdf.iloc[idx])
+
     if not rows:
-        ax.text(0.5, 0.5, "no match @period",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, f"no data near T = {period:g} s",
+                ha="center", va="center", transform=ax.transAxes)
         return ax
-    vv = np.array([r.get(c_by, np.nan) for r in rows], float)
-    v0 = np.nanpercentile(vv, 5)
-    v1 = np.nanpercentile(vv, 95)
-    norm = plt.Normalize(vmin=v0, vmax=v1)
-    cmap = plt.get_cmap("coolwarm")
-    for row in rows:
-        st = row["station"]
-        lat, lon = coords[st]
-        s1 = float(row["s1"])
-        s2 = float(row["s2"])
-        th = float(row["theta"])
-        w = scale * s1
-        h = scale * s2
+
+    st_names = [r["station"] for r in rows]
+    lats = np.array([coords[s][0] for s in st_names], float)
+    lons = np.array([coords[s][1] for s in st_names], float)
+    s1s  = np.array([float(r["s1"]) for r in rows], float)
+    s2s  = np.array([float(r["s2"]) for r in rows], float)
+    ths  = np.array([float(r["theta"]) for r in rows], float)
+    betas = np.array([float(r.get("skew", r.get("beta", np.nan))) for r in rows], float)
+
+    # ── 5. auto scale from grid spacing ──────────────────────────────────
+    if scale is _UNSET:
+        if len(lons) > 1:
+            # Use unique grid spacings (cross-profile > within-profile)
+            u_lons = np.unique(np.round(lons, 3))
+            u_lats = np.unique(np.round(lats, 3))
+            d_lon = (float(np.median(np.diff(u_lons)))
+                     if len(u_lons) > 1 else float(np.ptp(lons) or 0.01))
+            d_lat = (float(np.median(np.diff(u_lats)))
+                     if len(u_lats) > 1 else float(np.ptp(lats) or 0.01))
+            scale_ = 0.55 * max(abs(d_lon) + 1e-9, abs(d_lat) + 1e-9)
+        else:
+            scale_ = 0.01
+    else:
+        scale_ = float(scale)
+
+    # ── 6. ellipse size normalisation ────────────────────────────────────
+    # Clip extreme s1 outliers (robust 95th pct) before normalising
+    s1s_clip = np.clip(s1s, 0.0, float(np.nanpercentile(s1s, 95)))
+    if normalise_by == "unity":
+        _s1ref = s1_ref_ if s1_ref_ is not None else float(np.tan(np.radians(45.0)))
+    elif normalise_by == "cell":
+        _s1ref = (s1_ref_ if s1_ref_ is not None
+                  else float(np.nanpercentile(s1s_clip, 90)))
+    else:  # "abs"
+        _s1ref = s1_ref_ if s1_ref_ is not None else 1.0
+    _s1ref = max(_s1ref, 1e-9)
+
+    # ── 7. colour mapping ─────────────────────────────────────────────────
+    c_vals = np.array([float(r.get(c_by, np.nan)) for r in rows], float)
+    if clim is not None:
+        v0, v1 = float(clim[0]), float(clim[1])
+    else:
+        lo_pct, hi_pct = float(clim_pct[0]), float(clim_pct[1])
+        v0 = float(np.nanpercentile(c_vals, lo_pct))
+        v1 = float(np.nanpercentile(c_vals, hi_pct))
+    if sym and v0 != v1:
+        vmax = max(abs(v0), abs(v1))
+        v0, v1 = -vmax, vmax
+    v0 = v0 if v0 != v1 else v0 - 1.0
+    cm_obj = plt.get_cmap(cmap_)
+    norm_c = plt.Normalize(vmin=v0, vmax=v1)
+
+    # ── 8. optional background grid ───────────────────────────────────────
+    bg_mappable = None
+    if bg_grid is not None:
+        g_lon = np.asarray(bg_grid.get("lons", []), float)
+        g_lat = np.asarray(bg_grid.get("lats", []), float)
+        g_val = np.asarray(bg_grid.get("values", []), float)
+        g_cm  = bg_grid.get("cmap", "RdYlGn")
+        g_cl  = bg_grid.get("clim", None)
+        g_al  = float(bg_grid.get("alpha", 0.5))
+        g_lbl = bg_grid.get("label", "")
+        if g_val.size > 0:
+            if g_val.ndim == 1:
+                g_val = g_val.reshape(len(g_lat), len(g_lon))
+            gv0 = float(np.nanpercentile(g_val, 5)) if g_cl is None else float(g_cl[0])
+            gv1 = float(np.nanpercentile(g_val, 95)) if g_cl is None else float(g_cl[1])
+            bg_mappable = ax.pcolormesh(
+                g_lon, g_lat, g_val,
+                cmap=g_cm, vmin=gv0, vmax=gv1,
+                alpha=g_al, shading="auto", zorder=0,
+            )
+            if g_lbl:
+                add_colorbar(bg_mappable, ax, label=g_lbl,
+                             side="left", size="3.5%", pad=0.08)
+
+    # ── 9. draw ellipses ──────────────────────────────────────────────────
+    for row, lat, lon, s1, s2, th in zip(rows, lats, lons, s1s_clip, s2s, ths):
+        # clamp to 2×scale_ so outlier sites don't swamp the map
+        w = min(2.0 * scale_ * (s1 / _s1ref), 2.0 * scale_)
+        h = min(2.0 * scale_ * (s2 / _s1ref), 2.0 * scale_)
+        cv = float(row.get(c_by, np.nan))
+        fc = cm_obj(norm_c(cv)) if np.isfinite(cv) else (0.8, 0.8, 0.8, 0.8)
+        # 3-D flagging
+        beta = float(row.get("skew", row.get("beta", 0.0)))
+        is_3d = (skew_threshold_ is not None and
+                 mark_3d_ and
+                 abs(beta) > skew_threshold_)
+        lw = linewidth_ * lw_3d_factor_ if is_3d else linewidth_
+        ec = edgecolor_
         e = Ellipse(
-            (lon, lat),
-            width=w,
-            height=h,
+            xy=(lon, lat),
+            width=w, height=h,
             angle=th,
-            fill=True,
-            lw=0.5,
+            facecolor=fc, edgecolor=ec,
+            linewidth=lw, alpha=alpha_,
+            zorder=2,
         )
-        e.set_edgecolor("k")
-        e.set_facecolor(cmap(norm(float(row.get(c_by, np.nan)))))
         ax.add_patch(e)
-        ax.plot(lon, lat, "k.", ms=2)
-    ax.set_xlabel("Lon")
-    ax.set_ylabel("Lat")
-    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
-    cb = plt.colorbar(sm, ax=ax)
-    cb.set_label(c_by)
+
+    # ── 10. tipper arrows ─────────────────────────────────────────────────
+    if show_tipper:
+        _tip_data: Dict[str, Tuple[float, float]] = {}
+        for i, ed in enumerate(_iter_items(S)):
+            st = _name(ed, i)
+            if st not in coords:
+                continue
+            _T, t, fr = _get_t_block(ed)
+            if t is None or fr is None:
+                continue
+            per_arr = 1.0 / np.where(fr == 0, np.nan, fr)
+            j = int(np.nanargmin(np.abs(per_arr - period)))
+            tx, ty = t[j, 0], t[j, 1]
+            if tipper_component == "real":
+                u, v = float(np.real(ty)), float(np.real(tx))  # E, N
+            elif tipper_component == "imag":
+                u, v = float(np.imag(ty)), float(np.imag(tx))
+            else:
+                u, v = float(np.real(ty)), float(np.real(tx))
+            if tipper_convention == "parkinson":
+                u, v = -u, -v
+            _tip_data[st] = (u, v)
+
+        if _tip_data:
+            # normalise arrow lengths
+            magnitudes = np.array([np.hypot(u, v) for u, v in _tip_data.values()], float)
+            mag_max = float(np.nanpercentile(magnitudes, 95)) + 1e-12
+            t_scale = (tipper_scale if tipper_scale is not None
+                       else scale_ * 1.6)
+
+            t_lons, t_lats, t_u, t_v = [], [], [], []
+            for st_t, (u, v) in _tip_data.items():
+                lat_t, lon_t = coords[st_t]
+                t_lons.append(lon_t)
+                t_lats.append(lat_t)
+                t_u.append(u / mag_max * t_scale)
+                t_v.append(v / mag_max * t_scale)
+
+            ax.quiver(
+                np.array(t_lons), np.array(t_lats),
+                np.array(t_u), np.array(t_v),
+                color=tipper_color,
+                scale=1.0, scale_units="xy", angles="xy",
+                width=0.003, headwidth=4, headlength=5,
+                linewidth=tipper_lw,
+                zorder=4,
+            )
+
+            # imaginary component if "both"
+            if tipper_component == "both":
+                _tip_im: Dict[str, Tuple[float, float]] = {}
+                for i, ed in enumerate(_iter_items(S)):
+                    st = _name(ed, i)
+                    if st not in coords:
+                        continue
+                    _T, t, fr = _get_t_block(ed)
+                    if t is None or fr is None:
+                        continue
+                    per_arr = 1.0 / np.where(fr == 0, np.nan, fr)
+                    j = int(np.nanargmin(np.abs(per_arr - period)))
+                    tx, ty = t[j, 0], t[j, 1]
+                    u_i, v_i = float(np.imag(ty)), float(np.imag(tx))
+                    if tipper_convention == "parkinson":
+                        u_i, v_i = -u_i, -v_i
+                    _tip_im[st] = (u_i, v_i)
+                if _tip_im:
+                    im_lons, im_lats, im_u, im_v = [], [], [], []
+                    for st_t, (u, v) in _tip_im.items():
+                        lat_t, lon_t = coords[st_t]
+                        im_lons.append(lon_t)
+                        im_lats.append(lat_t)
+                        im_u.append(u / mag_max * t_scale)
+                        im_v.append(v / mag_max * t_scale)
+                    ax.quiver(
+                        np.array(im_lons), np.array(im_lats),
+                        np.array(im_u), np.array(im_v),
+                        color=_mc.to_rgba(tipper_color, 0.55),
+                        scale=1.0, scale_units="xy", angles="xy",
+                        width=0.002, headwidth=3, headlength=4,
+                        linestyle="dashed",
+                        zorder=3,
+                    )
+
+    # ── 11. station markers + labels ──────────────────────────────────────
+    ax.scatter(lons, lats, marker=station_marker, c=station_color,
+               s=station_ms**2, zorder=5, linewidths=0)
+    if station_labels:
+        offset_y = scale_ * 0.8
+        for st, lat, lon in zip(st_names, lats, lons):
+            ax.annotate(
+                st, (lon, lat),
+                xytext=(0, offset_y * 111000 * 0.00001),
+                textcoords="offset points",
+                fontsize=label_fontsize, color=station_color,
+                ha="center", va="bottom", zorder=6,
+            )
+
+    # ── 12. reference ellipse ─────────────────────────────────────────────
+    if ref_ellipse_:
+        pad = scale_ * 0.7
+        ref_lon = float(lons.min()) - pad
+        ref_lat = float(lats.min()) - pad
+        ref_w = 2.0 * scale_
+        ref_h = 2.0 * scale_
+        ref_e = Ellipse(
+            (ref_lon, ref_lat), width=ref_w, height=ref_h,
+            facecolor="none", edgecolor=_es.ref_edgecolor,
+            linewidth=_es.ref_lw, zorder=5,
+        )
+        ax.add_patch(ref_e)
+        ax.text(ref_lon, ref_lat - scale_ * 1.3,
+                "ref", ha="center", va="top",
+                fontsize=_es.ref_fontsize, color=_es.ref_edgecolor)
+
+    # ── 13. colorbar ──────────────────────────────────────────────────────
+    sm = plt.cm.ScalarMappable(cmap=cm_obj, norm=norm_c)
+    sm.set_array([])
+    cb_label = colorbar_label if colorbar_label is not None else c_by
+    add_colorbar(sm, ax, label=cb_label, side="right", size="3.5%", pad=0.06)
+
+    # ── 14. axes decoration ───────────────────────────────────────────────
+    from matplotlib.ticker import ScalarFormatter
+    pad_xy = scale_ * 2.2
+    ax.set_xlim(lons.min() - pad_xy, lons.max() + pad_xy)
+    ax.set_ylim(lats.min() - pad_xy, lats.max() + pad_xy)
+    # geographic aspect ratio: 1° lon = cos(lat) × 1° lat in physical distance
+    lat_mid = float(np.mean(lats))
+    ax.set_aspect(1.0 / max(np.cos(np.radians(lat_mid)), 1e-6))
+    ax.set_xlabel("Longitude", fontsize=9)
+    ax.set_ylabel("Latitude",  fontsize=9)
+    ax.tick_params(labelsize=8)
+    # suppress matplotlib offset notation (e.g. "+1.1912e2")
+    for _axis in (ax.xaxis, ax.yaxis):
+        _fmt = ScalarFormatter(useOffset=False)
+        _fmt.set_scientific(False)
+        _axis.set_major_formatter(_fmt)
+    ax.grid(True, alpha=0.18, linewidth=0.5)
+    period_txt = (f"{period*1e3:.4g} ms" if period < 1.0
+                  else f"{period:.4g} s")
+    ax.set_title(
+        title or f"Phase Tensor Map for {period_txt}",
+        fontsize=10, pad=8, fontweight="bold",
+    )
     return ax
 
 

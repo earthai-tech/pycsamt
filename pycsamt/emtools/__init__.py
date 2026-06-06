@@ -70,8 +70,14 @@ from .diag import (
 )
 from .qc import (
     build_qc_table,
+    frequency_confidence_table,
     qc_flags,
+    station_confidence_table,
+    plot_confidence_band_summary,
     plot_confidence_profile,
+    plot_frequency_confidence_psection,
+    plot_station_confidence_dashboard,
+    plot_station_confidence_spectrum,
     plot_coverage_psection,
     plot_snr_hist,
     plot_qc_quicklook,
@@ -90,6 +96,14 @@ from .remove_noise import (
     remove_noise_pipeline,
     hampel_filter_freq,
     spatial_median_filter,
+    fixed_length_moving_average,
+    trimmed_moving_average,
+    apply_emap_filter,
+    confidence_gated_emap_filter,
+    EMAPFilterResult,
+    emap_filter_report,
+    plot_emap_filter_profile,
+    plot_emap_filter_psection,
     rpca_offdiag_denoise,
     enforce_offdiag_consistency,
     mask_incoherent_freqs,
@@ -127,6 +141,15 @@ from .ss import (
 from .frequency import (
     select_band,
     drop_duplicates,
+    drop_low_confidence_frequencies,
+    edit_frequencies_by_confidence,
+    FrequencyEditResult,
+    frequency_edit_decision_table,
+    frequency_edit_report,
+    mask_low_confidence_frequencies,
+    plot_frequency_edit_decisions,
+    plot_frequency_edit_summary,
+    recover_low_confidence_frequencies,
     regrid_to,
     regrid_logspace,
     decimate_step,
@@ -187,6 +210,7 @@ from .strike import (
     plot_strike_ribbon,
     plot_strike_profile,
     plot_strike_mapsticks,
+    plot_strike_analysis,
 )
 
 # ─── Tensor operations ────────────────────────────────────────────────────────
@@ -240,16 +264,49 @@ from .inspect import (
     plot_rhoa_phi,
     plot_tipper_components,
     pseudosection,
+    plot_station_response,
+)
+from .advanced import (
+    plot_impedance_mohr_circles,
+    plot_zt_argand,
+    plot_survey_fingerprint,
+    plot_sensitivity_depth_section,
+    plot_dimensionality_ternary,
+    plot_distortion_radar,
+    plot_tf_coherence_network,
+    plot_strike_stability_bands,
+    plot_rho_phase_bode,
+    plot_pt_period_clock,
+    plot_apparent_resistivity_polar,
+    plot_apparent_anisotropy_section,
+    plot_dimensionality_depth_profile,
+    plot_mt_composite_section,
+    plot_snr_section,
+    plot_z_invariants_section,
 )
 
-# ─── Transfer functions — tipper ──────────────────────────────────────────────
+# ─── Transfer functions — tipper & induction arrows ──────────────────────────
 from .tf import (
     plot_tipper_hodograms,
     plot_induction_arrows,
+    # new: richer induction arrow views
+    plot_induction_map,
+    plot_induction_section,
+    plot_induction_convention,
+    plot_tipper_polar,
+    plot_induction_rose,
+    # spectra-direct wrappers (no Sites needed)
+    plot_induction_map_from_spectra,
+    plot_tipper_polar_from_spectra,
+    plot_induction_rose_from_spectra,
+    # multi-period stacked map (Boukhalfa 2020 style)
+    plot_induction_multiperiod_map,
 )
 
 # ─── Site-level visualisation ─────────────────────────────────────────────────
 from .plot import (
+    plot_response_tipper,
+    plot_raw_sites_1d,
     plot_sites_panels,
     plot_sites_compare,
     plot_sites_fit_grid,
@@ -259,6 +316,24 @@ from .plot import (
 from .lcurve import (
     lcurve_table,
     plot_lcurve,
+)
+
+# ─── Cross-spectra analysis and visualisation ────────────────────────────────
+from .spectra import (
+    coherence_matrix,
+    psd_table,
+    coherence_table,
+    snr_table,
+    band_select,
+    mask_low_coherence,
+    spectra_summary,
+    plot_psd,
+    plot_coherence,
+    plot_spectra_matrix,
+    plot_z_from_spectra,
+    plot_tipper_from_spectra,
+    plot_psd_section,
+    plot_coherence_section,
 )
 
 # ─── Legacy / compatibility shims ─────────────────────────────────────────────
@@ -329,8 +404,14 @@ __all__ = [
     "plot_polar_errors",
     "plot_width_drift",
     "build_qc_table",
+    "frequency_confidence_table",
     "qc_flags",
+    "station_confidence_table",
+    "plot_confidence_band_summary",
     "plot_confidence_profile",
+    "plot_frequency_confidence_psection",
+    "plot_station_confidence_dashboard",
+    "plot_station_confidence_spectrum",
     "plot_coverage_psection",
     "plot_snr_hist",
     "plot_qc_quicklook",
@@ -346,6 +427,14 @@ __all__ = [
     "remove_noise_pipeline",
     "hampel_filter_freq",
     "spatial_median_filter",
+    "fixed_length_moving_average",
+    "trimmed_moving_average",
+    "apply_emap_filter",
+    "confidence_gated_emap_filter",
+    "EMAPFilterResult",
+    "emap_filter_report",
+    "plot_emap_filter_profile",
+    "plot_emap_filter_psection",
     "rpca_offdiag_denoise",
     "enforce_offdiag_consistency",
     "mask_incoherent_freqs",
@@ -377,6 +466,15 @@ __all__ = [
     # frequency grid
     "select_band",
     "drop_duplicates",
+    "drop_low_confidence_frequencies",
+    "edit_frequencies_by_confidence",
+    "FrequencyEditResult",
+    "frequency_edit_decision_table",
+    "frequency_edit_report",
+    "mask_low_confidence_frequencies",
+    "plot_frequency_edit_decisions",
+    "plot_frequency_edit_summary",
+    "recover_low_confidence_frequencies",
     "regrid_to",
     "regrid_logspace",
     "decimate_step",
@@ -425,6 +523,7 @@ __all__ = [
     "plot_strike_ribbon",
     "plot_strike_profile",
     "plot_strike_mapsticks",
+    "plot_strike_analysis",
     # tensor operations
     "rotate_z_to_strike",
     "rotate",
@@ -464,16 +563,43 @@ __all__ = [
     "plot_rhoa_phi",
     "plot_tipper_components",
     "pseudosection",
-    # transfer functions
+    "plot_station_response",
+    # transfer functions / tipper / induction arrows
     "plot_tipper_hodograms",
     "plot_induction_arrows",
+    "plot_induction_map",
+    "plot_induction_section",
+    "plot_induction_convention",
+    "plot_tipper_polar",
+    "plot_induction_rose",
+    "plot_induction_map_from_spectra",
+    "plot_tipper_polar_from_spectra",
+    "plot_induction_rose_from_spectra",
+    "plot_induction_multiperiod_map",
     # site-level visualisation
+    "plot_response_tipper",
+    "plot_raw_sites_1d",
     "plot_sites_panels",
     "plot_sites_compare",
     "plot_sites_fit_grid",
     # l-curve
     "lcurve_table",
     "plot_lcurve",
+    # cross-spectra
+    "coherence_matrix",
+    "psd_table",
+    "coherence_table",
+    "snr_table",
+    "band_select",
+    "mask_low_coherence",
+    "spectra_summary",
+    "plot_psd",
+    "plot_coherence",
+    "plot_spectra_matrix",
+    "plot_z_from_spectra",
+    "plot_tipper_from_spectra",
+    "plot_psd_section",
+    "plot_coherence_section",
     # legacy
     "check_em_kind",
     "extract_z_list",

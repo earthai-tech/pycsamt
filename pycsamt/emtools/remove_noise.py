@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -16,6 +17,52 @@ from ._core import (
 )
 
 _MU0: float = 4.0 * np.pi * 1e-7   # H/m
+
+
+@dataclass
+class EMAPFilterResult:
+    """Container returned by confidence-gated EMAP filtering."""
+
+    sites: Any
+    report: pd.DataFrame
+    decisions: pd.DataFrame
+    method: str
+    confidence_method: str
+    ci_hi: float
+    ci_lo: float
+
+    @property
+    def n_preserved(self) -> int:
+        """Number of station-frequency rows left unchanged."""
+        if self.decisions.empty:
+            return 0
+        return int((self.decisions["action"] == "preserved").sum())
+
+    @property
+    def n_blended(self) -> int:
+        """Number of station-frequency rows partially blended."""
+        if self.decisions.empty:
+            return 0
+        return int((self.decisions["action"] == "blended").sum())
+
+    @property
+    def n_filtered(self) -> int:
+        """Number of station-frequency rows fully filtered."""
+        if self.decisions.empty:
+            return 0
+        return int((self.decisions["action"] == "filtered").sum())
+
+    def summary(self) -> str:
+        """Return a compact text summary."""
+        return (
+            "EMAPFilterResult("
+            f"method={self.method!r}, confidence={self.confidence_method!r}, "
+            f"preserved={self.n_preserved}, blended={self.n_blended}, "
+            f"filtered={self.n_filtered})"
+        )
+
+    def __repr__(self) -> str:  # noqa: D105
+        return self.summary()
 
 # ----------------------------- SNR table -------------------------------- #
 
@@ -870,6 +917,477 @@ def correct_static_shift(
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 
 
+def _emap_component_indices(component: str) -> Tuple[Tuple[int, int], ...]:
+    """Return tensor component indices selected by an EMAP filter."""
+    component = str(component).lower()
+    mapping = {
+        "xx": ((0, 0),),
+        "xy": ((0, 1),),
+        "yx": ((1, 0),),
+        "yy": ((1, 1),),
+        "offdiag": ((0, 1), (1, 0)),
+        "all": ((0, 0), (0, 1), (1, 0), (1, 1)),
+    }
+    if component not in mapping:
+        msg = (
+            "component must be one of 'all', 'offdiag', "
+            "'xx', 'xy', 'yx', or 'yy'."
+        )
+        raise ValueError(msg)
+    return mapping[component]
+
+
+def _nearest_frequency_row(
+    z: np.ndarray,
+    fr: np.ndarray,
+    freq: float,
+    *,
+    rtol: float,
+) -> Optional[np.ndarray]:
+    """Return the nearest tensor row when the frequency matches."""
+    if fr.size == 0 or not np.isfinite(freq):
+        return None
+    idx = int(np.nanargmin(np.abs(fr - freq)))
+    if not np.isclose(fr[idx], freq, rtol=rtol, atol=1e-12):
+        return None
+    return z[idx]
+
+
+def _boxcar_spatial_filter(
+    sites: Any,
+    *,
+    window: int,
+    trim: bool,
+    component: str,
+    frequency_rtol: float,
+    inplace: bool,
+    recursive: bool,
+    on_dup: str,
+    strict: bool,
+    verbose: int,
+) -> Any:
+    """Apply a count-based EMAP moving average along station order."""
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    items = list(_iter_items(S))
+    if not items:
+        return S
+    window = max(1, int(window))
+    if window % 2 == 0:
+        window += 1
+    half = window // 2
+    comps = _emap_component_indices(component)
+    blocks = []
+    for ed in items:
+        blocks.append(_get_z_block(ed))
+    name_to_index = {
+        _name(ed, i): i
+        for i, ed in enumerate(items)
+    }
+
+    def _neighbors(index: int) -> List[int]:
+        lo = max(0, index - half)
+        hi = min(len(items), index + half + 1)
+        return list(range(lo, hi))
+
+    def _filtered_row(index: int, freq: float) -> Optional[np.ndarray]:
+        rows = []
+        for j in _neighbors(index):
+            Zj, zj, frj = blocks[j]
+            if Zj is None:
+                continue
+            row = _nearest_frequency_row(
+                zj,
+                frj,
+                freq,
+                rtol=frequency_rtol,
+            )
+            if row is not None:
+                rows.append(row)
+        if not rows:
+            return None
+        arr = np.asarray(rows, dtype=complex)
+        out = np.nanmean(arr, axis=0)
+        if trim and arr.shape[0] >= 5:
+            for a, b in comps:
+                vals = arr[:, a, b]
+                finite = np.isfinite(vals)
+                if np.count_nonzero(finite) < 3:
+                    continue
+                keep_vals = vals[finite]
+                order = np.argsort(np.abs(keep_vals))
+                trimmed = keep_vals[order][1:-1]
+                if trimmed.size:
+                    out[a, b] = np.nanmean(trimmed)
+        return out
+
+    def _one(Si):
+        ed = next(_iter_items(Si))
+        index = name_to_index.get(_name(ed, 0), 0)
+        Z, z, fr = _get_z_block(ed)
+        if Z is None:
+            return Si
+        z2 = z.copy()
+        for k, freq in enumerate(fr):
+            row = _filtered_row(index, float(freq))
+            if row is None:
+                continue
+            for a, b in comps:
+                z2[k, a, b] = row[a, b]
+        Z.z = z2
+        return Si
+
+    return _apply_each(S, _one, inplace=inplace, verbose=verbose)
+
+
+def fixed_length_moving_average(
+    sites: Any,
+    *,
+    window: int = 5,
+    component: str = "all",
+    frequency_rtol: float = 1e-6,
+    inplace: bool = False,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> Any:
+    """Apply a fixed-length EMAP moving average along a profile.
+
+    The filter replaces each selected impedance component by the local
+    arithmetic mean of neighboring stations at the same frequency.  It is a
+    v2 functional equivalent of the classic FLMA idea and preserves the
+    input frequency grids.
+    """
+    return _boxcar_spatial_filter(
+        sites,
+        window=window,
+        trim=False,
+        component=component,
+        frequency_rtol=frequency_rtol,
+        inplace=inplace,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def trimmed_moving_average(
+    sites: Any,
+    *,
+    window: int = 5,
+    component: str = "all",
+    frequency_rtol: float = 1e-6,
+    inplace: bool = False,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> Any:
+    """Apply a trimmed EMAP moving average along a profile.
+
+    The filter is similar to :func:`fixed_length_moving_average`, but when a
+    full enough window is available it removes the smallest and largest
+    magnitudes before averaging.  This makes the profile smoothing less
+    sensitive to isolated bad stations.
+    """
+    return _boxcar_spatial_filter(
+        sites,
+        window=window,
+        trim=True,
+        component=component,
+        frequency_rtol=frequency_rtol,
+        inplace=inplace,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def apply_emap_filter(
+    sites: Any,
+    *,
+    method: str = "ama",
+    window: int = 5,
+    window_m: float = 1500.0,
+    spacing_m: float = 200.0,
+    component: str = "all",
+    comp: str = "det",
+    frequency_rtol: float = 1e-6,
+    inplace: bool = False,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> Any:
+    """Apply one EMAP-style spatial filter to MT/AMT sites.
+
+    ``method='ama'`` delegates to :func:`correct_static_shift`, the existing
+    Hanning adaptive moving-average correction.  ``'flma'`` and ``'tma'``
+    apply count-based spatial smoothing along station order.
+    """
+    method = str(method).lower()
+    if method in {"ama", "adaptive"}:
+        return correct_static_shift(
+            sites,
+            window_m=window_m,
+            spacing_m=spacing_m,
+            comp=comp,
+            inplace=inplace,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
+    if method in {"flma", "fixed"}:
+        return fixed_length_moving_average(
+            sites,
+            window=window,
+            component=component,
+            frequency_rtol=frequency_rtol,
+            inplace=inplace,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
+    if method in {"tma", "trimmed"}:
+        return trimmed_moving_average(
+            sites,
+            window=window,
+            component=component,
+            frequency_rtol=frequency_rtol,
+            inplace=inplace,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
+    msg = "method must be one of 'ama', 'flma', or 'tma'."
+    raise ValueError(msg)
+
+
+def _confidence_vector_for_station(
+    table: pd.DataFrame,
+    station: str,
+    fr: np.ndarray,
+) -> np.ndarray:
+    """Return confidence values aligned to one station frequency grid."""
+    out = np.full(fr.size, np.nan, dtype=float)
+    if table.empty:
+        return out
+    sub = table[table["station"].astype(str) == str(station)]
+    if sub.empty:
+        return out
+    ftab = sub["frequency_hz"].to_numpy(dtype=float)
+    ctab = sub["confidence"].to_numpy(dtype=float)
+    for i, freq in enumerate(fr):
+        if not np.isfinite(freq) or ftab.size == 0:
+            continue
+        idx = int(np.nanargmin(np.abs(ftab - freq)))
+        if np.isclose(ftab[idx], freq, rtol=1e-6, atol=1e-12):
+            out[i] = ctab[idx]
+    return out
+
+
+def _emap_decision_report(decisions: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate confidence-gated EMAP decisions by station."""
+    if decisions.empty:
+        return pd.DataFrame(
+            columns=[
+                "station",
+                "n_freq",
+                "n_preserved",
+                "n_blended",
+                "n_filtered",
+                "mean_blend_weight",
+                "median_confidence",
+                "median_delta_log10_abs_z",
+            ]
+        )
+    grouped = decisions.groupby("station", sort=False)
+    rows = []
+    for station, sub in grouped:
+        rows.append(
+            dict(
+                station=station,
+                n_freq=int(len(sub)),
+                n_preserved=int((sub["action"] == "preserved").sum()),
+                n_blended=int((sub["action"] == "blended").sum()),
+                n_filtered=int((sub["action"] == "filtered").sum()),
+                mean_blend_weight=float(
+                    np.nanmean(sub["blend_weight"].to_numpy(dtype=float)),
+                ),
+                median_confidence=float(
+                    np.nanmedian(sub["confidence"].to_numpy(dtype=float)),
+                ),
+                median_delta_log10_abs_z=float(
+                    np.nanmedian(
+                        sub["delta_log10_abs_z"].to_numpy(dtype=float),
+                    ),
+                ),
+            )
+        )
+    return pd.DataFrame.from_records(rows)
+
+
+def confidence_gated_emap_filter(
+    sites: Any,
+    *,
+    before_sites: Optional[Any] = None,
+    method: str = "flma",
+    confidence_method: str = "composite",
+    component: str = "xy",
+    ci_hi: float = 0.90,
+    ci_lo: float = 0.50,
+    weights: Optional[Dict[str, float]] = None,
+    blend_power: float = 1.0,
+    window: int = 5,
+    window_m: float = 1500.0,
+    spacing_m: float = 200.0,
+    comp: str = "det",
+    frequency_rtol: float = 1e-6,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> EMAPFilterResult:
+    """Apply EMAP filtering only as strongly as confidence requires.
+
+    Rows with confidence greater than or equal to ``ci_hi`` are preserved.
+    Rows below ``ci_lo`` are fully replaced by the EMAP-filtered estimate.
+    Rows between the two limits are linearly blended, with optional
+    ``blend_power`` shaping.
+    """
+    from .qc import frequency_confidence_table
+
+    baseline = before_sites if before_sites is not None else sites
+    before = ensure_sites(
+        baseline,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    filtered = apply_emap_filter(
+        sites,
+        method=method,
+        window=window,
+        window_m=window_m,
+        spacing_m=spacing_m,
+        component=component,
+        comp=comp,
+        frequency_rtol=frequency_rtol,
+        inplace=False,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    conf_table = frequency_confidence_table(
+        before,
+        method=confidence_method,
+        weights=weights,
+        ci_hi=ci_hi,
+        ci_lo=ci_lo,
+        spacing_m=spacing_m,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
+    )
+    before_map = {
+        _name(ed, i): ed
+        for i, ed in enumerate(_iter_items(before))
+    }
+    comps = _emap_component_indices(component)
+    decisions = []
+    for i, edf in enumerate(_iter_items(filtered)):
+        station = _name(edf, i)
+        ed0 = before_map.get(station)
+        if ed0 is None:
+            continue
+        Z0, z0, fr0 = _get_z_block(ed0)
+        Zf, zf, frf = _get_z_block(edf)
+        if Z0 is None or Zf is None:
+            continue
+        conf = _confidence_vector_for_station(conf_table, station, fr0)
+        znew = zf.copy()
+        for j, freq in enumerate(frf):
+            if fr0.size == 0:
+                continue
+            idx0 = int(np.nanargmin(np.abs(fr0 - freq)))
+            if not np.isclose(fr0[idx0], freq, rtol=frequency_rtol, atol=1e-12):
+                continue
+            ci = conf[idx0]
+            if not np.isfinite(ci):
+                alpha = 0.0
+            else:
+                alpha = (float(ci_hi) - ci) / max(
+                    float(ci_hi) - float(ci_lo),
+                    1e-12,
+                )
+                alpha = float(np.clip(alpha, 0.0, 1.0))
+                alpha = alpha ** max(float(blend_power), 1e-12)
+            action = (
+                "preserved"
+                if alpha <= 1e-9
+                else "filtered"
+                if alpha >= 1.0 - 1e-9
+                else "blended"
+            )
+            before_mag = []
+            after_mag = []
+            for a, b in comps:
+                original = z0[idx0, a, b]
+                filtered_value = zf[j, a, b]
+                znew[j, a, b] = (
+                    (1.0 - alpha) * original
+                    + alpha * filtered_value
+                )
+                before_mag.append(abs(original))
+                after_mag.append(abs(znew[j, a, b]))
+            before_ref = float(np.nanmedian(before_mag))
+            after_ref = float(np.nanmedian(after_mag))
+            decisions.append(
+                dict(
+                    station=station,
+                    frequency_hz=float(freq),
+                    period_s=float(1.0 / freq) if freq else np.nan,
+                    log10_period=(
+                        float(np.log10(1.0 / freq))
+                        if freq > 0
+                        else np.nan
+                    ),
+                    confidence=float(ci) if np.isfinite(ci) else np.nan,
+                    blend_weight=float(alpha),
+                    action=action,
+                    delta_log10_abs_z=float(
+                        np.log10(after_ref + 1e-24)
+                        - np.log10(before_ref + 1e-24)
+                    ),
+                )
+            )
+        Zf.z = znew
+    decision_table = pd.DataFrame.from_records(decisions)
+    return EMAPFilterResult(
+        sites=filtered,
+        report=_emap_decision_report(decision_table),
+        decisions=decision_table,
+        method=str(method),
+        confidence_method=str(confidence_method),
+        ci_hi=float(ci_hi),
+        ci_lo=float(ci_lo),
+    )
+
+
 # -------------------- NOISE REMOVAL QC PLOTS ---------------------------- #
 
 def _offdiag_logmag(z: np.ndarray) -> np.ndarray:
@@ -916,6 +1434,38 @@ def _union_offdiag_matrix(
     return sts, G, M
 
 
+def _union_component_logmag_matrix(
+    sites: Any,
+    component: str,
+) -> Tuple[List[str], np.ndarray, np.ndarray]:
+    """Return station, union-frequency, log10 selected-component matrix."""
+    S = ensure_sites(sites, recursive=False, strict=False)
+    a, b = _component_index(component)
+    sts, Gs, Ms = [], [], []
+    for i, ed in enumerate(_iter_items(S)):
+        Z, z, fr = _get_z_block(ed)
+        if Z is None:
+            continue
+        sts.append(_name(ed, i))
+        Gs.append(fr)
+        Ms.append(np.log10(np.abs(z[:, a, b]) + 1e-24))
+    if not sts:
+        return [], np.array([]), np.empty((0, 0))
+    G = np.unique(np.concatenate(Gs))
+    M = np.full((len(sts), G.size), np.nan, dtype=float)
+    for row, (fr, lm) in enumerate(zip(Gs, Ms)):
+        idx = np.searchsorted(G, fr)
+        idx = np.clip(idx, 0, G.size - 1)
+        M[row, idx] = lm
+        r = M[row]
+        g = np.isfinite(r)
+        if g.sum() >= 2:
+            xi = np.where(g)[0]
+            r[~g] = np.interp(np.where(~g)[0], xi, r[g])
+            M[row] = r
+    return sts, G, M
+
+
 def _denoise_sites(
     sites: Any,
     method: str,
@@ -934,7 +1484,390 @@ def _denoise_sites(
         return spatial_median_filter(sites, **kws)
     if m == "hampel":
         return hampel_filter_freq(sites, **kws)
+    if m in {"emap", "ama", "flma", "tma"}:
+        emap_method = kws.pop("emap_method", "ama" if m == "emap" else m)
+        return apply_emap_filter(sites, method=emap_method, **kws)
     raise ValueError(f"unknown method: {method}")
+
+
+def _station_style_top(
+    ax: plt.Axes,
+    labels: Sequence[str],
+    *,
+    station_label_step: Optional[int],
+    station_preset: str,
+    station_style: Optional[Any],
+) -> None:
+    """Apply top station rendering for EMTools profile plots."""
+    import copy
+    from pycsamt.api.station import PYCSAMT_STATION_RENDERING
+
+    style = station_style or PYCSAMT_STATION_RENDERING.style_for(
+        station_preset,
+    )
+    style = copy.copy(style)
+    style.side = "top"
+    style.max_labels = max(int(style.max_labels), len(labels))
+    style.every = 1 if station_label_step is None else int(
+        station_label_step,
+    )
+    x = np.arange(len(labels), dtype=float)
+    style.apply(ax, x, labels, xlim=(-0.5, len(labels) - 0.5))
+
+
+def _component_index(component: str) -> Tuple[int, int]:
+    """Return one tensor component index."""
+    component = str(component).lower()
+    mapping = {
+        "xx": (0, 0),
+        "xy": (0, 1),
+        "yx": (1, 0),
+        "yy": (1, 1),
+    }
+    if component not in mapping:
+        msg = "component must be one of 'xx', 'xy', 'yx', or 'yy'."
+        raise ValueError(msg)
+    return mapping[component]
+
+
+def _paired_z_items(before_sites: Any,
+                    after_sites: Any) -> List[Tuple[str, Any, Any]]:
+    """Pair before/after Z-bearing items by station name."""
+    before = ensure_sites(before_sites, recursive=False, strict=False)
+    after = ensure_sites(after_sites, recursive=False, strict=False)
+    after_map = {
+        _name(ed, i): ed
+        for i, ed in enumerate(_iter_items(after))
+    }
+    pairs = []
+    for i, ed0 in enumerate(_iter_items(before)):
+        station = _name(ed0, i)
+        ed1 = after_map.get(station)
+        if ed1 is None:
+            continue
+        if _get_z_block(ed0)[0] is None or _get_z_block(ed1)[0] is None:
+            continue
+        pairs.append((station, ed0, ed1))
+    return pairs
+
+
+def _nearest_component_value(ed: Any,
+                             freq_hz: Optional[float],
+                             component: str) -> Tuple[float, complex]:
+    """Return nearest frequency and complex tensor component magnitude."""
+    _, z, fr = _get_z_block(ed)
+    a, b = _component_index(component)
+    if freq_hz is None:
+        row = int(np.nanargmin(fr))
+    else:
+        row = int(np.nanargmin(np.abs(fr - float(freq_hz))))
+    return float(fr[row]), complex(z[row, a, b])
+
+
+def emap_filter_report(
+    before_sites: Any,
+    after_sites: Any,
+    *,
+    component: str = "xy",
+    period_s: Optional[float] = None,
+    frequency_hz: Optional[float] = None,
+) -> pd.DataFrame:
+    """Summarize station-level changes after an EMAP-style filter.
+
+    The report compares the selected impedance component before and after a
+    filter.  When ``period_s`` or ``frequency_hz`` is provided, the table also
+    includes a reference-row before/after profile value for each station.
+    """
+    rows = []
+    ref_freq = frequency_hz
+    if ref_freq is None and period_s is not None:
+        ref_freq = 1.0 / max(float(period_s), 1e-24)
+    a, b = _component_index(component)
+    for station, ed0, ed1 in _paired_z_items(before_sites, after_sites):
+        _, z0, fr0 = _get_z_block(ed0)
+        _, z1, fr1 = _get_z_block(ed1)
+        vals = []
+        for k, freq in enumerate(fr0):
+            if fr1.size == 0:
+                continue
+            idx = int(np.nanargmin(np.abs(fr1 - freq)))
+            if not np.isclose(fr1[idx], freq, rtol=1e-6, atol=1e-12):
+                continue
+            before = z0[k, a, b]
+            after = z1[idx, a, b]
+            if np.isfinite(before) and np.isfinite(after):
+                vals.append(
+                    np.log10(np.abs(after) + 1e-24)
+                    - np.log10(np.abs(before) + 1e-24)
+                )
+        vals_arr = np.asarray(vals, dtype=float)
+        row = dict(
+            station=station,
+            component=component,
+            n_matched_freq=int(vals_arr.size),
+            median_delta_log10_abs_z=(
+                float(np.nanmedian(vals_arr))
+                if vals_arr.size
+                else np.nan
+            ),
+            rms_delta_log10_abs_z=(
+                float(np.sqrt(np.nanmean(vals_arr ** 2)))
+                if vals_arr.size
+                else np.nan
+            ),
+        )
+        if ref_freq is not None:
+            f0, v0 = _nearest_component_value(ed0, ref_freq, component)
+            f1, v1 = _nearest_component_value(ed1, ref_freq, component)
+            row.update(
+                reference_frequency_hz=float(f0),
+                reference_frequency_after_hz=float(f1),
+                before_log10_abs_z=float(np.log10(np.abs(v0) + 1e-24)),
+                after_log10_abs_z=float(np.log10(np.abs(v1) + 1e-24)),
+                reference_delta_log10_abs_z=float(
+                    np.log10(np.abs(v1) + 1e-24)
+                    - np.log10(np.abs(v0) + 1e-24)
+                ),
+            )
+        rows.append(row)
+    return pd.DataFrame.from_records(rows)
+
+
+def plot_emap_filter_profile(
+    before_sites: Any,
+    after_sites: Optional[Any] = None,
+    *,
+    method: str = "flma",
+    component: str = "xy",
+    period_s: Optional[float] = None,
+    frequency_hz: Optional[float] = None,
+    window: int = 5,
+    window_m: float = 1500.0,
+    spacing_m: float = 200.0,
+    comp: str = "det",
+    figsize: Tuple[float, float] = (9.5, 4.0),
+    station_label_step: Optional[int] = 1,
+    station_preset: str = "pseudosection",
+    station_style: Optional[Any] = None,
+    ax: Optional[plt.Axes] = None,
+    **filter_kws: Any,
+) -> plt.Axes:
+    """Plot a before/after EMAP filter station profile."""
+    from pycsamt.api.style import PYCSAMT_STYLE
+
+    if after_sites is None:
+        after_sites = apply_emap_filter(
+            before_sites,
+            method=method,
+            window=window,
+            window_m=window_m,
+            spacing_m=spacing_m,
+            component=component,
+            comp=comp,
+            inplace=False,
+            **filter_kws,
+        )
+    ref_freq = frequency_hz
+    if ref_freq is None and period_s is not None:
+        ref_freq = 1.0 / max(float(period_s), 1e-24)
+    pairs = _paired_z_items(before_sites, after_sites)
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+    if not pairs:
+        ax.text(0.5, 0.5, "no paired stations", ha="center", va="center")
+        return ax
+    labels, before_vals, after_vals = [], [], []
+    used_freqs = []
+    for station, ed0, ed1 in pairs:
+        f0, v0 = _nearest_component_value(ed0, ref_freq, component)
+        f1, v1 = _nearest_component_value(ed1, f0, component)
+        labels.append(station)
+        before_vals.append(float(np.log10(np.abs(v0) + 1e-24)))
+        after_vals.append(float(np.log10(np.abs(v1) + 1e-24)))
+        used_freqs.append(f0 if np.isfinite(f0) else f1)
+    x = np.arange(len(labels))
+    ax.plot(
+        x,
+        before_vals,
+        **PYCSAMT_STYLE.correction.before.plot_kwargs(),
+    )
+    ax.plot(
+        x,
+        after_vals,
+        **PYCSAMT_STYLE.correction.after.plot_kwargs(),
+    )
+    _station_style_top(
+        ax,
+        labels,
+        station_label_step=station_label_step,
+        station_preset=station_preset,
+        station_style=station_style,
+    )
+    freq_label = np.nanmedian(np.asarray(used_freqs, dtype=float))
+    ax.set_ylabel(rf"$\log_{{10}}|Z_{{{component.upper()}}}|$")
+    ax.set_title(
+        f"{method.upper()} profile at {freq_label:.4g} Hz",
+        fontsize=10,
+    )
+    ax.grid(True, ls=":", alpha=0.35)
+    ax.legend(fontsize=8)
+    return ax
+
+
+def plot_emap_filter_psection(
+    before_sites: Any,
+    after_sites: Optional[Any] = None,
+    *,
+    method: str = "flma",
+    component: str = "xy",
+    window: int = 5,
+    window_m: float = 1500.0,
+    spacing_m: float = 200.0,
+    comp: str = "det",
+    cmap: str = "RdYlBu_r",
+    delta_cmap: str = "RdBu_r",
+    clim: Optional[Tuple[float, float]] = None,
+    clim_pct: Tuple[float, float] = (2.0, 98.0),
+    delta_vlim: Optional[float] = None,
+    delta_vlim_pct: float = 95.0,
+    figsize: Tuple[float, float] = (11.0, 8.2),
+    station_label_step: Optional[int] = 1,
+    station_preset: str = "pseudosection",
+    station_style: Optional[Any] = None,
+    **filter_kws: Any,
+) -> plt.Figure:
+    """Plot before/after/delta pseudo-sections for an EMAP filter."""
+    if after_sites is None:
+        after_sites = apply_emap_filter(
+            before_sites,
+            method=method,
+            window=window,
+            window_m=window_m,
+            spacing_m=spacing_m,
+            component=component,
+            comp=comp,
+            inplace=False,
+            **filter_kws,
+        )
+    st0, G0, M0 = _union_component_logmag_matrix(before_sites, component)
+    st1, G1, M1 = _union_component_logmag_matrix(after_sites, component)
+    fig, axes = plt.subplots(
+        3,
+        1,
+        figsize=figsize,
+        sharex=True,
+        gridspec_kw={"hspace": 0.24},
+    )
+    if not st0 or not st1:
+        axes[1].text(0.5, 0.5, "no paired data", ha="center", va="center")
+        return fig
+
+    labels = [station for station in st0 if station in set(st1)]
+    I0 = [st0.index(station) for station in labels]
+    I1 = [st1.index(station) for station in labels]
+    G = np.unique(np.concatenate([G0, G1]))
+
+    def _resample(M: np.ndarray, Gs: np.ndarray) -> np.ndarray:
+        out = np.full((M.shape[0], G.size), np.nan, dtype=float)
+        for i in range(M.shape[0]):
+            idx = np.searchsorted(G, Gs)
+            idx = np.clip(idx, 0, G.size - 1)
+            out[i, idx] = M[i]
+            row = out[i]
+            ok = np.isfinite(row)
+            if ok.sum() >= 2:
+                xi = np.where(ok)[0]
+                row[~ok] = np.interp(np.where(~ok)[0], xi, row[ok])
+        return out
+
+    before = _resample(M0[I0], G0)
+    after = _resample(M1[I1], G1)
+    delta = after - before
+    yvals = np.log10(1.0 / np.maximum(G, 1e-24))
+    order = np.argsort(yvals)
+    y_sorted = yvals[order]
+
+    if clim is None:
+        values = np.concatenate([before.ravel(), after.ravel()])
+        values = values[np.isfinite(values)]
+        if values.size:
+            vmin, vmax = np.percentile(values, clim_pct)
+        else:
+            vmin, vmax = 0.0, 1.0
+    else:
+        vmin, vmax = float(clim[0]), float(clim[1])
+    if delta_vlim is None:
+        dvals = np.abs(delta[np.isfinite(delta)])
+        delta_vlim = (
+            float(np.nanpercentile(dvals, delta_vlim_pct))
+            if dvals.size
+            else 0.25
+        )
+        delta_vlim = max(delta_vlim, 1e-6)
+
+    extent = (-0.5, len(labels) - 0.5, y_sorted.min(), y_sorted.max())
+    panels = [
+        (before[:, order].T, axes[0], cmap, vmin, vmax, "Before"),
+        (after[:, order].T, axes[1], cmap, vmin, vmax, "After"),
+        (
+            delta[:, order].T,
+            axes[2],
+            delta_cmap,
+            -float(delta_vlim),
+            float(delta_vlim),
+            r"$\Delta$ after-before",
+        ),
+    ]
+    images = []
+    for data, ax, cm, lo, hi, title in panels:
+        im = ax.imshow(
+            data,
+            aspect="auto",
+            origin="lower",
+            interpolation="nearest",
+            cmap=cm,
+            vmin=lo,
+            vmax=hi,
+            extent=extent,
+        )
+        images.append(im)
+        ax.set_ylabel(r"$\log_{10}T$ (s)")
+        ax.set_title(title, fontsize=9)
+        ax.grid(False)
+
+    _station_style_top(
+        axes[0],
+        labels,
+        station_label_step=station_label_step,
+        station_preset=station_preset,
+        station_style=station_style,
+    )
+    for ax in axes[1:]:
+        ax.tick_params(
+            axis="x",
+            which="both",
+            top=False,
+            bottom=False,
+            labeltop=False,
+            labelbottom=False,
+        )
+    cb_main = fig.colorbar(
+        images[0],
+        ax=[axes[0], axes[1]],
+        fraction=0.018,
+        pad=0.012,
+        aspect=35,
+    )
+    cb_main.set_label(rf"$\log_{{10}}|Z_{{{component.upper()}}}|$")
+    cb_delta = fig.colorbar(
+        images[2],
+        ax=axes[2],
+        fraction=0.018,
+        pad=0.012,
+        aspect=35,
+    )
+    cb_delta.set_label(r"$\Delta\log_{10}|Z|$")
+    return fig
 
 
 # 1) Δ log|Z_off| pseudosection (station × log-period) ------------------- #
@@ -1088,7 +2021,7 @@ def nr_qc_harmonic_waterfall(
         mains_hz=mains_hz, n_harm=n_harm, tol_hz=tol_hz,
         **denoise,
     )
-    sts, H = [], []
+    sts = []
     for i, (S, tag) in enumerate([(S0, "b"), (S1, "a")]):
         rows = []
         labs = []

@@ -18,6 +18,7 @@ from ._core import (
     _iter_items,
     _apply_each,
     _get_z_block,
+    _get_t_block,
     _name,
 )
 from ..site import edit as _edit
@@ -1264,3 +1265,336 @@ def plot_strike_mapsticks(
     ax.set_ylabel("Lat")
     ax.set_aspect("equal", adjustable="box")
     return ax
+
+
+# ---- shared rose-panel renderer ----------------------------------------- #
+
+def _draw_rose_on_ax(
+    ax: plt.Axes,
+    angles_deg: np.ndarray,
+    rs: "RoseStyle",
+    *,
+    bins: int = 36,
+    cmap_override: Optional[str] = None,
+    title: str = "",
+    title_fc: str = "white",
+    title_ec: str = "0.35",
+) -> None:
+    """Render one rose panel onto an existing polar Axes.
+
+    Parameters
+    ----------
+    ax : polar Axes
+    angles_deg : 1-D array of strike/azimuth angles (degrees, axial 0–180°).
+    rs : :class:`~pycsamt.api._rose_style.RoseStyle`
+    bins : histogram bins over 0–180°.
+    cmap_override : optional colormap name; falls back to ``rs.cmap``.
+    title : panel title text.
+    title_fc / title_ec : facecolor / edgecolor of the title bbox.
+    """
+    ang = angles_deg[np.isfinite(angles_deg)] % 180.0
+    cmap_name = cmap_override or rs.cmap
+
+    bins_ = int(max(12, bins))
+    edges = np.linspace(0.0, 180.0, bins_ + 1)
+    dw = np.radians(180.0 / bins_)
+
+    h, _ = np.histogram(ang, bins=edges)
+    cen = 0.5 * (edges[1:] + edges[:-1])
+    th = np.radians(np.concatenate([cen, cen + 180.0]))
+    rr = np.concatenate([h, h])
+    rmax = max(float(rr.max()), 1.0)
+    rline = rmax * 1.08
+
+    ax.set_theta_zero_location("N")
+    ax.set_theta_direction(-1)
+
+    # ── bars ─────────────────────────────────────────────────────────────────
+    if rs.bar_style == "gradient":
+        cm_ = plt.get_cmap(cmap_name)
+        cols = cm_(rr / (rmax + 1e-12))
+        ax.bar(th, rr, width=dw, color=cols,
+               edgecolor=rs.bar_edgecolor, linewidth=rs.bar_edgelw,
+               alpha=rs.bar_alpha, align="center")
+    else:
+        ax.bar(th, rr, width=dw, color=rs.bar_color,
+               edgecolor=rs.bar_edgecolor, linewidth=rs.bar_edgelw,
+               alpha=rs.bar_alpha, align="center")
+
+    # ── concentric rings ─────────────────────────────────────────────────────
+    if rs.ring_labels is not None:
+        r_levels = [float(v) for v in rs.ring_labels]
+    else:
+        step = rmax / max(1, rs.n_rings)
+        r_levels = [step * k for k in range(1, rs.n_rings + 1)]
+
+    ax.set_rmax(rline * 1.18)
+    ax.set_yticks(r_levels)
+    ax.set_yticklabels([])
+
+    lbl_theta = np.radians(rs.ring_label_angle)
+    for rv in r_levels:
+        ax.text(lbl_theta, rv, rs.ring_label_fmt.format(rv),
+                ha="center", va="center",
+                fontsize=rs.ring_label_fontsize,
+                color=rs.ring_label_color, zorder=5)
+
+    # ── spokes / compass labels ───────────────────────────────────────────────
+    spoke_angles = np.arange(0.0, 360.0, float(rs.spoke_every))
+    if rs.compass_labels == "NESW":
+        _cpts = {0: "N", 90: "E", 180: "S", 270: "W"}
+        lbls = [_cpts.get(int(round(s)) % 360, "") for s in spoke_angles]
+    elif rs.compass_labels == "degrees":
+        lbls = [f"{int(s)}°" for s in spoke_angles]
+    else:
+        lbls = [""] * len(spoke_angles)
+    ax.set_thetagrids(spoke_angles, labels=lbls)
+    ax.tick_params(axis="x", labelsize=rs.compass_fontsize,
+                   labelcolor=rs.compass_color, pad=4)
+    for lbl in ax.get_xticklabels():
+        lbl.set_fontweight(rs.compass_fontweight)
+
+    # ── grid styling ──────────────────────────────────────────────────────────
+    ax.yaxis.grid(True, color=rs.ring_color, linestyle=rs.ring_ls,
+                  linewidth=rs.ring_lw, alpha=0.8)
+    ax.xaxis.grid(True, color=rs.spoke_color, linestyle=rs.spoke_ls,
+                  linewidth=rs.spoke_lw, alpha=0.7)
+    ax.spines["polar"].set_linewidth(rs.outer_ring_lw)
+    ax.spines["polar"].set_color(rs.outer_ring_color)
+
+    # ── mean direction + annotation ───────────────────────────────────────────
+    if len(ang) == 0:
+        ax.text(0.5, 0.5, "no data",
+                ha="center", va="center", transform=ax.transAxes,
+                fontsize=rs.annotation_fontsize, color="0.55")
+    if len(ang) > 0:
+        mu = _axial_mean_deg(ang, np.ones(len(ang)))
+        mu_rad = np.radians(mu)
+        if rs.show_mean:
+            ax.plot([mu_rad, mu_rad], [0.0, rline],
+                    color=rs.mean_color, lw=rs.mean_lw, ls=rs.mean_ls,
+                    solid_capstyle="round", zorder=5)
+            if rs.show_secondary:
+                sc = rs.secondary_color or rs.mean_color
+                sl = rs.secondary_lw if rs.secondary_lw is not None else rs.mean_lw
+                ax.plot([mu_rad + np.pi, mu_rad + np.pi], [0.0, rline],
+                        color=sc, lw=sl, ls=rs.secondary_ls,
+                        solid_capstyle="round", zorder=5)
+        if rs.show_annotation:
+            txt = f"{mu:.1f}°"
+            if rs.show_n:
+                txt += f"\nn={len(ang)}"
+            ax.text(
+                rs.annotation_pos[0], rs.annotation_pos[1], txt,
+                transform=ax.transAxes,
+                fontsize=rs.annotation_fontsize,
+                va="top", ha="left",
+                bbox=dict(boxstyle="round,pad=0.25",
+                          fc=rs.annotation_bg, ec=rs.annotation_ec, lw=0.7),
+                zorder=6,
+            )
+
+    # ── title with coloured box ───────────────────────────────────────────────
+    ax.set_title(
+        title,
+        fontsize=rs.annotation_fontsize + 1.5,
+        fontweight="bold",
+        pad=14,
+        bbox=dict(boxstyle="round,pad=0.3",
+                  facecolor=title_fc, edgecolor=title_ec, lw=0.8),
+    )
+
+
+# ---- combined Strike-Analysis figure ------------------------------------ #
+
+def plot_strike_analysis(
+    sites: Any,
+    *,
+    # ── visual style ─────────────────────────────────────────────────────
+    style: "str | RoseStyle | None" = "pycsamt",
+    # ── data / algorithm ─────────────────────────────────────────────────
+    band: Optional[Tuple[float, float]] = None,
+    bins: int = 36,
+    method: str = "sweep",
+    # ── per-panel colormap overrides (None → rs.cmap from style) ─────────
+    cmap_z: Optional[str] = None,
+    cmap_pt: Optional[str] = None,
+    cmap_tipper: Optional[str] = None,
+    # ── title box colours ─────────────────────────────────────────────────
+    title_fc_z: str = "#ffe0e0",
+    title_fc_pt: str = "#ffffd0",
+    title_fc_tipper: str = "#d5e8ff",
+    title_ec: str = "0.35",
+    # ── layout ───────────────────────────────────────────────────────────
+    figsize: Optional[Tuple[float, float]] = None,
+    subplot_size: float = 3.8,
+    suptitle: str = "",
+    tight_layout: bool = True,
+    # ── core ─────────────────────────────────────────────────────────────
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> plt.Figure:
+    """Three-panel rose diagram: Strike (Z), PT Azimuth, and Tipper Strike.
+
+    Produces a publication-quality figure with one polar rose per analysis
+    type, analogous to the MTPy ``StrikeAnalysis`` plot.  All three panels
+    share the same :class:`~pycsamt.api._rose_style.RoseStyle` so colours
+    remain visually consistent.  Each panel carries a coloured title box to
+    distinguish the three quantities at a glance.
+
+    Parameters
+    ----------
+    sites : any
+        EDI paths, EDI objects, or
+        :class:`~pycsamt.core.base.SitesCollection` accepted by
+        :func:`~pycsamt.emtools._core.ensure_sites`.
+    style : str, RoseStyle, or None
+        Named style preset or :class:`~pycsamt.api._rose_style.RoseStyle`
+        instance.  Default ``"pycsamt"`` uses the YlOrRd-gradient,
+        crimson-mean-line paper style.
+    band : (lo_s, hi_s) or None
+        Period window in seconds applied to **all three** panels.
+        ``None`` uses all available periods / frequencies.
+    bins : int
+        Number of histogram bins over 0–180°, mirrored to 0–360°.
+        Default 36 → 5° bins.
+    method : {"sweep", "pt", "consensus"}
+        Strike estimation algorithm for the **Strike (Z)** panel.
+
+        ``"sweep"`` — impedance-tensor rotation sweep
+        (calls :func:`estimate_strike_sweep`);
+        ``"pt"`` — phase-tensor θ median per station
+        (calls :func:`estimate_strike_phase_tensor`);
+        ``"consensus"`` — weighted blend of sweep and PT
+        (calls :func:`estimate_strike_consensus`).
+    cmap_z, cmap_pt, cmap_tipper : str or None
+        Colormap name for each panel when ``bar_style="gradient"``.
+        ``None`` falls back to the colormap in *style*.
+    title_fc_z, title_fc_pt, title_fc_tipper : str
+        Facecolour of the title annotation box for each panel.
+    title_ec : str
+        Edge colour shared by all title boxes.
+    figsize : (float, float) or None
+        Figure size.  Auto-derived from *subplot_size* when ``None``.
+    subplot_size : float
+        Side length (inches) of each polar panel when *figsize* is auto.
+    suptitle : str
+        Figure-level super-title.
+    tight_layout : bool
+        Call ``fig.tight_layout()`` before returning.
+    recursive, on_dup, strict, verbose
+        Passed to :func:`~pycsamt.emtools._core.ensure_sites`.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Figure with three polar axes: Strike (Z), PT Azimuth, Tipper Strike.
+
+    Examples
+    --------
+    Default style, all periods:
+
+    >>> from pycsamt.emtools import plot_strike_analysis
+    >>> fig = plot_strike_analysis("path/to/edis/")
+    >>> fig.savefig("strike_analysis.png", dpi=150, bbox_inches="tight")
+
+    Short-period band, publication style:
+
+    >>> fig = plot_strike_analysis(
+    ...     sites,
+    ...     band=(0.01, 1.0),
+    ...     style="publication",
+    ...     suptitle="WILLY AMT — short-period band",
+    ... )
+    """
+    rs = resolve_rose_style(style)
+
+    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
+                     strict=strict, verbose=verbose)
+
+    # ── 1. Z-strike angles (one per station) ────────────────────────────────
+    if method == "pt":
+        df_z = estimate_strike_phase_tensor(
+            S, band=band, recursive=False,
+            on_dup=on_dup, strict=False, verbose=verbose,
+        )
+    elif method == "consensus":
+        df_z = estimate_strike_consensus(
+            S, band=band, recursive=False,
+            on_dup=on_dup, strict=False, verbose=verbose,
+        )
+    else:
+        df_z = estimate_strike_sweep(
+            S, band=band, recursive=False,
+            on_dup=on_dup, strict=False, verbose=verbose,
+        )
+    ang_z = (df_z["ang"].to_numpy(float) % 180.0
+             if not df_z.empty else np.empty(0))
+
+    # ── 2. PT azimuth angles (per frequency × station) ──────────────────────
+    df_pt = build_phase_tensor_table(
+        S, recursive=False, on_dup=on_dup, strict=False, verbose=verbose,
+    )
+    if not df_pt.empty:
+        if band is not None:
+            lo_, hi_ = float(band[0]), float(band[1])
+            m_pt = (df_pt["period"] >= lo_) & (df_pt["period"] <= hi_)
+            ang_pt = df_pt.loc[m_pt, "theta"].to_numpy(float) % 180.0
+        else:
+            ang_pt = df_pt["theta"].to_numpy(float) % 180.0
+        ang_pt = ang_pt[np.isfinite(ang_pt)]
+    else:
+        ang_pt = np.empty(0)
+
+    # ── 3. Tipper-strike angles (per frequency × station) ───────────────────
+    _tip_list: List[float] = []
+    for i, ed in enumerate(_iter_items(S)):
+        _T, t, fr = _get_t_block(ed)
+        if t is None or fr is None:
+            continue
+        per_t = 1.0 / np.where(fr == 0, np.nan, fr)
+        mask_t = np.isfinite(per_t)
+        if band is not None:
+            lo_, hi_ = float(band[0]), float(band[1])
+            mask_t &= (per_t >= lo_) & (per_t <= hi_)
+        if not mask_t.any():
+            continue
+        tx = np.real(t[mask_t, 0])   # Re(Tzx)
+        ty = np.real(t[mask_t, 1])   # Re(Tzy)
+        az = np.degrees(np.arctan2(ty, tx)) % 180.0
+        _tip_list.extend(az[np.isfinite(az)].tolist())
+    ang_tipper = np.array(_tip_list, float)
+
+    # ── figure ───────────────────────────────────────────────────────────────
+    if figsize is None:
+        figsize = (subplot_size * 3 + 0.6, subplot_size + 0.5)
+    fig, axes = plt.subplots(
+        1, 3, figsize=figsize, subplot_kw=dict(polar=True),
+    )
+
+    _draw_rose_on_ax(
+        axes[0], ang_z, rs,
+        bins=bins, cmap_override=cmap_z,
+        title="Strike (Z)",
+        title_fc=title_fc_z, title_ec=title_ec,
+    )
+    _draw_rose_on_ax(
+        axes[1], ang_pt, rs,
+        bins=bins, cmap_override=cmap_pt,
+        title="PT Azimuth",
+        title_fc=title_fc_pt, title_ec=title_ec,
+    )
+    _draw_rose_on_ax(
+        axes[2], ang_tipper, rs,
+        bins=bins, cmap_override=cmap_tipper,
+        title="Tipper Strike",
+        title_fc=title_fc_tipper, title_ec=title_ec,
+    )
+
+    if suptitle:
+        fig.suptitle(suptitle, fontsize=10.0, y=1.02)
+    if tight_layout:
+        fig.tight_layout()
+    return fig

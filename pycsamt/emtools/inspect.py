@@ -8,10 +8,12 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
-from ._core import ensure_sites
-
+from ..api.style import PYCSAMT_STYLE
+from ._core import ensure_sites, _get_z_block, _get_t_block
 
 # ------------------------- small helpers --------------------------------- #
 
@@ -426,6 +428,8 @@ def plot_tipper_components(
     verbose: int = 0,
     ax: Optional[plt.Axes] = None,
 ) -> plt.Axes:
+    from ._core import _iter_items, _name, _get_t_block
+
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -433,38 +437,51 @@ def plot_tipper_components(
         strict=strict,
         verbose=verbose,
     )
-    df = _df_resphase(S, kind="tipper")
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
-    if df is None or df.empty:
-        ax.text(0.5, 0.5, "no tipper", ha="center", va="center")
-        return ax
-    xkey = "period" if axis == "period" else "freq"
-    if xkey not in df.columns and "freq" in df.columns:
-        df["period"] = 1.0 / df["freq"].replace(0, np.nan)
-        xkey = "period" if axis == "period" else "freq"
-    stations = sorted(df.get("station", pd.Series()).unique())
-    if not stations:
-        stations = ["__all__"]
-        df = df.copy()
-        df["station"] = stations[0]
-    comps = ("tx", "ty")
-    for st in stations:
-        sdf = df[df["station"] == st]
-        for c in comps:
+
+    _STYLES = {
+        ("tx", "real"): dict(color="#1f77b4", ls="-",  marker="o", ms=3, lw=0.9),
+        ("tx", "imag"): dict(color="#1f77b4", ls="--", marker="o", ms=3, lw=0.9),
+        ("ty", "real"): dict(color="#d62728", ls="-",  marker="s", ms=3, lw=0.9),
+        ("ty", "imag"): dict(color="#d62728", ls="--", marker="s", ms=3, lw=0.9),
+    }
+
+    n_plotted = 0
+    for i, ed in enumerate(_iter_items(S)):
+        nm  = _name(ed, i)
+        out = _get_t_block(ed)
+        _, t, fr = out[0], out[1], out[2]
+        if t is None or fr is None:
+            continue
+        t  = np.asarray(t, complex)   # (n_freq, 2) — Tx, Ty
+        fr = np.asarray(fr, float)
+        if t.ndim == 3 and t.shape[1] == 1 and t.shape[2] == 2:
+            t = t[:, 0, :]
+        if t.ndim != 2 or t.shape[1] < 2:
+            continue
+
+        x  = (1.0 / np.where(fr == 0, np.nan, fr)
+               if axis == "period" else fr)
+
+        for ci, comp in enumerate(("tx", "ty")):
+            col_t = t[:, ci]
             for k in kind:
-                col = f"{c}_{k}"
-                if col in sdf.columns:
-                    ax.plot(
-                        sdf[xkey].to_numpy(),
-                        sdf[col].to_numpy(),
-                        ".",
-                        label=f"{st}:{col}",
-                    )
+                vals = col_t.real if k == "real" else col_t.imag
+                sty  = _STYLES.get((comp, k), {})
+                ax.plot(x, vals, label=f"{nm}:{comp}_{k}", **sty)
+                n_plotted += 1
+
     ax.set_xscale("log")
-    ax.set_xlabel(axis)
-    ax.set_ylabel("tipper")
-    ax.legend(ncols=2, fontsize=8)
+    ax.set_xlabel("Period (s)" if axis == "period" else "Frequency (Hz)", fontsize=9)
+    ax.set_ylabel("Tipper", fontsize=9)
+    ax.axhline(0, color="k", lw=0.5, ls=":")
+    ax.tick_params(labelsize=8)
+    if n_plotted:
+        ax.legend(ncols=2, fontsize=7)
+    else:
+        ax.text(0.5, 0.5, "no tipper data", ha="center", va="center",
+                transform=ax.transAxes, color="0.5")
     return ax
 
 
@@ -540,3 +557,385 @@ def pseudosection(
     cb = plt.colorbar(im, ax=ax)
     cb.set_label(quantity)
     return ax
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# plot_station_response — full 4-component impedance tensor + tipper view
+# ──────────────────────────────────────────────────────────────────────────────
+
+_COMP_IDX: dict = {"xx": (0, 0), "xy": (0, 1), "yx": (1, 0), "yy": (1, 1)}
+_TIP_PANELS: list = [
+    ("Re($T_x$)",  "tx", "real"),
+    ("Im($T_x$)",  "tx", "imag"),
+    ("Re($T_y$)",  "ty", "real"),
+    ("Im($T_y$)",  "ty", "imag"),
+]
+
+
+def _rho_phase_err(rho, z, z_err):
+    """Return (rho_err, phase_err_deg) from impedance absolute errors."""
+    z_abs = np.abs(z)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        rel = np.where(z_abs > 0, np.abs(z_err) / z_abs, 0.0)
+    rho_err    = 2.0 * rho * rel
+    phase_err  = np.degrees(rel)
+    return rho_err, phase_err
+
+
+def _rms_log(obs, mod):
+    """Root-mean-square misfit in log10(rho) space."""
+    with np.errstate(divide="ignore", invalid="ignore"):
+        r = np.log10(obs / np.where(mod > 0, mod, np.nan))
+    r = r[np.isfinite(r)]
+    return float(np.sqrt(np.mean(r ** 2))) if r.size else np.nan
+
+
+def _pick_station(S, station):
+    """Return the first (or named) Site object from S."""
+    for i, ed in enumerate(_iter_items(S)):
+        st = _name(ed, i)
+        if station is None or st == station:
+            return st, ed
+    raise RuntimeError(
+        f"Station {station!r} not found." if station
+        else "No sites in collection."
+    )
+
+
+def plot_station_response(
+    sites: Any,
+    *,
+    station: Optional[str] = None,
+    sites_model: Optional[Any] = None,
+    components: Tuple[str, ...] = ("xx", "xy", "yx", "yy"),
+    period_range: Optional[Tuple[float, float]] = None,
+    rho_lim: Optional[Tuple[float, float]] = None,
+    phase_lim: Optional[Tuple[float, float]] = None,
+    tipper_lim: Tuple[float, float] = (-0.5, 0.5),
+    show_tipper: bool = True,
+    show_error_bars: bool = True,
+    show_rms: bool = True,
+    title: str = "",
+    figsize: Optional[Tuple[float, float]] = None,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> plt.Figure:
+    """Full four-component impedance tensor + tipper response for one station.
+
+    Renders a 3-row × N-column figure (N = len(*components*)) following the
+    :class:`~pycsamt.api.style.MTComponentStyle` colour scheme:
+
+    * **Row 0** — apparent resistivity ρa (Ω·m) vs period, log–log.
+    * **Row 1** — phase φ (°) vs period, semilog-x.
+    * **Row 2** — tipper magnitude: Re(Tx), Im(Tx), Re(Ty), Im(Ty)
+      vs period, semilog-x.  Hidden when *show_tipper* is ``False`` or when
+      no tipper data are found.
+
+    Each column corresponds to one impedance tensor component (Zxx, Zxy,
+    Zyx, Zyy).  The tipper row always uses four fixed sub-panels regardless
+    of which Z components are selected.
+
+    An optional *sites_model* argument overlays a second (model/forward)
+    dataset on the same axes as dotted lines.  When both observed and model
+    data are present, a per-component RMS is computed in log10(ρa) space and
+    appended to each column header.
+
+    Parameters
+    ----------
+    sites : any
+        Observed EDI data — path, :class:`~pycsamt.core.base.SitesCollection`,
+        or anything accepted by :func:`~pycsamt.emtools._core.ensure_sites`.
+    station : str or None
+        Name of the station to plot.  ``None`` picks the first available.
+    sites_model : any or None
+        Optional forward-model or inversion-response EDI data (same API as
+        *sites*).  When provided, overlay dashed lines and show RMS.
+    components : tuple of {"xx","xy","yx","yy"}, default all four
+        Z-tensor components to display.  Order determines column order.
+    period_range : (T_min, T_max) or None
+        Clip period axis to this window (seconds).
+    rho_lim : (vmin, vmax) or None
+        ρa y-axis limits.  ``None`` → matplotlib auto.
+    phase_lim : (lo, hi) or None
+        Phase y-axis limits in degrees.  ``None`` → auto.
+    tipper_lim : (lo, hi), default (-0.5, 0.5)
+        Tipper y-axis limits.
+    show_tipper : bool, default True
+        Whether to add the tipper row.
+    show_error_bars : bool, default True
+        Draw error bars on observed data.
+    show_rms : bool, default True
+        Append per-component RMS to column titles when *sites_model* is set.
+    title : str
+        Override the auto-derived figure title.
+    figsize : (float, float) or None
+        Figure size.  Auto-computed when ``None``.
+    recursive, on_dup, strict, verbose
+        Passed to :func:`~pycsamt.emtools._core.ensure_sites`.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+
+    Examples
+    --------
+    Observed data only:
+
+    >>> from pycsamt.emtools import plot_station_response
+    >>> fig = plot_station_response("path/to/edis/", station="S07")
+
+    With model overlay:
+
+    >>> fig = plot_station_response(
+    ...     obs_edis, station="HBH03_IMP",
+    ...     sites_model=model_edis,
+    ...     period_range=(1e-4, 1.0),
+    ... )
+    """
+
+    mt = PYCSAMT_STYLE.mt
+
+    # ── 1. load observed site ─────────────────────────────────────────────
+    S_obs = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
+                         strict=strict, verbose=verbose)
+    st_name, ed_obs = _pick_station(S_obs, station)
+
+    Z_obs, z_obs, fr_obs = _get_z_block(ed_obs)
+    rho_obs   = getattr(ed_obs, "rho",   None)
+    phase_obs = getattr(ed_obs, "phase", None)
+    z_err_obs = getattr(Z_obs,  "z_err", None) if Z_obs else None
+    T_obs, t_obs, _ = _get_t_block(ed_obs)
+    tip_err_obs = getattr(T_obs, "tipper_err", None) if T_obs else None
+
+    if rho_obs is None or phase_obs is None or z_obs is None:
+        fig, ax = plt.subplots(figsize=figsize or (10, 6))
+        ax.text(0.5, 0.5, "no impedance data", ha="center", va="center",
+                transform=ax.transAxes)
+        return fig
+
+    per_obs = 1.0 / np.where(fr_obs == 0, np.nan, fr_obs)
+
+    # ── 2. period mask ────────────────────────────────────────────────────
+    if period_range is not None:
+        lo, hi = float(period_range[0]), float(period_range[1])
+        mask = np.isfinite(per_obs) & (per_obs >= lo) & (per_obs <= hi)
+    else:
+        mask = np.isfinite(per_obs)
+
+    per = per_obs[mask]
+    rho   = rho_obs[mask]
+    phase = phase_obs[mask]
+    z_m   = z_obs[mask]
+    z_e   = z_err_obs[mask] if z_err_obs is not None else None
+    tip   = t_obs[mask] if t_obs is not None else None
+    tip_e = tip_err_obs[mask] if tip_err_obs is not None else None
+
+    rho_err, phase_err = (
+        _rho_phase_err(rho, z_m, z_e) if z_e is not None
+        else (np.zeros_like(rho), np.zeros_like(phase))
+    )
+
+    # ── 3. optional model site ────────────────────────────────────────────
+    rho_mod = phase_mod = per_mod = tip_mod = None
+    if sites_model is not None:
+        S_mod = ensure_sites(sites_model, recursive=recursive, on_dup=on_dup,
+                             strict=False, verbose=0)
+        try:
+            _, ed_mod = _pick_station(S_mod, st_name)
+            Z_mod, z_mod_arr, fr_mod = _get_z_block(ed_mod)
+            rho_mod_raw   = getattr(ed_mod, "rho",   None)
+            phase_mod_raw = getattr(ed_mod, "phase", None)
+            if rho_mod_raw is not None and fr_mod is not None:
+                per_m = 1.0 / np.where(fr_mod == 0, np.nan, fr_mod)
+                msk_m = np.isfinite(per_m)
+                if period_range is not None:
+                    msk_m &= (per_m >= lo) & (per_m <= hi)
+                per_mod   = per_m[msk_m]
+                rho_mod   = rho_mod_raw[msk_m]
+                phase_mod = phase_mod_raw[msk_m]
+            T_mod, t_mod_arr, _ = _get_t_block(ed_mod)
+            if t_mod_arr is not None:
+                tip_mod = t_mod_arr[msk_m] if period_range else t_mod_arr
+        except Exception:
+            pass
+
+    # ── 4. figure layout ──────────────────────────────────────────────────
+    n_comp = len(components)
+    has_tipper = show_tipper and tip is not None
+
+    n_rows = 3 if has_tipper else 2
+    h_ratios = ([2.2, 1.6, 1.0] if has_tipper else [2.2, 1.6])
+
+    if figsize is None:
+        figsize = (3.4 * max(n_comp, 4) + 0.6, 4.5 + (1.8 if has_tipper else 0))
+
+    fig = plt.figure(figsize=figsize, constrained_layout=True)
+    gs = gridspec.GridSpec(
+        n_rows, max(n_comp, 4) if has_tipper else n_comp,
+        figure=fig,
+        height_ratios=h_ratios,
+        hspace=0.08,
+        wspace=0.28,
+    )
+
+    # Build axes: [rho row, phase row] share x across columns
+    ax_rho   = [fig.add_subplot(gs[0, c]) for c in range(n_comp)]
+    ax_phase = [fig.add_subplot(gs[1, c], sharex=ax_rho[c]) for c in range(n_comp)]
+    if has_tipper:
+        ax_tip = [fig.add_subplot(gs[2, c]) for c in range(4)]
+    else:
+        ax_tip = []
+
+    # ── 5. per-component RMS store ────────────────────────────────────────
+    rms_dict: dict = {}
+
+    # ── 6. draw ρa and φ panels ───────────────────────────────────────────
+    for ci, comp in enumerate(components):
+        if comp.lower() not in _COMP_IDX:
+            continue
+        ri, ci_mat = _COMP_IDX[comp.lower()]
+        cs = mt.component(comp.lower())
+        ekw = cs.errorbar_kwargs()
+
+        ax_r = ax_rho[ci]
+        ax_p = ax_phase[ci]
+
+        # ── observed ────────────────────────────────────────────────
+        rho_c   = rho[:, ri, ci_mat]
+        phi_c   = phase[:, ri, ci_mat]
+        rerr_c  = rho_err[:, ri, ci_mat]   if show_error_bars else None
+        perr_c  = phase_err[:, ri, ci_mat] if show_error_bars else None
+
+        # mask non-positive ρa
+        valid = rho_c > 0
+        xp = per[valid]; rr = rho_c[valid]; pp = phi_c[valid]
+        if rerr_c is not None:
+            re = rerr_c[valid]
+            yerr_r = re if np.any(re > 0) else None
+        else:
+            yerr_r = None
+        if perr_c is not None:
+            pe = perr_c[valid]
+            yerr_p = pe if np.any(pe > 0) else None
+        else:
+            yerr_p = None
+
+        obs_label = f"$Z_{{\\rm {comp.upper()}}}$"
+        ax_r.errorbar(xp, rr, yerr=yerr_r, **{**ekw, "label": obs_label})
+        ax_p.errorbar(xp, pp, yerr=yerr_p, **{**ekw, "label": obs_label})
+
+        # ── model overlay ────────────────────────────────────────────
+        if rho_mod is not None and per_mod is not None:
+            rho_mc  = rho_mod[:, ri, ci_mat]
+            phi_mc  = phase_mod[:, ri, ci_mat]
+            valid_m = rho_mc > 0
+            # compute RMS
+            rms_val = _rms_log(rr, np.interp(xp, per_mod[valid_m], rho_mc[valid_m],
+                                               left=np.nan, right=np.nan))
+            if np.isfinite(rms_val):
+                rms_dict[comp] = rms_val
+            mod_lbl = f"$Z^m_{{\\rm {comp.upper()}}}$"
+            if show_rms and np.isfinite(rms_val):
+                mod_lbl += f"  rms={rms_val:.2f}"
+            mk = cs.plot_kwargs(ls="--", lw=1.6, alpha=0.85, marker="",
+                                label=mod_lbl)
+            ax_r.plot(per_mod[valid_m], rho_mc[valid_m], **mk)
+            ax_p.plot(per_mod, phi_mc, **{**mk, "label": ""})
+
+        # ── axes styling ─────────────────────────────────────────────
+        ax_r.set_xscale("log")
+        ax_r.set_yscale("log")
+        ax_r.grid(True, which="both", alpha=0.2, lw=0.5)
+        ax_r.grid(True, which="major", alpha=0.4, lw=0.7)
+        if rho_lim:
+            ax_r.set_ylim(*rho_lim)
+        plt.setp(ax_r.get_xticklabels(), visible=False)
+        ax_r.tick_params(labelsize=7)
+        ax_r.legend(fontsize=7, framealpha=0.85, loc="best",
+                    handlelength=1.5, borderpad=0.4)
+
+        ax_p.set_xscale("log")
+        ax_p.grid(True, which="both", alpha=0.2, lw=0.5)
+        ax_p.grid(True, which="major", alpha=0.4, lw=0.7)
+        if phase_lim:
+            ax_p.set_ylim(*phase_lim)
+        ax_p.tick_params(labelsize=7)
+        ax_p.set_xlabel("Period (s)", fontsize=8)
+
+        # column header
+        rms_str = (f"  rms={rms_dict[comp]:.2f}"
+                   if (show_rms and rms_dict.get(comp) is not None) else "")
+        ax_r.set_title(
+            f"$Z_{{\\rm {comp.upper()}}}${rms_str}",
+            fontsize=9, pad=6, fontweight="bold",
+        )
+
+        # shared y labels on leftmost column only
+        if ci == 0:
+            ax_r.set_ylabel(r"App. Res. (Ω·m)", fontsize=8)
+            ax_p.set_ylabel("Phase (deg)", fontsize=8)
+
+    # ── 7. tipper panels ──────────────────────────────────────────────────
+    if has_tipper and len(ax_tip) == 4:
+        # Tx=t[:,0], Ty=t[:,1]
+        tip_series = {
+            "tx": tip[:, 0] if tip is not None else None,
+            "ty": tip[:, 1] if tip is not None else None,
+        }
+        tip_err_series = {
+            "tx": (tip_e[:, 0]
+                   if (tip_e is not None and tip_e.shape[1] > 0) else None),
+            "ty": (tip_e[:, 1]
+                   if (tip_e is not None and tip_e.shape[1] > 1) else None),
+        }
+        tip_mod_series = {
+            "tx": tip_mod[:, 0] if tip_mod is not None else None,
+            "ty": tip_mod[:, 1] if tip_mod is not None else None,
+        }
+        tip_colors = {"tx": "#1f77b4", "ty": "#d62728"}  # blue, red
+
+        for ti, (lbl, tc_key, part) in enumerate(_TIP_PANELS):
+            ax_t = ax_tip[ti]
+            tv = tip_series.get(tc_key)
+            if tv is None:
+                ax_t.text(0.5, 0.5, "—", ha="center", va="center",
+                          transform=ax_t.transAxes, color="0.55")
+                continue
+            col = tip_colors[tc_key]
+            vals = np.real(tv) if part == "real" else np.imag(tv)
+            te_v = tip_err_series.get(tc_key)
+            if te_v is not None and show_error_bars:
+                err_v = np.abs(te_v)
+                err_v = err_v if np.any(err_v > 0) else None
+            else:
+                err_v = None
+            ax_t.errorbar(per, vals, yerr=err_v, fmt="o", ms=3.5, color=col,
+                          elinewidth=0.8, capsize=2, alpha=0.9, zorder=3)
+            # model overlay
+            tm_v = tip_mod_series.get(tc_key)
+            if tm_v is not None and per_mod is not None:
+                mod_vals = np.real(tm_v) if part == "real" else np.imag(tm_v)
+                ax_t.plot(per_mod, mod_vals, "--", color=col,
+                          lw=1.5, alpha=0.85, zorder=2)
+            ax_t.axhline(0.0, color="0.65", lw=0.7, ls=":", zorder=1)
+            ax_t.set_xscale("log")
+            ax_t.set_ylim(*tipper_lim)
+            ax_t.grid(True, which="both", alpha=0.2, lw=0.5)
+            ax_t.grid(True, which="major", alpha=0.4, lw=0.7)
+            ax_t.tick_params(labelsize=7)
+            ax_t.set_xlabel("Period (s)", fontsize=8)
+            ax_t.set_title(lbl, fontsize=8, pad=4)
+            if ti == 0:
+                ax_t.set_ylabel("Tipper", fontsize=8)
+        # hide unused tipper panels (when n_comp < 4)
+        for ti in range(4, len(ax_tip)):
+            ax_tip[ti].set_visible(False)
+
+    # ── 8. figure title ───────────────────────────────────────────────────
+    fig.suptitle(
+        title or st_name,
+        fontsize=11, fontweight="bold", y=1.01,
+    )
+    return fig

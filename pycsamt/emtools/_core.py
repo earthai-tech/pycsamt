@@ -180,7 +180,11 @@ def _get_t_block(
     *,
     with_errors: bool = False,
 ) -> tuple:
-    T = _first_attr(ed, ("Tipper", "tipper"))
+    T = _first_attr(ed, ("Tipper", "tipper", "Tip"))
+    if T is None:
+        edi = getattr(ed, "edi", None)
+        if edi is not None:
+            T = _first_attr(edi, ("Tipper", "tipper", "Tip"))
     if T is None:
         return (None, None, None) if not with_errors else (
             None, None, None, None
@@ -199,9 +203,12 @@ def _get_t_block(
         return (None, None, None) if not with_errors else (
             None, None, None, None
         )
-    # enforce (n,2)
+    # enforce (n,2).  v2 EDI tipper objects commonly store the array as
+    # (n_freq, 1, 2), mirroring impedance tensor dimensions.
     if t.ndim == 2 and t.shape[1] == 2:
         pass
+    elif t.ndim == 3 and t.shape[1] == 1 and t.shape[2] == 2:
+        t = t[:, 0, :]
     elif t.ndim == 1 and t.size == 2:
         t = t[None, ...]
     else:
@@ -210,6 +217,8 @@ def _get_t_block(
         )
     if isinstance(te, np.ndarray):
         te = np.asarray(te)
+        if te.ndim == 3 and te.shape[1] == 1 and te.shape[2] == 2:
+            te = te[:, 0, :]
         if te.ndim == 2 and te.shape[1] != 2:
             te = None
     if with_errors and isinstance(te, np.ndarray):

@@ -1,7 +1,8 @@
 
 from __future__ import annotations 
 
-from typing import List, Any, Optional, Sequence, Tuple 
+from dataclasses import dataclass
+from typing import List, Any, Dict, Optional, Sequence, Tuple
 import numpy as np
 
 from ._core import (
@@ -10,6 +11,7 @@ from ._core import (
     _iter_items,
     _get_z_block,
     _get_t_block,
+    _name,
 )
 
 # re-use package editors when it saves code
@@ -17,6 +19,54 @@ from pycsamt.site import edit as _edit
 
 _BACKWARD_SINCE = "2.0.0"
 _BACKWARD_REMOVE = "2.17.0"
+
+
+@dataclass
+class FrequencyEditResult:
+    """Container returned by confidence-based frequency editing."""
+
+    sites: Any
+    report: Any
+    decisions: Any
+    mode: str
+    method: str
+    ci_hi: float
+    ci_lo: float
+    reject: str
+    interpolation: str
+
+    @property
+    def n_dropped(self) -> int:
+        """Total number of dropped station-frequency rows."""
+        if getattr(self.decisions, "empty", True):
+            return 0
+        return int((self.decisions["action"] == "dropped").sum())
+
+    @property
+    def n_masked(self) -> int:
+        """Total number of masked station-frequency rows."""
+        if getattr(self.decisions, "empty", True):
+            return 0
+        return int((self.decisions["action"] == "masked").sum())
+
+    @property
+    def n_recovered(self) -> int:
+        """Total number of recovered station-frequency rows."""
+        if getattr(self.decisions, "empty", True):
+            return 0
+        return int((self.decisions["action"] == "recovered").sum())
+
+    def summary(self) -> str:
+        """Return a compact text summary of the edit result."""
+        return (
+            "FrequencyEditResult("
+            f"mode={self.mode!r}, method={self.method!r}, "
+            f"dropped={self.n_dropped}, masked={self.n_masked}, "
+            f"recovered={self.n_recovered})"
+        )
+
+    def __repr__(self) -> str:  # noqa: D105
+        return self.summary()
 
 
 # ------------------------------- helpers -------------------------------- #
@@ -67,6 +117,202 @@ def _interp_complex(
     out = rr + 1j * ii
     return out.squeeze()
 
+
+def _interp_rows_by_freq(
+    values: np.ndarray,
+    fr: np.ndarray,
+    fill: np.ndarray,
+    good: np.ndarray,
+    *,
+    method: str = "linear",
+) -> np.ndarray:
+    """Recover selected rows by interpolating finite trusted rows."""
+    out = values.copy()
+    fr = np.asarray(fr, dtype=float)
+    fill = np.asarray(fill, dtype=bool)
+    good = np.asarray(good, dtype=bool)
+    if values.shape[0] != fr.size:
+        return out
+    if not np.any(fill):
+        return out
+    x_good = np.log10(np.maximum(fr[good], 1e-24))
+    x_fill = np.log10(np.maximum(fr[fill], 1e-24))
+    if x_good.size < 2 or x_fill.size == 0:
+        out[fill] = np.nan
+        return out
+    flat = values.reshape(values.shape[0], -1)
+    flat_out = out.reshape(out.shape[0], -1)
+    for j in range(flat.shape[1]):
+        y = flat[:, j]
+        valid = good & np.isfinite(y)
+        if np.count_nonzero(valid) < 2:
+            flat_out[fill, j] = np.nan
+            continue
+        flat_out[fill, j] = _interp_complex(
+            np.log10(np.maximum(fr[valid], 1e-24)),
+            y[valid],
+            x_fill,
+            method=method,
+        )
+    return flat_out.reshape(values.shape)
+
+
+def _confidence_decision_table(
+    sites: Any,
+    *,
+    method: str,
+    ci_hi: float,
+    ci_lo: float,
+    weights: Optional[Dict[str, float]],
+    recursive: bool,
+    on_dup: str,
+    strict: bool,
+    verbose: int,
+):
+    from .qc import frequency_confidence_table
+
+    return frequency_confidence_table(
+        sites,
+        method=method,
+        weights=weights,
+        ci_hi=ci_hi,
+        ci_lo=ci_lo,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def _apply_station_rendering(
+    ax: Any,
+    positions: Sequence[float],
+    labels: Sequence[Any],
+    *,
+    station_label_step: Optional[int],
+    station_preset: str,
+    station_style: Optional[Any],
+) -> None:
+    """Apply the package station-axis API to frequency-edit plots."""
+    import copy
+    from pycsamt.api.station import PYCSAMT_STATION_RENDERING
+
+    style = station_style or PYCSAMT_STATION_RENDERING.style_for(
+        station_preset,
+    )
+    style = copy.copy(style)
+    style.side = "top"
+    style.max_labels = max(int(style.max_labels), len(labels))
+    if station_label_step is None:
+        style.every = 1
+    else:
+        style.every = int(station_label_step)
+    style.apply(
+        ax,
+        positions,
+        labels,
+        xlim=(-0.5, len(labels) - 0.5),
+    )
+
+
+def _station_confidence_vectors(
+    table: Any,
+    station: str,
+    fr: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Return confidence and matching flags for station frequencies."""
+    confidence = np.full(fr.size, np.nan, dtype=float)
+    flags = np.full(fr.size, "", dtype=object)
+    if table is None or getattr(table, "empty", True):
+        return confidence, flags
+    sub = table[table["station"].astype(str) == str(station)]
+    if sub.empty:
+        return confidence, flags
+    ftab = sub["frequency_hz"].to_numpy(dtype=float)
+    ctab = sub["confidence"].to_numpy(dtype=float)
+    flagtab = sub["flags"].astype(str).to_numpy()
+    for i, freq in enumerate(fr):
+        if not np.isfinite(freq):
+            continue
+        idx = int(np.nanargmin(np.abs(ftab - freq)))
+        if np.isclose(ftab[idx], freq, rtol=1e-6, atol=1e-12):
+            confidence[i] = ctab[idx]
+            flags[i] = flagtab[idx]
+    return confidence, flags
+
+
+def _apply_row_mask_to_block(obj: Any,
+                             fields: Sequence[str],
+                             keep: np.ndarray,
+                             fr: np.ndarray) -> None:
+    """Apply a row-keep mask to tensor/tipper arrays and their frequency."""
+    if _set_masked_strict_block(obj, fields, keep, fr):
+        return
+    for field in fields:
+        value = getattr(obj, field, None)
+        if isinstance(value, np.ndarray) and value.shape[0] == fr.size:
+            _set_array_field(obj, field, value[keep])
+    _set_block_freq(obj, fr[keep])
+
+
+def _set_bad_rows_to_nan(obj: Any,
+                         fields: Sequence[str],
+                         bad: np.ndarray,
+                         fr: np.ndarray) -> None:
+    """Set selected tensor/tipper rows to NaN."""
+    for field in fields:
+        value = getattr(obj, field, None)
+        if isinstance(value, np.ndarray) and value.shape[0] == fr.size:
+            new = value.copy()
+            new[bad] = np.nan
+            _set_array_field(obj, field, new)
+
+
+def _set_array_field(obj: Any, field: str, value: np.ndarray) -> None:
+    """Set an array field while tolerating strict container validators."""
+    if (
+        hasattr(obj, "compute_resistivity_phase")
+        and field in {"z", "z_err"}
+        and not np.isfinite(value).all()
+    ):
+        return
+    try:
+        setattr(obj, field, value)
+    except Exception:
+        pass
+
+
+def _set_masked_strict_block(obj: Any,
+                             fields: Sequence[str],
+                             keep: np.ndarray,
+                             fr: np.ndarray) -> bool:
+    """Atomically subset strict Z-like containers."""
+    if not hasattr(obj, "compute_resistivity_phase"):
+        return False
+    if "z" not in fields or not hasattr(obj, "_z"):
+        return False
+    z = getattr(obj, "z", None)
+    if not isinstance(z, np.ndarray) or z.shape[0] != fr.size:
+        return False
+    z_new = z[keep]
+    if not np.isfinite(z_new).all():
+        return False
+    try:
+        obj._freq = np.asarray(fr[keep], dtype=float)
+        obj._z = z_new.astype(complex, copy=False)
+        z_err = getattr(obj, "z_err", None)
+        if (
+            "z_err" in fields
+            and isinstance(z_err, np.ndarray)
+            and z_err.shape[0] == fr.size
+        ):
+            z_err_new = z_err[keep]
+            if np.isfinite(z_err_new).all():
+                obj._z_err = z_err_new.astype(float, copy=False)
+        obj.compute_resistivity_phase()
+    except Exception:
+        return False
+    return True
 
 
 
@@ -258,6 +504,770 @@ def drop_duplicates(
         return Si
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
+
+
+def drop_low_confidence_frequencies(
+    sites: Any,
+    *,
+    method: str = "composite",
+    threshold: float = 0.50,
+    weights: Optional[Dict[str, float]] = None,
+    also: str = "both",
+    inplace: bool = False,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+):
+    """Drop rows whose frequency confidence is below ``threshold``.
+
+    The confidence scores are computed with
+    :func:`pycsamt.emtools.qc.frequency_confidence_table`.  The operation is
+    station-aware: each station keeps or drops its own bad frequency rows.
+    A new :class:`~pycsamt.site.base.Sites` object is returned unless
+    ``inplace=True``.
+    """
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    table = _confidence_decision_table(
+        S,
+        method=method,
+        ci_hi=max(float(threshold), 0.50),
+        ci_lo=float(threshold),
+        weights=weights,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
+    )
+
+    def _one(Si):
+        ed = next(_iter_items(Si))
+        station = _name(ed, 0)
+        if also in ("z", "both"):
+            Z, z, fr = _get_z_block(ed)
+            if Z is not None:
+                conf, _ = _station_confidence_vectors(table, station, fr)
+                keep = ~np.isfinite(conf) | (conf >= float(threshold))
+                _apply_row_mask_to_block(Z, ("z", "z_err"), keep, fr)
+        if also in ("tipper", "both"):
+            T, t, fr = _get_t_block(ed)
+            if T is not None:
+                conf, _ = _station_confidence_vectors(table, station, fr)
+                keep = ~np.isfinite(conf) | (conf >= float(threshold))
+                _apply_row_mask_to_block(
+                    T,
+                    ("tipper", "tipper_err"),
+                    keep,
+                    fr,
+                )
+        return Si
+
+    return _apply_each(S, _one, inplace=inplace, verbose=verbose)
+
+
+def mask_low_confidence_frequencies(
+    sites: Any,
+    *,
+    method: str = "composite",
+    threshold: float = 0.50,
+    weights: Optional[Dict[str, float]] = None,
+    also: str = "both",
+    inplace: bool = False,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+):
+    """Set low-confidence frequency rows to NaN without changing the grid."""
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    table = _confidence_decision_table(
+        S,
+        method=method,
+        ci_hi=max(float(threshold), 0.50),
+        ci_lo=float(threshold),
+        weights=weights,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
+    )
+
+    def _one(Si):
+        ed = next(_iter_items(Si))
+        station = _name(ed, 0)
+        if also in ("z", "both"):
+            Z, z, fr = _get_z_block(ed)
+            if Z is not None:
+                conf, _ = _station_confidence_vectors(table, station, fr)
+                bad = np.isfinite(conf) & (conf < float(threshold))
+                _set_bad_rows_to_nan(Z, ("z", "z_err"), bad, fr)
+        if also in ("tipper", "both"):
+            T, t, fr = _get_t_block(ed)
+            if T is not None:
+                conf, _ = _station_confidence_vectors(table, station, fr)
+                bad = np.isfinite(conf) & (conf < float(threshold))
+                _set_bad_rows_to_nan(T, ("tipper", "tipper_err"), bad, fr)
+        return Si
+
+    return _apply_each(S, _one, inplace=inplace, verbose=verbose)
+
+
+def recover_low_confidence_frequencies(
+    sites: Any,
+    *,
+    method: str = "composite",
+    ci_hi: float = 0.90,
+    ci_lo: float = 0.50,
+    weights: Optional[Dict[str, float]] = None,
+    interpolation: str = "linear",
+    reject: str = "mask",
+    also: str = "both",
+    inplace: bool = False,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+):
+    """Recover recoverable frequency rows using trusted neighboring rows.
+
+    Rows with confidence in ``[ci_lo, ci_hi)`` are treated as recoverable and
+    are interpolated in log-frequency from rows with confidence
+    ``>= ci_hi``.  Rows below ``ci_lo`` are considered rejected and are either
+    masked, dropped, or kept depending on ``reject``.
+    """
+    reject = str(reject).lower()
+    if reject not in {"mask", "drop", "keep"}:
+        msg = "reject must be one of 'mask', 'drop', or 'keep'."
+        raise ValueError(msg)
+    if interpolation not in {"linear", "nearest"}:
+        msg = "interpolation must be 'linear' or 'nearest'."
+        raise ValueError(msg)
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    table = _confidence_decision_table(
+        S,
+        method=method,
+        ci_hi=ci_hi,
+        ci_lo=ci_lo,
+        weights=weights,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
+    )
+
+    def _recover_block(obj, fields, fr, conf):
+        trusted = np.isfinite(conf) & (conf >= float(ci_hi))
+        recover = (
+            np.isfinite(conf)
+            & (conf >= float(ci_lo))
+            & (conf < float(ci_hi))
+        )
+        reject_mask = np.isfinite(conf) & (conf < float(ci_lo))
+        if recover.any():
+            for field in fields:
+                value = getattr(obj, field, None)
+                if isinstance(value, np.ndarray) and value.shape[0] == fr.size:
+                    recovered = _interp_rows_by_freq(
+                        value,
+                        fr,
+                        recover,
+                        trusted,
+                        method=interpolation,
+                    )
+                    _set_array_field(obj, field, recovered)
+        if reject == "mask" and reject_mask.any():
+            _set_bad_rows_to_nan(obj, fields, reject_mask, fr)
+        elif reject == "drop" and reject_mask.any():
+            keep = ~reject_mask
+            _apply_row_mask_to_block(obj, fields, keep, fr)
+
+    def _one(Si):
+        ed = next(_iter_items(Si))
+        station = _name(ed, 0)
+        if also in ("z", "both"):
+            Z, z, fr = _get_z_block(ed)
+            if Z is not None:
+                conf, _ = _station_confidence_vectors(table, station, fr)
+                _recover_block(Z, ("z", "z_err"), fr, conf)
+        if also in ("tipper", "both"):
+            T, t, fr = _get_t_block(ed)
+            if T is not None:
+                conf, _ = _station_confidence_vectors(table, station, fr)
+                _recover_block(T, ("tipper", "tipper_err"), fr, conf)
+        return Si
+
+    return _apply_each(S, _one, inplace=inplace, verbose=verbose)
+
+
+def edit_frequencies_by_confidence(
+    sites: Any,
+    *,
+    mode: str = "recover",
+    before_sites: Optional[Any] = None,
+    method: str = "composite",
+    threshold: float = 0.50,
+    ci_hi: float = 0.90,
+    ci_lo: float = 0.50,
+    weights: Optional[Dict[str, float]] = None,
+    interpolation: str = "linear",
+    reject: str = "drop",
+    also: str = "both",
+    inplace: bool = False,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> FrequencyEditResult:
+    """Edit frequency rows and return diagnostics in one workflow.
+
+    This is the high-level confidence-editing entry point.  It applies one
+    of the low-level edit strategies and immediately computes a station
+    report and a station-frequency decision table.  Use ``before_sites`` when
+    ``sites`` is already an in-memory object and a reliable before/after
+    comparison is required, because lower-level site editors can mutate the
+    wrapped impedance objects while constructing the edited return value.
+
+    Parameters
+    ----------
+    sites : path-like, EDI-like, Sites, or sequence
+        Input data to edit.  Path-like inputs are normally safe to use
+        directly because they can be loaded independently by the package.
+        In-memory objects should be paired with ``before_sites`` when the
+        report must preserve an untouched baseline.
+    mode : {'recover', 'drop', 'mask'}, default 'recover'
+        Frequency-editing strategy.  ``'recover'`` interpolates recoverable
+        rows in log-frequency and handles rejected rows according to
+        ``reject``.  ``'drop'`` removes rows below ``threshold``.
+        ``'mask'`` keeps the frequency grid but replaces low-confidence
+        tensor rows by missing values when the container allows it.
+    before_sites : optional
+        Independent baseline used only for reporting and decision tracking.
+        If omitted, ``sites`` is used as the baseline.
+    method : str, default 'composite'
+        Confidence metric passed to
+        :func:`pycsamt.emtools.qc.frequency_confidence_table`.
+    threshold : float, default 0.50
+        Confidence threshold used by ``mode='drop'`` and ``mode='mask'``.
+    ci_hi, ci_lo : float, default 0.90 and 0.50
+        High-confidence and low-confidence limits used by ``mode='recover'``
+        and by the diagnostic report.
+    weights : dict or None, default None
+        Optional confidence-metric weights.
+    interpolation : {'linear', 'nearest'}, default 'linear'
+        Interpolation strategy for recoverable rows in ``mode='recover'``.
+    reject : {'drop', 'mask', 'keep'}, default 'drop'
+        Handling of rows below ``ci_lo`` in ``mode='recover'``.
+    also : {'z', 'tipper', 'both'}, default 'both'
+        Data blocks edited when present.
+    inplace : bool, default False
+        Forwarded to the low-level edit function.
+    recursive, on_dup, strict, verbose
+        Site-loading options forwarded to :func:`ensure_sites`.
+
+    Returns
+    -------
+    FrequencyEditResult
+        Edited sites together with station-level and station-frequency
+        diagnostics.
+    """
+    mode = str(mode).lower()
+    if mode not in {"recover", "drop", "mask"}:
+        msg = "mode must be one of 'recover', 'drop', or 'mask'."
+        raise ValueError(msg)
+    baseline = before_sites if before_sites is not None else sites
+    if mode == "recover":
+        edited = recover_low_confidence_frequencies(
+            sites,
+            method=method,
+            ci_hi=ci_hi,
+            ci_lo=ci_lo,
+            weights=weights,
+            interpolation=interpolation,
+            reject=reject,
+            also=also,
+            inplace=inplace,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
+    elif mode == "drop":
+        edited = drop_low_confidence_frequencies(
+            sites,
+            method=method,
+            threshold=threshold,
+            weights=weights,
+            also=also,
+            inplace=inplace,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
+    else:
+        edited = mask_low_confidence_frequencies(
+            sites,
+            method=method,
+            threshold=threshold,
+            weights=weights,
+            also=also,
+            inplace=inplace,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
+    report = frequency_edit_report(
+        baseline,
+        edited,
+        method=method,
+        ci_hi=ci_hi,
+        ci_lo=ci_lo,
+        weights=weights,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    decisions = frequency_edit_decision_table(
+        baseline,
+        edited,
+        method=method,
+        ci_hi=ci_hi,
+        ci_lo=ci_lo,
+        weights=weights,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    return FrequencyEditResult(
+        sites=edited,
+        report=report,
+        decisions=decisions,
+        mode=mode,
+        method=method,
+        ci_hi=float(ci_hi),
+        ci_lo=float(ci_lo),
+        reject=str(reject),
+        interpolation=str(interpolation),
+    )
+
+
+def frequency_edit_report(
+    before_sites: Any,
+    after_sites: Any,
+    *,
+    method: str = "composite",
+    ci_hi: float = 0.90,
+    ci_lo: float = 0.50,
+    weights: Optional[Dict[str, float]] = None,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+):
+    """Summarize station-level changes after frequency editing.
+
+    The report compares the native frequency rows and finite tensor rows
+    before and after an edit such as dropping, masking, or recovery.  It also
+    carries the median confidence from
+    :func:`pycsamt.emtools.qc.frequency_confidence_table`.
+    """
+    import pandas as pd
+
+    before = ensure_sites(
+        before_sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    after = ensure_sites(
+        after_sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    tb_before = _confidence_decision_table(
+        before,
+        method=method,
+        ci_hi=ci_hi,
+        ci_lo=ci_lo,
+        weights=weights,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
+    )
+    tb_after = _confidence_decision_table(
+        after,
+        method=method,
+        ci_hi=ci_hi,
+        ci_lo=ci_lo,
+        weights=weights,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
+    )
+
+    def _counts(sites_obj):
+        rows = []
+        for i, ed in enumerate(_iter_items(sites_obj)):
+            station = _name(ed, i)
+            Z, z, fr = _get_z_block(ed)
+            if Z is None:
+                rows.append(
+                    dict(
+                        station=station,
+                        n_freq=0,
+                        n_finite=0,
+                        frac_finite=np.nan,
+                    )
+                )
+                continue
+            finite_rows = np.isfinite(z.reshape(z.shape[0], -1)).all(axis=1)
+            rows.append(
+                dict(
+                    station=station,
+                    n_freq=int(fr.size),
+                    n_finite=int(np.count_nonzero(finite_rows)),
+                    frac_finite=float(
+                        np.count_nonzero(finite_rows) / max(1, fr.size),
+                    ),
+                )
+            )
+        return pd.DataFrame.from_records(rows)
+
+    def _conf_summary(table, suffix):
+        if table.empty:
+            return pd.DataFrame(
+                columns=[
+                    "station",
+                    f"confidence_median_{suffix}",
+                    f"safe_fraction_{suffix}",
+                    f"recoverable_fraction_{suffix}",
+                    f"reject_fraction_{suffix}",
+                ]
+            )
+        grouped = table.assign(
+            safe=table["confidence"] >= ci_hi,
+            recoverable=(table["confidence"] >= ci_lo)
+            & (table["confidence"] < ci_hi),
+            reject=table["confidence"] < ci_lo,
+        ).groupby("station")
+        return grouped.agg(
+            **{
+                f"confidence_median_{suffix}": ("confidence", "median"),
+                f"safe_fraction_{suffix}": ("safe", "mean"),
+                f"recoverable_fraction_{suffix}": ("recoverable", "mean"),
+                f"reject_fraction_{suffix}": ("reject", "mean"),
+            }
+        ).reset_index()
+
+    left = _counts(before).rename(
+        columns={
+            "n_freq": "n_freq_before",
+            "n_finite": "n_finite_before",
+            "frac_finite": "frac_finite_before",
+        }
+    )
+    right = _counts(after).rename(
+        columns={
+            "n_freq": "n_freq_after",
+            "n_finite": "n_finite_after",
+            "frac_finite": "frac_finite_after",
+        }
+    )
+    out = left.merge(right, on="station", how="outer")
+    out = out.merge(_conf_summary(tb_before, "before"), on="station", how="left")
+    out = out.merge(_conf_summary(tb_after, "after"), on="station", how="left")
+    out["n_dropped"] = out["n_freq_before"] - out["n_freq_after"]
+    out["n_masked_or_unfinite"] = out["n_finite_before"] - out["n_finite_after"]
+    out["confidence_delta"] = (
+        out["confidence_median_after"] - out["confidence_median_before"]
+    )
+    return out.sort_values("station").reset_index(drop=True)
+
+
+def frequency_edit_decision_table(
+    before_sites: Any,
+    after_sites: Any,
+    *,
+    method: str = "composite",
+    ci_hi: float = 0.90,
+    ci_lo: float = 0.50,
+    weights: Optional[Dict[str, float]] = None,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+):
+    """Return one row per original station-frequency edit decision."""
+    import pandas as pd
+
+    before = ensure_sites(
+        before_sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    after = ensure_sites(
+        after_sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    conf = _confidence_decision_table(
+        before,
+        method=method,
+        ci_hi=ci_hi,
+        ci_lo=ci_lo,
+        weights=weights,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
+    )
+    after_map = {}
+    for i, ed in enumerate(_iter_items(after)):
+        station = _name(ed, i)
+        Z, z, fr = _get_z_block(ed)
+        if Z is None:
+            continue
+        finite = np.isfinite(z.reshape(z.shape[0], -1)).all(axis=1)
+        after_map[station] = (fr, finite, z)
+
+    rows = []
+    for i, ed in enumerate(_iter_items(before)):
+        station = _name(ed, i)
+        Z, z, fr = _get_z_block(ed)
+        if Z is None:
+            continue
+        finite_before = np.isfinite(z.reshape(z.shape[0], -1)).all(axis=1)
+        after_fr, after_finite, after_z = after_map.get(
+            station,
+            (
+                np.asarray([], dtype=float),
+                np.asarray([], dtype=bool),
+                np.asarray([], dtype=complex),
+            ),
+        )
+        cvec, flagvec = _station_confidence_vectors(conf, station, fr)
+        for j, freq in enumerate(fr):
+            present_after = False
+            finite_after = False
+            changed_after = False
+            if after_fr.size:
+                idx = int(np.nanargmin(np.abs(after_fr - freq)))
+                if np.isclose(after_fr[idx], freq, rtol=1e-6, atol=1e-12):
+                    present_after = True
+                    finite_after = bool(after_finite[idx])
+                    if after_z.ndim == z.ndim and after_z.shape[0] > idx:
+                        changed_after = not np.allclose(
+                            z[j],
+                            after_z[idx],
+                            rtol=1e-7,
+                            atol=1e-12,
+                            equal_nan=True,
+                        )
+            if not present_after:
+                action = "dropped"
+            elif finite_before[j] and not finite_after:
+                action = "masked"
+            elif (not finite_before[j]) and finite_after:
+                action = "recovered"
+            elif (
+                np.isfinite(cvec[j])
+                and float(ci_lo) <= cvec[j] < float(ci_hi)
+                and changed_after
+            ):
+                action = "recovered"
+            else:
+                action = "kept"
+            rows.append(
+                dict(
+                    station=station,
+                    frequency_hz=float(freq),
+                    period_s=float(1.0 / freq) if freq else np.nan,
+                    log10_period=(
+                        float(np.log10(1.0 / freq))
+                        if freq > 0
+                        else np.nan
+                    ),
+                    confidence=float(cvec[j]),
+                    flags=str(flagvec[j]),
+                    finite_before=bool(finite_before[j]),
+                    present_after=bool(present_after),
+                    finite_after=bool(finite_after),
+                    action=action,
+                )
+            )
+    return pd.DataFrame.from_records(rows)
+
+
+def plot_frequency_edit_summary(
+    before_sites: Any,
+    after_sites: Any,
+    *,
+    method: str = "composite",
+    ci_hi: float = 0.90,
+    ci_lo: float = 0.50,
+    figsize: Tuple[float, float] = (9.0, 4.0),
+    station_label_step: Optional[int] = 1,
+    station_preset: str = "pseudosection",
+    station_style: Optional[Any] = None,
+    ax: Optional[Any] = None,
+):
+    """Plot station-level before/after frequency-edit summary."""
+    import matplotlib.pyplot as plt
+    from pycsamt.api.style import PYCSAMT_STYLE
+
+    report = frequency_edit_report(
+        before_sites,
+        after_sites,
+        method=method,
+        ci_hi=ci_hi,
+        ci_lo=ci_lo,
+    )
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+    if report.empty:
+        ax.text(0.5, 0.5, "no stations", ha="center", va="center")
+        return ax
+    x = np.arange(len(report))
+    before_kw = PYCSAMT_STYLE.correction.before.plot_kwargs()
+    after_kw = PYCSAMT_STYLE.correction.after.plot_kwargs()
+    ax.plot(
+        x,
+        report["n_freq_before"].to_numpy(dtype=float),
+        **before_kw,
+    )
+    ax.plot(
+        x,
+        report["n_freq_after"].to_numpy(dtype=float),
+        **after_kw,
+    )
+    dropped = report["n_dropped"].fillna(0).to_numpy(dtype=float)
+    masked = report["n_masked_or_unfinite"].fillna(0).to_numpy(dtype=float)
+    ax.bar(x, dropped, color="#d62728", alpha=0.22, label="dropped")
+    ax.bar(
+        x,
+        masked,
+        bottom=dropped,
+        color="#ff99c8",
+        alpha=0.28,
+        label="masked/unfinite delta",
+    )
+    station_names = report["station"].astype(str).tolist()
+    _apply_station_rendering(
+        ax,
+        x,
+        station_names,
+        station_label_step=station_label_step,
+        station_preset=station_preset,
+        station_style=station_style,
+    )
+    ax.set_ylabel("Frequency rows")
+    ax.set_title("Frequency edit summary", fontsize=10)
+    ax.grid(True, ls=":", alpha=0.35)
+    ax.legend(fontsize=8)
+    return ax
+
+
+def plot_frequency_edit_decisions(
+    before_sites: Any,
+    after_sites: Any,
+    *,
+    method: str = "composite",
+    ci_hi: float = 0.90,
+    ci_lo: float = 0.50,
+    figsize: Tuple[float, float] = (10.0, 5.0),
+    station_label_step: Optional[int] = 1,
+    station_preset: str = "pseudosection",
+    station_style: Optional[Any] = None,
+    ax: Optional[Any] = None,
+):
+    """Plot dropped, masked, recovered, and kept frequency decisions."""
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import ListedColormap, BoundaryNorm
+
+    table = frequency_edit_decision_table(
+        before_sites,
+        after_sites,
+        method=method,
+        ci_hi=ci_hi,
+        ci_lo=ci_lo,
+    )
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+    if table.empty:
+        ax.text(0.5, 0.5, "no data", ha="center", va="center")
+        return ax
+    action_codes = {
+        "dropped": 0,
+        "masked": 1,
+        "recovered": 2,
+        "kept": 3,
+    }
+    stations = table["station"].drop_duplicates().astype(str).tolist()
+    periods = np.sort(table["log10_period"].dropna().unique())
+    matrix = np.full((periods.size, len(stations)), np.nan, dtype=float)
+    for j, station in enumerate(stations):
+        sub = table[table["station"].astype(str) == station]
+        lookup = {
+            float(row.log10_period): action_codes.get(str(row.action), np.nan)
+            for _, row in sub.iterrows()
+            if np.isfinite(row.log10_period)
+        }
+        for i, period in enumerate(periods):
+            matrix[i, j] = lookup.get(float(period), np.nan)
+    cmap = ListedColormap(["#8b0026", "#ff99c8", "#20b455", "#d8d8d8"])
+    norm = BoundaryNorm([-0.5, 0.5, 1.5, 2.5, 3.5], cmap.N)
+    im = ax.imshow(
+        matrix,
+        aspect="auto",
+        origin="lower",
+        interpolation="nearest",
+        cmap=cmap,
+        norm=norm,
+        extent=(-0.5, len(stations) - 0.5, periods.min(), periods.max()),
+    )
+    _apply_station_rendering(
+        ax,
+        np.arange(len(stations)),
+        stations,
+        station_label_step=station_label_step,
+        station_preset=station_preset,
+        station_style=station_style,
+    )
+    ax.set_ylabel(r"$\log_{10}T$ (s)")
+    ax.set_title("Frequency edit decisions", fontsize=10)
+    cbar = ax.figure.colorbar(im, ax=ax, pad=0.015, ticks=[0, 1, 2, 3])
+    cbar.ax.set_yticklabels(["dropped", "masked", "recovered", "kept"])
+    return ax
 
 
 def regrid_to(
@@ -557,10 +1567,8 @@ def plot_coverage_quality_heatmap(
         M[i, idx] = q
     # 0..1 quality; 0 means absent/low confidence
     if axis == "period":
-        y = 1.0 / grid
         ylab = "period (s)"
     else:
-        y = grid
         ylab = "freq (Hz)"
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)

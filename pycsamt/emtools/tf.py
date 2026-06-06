@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+from matplotlib.patches import FancyArrowPatch
 
 from ._core import (
     ensure_sites,
@@ -13,6 +15,12 @@ from ._core import (
 )
 
 from .tensor import build_phase_tensor_table
+from ..api._rose_style import _UNSET, RoseStyle, resolve_rose_style
+from ..api.style import PYCSAMT_STYLE
+from ..api.control import PYCSAMT_CONTROL
+from ..api.section import PYCSAMT_SECTION, SectionStyle
+from ..api.station import PYCSAMT_STATION_RENDERING
+from ..api.plot import add_colorbar, add_polar_colorbar
 
 
 # ------------------------------- helpers -------------------------------- #
@@ -316,3 +324,1313 @@ def plot_induction_arrows(
         loc="upper center", bbox_to_anchor=(0.5, 1.02), fontsize=9,
     )
     return ax
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Internal helpers shared by the new functions
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _spine_style(ax) -> None:
+    ax.grid(True, which="both", ls=":", lw=0.4, color="0.75", zorder=0)
+    ax.set_axisbelow(True)
+
+
+def _set_map_aspect(ax, ys: np.ndarray, scale: float) -> None:
+    """Set aspect ratio without wasteful whitespace.
+
+    For a true 2-D map (stations spread in both x and y) use equal
+    scaling.  For a profile (all stations on a near-horizontal line)
+    switch to *auto* and enforce a tight y-window around the arrow
+    extent so the arrow panel fills the axes without blank borders.
+    """
+    ax.autoscale(True)
+    xlim = ax.get_xlim(); ylim = ax.get_ylim()
+    xspan = xlim[1] - xlim[0] + 1e-12
+    yspan = ylim[1] - ylim[0] + 1e-12
+
+    if yspan < 0.25 * xspan:
+        # Profile case: force a visible y-window ≈ 2× max arrow length
+        margin = max(scale * 1.4, yspan * 0.5, xspan * 0.08)
+        y_ctr  = 0.5 * (ylim[0] + ylim[1])
+        ax.set_ylim(y_ctr - margin, y_ctr + margin)
+        ax.set_aspect("auto")
+    else:
+        ax.set_aspect("equal", adjustable="box")
+
+
+def _collect_tipper_spectrum(
+    S: Any,
+) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, Any]]:
+    """Return dicts keyed by station: tipper (nf,2), freq, xy."""
+    tip_dict: Dict[str, np.ndarray] = {}
+    freq_dict: Dict[str, np.ndarray] = {}
+    xy_dict:   Dict[str, Tuple[float, float]] = {}
+    for i, ed in enumerate(_iter_items(S)):
+        T, t, fr = _get_t_block(ed)
+        if T is None or t is None:
+            continue
+        name = _name(ed, i)
+        tip_dict[name]  = np.asarray(t, complex)
+        freq_dict[name] = np.asarray(fr, float)
+        xy_dict[name]   = _station_xy(ed, i)
+    return tip_dict, freq_dict, xy_dict
+
+
+def _tipper_from_spectra(
+    sp_input: Any,
+) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
+    """Extract tipper from a Spectra object or collection."""
+    from ..seg.spectra import Spectra as _Spectra  # noqa: PLC0415
+
+    if isinstance(sp_input, _Spectra):
+        items = {"site": sp_input}
+    elif isinstance(sp_input, dict):
+        items = sp_input
+    elif isinstance(sp_input, (list, tuple)):
+        items = {getattr(s, "name", None) or f"site{k}": s
+                 for k, s in enumerate(sp_input)}
+    else:
+        raise TypeError(type(sp_input))
+
+    tip_dict: Dict[str, np.ndarray] = {}
+    freq_dict: Dict[str, np.ndarray] = {}
+    for name, sp in items.items():
+        _, tip = sp.to_Z(estimate_error=False)
+        if tip is None or tip.tipper is None:
+            continue
+        tip_dict[str(name)]  = tip.tipper[:, 0, :]   # (nf, 2)
+        freq_dict[str(name)] = tip.freq
+    return tip_dict, freq_dict
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 13) Map view — real + imaginary induction arrows on station positions
+# ─────────────────────────────────────────────────────────────────────────────
+
+def plot_induction_map(
+    sites: Any,
+    *,
+    period: float = 1.0,
+    convention: str = "park",
+    show_real: bool = True,
+    show_imag: bool = True,
+    scale: float = _UNSET,
+    cmap: str = "plasma",
+    clim: Optional[Tuple[float, float]] = None,
+    show_colorbar: bool = True,
+    reference_arrow: float = 0.1,
+    station_labels: bool = True,
+    title: str = "",
+    figsize: Tuple[float, float] = (8, 7),
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    ax: Optional[plt.Axes] = None,
+) -> plt.Axes:
+    r"""Map-view induction arrows at one period.
+
+    Real (solid) and imaginary (dashed) Parkinson arrows at every
+    station, coloured by |T| magnitude.
+
+    Parameters
+    ----------
+    sites : Sites-like
+    period : float
+        Target period in seconds.
+    convention : {'park', 'wiese', 'real', 'imag'}
+    show_real, show_imag : bool
+    scale : float or _UNSET
+        Arrow scale factor (auto from station spacing).
+    cmap : str
+    clim : (vmin, vmax) or None
+    show_colorbar : bool
+    reference_arrow : float
+        Length of the scale-bar reference arrow.
+    station_labels : bool
+    title : str
+    figsize, ax : standard
+
+    Returns
+    -------
+    ax : Axes
+    """
+    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
+                     strict=strict, verbose=verbose)
+
+    names, xs, ys, re_vecs, im_vecs = [], [], [], [], []
+    for i, ed in enumerate(_iter_items(S)):
+        T, t, fr = _get_t_block(ed)
+        if T is None or t is None:
+            continue
+        per = 1.0 / fr
+        j   = _nearest_idx(per, np.array([float(period)]))[0]
+        tx  = t[j, 0]; ty = t[j, 1]
+        re_vecs.append([np.real(tx), np.real(ty)])
+        im_vecs.append([np.imag(tx), np.imag(ty)])
+        x, y = _station_xy(ed, i)
+        xs.append(x); ys.append(y); names.append(_name(ed, i))
+
+    if not names:
+        if ax is None:
+            _, ax = plt.subplots(figsize=figsize)
+        ax.text(0.5, 0.5, "no tipper data", ha="center", va="center",
+                transform=ax.transAxes)
+        return ax
+
+    xs = np.array(xs, float); ys = np.array(ys, float)
+    re = np.array(re_vecs, float)
+    im = np.array(im_vecs, float)
+
+    if scale is _UNSET:
+        dist  = (np.diff(xs) ** 2 + np.diff(ys) ** 2).mean() ** 0.5 if len(xs) > 1 else 1.0
+        scale = float(dist * 0.4)
+
+    mag  = np.hypot(re[:, 0], re[:, 1])
+    norm = mcolors.Normalize(
+        vmin=clim[0] if clim else mag.min(),
+        vmax=clim[1] if clim else mag.max() + 1e-12,
+    )
+    cm   = plt.get_cmap(cmap)
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+    else:
+        fig = ax.get_figure()
+
+    for k in range(len(names)):
+        c = cm(norm(mag[k]))
+        if show_real:
+            ax.annotate("",
+                xy=(xs[k] + re[k, 0] * scale, ys[k] + re[k, 1] * scale),
+                xytext=(xs[k], ys[k]),
+                arrowprops=dict(arrowstyle="-|>", color=c,
+                                lw=1.8, mutation_scale=10))
+        if show_imag:
+            ax.annotate("",
+                xy=(xs[k] + im[k, 0] * scale, ys[k] + im[k, 1] * scale),
+                xytext=(xs[k], ys[k]),
+                arrowprops=dict(arrowstyle="-|>", color=c, lw=1.2,
+                                linestyle="dashed", mutation_scale=8))
+        ax.plot(xs[k], ys[k], "v", ms=5, color="0.3", zorder=5)
+        if station_labels:
+            ax.annotate(names[k], (xs[k], ys[k]),
+                        xytext=(3, 4), textcoords="offset points",
+                        fontsize=6.5, color="0.4")
+
+    # Reference scale arrow
+    x0 = xs.min()
+    y0 = ys.min() - 0.15 * (np.ptp(ys) + 1e-6)
+    ax.annotate("",
+        xy=(x0 + reference_arrow * scale, y0), xytext=(x0, y0),
+        arrowprops=dict(arrowstyle="-|>", color="0.2",
+                        lw=1.8, mutation_scale=10))
+    ax.text(x0 + 0.5 * reference_arrow * scale, y0,
+            f"|T|={reference_arrow}", ha="center", va="top",
+            fontsize=7, color="0.3")
+
+    if show_colorbar:
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        add_colorbar(sm, ax, label="|T|", size="3%", pad=0.04, max_ticks=5)
+
+    from matplotlib.lines import Line2D
+    handles = []
+    if show_real:
+        handles.append(Line2D([], [], color="0.4", lw=1.8,
+                              label="Real (Parkinson)"))
+    if show_imag:
+        handles.append(Line2D([], [], color="0.4", lw=1.2, ls="--",
+                              label="Imaginary"))
+    if handles:
+        ax.legend(handles=handles, fontsize=8, framealpha=0.8, loc="upper right")
+
+    _set_map_aspect(ax, ys, scale)
+    ax.set_xlabel("x / Easting  (m)", fontsize=9)
+    ax.set_ylabel("y / Northing  (m)", fontsize=9)
+    ax.set_title(
+        title or f"Induction arrows  —  T = {period:g} s  [{convention}]",
+        fontsize=10, pad=6)
+    _spine_style(ax)
+    return ax
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 14) Period section — |T| pseudo-section (station × log-period)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def plot_induction_section(
+    sites: Any,
+    *,
+    component: str = "abs",
+    n_periods: int = 20,
+    cmap: str = "RdBu_r",
+    clim: Optional[Tuple[float, float]] = None,
+    section: Union[str, SectionStyle] = "pseudosection",
+    title: str = "",
+    figsize: Optional[Tuple[float, float]] = None,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    ax: Optional[plt.Axes] = None,
+) -> plt.Axes:
+    """Period × station pseudo-section coloured by |T| magnitude.
+
+    Parameters
+    ----------
+    sites : Sites-like
+    component : {'real', 'imag', 'abs'}
+    n_periods : int
+    cmap : str
+    clim : (vmin, vmax) or None
+    section : str or SectionStyle
+    title, figsize, ax : standard
+
+    Returns
+    -------
+    ax : Axes
+    """
+    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
+                     strict=strict, verbose=verbose)
+
+    tip_dict, freq_dict, xy_dict = _collect_tipper_spectrum(S)
+    if not tip_dict:
+        if ax is None: _, ax = plt.subplots()
+        ax.text(0.5, 0.5, "no tipper", ha="center", va="center",
+                transform=ax.transAxes); return ax
+
+    all_fr = list(freq_dict.values())
+    f_min  = max(float(f.min()) for f in all_fr)
+    f_max  = min(float(f.max()) for f in all_fr)
+    f_grid = np.logspace(np.log10(f_min), np.log10(f_max), n_periods)
+    per    = 1.0 / f_grid
+    names  = list(tip_dict.keys())
+    n_st   = len(names)
+
+    mat = np.full((n_st, n_periods), np.nan)
+    for si, name in enumerate(names):
+        t, fr = tip_dict[name], freq_dict[name]
+        for pi, f0 in enumerate(f_grid):
+            j = np.argmin(np.abs(fr - f0))
+            tx, ty = t[j, 0], t[j, 1]
+            if component == "real":
+                mat[si, pi] = np.hypot(np.real(tx), np.real(ty))
+            elif component == "imag":
+                mat[si, pi] = np.hypot(np.imag(tx), np.imag(ty))
+            else:
+                mat[si, pi] = np.hypot(np.abs(tx), np.abs(ty))
+
+    y_log = np.log10(per)
+    sty   = (section if isinstance(section, SectionStyle)
+             else PYCSAMT_SECTION.style_for(str(section)).copy())
+    if figsize is None:
+        figsize = sty.figsize_for(n_stations=n_st, n_y=n_periods)
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+        fig = ax.get_figure()
+    else:
+        fig = ax.get_figure()
+
+    st_x    = np.arange(n_st, dtype=float)
+    x_edges = np.r_[st_x[0] - 0.5, st_x + 0.5]
+    if len(y_log) > 1:
+        dy = np.abs(np.diff(y_log)) / 2.0
+        sgn = np.sign(np.diff(y_log))
+        y_edges = np.r_[y_log[0] - dy[0],
+                        y_log[:-1] + sgn * dy,
+                        y_log[-1] + sgn[-1] * dy[-1]]
+    else:
+        y_edges = np.r_[y_log[0] - 0.2, y_log[0] + 0.2]
+
+    vmin, vmax = clim if clim else (0.0, float(np.nanpercentile(mat, 95)) + 1e-12)
+    pc = ax.pcolormesh(x_edges, y_edges, mat.T,
+                       cmap=cmap, shading="flat", vmin=vmin, vmax=vmax)
+    sty.add_colorbar(pc, ax, label=f"|T| {component}")
+
+    if y_log[0] > y_log[-1]:
+        ax.invert_yaxis()
+
+    sty.apply_axis(ax, xlabel="Station", ylabel=r"$\log_{10}T$ (s)")
+    sty.apply_stations(ax, st_x, names)
+    ax.set_title(title or f"Tipper section  [{component}]",
+                 fontsize=10, pad=6)
+    _spine_style(ax)
+    return ax
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 15) Convention comparison — 2×2 panel
+# ─────────────────────────────────────────────────────────────────────────────
+
+def plot_induction_convention(
+    sites: Any,
+    *,
+    period: float = 1.0,
+    scale: float = _UNSET,
+    station_labels: bool = True,
+    title: str = "",
+    figsize: Tuple[float, float] = (11, 10),
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> np.ndarray:
+    r"""2×2 panel: Parkinson/Wiese × Real/Imaginary conventions.
+
+    +-----------------------+-----------------------+
+    | Parkinson — Real      | Parkinson — Imaginary |
+    +-----------------------+-----------------------+
+    | Wiese — Real          | Wiese — Imaginary     |
+    +-----------------------+-----------------------+
+
+    Parameters
+    ----------
+    sites : Sites-like
+    period : float
+    scale, station_labels, title, figsize : standard
+
+    Returns
+    -------
+    axes : ndarray of Axes, shape (2, 2)
+    """
+    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
+                     strict=strict, verbose=verbose)
+
+    names, xs, ys, txs, tys = [], [], [], [], []
+    for i, ed in enumerate(_iter_items(S)):
+        T, t, fr = _get_t_block(ed)
+        if T is None or t is None: continue
+        per = 1.0 / fr
+        j   = _nearest_idx(per, np.array([float(period)]))[0]
+        txs.append(t[j, 0]); tys.append(t[j, 1])
+        x, y = _station_xy(ed, i)
+        xs.append(x); ys.append(y); names.append(_name(ed, i))
+
+    if not names:
+        fig, axs = plt.subplots(2, 2, figsize=figsize)
+        for ax in axs.ravel():
+            ax.text(0.5, 0.5, "no tipper", ha="center", va="center",
+                    transform=ax.transAxes)
+        return axs
+
+    xs  = np.array(xs, float); ys  = np.array(ys, float)
+    txs = np.array(txs); tys = np.array(tys)
+
+    if scale is _UNSET:
+        dist  = (np.diff(xs)**2 + np.diff(ys)**2).mean()**0.5 if len(xs)>1 else 1.0
+        scale = float(dist * 0.4)
+
+    park_re = np.vstack([ np.real(txs),  np.real(tys)]).T
+    park_im = np.vstack([ np.imag(txs),  np.imag(tys)]).T
+    wies_re = np.vstack([-park_re[:,1],   park_re[:,0]]).T
+    wies_im = np.vstack([-park_im[:,1],   park_im[:,0]]).T
+
+    def _panel(ax, vecs, label):
+        u, v = vecs[:,0]*scale, vecs[:,1]*scale
+        mag  = np.hypot(u, v) / (scale+1e-24)
+        norm = mcolors.Normalize(vmin=0, vmax=max(mag.max(), 1e-6))
+        cm   = plt.get_cmap("plasma")
+        for k in range(len(names)):
+            c = cm(norm(mag[k]))
+            ax.annotate("",
+                xy=(xs[k]+u[k], ys[k]+v[k]), xytext=(xs[k], ys[k]),
+                arrowprops=dict(arrowstyle="-|>", color=c,
+                                lw=1.6, mutation_scale=10))
+            ax.plot(xs[k], ys[k], "v", ms=5, color="0.3", zorder=5)
+            if station_labels:
+                ax.annotate(names[k], (xs[k], ys[k]),
+                            xytext=(3,4), textcoords="offset points",
+                            fontsize=6, color="0.4")
+        ax.set_aspect("equal", adjustable="datalim")
+        ax.set_title(label, fontsize=9, pad=5)
+        ax.set_xlabel("x  (m)", fontsize=8); ax.set_ylabel("y  (m)", fontsize=8)
+        _spine_style(ax)
+
+    fig, axs = plt.subplots(2, 2, figsize=figsize, constrained_layout=True)
+    _panel(axs[0,0], park_re, "Parkinson — Real")
+    _panel(axs[0,1], park_im, "Parkinson — Imaginary")
+    _panel(axs[1,0], wies_re, "Wiese — Real")
+    _panel(axs[1,1], wies_im, "Wiese — Imaginary")
+    fig.suptitle(title or f"Induction arrow conventions  —  T = {period:g} s",
+                 fontsize=11, y=1.01)
+    return axs
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 16) Polar tipper plot
+# ─────────────────────────────────────────────────────────────────────────────
+
+def plot_tipper_polar(
+    sites: Any,
+    *,
+    station: Optional[str] = None,
+    component: str = "real",
+    cmap: str = _UNSET,
+    lw: float = _UNSET,
+    alpha: float = _UNSET,
+    title: str = "",
+    figsize: Tuple[float, float] = (5.5, 5.5),
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    ax: Optional[plt.Axes] = None,
+) -> plt.Axes:
+    """Polar view: tipper azimuth (angle) and magnitude (radius) vs period.
+
+    Each frequency is one scatter point; colour encodes log₁₀(period).
+    North (0°) = up, clockwise positive, following geomagnetic convention.
+
+    Parameters
+    ----------
+    sites : Sites-like
+    station : str or None
+    component : {'real', 'imag', 'abs'}
+    cmap : str or _UNSET
+    lw, alpha : float or _UNSET
+    title, figsize, ax : standard
+
+    Returns
+    -------
+    ax : polar Axes
+    """
+    _ml = PYCSAMT_STYLE.multiline
+    if lw    is _UNSET: lw    = _ml.lw
+    if alpha is _UNSET: alpha = _ml.alpha
+    if cmap  is _UNSET: cmap  = "viridis"
+
+    S  = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
+                      strict=strict, verbose=verbose)
+    st, ed = _pick_station(S, station)
+    T, t, fr = _get_t_block(ed)
+    if T is None or t is None:
+        if ax is None:
+            fig = plt.figure(figsize=figsize); ax = fig.add_subplot(111, polar=True)
+        ax.set_title("no tipper"); return ax
+
+    per = 1.0 / fr
+    tx  = t[:, 0]; ty = t[:, 1]
+
+    if component == "real":
+        u, v = np.real(tx), np.real(ty)
+    elif component == "imag":
+        u, v = np.imag(tx), np.imag(ty)
+    else:
+        u, v = np.abs(tx), np.abs(ty)
+
+    azimuth   = np.arctan2(v, u)
+    magnitude = np.hypot(u, v)
+    log_per   = np.log10(np.maximum(per, 1e-9))
+    norm      = mcolors.Normalize(vmin=log_per.min(), vmax=log_per.max())
+
+    if ax is None:
+        fig = plt.figure(figsize=figsize); ax = fig.add_subplot(111, polar=True)
+
+    sc = ax.scatter(azimuth, magnitude, c=log_per, cmap=cmap, norm=norm,
+                    s=30, alpha=alpha, edgecolors="none", zorder=4)
+    order = np.argsort(per)
+    ax.plot(azimuth[order], magnitude[order],
+            lw=lw*0.7, alpha=alpha*0.5, color="0.6", zorder=3)
+
+    ax.set_theta_zero_location("N"); ax.set_theta_direction(-1)
+    ax.grid(True, alpha=0.3)
+    ax.set_title(title or f"{st} — tipper polar [{component}]",
+                 fontsize=10, pad=10)
+    cbar = add_polar_colorbar(
+        sc,
+        ax,
+        label=r"$\log_{10}T$ (s)",
+        pad=0.10,
+        shrink=0.72,
+        aspect=18,
+        max_ticks=5,
+    )
+    cbar.ax.tick_params(labelsize=7)
+    return ax
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 17) Induction-arrow rose diagram
+# ─────────────────────────────────────────────────────────────────────────────
+
+def plot_induction_rose(
+    sites: Any,
+    *,
+    component: str = "real",
+    pband: Optional[Tuple[float, float]] = None,
+    nbins: int = 36,
+    style=_UNSET,
+    title: str = "",
+    figsize: Tuple[float, float] = (5, 5),
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    ax: Optional[plt.Axes] = None,
+) -> plt.Axes:
+    """Rose diagram of induction arrow azimuths (all stations & periods).
+
+    Parameters
+    ----------
+    sites : Sites-like
+    component : {'real', 'imag', 'abs'}
+    pband : (T_min, T_max) or None
+    nbins : int   (default 36 → 10° bins)
+    style : RoseStyle or str or _UNSET
+    title, figsize, ax : standard
+
+    Returns
+    -------
+    ax : polar Axes
+    """
+    rs = (PYCSAMT_STYLE.rose.copy() if style is _UNSET
+          else resolve_rose_style(style))
+    S  = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
+                      strict=strict, verbose=verbose)
+
+    azimuths: List[float] = []
+    for i, ed in enumerate(_iter_items(S)):
+        T, t, fr = _get_t_block(ed)
+        if T is None or t is None: continue
+        per  = 1.0 / fr
+        mask = np.ones(fr.size, bool)
+        if pband:
+            lo, hi = float(pband[0]), float(pband[1])
+            mask &= (per >= lo) & (per <= hi)
+        if not mask.any(): continue
+        tx, ty = t[mask, 0], t[mask, 1]
+        if component == "real":   u, v = np.real(tx), np.real(ty)
+        elif component == "imag": u, v = np.imag(tx), np.imag(ty)
+        else:                     u, v = np.abs(tx), np.abs(ty)
+        azimuths.extend((np.degrees(np.arctan2(v, u)) % 360.0).tolist())
+
+    if not azimuths:
+        if ax is None:
+            fig = plt.figure(figsize=figsize); ax = fig.add_subplot(111, polar=True)
+        ax.set_title("no arrows"); return ax
+
+    az = np.array(azimuths, float)
+    edges  = np.linspace(0, 360, nbins + 1)
+    counts, _ = np.histogram(az, bins=edges)
+    counts = counts / counts.sum() * 100.0
+    theta  = np.radians(0.5 * (edges[:-1] + edges[1:]))
+    width  = np.radians(360.0 / nbins) * 0.92
+    r_max  = counts.max() or 1.0
+
+    if ax is None:
+        fig = plt.figure(figsize=figsize); ax = fig.add_subplot(111, polar=True)
+
+    if rs.bar_style == "gradient":
+        _cm = plt.get_cmap(rs.cmap)
+        cols = [_cm(c / (r_max + 1e-12)) for c in counts]
+    else:
+        cols = rs.bar_color
+
+    ax.bar(theta, counts, width=width, color=cols,
+           alpha=rs.bar_alpha, edgecolor=rs.bar_edgecolor,
+           linewidth=rs.bar_edgelw, zorder=3)
+    ax.plot(np.linspace(0, 2*np.pi, 256), np.full(256, r_max),
+            lw=rs.outer_ring_lw, color=rs.outer_ring_color, zorder=4)
+    if rs.show_mean and az.size > 0:
+        mean_az = np.degrees(np.arctan2(
+            np.sin(np.radians(az)).sum(), np.cos(np.radians(az)).sum())) % 360.0
+        r_m = np.radians(mean_az)
+        ax.plot([r_m, r_m+np.pi], [r_max*0.9]*2,
+                lw=rs.mean_lw, color=rs.mean_color, ls=rs.mean_ls, zorder=5)
+
+    ax.set_theta_zero_location("N"); ax.set_theta_direction(-1)
+    ax.grid(True, alpha=0.25)
+    ax.set_title(title or f"Induction arrow rose [{component}]",
+                 fontsize=10, pad=12)
+    return ax
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 18) Spectra-direct wrappers (no Sites needed)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def plot_induction_map_from_spectra(
+    sp_input: Any,
+    *,
+    period: float = 1.0,
+    coords: Optional[Dict[str, Tuple[float, float]]] = None,
+    show_real: bool = True,
+    show_imag: bool = True,
+    scale: float = _UNSET,
+    cmap: str = "plasma",
+    station_labels: bool = True,
+    title: str = "",
+    figsize: Tuple[float, float] = (8, 5),
+    ax: Optional[plt.Axes] = None,
+) -> plt.Axes:
+    """Map-view induction arrows from :class:`~pycsamt.seg.spectra.Spectra`.
+
+    Parameters
+    ----------
+    sp_input : Spectra, list, or dict[str, Spectra]
+    period : float
+    coords : dict[name → (x, y)] or None
+        Station positions.  Equidistant line when ``None``.
+    show_real, show_imag : bool
+    scale, cmap, station_labels, title, figsize, ax : standard
+
+    Returns
+    -------
+    ax : Axes
+    """
+    tip_dict, freq_dict = _tipper_from_spectra(sp_input)
+    if not tip_dict:
+        if ax is None: _, ax = plt.subplots(figsize=figsize)
+        ax.text(0.5, 0.5, "no tipper", ha="center", va="center",
+                transform=ax.transAxes); return ax
+
+    names = list(tip_dict.keys())
+    if coords is None:
+        coords = {n: (float(i), 0.0) for i, n in enumerate(names)}
+
+    xs = np.array([coords.get(n, (i, 0.0))[0] for i, n in enumerate(names)], float)
+    ys = np.array([coords.get(n, (i, 0.0))[1] for i, n in enumerate(names)], float)
+
+    re_list, im_list = [], []
+    for name in names:
+        t  = tip_dict[name]
+        fr = freq_dict[name]
+        j  = np.argmin(np.abs(1.0/np.maximum(fr,1e-24) - period))
+        tx, ty = t[j,0], t[j,1]
+        re_list.append([np.real(tx), np.real(ty)])
+        im_list.append([np.imag(tx), np.imag(ty)])
+    re = np.array(re_list, float)
+    im = np.array(im_list, float)
+
+    if scale is _UNSET:
+        dist  = abs(np.diff(xs)).mean() if len(xs) > 1 else 1.0
+        scale = float(dist * 0.4) if dist > 1e-9 else 0.3
+
+    mag  = np.hypot(re[:,0], re[:,1])
+    norm = mcolors.Normalize(vmin=mag.min(), vmax=mag.max()+1e-12)
+    cm   = plt.get_cmap(cmap)
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+    else:
+        fig = ax.get_figure()
+
+    for k, name in enumerate(names):
+        c = cm(norm(mag[k]))
+        if show_real:
+            ax.annotate("",
+                xy=(xs[k]+re[k,0]*scale, ys[k]+re[k,1]*scale),
+                xytext=(xs[k], ys[k]),
+                arrowprops=dict(arrowstyle="-|>", color=c,
+                                lw=1.8, mutation_scale=10))
+        if show_imag:
+            ax.annotate("",
+                xy=(xs[k]+im[k,0]*scale, ys[k]+im[k,1]*scale),
+                xytext=(xs[k], ys[k]),
+                arrowprops=dict(arrowstyle="-|>", color=c, lw=1.2,
+                                linestyle="dashed", mutation_scale=8))
+        ax.plot(xs[k], ys[k], "v", ms=5, color="0.3", zorder=5)
+        if station_labels:
+            ax.annotate(name, (xs[k], ys[k]),
+                        xytext=(3,4), textcoords="offset points",
+                        fontsize=6.5, color="0.4")
+
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm); sm.set_array([])
+    add_colorbar(sm, ax, label="|T|", size="3%", pad=0.04, max_ticks=5)
+    from matplotlib.lines import Line2D
+    handles = []
+    if show_real: handles.append(Line2D([],[],color="0.4",lw=1.8,label="Real"))
+    if show_imag: handles.append(Line2D([],[],color="0.4",lw=1.2,ls="--",label="Imaginary"))
+    if handles: ax.legend(handles=handles, fontsize=8, framealpha=0.8)
+    _set_map_aspect(ax, ys, scale)
+    ax.set_xlabel("Station", fontsize=9)
+    ax.set_title(title or f"Induction arrows from spectra  —  T={period:g} s",
+                 fontsize=10, pad=6)
+    _spine_style(ax)
+    return ax
+
+
+def plot_tipper_polar_from_spectra(
+    sp: Any,
+    *,
+    component: str = "real",
+    cmap: str = "viridis",
+    title: str = "",
+    figsize: Tuple[float, float] = (5.5, 5.5),
+) -> plt.Axes:
+    """Polar tipper from a :class:`~pycsamt.seg.spectra.Spectra` object.
+
+    Parameters
+    ----------
+    sp : Spectra
+    component : {'real', 'imag', 'abs'}
+    cmap, title, figsize : standard
+
+    Returns
+    -------
+    ax : polar Axes
+    """
+    tip_dict, freq_dict = _tipper_from_spectra(sp)
+    if not tip_dict:
+        fig = plt.figure(figsize=figsize); ax = fig.add_subplot(111,polar=True)
+        ax.set_title("no tipper"); return ax
+
+    name  = list(tip_dict.keys())[0]
+    t     = tip_dict[name]
+    fr    = freq_dict[name]
+    per   = 1.0 / np.maximum(fr, 1e-24)
+    tx, ty = t[:,0], t[:,1]
+
+    if component == "real":   u, v = np.real(tx), np.real(ty)
+    elif component == "imag": u, v = np.imag(tx), np.imag(ty)
+    else:                     u, v = np.abs(tx), np.abs(ty)
+
+    azimuth   = np.arctan2(v, u)
+    magnitude = np.hypot(u, v)
+    log_per   = np.log10(np.maximum(per, 1e-9))
+    norm      = mcolors.Normalize(vmin=log_per.min(), vmax=log_per.max())
+
+    fig = plt.figure(figsize=figsize)
+    ax  = fig.add_subplot(111, polar=True)
+    sc  = ax.scatter(azimuth, magnitude, c=log_per, cmap=cmap, norm=norm,
+                     s=30, alpha=0.85, edgecolors="none", zorder=4)
+    order = np.argsort(per)
+    ax.plot(azimuth[order], magnitude[order], lw=0.8, alpha=0.4, color="0.6")
+    ax.set_theta_zero_location("N"); ax.set_theta_direction(-1)
+    ax.grid(True, alpha=0.3)
+    ax.set_title(title or f"{name} — polar tipper [{component}]",
+                 fontsize=10, pad=10)
+    add_polar_colorbar(
+        sc,
+        ax,
+        label=r"$\log_{10}T$ (s)",
+        pad=0.10,
+        shrink=0.72,
+        aspect=18,
+        max_ticks=5,
+    )
+    return ax
+
+
+def plot_induction_rose_from_spectra(
+    sp_input: Any,
+    *,
+    component: str = "real",
+    pband: Optional[Tuple[float, float]] = None,
+    nbins: int = 36,
+    style=_UNSET,
+    title: str = "",
+    figsize: Tuple[float, float] = (5, 5),
+    ax: Optional[plt.Axes] = None,
+) -> plt.Axes:
+    """Rose diagram of induction arrow directions from Spectra objects.
+
+    Parameters
+    ----------
+    sp_input : Spectra, list, or dict[str, Spectra]
+    component : {'real', 'imag', 'abs'}
+    pband : (T_min, T_max) or None
+    nbins : int
+    style : RoseStyle or str or _UNSET
+    title, figsize, ax : standard
+
+    Returns
+    -------
+    ax : polar Axes
+    """
+    rs = (PYCSAMT_STYLE.rose.copy() if style is _UNSET
+          else resolve_rose_style(style))
+    tip_dict, freq_dict = _tipper_from_spectra(sp_input)
+
+    azimuths: List[float] = []
+    for name, t in tip_dict.items():
+        fr  = freq_dict[name]
+        per = 1.0 / np.maximum(fr, 1e-24)
+        mask = np.ones(fr.size, bool)
+        if pband:
+            lo, hi = float(pband[0]), float(pband[1])
+            mask &= (per >= lo) & (per <= hi)
+        if not mask.any(): continue
+        tx, ty = t[mask,0], t[mask,1]
+        if component == "real":   u, v = np.real(tx), np.real(ty)
+        elif component == "imag": u, v = np.imag(tx), np.imag(ty)
+        else:                     u, v = np.abs(tx), np.abs(ty)
+        azimuths.extend((np.degrees(np.arctan2(v, u)) % 360.0).tolist())
+
+    if not azimuths:
+        if ax is None:
+            fig = plt.figure(figsize=figsize); ax = fig.add_subplot(111,polar=True)
+        ax.set_title("no arrows"); return ax
+
+    az    = np.array(azimuths, float)
+    edges = np.linspace(0, 360, nbins+1)
+    counts, _ = np.histogram(az, bins=edges)
+    counts    = counts / counts.sum() * 100.0
+    theta     = np.radians(0.5*(edges[:-1]+edges[1:]))
+    width     = np.radians(360.0/nbins) * 0.92
+    r_max     = counts.max() or 1.0
+
+    if ax is None:
+        fig = plt.figure(figsize=figsize); ax = fig.add_subplot(111,polar=True)
+
+    if rs.bar_style == "gradient":
+        _cm = plt.get_cmap(rs.cmap)
+        cols = [_cm(c/(r_max+1e-12)) for c in counts]
+    else:
+        cols = rs.bar_color
+
+    ax.bar(theta, counts, width=width, color=cols,
+           alpha=rs.bar_alpha, edgecolor=rs.bar_edgecolor,
+           linewidth=rs.bar_edgelw, zorder=3)
+    ax.plot(np.linspace(0,2*np.pi,256), np.full(256, r_max),
+            lw=rs.outer_ring_lw, color=rs.outer_ring_color, zorder=4)
+    if rs.show_mean and az.size > 0:
+        mean_az = np.degrees(np.arctan2(
+            np.sin(np.radians(az)).sum(),
+            np.cos(np.radians(az)).sum())) % 360.0
+        r_m = np.radians(mean_az)
+        ax.plot([r_m, r_m+np.pi], [r_max*0.9]*2,
+                lw=rs.mean_lw, color=rs.mean_color, ls=rs.mean_ls, zorder=5)
+
+    ax.set_theta_zero_location("N"); ax.set_theta_direction(-1)
+    ax.grid(True, alpha=0.25)
+    ax.set_title(title or f"Induction rose (spectra) [{component}]",
+                 fontsize=10, pad=12)
+    return ax
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 19) Multi-period induction vector map  (Boukhalfa et al. 2020 style)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _synthetic_background(
+    x0: float, x1: float, y0: float, y1: float,
+    *,
+    nx: int = 120,
+    ny: int = 100,
+    seed: int = 42,
+    elev_min: float = 1000.0,
+    elev_max: float = 2200.0,
+) -> Tuple[np.ndarray, Tuple[float, float, float, float]]:
+    """Return a smooth synthetic terrain image (ny, nx) and its extent."""
+    from scipy.ndimage import gaussian_filter as _gf
+    rng  = np.random.default_rng(seed)
+    raw  = rng.normal(size=(ny, nx))
+    raw  = _gf(raw, sigma=12)
+    raw  = (raw - raw.min()) / (np.ptp(raw) + 1e-12)
+    bg   = raw * (elev_max - elev_min) + elev_min
+    extent = (x0, x1, y0, y1)
+    return bg, extent
+
+
+def plot_induction_multiperiod_map(
+    sites: Any,
+    *,
+    periods: Sequence[float] = (1.0, 10.0, 100.0, 1000.0),
+    tipper_data: Optional[Dict[str, np.ndarray]] = None,
+    convention: str = "park",
+    panel_labels: Optional[Sequence[str]] = None,
+    background: Optional[np.ndarray] = None,
+    background_extent: Optional[Tuple[float, float, float, float]] = None,
+    background_cmap: str = "terrain",
+    background_alpha: float = 0.75,
+    background_clim: Optional[Tuple[float, float]] = None,
+    bg_colorbar_label: str = "Elevation  (m)",
+    bg_colorbar_side: str = "right",
+    show_background_cbar: bool = True,
+    arrow_color: str = "black",
+    arrow_scale: float = _UNSET,
+    arrow_lw: float = 1.6,
+    reference_arrow: float = 0.1,
+    reference_panel: int = 0,
+    reference_label: str = _UNSET,
+    show_stations: bool = True,
+    station_labels: bool = False,
+    annotations: Optional[Dict[str, Any]] = None,
+    annotation_color: str = "navy",
+    annotation_fontsize: float = 8.0,
+    title: str = "",
+    figsize: Any = _UNSET,
+    panel_height: float = 3.0,
+    panel_width:  float = 8.5,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> Tuple[plt.Figure, np.ndarray]:
+    r"""Stacked multi-period induction vector map.
+
+    Produces one panel per period (stacked vertically), each showing the
+    **real** Parkinson induction vectors on a background colour map
+    (elevation, resistivity, or any 2-D raster).  The layout mimics
+    the style of Boukhalfa et al. (2020, *GJI*) Fig. 7 and the paper
+    figure described in the session above.
+
+    Visual conventions
+    ------------------
+    * **Arrows**: black solid vectors using the Parkinson (1962) convention
+      (real component pointing toward the conductor).
+    * **Background**: smooth terrain coloured with *background_cmap*; a
+      synthetic gradient is auto-generated when *background* is ``None``.
+    * **Reference vector**: drawn in the first (or *reference_panel*)
+      sub-plot; labelled with its normalised length.
+    * **Shared colorbar**: placed on the **right** edge of the figure,
+      spanning all panels.
+    * **Panel labels**: ``"(A) 1 s"``, ``"(B) 10 s"``, … placed in the
+      lower-left corner of each panel.
+    * **Geological / site annotations**: optional blue text labels
+      supplied via *annotations*.
+
+    Parameters
+    ----------
+    sites : Sites-like
+        EDI collection accepted by :func:`ensure_sites`.  When the EDIs
+        carry no tipper (``Tipper.tipper`` all-zero), pass synthetic
+        tipper via *tipper_data*.
+    periods : sequence of float
+        Target periods in seconds, one panel each.
+    tipper_data : dict {period → (n_sites, 2) complex array}, optional
+        Explicit tipper override.  Keys must match *periods* (nearest
+        match is used).  Column 0 = T_x, column 1 = T_y.  When absent,
+        the tipper is read from the EDIs.
+    convention : str
+        Arrow convention.  ``"park"`` (Parkinson real) is the only one
+        used in published induction-vector maps; ``"wiese"`` is supported.
+    panel_labels : sequence of str, optional
+        Panel corner labels (e.g. ``["(A) 1 s", "(B) 10 s", ...]``).
+        Auto-generated when ``None``.
+    background : ndarray (ny, nx), optional
+        Pre-computed background raster.  A smooth synthetic terrain is
+        generated when ``None``.
+    background_extent : (x_left, x_right, y_bottom, y_top), optional
+        Geographic extent for the background raster.  Auto-inferred from
+        station positions when ``None``.
+    background_cmap : str
+        Colormap for the background.  Default ``"terrain"`` (green→brown
+        elevation appearance).
+    background_alpha : float
+        Background opacity (0–1).
+    background_clim : (vmin, vmax) or None
+    bg_colorbar_label : str
+        Label for the shared colorbar.
+    bg_colorbar_side : {'right', 'left', 'top', 'bottom'}, default 'right'
+        Side of the figure where the shared background colorbar is
+        placed.  Right-side placement is the package default because it
+        keeps section axes and station labels visually grouped.
+    show_background_cbar : bool
+    arrow_color : str
+        Single colour for all induction vectors.  Default ``"black"``.
+    arrow_scale : float or _UNSET
+        Multiplier for arrow length in data units.  Auto-computed from
+        the typical station spacing when ``_UNSET``.
+    arrow_lw : float
+        Arrow shaft line width in points.
+    reference_arrow : float
+        Normalised length of the scale-reference arrow drawn in the
+        *reference_panel* sub-plot.  Default 0.1.
+    reference_panel : int
+        Sub-plot index (0-based) where the reference arrow appears.
+    reference_label : str or _UNSET
+        Text for the reference arrow.  Defaults to
+        ``"Vector length {reference_arrow}"``.
+    show_stations : bool
+        Draw a small marker (``▼``) at each station position.
+    station_labels : bool
+        Annotate station names next to markers.
+    annotations : dict {label: (x, y)} or {label: (x, y, {fontsize, color, …})}, optional
+        Geological or site annotations drawn in *annotation_color* on
+        **every** panel.
+    annotation_color : str
+        Default colour for *annotations*.
+    annotation_fontsize : float
+    title : str
+        Figure suptitle.
+    figsize : (float, float) or _UNSET
+        Auto-computed from *panel_height*, *panel_width*, and number
+        of panels when omitted.
+    panel_height, panel_width : float
+        Per-panel size in inches used for auto *figsize*.
+    recursive, on_dup, strict, verbose : standard ensure_sites kwargs.
+
+    Returns
+    -------
+    fig : Figure
+    axes : ndarray of Axes, shape (n_periods,)
+
+    Examples
+    --------
+    Real data with tipper::
+
+        fig, axs = plot_induction_multiperiod_map(
+            "site.edi",
+            periods=[1, 10, 100, 1000],
+        )
+
+    Synthetic tipper supplied explicitly::
+
+        tipper = {1.0:   st_tips_1s,
+                  10.0:  st_tips_10s,
+                  100.0: st_tips_100s}
+        fig, axs = plot_induction_multiperiod_map(
+            "profile/*.edi",
+            periods=[1, 10, 100],
+            tipper_data=tipper,
+        )
+    """
+    import string
+    import matplotlib.gridspec as gridspec
+    from scipy.ndimage import gaussian_filter as _gf
+
+    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
+                     strict=strict, verbose=verbose)
+
+    # ── Collect station positions ──────────────────────────────────────────
+    all_items = list(_iter_items(S))
+    st_names: List[str] = []
+    st_xy:    List[Tuple[float, float]] = []
+    for i, ed in enumerate(all_items):
+        st_names.append(_name(ed, i))
+        st_xy.append(_station_xy(ed, i))
+    st_xy = np.array(st_xy, float)  # (n, 2)
+    n_st  = len(st_names)
+
+    if n_st == 0:
+        fig = plt.figure()
+        ax  = fig.add_subplot(111)
+        ax.text(0.5, 0.5, "no sites", ha="center", va="center",
+                transform=ax.transAxes)
+        return fig, np.array([ax])
+
+    xs, ys = st_xy[:, 0], st_xy[:, 1]
+
+    # ── Auto scale from station spacing ───────────────────────────────────
+    if arrow_scale is _UNSET:
+        if n_st > 1:
+            dists = np.sqrt(np.diff(xs)**2 + np.diff(ys)**2)
+            med   = np.median(dists[dists > 1e-9]) if dists[dists > 1e-9].size else 1.0
+        else:
+            med = 1.0
+        arrow_scale = float(med * 0.35)
+
+    # ── Build background ──────────────────────────────────────────────────
+    pad_x = max((np.ptp(xs) + 1e-9) * 0.12, arrow_scale * 2)
+    pad_y = max((np.ptp(ys) + 1e-9) * 0.12, arrow_scale * 2)
+    ext = (xs.min() - pad_x, xs.max() + pad_x,
+           ys.min() - pad_y, ys.max() + pad_y)
+
+    if background is None:
+        background, _ = _synthetic_background(
+            ext[0], ext[1], ext[2], ext[3],
+            elev_min=1000.0, elev_max=2200.0,
+        )
+    if background_extent is None:
+        background_extent = ext
+
+    bg_vmin = (background_clim[0] if background_clim
+               else float(np.nanpercentile(background, 2)))
+    bg_vmax = (background_clim[1] if background_clim
+               else float(np.nanpercentile(background, 98)))
+
+    # ── Panel labels ──────────────────────────────────────────────────────
+    n_per = len(periods)
+    letters = list(string.ascii_uppercase)
+    if panel_labels is None:
+        panel_labels = [f"({letters[k]}) {p:g} s"
+                        for k, p in enumerate(periods)]
+
+    # ── Reference label ───────────────────────────────────────────────────
+    if reference_label is _UNSET:
+        reference_label = f"Vector length  {reference_arrow}"
+
+    # ── Tipper per period ─────────────────────────────────────────────────
+    def _get_tip(period: float) -> Optional[np.ndarray]:
+        """Return (n_st, 2) complex tipper at *period*, or None."""
+        if tipper_data is not None:
+            # find nearest key
+            keys = np.array(list(tipper_data.keys()), float)
+            k    = int(np.argmin(np.abs(keys - period)))
+            arr  = np.asarray(tipper_data[keys[k]], complex)
+            if arr.shape[0] == n_st:
+                return arr
+        # fall back to EDI tipper
+        vecs: List[complex] = []
+        for i, ed in enumerate(all_items):
+            T, t, fr = _get_t_block(ed)
+            if T is None or t is None:
+                vecs.append(0.0 + 0.0j)
+                continue
+            per = 1.0 / fr
+            j   = _nearest_idx(per, np.array([float(period)]))[0]
+            vecs.append(t[j, 0] + 0.0j)   # Tx only (first component)
+        tx_arr  = np.array([v.real for v in vecs], float)
+        ty_arr  = np.zeros(n_st, float)    # no Ty if single component
+        return (tx_arr + 1j * ty_arr)[:, np.newaxis]   # fall-through
+
+    # ── Figure layout ─────────────────────────────────────────────────────
+    if figsize is _UNSET:
+        figsize = (panel_width, panel_height * n_per + 0.6)
+
+    fig = plt.figure(figsize=figsize)
+    gs  = gridspec.GridSpec(
+        n_per, 1,
+        figure=fig,
+        hspace=0.04,                   # minimal gap between panels
+        left=0.12, right=0.97,
+        top=0.95 if title else 0.97,
+        bottom=0.06,
+    )
+    axs = [fig.add_subplot(gs[k]) for k in range(n_per)]
+    # share axes
+    for ax in axs[1:]:
+        ax.sharex(axs[0])
+        ax.sharey(axs[0])
+
+    # ── Draw each panel ───────────────────────────────────────────────────
+    im_handle = None
+    for k, (period, ax) in enumerate(zip(periods, axs)):
+        # background
+        im = ax.imshow(
+            background,
+            extent=background_extent,
+            origin="lower",
+            cmap=background_cmap,
+            alpha=background_alpha,
+            vmin=bg_vmin, vmax=bg_vmax,
+            aspect="auto",
+            interpolation="bilinear",
+            zorder=1,
+        )
+        if im_handle is None:
+            im_handle = im
+
+        # station markers
+        if show_stations:
+            ax.scatter(xs, ys, marker="v", s=18, color="0.15",
+                       zorder=4, linewidths=0)
+            if station_labels:
+                for ki, (xi, yi) in enumerate(zip(xs, ys)):
+                    ax.annotate(st_names[ki], (xi, yi),
+                                xytext=(2, 3), textcoords="offset points",
+                                fontsize=5, color="0.25")
+
+        # induction vectors
+        tip_arr = _get_tip(period)        # (n_st, 2) or (n_st,)
+        if tip_arr is not None:
+            tip_arr = np.asarray(tip_arr, complex)
+            if tip_arr.ndim == 1:
+                tip_arr = tip_arr[:, np.newaxis]
+            for si in range(n_st):
+                tx = complex(tip_arr[si, 0])
+                ty = complex(tip_arr[si, 1]) if tip_arr.shape[1] > 1 else 0.0
+                if convention == "wiese":
+                    ux = -float(np.real(ty))
+                    uy =  float(np.real(tx))
+                else:   # Parkinson: real component
+                    ux = float(np.real(tx))
+                    uy = float(np.real(ty))
+                mag = np.hypot(ux, uy)
+                if mag < 1e-9:
+                    continue
+                ax.annotate(
+                    "",
+                    xy=(xs[si] + ux * arrow_scale,
+                        ys[si] + uy * arrow_scale),
+                    xytext=(xs[si], ys[si]),
+                    arrowprops=dict(
+                        arrowstyle="-|>",
+                        color=arrow_color,
+                        lw=arrow_lw,
+                        mutation_scale=9,
+                    ),
+                    zorder=5,
+                )
+
+        # reference arrow (first panel only)
+        if k == reference_panel:
+            rx  = background_extent[0] + (background_extent[1] -
+                                           background_extent[0]) * 0.05
+            ry  = background_extent[2] + (background_extent[3] -
+                                           background_extent[2]) * 0.80
+            ax.annotate(
+                "",
+                xy=(rx + reference_arrow * arrow_scale, ry),
+                xytext=(rx, ry),
+                arrowprops=dict(arrowstyle="-|>", color="black",
+                                lw=arrow_lw + 0.2, mutation_scale=11),
+                zorder=6,
+            )
+            ax.text(rx + reference_arrow * arrow_scale * 0.5,
+                    ry + (background_extent[3] - background_extent[2]) * 0.035,
+                    reference_label,
+                    ha="center", va="bottom", fontsize=7,
+                    color="black", fontweight="bold", zorder=6)
+
+        # geological / site annotations
+        if annotations:
+            for label, info in annotations.items():
+                if isinstance(info, (list, tuple)) and len(info) >= 2:
+                    ax_x, ax_y = float(info[0]), float(info[1])
+                    kw = info[2] if len(info) > 2 and isinstance(info[2], dict) else {}
+                    fc = kw.pop("color",     annotation_color)
+                    fs = kw.pop("fontsize",  annotation_fontsize)
+                    fw = kw.pop("fontweight", "bold")
+                    ax.text(ax_x, ax_y, label,
+                            color=fc, fontsize=fs, fontweight=fw,
+                            ha="center", va="center", zorder=7, **kw)
+
+        # panel label in lower-left corner
+        ax.text(
+            0.015, 0.06, panel_labels[k],
+            transform=ax.transAxes,
+            fontsize=9, color="white", fontweight="bold",
+            va="bottom", ha="left", zorder=8,
+            bbox=dict(boxstyle="round,pad=0.2", fc="black",
+                      alpha=0.55, ec="none"),
+        )
+
+        # clean ticks: only bottom panel keeps x labels
+        if k < n_per - 1:
+            plt.setp(ax.get_xticklabels(), visible=False)
+        ax.tick_params(labelsize=7)
+        ax.set_xlim(background_extent[0], background_extent[1])
+        ax.set_ylim(background_extent[2], background_extent[3])
+
+    # x-axis label on bottom panel only
+    axs[-1].set_xlabel("x  (m)", fontsize=8)
+    for ax in axs:
+        ax.set_ylabel("y  (m)", fontsize=8)
+
+    # ── Shared background colorbar ────────────────────────────────────────
+    if show_background_cbar and im_handle is not None:
+        bg_colorbar_side = str(bg_colorbar_side).lower()
+        if bg_colorbar_side not in {"right", "left", "top", "bottom"}:
+            msg = (
+                "bg_colorbar_side must be 'right', 'left', 'top', "
+                "or 'bottom'."
+            )
+            raise ValueError(msg)
+        vertical = bg_colorbar_side in {"right", "left"}
+        cbar = fig.colorbar(
+            im_handle,
+            ax=axs,
+            location=bg_colorbar_side,
+            shrink=0.75,
+            pad=0.04 if vertical else 0.08,
+            fraction=0.025,
+            aspect=30,
+        )
+        cbar.set_label(
+            bg_colorbar_label,
+            rotation=90 if vertical else 0,
+            labelpad=10,
+            fontsize=8,
+        )
+        cbar.ax.tick_params(labelsize=7)
+
+    if title:
+        fig.suptitle(title, fontsize=11, y=0.99)
+
+    return fig, np.array(axs)

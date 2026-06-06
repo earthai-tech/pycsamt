@@ -10,9 +10,39 @@ import pytest
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.collections import PathCollection
 
-from pycsamt.emtools.remove_noise import correct_static_shift
-from pycsamt.emtools.qc import plot_confidence_profile
+from pycsamt.emtools.remove_noise import (
+    apply_emap_filter,
+    confidence_gated_emap_filter,
+    correct_static_shift,
+    EMAPFilterResult,
+    emap_filter_report,
+    fixed_length_moving_average,
+    plot_emap_filter_profile,
+    plot_emap_filter_psection,
+    trimmed_moving_average,
+)
+from pycsamt.emtools.frequency import (
+    drop_low_confidence_frequencies,
+    edit_frequencies_by_confidence,
+    FrequencyEditResult,
+    frequency_edit_decision_table,
+    frequency_edit_report,
+    mask_low_confidence_frequencies,
+    plot_frequency_edit_decisions,
+    plot_frequency_edit_summary,
+    recover_low_confidence_frequencies,
+)
+from pycsamt.emtools.qc import (
+    frequency_confidence_table,
+    plot_confidence_band_summary,
+    plot_confidence_profile,
+    plot_frequency_confidence_psection,
+    plot_station_confidence_dashboard,
+    plot_station_confidence_spectrum,
+    station_confidence_table,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared fake-site infrastructure
@@ -96,7 +126,6 @@ class TestCorrectStaticShiftContract:
         assert isinstance(result, Sites)
 
     def test_returns_same_number_of_sites(self):
-        from pycsamt.site.base import Sites
         sites = _line_sites(4)
         result = correct_static_shift(sites)
         count = sum(1 for _ in result)
@@ -262,6 +291,192 @@ class TestCorrectStaticShiftDirection:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# EMAP-style FLMA/TMA spatial filters
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestEMAPSpatialFilters:
+
+    def _outlier_line(self, n=5, outlier_idx=2, outlier_rho=1600.0):
+        sites = []
+        for i in range(n):
+            rho = outlier_rho if i == outlier_idx else 100.0
+            sites.append(
+                _site(
+                    f"S{i:02d}",
+                    rho=rho,
+                    n=6,
+                    east=i * 200.0,
+                    north=0.0,
+                )
+            )
+        return sites
+
+    def _outlier_line_with_partial_row(self):
+        sites = self._outlier_line()
+        sites[2].Z.z[2, 0, 0] = np.nan
+        return sites
+
+    def _xy_mean(self, sites, station_index):
+        from pycsamt.emtools._core import _iter_items
+
+        items = list(_iter_items(sites))
+        z, _ = _z_freq(items[station_index])
+        return float(np.mean(np.abs(z[:, 0, 1])))
+
+    def test_fixed_length_moving_average_reduces_center_outlier(self):
+        sites = self._outlier_line()
+        before = self._xy_mean(sites, 2)
+
+        out = fixed_length_moving_average(
+            sites,
+            window=3,
+            component="offdiag",
+        )
+        after = self._xy_mean(out, 2)
+
+        assert after < before
+
+    def test_trimmed_moving_average_suppresses_isolated_outlier(self):
+        sites = self._outlier_line()
+        before = self._xy_mean(sites, 2)
+
+        out = trimmed_moving_average(
+            sites,
+            window=5,
+            component="xy",
+        )
+        after = self._xy_mean(out, 2)
+
+        assert after < before
+
+    def test_apply_emap_filter_dispatches_flma(self):
+        sites = self._outlier_line()
+        out = apply_emap_filter(
+            sites,
+            method="flma",
+            window=3,
+            component="xy",
+        )
+
+        assert out is not None
+
+    def test_apply_emap_filter_rejects_bad_method(self):
+        sites = self._outlier_line()
+
+        with pytest.raises(ValueError, match="method"):
+            apply_emap_filter(sites, method="unknown")
+
+    def test_confidence_gated_emap_filter_returns_result(self):
+        before = self._outlier_line_with_partial_row()
+        source = self._outlier_line_with_partial_row()
+
+        result = confidence_gated_emap_filter(
+            source,
+            before_sites=before,
+            method="flma",
+            confidence_method="presence",
+            component="xy",
+            ci_hi=0.90,
+            ci_lo=0.50,
+            window=3,
+        )
+
+        assert isinstance(result, EMAPFilterResult)
+        assert not result.report.empty
+        assert not result.decisions.empty
+        assert result.n_blended >= 1
+
+    def test_confidence_gated_emap_filter_preserves_high_confidence_rows(self):
+        before = self._outlier_line()
+        source = self._outlier_line()
+
+        result = confidence_gated_emap_filter(
+            source,
+            before_sites=before,
+            method="flma",
+            confidence_method="presence",
+            component="xy",
+            ci_hi=0.90,
+            ci_lo=0.50,
+            window=3,
+        )
+
+        assert result.n_preserved > 0
+        assert result.n_blended == 0
+        assert result.n_filtered == 0
+
+    def test_emap_filter_report_columns(self):
+        before = self._outlier_line()
+        source = self._outlier_line()
+        after = fixed_length_moving_average(
+            source,
+            window=3,
+            component="xy",
+        )
+
+        report = emap_filter_report(
+            before,
+            after,
+            component="xy",
+            frequency_hz=10.0,
+        )
+
+        expected = {
+            "station",
+            "component",
+            "n_matched_freq",
+            "median_delta_log10_abs_z",
+            "rms_delta_log10_abs_z",
+            "before_log10_abs_z",
+            "after_log10_abs_z",
+        }
+        assert expected.issubset(report.columns)
+        assert len(report) == 5
+
+    def test_plot_emap_filter_profile_uses_station_axis(self):
+        before = self._outlier_line()
+        source = self._outlier_line()
+        after = trimmed_moving_average(
+            source,
+            window=5,
+            component="xy",
+        )
+
+        ax = plot_emap_filter_profile(
+            before,
+            after,
+            method="tma",
+            component="xy",
+            frequency_hz=10.0,
+        )
+
+        assert ax.xaxis.get_label_position() == "top"
+        assert ax.get_legend() is not None
+        plt.close("all")
+
+    def test_plot_emap_filter_psection_returns_three_panels(self):
+        before = self._outlier_line()
+        source = self._outlier_line()
+        after = fixed_length_moving_average(
+            source,
+            window=3,
+            component="xy",
+        )
+
+        fig = plot_emap_filter_psection(
+            before,
+            after,
+            method="flma",
+            component="xy",
+        )
+
+        assert isinstance(fig, plt.Figure)
+        assert len(fig.axes) >= 3
+        assert fig.axes[0].xaxis.get_label_position() == "top"
+        plt.close("all")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # correct_static_shift — Hanning weight helper
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -387,11 +602,11 @@ class TestPlotConfidenceProfile:
         assert ax_out is ax_in
         plt.close("all")
 
-    def test_ylim_includes_zero_one(self):
+    def test_ylim_includes_thresholds(self):
         sites = self._sites_all_good()
         ax = plot_confidence_profile(sites)
         ylo, yhi = ax.get_ylim()
-        assert ylo <= 0.0
+        assert ylo <= 0.50
         assert yhi >= 1.0
         plt.close("all")
 
@@ -415,7 +630,8 @@ class TestPlotConfidenceProfile:
     def test_scatter_points_count(self):
         sites = self._sites_all_good(n=4)
         ax = plot_confidence_profile(sites)
-        colls = ax.collections
+        colls = [coll for coll in ax.collections
+                 if isinstance(coll, PathCollection)]
         n_pts = sum(len(c.get_offsets()) for c in colls)
         assert n_pts == 4
         plt.close("all")
@@ -462,4 +678,267 @@ class TestPlotConfidenceProfile:
         for coll in ax.collections:
             for x, y in coll.get_offsets():
                 assert 0.0 <= y <= 1.0
+        plt.close("all")
+
+    def test_composite_confidence_table_columns(self):
+        sites = self._sites_mixed()
+        tb = station_confidence_table(sites, method="composite")
+
+        expected = {
+            "station", "distance_m", "confidence", "coverage",
+            "confidence_err", "offdiag", "diagonal", "phase",
+            "spatial",
+        }
+        assert expected.issubset(tb.columns)
+        assert tb["confidence"].between(0.0, 1.0).all()
+        assert tb["confidence_err"].between(0.0, 1.0).all()
+
+    def test_composite_confidence_penalizes_bad_station(self):
+        sites = self._sites_mixed()
+        tb = station_confidence_table(sites, method="composite")
+        good = float(tb.loc[tb.station == "S_good", "confidence"].iloc[0])
+        bad = float(tb.loc[tb.station == "S_bad", "confidence"].iloc[0])
+
+        assert bad < good
+
+    def test_plot_confidence_profile_composite_method(self):
+        sites = self._sites_mixed()
+        ax = plot_confidence_profile(sites, method="composite")
+
+        assert "composite" in ax.get_title().lower()
+        assert ax.get_legend() is not None
+        plt.close("all")
+
+    def test_plot_confidence_profile_full_shade_mode(self):
+        sites = self._sites_mixed()
+        ax = plot_confidence_profile(sites, shade_mode="full")
+
+        assert len(ax.patches) > 0
+        plt.close("all")
+
+    def test_frequency_confidence_table_columns(self):
+        sites = self._sites_mixed()
+        tb = frequency_confidence_table(sites, method="composite")
+
+        expected = {
+            "station", "frequency_hz", "log10_period", "confidence",
+            "confidence_err", "coverage", "offdiag", "diagonal",
+            "phase", "spatial", "flags",
+        }
+        assert expected.issubset(tb.columns)
+        assert tb["confidence"].between(0.0, 1.0).all()
+
+    def test_frequency_confidence_table_has_one_row_per_sample(self):
+        sites = self._sites_mixed()
+        tb = frequency_confidence_table(sites, method="presence")
+
+        assert len(tb) == 30
+
+    def test_plot_frequency_confidence_psection(self):
+        sites = self._sites_mixed()
+        ax = plot_frequency_confidence_psection(sites, method="composite")
+
+        assert ax.images
+        assert ax.xaxis.get_label_position() == "top"
+        assert "frequency confidence" in ax.get_title().lower()
+        plt.close("all")
+
+    def test_plot_station_confidence_spectrum(self):
+        sites = self._sites_mixed()
+        ax = plot_station_confidence_spectrum(
+            sites,
+            station="S_partial",
+            method="composite",
+        )
+
+        assert "S_partial" in ax.get_title()
+        assert ax.get_legend() is not None
+        plt.close("all")
+
+    def test_plot_station_confidence_dashboard(self):
+        sites = self._sites_mixed()
+        fig = plot_station_confidence_dashboard(
+            sites,
+            station="S_partial",
+            method="composite",
+        )
+
+        assert isinstance(fig, plt.Figure)
+        assert len(fig.axes) == 6
+        plt.close("all")
+
+    def test_plot_confidence_band_summary(self):
+        sites = self._sites_mixed()
+        ax = plot_confidence_band_summary(sites, method="composite")
+
+        assert "period-band" in ax.get_title().lower()
+        assert ax.get_legend() is not None
+        plt.close("all")
+
+
+class TestConfidenceFrequencyEditing:
+
+    def _site_with_recoverable_rows(self):
+        fr = _freqs(6)
+        z = _make_z(fr, 100.0)
+        z[2, 0, 0] = np.nan
+        z[4] = np.nan
+        return [_FakeSite("S_edit", z, fr, east=0.0, north=0.0)]
+
+    def _first_z_block(self, sites):
+        from pycsamt.emtools._core import _get_z_block, _iter_items
+
+        ed = next(_iter_items(sites))
+        return _get_z_block(ed)
+
+    def test_mask_low_confidence_keeps_grid(self):
+        sites = self._site_with_recoverable_rows()
+        out = mask_low_confidence_frequencies(
+            sites,
+            method="presence",
+            threshold=0.80,
+        )
+        _, z, fr = self._first_z_block(out)
+
+        assert fr.size == 6
+        assert np.isnan(z[2]).any()
+        assert np.isnan(z[4]).all()
+
+    def test_drop_low_confidence_removes_bad_rows(self):
+        sites = self._site_with_recoverable_rows()
+        out = drop_low_confidence_frequencies(
+            sites,
+            method="presence",
+            threshold=0.80,
+        )
+        _, z, fr = self._first_z_block(out)
+
+        assert fr.size == 4
+        assert z.shape[0] == 4
+
+    def test_recover_low_confidence_interpolates_recoverable_rows(self):
+        sites = self._site_with_recoverable_rows()
+        out = recover_low_confidence_frequencies(
+            sites,
+            method="presence",
+            ci_hi=0.90,
+            ci_lo=0.50,
+            reject="mask",
+        )
+        _, z, fr = self._first_z_block(out)
+
+        assert fr.size == 6
+        assert np.isfinite(z[2]).all()
+        assert np.isnan(z[4]).all()
+
+    def test_recover_low_confidence_can_drop_rejected_rows(self):
+        sites = self._site_with_recoverable_rows()
+        out = recover_low_confidence_frequencies(
+            sites,
+            method="presence",
+            ci_hi=0.90,
+            ci_lo=0.50,
+            reject="drop",
+        )
+        _, z, fr = self._first_z_block(out)
+
+        assert fr.size == 5
+        assert z.shape[0] == 5
+
+    def test_frequency_edit_report_counts_changes(self):
+        before = self._site_with_recoverable_rows()
+        sites = self._site_with_recoverable_rows()
+        out = recover_low_confidence_frequencies(
+            sites,
+            method="presence",
+            ci_hi=0.90,
+            ci_lo=0.50,
+            reject="drop",
+        )
+        report = frequency_edit_report(before, out, method="presence")
+
+        row = report.iloc[0]
+        assert int(row["n_freq_before"]) == 6
+        assert int(row["n_freq_after"]) == 5
+        assert int(row["n_dropped"]) == 1
+
+    def test_frequency_edit_decision_table_marks_recovery_and_drop(self):
+        before = self._site_with_recoverable_rows()
+        sites = self._site_with_recoverable_rows()
+        out = recover_low_confidence_frequencies(
+            sites,
+            method="presence",
+            ci_hi=0.90,
+            ci_lo=0.50,
+            reject="drop",
+        )
+        decisions = frequency_edit_decision_table(
+            before,
+            out,
+            method="presence",
+        )
+
+        actions = set(decisions["action"])
+        assert "recovered" in actions
+        assert "dropped" in actions
+
+    def test_edit_frequencies_by_confidence_returns_result(self):
+        before = self._site_with_recoverable_rows()
+        sites = self._site_with_recoverable_rows()
+        result = edit_frequencies_by_confidence(
+            sites,
+            before_sites=before,
+            mode="recover",
+            method="presence",
+            ci_hi=0.90,
+            ci_lo=0.50,
+            reject="drop",
+        )
+
+        assert isinstance(result, FrequencyEditResult)
+        assert not result.report.empty
+        assert not result.decisions.empty
+        assert result.n_dropped == 1
+        assert result.n_recovered >= 1
+
+    def test_edit_frequencies_by_confidence_rejects_bad_mode(self):
+        sites = self._site_with_recoverable_rows()
+
+        with pytest.raises(ValueError, match="mode"):
+            edit_frequencies_by_confidence(
+                sites,
+                mode="unknown",
+                method="presence",
+            )
+
+    def test_plot_frequency_edit_summary(self):
+        before = self._site_with_recoverable_rows()
+        sites = self._site_with_recoverable_rows()
+        out = mask_low_confidence_frequencies(
+            sites,
+            method="presence",
+            threshold=0.80,
+        )
+        ax = plot_frequency_edit_summary(before, out, method="presence")
+
+        assert "frequency edit" in ax.get_title().lower()
+        assert ax.xaxis.get_label_position() == "top"
+        assert ax.get_legend() is not None
+        plt.close("all")
+
+    def test_plot_frequency_edit_decisions(self):
+        before = self._site_with_recoverable_rows()
+        sites = self._site_with_recoverable_rows()
+        out = recover_low_confidence_frequencies(
+            sites,
+            method="presence",
+            ci_hi=0.90,
+            ci_lo=0.50,
+            reject="drop",
+        )
+        ax = plot_frequency_edit_decisions(before, out, method="presence")
+
+        assert ax.images
+        assert "decisions" in ax.get_title().lower()
+        assert ax.xaxis.get_label_position() == "top"
         plt.close("all")

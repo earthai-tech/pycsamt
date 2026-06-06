@@ -18,6 +18,7 @@ API reference
    z
    site
    forward
+   inversion
    models
    ai
    interp

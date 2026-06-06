@@ -80,6 +80,21 @@ from .hydro      import (
     HydroInterpreter,
     HydroUnit,
 )
+from .hydromodel import (
+    EMHydroModel,
+    EMHydroResult,
+    PetrophysicalConfig,
+)
+from .constraints import (
+    ConstrainedCalibrator,
+    ECConstraint,
+    PumpingTestConstraint,
+    SlugTestConstraint,
+    WaterLevelConstraint,
+)
+from .timelapse  import TimeLapseEM, assert_compatible_grids
+from .fusion       import MultiMethodEMModel, FusionDiagnostics
+from .uncertainty  import UncertaintyBounds, UncertaintyResult, MonteCarloHydro
 from .lithology  import RockDatabase, RockEntry, Layer, StratigraphicLog
 from .           import export
 from .           import plot
@@ -90,13 +105,33 @@ __all__ = [
     # borehole
     "Borehole",
     "Interval",
-    # calibration
+    # calibration (geological)
     "ModelCalibrator",
-    # hydrogeology
+    # qualitative hydrogeology
     "AquiferZone",
     "HydroGeophysicalModel",
     "HydroInterpreter",
     "HydroUnit",
+    # quantitative hydro-geophysics
+    "PetrophysicalConfig",
+    "EMHydroModel",
+    "EMHydroResult",
+    # field-measurement constraints
+    "ConstrainedCalibrator",
+    "WaterLevelConstraint",
+    "PumpingTestConstraint",
+    "SlugTestConstraint",
+    "ECConstraint",
+    # time-lapse monitoring
+    "TimeLapseEM",
+    "assert_compatible_grids",
+    # multi-method fusion
+    "MultiMethodEMModel",
+    "FusionDiagnostics",
+    # uncertainty quantification
+    "UncertaintyBounds",
+    "UncertaintyResult",
+    "MonteCarloHydro",
     # lithology
     "RockDatabase",
     "RockEntry",

@@ -50,12 +50,17 @@ from pycsamt.forward import (
     MT1DForward, CSAMT1DForward, TEM1DForward,
     LayeredModel, GEOLOGY_PRIORS,
     Grid2D, MT2DForward,
+    Grid3D, MT3DForward,
     plot_response_1d,
     plot_model_1d,
     plot_response_and_model_1d,
     plot_model_2d,
     plot_pseudosection_2d,
     plot_response_profiles,
+    plot_model_3d,
+    plot_response_map_3d,
+    plot_response_section_3d,
+    plot_tensor_components_3d,
 )
 from pycsamt.api.style   import use_style, reset_style, configure_style
 from pycsamt.api.control import PYCSAMT_CONTROL, configure_control
@@ -415,6 +420,119 @@ save(
     "Fig 23 — PYCSAMT_CONTROL: period axis  (geothermal model)",
 )
 configure_control(x__view="log10_period")   # restore
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Section 5 — 3-D quasi-3D forward gallery
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n── Section 5 — 3-D forward gallery ──")
+
+FREQS_3D = np.logspace(0, 3, 12)   # 1 Hz – 1 kHz
+
+# ── Build two 3-D models ─────────────────────────────────────────────────────
+# Halfspace: validation baseline
+G3_HALF = Grid3D.halfspace(
+    rho=100.0, nx=8, ny=8, nz=6,
+    x_max=4_000.0, y_max=4_000.0, z_max=2_000.0,
+    n_pad=3, nx_stations=4, ny_stations=4,
+    name="halfspace-3D",
+)
+
+# 3-D conductive block embedded in a resistive background
+G3_BLOCK = Grid3D.block_anomaly(
+    bg_rho=500.0, anomaly_rho=5.0,
+    bounds=(1_200.0, 2_800.0, 1_200.0, 2_800.0, 300.0, 1_200.0),
+    nx=8, ny=8, nz=6,
+    x_max=4_000.0, y_max=4_000.0, z_max=2_000.0,
+    n_pad=3, nx_stations=4, ny_stations=4,
+    name="block-anomaly-3D",
+)
+
+# ── Fig 24 — 3-D halfspace model slices ──────────────────────────────────────
+save(
+    plot_model_3d(G3_HALF,
+                  title="3-D halfspace model  (100 Ω·m)"),
+    "fig_fwd24_model_3d_halfspace.png",
+    "Fig 24 — 3-D model slices  (uniform halfspace)",
+)
+
+# ── Fig 25 — 3-D block-anomaly model slices ───────────────────────────────────
+save(
+    plot_model_3d(G3_BLOCK,
+                  title="3-D block-anomaly model  (500/5 Ω·m)"),
+    "fig_fwd25_model_3d_block.png",
+    "Fig 25 — 3-D model slices  (conductive block anomaly)",
+)
+
+# ── Run quasi-3D forward ──────────────────────────────────────────────────────
+print("  running quasi-3D forward (halfspace)…")
+R3_HALF  = MT3DForward(FREQS_3D, G3_HALF,  verbose=False).run()
+print("  running quasi-3D forward (block anomaly)…")
+R3_BLOCK = MT3DForward(FREQS_3D, G3_BLOCK, verbose=False).run()
+
+# ── Fig 26 — map-view ρ_a  (halfspace, Z_xy) ─────────────────────────────────
+save(
+    plot_response_map_3d(R3_HALF, freq_idx=0, component="xy",
+                         title=r"Halfspace — map  $\rho_a$  [Z_XY]  (T = 1 s)"),
+    "fig_fwd26_map_3d_halfspace.png",
+    r"Fig 26 — quasi-3D map view  $\rho_a$  (halfspace)",
+)
+
+# ── Fig 27 — map-view ρ_a  (block anomaly, Z_xy) ─────────────────────────────
+save(
+    plot_response_map_3d(R3_BLOCK, freq_idx=4, component="xy",
+                         title=r"Block anomaly — map  $\rho_a$  [Z_XY]"),
+    "fig_fwd27_map_3d_block_rho.png",
+    r"Fig 27 — quasi-3D map view  $\rho_a$  (conductive block)",
+)
+
+# ── Fig 28 — map-view phase  (block anomaly, Z_xy) ────────────────────────────
+save(
+    plot_response_map_3d(R3_BLOCK, freq_idx=4, component="xy",
+                         quantity="phase",
+                         title=r"Block anomaly — map phase  [Z_XY]"),
+    "fig_fwd28_map_3d_block_phase.png",
+    r"Fig 28 — quasi-3D map view  phase  (conductive block)",
+)
+
+# ── Fig 29 — pseudo-section  (halfspace, Z_xy) ────────────────────────────────
+save(
+    plot_response_section_3d(R3_HALF, component="xy",
+                              title=r"Halfspace — 3-D pseudo-section  $\rho_a$  [Z_XY]"),
+    "fig_fwd29_psection_3d_halfspace.png",
+    r"Fig 29 — quasi-3D pseudo-section  $\rho_a$  (halfspace)",
+)
+
+# ── Fig 30 — pseudo-section  (block anomaly, Z_xy) ────────────────────────────
+save(
+    plot_response_section_3d(R3_BLOCK, component="xy", n_contours=4,
+                              title=r"Block anomaly — 3-D pseudo-section  $\rho_a$  [Z_XY]"),
+    "fig_fwd30_psection_3d_block.png",
+    r"Fig 30 — quasi-3D pseudo-section  $\rho_a$  (conductive block)",
+)
+
+# ── Fig 31 — pseudo-section phase  (block anomaly, Z_yx) ──────────────────────
+save(
+    plot_response_section_3d(R3_BLOCK, component="yx", quantity="phase",
+                              title=r"Block anomaly — pseudo-section phase  [Z_YX]"),
+    "fig_fwd31_psection_3d_block_phase.png",
+    r"Fig 31 — quasi-3D pseudo-section  phase  Z_YX  (block anomaly)",
+)
+
+# ── Fig 32 — full tensor 2×2 map panel  (block anomaly) ──────────────────────
+save(
+    plot_tensor_components_3d(R3_BLOCK, freq_idx=4,
+                               title=r"Block anomaly — full impedance tensor  $\rho_a$"),
+    "fig_fwd32_tensor_3d_block.png",
+    r"Fig 32 — quasi-3D full tensor components  $\rho_a$  (block anomaly)",
+)
+
+# ── Fig 33 — full tensor phase panel  (block anomaly) ────────────────────────
+save(
+    plot_tensor_components_3d(R3_BLOCK, freq_idx=4, quantity="phase",
+                               title="Block anomaly — full impedance tensor  phase"),
+    "fig_fwd33_tensor_3d_block_phase.png",
+    "Fig 33 — quasi-3D full tensor components  phase  (block anomaly)",
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n" + "━" * 64)

@@ -36,9 +36,12 @@ _DEMO_DIR = os.path.dirname(os.path.abspath(__file__))
 _ROOT      = os.path.dirname(os.path.dirname(_DEMO_DIR))
 sys.path.insert(0, _ROOT)
 
-DATA_ROOT  = os.path.join(_ROOT, "data", "AMT", "WILLY_DATA")
-OUT_DIR    = os.path.join(_DEMO_DIR, "figures", "emtools")
-os.makedirs(OUT_DIR, exist_ok=True)
+DATA_ROOT   = os.path.join(_ROOT, "data", "AMT", "WILLY_DATA")
+OUT_DIR     = os.path.join(_DEMO_DIR, "figures", "emtools")
+TIPPER_DIR  = os.path.join(_ROOT, "data", "AMT", "TIPPER")
+TIPPER_OUT  = os.path.join(_DEMO_DIR, "figures", "tipper")
+os.makedirs(OUT_DIR,    exist_ok=True)
+os.makedirs(TIPPER_OUT, exist_ok=True)
 
 # ── emtools imports ─────────────────────────────────────────────────────────
 from pycsamt.emtools._core       import ensure_sites, _iter_items, _name
@@ -50,8 +53,18 @@ from pycsamt.emtools.qc          import (
     plot_station_confidence_dashboard,
 )
 from pycsamt.emtools.frequency   import (
+    edit_frequencies_by_confidence,
     plot_coverage_quality_heatmap,
     plot_apparent_depth_psection,
+    plot_frequency_edit_decisions,
+    plot_frequency_edit_summary,
+)
+from pycsamt.emtools.remove_noise import (
+    apply_emap_filter,
+    confidence_gated_emap_filter,
+    emap_filter_report,
+    plot_emap_filter_profile,
+    plot_emap_filter_psection,
 )
 from pycsamt.emtools.impedance   import plot_phasor_wheel, plot_determinant_track
 from pycsamt.emtools.tensor      import (
@@ -74,6 +87,16 @@ from pycsamt.emtools.strike         import (
     plot_strike_ribbon,
     plot_strike_profile,
     plot_strike_mapsticks,
+    plot_strike_analysis,
+)
+from pycsamt.emtools.tf             import (
+    plot_tipper_hodograms,
+    plot_tipper_polar,
+    plot_induction_arrows,
+    plot_induction_map,
+    plot_induction_section,
+    plot_induction_convention,
+    plot_induction_rose,
 )
 from pycsamt.emtools.plot           import plot_raw_sites_1d
 from pycsamt.api.control            import PYCSAMT_CONTROL
@@ -100,6 +123,7 @@ print("━" * 62)
 print("\nLoading EDI data …")
 
 L22   = ensure_sites(os.path.join(DATA_ROOT, "L22PLT"))       # 25 stations, AMT
+L22_PATH = os.path.join(DATA_ROOT, "L22PLT")
 
 # All 5 lines (128 stations) with explicit line groups for multi-line plots
 S_all = ensure_sites(DATA_ROOT, recursive=True)
@@ -184,6 +208,136 @@ save(
     ),
     "fig03e_station_confidence_dashboard.png",
     "Fig 03e — Frequency-confidence dashboard  (22-14BF)",
+)
+
+# Frequency confidence editing demo.  Separate loads keep the unedited
+# baseline independent from the edited source objects.
+L22_edit_before = ensure_sites(L22_PATH)
+L22_edit_source = ensure_sites(L22_PATH)
+frequency_edit = edit_frequencies_by_confidence(
+    L22_edit_source,
+    before_sites=L22_edit_before,
+    mode="recover",
+    method="composite",
+    ci_hi=0.90,
+    ci_lo=0.50,
+    reject="drop",
+)
+frequency_edit.report.to_csv(
+    os.path.join(OUT_DIR, "table03f_frequency_edit_report.csv"),
+    index=False,
+)
+frequency_edit.decisions.to_csv(
+    os.path.join(OUT_DIR, "table03g_frequency_edit_decisions.csv"),
+    index=False,
+)
+print("  ✔  table03f_frequency_edit_report.csv")
+print("  ✔  table03g_frequency_edit_decisions.csv")
+
+save(
+    plot_frequency_edit_summary(
+        L22_edit_before,
+        frequency_edit.sites,
+        method="composite",
+        ci_hi=0.90,
+        ci_lo=0.50,
+        figsize=(10, 4.0),
+    ),
+    "fig03f_frequency_edit_summary.png",
+    "Fig 03f — Frequency confidence edit summary  (L22PLT)",
+)
+
+save(
+    plot_frequency_edit_decisions(
+        L22_edit_before,
+        frequency_edit.sites,
+        method="composite",
+        ci_hi=0.90,
+        ci_lo=0.50,
+        figsize=(12, 4.8),
+    ),
+    "fig03g_frequency_edit_decisions.png",
+    "Fig 03g — Frequency confidence edit decisions  (L22PLT)",
+)
+
+L22_emap_before = ensure_sites(L22_PATH)
+L22_emap_source = ensure_sites(L22_PATH)
+L22_flma = apply_emap_filter(
+    L22_emap_source,
+    method="flma",
+    window=5,
+    component="xy",
+)
+emap_report = emap_filter_report(
+    L22_emap_before,
+    L22_flma,
+    component="xy",
+    period_s=0.01,
+)
+emap_report.to_csv(
+    os.path.join(OUT_DIR, "table03h_emap_flma_report.csv"),
+    index=False,
+)
+print("  ✔  table03h_emap_flma_report.csv")
+
+save(
+    plot_emap_filter_profile(
+        L22_emap_before,
+        L22_flma,
+        method="flma",
+        component="xy",
+        period_s=0.01,
+        figsize=(10.5, 4.0),
+    ),
+    "fig03h_emap_flma_profile.png",
+    "Fig 03h — EMAP FLMA station profile  (L22PLT)",
+)
+
+save(
+    plot_emap_filter_psection(
+        L22_emap_before,
+        L22_flma,
+        method="flma",
+        component="xy",
+        figsize=(11.5, 8.2),
+    ),
+    "fig03i_emap_flma_psection.png",
+    "Fig 03i — EMAP FLMA pseudo-section comparison  (L22PLT)",
+)
+
+L22_gated_before = ensure_sites(L22_PATH)
+L22_gated_source = ensure_sites(L22_PATH)
+gated_emap = confidence_gated_emap_filter(
+    L22_gated_source,
+    before_sites=L22_gated_before,
+    method="flma",
+    confidence_method="composite",
+    component="xy",
+    window=5,
+    ci_hi=0.90,
+    ci_lo=0.50,
+)
+gated_emap.report.to_csv(
+    os.path.join(OUT_DIR, "table03j_emap_gated_report.csv"),
+    index=False,
+)
+gated_emap.decisions.to_csv(
+    os.path.join(OUT_DIR, "table03k_emap_gated_decisions.csv"),
+    index=False,
+)
+print("  ✔  table03j_emap_gated_report.csv")
+print("  ✔  table03k_emap_gated_decisions.csv")
+
+save(
+    plot_emap_filter_psection(
+        L22_gated_before,
+        gated_emap.sites,
+        method="confidence-gated FLMA",
+        component="xy",
+        figsize=(11.5, 8.2),
+    ),
+    "fig03j_emap_gated_flma_psection.png",
+    "Fig 03j — Confidence-gated EMAP FLMA pseudo-section  (L22PLT)",
 )
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -463,6 +617,164 @@ save(
 )
 
 # ────────────────────────────────────────────────────────────────────────────
+# Section 9 — Tipper / induction-arrow analysis  (HBH03_IMP.edi)
+# ────────────────────────────────────────────────────────────────────────────
+print("\n── Section 9 — Tipper & induction-arrow analysis ──")
+
+TIPPER_EDI = os.path.join(TIPPER_DIR, "HBH03_IMP.edi")
+S_tip = ensure_sites(TIPPER_EDI)
+N_TIP = 0
+
+def save_tip(obj, name: str, title: str = "") -> None:
+    global N_TIP
+    fig = obj if isinstance(obj, plt.Figure) else obj.get_figure()
+    path = os.path.join(TIPPER_OUT, name)
+    fig.savefig(path, dpi=DPI, bbox_inches="tight")
+    plt.close(fig)
+    N_TIP += 1
+    print(f"  ✔  tipper/{name}")
+
+
+# T01 — Tipper hodograms: real and imaginary vectors per period band
+save_tip(
+    plot_tipper_hodograms(
+        S_tip,
+        n_bands  = 4,
+        normalize = False,
+        figsize  = (10, 8),
+    ),
+    "fig_t01_tipper_hodograms.png",
+    "Fig T01 — Tipper hodograms by period band  (HBH03)",
+)
+
+# T02 — Tipper polar: magnitude vs azimuth for each frequency
+save_tip(
+    plot_tipper_polar(
+        S_tip,
+        component = "real",
+        cmap      = "plasma",
+        figsize   = (6, 6),
+    ),
+    "fig_t02_tipper_polar_real.png",
+    "Fig T02 — Tipper polar magnitude (real)  (HBH03)",
+)
+
+save_tip(
+    plot_tipper_polar(
+        S_tip,
+        component = "imag",
+        cmap      = "viridis",
+        figsize   = (6, 6),
+    ),
+    "fig_t02b_tipper_polar_imag.png",
+    "Fig T02b — Tipper polar magnitude (imaginary)  (HBH03)",
+)
+
+# T03 — Induction arrows section at representative periods
+save_tip(
+    plot_induction_arrows(
+        S_tip,
+        periods  = [1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 5e-1],
+        scale    = 2.0,
+        figsize  = (11, 4.5),
+    ),
+    "fig_t03_induction_arrows.png",
+    "Fig T03 — Induction arrows section  (HBH03)",
+)
+
+# T04 — Induction map at a single representative period
+save_tip(
+    plot_induction_map(
+        S_tip,
+        period  = 0.01,
+        scale   = 0.5,
+        figsize = (7, 5),
+    ),
+    "fig_t04_induction_map.png",
+    "Fig T04 — Induction arrow map  (HBH03, T=0.01 s)",
+)
+
+# T05 — Tipper magnitude section vs period
+save_tip(
+    plot_induction_section(
+        S_tip,
+        component = "real",
+        n_periods = 20,
+        figsize   = (9, 4.5),
+    ),
+    "fig_t05_induction_section.png",
+    "Fig T05 — Tipper section (real component)  (HBH03)",
+)
+
+# T06 — Induction convention diagram (returns 2×2 axes array)
+_conv_axs = plot_induction_convention(
+    S_tip,
+    period  = 0.01,
+    figsize = (10, 8),
+)
+save_tip(
+    _conv_axs.flat[0].get_figure(),
+    "fig_t06_induction_convention.png",
+    "Fig T06 — Induction arrow convention  (HBH03, T=0.01 s)",
+)
+
+# T07 — Rose diagram of induction arrow azimuths (real component)
+save_tip(
+    plot_induction_rose(
+        S_tip,
+        component = "real",
+        nbins     = 36,
+        figsize   = (5.5, 5.5),
+    ),
+    "fig_t07_induction_rose_real.png",
+    "Fig T07 — Induction rose (real)  (HBH03, all periods)",
+)
+
+# T08 — Rose diagram of induction arrow azimuths (imaginary component)
+save_tip(
+    plot_induction_rose(
+        S_tip,
+        component = "imag",
+        nbins     = 36,
+        figsize   = (5.5, 5.5),
+    ),
+    "fig_t08_induction_rose_imag.png",
+    "Fig T08 — Induction rose (imaginary)  (HBH03, all periods)",
+)
+
+# T09 — Combined Strike(Z) / PT Azimuth / Tipper Strike analysis
+save_tip(
+    plot_strike_analysis(
+        S_tip,
+        style   = "pycsamt",
+        method  = "sweep",
+        bins    = 36,
+        suptitle = "Strike Analysis — HBH03  (Z | PT Azimuth | Tipper)",
+        subplot_size = 4.0,
+    ),
+    "fig_t09_strike_analysis.png",
+    "Fig T09 — Strike analysis rose (Z / PT / Tipper)  (HBH03)",
+)
+
+# T10 — Strike analysis with short-period band only
+save_tip(
+    plot_strike_analysis(
+        S_tip,
+        style   = "pycsamt",
+        method  = "sweep",
+        band    = (1e-4, 1e-2),
+        bins    = 36,
+        suptitle = "Strike Analysis — HBH03  (T = 0.1–10 ms)",
+        subplot_size = 4.0,
+    ),
+    "fig_t10_strike_analysis_shortband.png",
+    "Fig T10 — Strike analysis: short-period band  (HBH03)",
+)
+
+print(f"\n  {N_TIP} tipper figures saved → {TIPPER_OUT}")
+
+# ────────────────────────────────────────────────────────────────────────────
 print("\n" + "━" * 62)
-print(f"  {N_FIGURES} figures saved →  {OUT_DIR}")
+print(f"  {N_FIGURES} emtools figures saved →  {OUT_DIR}")
+print(f"  {N_TIP} tipper  figures saved →  {TIPPER_OUT}")
 print("━" * 62)

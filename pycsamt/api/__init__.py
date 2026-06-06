@@ -1,4 +1,45 @@
 """Public API helpers shared across pyCSAMT packages."""
+from .agents import (
+    AGENT_CONFIG,
+    AgentConfig,
+    BudgetExceededError,
+    configure_agents,
+    reset_agents,
+)
+from .cli import (
+    BuildConfig,
+    LogConfig,
+    OutputConfig,
+    PYCSAMT_CLI,
+    PyCSAMTCLI,
+    configure_cli,
+    reset_cli,
+    # shared option decorators
+    common_options,
+    format_option,
+    n_jobs_option,
+    no_cache_option,
+    no_color_option,
+    output_dir_option,
+    overwrite_option,
+    verbose_option,
+    # custom param types
+    EDIDir,
+    EDIPath,
+    FreqRange,
+    StationList,
+)
+
+from .interp import (
+    PYCSAMT_INTERP,
+    HydroProfileStyle,
+    HydroSectionStyle,
+    InterpStyle,
+    PyCSAMTInterp,
+    configure_interp,
+    reset_interp,
+    use_interp,
+)
 
 from .control import (
     PYCSAMT_CONTROL,
@@ -11,6 +52,24 @@ from .control import (
     wrap_phase,
 )
 from .property import MetadataMixin, PyCSAMTObject
+from .section import (
+    PYCSAMT_SECTION,
+    PyCSAMTSection,
+    SectionAxisStyle,
+    SectionColorbarStyle,
+    SectionFigureStyle,
+    SectionStyle,
+    configure_section,
+    reset_section,
+)
+from .station import (
+    PYCSAMT_STATION_RENDERING,
+    PyCSAMTStationRendering,
+    StationAxisStyle,
+    StationMarkerStyle,
+    configure_station_rendering,
+    reset_station_rendering,
+)
 from .style import (
     PYCSAMT_STYLE,
     CorrectionStyle,
@@ -37,8 +96,23 @@ from .plot import (
 )
 
 __all__ = [
+    # agent LLM config
+    "AGENT_CONFIG",
+    "AgentConfig",
+    "BudgetExceededError",
+    "configure_agents",
+    "reset_agents",
     "MetadataMixin",
     "PyCSAMTObject",
+    # interp API
+    "PYCSAMT_INTERP",
+    "PyCSAMTInterp",
+    "HydroSectionStyle",
+    "HydroProfileStyle",
+    "InterpStyle",
+    "configure_interp",
+    "reset_interp",
+    "use_interp",
     # control API
     "FrequencyAxisControl",
     "PYCSAMT_CONTROL",
@@ -48,6 +122,22 @@ __all__ = [
     "configure_control",
     "reset_control",
     "wrap_phase",
+    # section API
+    "PYCSAMT_SECTION",
+    "PyCSAMTSection",
+    "SectionAxisStyle",
+    "SectionColorbarStyle",
+    "SectionFigureStyle",
+    "SectionStyle",
+    "configure_section",
+    "reset_section",
+    # station rendering API
+    "PYCSAMT_STATION_RENDERING",
+    "PyCSAMTStationRendering",
+    "StationAxisStyle",
+    "StationMarkerStyle",
+    "configure_station_rendering",
+    "reset_station_rendering",
     # style API
     "PyCSAMTStyle",
     "MultilineStyle",
@@ -70,4 +160,26 @@ __all__ = [
     "reset_plot_config",
     "load_plot_config",
     "write_default_config",
+    # CLI configuration API
+    "BuildConfig",
+    "LogConfig",
+    "OutputConfig",
+    "PYCSAMT_CLI",
+    "PyCSAMTCLI",
+    "configure_cli",
+    "reset_cli",
+    # CLI option decorators
+    "common_options",
+    "format_option",
+    "n_jobs_option",
+    "no_cache_option",
+    "no_color_option",
+    "output_dir_option",
+    "overwrite_option",
+    "verbose_option",
+    # CLI param types
+    "EDIDir",
+    "EDIPath",
+    "FreqRange",
+    "StationList",
 ]

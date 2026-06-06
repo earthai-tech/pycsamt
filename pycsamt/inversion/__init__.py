@@ -23,26 +23,65 @@ Examples
 
 from .config import InversionConfig
 from .data import EMData
-from .mesh import InversionMesh
+from .mesh import (
+    InversionMesh,
+    build_1d_tensor_mesh,
+    build_3d_tensor_mesh,
+    build_fd2d_grid,
+    core_rho_from_start,
+    depth_widths,
+)
 from .model import ReferenceModel, StartingModel
-from .regularization import Regularization
-from .results import InversionResult
+from .objective import (
+    ErrorModel,
+    component_errors,
+    component_mask,
+    error_model_from_config,
+)
+from .regularization import (
+    Regularization,
+    pygimli_lambda,
+    regularization_from_config,
+    regularization_residual,
+    regularization_weight,
+)
+from .results import InversionHistory, InversionResult, InversionUncertainty
 from .workflow import InversionWorkflow, run_inversion
 from .backends import available_backends, get_backend
+from .mt import MT1DInversion, MT2DInversion, MT3DInversion, SimPEGMT3DInversion
 from . import export, plot
 
 __all__ = [
     "EMData",
+    "ErrorModel",
+    "InversionHistory",
     "InversionConfig",
     "InversionMesh",
     "InversionResult",
+    "InversionUncertainty",
     "InversionWorkflow",
     "ReferenceModel",
     "Regularization",
     "StartingModel",
     "available_backends",
+    "MT1DInversion",
+    "MT2DInversion",
+    "MT3DInversion",
+    "SimPEGMT3DInversion",
+    "build_1d_tensor_mesh",
+    "build_3d_tensor_mesh",
+    "build_fd2d_grid",
+    "component_errors",
+    "component_mask",
+    "core_rho_from_start",
+    "depth_widths",
+    "error_model_from_config",
     "export",
     "get_backend",
     "plot",
+    "pygimli_lambda",
+    "regularization_from_config",
+    "regularization_residual",
+    "regularization_weight",
     "run_inversion",
 ]

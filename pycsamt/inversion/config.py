@@ -16,6 +16,8 @@ from ..models.config_io import (
     write_config_template,
 )
 
+from .doc import _inversion_examples, _inversion_param_docs
+
 __all__ = ["InversionConfig"]
 
 
@@ -221,3 +223,49 @@ class InversionConfig(PyCSAMTObject, MetadataMixin):
         return cls(**read_config_file(path, cls, strict=strict))
 
     read = from_file
+
+
+InversionConfig.__doc__ = """
+Source-of-truth configuration for :mod:`pycsamt.inversion`.
+
+Parameters
+----------
+{method}
+{dimension}
+{backend}
+{data}
+{workdir}
+{n_layers}
+{starting_model}
+{reference_model}
+{error_floor}
+{include_phase}
+{phase_error}
+{regularization}
+{max_iter}
+{tol}
+{bounds}
+{run_external}
+{backend_options}
+
+{examples}
+""".format(
+    method=_inversion_param_docs.common.method,
+    dimension=_inversion_param_docs.common.dimension,
+    backend=_inversion_param_docs.common.backend,
+    data=_inversion_param_docs.common.data,
+    workdir=_inversion_param_docs.common.workdir,
+    n_layers=_inversion_param_docs.model.n_layers,
+    starting_model=_inversion_param_docs.model.starting_model,
+    reference_model=_inversion_param_docs.model.reference_model,
+    error_floor=_inversion_param_docs.errors.error_floor,
+    include_phase=_inversion_param_docs.errors.include_phase,
+    phase_error=_inversion_param_docs.errors.phase_error,
+    regularization=_inversion_param_docs.model.regularization,
+    max_iter=_inversion_param_docs.solver.max_iter,
+    tol=_inversion_param_docs.solver.tol,
+    bounds=_inversion_param_docs.solver.bounds,
+    run_external=_inversion_param_docs.solver.run_external,
+    backend_options=_inversion_param_docs.common.backend_options,
+    examples=_inversion_examples.mt1d,
+)

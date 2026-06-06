@@ -3,16 +3,16 @@
 # License: LGPL-3.0
 """SimPEG backend for physics-based EM inversion.
 
-The implementation keeps SimPEG optional and imports it only when this
-backend is selected. The supported first target is natural-source 1-D
-MT/AMT/CSAMT inversion using SimPEG's ``natural_source`` module. Profile
-data are handled as stitched station-by-station 1-D inversions so the
-result still converts into :class:`pycsamt.interp.ResistivityModel`.
+SimPEG is optional and imported only when this backend is selected. The
+backend wraps SimPEG's natural-source electromagnetic API for MT, AMT, and
+CSAMT inversion. It supports 1-D soundings, stitched station-by-station 2-D
+profiles, and a 3-D primary-secondary natural-source path when the installed
+SimPEG version exposes the required classes.
 
-The code follows the documented SimPEG natural-source API: 1-D simulations
-use ``Simulation1DElectricField``; MT observations are represented by
-``PointNaturalSource`` receivers with ``apparent_resistivity`` and
-``phase`` components; frequencies are represented by ``Planewave`` sources.
+The model parameter is log conductivity on SimPEG mesh cells. PyCSAMT converts
+user-facing layered resistivity starting models into log-conductivity cells,
+runs the inversion, and converts recovered models back to resistivity-oriented
+``InversionResult`` payloads.
 """
 
 from __future__ import annotations
@@ -24,9 +24,10 @@ import numpy as np
 
 from ..base import BaseInversionBackend
 from ..data import EMData
-from ..mesh import InversionMesh
+from ..mesh import InversionMesh, build_1d_tensor_mesh, build_3d_tensor_mesh
 from ..model import StartingModel
-from ..objective import weighted_rms
+from ..objective import component_errors, component_mask, weighted_rms
+from ..regularization import regularization_from_config
 from ..results import InversionResult
 
 __all__ = ["SimPEGBackend"]
@@ -47,8 +48,6 @@ class _SimPEGModules:
 
 
 class SimPEGBackend(BaseInversionBackend):
-    """Run optional SimPEG natural-source EM inversions."""
-
     name = "simpeg"
     supports = (
         ("mt", "1d"),
@@ -63,6 +62,50 @@ class SimPEGBackend(BaseInversionBackend):
     )
 
     def run(self, data: Any | None = None) -> InversionResult:
+        """Run a SimPEG natural-source EM inversion.
+
+        Parameters
+        ----------
+        data : mapping, object, sequence, or path-like, optional
+            Optional data override for this call. When omitted, the backend
+            uses ``self.config.data``. Values are coerced through
+            :class:`pycsamt.inversion.data.EMData`.
+
+        Returns
+        -------
+        InversionResult
+            Backend-neutral result. For 1-D runs, ``model`` is a recovered
+            :class:`pycsamt.inversion.model.StartingModel`. For stitched 2-D
+            runs, ``model`` is a dictionary containing ``rho_2d`` and profile
+            coordinates. For 3-D runs, ``model`` contains ``rho_3d`` and
+            ``x_centers``, ``y_centers``, and ``z_centers`` arrays.
+
+        Raises
+        ------
+        ImportError
+            If SimPEG or discretize is not installed.
+        ValueError
+            If data do not contain frequencies plus apparent resistivity
+            and/or phase.
+        NotImplementedError
+            If the configured method/dimension pair is unsupported by this
+            backend or by the installed SimPEG natural-source API.
+
+        Examples
+        --------
+        >>> from pycsamt.inversion.backends.simpeg import SimPEGBackend
+        >>> from pycsamt.inversion.config import InversionConfig
+        >>> cfg = InversionConfig(
+        ...     method="mt",
+        ...     dimension="1d",
+        ...     backend="simpeg",
+        ...     data={"freqs": [1.0, 10.0],
+        ...           "rho_a": [100.0, 120.0],
+        ...           "phase": [45.0, 47.0]},
+        ...     max_iter=8,
+        ... )
+        >>> result = SimPEGBackend(cfg).run()  # doctest: +SKIP
+        """
         self.check_supported()
         modules = _load_simpeg()
         em_data = self.prepare_data(data)
@@ -369,18 +412,7 @@ def _build_1d_mesh(
     options: dict[str, Any],
     modules: _SimPEGModules,
 ):
-    n_cells = int(options.get("n_cells", max(32, start.n_layers * 12)))
-    depth_max = float(options.get(
-        "depth_max",
-        max(float(np.sum(start.thicknesses)) * 3.0, float(start.thicknesses[-1]) * 4.0),
-    ))
-    min_cell = float(options.get("min_cell_size", max(depth_max / n_cells / 4.0, 1.0)))
-    growth = float(options.get("growth_factor", 1.08))
-    widths = min_cell * growth ** np.arange(n_cells, dtype=float)
-    widths *= depth_max / np.sum(widths)
-    mesh = modules.discretize.TensorMesh([widths], origin="0")
-    z_centers = np.cumsum(widths) - 0.5 * widths
-    return mesh, z_centers
+    return build_1d_tensor_mesh(start, options, modules.discretize.TensorMesh)
 
 
 def _build_3d_mesh(
@@ -390,34 +422,12 @@ def _build_3d_mesh(
 ):
     station_x = _station_x(em_data, em_data.n_stations)
     station_y = _station_y(em_data, em_data.n_stations)
-    x_pad = float(options.get("x_pad", 1000.0))
-    y_pad = float(options.get("y_pad", 1000.0))
-    depth_max = float(options.get("depth_max", 3000.0))
-    nx = int(options.get("nx", max(8, min(32, em_data.n_stations * 4))))
-    ny = int(options.get("ny", max(8, min(32, em_data.n_stations * 4))))
-    nz = int(options.get("nz", 16))
-    x_min, x_max = float(np.min(station_x) - x_pad), float(np.max(station_x) + x_pad)
-    y_min, y_max = float(np.min(station_y) - y_pad), float(np.max(station_y) + y_pad)
-    hx = np.full(nx, (x_max - x_min) / max(nx, 1), dtype=float)
-    hy = np.full(ny, (y_max - y_min) / max(ny, 1), dtype=float)
-    hz = _depth_widths(depth_max, nz, options)
-    origin = np.array([x_min, y_min, -float(np.sum(hz))], dtype=float)
-    mesh = modules.discretize.TensorMesh([hx, hy, hz], origin=origin)
-    centers = {
-        "x": x_min + np.cumsum(hx) - 0.5 * hx,
-        "y": y_min + np.cumsum(hy) - 0.5 * hy,
-        "z": origin[2] + np.cumsum(hz) - 0.5 * hz,
-    }
-    centers["z_depth"] = -centers["z"]
-    return mesh, centers
-
-
-def _depth_widths(depth_max: float, nz: int, options: dict[str, Any]) -> np.ndarray:
-    min_cell = float(options.get("min_cell_size", max(depth_max / nz / 4.0, 1.0)))
-    growth = float(options.get("growth_factor", 1.08))
-    widths = min_cell * growth ** np.arange(nz, dtype=float)
-    widths *= depth_max / np.sum(widths)
-    return widths
+    return build_3d_tensor_mesh(
+        station_x,
+        station_y,
+        options,
+        modules.discretize.TensorMesh,
+    )
 
 
 def _build_nsem_survey(
@@ -492,18 +502,22 @@ def _pack_nsem_observations(
     for i in range(n):
         if rho is not None:
             rho_i = rho[i] if rho.ndim == 1 else rho[:, i]
+            mask_i = component_mask(rho_i, cfg, component="rho").reshape(-1)
             values.extend(np.asarray(rho_i, dtype=float).reshape(-1).tolist())
-            if raw_err is not None:
-                err_i = raw_err[i] if raw_err.ndim == 1 else raw_err[:, i]
-                floor_i = np.abs(rho_i) * cfg.error_floor
-                errors.extend(np.maximum(err_i, np.maximum(floor_i, 1e-12)).reshape(-1).tolist())
-            else:
-                errors.extend(np.maximum(np.abs(rho_i) * cfg.error_floor, 1e-12).reshape(-1).tolist())
+            err_i = raw_err[i] if raw_err is not None and raw_err.ndim == 1 else (
+                raw_err[:, i] if raw_err is not None else None
+            )
+            err = component_errors(rho_i, cfg, component="rho", explicit=err_i).reshape(-1)
+            err[~mask_i] = 1e30
+            errors.extend(err.tolist())
         if phase is not None:
             phase_i = phase[i] if phase.ndim == 1 else phase[:, i]
             phase_i = np.asarray(phase_i, dtype=float).reshape(-1)
+            mask_i = component_mask(phase_i, cfg, component="phase").reshape(-1)
             values.extend(phase_i.tolist())
-            errors.extend(np.full(phase_i.shape, cfg.phase_error, dtype=float).tolist())
+            err = component_errors(phase_i, cfg, component="phase").reshape(-1)
+            err[~mask_i] = 1e30
+            errors.extend(err.tolist())
     return np.asarray(values, dtype=float), np.asarray(errors, dtype=float)
 
 
@@ -513,24 +527,54 @@ def _build_regularization(
     modules: _SimPEGModules,
     cfg: Any,
 ):
-    kind = str(cfg.regularization).lower()
+    reg_cfg = regularization_from_config(cfg)
+    kind = reg_cfg.kind
     if hasattr(modules.regularization, "WeightedLeastSquares"):
         reg = modules.regularization.WeightedLeastSquares(mesh, mapping=mapping)
     else:
         reg = modules.regularization.Simple(mesh, mapping=mapping)
     if kind == "none":
-        reg.alpha_s = 0.0
-        if hasattr(reg, "alpha_x"):
-            reg.alpha_x = 0.0
+        _set_if_present(reg, "alpha_s", 0.0)
+        _set_if_present(reg, "alpha_x", 0.0)
+        _set_if_present(reg, "alpha_y", 0.0)
+        _set_if_present(reg, "alpha_z", 0.0)
     elif kind == "damped":
-        reg.alpha_s = float(cfg.backend_options.get("alpha_s", 1.0))
-        if hasattr(reg, "alpha_x"):
-            reg.alpha_x = 0.0
+        _set_if_present(reg, "alpha_s", reg_cfg.alpha_s)
+        _set_if_present(reg, "alpha_x", 0.0)
+        _set_if_present(reg, "alpha_y", 0.0)
+        _set_if_present(reg, "alpha_z", 0.0)
     else:
-        reg.alpha_s = float(cfg.backend_options.get("alpha_s", 1.0))
-        if hasattr(reg, "alpha_x"):
-            reg.alpha_x = float(cfg.backend_options.get("alpha_x", 1.0))
+        _set_if_present(reg, "alpha_s", reg_cfg.alpha_s)
+        _set_if_present(reg, "alpha_x", reg_cfg.alpha_x)
+        _set_if_present(reg, "alpha_y", float(cfg.backend_options.get("alpha_y", reg_cfg.alpha_x)))
+        _set_if_present(reg, "alpha_z", reg_cfg.alpha_z)
+    reference = _simpeg_reference_model(cfg, mesh)
+    if reference is not None:
+        _set_if_present(reg, "reference_model", reference)
+        _set_if_present(reg, "mref", reference)
     return reg
+
+
+def _set_if_present(obj: Any, name: str, value: Any) -> None:
+    if hasattr(obj, name):
+        setattr(obj, name, value)
+
+
+def _simpeg_reference_model(cfg: Any, mesh: Any) -> np.ndarray | None:
+    value = cfg.backend_options.get("reference_model", cfg.reference_model)
+    if value is None:
+        return None
+    raw = getattr(value, "resistivities", value)
+    try:
+        arr = np.asarray(raw, dtype=float).reshape(-1)
+    except Exception:
+        return None
+    n_cells = int(getattr(mesh, "nC", arr.size))
+    if arr.size != n_cells:
+        return None
+    if np.all(arr > 0.0):
+        return np.log(1.0 / arr)
+    return arr
 
 
 def _build_directives(modules: _SimPEGModules, cfg: Any) -> list[Any]:
@@ -677,3 +721,168 @@ def _station_locations(em_data: EMData) -> np.ndarray:
         _station_y(em_data, n_st),
         np.zeros(n_st, dtype=float),
     ]
+
+
+SimPEGBackend.__doc__ = r"""
+Run optional SimPEG natural-source EM inversions.
+
+``SimPEGBackend`` adapts PyCSAMT's inversion configuration objects to SimPEG's
+natural-source electromagnetic machinery. It is intended for users who want a
+physics-backed inversion engine while keeping the same
+:class:`pycsamt.inversion.workflow.InversionWorkflow` and
+:class:`pycsamt.inversion.results.InversionResult` API used by the built-in and
+external backends.
+
+The backend supports MT, AMT, and CSAMT. One-dimensional runs use
+``Simulation1DElectricField``. Two-dimensional runs are stitched
+station-by-station 1-D inversions, not full 2-D SimPEG EM inversion. Three-
+dimensional runs use ``Simulation3DPrimarySecondary`` with plane-wave natural-
+source survey objects when available in the installed SimPEG version.
+
+Parameters
+----------
+config : pycsamt.inversion.config.InversionConfig
+    Inversion configuration. Important fields are ``method``, ``dimension``,
+    ``data``, ``starting_model``, ``reference_model``, ``regularization``,
+    ``max_iter``, ``tol``, ``error_floor``, ``phase_error``,
+    ``backend_options``, ``workdir``, and ``metadata``.
+
+Attributes
+----------
+name : str
+    Backend registry name, always ``"simpeg"``.
+supports : tuple of tuple
+    Supported ``(method, dimension)`` pairs.
+
+Notes
+-----
+The inversion model is log conductivity, :math:`m = \log(\sigma)`, on SimPEG
+mesh cells. Starting and recovered models exposed through PyCSAMT are
+resistivity oriented. For 1-D output, recovered cell conductivities are
+compressed back into a layered
+:class:`pycsamt.inversion.model.StartingModel`. For 3-D output, the result
+stores ``rho_3d`` as linear resistivity.
+
+``backend_options`` can contain:
+
+``mesh`` controls
+    Options consumed by :func:`pycsamt.inversion.mesh.build_1d_tensor_mesh`
+    and :func:`pycsamt.inversion.mesh.build_3d_tensor_mesh`, such as core
+    cell widths, padding, depth extent, and station padding.
+``max_iter_ls``
+    Maximum line-search iterations passed to
+    ``optimization.InexactGaussNewton``.
+``beta0``, ``estimate_beta``, ``beta0_ratio``
+    Initial trade-off and beta-estimation controls.
+``target_chifact``
+    Target misfit directive chi factor.
+``cooling_factor`` and ``cooling_rate``
+    Beta schedule directive controls.
+``sigma_primary``
+    Background conductivity for 3-D primary-secondary simulation.
+``reference_model``
+    Cell-sized reference model. Positive values are treated as resistivity and
+    converted to log conductivity; otherwise values are assumed already in the
+    SimPEG model domain.
+``alpha_y``
+    Optional y-direction smoothness weight for 3-D regularization.
+
+Examples
+--------
+Run a 1-D MT sounding directly through the backend::
+
+    >>> from pycsamt.inversion.backends.simpeg import SimPEGBackend
+    >>> from pycsamt.inversion.config import InversionConfig
+    >>> cfg = InversionConfig(
+    ...     method="mt",
+    ...     dimension="1d",
+    ...     backend="simpeg",
+    ...     data={"freqs": [1.0, 10.0],
+    ...           "rho_a": [100.0, 120.0],
+    ...           "phase": [45.0, 47.0]},
+    ...     max_iter=8,
+    ... )
+    >>> result = SimPEGBackend(cfg).run()  # doctest: +SKIP
+
+Run a stitched 2-D AMT profile through the high-level workflow::
+
+    >>> from pycsamt.inversion.workflow import run_inversion
+    >>> result = run_inversion(
+    ...     method="amt",
+    ...     dimension="2d",
+    ...     backend="simpeg",
+    ...     data={"freqs": [10.0, 100.0],
+    ...           "rho_a": [[80.0, 100.0], [90.0, 110.0]],
+    ...           "phase": [[42.0, 45.0], [43.0, 46.0]],
+    ...           "station_x": [0.0, 250.0],
+    ...           "station_names": ["A01", "A02"]},
+    ...     max_iter=6,
+    ... )  # doctest: +SKIP
+    >>> result.metadata["profile_mode"]  # doctest: +SKIP
+    'stitched_station_1d'
+
+Configure a small 3-D natural-source run::
+
+    >>> from pycsamt.inversion.workflow import run_inversion
+    >>> result = run_inversion(
+    ...     method="mt",
+    ...     dimension="3d",
+    ...     backend="simpeg",
+    ...     data={"freqs": [1.0],
+    ...           "rho_a": [[100.0], [120.0]],
+    ...           "phase": [[45.0], [47.0]],
+    ...           "station_x": [0.0, 500.0],
+    ...           "station_names": ["M01", "M02"],
+    ...           "metadata": {"station_y": [0.0, 250.0]}},
+    ...     backend_options={
+    ...         "sigma_primary": 0.01,
+    ...         "beta0": 1.0,
+    ...         "target_chifact": 1.0,
+    ...     },
+    ...     max_iter=4,
+    ... )  # doctest: +SKIP
+
+Pass SimPEG directive and optimization controls::
+
+    >>> from pycsamt.inversion.workflow import run_inversion
+    >>> result = run_inversion(
+    ...     method="csamt",
+    ...     dimension="1d",
+    ...     backend="simpeg",
+    ...     data={"freqs": [1.0, 10.0], "rho_a": [100.0, 120.0]},
+    ...     backend_options={
+    ...         "estimate_beta": True,
+    ...         "beta0_ratio": 2.0,
+    ...         "cooling_factor": 2.0,
+    ...         "cooling_rate": 1,
+    ...         "max_iter_ls": 10,
+    ...     },
+    ... )  # doctest: +SKIP
+
+See Also
+--------
+pycsamt.inversion.workflow.InversionWorkflow
+    High-level entry point that instantiates this backend.
+pycsamt.inversion.backends.builtin.Builtin1DBackend
+    Dependency-light fallback backend.
+pycsamt.inversion.backends.pygimli.PyGIMLiBackend
+    Optional pyGIMLi backend for 1-D EM inversions.
+pycsamt.inversion.mesh.build_1d_tensor_mesh
+    Mesh helper used by the 1-D SimPEG path.
+pycsamt.inversion.mesh.build_3d_tensor_mesh
+    Mesh helper used by the 3-D SimPEG path.
+pycsamt.inversion.results.InversionResult
+    Backend-neutral result returned by :meth:`run`.
+
+References
+----------
+.. [1] Cockett, R., Kang, S., Heagy, L. J., Pidlisecky, A. and Oldenburg,
+       D. W. (2015). SimPEG: An open source framework for simulation and
+       gradient based parameter estimation in geophysical applications.
+       *Computers & Geosciences*, 85, 142-154.
+.. [2] Heagy, L. J., Cockett, R., Kang, S., Rosenkjaer, G. K. and Oldenburg,
+       D. W. (2017). A framework for simulation and inversion in
+       electromagnetics. *Computers & Geosciences*, 107, 1-19.
+.. [3] Haber, E. (2015). *Computational Methods in Geophysical
+       Electromagnetics*. SIAM.
+"""

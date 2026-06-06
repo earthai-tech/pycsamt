@@ -1,11 +1,18 @@
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
-"""pyGIMLi backend for 1-D EM inversion.
+"""pyGIMLi backend for EM inversion.
 
-pyGIMLi is optional. This backend imports it only when selected. The first
-supported targets are 1-D MT/AMT/CSAMT and TDEM inversions using
-``pygimli.physics.em`` modelling operators and ``pg.Inversion``.
+pyGIMLi is optional and imported only when this backend is selected. The
+backend wraps ``pygimli.physics.em`` modelling operators and ``pg.Inversion``
+for 1-D MT/AMT/CSAMT and TDEM soundings. Two-dimensional runs are represented
+as stitched station-by-station 1-D inversions so their output can still be
+used by PyCSAMT interpretation and plotting tools.
+
+The implementation deliberately accepts several pyGIMLi operator names and
+constructor signatures because the EM API has varied across pyGIMLi releases.
+Backend options let users force a specific operator when automatic discovery
+is not enough.
 """
 
 from __future__ import annotations
@@ -19,7 +26,8 @@ from ..base import BaseInversionBackend
 from ..data import EMData
 from ..mesh import InversionMesh
 from ..model import StartingModel
-from ..objective import weighted_rms
+from ..objective import component_errors, weighted_rms
+from ..regularization import pygimli_lambda, regularization_from_config
 from ..results import InversionResult
 
 __all__ = ["PyGIMLiBackend"]
@@ -32,8 +40,6 @@ class _PyGIMLiModules:
 
 
 class PyGIMLiBackend(BaseInversionBackend):
-    """Run optional pyGIMLi 1-D EM inversions."""
-
     name = "pygimli"
     supports = (
         ("mt", "1d"),
@@ -47,6 +53,52 @@ class PyGIMLiBackend(BaseInversionBackend):
     )
 
     def run(self, data: Any | None = None) -> InversionResult:
+        """Run a pyGIMLi-backed EM inversion.
+
+        Parameters
+        ----------
+        data : mapping, object, sequence, or path-like, optional
+            Optional data override for this call. When omitted, the backend
+            uses ``self.config.data``. Values are coerced through
+            :class:`pycsamt.inversion.data.EMData`.
+
+        Returns
+        -------
+        InversionResult
+            Backend-neutral result. For 1-D runs the result model is a
+            :class:`pycsamt.inversion.model.StartingModel` containing recovered
+            resistivities and thicknesses. For stitched 2-D profile runs the
+            model is a dictionary with ``rho_2d``, station positions, and depth
+            centres.
+
+        Raises
+        ------
+        ImportError
+            If ``pygimli`` is not installed.
+        ValueError
+            If the selected method does not receive the required data
+            components. TDEM requires times and values. Natural-source methods
+            require frequencies plus apparent resistivity and/or phase.
+        NotImplementedError
+            If the configured method/dimension pair is not supported, or if
+            the installed pyGIMLi version does not expose a usable EM
+            modelling operator.
+
+        Examples
+        --------
+        >>> from pycsamt.inversion.backends.pygimli import PyGIMLiBackend
+        >>> from pycsamt.inversion.config import InversionConfig
+        >>> cfg = InversionConfig(
+        ...     method="mt",
+        ...     dimension="1d",
+        ...     backend="pygimli",
+        ...     data={"freqs": [1.0, 10.0],
+        ...           "rho_a": [100.0, 120.0],
+        ...           "phase": [45.0, 47.0]},
+        ...     max_iter=8,
+        ... )
+        >>> result = PyGIMLiBackend(cfg).run()  # doctest: +SKIP
+        """
         self.check_supported()
         modules = _load_pygimli()
         em_data = self.prepare_data(data)
@@ -155,26 +207,28 @@ class PyGIMLiBackend(BaseInversionBackend):
         observed = _pack_mt_observations(em_data)
         errors = _pack_mt_errors(em_data, cfg)
 
-        fop_cls = getattr(em, "MT1dSmoothModelling", None)
-        if fop_cls is None:
-            fop_cls = getattr(em, "MT1dBlockModelling")
-            fop = fop_cls(T=periods, nLayers=start.n_layers, verbose=False)
-            start_model = np.r_[thk, start.resistivities]
-        else:
-            fop = fop_cls(T=periods, thk=thk, verbose=False)
-            start_model = start.resistivities
+        opts = cfg.backend_options
+        verbose = bool(opts.get("verbose", False))
+        fop, start_model, operator_name, parameterization = _make_mt_forward_operator(
+            em,
+            periods,
+            start,
+            opts,
+        )
 
-        inv = pg.Inversion(fop=fop, verbose=bool(cfg.backend_options.get("verbose", False)))
+        inv = _make_inversion(pg, fop, verbose=verbose)
         if hasattr(pg, "trans"):
             inv.modelTrans = pg.trans.TransLog()
-        lam = float(cfg.backend_options.get("lam", cfg.backend_options.get("lambda", 20.0)))
-        recovered_raw = inv.run(
+        reg = regularization_from_config(cfg)
+        lam = pygimli_lambda(cfg, default=20.0)
+        recovered_raw = _run_inversion(
+            inv,
             observed,
             startModel=start_model,
             errorVals=errors,
             lam=lam,
             maxIter=cfg.max_iter,
-            verbose=bool(cfg.backend_options.get("verbose", False)),
+            verbose=verbose,
         )
         response = np.asarray(fop.response(recovered_raw), dtype=float)
         recovered = _recover_mt_model(recovered_raw, start)
@@ -188,7 +242,13 @@ class PyGIMLiBackend(BaseInversionBackend):
             inv,
             fop,
             station_index,
-            extra={"lam": lam, "mode": "mt"},
+            extra={
+                "lam": lam,
+                "mode": "mt",
+                "operator": operator_name,
+                "parameterization": parameterization,
+                "regularization": reg.to_dict(),
+            },
         )
 
     def _run_tdem_sounding(
@@ -209,24 +269,29 @@ class PyGIMLiBackend(BaseInversionBackend):
         tx_area = float(opts.get("tx_area", opts.get("txArea", np.pi * 50.0 ** 2)))
         rx_area = opts.get("rx_area", opts.get("rxArea", None))
 
-        fop = em.TDEMSmoothModelling(
-            thk=thk,
-            times=np.asarray(em_data.times, dtype=float),
-            txArea=tx_area,
-            rxArea=rx_area,
+        verbose = bool(opts.get("verbose", False))
+        fop, operator_name = _make_tdem_forward_operator(
+            em,
+            np.asarray(em_data.times, dtype=float),
+            thk,
+            opts,
+            tx_area=tx_area,
+            rx_area=rx_area,
         )
-        inv = pg.Inversion(fop=fop, verbose=bool(opts.get("verbose", False)))
+        inv = _make_inversion(pg, fop, verbose=verbose)
         if hasattr(pg, "trans"):
             inv.dataTrans = pg.trans.TransLog()
             inv.modelTrans = pg.trans.TransLog()
-        lam = float(opts.get("lam", opts.get("lambda", 20.0)))
-        recovered_raw = inv.run(
+        reg = regularization_from_config(cfg)
+        lam = pygimli_lambda(cfg, default=20.0)
+        recovered_raw = _run_inversion(
+            inv,
             values,
             startModel=start.resistivities,
             errorVals=errors,
             lam=lam,
             maxIter=cfg.max_iter,
-            verbose=bool(opts.get("verbose", False)),
+            verbose=verbose,
         )
         response = np.asarray(fop.response(recovered_raw), dtype=float)
         recovered = StartingModel(recovered_raw, thk, name="pygimli_tdem_1d")
@@ -242,7 +307,14 @@ class PyGIMLiBackend(BaseInversionBackend):
             inv,
             fop,
             station_index,
-            extra={"lam": lam, "mode": "tdem", "tx_area": tx_area, "rx_area": rx_area},
+            extra={
+                "lam": lam,
+                "mode": "tdem",
+                "operator": operator_name,
+                "tx_area": tx_area,
+                "rx_area": rx_area,
+                "regularization": reg.to_dict(),
+            },
         )
 
 
@@ -258,6 +330,175 @@ def _load_pygimli() -> _PyGIMLiModules:
     return _PyGIMLiModules(pg=pg, em=em)
 
 
+def _make_mt_forward_operator(
+    em: Any,
+    periods: np.ndarray,
+    start: StartingModel,
+    opts: dict[str, Any],
+) -> tuple[Any, np.ndarray, str, str]:
+    """Create a pyGIMLi MT forward operator across common API variants."""
+    thk = np.asarray(start.thicknesses, dtype=float)
+    verbose = bool(opts.get("verbose", False))
+    candidates = _candidate_names(
+        opts,
+        "mt_operator",
+        (
+            "MT1dSmoothModelling",
+            "MT1DSmoothModelling",
+            "MT1dBlockModelling",
+            "MT1DBlockModelling",
+            "MT1dModelling",
+            "MT1DModelling",
+        ),
+    )
+    cls, operator_name = _resolve_operator(em, candidates, "MT/AMT/CSAMT 1-D")
+    block = "block" in operator_name.lower()
+    attempts = []
+    if block:
+        attempts.extend([
+            {"T": periods, "nLayers": start.n_layers, "verbose": verbose},
+            {"periods": periods, "nLayers": start.n_layers, "verbose": verbose},
+            {"T": periods, "nlay": start.n_layers, "verbose": verbose},
+            {"T": periods, "thk": thk, "verbose": verbose},
+        ])
+    else:
+        attempts.extend([
+            {"T": periods, "thk": thk, "verbose": verbose},
+            {"periods": periods, "thk": thk, "verbose": verbose},
+            {"T": periods, "nLayers": start.n_layers, "verbose": verbose},
+            {"T": periods, "verbose": verbose},
+        ])
+    fop = _construct_operator(cls, attempts, operator_name)
+    if block:
+        start_model = np.r_[thk, start.resistivities]
+        parameterization = "thickness_resistivity"
+    else:
+        start_model = start.resistivities
+        parameterization = "resistivity"
+    return fop, np.asarray(start_model, dtype=float), operator_name, parameterization
+
+
+def _make_tdem_forward_operator(
+    em: Any,
+    times: np.ndarray,
+    thk: np.ndarray,
+    opts: dict[str, Any],
+    *,
+    tx_area: float,
+    rx_area: Any,
+) -> tuple[Any, str]:
+    """Create a pyGIMLi TDEM forward operator across common API variants."""
+    verbose = bool(opts.get("verbose", False))
+    candidates = _candidate_names(
+        opts,
+        "tdem_operator",
+        (
+            "TDEMSmoothModelling",
+            "TDEMBlockModelling",
+            "TDEM1dModelling",
+            "TDEM1DModelling",
+        ),
+    )
+    cls, operator_name = _resolve_operator(em, candidates, "TDEM 1-D")
+    attempts = [
+        {
+            "thk": thk,
+            "times": times,
+            "txArea": tx_area,
+            "rxArea": rx_area,
+            "verbose": verbose,
+        },
+        {
+            "thk": thk,
+            "t": times,
+            "txArea": tx_area,
+            "rxArea": rx_area,
+            "verbose": verbose,
+        },
+        {
+            "thk": thk,
+            "times": times,
+            "tx_area": tx_area,
+            "rx_area": rx_area,
+            "verbose": verbose,
+        },
+        {"thk": thk, "times": times, "verbose": verbose},
+    ]
+    return _construct_operator(cls, attempts, operator_name), operator_name
+
+
+def _candidate_names(
+    opts: dict[str, Any],
+    key: str,
+    defaults: tuple[str, ...],
+) -> tuple[str, ...]:
+    configured = opts.get(key)
+    if configured is None:
+        return defaults
+    if isinstance(configured, str):
+        return (configured,)
+    return tuple(str(name) for name in configured)
+
+
+def _resolve_operator(
+    em: Any,
+    candidates: tuple[str, ...],
+    label: str,
+) -> tuple[Any, str]:
+    for name in candidates:
+        operator = getattr(em, name, None)
+        if operator is not None:
+            return operator, name
+    available = sorted(
+        name for name in dir(em)
+        if "modelling" in name.lower() or name.lower().startswith(("mt", "tdem"))
+    )
+    raise NotImplementedError(
+        f"pyGIMLi does not expose a supported {label} modelling operator. "
+        f"Tried {', '.join(candidates)}. Available EM operators: "
+        f"{', '.join(available) if available else 'none'}."
+    )
+
+
+def _construct_operator(cls: Any, attempts: list[dict[str, Any]], name: str) -> Any:
+    errors = []
+    for kwargs in attempts:
+        clean = {key: value for key, value in kwargs.items() if value is not None}
+        try:
+            return cls(**clean)
+        except TypeError as exc:
+            errors.append(f"{sorted(clean)}: {exc}")
+    raise TypeError(
+        f"could not construct pyGIMLi operator {name!r}; attempted signatures "
+        + "; ".join(errors)
+    )
+
+
+def _make_inversion(pg: Any, fop: Any, *, verbose: bool) -> Any:
+    try:
+        return pg.Inversion(fop=fop, verbose=verbose)
+    except TypeError:
+        return pg.Inversion(fop, verbose=verbose)
+
+
+def _run_inversion(inv: Any, observed: np.ndarray, **kwargs: Any) -> np.ndarray:
+    try:
+        return np.asarray(inv.run(observed, **kwargs), dtype=float)
+    except TypeError:
+        fallback = dict(kwargs)
+        if "errorVals" in fallback:
+            fallback["relativeError"] = fallback.pop("errorVals")
+        try:
+            return np.asarray(inv.run(observed, **fallback), dtype=float)
+        except TypeError:
+            minimal = {
+                key: value
+                for key, value in fallback.items()
+                if key in {"startModel", "lam", "maxIter", "verbose"}
+            }
+            return np.asarray(inv.run(observed, **minimal), dtype=float)
+
+
 def _pack_mt_observations(em_data: EMData) -> np.ndarray:
     values = []
     if em_data.rho_a is not None:
@@ -271,25 +512,29 @@ def _pack_mt_errors(em_data: EMData, cfg: Any) -> np.ndarray:
     errors = []
     if em_data.rho_a is not None:
         rho = np.asarray(em_data.rho_a, dtype=float)
-        if em_data.errors is not None:
-            errors.extend(np.asarray(em_data.errors, dtype=float).tolist())
-        else:
-            errors.extend(np.full(rho.shape, cfg.error_floor, dtype=float).tolist())
+        errors.extend(component_errors(
+            rho,
+            cfg,
+            component="rho",
+            explicit=em_data.errors,
+            relative=True,
+        ).tolist())
     if em_data.phase is not None:
         phase = np.asarray(em_data.phase, dtype=float)
         # pyGIMLi inversion error values are relative, so convert degrees
         # to a conservative relative phase error.
-        phase_rel = np.maximum(cfg.phase_error / np.maximum(np.abs(phase), 1.0), 1e-3)
-        errors.extend(phase_rel.tolist())
+        errors.extend(component_errors(phase, cfg, component="phase", relative=True).tolist())
     return np.asarray(errors, dtype=float)
 
 
 def _tdem_errors(em_data: EMData, cfg: Any) -> np.ndarray:
-    if em_data.errors is not None:
-        raw = np.asarray(em_data.errors, dtype=float)
-        values = np.asarray(em_data.values, dtype=float)
-        return np.maximum(raw / np.maximum(np.abs(values), 1e-30), 1e-3)
-    return np.full_like(np.asarray(em_data.values, dtype=float), cfg.error_floor, dtype=float)
+    return component_errors(
+        em_data.values,
+        cfg,
+        component="tdem",
+        explicit=em_data.errors,
+        relative=True,
+    )
 
 
 def _recover_mt_model(raw: np.ndarray, start: StartingModel) -> StartingModel:
@@ -382,3 +627,153 @@ def _station_x(em_data: EMData, n_st: int) -> np.ndarray:
     if em_data.station_x is not None:
         return np.asarray(em_data.station_x, dtype=float)
     return np.arange(n_st, dtype=float)
+
+
+PyGIMLiBackend.__doc__ = r"""
+Run optional pyGIMLi EM inversions.
+
+``PyGIMLiBackend`` adapts
+:mod:`pycsamt.inversion` configurations to pyGIMLi's electromagnetic
+modelling and inversion APIs. It is an optional backend: importing
+:mod:`pycsamt.inversion` does not require pyGIMLi, but selecting
+``backend="pygimli"`` does.
+
+The backend supports two execution patterns:
+
+* 1-D MT/AMT/CSAMT soundings with apparent resistivity and optional phase;
+* 1-D TDEM soundings with transient time gates and decay values.
+
+For ``dimension="2d"``, the backend performs stitched station-by-station 1-D
+inversions: each station is inverted independently with the same 1-D machinery
+and the recovered log10 resistivity columns are assembled into a profile
+model. This is useful for quick profile interpretation, but it is not a full
+2-D finite-element pyGIMLi EM inversion.
+
+Parameters
+----------
+config : pycsamt.inversion.config.InversionConfig
+    Inversion configuration. Important fields are ``method``, ``dimension``,
+    ``data``, ``starting_model``, ``regularization``, ``max_iter``, ``tol``,
+    ``error_floor``, ``phase_error``, ``backend_options``, ``workdir``, and
+    ``metadata``.
+
+Attributes
+----------
+name : str
+    Backend registry name, always ``"pygimli"``.
+supports : tuple of tuple
+    Supported ``(method, dimension)`` pairs.
+
+Notes
+-----
+Natural-source observations are passed to pyGIMLi in the order apparent
+resistivity followed by phase when both are present. pyGIMLi expects relative
+error values, so PyCSAMT converts the shared component error model into the
+form required by ``pg.Inversion``.
+
+``backend_options`` can contain:
+
+``mt_operator``
+    Name or ordered sequence of names to try for MT/AMT/CSAMT modelling.
+    Defaults include ``MT1dSmoothModelling``, ``MT1DSmoothModelling``,
+    ``MT1dBlockModelling``, ``MT1DBlockModelling``, ``MT1dModelling``, and
+    ``MT1DModelling``.
+``tdem_operator``
+    Name or ordered sequence of names to try for TDEM modelling. Defaults
+    include ``TDEMSmoothModelling``, ``TDEMBlockModelling``,
+    ``TDEM1dModelling``, and ``TDEM1DModelling``.
+``lam``
+    pyGIMLi regularization strength. If omitted, PyCSAMT maps the shared
+    :class:`pycsamt.inversion.regularization.Regularization` settings through
+    :func:`pycsamt.inversion.regularization.pygimli_lambda`.
+``verbose``
+    Forwarded to pyGIMLi operator and inversion construction when supported.
+``tx_area`` / ``txArea`` and ``rx_area`` / ``rxArea``
+    TDEM transmitter and receiver loop areas passed to the TDEM operator when
+    supported by the installed pyGIMLi version.
+
+Examples
+--------
+Run a 1-D MT sounding through the backend directly::
+
+    >>> from pycsamt.inversion.backends.pygimli import PyGIMLiBackend
+    >>> from pycsamt.inversion.config import InversionConfig
+    >>> cfg = InversionConfig(
+    ...     method="mt",
+    ...     dimension="1d",
+    ...     backend="pygimli",
+    ...     data={"freqs": [1.0, 10.0],
+    ...           "rho_a": [100.0, 120.0],
+    ...           "phase": [45.0, 47.0]},
+    ...     max_iter=8,
+    ... )
+    >>> result = PyGIMLiBackend(cfg).run()  # doctest: +SKIP
+
+Run a TDEM sounding and pass loop geometry to pyGIMLi::
+
+    >>> from pycsamt.inversion.workflow import run_inversion
+    >>> result = run_inversion(
+    ...     method="tdem",
+    ...     dimension="1d",
+    ...     backend="pygimli",
+    ...     data={"times": [1e-5, 3e-5, 1e-4],
+    ...           "values": [1e-8, 5e-9, 1e-9]},
+    ...     backend_options={"tx_area": 7850.0, "rx_area": 100.0},
+    ...     max_iter=8,
+    ... )  # doctest: +SKIP
+
+Build a stitched 2-D profile from station-wise MT inversions::
+
+    >>> from pycsamt.inversion.workflow import run_inversion
+    >>> result = run_inversion(
+    ...     method="amt",
+    ...     dimension="2d",
+    ...     backend="pygimli",
+    ...     data={"freqs": [10.0, 100.0],
+    ...           "rho_a": [[80.0, 100.0], [90.0, 110.0]],
+    ...           "phase": [[42.0, 45.0], [43.0, 46.0]],
+    ...           "station_x": [0.0, 250.0],
+    ...           "station_names": ["A01", "A02"]},
+    ...     max_iter=6,
+    ... )  # doctest: +SKIP
+    >>> result.metadata["profile_mode"]  # doctest: +SKIP
+    'stitched_station_1d'
+
+Force a specific pyGIMLi operator name when needed::
+
+    >>> from pycsamt.inversion.workflow import run_inversion
+    >>> result = run_inversion(
+    ...     method="mt",
+    ...     dimension="1d",
+    ...     backend="pygimli",
+    ...     data={"freqs": [1.0], "rho_a": [100.0]},
+    ...     backend_options={
+    ...         "mt_operator": "MT1DModelling",
+    ...         "lam": 15.0,
+    ...         "verbose": False,
+    ...     },
+    ... )  # doctest: +SKIP
+
+See Also
+--------
+pycsamt.inversion.workflow.InversionWorkflow
+    High-level entry point that instantiates this backend.
+pycsamt.inversion.backends.builtin.Builtin1DBackend
+    Dependency-light fallback backend for local smoke inversions.
+pycsamt.inversion.backends.simpeg.SimPEGBackend
+    Optional SimPEG backend for natural-source physics inversion.
+pycsamt.inversion.regularization.pygimli_lambda
+    Helper that maps shared regularization settings to pyGIMLi ``lam``.
+pycsamt.inversion.results.InversionResult
+    Backend-neutral result returned by :meth:`run`.
+
+References
+----------
+.. [1] Rücker, C., Günther, T. and Wagner, F. M. (2017). pyGIMLi: An
+       open-source library for modelling and inversion in geophysics.
+       *Computers & Geosciences*, 109, 106-123.
+.. [2] Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
+       Estimation and Inverse Problems*, 3rd edition. Elsevier.
+.. [3] Chave, A. D. and Jones, A. G. (2012). *The Magnetotelluric Method:
+       Theory and Practice*. Cambridge University Press.
+"""

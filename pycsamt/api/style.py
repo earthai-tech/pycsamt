@@ -48,14 +48,14 @@ Style sections
 * :class:`MultilineStyle` — gradient or cycle coloring for multi-line plots
 * :class:`MTComponentStyle` — consistent per-component colors (XY/YX/XX/YY/TE/TM)
 * :class:`CorrectionStyle` — before/after pair for any 1-D correction workflow
+* :class:`RawDataStyle` — black diagnostic traces for unprocessed observations
 """
 from __future__ import annotations
 
 import copy
-import colorsys
 from contextlib import contextmanager
 from dataclasses import dataclass, field, fields as dc_fields
-from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 import numpy as np
 
@@ -63,7 +63,6 @@ import numpy as np
 from ._rose_style import (
     RoseStyle,
     resolve_rose_style,
-    _PRESETS as _ROSE_PRESETS,
 )
 
 
@@ -248,17 +247,19 @@ class _MTComp:
         Error-bar cap size in points.
     """
 
-    color:       str   = "#1f77b4"
-    ls:          str   = "-"
-    lw:          float = 1.5
-    marker:      str   = "o"
-    ms:          float = 4.0
-    mfc:         str   = "white"
-    mew:         float = 1.2
-    alpha:       float = 0.90
-    label:       str   = ""
-    elinewidth:  float = 0.8
-    capsize:     float = 2.5
+    color:           str   = "#1f77b4"
+    ls:              str   = "-"
+    lw:              float = 1.5
+    marker:          str   = "o"
+    ms:              float = 4.0
+    mfc:             str   = "white"
+    mew:             float = 1.2
+    alpha:           float = 0.90
+    label:           str   = ""
+    elinewidth:      float = 0.8
+    capsize:         float = 2.5
+    predicted_color: str   = ""  # empty → fall back to `color`
+    predicted_ls:    str   = ":" # line style for model-predicted overlay
 
     def plot_kwargs(self, **overrides: Any) -> Dict[str, Any]:
         """Keyword arguments for :func:`matplotlib.axes.Axes.plot`.
@@ -490,6 +491,69 @@ class CorrectionStyle:
             f"  after={self.after!r}\n"
             f")"
         )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RawDataStyle
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@dataclass
+class RawDataStyle:
+    """Visual style for raw, unprocessed EM observations.
+
+    Raw data should be visually distinct from processed or modelled data.
+    The package convention is therefore a restrained black trace with small
+    markers and thin connecting lines.  Plot functions may use this style
+    automatically when called with ``raw=True`` unless users explicitly pass
+    colors or force a processed-data style.
+    """
+
+    color: str = "black"
+    ls: str = ":"
+    lw: float = 0.8
+    marker: str = "."
+    ms: float = 3.0
+    mfc: str = "black"
+    mew: float = 0.5
+    alpha: float = 0.85
+    capsize: float = 1.5
+    elinewidth: float = 0.6
+    label: str = "raw"
+
+    def plot_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+        """Return keyword arguments for raw-data line plots."""
+        kwargs: Dict[str, Any] = dict(
+            color=self.color,
+            ls=self.ls,
+            lw=self.lw,
+            marker=self.marker,
+            ms=self.ms,
+            mfc=self.mfc,
+            mew=self.mew,
+            alpha=self.alpha,
+        )
+        if self.label:
+            kwargs["label"] = self.label
+        kwargs.update(overrides)
+        return kwargs
+
+    def errorbar_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+        """Return keyword arguments for raw-data error bars."""
+        kwargs = self.plot_kwargs()
+        kwargs.update(
+            ecolor=self.color,
+            capsize=self.capsize,
+            elinewidth=self.elinewidth,
+        )
+        kwargs.update(overrides)
+        return kwargs
+
+    def copy(self, **kw: Any) -> "RawDataStyle":
+        """Return a modified copy."""
+        new = copy.copy(self)
+        for k, v in kw.items():
+            setattr(new, k, v)
+        return new
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -736,6 +800,7 @@ class PyCSAMTStyle:
     * :attr:`multiline` — :class:`MultilineStyle`
     * :attr:`mt` — :class:`MTComponentStyle`
     * :attr:`correction` — :class:`CorrectionStyle`
+    * :attr:`raw` — :class:`RawDataStyle`
     * :attr:`pt_ellipse` — :class:`PhaseTensorEllipseStyle`
 
     The module-level singleton :data:`PYCSAMT_STYLE` is the recommended
@@ -785,6 +850,7 @@ class PyCSAMTStyle:
         self.multiline  = MultilineStyle()
         self.mt         = MTComponentStyle()
         self.correction = CorrectionStyle()
+        self.raw        = RawDataStyle()
         self.pt_ellipse = PhaseTensorEllipseStyle()
 
     # ── named presets ─────────────────────────────────────────────────────────
@@ -824,6 +890,9 @@ class PyCSAMTStyle:
         # correction
         if "correction" in spec:
             self._apply_correction(spec["correction"])
+        # raw
+        if "raw" in spec:
+            self._apply_raw(spec["raw"])
         # pt_ellipse
         if "pt_ellipse" in spec:
             self._apply_pt_ellipse(spec["pt_ellipse"])
@@ -847,6 +916,10 @@ class PyCSAMTStyle:
     def _apply_pt_ellipse(self, spec: Dict[str, Any]) -> None:
         for k, v in spec.items():
             setattr(self.pt_ellipse, k, v)
+
+    def _apply_raw(self, spec: Dict[str, Any]) -> None:
+        for k, v in spec.items():
+            setattr(self.raw, k, v)
 
     # ── configure with dotted paths ───────────────────────────────────────────
 
@@ -911,6 +984,7 @@ class PyCSAMTStyle:
         saved_multiline  = copy.deepcopy(self.multiline)
         saved_mt         = copy.deepcopy(self.mt)
         saved_correction = copy.deepcopy(self.correction)
+        saved_raw        = copy.deepcopy(self.raw)
         saved_pt_ellipse = copy.deepcopy(self.pt_ellipse)
         try:
             if preset is not None:
@@ -923,6 +997,7 @@ class PyCSAMTStyle:
             self.multiline  = saved_multiline
             self.mt         = saved_mt
             self.correction = saved_correction
+            self.raw        = saved_raw
             self.pt_ellipse = saved_pt_ellipse
 
     # ── reset ─────────────────────────────────────────────────────────────────
@@ -955,6 +1030,10 @@ class PyCSAMTStyle:
         )
         lines.append(
             f"  correction.after   color={a.color!r}  ls={a.ls!r}  label={a.label!r}"
+        )
+        lines.append(
+            f"  raw  color={self.raw.color!r}  marker={self.raw.marker!r}"
+            f"  ls={self.raw.ls!r}  lw={self.raw.lw}"
         )
         e = self.pt_ellipse
         lines.append(
@@ -1010,6 +1089,11 @@ _register_preset("pycsamt", {
         "after":  dict(color="#d62728", ls="-",  lw=1.5, marker="o", ms=4.0,
                        mfc="white", mew=1.2, alpha=0.90, label="after"),
     },
+    "raw": dict(
+        color="black", ls=":", lw=0.8, marker=".", ms=3.0,
+        mfc="black", mew=0.5, alpha=0.85, capsize=1.5,
+        elinewidth=0.6, label="raw",
+    ),
     # phase-tensor ellipse defaults — Caldwell 2004 / pycsamt house style
     "pt_ellipse": dict(
         normalise_by="cell", scale=0.85, s1_ref=None,
@@ -1052,6 +1136,11 @@ _register_preset("publication", {
         "after":  dict(color="#000000", ls="-",  lw=1.5, marker="o", ms=4.0,
                        mfc="black", mew=1.2, alpha=0.92, label="after"),
     },
+    "raw": dict(
+        color="black", ls=":", lw=0.75, marker=".", ms=2.8,
+        mfc="black", mew=0.4, alpha=0.88, capsize=1.2,
+        elinewidth=0.55, label="raw",
+    ),
     # grayscale ellipses: no fill colour, edge-only on white paper
     "pt_ellipse": dict(
         normalise_by="cell", scale=0.82, s1_ref=None,
@@ -1094,6 +1183,11 @@ _register_preset("dark", {
         "after":  dict(color="#ff7675", ls="-",  lw=2.0, marker="o", ms=4.5,
                        mfc="#ff7675", mew=1.2, alpha=0.92, label="after"),
     },
+    "raw": dict(
+        color="#f2f2f2", ls=":", lw=0.9, marker=".", ms=3.2,
+        mfc="#f2f2f2", mew=0.5, alpha=0.88, capsize=1.5,
+        elinewidth=0.6, label="raw",
+    ),
     # dark-mode ellipses: lighter edge, slightly higher alpha
     "pt_ellipse": dict(
         normalise_by="cell", scale=0.85, s1_ref=None,
@@ -1104,6 +1198,41 @@ _register_preset("dark", {
         skew_threshold=3.0, mark_3d=True, lw_3d_factor=3.0,
         show_ref=True, ref_edgecolor="#aaaaaa", ref_lw=0.8, ref_fontsize=6.5,
     ),
+})
+
+# "modem" — colour convention for ModEM inversion response / pseudo-section
+# ─────────────────────────────────────────────────────────────────────────
+# Observed Z_x* components  : pure blue   #0000FF  (hollow circle marker)
+# Observed Z_y* components  : bright red  #FF2C2C  (hollow square marker)
+# Predicted Z_x* model line : green       #00FF00  dotted (:)
+# Predicted Z_y* model line : magenta     #CC338B  dotted (:)
+#
+# Only the "mt" section is overridden; all other style sections
+# (rose, multiline, correction …) stay at the package default.
+_register_preset("modem", {
+    "mt": {
+        "xx": dict(color="#0000FF", ls="-",  lw=1.5, marker="o", ms=4.0,
+                   mfc="white", label=r"$Z_{xx}$",
+                   predicted_color="#00FF00", predicted_ls=":"),
+        "xy": dict(color="#0000FF", ls="-",  lw=1.5, marker="o", ms=4.0,
+                   mfc="white", label=r"$Z_{xy}$",
+                   predicted_color="#00FF00", predicted_ls=":"),
+        "yx": dict(color="#FF2C2C", ls="-",  lw=1.5, marker="s", ms=4.0,
+                   mfc="white", label=r"$Z_{yx}$",
+                   predicted_color="#CC338B", predicted_ls=":"),
+        "yy": dict(color="#FF2C2C", ls="-",  lw=1.5, marker="s", ms=4.0,
+                   mfc="white", label=r"$Z_{yy}$",
+                   predicted_color="#CC338B", predicted_ls=":"),
+        "te": dict(color="#0000FF", ls="-",  lw=1.5, marker="o", ms=4.0,
+                   mfc="white", label="TE",
+                   predicted_color="#00FF00", predicted_ls=":"),
+        "tm": dict(color="#FF2C2C", ls="-",  lw=1.5, marker="s", ms=4.0,
+                   mfc="white", label="TM",
+                   predicted_color="#CC338B", predicted_ls=":"),
+        "det": dict(color="#7f7f7f", ls="-",  lw=1.3, marker="D", ms=3.5,
+                    mfc="white", label="det",
+                    predicted_color="#aaaaaa", predicted_ls=":"),
+    },
 })
 
 
@@ -1177,6 +1306,7 @@ __all__ = [
     "RoseStyle",
     "CorrectionStyle",
     "PhaseTensorEllipseStyle",
+    "RawDataStyle",
     # singleton + helpers
     "PYCSAMT_STYLE",
     "use_style",

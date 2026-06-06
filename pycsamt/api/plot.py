@@ -650,6 +650,94 @@ def save_fig(
     return PLOT_CONFIG.save(fig_or_ax, path, fmt=fmt, dpi=dpi, **kw)
 
 
+def add_colorbar(
+    mappable: Any,
+    ax: Any,
+    *,
+    label: str | None = None,
+    side: str = "right",
+    size: str = "3.5%",
+    pad: float | str = 0.06,
+    max_ticks: int | None = 6,
+    tick_format: str | None = None,
+    **colorbar_kw: Any,
+) -> Any:
+    """Attach an axes-aligned colorbar with smart tick density.
+
+    The helper creates a dedicated colorbar axes whose height matches the
+    plotted axes.  This avoids overly tall colorbars on equal-aspect maps
+    and gives package plots a consistent colorbar geometry.
+    """
+    from matplotlib.ticker import FormatStrFormatter, MaxNLocator
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+    side = side.lower()
+    if side not in {"right", "left", "top", "bottom"}:
+        msg = "colorbar side must be 'right', 'left', 'top', or 'bottom'."
+        raise ValueError(msg)
+
+    divider = make_axes_locatable(ax)
+    orientation = (
+        "vertical" if side in {"right", "left"} else "horizontal"
+    )
+    cax = divider.append_axes(side, size=size, pad=pad)
+    cbar = ax.figure.colorbar(
+        mappable,
+        cax=cax,
+        orientation=orientation,
+        **colorbar_kw,
+    )
+    if label:
+        cbar.set_label(label)
+    if max_ticks is not None:
+        locator = MaxNLocator(nbins=max(2, int(max_ticks)))
+        cbar.locator = locator
+    if tick_format:
+        formatter = FormatStrFormatter(tick_format)
+        cbar.formatter = formatter
+    cbar.update_ticks()
+    return cbar
+
+
+def add_polar_colorbar(
+    mappable: Any,
+    ax: Any,
+    *,
+    label: str | None = None,
+    pad: float = 0.10,
+    shrink: float = 0.72,
+    aspect: float = 20,
+    max_ticks: int | None = 5,
+    tick_format: str | None = None,
+    **colorbar_kw: Any,
+) -> Any:
+    """Attach a compact colorbar beside a polar axes.
+
+    Polar plots do not work well with the axes-divider geometry used by
+    :func:`add_colorbar`, especially when figures are saved with tight
+    bounding boxes.  This helper keeps the same tick-density policy while
+    using Matplotlib's polar-friendly colorbar placement.
+    """
+    from matplotlib.ticker import FormatStrFormatter, MaxNLocator
+
+    cbar = ax.figure.colorbar(
+        mappable,
+        ax=ax,
+        pad=pad,
+        shrink=shrink,
+        aspect=aspect,
+        **colorbar_kw,
+    )
+    if label:
+        cbar.set_label(label)
+    if max_ticks is not None:
+        cbar.locator = MaxNLocator(nbins=max(2, int(max_ticks)))
+    if tick_format:
+        cbar.formatter = FormatStrFormatter(tick_format)
+    cbar.update_ticks()
+    return cbar
+
+
 def set_fmt(*formats: str) -> None:
     """Set the global export format(s) on :data:`PLOT_CONFIG`.
 
@@ -834,6 +922,8 @@ __all__ = [
     # singleton
     "PLOT_CONFIG",
     # convenience setters
+    "add_colorbar",
+    "add_polar_colorbar",
     "save_fig",
     "set_fmt",
     "set_dpi",

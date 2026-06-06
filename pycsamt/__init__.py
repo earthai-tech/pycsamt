@@ -55,6 +55,12 @@ from . import interp  # noqa: F401  geological interpretation / export
 from . import inversion  # noqa: F401  physics-based EM inversion API
 from . import tdem    # noqa: F401  time-domain EM → EDICollection
 
+# ── AI agents (optional — requires anthropic / openai / google-generativeai) ──
+try:
+    from . import agents  # noqa: F401
+except Exception:          # ImportError or any initialisation error
+    pass
+
 # ── Backend API ───────────────────────────────────────────────────────────────
 from pycsamt.backends import (
     auto_detect,

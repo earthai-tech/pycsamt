@@ -47,6 +47,7 @@ dependencies = [
     "pandas>=1.4",
     "pyyaml>=5.4",
     "tqdm>=4.60",
+    "click>=8.1",
 ]
 
 # ---------------------------------------------------------------------------
@@ -103,10 +104,10 @@ Documentation   = "https://pycsamt.readthedocs.io"
 Changelog       = "https://pycsamt.readthedocs.io/en/latest/changelog.html"
 
 # ---------------------------------------------------------------------------
-# Entry points  (v2 CLI — to be implemented)
+# Entry points
 # ---------------------------------------------------------------------------
-# [project.scripts]
-# pycsamt = "pycsamt.cli:main"
+[project.scripts]
+pycsamt = "pycsamt.cli:main"
 
 # ---------------------------------------------------------------------------
 # Setuptools configuration

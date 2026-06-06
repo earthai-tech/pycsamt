@@ -1962,7 +1962,7 @@ def _extract_z_arrays(ed: EDIFile) -> Dict[str, Any]:
     )
     out["rho"] = _safe_get(Z, "rho", "res", "resistivity")
     out["phase"] = _safe_get(Z, "phase", "phi")
-    tip = _safe_get(ed, "T", "TIP")
+    tip = _safe_get(ed, "T", "TIP", "Tip", "tipper", "Tipper")
     if tip is None:
         tip = _safe_get(Z, "tipper", "tip")
     out["tipper"] = tip

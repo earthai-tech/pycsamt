@@ -1024,6 +1024,216 @@ class Spectra(BaseEM):
     
         return self
 
+    @classmethod
+    def from_file(
+        cls,
+        path: str,
+        *,
+        empty: float = 1.0e32,
+        verbose: int = 0,
+    ) -> "Spectra":
+        """Read a :class:`Spectra` directly from an EDI file path.
+
+        Convenience wrapper around :meth:`from_io` that calls
+        :class:`SpectraSECT.from_file` and :class:`SpectraIO.from_file`
+        internally.
+
+        Parameters
+        ----------
+        path : str or Path
+            Path to the EDI file containing ``>=SPECTRASECT`` and
+            ``>SPECTRA`` blocks.
+        empty : float
+            Sentinel value for missing spectra entries.  Default 1e32.
+        verbose : int
+            Verbosity level forwarded to :meth:`from_io`.
+
+        Returns
+        -------
+        Spectra
+        """
+        sect = SpectraSECT.from_file(str(path))
+        sio  = SpectraIO.from_file(str(path),
+                                   start_line=sect.start_data_lines_num)
+        return cls.from_io(sect, sio, empty=empty, verbose=verbose)
+
+    def to_edi(
+        self,
+        source_edi=None,
+        *,
+        station_name: Optional[str] = None,
+        e_labels: Tuple[str, str] = ("EX", "EY"),
+        h_labels: Tuple[str, str] = ("HX", "HY"),
+        ridge: Optional[float] = None,
+        estimate_error: bool = False,
+        dof: Optional[Any] = None,
+    ) -> Any:
+        r"""Convert cross-spectra to an MT-impedance :class:`~pycsamt.seg.edi.EDIFile`.
+
+        Calls :meth:`to_Z` and assembles a complete
+        ``>=MTSECT`` / ``>FREQ`` / ``>ZXXR`` / ``>ZXYR`` / … EDI
+        ready to be saved with :meth:`~pycsamt.seg.edi.EDIFile.write`.
+
+        The structural sections (``>HEAD``, ``>INFO``, ``>=DEFINEMEAS``)
+        are *re-used* from *source_edi* when provided, preserving all
+        acquisition metadata; otherwise a minimal header is synthesised
+        from the :class:`Spectra` metadata.
+
+        According to the SEG EDI standard (§ 7.53, 12.1), an MT data
+        section requires:
+
+        .. code-block:: text
+
+            >=MTSECT
+              SECTID=...
+              NFREQ=...
+              HX=...  HY=...  HZ=...  EX=...  EY=...
+            >FREQ   //N
+              ...
+            >ZXXR  ROT=ZROT  //N
+              ...
+            >ZXXI  ROT=ZROT  //N
+              ...
+            ...
+            >END
+
+        The measurement IDs for ``HX``, ``HY``, … in ``>=MTSECT`` are
+        resolved from :attr:`id_to_chtype` (populated by
+        :class:`SpectraSECT` from ``>HMEAS`` / ``>EMEAS`` lines).
+
+        Parameters
+        ----------
+        source_edi : str, Path, or EDIFile, optional
+            Spectra EDI file whose ``>HEAD``, ``>INFO``, and
+            ``>=DEFINEMEAS`` sections are copied into the output.
+            Pass the same path used with :meth:`from_file` to produce
+            a fully metadata-rich result.  When ``None``, a minimal
+            header is synthesised.
+        station_name : str, optional
+            Override for the ``DATAID`` in ``>HEAD`` and ``SECTID`` in
+            ``>=MTSECT``.  Defaults to :attr:`name`.
+        e_labels : tuple of str
+            Electric channel type labels forwarded to :meth:`to_Z`.
+        h_labels : tuple of str
+            Horizontal magnetic channel type labels forwarded to :meth:`to_Z`.
+        ridge : float, optional
+            Tikhonov regularisation forwarded to :meth:`to_Z`.
+        estimate_error : bool
+            If ``True``, propagate 1-σ errors into ``>ZXX.VAR`` … blocks.
+        dof : float or ndarray, optional
+            Effective degrees of freedom forwarded to :meth:`to_Z`.
+
+        Returns
+        -------
+        EDIFile
+            Fully populated MT-impedance container.  Call
+            :meth:`~pycsamt.seg.edi.EDIFile.write` to save.
+
+        Raises
+        ------
+        EdIDataError
+            If :meth:`to_Z` fails (channel types not resolved, singular
+            magnetic block, etc.).
+
+        Examples
+        --------
+        Convert and save::
+
+            sp  = Spectra.from_file("site.edi")
+            ed  = sp.to_edi("site.edi", estimate_error=False)
+            out = ed.write(savepath="mt_output/")
+
+        Convert with a custom station name and error propagation::
+
+            ed  = sp.to_edi("site.edi", station_name="HBH03_imp",
+                            estimate_error=True, dof=24.0)
+            out = ed.write(savepath="mt_output/")
+
+        Verify the round-trip::
+
+            from pycsamt.seg.edi import EDIFile
+            ed2 = EDIFile(out)
+            assert ed2.Z.n_freq == sp.n_freq
+        """
+        # deferred import to avoid circular deps at module level
+        from .edi import EDIFile as _EDIFile
+        from .mtemap import MTEMAP as _MTEMAP
+
+        # ── Step 1: recover Z and Tipper from cross-spectra ──────────────
+        z_obj, tip = self.to_Z(
+            e_labels=e_labels,
+            h_labels=h_labels,
+            ridge=ridge,
+            estimate_error=estimate_error,
+            dof=dof,
+        )
+
+        # ── Step 2: build or load the structural EDI template ─────────────
+        if isinstance(source_edi, _EDIFile):
+            ed = source_edi
+        elif source_edi is not None:
+            ed = _EDIFile(str(source_edi), verbose=0)
+        else:
+            # No source: create a blank container; caller must fill header
+            ed = _EDIFile.__new__(_EDIFile)
+            ed.path      = None
+            ed.verbose   = 0
+            ed._init_registry()
+            ed._data_start = None
+            from ..z.z import Z as _Z
+            from ..z.tipper import Tipper as _Tip
+            from ..z.resphase import ResPhase as _RP
+            ed.Z   = _Z(verbose=0)
+            ed.Res = _RP(verbose=0)
+            ed.Tip = _Tip()
+            ed.block_size  = 6
+            ed.float_fmt   = "{: .6E}"
+            ed.header_tpl  = ">!****{title}****!\n"
+
+        # ── Step 3: build >=MTSECT section ───────────────────────────────
+        # Invert id_to_chtype: CHTYPE → first matching measurement ID
+        id_map: Dict[str, str] = dict(getattr(self, "id_to_chtype", {}) or {})
+        chtype_to_id: Dict[str, str] = {}
+        for mid, cht in id_map.items():
+            key = "".join(c for c in str(cht).upper() if c.isalpha())
+            if key and key not in chtype_to_id:
+                chtype_to_id[key] = str(mid)
+
+        # Also try chan_ids directly when they look like channel type labels
+        if not chtype_to_id and self.chan_ids:
+            for cid in self.chan_ids:
+                key = "".join(c for c in str(cid).upper() if c.isalpha())
+                if key in {"HX", "HY", "HZ", "EX", "EY", "RX", "RY"}:
+                    chtype_to_id[key] = str(cid)
+
+        mtsect_kw: Dict[str, Any] = {}
+        for attr in ("hx", "hy", "hz", "ex", "ey", "rx", "ry"):
+            cht = attr.upper()
+            if cht in chtype_to_id:
+                mtsect_kw[attr] = chtype_to_id[cht]
+
+        sid = station_name or self.name or "SITE"
+        mtsect = _MTEMAP(
+            sectid=str(sid),
+            nfreq=int(z_obj.n_freq),
+            **mtsect_kw,
+        )
+        ed.add_section("mtsect", mtsect)
+
+        # ── Step 4: attach Z and Tipper ───────────────────────────────────
+        ed.Z = z_obj
+        if tip is not None:
+            ed.Tip = tip
+
+        # ── Step 5: propagate station name to >HEAD if possible ───────────
+        if station_name:
+            try:
+                ed.station = str(station_name)
+            except Exception:
+                pass
+
+        return ed
+
     # -------------- round-trip to IO
     def to_io(self) -> Tuple["SpectraSECT", "SpectraIO"]:
         nc = self.n_chan

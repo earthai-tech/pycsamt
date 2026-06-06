@@ -69,6 +69,11 @@ __all__ = [
     "plot_model_2d",
     "plot_pseudosection_2d",
     "plot_response_profiles",
+    # 3-D forward
+    "plot_model_3d",
+    "plot_response_map_3d",
+    "plot_response_section_3d",
+    "plot_tensor_components_3d",
 ]
 
 
@@ -738,3 +743,395 @@ def plot_response_profiles(
     )
     _spine_style(ax)
     return ax
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3-D model — orthogonal slice view
+# ─────────────────────────────────────────────────────────────────────────────
+
+def plot_model_3d(
+    grid3d,
+    *,
+    cmap: str = "jet_r",
+    log_scale: bool = True,
+    clip_core: bool = True,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    show_stations: bool = True,
+    title: str = "",
+    figsize: Tuple[float, float] = (13, 4.5),
+) -> np.ndarray:
+    """Three orthogonal slice panels for a 3-D resistivity model.
+
+    Displays the XZ (mid-y), YZ (mid-x), and XY (mid-z) cross-sections of
+    *grid3d* as colour maps.  Station positions are overlaid on the XY
+    (map-view) panel.
+
+    Parameters
+    ----------
+    grid3d : Grid3D
+    cmap : str
+    log_scale : bool
+    clip_core : bool
+    vmin, vmax : float or None
+        Colour limits in log₁₀(Ω·m) when *log_scale* is True.
+    show_stations : bool
+    title : str
+    figsize : (float, float)
+
+    Returns
+    -------
+    axes : ndarray of Axes, shape (3,)
+        ``[ax_xz, ax_yz, ax_xy]``
+    """
+    p  = grid3d.n_pad
+    cx = slice(p, grid3d.nx - p) if (clip_core and p) else slice(None)
+    cy = slice(p, grid3d.ny - p) if (clip_core and p) else slice(None)
+    cz = slice(None, grid3d.nz - p) if (clip_core and p) else slice(None)
+
+    xn = grid3d.x_nodes[p: grid3d.nx + 1 - p] if (clip_core and p) else grid3d.x_nodes
+    yn = grid3d.y_nodes[p: grid3d.ny + 1 - p] if (clip_core and p) else grid3d.y_nodes
+    zn = grid3d.z_nodes[: grid3d.nz + 1 - p]  if (clip_core and p) else grid3d.z_nodes
+
+    mid_y = p + (grid3d.ny - 2 * p) // 2 if p else grid3d.ny // 2
+    mid_x = p + (grid3d.nx - 2 * p) // 2 if p else grid3d.nx // 2
+    mid_z = (grid3d.nz - p) // 2          if p else grid3d.nz // 2
+
+    rho = grid3d.resistivity
+
+    def _prep(data):
+        return np.log10(np.maximum(data, 1e-12)) if log_scale else data
+
+    slices = [
+        (_prep(rho[cz, mid_y, cx]), xn, zn, "x (m)", "z (m)",
+         f"XZ  (y = {grid3d.y_centers[mid_y]:.0f} m)"),
+        (_prep(rho[cz, cy, mid_x]), yn, zn, "y (m)", "z (m)",
+         f"YZ  (x = {grid3d.x_centers[mid_x]:.0f} m)"),
+        (_prep(rho[mid_z, cy, cx]), xn, yn, "x (m)", "y (m)",
+         f"XY  (z = {grid3d.z_centers[mid_z]:.0f} m)"),
+    ]
+
+    clabel = (r"$\log_{10}\rho$  ($\Omega\cdot$m)"
+              if log_scale else r"$\rho$  ($\Omega\cdot$m)")
+
+    fig, axs = plt.subplots(1, 3, figsize=figsize, constrained_layout=True)
+
+    for ax, (data, h_nodes, v_nodes, xlb, ylb, ttl) in zip(axs, slices):
+        pc = ax.pcolormesh(
+            h_nodes, v_nodes, data,
+            cmap=cmap, shading="flat", vmin=vmin, vmax=vmax,
+        )
+        _add_colorbar(fig, ax, pc, clabel, fontsize=7.5, pad=0.02, shrink=0.92)
+        if ylb == "z (m)":
+            ax.invert_yaxis()
+        ax.set_xlabel(xlb, fontsize=8)
+        ax.set_ylabel(ylb, fontsize=8)
+        ax.set_title(ttl, fontsize=8.5, pad=4)
+        _spine_style(ax)
+
+    if show_stations and grid3d.n_stations > 0:
+        axs[2].scatter(
+            grid3d.stations_xy[:, 0], grid3d.stations_xy[:, 1],
+            marker="v", s=36, color="k", zorder=5, label="stations",
+        )
+        axs[2].legend(fontsize=7, framealpha=0.7, loc="upper right")
+
+    fig.suptitle(title or (grid3d.name or "3-D resistivity model"),
+                 fontsize=10, y=1.01)
+    return np.array(axs)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3-D response — map view (one frequency)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def plot_response_map_3d(
+    response3d,
+    *,
+    freq_idx: int = 0,
+    component: str = "xy",
+    quantity: str = "rho_a",
+    cmap=_UNSET,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    show_labels: bool = True,
+    marker_size: float = 120.0,
+    title: str = "",
+    figsize: Tuple[float, float] = (7, 6),
+    ax: Optional[Axes] = None,
+) -> Axes:
+    """Map-view scatter of ρ_a or phase at one frequency.
+
+    Each station is drawn as a coloured symbol at its (x, y) surface
+    position.
+
+    Parameters
+    ----------
+    response3d : ForwardResponse3D
+    freq_idx : int
+    component : {'xy', 'yx', 'xx', 'yy'}
+    quantity : {'rho_a', 'phase'}
+    cmap : str or _UNSET
+    vmin, vmax : float or None
+    show_labels : bool
+    marker_size : float
+    title : str
+    figsize : (float, float)
+    ax : Axes or None
+
+    Returns
+    -------
+    ax : Axes
+    """
+    from ..api.plot import add_colorbar as _add_cb
+
+    comp   = component.lower()
+    attr   = f"rho_a_{comp}" if quantity == "rho_a" else f"phase_{comp}"
+    raw    = getattr(response3d, attr)[freq_idx, :]
+
+    if quantity == "rho_a":
+        data_c       = np.log10(np.maximum(raw, 1e-12))
+        default_cmap = "jet_r"
+        cb_label     = (r"$\log_{10}\rho_a$  ($\Omega\cdot$m)  "
+                        f"[Z_{comp.upper()}]")
+    else:
+        data_c       = _phase_vals(raw)
+        default_cmap = "RdBu_r"
+        cb_label     = _phase_label() + f"  [Z_{comp.upper()}]"
+
+    if cmap is _UNSET:
+        cmap = default_cmap
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+    else:
+        fig = ax.get_figure()
+
+    x_st = response3d.stations_xy[:, 0]
+    y_st = response3d.stations_xy[:, 1]
+
+    sc = ax.scatter(
+        x_st, y_st, c=data_c,
+        cmap=cmap, s=marker_size, vmin=vmin, vmax=vmax,
+        edgecolors="0.3", linewidths=0.6, zorder=4,
+    )
+    _add_cb(sc, ax, label=cb_label, side="right", size="4%", pad=0.06,
+            max_ticks=6)
+
+    if show_labels:
+        for i, (xi, yi) in enumerate(zip(x_st, y_st)):
+            ax.annotate(str(i + 1), (xi, yi),
+                        xytext=(4, 4), textcoords="offset points",
+                        fontsize=6.5, color="0.3")
+
+    freq = response3d.freqs[freq_idx]
+    per  = 1.0 / freq
+    ax.set_xlabel("x  (m)", fontsize=9)
+    ax.set_ylabel("y  (m)", fontsize=9)
+    ax.set_aspect("equal")
+    ax.set_title(
+        title or (f"Map view — {quantity}  [Z_{comp.upper()}]  "
+                  f"T = {per:.3g} s"),
+        fontsize=10, pad=6,
+    )
+    _spine_style(ax)
+    return ax
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3-D response — pseudo-section (period × station)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def plot_response_section_3d(
+    response3d,
+    *,
+    component: str = "xy",
+    quantity: str = "rho_a",
+    y_row: Optional[int] = None,
+    cmap=_UNSET,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    n_contours: int = 0,
+    show_stations: bool = True,
+    station_preset: str = "pseudosection",
+    title: str = "",
+    figsize: Tuple[float, float] = (11, 5),
+    ax: Optional[Axes] = None,
+) -> Axes:
+    """Period × station pseudo-section for one 3-D response component.
+
+    Stations are sorted along x and projected onto a profile at a selected
+    y-row (default: mid-y row).
+
+    Parameters
+    ----------
+    response3d : ForwardResponse3D
+    component : {'xy', 'yx', 'xx', 'yy'}
+    quantity : {'rho_a', 'phase'}
+    y_row : int or None
+        Index of the y-row.  ``None`` → midpoint row.
+    cmap : str or _UNSET
+    vmin, vmax : float or None
+    n_contours : int
+    show_stations : bool
+    station_preset : str
+    title : str
+    figsize : (float, float)
+    ax : Axes or None
+
+    Returns
+    -------
+    ax : Axes
+    """
+    comp  = component.lower()
+    attr  = f"rho_a_{comp}" if quantity == "rho_a" else f"phase_{comp}"
+    data  = getattr(response3d, attr)    # (n_freqs, n_stations)
+    freqs = response3d.freqs
+    xy    = response3d.stations_xy
+
+    # Select y-row
+    y_unique = np.unique(xy[:, 1])
+    if y_row is None:
+        y_row = len(y_unique) // 2
+    y_sel = y_unique[min(y_row, len(y_unique) - 1)]
+    tol   = (0.5 * (y_unique[1] - y_unique[0])
+              if len(y_unique) > 1 else 1e9)
+    mask  = np.abs(xy[:, 1] - y_sel) < tol
+    if not mask.any():
+        mask = np.ones(len(xy), dtype=bool)
+
+    st_x   = xy[mask, 0]
+    data_s = data[:, mask]
+    order  = np.argsort(st_x)
+    st_x, data_s = st_x[order], data_s[:, order]
+
+    if quantity == "rho_a":
+        data_c       = np.log10(np.maximum(data_s, 1e-12))
+        default_cmap = "jet_r"
+        cb_label     = (r"$\log_{10}\rho_a$  ($\Omega\cdot$m)  "
+                        f"[Z_{comp.upper()}]")
+    else:
+        data_c       = _phase_vals(data_s)
+        default_cmap = "RdBu_r"
+        cb_label     = _phase_label() + f"  [Z_{comp.upper()}]"
+
+    if cmap is _UNSET:
+        cmap = default_cmap
+
+    y_log = np.log10(1.0 / freqs)
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+    else:
+        fig = ax.get_figure()
+
+    if len(st_x) > 1:
+        dx = np.diff(st_x) / 2.0
+        x_edges = np.r_[st_x[0] - dx[0], st_x[:-1] + dx, st_x[-1] + dx[-1]]
+    else:
+        x_edges = np.r_[st_x[0] - 100., st_x[0] + 100.]
+
+    if len(y_log) > 1:
+        dy  = np.abs(np.diff(y_log)) / 2.0
+        sgn = np.sign(np.diff(y_log))
+        y_edges = np.r_[y_log[0] - dy[0],
+                        y_log[:-1] + sgn * dy,
+                        y_log[-1] + sgn[-1] * dy[-1]]
+    else:
+        y_edges = np.r_[y_log[0] - 0.2, y_log[0] + 0.2]
+
+    pc = ax.pcolormesh(
+        x_edges, y_edges, data_c,
+        cmap=cmap, shading="flat", vmin=vmin, vmax=vmax,
+    )
+    _add_colorbar(fig, ax, pc, cb_label)
+
+    if n_contours > 0 and data_c.shape[1] > 1:
+        ax.contour(st_x, y_log, data_c,
+                   levels=n_contours, colors="k",
+                   linewidths=0.5, alpha=0.6)
+
+    ax.set_ylabel(r"$\log_{10}T$  (s)", fontsize=9)
+    if y_log[0] > y_log[-1]:
+        ax.invert_yaxis()
+
+    if show_stations and len(st_x) > 0:
+        labels = [f"{i+1}" for i in range(len(st_x))]
+        xlim   = (float(x_edges[0]), float(x_edges[-1]))
+        sty    = PYCSAMT_STATION_RENDERING.style_for(station_preset)
+        sty.apply(ax, st_x, labels, xlim=xlim)
+    else:
+        ax.set_xlabel("x  (m)", fontsize=9)
+
+    qty_lbl = "Apparent resistivity" if quantity == "rho_a" else "Phase"
+    ax.set_title(
+        title or (f"3-D pseudo-section — {qty_lbl}  [Z_{comp.upper()}]"
+                  f"  (y = {y_sel:.0f} m)"),
+        fontsize=10, pad=6,
+    )
+    _spine_style(ax)
+    return ax
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3-D response — full 2 × 2 tensor component panel
+# ─────────────────────────────────────────────────────────────────────────────
+
+def plot_tensor_components_3d(
+    response3d,
+    *,
+    freq_idx: int = 0,
+    quantity: str = "rho_a",
+    cmap=_UNSET,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    marker_size: float = 100.0,
+    title: str = "",
+    figsize: Tuple[float, float] = (12, 10),
+) -> np.ndarray:
+    """2 × 2 map panel showing all four impedance tensor components.
+
+    Panels are arranged as:
+    ``[[Z_xx, Z_xy], [Z_yx, Z_yy]]``
+
+    Parameters
+    ----------
+    response3d : ForwardResponse3D
+    freq_idx : int
+    quantity : {'rho_a', 'phase'}
+    cmap : str or _UNSET
+    vmin, vmax : float or None
+    marker_size : float
+    title : str
+    figsize : (float, float)
+
+    Returns
+    -------
+    axes : ndarray of Axes, shape (2, 2)
+    """
+    fig, axs = plt.subplots(2, 2, figsize=figsize, constrained_layout=True)
+
+    for idx, comp in enumerate(["xx", "xy", "yx", "yy"]):
+        r, c = divmod(idx, 2)
+        plot_response_map_3d(
+            response3d,
+            freq_idx    = freq_idx,
+            component   = comp,
+            quantity    = quantity,
+            cmap        = cmap,
+            vmin        = vmin,
+            vmax        = vmax,
+            show_labels = False,
+            marker_size = marker_size,
+            ax          = axs[r, c],
+        )
+
+    freq = response3d.freqs[freq_idx]
+    per  = 1.0 / freq
+    qty_lbl = "Apparent resistivity" if quantity == "rho_a" else "Phase"
+    fig.suptitle(
+        title or f"Full impedance tensor — {qty_lbl}   T = {per:.3g} s",
+        fontsize=11, y=1.01,
+    )
+    return axs
+

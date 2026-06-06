@@ -73,6 +73,10 @@ from .plot import (
     plot_model_2d,
     plot_pseudosection_2d,
     plot_response_profiles,
+    plot_model_3d,
+    plot_response_map_3d,
+    plot_response_section_3d,
+    plot_tensor_components_3d,
 )
 
 __all__ = [
@@ -109,11 +113,16 @@ __all__ = [
     "ForwardConfig",
     "ForwardConfig2D",
     "ForwardConfig3D",
-    # plotting
+    # plotting — 1-D / 2-D
     "plot_response_1d",
     "plot_model_1d",
     "plot_response_and_model_1d",
     "plot_model_2d",
     "plot_pseudosection_2d",
     "plot_response_profiles",
+    # plotting — 3-D
+    "plot_model_3d",
+    "plot_response_map_3d",
+    "plot_response_section_3d",
+    "plot_tensor_components_3d",
 ]

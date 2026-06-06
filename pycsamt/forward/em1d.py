@@ -254,7 +254,7 @@ def _hankel_hz_fd(omega: float, rho: np.ndarray, thick: np.ndarray,
     # Kernel:  λ · r_TE · J₁(λa)  ×  λ (Jacobian for log substitution)
     integrand = lam * r_TE * J1(lam * a) * lam
 
-    return jac * float(np.dot(wts, integrand)) / (4.0 * np.pi)
+    return jac * complex(np.dot(wts, integrand)) / (4.0 * np.pi)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

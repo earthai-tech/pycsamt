@@ -109,8 +109,27 @@ class StationAxisStyle:
         labels: Sequence[Any] | None = None,
         *,
         xlim: tuple[float, float] | None = None,
+        topo_elev: np.ndarray | None = None,
     ) -> np.ndarray:
-        """Apply station ticks, labels, and markers to ``ax``."""
+        """Apply station ticks, labels, and markers to ``ax``.
+
+        Parameters
+        ----------
+        ax : Axes
+        positions : (n,) station x positions
+        labels : (n,) station name strings, optional
+        xlim : (xmin, xmax) x-axis limits, optional
+        topo_elev : (n,) terrain elevation in *data y-units*, optional
+            When provided the markers are placed at the terrain surface
+            (+ a small pad toward the viewer) instead of at the flat
+            axis edge.  Labels are drawn inline above the markers;
+            xticklabels at the axis edge are suppressed.
+
+        Returns
+        -------
+        numpy.ndarray
+            Indices of stations whose labels are visible.
+        """
         side = self.side.lower()
         if side not in _SIDES:
             msg = f"station axis side must be one of {sorted(_SIDES)}."
@@ -123,6 +142,60 @@ class StationAxisStyle:
         figwidth = ax.figure.get_figwidth() if ax.figure is not None else 10.0
         idx = self.label_indices(raw_labels, figwidth)
 
+        if xlim is not None:
+            ax.set_xlim(*xlim)
+
+        # ── Topo-surface mode ─────────────────────────────────────────────
+        # Markers are placed at the real terrain elevation (data coordinates)
+        # instead of at the flat axis edge.  Labels are drawn inline above
+        # the markers; the axis ticklabels at the edge are suppressed.
+        if topo_elev is not None:
+            elev = np.asarray(topo_elev, dtype=float)
+
+            # Compute pad: move marker slightly above the topo surface
+            # toward the viewer (upper part of the display).
+            y0, y1 = ax.get_ylim()
+            y_range = abs(y1 - y0)
+            from pycsamt.topo.config import PYCSAMT_TOPO
+            pad_frac = PYCSAMT_TOPO.marker_pad_fraction
+            # Direction toward the top of the display (+1 if normal, -1 if inverted)
+            toward_top = 1.0 if y1 >= y0 else -1.0
+            pad = toward_top * pad_frac * y_range
+
+            marker_y = elev + pad
+            label_y  = elev + pad * 3.5  # label further above the marker
+
+            # Suppress axis ticklabels — labels are drawn inline instead
+            ax.set_xticks(x, minor=True)
+            ax.tick_params(axis="x", which="minor", length=self.tick_length, top=True)
+            ax.set_xticks([])
+            ax.set_xticklabels([])
+
+            # All markers always visible
+            if self.show_markers:
+                ax.scatter(
+                    x, marker_y,
+                    transform=ax.transData,
+                    **self.marker.kwargs(),
+                )
+
+            # Labels only at thinned subset
+            if self.show_labels:
+                ha = "center"
+                for i in idx:
+                    ax.text(
+                        x[i], label_y[i],
+                        raw_labels[i],
+                        fontsize=self.fontsize,
+                        rotation=self.rotation,
+                        va="bottom" if toward_top > 0 else "top",
+                        ha=ha,
+                        clip_on=True,
+                        zorder=self.marker.zorder + 1,
+                    )
+            return idx
+
+        # ── Flat-datum mode (default) ─────────────────────────────────────
         if self.show_all_ticks:
             ax.set_xticks(x, minor=True)
             ax.tick_params(axis="x", which="minor", length=self.tick_length)
@@ -163,8 +236,6 @@ class StationAxisStyle:
                 pad=self.label_pad,
             )
         ax.set_xlabel(self.xlabel, labelpad=self.xlabel_pad)
-        if xlim is not None:
-            ax.set_xlim(*xlim)
         if self.show_markers:
             ax.scatter(
                 x,

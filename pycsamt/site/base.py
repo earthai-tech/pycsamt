@@ -30,9 +30,10 @@ from .utils import (
     set_coords as _set_coords,
     maybe_copy as _maybe_copy,
     _get_head,
-    _ensure_head, 
-    as_edicollection       
+    _ensure_head,
+    as_edicollection
 )
+from ..api.view import maybe_wrap_frame
 
 __all__ = ["SiteMixin", "Site", "Sites", "to_sites"]
 
@@ -242,7 +243,7 @@ class SiteMixin(CoreObject):
             out["INFO"] = dict(getattr(info, "__dict__", {}))
         return out
 
-    def to_dataframe(self, kind: str = "z") -> pd.DataFrame:
+    def to_dataframe(self, kind: str = "z", *, api: bool | None = None) -> Any:
         r"""
         Export core arrays to a tidy :class:`pandas.DataFrame`.
 
@@ -288,13 +289,23 @@ class SiteMixin(CoreObject):
              if arrs["freq"] is not None
              else np.asarray([], float))
         idx = pd.Index(f, name="f")
+
+        def _out(df: pd.DataFrame) -> Any:
+
+            return maybe_wrap_frame(
+                df,
+                api=api,
+                name=f"site_{kind.strip().lower()}",
+                kind=f"site.{kind.strip().lower()}",
+                source=getattr(self, "name", None),
+            )
     
         k = kind.strip().lower()
         if k in ("z", "imp", "impedance"):
             z = arrs["z"]
             z = None if z is None else _z_to_2d(z)
             if z is None or z.size == 0:
-                return pd.DataFrame(index=idx)
+                return _out(pd.DataFrame(index=idx))
             cols = _component_names()
             data: Dict[str, Any] = {}
             for i, c in enumerate(cols):
@@ -302,7 +313,7 @@ class SiteMixin(CoreObject):
                     data[c] = z[:, i]
                 except Exception:
                     data[c] = np.full(idx.size, np.nan, float)
-            return pd.DataFrame(data, index=idx)
+            return _out(pd.DataFrame(data, index=idx))
     
         if k in ("resphase", "rp", "rho_phase"):
             rho = arrs["rho"]
@@ -326,12 +337,12 @@ class SiteMixin(CoreObject):
                     pass
                 data[f"rho_{c.lower()}"] = rr
                 data[f"phi_{c.lower()}"] = pp
-            return pd.DataFrame(data, index=idx)
+            return _out(pd.DataFrame(data, index=idx))
     
         if k in ("tip", "tipper", "t"):
             tip = arrs["tipper"]
             if tip is None:
-                return pd.DataFrame(index=idx)
+                return _out(pd.DataFrame(index=idx))
             tip = np.asarray(tip)
             data: Dict[str, Any] = {}
             for i, c in enumerate(("Tx", "Ty")):
@@ -339,7 +350,7 @@ class SiteMixin(CoreObject):
                     data[c] = tip[:, i]
                 except Exception:
                     data[c] = np.full(idx.size, np.nan, float)
-            return pd.DataFrame(data, index=idx)
+            return _out(pd.DataFrame(data, index=idx))
     
         raise ValueError(f"Unknown kind: {kind!r}")
 
@@ -411,7 +422,10 @@ class SiteMixin(CoreObject):
             tip = _extract_z_arrays(self.edi)["tipper"]
             if tip is None:
                 return False
-            a = np.asarray(tip)
+            try:
+                a = np.asarray(tip, dtype=np.complex128)
+            except (TypeError, ValueError):
+                return False
             return a.size > 0 and np.any(np.isfinite(a))
     
         z = _extract_z_arrays(self.edi)["z"]
@@ -1841,7 +1855,11 @@ def _to_sites(
         except TypeError:
             return Sites(edic=coll)
 
-    # 2) Non-path inputs → coerce to collection
+    # 2a) Single Site object — wrap its EDIFile directly
+    if isinstance(x, Site):
+        return Sites([x.edi])
+
+    # 2b) Non-path inputs → coerce to collection
 
     try:
         coll = as_edicollection(

@@ -19,6 +19,7 @@ from ._core import (
     _get_z_block, 
 )
 from .tensor import build_phase_tensor_table
+from ..api.view import maybe_wrap_frame
 
 # -------------------------- local helpers ------------------------------- #
 
@@ -49,7 +50,8 @@ def phase_features_table(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -69,7 +71,15 @@ def phase_features_table(
             "station", "freq", "period", "beta_abs",
             "ellipt_abs", "logrho_det", "phi_det", "tip_amp",
         ]
-        return pd.DataFrame(columns=cols)
+        df = pd.DataFrame(columns=cols)
+
+        return maybe_wrap_frame(
+            df,
+            api=api,
+            name="phase_features_table",
+            kind="emtools.dimensionality.features",
+            source=sites,
+        )
     rows: List[Dict[str, float]] = []
     for i, ed in enumerate(_iter_items(S)):
         st = _name(ed, i)
@@ -106,7 +116,15 @@ def phase_features_table(
                 )
             )
     df = pd.DataFrame.from_records(rows)
-    return df
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="phase_features_table",
+        kind="emtools.dimensionality.features",
+        source=sites,
+        description="Phase tensor and impedance-derived dimensionality features.",
+    )
 
 def classify_dimensionality(
     sites: Any,
@@ -117,16 +135,25 @@ def classify_dimensionality(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     df = phase_features_table(
         sites,
         recursive=recursive,
         on_dup=on_dup,
         strict=strict,
         verbose=verbose,
+        api=False,
     )
     if df.empty:
-        return df
+
+        return maybe_wrap_frame(
+            df,
+            api=api,
+            name="dimensionality_table",
+            kind="emtools.dimensionality.classification",
+            source=sites,
+        )
     lab = np.full(len(df), 2, dtype=int)
     ok2 = (df["beta_abs"] <= skew_th)
     lab[ok2 & (df["ellipt_abs"] <= ellipt_th)] = 0
@@ -134,7 +161,15 @@ def classify_dimensionality(
     out = df.copy()
     out["dim"] = lab
     # 0=1D, 1=2D, 2=3D
-    return out
+
+    return maybe_wrap_frame(
+        out,
+        api=api,
+        name="dimensionality_table",
+        kind="emtools.dimensionality.classification",
+        source=sites,
+        description="Rule-based dimensionality labels from phase features.",
+    )
 
 # ---------------------- site-level masking/projection -------------------- #
 
@@ -353,22 +388,39 @@ def encode_dimensionality(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     D = model.get("D", None)
     mu = model.get("mu", None)
     sd = model.get("sd", None)
     feats = model.get("feat", [])
     if D is None or mu is None or sd is None:
-        return pd.DataFrame()
+        df = pd.DataFrame()
+
+        return maybe_wrap_frame(
+            df,
+            api=api,
+            name="dimensionality_encoding",
+            kind="emtools.dimensionality.encoding",
+            source=sites,
+        )
     df = phase_features_table(
         sites,
         recursive=recursive,
         on_dup=on_dup,
         strict=strict,
         verbose=verbose,
+        api=False,
     )
     if df.empty:
-        return df
+
+        return maybe_wrap_frame(
+            df,
+            api=api,
+            name="dimensionality_encoding",
+            kind="emtools.dimensionality.encoding",
+            source=sites,
+        )
     X, _ = _feature_matrix(df)
     Z = (X - mu) / (sd + 1e-12)
     Z[np.isnan(Z)] = 0.0
@@ -382,7 +434,15 @@ def encode_dimensionality(
     for j in range(k):
         out[f"a{j}"] = codes[:, j]
     out["dim_pred"] = pred
-    return out
+
+    return maybe_wrap_frame(
+        out,
+        api=api,
+        name="dimensionality_encoding",
+        kind="emtools.dimensionality.encoding",
+        source=sites,
+        description="Dictionary-coded dimensionality labels and atom weights.",
+    )
 
 
 def mask_by_dictionary(

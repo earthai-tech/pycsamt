@@ -7,8 +7,8 @@ import warnings
 import numpy as np 
 
 from typing import Callable
-from pycsamt.seg.collection import EDICollection
-from pycsamt.site.base import Sites
+from ..seg.collection import EDICollection
+from ..site.base import Sites
 
 
 def _wrap_one(ed):

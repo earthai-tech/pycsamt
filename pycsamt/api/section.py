@@ -37,8 +37,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
-from pycsamt.api.plot import add_colorbar
-from pycsamt.api.station import (
+from .plot import add_colorbar
+from .station import (
     PYCSAMT_STATION_RENDERING,
     StationAxisStyle,
 )
@@ -110,6 +110,10 @@ class SectionAxisStyle:
     title: bool = True
     xlabel_pad: float | None = None
     ylabel_pad: float | None = None
+    # What the y-axis represents — used to decide whether topography applies.
+    # Depth-like: "depth", "elevation", "elev", "skin_depth", "z"
+    # Freq-like:  "period", "frequency", "freq", "per", "t", "f"
+    y_type: str = "depth"
 
     def apply(
         self,
@@ -198,6 +202,17 @@ class SectionStyle:
     )
     station_preset: str = "pseudosection"
 
+    def topo_active(self) -> bool:
+        """Return True when the global topo config applies to this section.
+
+        Checks :data:`~pycsamt.topo.config.PYCSAMT_TOPO` against
+        ``self.axis.y_type``.  Period / frequency sections return False
+        even when topo is globally enabled, because they carry no real
+        elevation information.
+        """
+        from pycsamt.topo.config import PYCSAMT_TOPO
+        return PYCSAMT_TOPO.is_active_for(self.axis.y_type)
+
     def copy(self, **kw: Any) -> "SectionStyle":
         """Return a modified deep copy of this section style."""
         new = copy.deepcopy(self)
@@ -273,6 +288,7 @@ class PyCSAMTSection:
                 aspect="auto",
                 grid=False,
                 station_side="top",
+                y_type="period",
             ),
             colorbar=SectionColorbarStyle(
                 size="3.5%",
@@ -290,6 +306,7 @@ class PyCSAMTSection:
                 aspect="auto",
                 grid=False,
                 station_side="top",
+                y_type="depth",
             ),
             colorbar=SectionColorbarStyle(
                 size="3.2%",
@@ -311,6 +328,7 @@ class PyCSAMTSection:
                 grid=False,
                 station_side="top",
                 title=False,
+                y_type="period",
             ),
             colorbar=SectionColorbarStyle(
                 size="2.8%",
@@ -332,6 +350,7 @@ class PyCSAMTSection:
                 grid=False,
                 station_side="top",
                 title=False,
+                y_type="period",
             ),
             colorbar=SectionColorbarStyle(
                 size="2.8%",
@@ -352,6 +371,7 @@ class PyCSAMTSection:
                 aspect="auto",
                 grid=False,
                 station_side="top",
+                y_type="period",
             ),
             colorbar=SectionColorbarStyle(
                 size="3.0%",
@@ -378,6 +398,7 @@ class PyCSAMTSection:
                 aspect="auto",
                 grid=False,
                 station_side="top",
+                y_type="period",
             ),
             colorbar=SectionColorbarStyle(
                 size="3.2%",

@@ -7,7 +7,15 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pycsamt.emtools.ss import detect_near_surface, plot_ns_detection
+from pycsamt.api import APIFrame, reset_api_view
+from pycsamt.emtools.ss import (
+    detect_near_surface,
+    estimate_ss_ama,
+    estimate_ss_bilateral,
+    estimate_ss_loess,
+    estimate_ss_refmedian,
+    plot_ns_detection,
+)
 
 # ----------------------------- fixtures ----------------------------------- #
 
@@ -83,6 +91,7 @@ def _profile(sites, offsets=None):
 # -------------------------------------------------------------------------- #
 
 def test_detect_ns_columns():
+    reset_api_view()
     sites = [_clean_site(f"S{i:02d}") for i in range(5)]
     df = detect_near_surface(sites)
     expected = {
@@ -92,6 +101,35 @@ def test_detect_ns_columns():
         "ss_delta_log10", "ns_flag", "ss_flag", "distortion_type",
     }
     assert expected.issubset(df.columns)
+
+
+def test_detect_ns_api_flag_overrides_global():
+    reset_api_view()
+    sites = [_clean_site(f"S{i:02d}") for i in range(5)]
+
+    plain = detect_near_surface(sites, api=False)
+    viewed = detect_near_surface(sites, api=True)
+
+    assert not isinstance(plain, APIFrame)
+    assert isinstance(viewed, APIFrame)
+    assert viewed.kind == "emtools.ss.near_surface"
+    assert viewed.df.equals(plain)
+
+
+def test_static_shift_estimators_can_return_api_frames_for_empty_input():
+    reset_api_view()
+
+    for func, kind in (
+        (estimate_ss_ama, "emtools.ss.ama"),
+        (estimate_ss_loess, "emtools.ss.loess"),
+        (estimate_ss_bilateral, "emtools.ss.bilateral"),
+        (estimate_ss_refmedian, "emtools.ss.refmedian"),
+    ):
+        viewed = func([], api=True)
+
+        assert isinstance(viewed, APIFrame)
+        assert viewed.kind == kind
+        assert viewed.df.empty
 
 
 def test_detect_ns_row_count():

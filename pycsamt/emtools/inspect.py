@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 from ..api.style import PYCSAMT_STYLE
+from ..api.view import maybe_wrap_frame
 from ._core import ensure_sites, _get_z_block, _get_t_block
 
 # ------------------------- small helpers --------------------------------- #
@@ -150,7 +151,8 @@ def sites_summary(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -182,7 +184,18 @@ def sites_summary(
         )
         rows.append(rec)
     df = _df_from_kv(rows, list(fields))
-    return df[list(fields)]
+    df = df[list(fields)]
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="sites_summary",
+        kind="edi.summary",
+        source=sites,
+        description=(
+            "Per-site EDI frequency, tipper, and coordinate summary."
+        ),
+    )
 
 
 def list_missing_sections(
@@ -304,11 +317,20 @@ def plot_coverage(
     ax.set_ylabel(axis)
     ax.set_xticks(np.arange(len(labs)))
     ax.set_xticklabels(labs, rotation=90)
-    cb = plt.colorbar(im, ax=ax)
+    cb = ax.get_figure().colorbar(im, ax=ax)
     cb.set_label("presence")
     return ax
 
 # ------------------------ impedance curves -------------------------------- #
+
+_RESPHASE_RENAME = {
+    # Site.to_dataframe() uses z-prefix (rho_zxy); plot functions expect rho_xy
+    "rho_zxx": "rho_xx", "phi_zxx": "phi_xx",
+    "rho_zxy": "rho_xy", "phi_zxy": "phi_xy",
+    "rho_zyx": "rho_yx", "phi_zyx": "phi_yx",
+    "rho_zyy": "rho_yy", "phi_zyy": "phi_yy",
+}
+
 
 def _df_resphase(
     sites: Any,
@@ -319,7 +341,7 @@ def _df_resphase(
     strict: bool = False,
     verbose: int = 0,
 ) -> Optional[pd.DataFrame]:
-    tdf = None
+    # Try the object's own to_dataframe first (works for a single Site)
     get_df = getattr(sites, "to_dataframe", None)
     if callable(get_df):
         try:
@@ -329,7 +351,60 @@ def _df_resphase(
                 tdf = get_df(kind)
             except Exception:
                 tdf = None
-    return tdf if _is_df(tdf) else None
+        else:
+            pass
+        normed = _normalise_resphase_df(tdf, station=_name(sites, 0))
+        if normed is not None:
+            return normed
+
+    # Fallback: sites is a collection (Sites is iterable, yields Site objects)
+    dfs: List[pd.DataFrame] = []
+    try:
+        for i, item in enumerate(_iter_items(sites)):
+            item_get = getattr(item, "to_dataframe", None)
+            if not callable(item_get):
+                continue
+            try:
+                idf = item_get(kind=kind)
+            except Exception:
+                continue
+            normed = _normalise_resphase_df(idf, station=_name(item, i))
+            if normed is not None:
+                dfs.append(normed)
+    except Exception:
+        pass
+
+    if dfs:
+        return pd.concat(dfs, ignore_index=True)
+    return None
+
+
+def _unwrap_frame(obj: Any) -> Optional[pd.DataFrame]:
+    """Return a plain pd.DataFrame from obj, unwrapping APIFrame if needed."""
+    if isinstance(obj, pd.DataFrame):
+        return obj
+    # APIFrame stores the real DataFrame in .df
+    inner = getattr(obj, "df", None)
+    if isinstance(inner, pd.DataFrame):
+        return inner
+    return None
+
+
+def _normalise_resphase_df(raw: Any, station: str) -> Optional[pd.DataFrame]:
+    """Add station/freq columns and normalise column names from to_dataframe output."""
+    df = _unwrap_frame(raw)
+    if df is None:
+        return None
+    df = df.copy()
+    # Flatten freq index produced by Site.to_dataframe (index.name == 'f')
+    if df.index.name in ("f", "freq") and "freq" not in df.columns:
+        df = df.reset_index()
+        df = df.rename(columns={"f": "freq"})
+    if "station" not in df.columns:
+        df["station"] = station
+    # Rename rho_zxy → rho_xy etc.
+    df = df.rename(columns=_RESPHASE_RENAME)
+    return df
 
 
 def plot_rhoa_phi(
@@ -493,6 +568,7 @@ def pseudosection(
     quantity: str = "rho_xy",
     axis_x: str = "station",
     axis_y: str = "period",
+    period_range: Optional[Tuple[float, float]] = None,
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
     figsize: Tuple[float, float] = (7.5, 4.5),
@@ -501,7 +577,23 @@ def pseudosection(
     strict: bool = False,
     verbose: int = 0,
     ax: Optional[plt.Axes] = None,
+    topo: Optional[bool] = None,
+    dark: bool = True,
 ) -> plt.Axes:
+    """Draw a period-vs-station pseudosection.
+
+    Parameters
+    ----------
+    sites : Sites or compatible
+        Station data.
+    quantity : str
+        Column name to plot (e.g. ``"rho_xy"``, ``"phi_xy"``).
+    topo : bool or None
+        Override the global :data:`~pycsamt.topo.PYCSAMT_TOPO` setting.
+        ``None`` (default) reads the global singleton.
+    dark : bool
+        Use dark-palette styling for the topo strip.
+    """
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -524,6 +616,16 @@ def pseudosection(
             raise ValueError("axis_y not available")
     if axis_x not in df.columns:
         raise ValueError("axis_x not available")
+    # optional period-range filter (T in seconds; applied before pivot)
+    if period_range is not None and axis_y == "period":
+        T_min, T_max = float(period_range[0]), float(period_range[1])
+        df = df[(df["period"] >= T_min) & (df["period"] <= T_max)]
+        if df.empty:
+            if ax is None:
+                _, ax = plt.subplots(figsize=figsize)
+            ax.text(0.5, 0.5, "No data in selected period range",
+                    ha="center", va="center", fontsize=9)
+            return ax
     # pivot
     piv = df.pivot_table(
         index=axis_y,
@@ -531,32 +633,80 @@ def pseudosection(
         values=quantity,
         aggfunc="median",
     )
+    # Sort periods ascending; shallow (short period) will go to the top.
     piv = piv.sort_index()
-    # X = np.arange(piv.shape[1])
-    Y = piv.index.to_numpy()
-    Z = piv.to_numpy(dtype=float)
+    Y = piv.index.to_numpy()          # period values, ascending
+    Z = piv.to_numpy(dtype=float)     # shape (n_period, n_station)
+
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
+
+    # Use Z directly (NOT Z.T) so that:
+    #   x-axis = station index  (cols 0..n_station-1)  ← matches set_xticks
+    #   y-axis = period index   (rows 0..n_period-1)
+    # origin="upper" → row 0 (smallest period, shallowest) at the TOP,
+    # which is the standard MT pseudosection convention.
     im = ax.imshow(
-        Z.T,
+        Z,
         aspect="auto",
-        origin="lower",
+        origin="upper",
         vmin=vmin,
         vmax=vmax,
         interpolation="nearest",
     )
-    ax.set_xlabel(axis_x)
-    ax.set_ylabel(axis_y)
-    ax.set_yticks(
-        np.linspace(0, len(Y) - 1, num=min(8, len(Y)))
-    )
-    yt = np.linspace(0, len(Y) - 1, num=min(8, len(Y)))
-    ax.set_yticklabels([f"{Y[int(i)]:.3g}" for i in yt])
-    ax.set_xticks(np.arange(len(piv.columns)))
-    ax.set_xticklabels(piv.columns, rotation=90)
-    cb = plt.colorbar(im, ax=ax)
-    cb.set_label(quantity)
+
+    # ── X-axis: station labels at the TOP (MT convention) ────────────
+    station_labels = list(piv.columns)
+    ax.set_xticks(np.arange(len(station_labels)))
+    ax.set_xticklabels(station_labels, rotation=90, fontsize=7, ha="center")
+    ax.xaxis.tick_top()
+    ax.xaxis.set_label_position("top")
+    ax.set_xlabel(axis_x, fontsize=9, labelpad=4)
+
+    # ── Y-axis: period values ─────────────────────────────────────────
+    n_yticks = min(8, len(Y))
+    yt = np.linspace(0, len(Y) - 1, num=n_yticks)
+    ax.set_yticks(yt)
+    ax.set_yticklabels([f"{Y[int(i)]:.3g}" for i in yt], fontsize=8)
+    ax.set_ylabel(axis_y, fontsize=9)
+
+    # ── Colorbar ──────────────────────────────────────────────────────
+    cb = ax.get_figure().colorbar(im, ax=ax)
+    cb.set_label(quantity, fontsize=8)
+
+    # ── Topography strip (optional) ───────────────────────────────────
+    _topo_enabled = topo if topo is not None else _topo_cfg().enabled
+    if _topo_enabled:
+        try:
+            from pycsamt.topo.extract import (
+                extract_elevation, extract_chainage, extract_station_names,
+            )
+            from pycsamt.topo.overlay import draw_topo_strip
+            chain_km = extract_chainage(S)
+            elev_m   = extract_elevation(S)
+            names    = extract_station_names(S)
+            # Reorder to match pivot column order (station labels)
+            name_to_idx = {n: i for i, n in enumerate(names)}
+            ordered_idx = [name_to_idx.get(str(s), i)
+                           for i, s in enumerate(station_labels)]
+            chain_ord = chain_km[ordered_idx] if len(chain_km) else chain_km
+            elev_ord  = elev_m[ordered_idx]   if len(elev_m)   else elev_m
+            strip_names = [str(s) for s in station_labels]
+            draw_topo_strip(
+                ax.get_figure(), ax,
+                chain_ord, elev_ord, strip_names,
+                dark=dark,
+            )
+        except Exception:
+            pass   # topo strip is optional; never break the main plot
+
     return ax
+
+
+def _topo_cfg():
+    """Return global TopoConfig singleton (lazy import to avoid circular deps)."""
+    from pycsamt.topo.config import PYCSAMT_TOPO
+    return PYCSAMT_TOPO
 
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -1,4 +1,18 @@
 """Public API helpers shared across pyCSAMT packages."""
+from pycsamt.topo.config import (
+    TopoConfig,
+    PYCSAMT_TOPO,
+    Y_DEPTH_TYPES,
+    Y_FREQ_TYPES,
+    configure_topo,
+    reset_topo,
+)
+from .pipe import (
+    PYCSAMT_PIPE,
+    PipelineAPIConfig,
+    configure_pipe,
+    reset_pipe,
+)
 from .agents import (
     AGENT_CONFIG,
     AgentConfig,
@@ -94,8 +108,45 @@ from .plot import (
     set_savedir,
     write_default_config,
 )
+from .view import (
+    APIFrame,
+    APIResult,
+    APISurvey,
+    APIViewConfig,
+    FrameProfile,
+    PYCSAMT_API_VIEW,
+    ProgressConfig,
+    api_frame,
+    configure_api_view,
+    iter_progress,
+    maybe_wrap_frame,
+    progress_enabled,
+    read_edi,
+    read_edis,
+    read_sites,
+    reset_api_view,
+    wrap_frame,
+    wrap_result,
+    geology_dataframe,
+    geology_table,
+    quality_dataframe,
+    quality_table,
+    sites_summary,
+)
 
 __all__ = [
+    # topography API
+    "TopoConfig",
+    "PYCSAMT_TOPO",
+    "Y_DEPTH_TYPES",
+    "Y_FREQ_TYPES",
+    "configure_topo",
+    "reset_topo",
+    # pipeline API
+    "PYCSAMT_PIPE",
+    "PipelineAPIConfig",
+    "configure_pipe",
+    "reset_pipe",
     # agent LLM config
     "AGENT_CONFIG",
     "AgentConfig",
@@ -160,6 +211,30 @@ __all__ = [
     "reset_plot_config",
     "load_plot_config",
     "write_default_config",
+    # public result/data view API
+    "APIFrame",
+    "APIResult",
+    "APISurvey",
+    "APIViewConfig",
+    "FrameProfile",
+    "PYCSAMT_API_VIEW",
+    "ProgressConfig",
+    "api_frame",
+    "configure_api_view",
+    "iter_progress",
+    "maybe_wrap_frame",
+    "progress_enabled",
+    "read_edi",
+    "read_edis",
+    "read_sites",
+    "reset_api_view",
+    "wrap_frame",
+    "wrap_result",
+    "geology_dataframe",
+    "geology_table",
+    "quality_dataframe",
+    "quality_table",
+    "sites_summary",
     # CLI configuration API
     "BuildConfig",
     "LogConfig",

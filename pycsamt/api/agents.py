@@ -113,7 +113,7 @@ _PROVIDERS: frozenset[str] = frozenset({"claude", "openai", "gemini"})
 _DEFAULT_MODELS: dict[str, str] = {
     "claude": "claude-sonnet-4-6",
     "openai": "gpt-4o",
-    "gemini": "gemini-1.5-pro",
+    "gemini": "gemini-2.0-flash",
 }
 
 _ENV_KEYS: dict[str, list[str]] = {

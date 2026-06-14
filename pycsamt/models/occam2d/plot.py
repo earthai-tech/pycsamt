@@ -31,7 +31,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 
-from pycsamt.api.section import PYCSAMT_SECTION, SectionStyle
+from ...api.section import PYCSAMT_SECTION, SectionStyle
 
 from .base import OccamBase
 

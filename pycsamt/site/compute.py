@@ -15,6 +15,7 @@ from .utils import (
     station_name,
     get_freq,
 )
+from ..api.view import maybe_wrap_frame
 
 __all__= [ 
     
@@ -28,6 +29,7 @@ def strike_estimate(
     obj: Any,
     *,
     method: str = "swift",
+    api: bool | None = None,
 ) -> Any:
     r"""
     Estimate a strike angle from impedance tensors.
@@ -143,8 +145,17 @@ def strike_estimate(
     if len(rows) == 1 and not isinstance(obj, Iterable):
         return rows[0][2]
 
-    return pd.DataFrame(
+    df = pd.DataFrame(
         rows, columns=["station", "method", "theta_deg"]
+    )
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="strike_estimate",
+        kind="site.compute.strike",
+        source=obj,
+        description="Estimated geoelectric strike angle by station.",
     )
 
 
@@ -153,6 +164,7 @@ def res_at_freq(
     freq: float,
     *,
     how: str = "nearest",
+    api: bool | None = None,
 ) -> Any:
     r"""
     Evaluate apparent resistivity at a target frequency.
@@ -279,14 +291,26 @@ def res_at_freq(
         _, rxy, ryx, fx = rows[0]
         return {"res_xy": rxy, "res_yx": ryx, "f_used": fx}
 
-    return pd.DataFrame(
+    df = pd.DataFrame(
         rows, columns=["station", "res_xy", "res_yx", "f_used"]
+    )
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="res_at_freq",
+        kind="site.compute.resistivity",
+        source=obj,
+        meta={"freq": float(freq), "how": how},
+        description="Apparent resistivity evaluated at a target frequency.",
     )
 
 
 def phase_slope(
     obj: Any,
     band: Tuple[float, float],
+    *,
+    api: bool | None = None,
 ) -> Any:
     r"""
     Estimate phase slopes within a frequency band.
@@ -406,8 +430,18 @@ def phase_slope(
         _, sx, sy = rows[0]
         return {"slope_xy": sx, "slope_yx": sy}
 
-    return pd.DataFrame(
+    df = pd.DataFrame(
         rows, columns=["station", "slope_xy", "slope_yx"]
+    )
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="phase_slope",
+        kind="site.compute.phase_slope",
+        source=obj,
+        meta={"band": tuple(float(v) for v in band)},
+        description="Phase slope diagnostics by station.",
     )
 
 
@@ -415,6 +449,7 @@ def tipper_magnitude(
     obj: Any,
     *,
     per_freq: bool = False,
+    api: bool | None = None,
 ) -> Any:
     r"""
     Summarize or tabulate tipper magnitudes.
@@ -556,11 +591,31 @@ def tipper_magnitude(
         return {"mean": m, "median": md, "max": mx}
 
     if per_freq:
-        return pd.DataFrame(
+        df = pd.DataFrame(
             long_rows, columns=["station", "freq", "mag"]
         )
-    return pd.DataFrame(
+
+        return maybe_wrap_frame(
+            df,
+            api=api,
+            name="tipper_magnitude",
+            kind="site.compute.tipper",
+            source=obj,
+            meta={"per_freq": True},
+            description="Per-frequency tipper magnitude by station.",
+        )
+    df = pd.DataFrame(
         rows, columns=["station", "mean", "median", "max"]
+    )
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="tipper_magnitude",
+        kind="site.compute.tipper",
+        source=obj,
+        meta={"per_freq": False},
+        description="Tipper magnitude summary by station.",
     )
 
 

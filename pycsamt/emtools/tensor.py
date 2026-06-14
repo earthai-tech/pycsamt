@@ -13,10 +13,10 @@ from matplotlib.patches import Ellipse
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-from pycsamt.site.base import Sites
-from pycsamt.site import edit as _edit
-from pycsamt.site import compute as _compute
-from pycsamt.z import utils as zutils
+from ..site.base import Sites
+from ..site import edit as _edit
+from ..site import compute as _compute
+from ..z import utils as zutils
 
 from ._core import (
     ensure_sites,
@@ -65,7 +65,7 @@ def rotate_to_strike(
             ang = 0.0
         return _edit.rotate(
             Si,
-            angle=ang,
+            ang,
             inplace=inplace,
         )
 

@@ -1,11 +1,11 @@
 <div align="center">
-  <img src="docs/source/_static/pycsamt_logo.svg" alt="pyCSAMT logo" width="320"/>
+  <img src="docs/source/_static/pycsamt_logo.svg" alt="pyCSAMT logo" width="340"/>
 </div>
 
 <h1 align="center">pyCSAMT v2</h1>
 
 <p align="center">
-  <strong>Python toolkit for audio-frequency magnetotelluric (MT / AMT / CSAMT / CSEM) data processing, inversion, and geological interpretation</strong>
+  <strong>Scientific Python toolkit for MT, AMT, CSAMT, CSEM, and TDEM survey processing, inversion, interpretation, and reproducible workflow automation.</strong>
 </p>
 
 <p align="center">
@@ -18,136 +18,293 @@
 
 ---
 
-## Overview
+## Status
 
-**pyCSAMT v2** is a complete rewrite of the original pyCSAMT library, designed to support the full lifecycle of electromagnetic (EM) survey data from field acquisition to geological interpretation.
+pyCSAMT v2 is a major rewrite of the original pyCSAMT project. The package is being organized as a larger scientific Python library with:
 
-| Scope | Supported methods |
-|-------|------------------|
-| Controlled-source AMT | CSAMT, CSEM |
-| Natural-source MT | AMT, broadband MT |
-| Inversion targets | 1-D, 2-D resistivity models |
-| AI-assisted inversion | Physics-informed CNN (DRCNN), joint multi-survey |
+- a scikit-learn-style documentation structure using the PyData Sphinx theme,
+- a command-line interface for field and production workflows,
+- a declarative pipeline system for reproducible processing,
+- physics-based inversion support for electromagnetic methods,
+- AI-assisted agents for workflow guidance, QC, inversion preparation, reporting, and automation,
+- developer documentation for API policy, docstring style, and documentation builds.
 
-### Key modules
-
-| Package | Purpose |
-|---------|---------|
-| `pycsamt.io` | EDI / AVG / J read-write; `EDICollection` batch loader |
-| `pycsamt.processing` | Static-shift correction, phase tensor, Z decomposition |
-| `pycsamt.models` | OCCAM2D and ModEM I/O; forward modelling helpers |
-| `pycsamt.inversion` | Inversion wrappers (`Occam2DInv`, `ModEMInv`) |
-| `pycsamt.forward` | 1-D / 2-D analytic and finite-difference forward solvers |
-| `pycsamt.ai` | Dual-backend (PyTorch / TensorFlow) deep-learning inversion |
-| `pycsamt.interp` | Post-inversion interpretation: stratigraphic logs, calibration, export |
+The v2 documentation and API are under active development. Some examples may evolve before the stable v2 release.
 
 ---
 
-## Quick start
+## What pyCSAMT Does
 
-```python
-import pycsamt
+pyCSAMT supports electromagnetic survey workflows from input data to interpretation-ready deliverables.
 
-# --- Load a set of EDI files ---
-from pycsamt.io import EDICollection
-coll = EDICollection.from_dir("data/edi/")
-print(coll)          # EDICollection(n_sites=47, freq_range=[0.001, 10000] Hz)
-
-# --- Run OCCAM2D inversion ---
-from pycsamt.models import OccamModel
-model = OccamModel(n_layers=60, target_rms=1.0)
-result = model.fit(coll)
-
-# --- Interpret the 2-D resistivity model ---
-from pycsamt.interp import ResistivityModel, ModelCalibrator
-rm = ResistivityModel.from_occam2d(result)
-cal = ModelCalibrator(ptol=0.30, verbose=True).fit(rm)
-
-# Export pseudostratigraphic logs for Oasis Montaj
-from pycsamt.interp import export
-export.to_oasis_montaj_xyz(cal.stratigraphic_logs(), "output/profile.xyz")
-```
+| Area | What pyCSAMT v2 provides |
+| --- | --- |
+| Survey data | EDI, AVG, Jones J, Zonge, TDEM/TEMAVG, station metadata, survey context |
+| Data structures | SEG-style EDI objects, site collections, impedance/tipper tensors, metadata models |
+| Processing | frequency filtering, tensor rotation, static-shift correction, phase analysis, quality control |
+| Forward modelling | 1-D and 2-D EM forward modelling utilities for MT, CSAMT, and TDEM workflows |
+| Inversion | preparation, execution wrappers, result inspection, and plotting for supported inversion backends |
+| Interpretation | resistivity classification, stratigraphic products, map/profile outputs, export workflows |
+| Pipelines | YAML/JSON/Python workflow definitions, presets, step registry, output manifests |
+| AI and agents | LLM-assisted workflow orchestration, QC, inversion support, model-zoo access, code/report generation |
+| Applications | command-line tools, desktop app entry point, and web/GUI-facing package structure |
 
 ---
 
 ## Installation
 
-### Stable release (PyPI)
+Install the base package:
 
 ```bash
 pip install pycsamt
 ```
 
-### With deep-learning support
-
-```bash
-# PyTorch backend
-pip install "pycsamt[torch]"
-
-# TensorFlow backend
-pip install "pycsamt[tensorflow]"
-
-# Both backends + geospatial extras
-pip install "pycsamt[torch,tensorflow,geo]"
-```
-
-### Development install
+Install from source for v2 development:
 
 ```bash
 git clone https://github.com/earthai-tech/pycsamt.git
 cd pycsamt
-pip install -e ".[dev]"
+pip install -e ".[dev,docs]"
+```
+
+Optional extras are split by workflow:
+
+```bash
+# Machine-learning backend
+pip install "pycsamt[torch]"
+pip install "pycsamt[tensorflow]"
+
+# Geospatial tools
+pip install "pycsamt[geo]"
+
+# Documentation build tools
+pip install "pycsamt[docs]"
+
+# Desktop and web application dependencies
+pip install "pycsamt[app]"
+
+# Everything used by the full v2 development environment
+pip install "pycsamt[full]"
+```
+
+pyCSAMT v2 currently targets Python 3.9 or newer.
+
+---
+
+## Quick Start
+
+### Command line
+
+The main executable is `pycsamt`:
+
+```bash
+pycsamt --help
+pycsamt info
+```
+
+Common command groups include:
+
+```bash
+pycsamt survey set data/edi/
+pycsamt edi info data/edi/
+pycsamt site info
+pycsamt transform avg survey.avg --output-dir outputs/edi/
+pycsamt invert build data/edi/ --solver occam2d --workdir runs/occam2d/
+pycsamt pipe steps
+pycsamt pipe presets
+```
+
+The desktop application entry point is:
+
+```bash
+pycsamt-gui
+```
+
+### Python API
+
+Use the Python API when you want direct control from notebooks, scripts, or applications:
+
+```python
+from pycsamt.pipeline import Pipeline, Step
+
+pipe = Pipeline(
+    [
+        ("notch", Step("NR001", mains_hz=50)),
+        ("band", Step("FREQ001")),
+        ("align", Step("FREQ004")),
+        ("static_shift", Step("SS001")),
+        ("rotate", Step("TZ001")),
+    ]
+)
+
+result = pipe.run(sites, outdir="outputs/profile_l22/")
+print(result.summary())
+```
+
+For configuration-driven work:
+
+```python
+from pycsamt.pipeline import Pipeline
+
+pipe = Pipeline.from_yaml("pipeline.yaml")
+result = pipe.run(sites, outdir="outputs/run01/")
 ```
 
 ---
 
-## AI-assisted inversion
+## Pipeline System
 
-pyCSAMT v2 ships a dual-backend deep learning module that can be switched between
-PyTorch and TensorFlow at runtime:
+The v2 pipeline layer is designed for reproducible survey processing. A pipeline can be created from code, from a preset, or from a configuration file.
 
-```python
-from pycsamt.backends import set_backend
-set_backend("torch")          # or "tensorflow"
-
-from pycsamt.ai.inversion import Inv2DNet
-net = Inv2DNet(n_stations=30, n_depth=60, n_freq=54)
-net.fit(X_train, y_train, epochs=200)
-rho_pred = net.predict(X_test)
-net.save("inv2d_checkpoint.npz")
+```bash
+pycsamt pipe init --preset publication_ready --output pipeline.yaml
+pycsamt pipe show pipeline.yaml
+pycsamt pipe run --config pipeline.yaml --survey data/edi/ --out outputs/run01/
 ```
+
+Pipeline documentation is organized around:
+
+- concepts: what a pipeline, step, preset, and result mean,
+- configuration files: YAML/JSON/Python workflow definitions,
+- CLI usage: `pycsamt pipe ...`,
+- step catalogue: registered processing operations,
+- presets: reusable workflow templates,
+- outputs: manifests, figures, tables, logs, and reports.
+
+See `docs/source/pipeline/` for the in-progress v2 pages.
 
 ---
 
-## Geological interpretation
+## AI-Assisted Agents
 
-The `pycsamt.interp` package converts raw inversion resistivity grids into
-actionable lithological products:
+The `pycsamt.agents` package provides optional AI-assisted workflow components. Agents are lazy-loaded so the base package remains usable without LLM client libraries.
+
+Examples of available agent groups:
+
+- foundation agents: request parsing, loading, coordination, and orchestration,
+- processing agents: QC, denoising, tensor rotation, static shift, phase/tipper analysis,
+- inversion agents: Occam2D, ModEM, MARE2DEM, inversion preparation, evaluation, comparison,
+- AI model agents: 1-D/2-D/3-D learned inversion, ensembles, joint inversion, model zoo,
+- output agents: interpretation, resistivity maps, report generation, reproducible code generation,
+- pipeline agents: pipeline construction and batch survey execution.
+
+Minimal example without an LLM key:
 
 ```python
-from pycsamt.interp import ResistivityModel, ModelCalibrator, RockDatabase
-from pycsamt.interp.plot import PlotStratigraphicLog
+from pycsamt.agents import AgentCoordinator, ContextInputAgent, MTLoaderAgent
 
-rm  = ResistivityModel.from_occam2d(result)
-cal = ModelCalibrator(ptol=0.25).fit(rm)
+coordinator = AgentCoordinator("survey_qc")
+coordinator.add_step("context", ContextInputAgent())
+coordinator.add_step(
+    "load",
+    MTLoaderAgent(),
+    input_fn=lambda results: {
+        "path": results["context"]["config"]["data_path"],
+    },
+)
 
-logs = cal.stratigraphic_logs(db=RockDatabase.default())
-PlotStratigraphicLog(logs[0]).plot()
+result = coordinator.execute(
+    {"request": "Load data/edi, run basic QC, and prepare a report."},
+)
 ```
 
-Supported export formats: **Oasis Montaj XYZ**, **CSV**, **LAS 2.0**, **VTK**.
+Optional LLM providers include Anthropic Claude, OpenAI, and Google Gemini when their client libraries and API keys are installed/configured.
 
 ---
 
 ## Documentation
 
-Full documentation is hosted at **<https://pycsamt.readthedocs.io>** (under construction for v2).
+The v2 documentation is being built as a scientific-library documentation set rather than a single long manual.
+
+Local documentation sources live in `docs/source/`:
+
+| Section | Purpose |
+| --- | --- |
+| `getting_started/` | installation, configuration, data formats, first survey |
+| `tutorials/` | step-by-step practical recipes |
+| `user_guide/` | processing, inversion, AI inversion, interpretation |
+| `pipeline/` | reproducible workflow system |
+| `agents/` | AI-assisted agents and orchestration |
+| `cli/` | command-line reference |
+| `api/` | generated and curated API reference |
+| `theory/` | scientific background |
+| `development/` | API policy, docstring style, docs build process |
+| `release_notes/` | version-specific release notes |
+
+Build the docs locally:
+
+```bash
+cd docs
+sphinx-build -b html source _build/html
+```
+
+The public documentation is planned at <https://pycsamt.readthedocs.io>.
+
+---
+
+## Repository Layout
+
+```text
+pycsamt/
+  agents/        AI-assisted workflow agents
+  ai/            learned inversion models and training utilities
+  api/           runtime configuration and user-facing API helpers
+  app/           desktop and web application entry points
+  backends/      ML backend selection
+  cli/           pycsamt command-line interface
+  core/          core numerical and domain primitives
+  emtools/       electromagnetic processing tools
+  forward/       forward modelling utilities
+  gis/           geospatial helpers
+  interp/        geological interpretation and export
+  inversion/     inversion workflows and backend integrations
+  io/            legacy and compatibility I/O paths
+  jones/         Jones-format support
+  metadata/      package metadata models and catalogues
+  models/        Occam2D, ModEM, MARE2DEM model interfaces
+  pipeline/      reproducible workflow engine
+  seg/           SEG/EDI data structures and operations
+  site/          site and survey abstractions
+  tdem/          time-domain EM workflows
+  transformers/  data-format transformations
+  z/             impedance tensor tools
+  zonge/         Zonge-format support
+```
+
+---
+
+## Development
+
+Install development and documentation dependencies:
+
+```bash
+pip install -e ".[dev,docs]"
+```
+
+Run tests:
+
+```bash
+pytest
+```
+
+Build documentation:
+
+```bash
+cd docs
+sphinx-build -b html source _build/html
+```
+
+Developer-facing documentation is being written in `docs/source/development/`, especially:
+
+- API policy and package structure,
+- NumPy-style docstring conventions,
+- Sphinx documentation build workflow.
 
 ---
 
 ## Citation
 
-If you use pyCSAMT in your research, please cite:
+If you use pyCSAMT in research or professional studies, please cite the relevant software and method papers:
 
 ```bibtex
 @article{Kouadio2022,
@@ -160,7 +317,7 @@ If you use pyCSAMT in your research, please cite:
   year    = {2022},
   volume  = {201},
   pages   = {104647},
-  doi     = {10.1016/j.jappgeo.2022.104647},
+  doi     = {10.1016/j.jappgeo.2022.104647}
 }
 
 @article{Kouadio2023,
@@ -169,7 +326,7 @@ If you use pyCSAMT in your research, please cite:
              deep resistivity convolutional neural network},
   journal = {Journal of Geophysical Research: Solid Earth},
   year    = {2023},
-  doi     = {10.1029/2023JB027538},
+  doi     = {10.1029/2023JB027538}
 }
 ```
 
@@ -177,15 +334,20 @@ If you use pyCSAMT in your research, please cite:
 
 ## Contributing
 
-Contributions are welcome — see [CONTRIBUTING](docs/source/contributing.rst) for guidelines.
-Bug reports and feature requests: <https://github.com/earthai-tech/pycsamt/issues>
+Contributions are welcome while v2 is being stabilized. Start with:
+
+- `docs/source/development/api_policy.rst` for public API rules,
+- `docs/source/development/docstring_style.rst` for documentation style,
+- `docs/source/development/documentation_build.rst` for docs build guidance,
+- `docs/source/contributing.rst` for project contribution notes.
+
+Bug reports and feature requests can be opened at <https://github.com/earthai-tech/pycsamt/issues>.
 
 ---
 
 ## License
 
-pyCSAMT is distributed under the **GNU Lesser General Public License v3.0 or later**.
-See [LICENSE.md](LICENSE.md) for the full text.
+pyCSAMT is distributed under the GNU Lesser General Public License v3.0 or later. See `LICENSE.md` for the full license text.
 
 ---
 

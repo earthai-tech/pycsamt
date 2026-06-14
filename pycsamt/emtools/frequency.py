@@ -15,7 +15,8 @@ from ._core import (
 )
 
 # re-use package editors when it saves code
-from pycsamt.site import edit as _edit
+from ..site import edit as _edit
+from ..api.view import PYCSAMT_API_VIEW, maybe_wrap_frame, wrap_result
 
 _BACKWARD_SINCE = "2.0.0"
 _BACKWARD_REMOVE = "2.17.0"
@@ -429,6 +430,7 @@ def select_band(
     *,
     fmin: Optional[float] = None,
     fmax: Optional[float] = None,
+    band_hz: Optional[Sequence[float]] = None,
     keep: Optional[Sequence[float]] = None,
     inplace: bool = False,
     recursive: bool = True,
@@ -436,6 +438,14 @@ def select_band(
     strict: bool = False,
     verbose: int = 0,
 ):
+    # Resolve band_hz alias → fmin / fmax.
+    # band_hz=(lo, hi) is a convenience form; canonical fmin/fmax always win.
+    if band_hz is not None:
+        _lo, _hi = band_hz
+        if fmin is None:
+            fmin = _lo
+        if fmax is None:
+            fmax = _hi
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -735,7 +745,8 @@ def edit_frequencies_by_confidence(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> FrequencyEditResult:
+    api: bool | None = None,
+) -> Any:
     """Edit frequency rows and return diagnostics in one workflow.
 
     This is the high-level confidence-editing entry point.  It applies one
@@ -859,7 +870,7 @@ def edit_frequencies_by_confidence(
         strict=strict,
         verbose=verbose,
     )
-    return FrequencyEditResult(
+    result = FrequencyEditResult(
         sites=edited,
         report=report,
         decisions=decisions,
@@ -869,6 +880,36 @@ def edit_frequencies_by_confidence(
         ci_lo=float(ci_lo),
         reject=str(reject),
         interpolation=str(interpolation),
+    )
+    if api is False:
+        return result
+    if api is None and not PYCSAMT_API_VIEW.enabled():
+        return result
+    return wrap_result(
+        {
+            "sites": result.sites,
+            "report": result.report,
+            "decisions": result.decisions,
+            "mode": result.mode,
+            "method": result.method,
+            "ci_hi": result.ci_hi,
+            "ci_lo": result.ci_lo,
+            "reject": result.reject,
+            "interpolation": result.interpolation,
+            "n_dropped": result.n_dropped,
+            "n_masked": result.n_masked,
+            "n_recovered": result.n_recovered,
+        },
+        name="frequency_edit",
+        kind="emtools.frequency.edit",
+        meta={
+            "mode": result.mode,
+            "method": result.method,
+            "ci_hi": result.ci_hi,
+            "ci_lo": result.ci_lo,
+            "reject": result.reject,
+            "interpolation": result.interpolation,
+        },
     )
 
 
@@ -884,6 +925,7 @@ def frequency_edit_report(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
+    api: bool | None = None,
 ):
     """Summarize station-level changes after frequency editing.
 
@@ -1007,7 +1049,16 @@ def frequency_edit_report(
     out["confidence_delta"] = (
         out["confidence_median_after"] - out["confidence_median_before"]
     )
-    return out.sort_values("station").reset_index(drop=True)
+    df = out.sort_values("station").reset_index(drop=True)
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="frequency_edit_report",
+        kind="emtools.frequency.edit_report",
+        source=before_sites,
+        description="Station-level changes after frequency editing.",
+    )
 
 
 def frequency_edit_decision_table(
@@ -1022,6 +1073,7 @@ def frequency_edit_decision_table(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
+    api: bool | None = None,
 ):
     """Return one row per original station-frequency edit decision."""
     import pandas as pd
@@ -1125,7 +1177,16 @@ def frequency_edit_decision_table(
                     action=action,
                 )
             )
-    return pd.DataFrame.from_records(rows)
+    df = pd.DataFrame.from_records(rows)
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="frequency_edit_decision_table",
+        kind="emtools.frequency.edit_decisions",
+        source=before_sites,
+        description="Per-frequency edit decisions for each station.",
+    )
 
 
 def plot_frequency_edit_summary(
@@ -1305,7 +1366,9 @@ def regrid_logspace(
     *,
     fmin: Optional[float] = None,
     fmax: Optional[float] = None,
+    band_hz: Optional[Sequence[float]] = None,
     per_decade: int = 6,
+    n_per_decade: Optional[int] = None,
     method: str = "nearest",
     inplace: bool = False,
     recursive: bool = True,
@@ -1313,6 +1376,17 @@ def regrid_logspace(
     strict: bool = False,
     verbose: int = 0,
 ):
+    # Resolve band_hz alias → fmin / fmax (canonical wins).
+    if band_hz is not None:
+        _lo, _hi = band_hz
+        if fmin is None:
+            fmin = _lo
+        if fmax is None:
+            fmax = _hi
+    # Resolve n_per_decade alias → per_decade.
+    # n_per_decade only takes effect when per_decade is still at its default (6).
+    if n_per_decade is not None and per_decade == 6:
+        per_decade = int(n_per_decade)
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -1383,6 +1457,7 @@ def smooth_mavg(
     sites: Any,
     *,
     k: int = 3,
+    window: Optional[int] = None,
     on: str = "both",
     inplace: bool = False,
     recursive: bool = True,
@@ -1390,6 +1465,10 @@ def smooth_mavg(
     strict: bool = False,
     verbose: int = 0,
 ):
+    # Resolve window alias → k.
+    # window only takes effect when k is still at its default (3).
+    if window is not None and k == 3:
+        k = int(window)
     S = ensure_sites(
         sites,
         recursive=recursive,

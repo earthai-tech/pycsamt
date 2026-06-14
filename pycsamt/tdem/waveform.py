@@ -11,7 +11,7 @@ from typing import Optional
 
 import numpy as np
 
-from pycsamt.api.property import PyCSAMTObject
+from ..api.property import PyCSAMTObject
 
 __all__ = ["SquareWaveform", "RampWaveform", "HalfSineWaveform", "CustomWaveform"]
 

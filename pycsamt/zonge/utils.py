@@ -338,7 +338,9 @@ def _parse_kind2(
                 io.StringIO(table_txt),
                 skipinitialspace=True
             )
-            dfb = dfb.applymap(
+            # applymap was renamed to map in pandas ≥2.1
+            _dfb_map = getattr(dfb, "map", None) or dfb.applymap
+            dfb = _dfb_map(
                 lambda v: _to_float(v) if isinstance(v, str) else v
             )
     

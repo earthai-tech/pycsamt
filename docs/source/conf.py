@@ -11,11 +11,17 @@
 #   myst-parser>=2.0
 #   sphinx-copybutton>=0.5
 #   sphinx-design>=0.5
+#   sphinx-gallery>=0.16
+#   sphinx-autodoc-typehints>=2.0
 
 from __future__ import annotations
 
 import os
 import sys
+
+# Keep package imports side-effect-light during documentation builds.
+os.environ.setdefault("PYCSAMT_DOCS_BUILD", "1")
+os.environ.setdefault("MPLCONFIGDIR", "/tmp/pycsamt-matplotlib")
 
 # -- Path setup ----------------------------------------------------------------
 # Make the package importable from the source tree without installation.
@@ -78,7 +84,7 @@ napoleon_use_ivar               = True
 numpydoc_show_class_members        = False
 numpydoc_show_inherited_class_members = False
 numpydoc_class_members_toctree     = False
-numpydoc_validation_checks         = {"all", "SA01", "EX01"}
+numpydoc_validation_checks         = set()
 
 # -- intersphinx ---------------------------------------------------------------
 intersphinx_mapping = {

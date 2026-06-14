@@ -1,0 +1,21 @@
+pycsamt.metadata
+================
+
+Survey, frequency, quality, instrument, geology, and rock metadata helpers.
+
+.. automodule:: pycsamt.metadata
+   :members:
+   :show-inheritance:
+
+Metadata Modules
+----------------
+
+.. autosummary::
+   :toctree: generated
+
+   pycsamt.metadata.frequency
+   pycsamt.metadata.geology
+   pycsamt.metadata.instrument
+   pycsamt.metadata.quality
+   pycsamt.metadata.rocks
+   pycsamt.metadata.survey

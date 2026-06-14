@@ -423,12 +423,7 @@ def plot_sites_panels(
 
     # draw each station
     for idx, (st, ed) in enumerate(items):
-        Z, z, fr = _get_z_block(ed, return_errors=True)
-        if isinstance(Z, tuple):
-            # legacy tuple from helper fallback
-            _, z, fr, ze = Z
-        else:
-            ze = getattr(getattr(ed, "Z", None), "z_err", None)
+        Z, z, fr, ze = _get_z_block(ed, with_errors=True)
         if z is None or fr is None:
             continue
         x = (1.0 / fr) if x_axis == "period" else fr

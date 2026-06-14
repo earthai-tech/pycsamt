@@ -75,6 +75,7 @@ from ..api.control import PYCSAMT_CONTROL
 from ..api.section import PYCSAMT_SECTION, SectionStyle
 from ..api.station import PYCSAMT_STATION_RENDERING
 from ..api.plot import add_colorbar
+from ..api.view import maybe_wrap_frame
 
 __all__ = [
     # analysis
@@ -211,7 +212,8 @@ def psd_table(
     sp_input: Any,
     *,
     normalize: bool = False,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     """Power spectral density per channel as a tidy DataFrame.
 
     Parameters
@@ -245,15 +247,25 @@ def psd_table(
                     "channel": lab,
                     "psd":     float(psd[fi]),
                 })
-    return pd.DataFrame(rows, columns=["station", "freq", "period",
-                                        "channel", "psd"])
+    df = pd.DataFrame(rows, columns=["station", "freq", "period",
+                                      "channel", "psd"])
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="psd_table",
+        kind="emtools.spectra.psd",
+        source=sp_input,
+        description="Power spectral density by station, frequency, and channel.",
+    )
 
 
 def coherence_table(
     sp_input: Any,
     *,
     pairs: Optional[List[Tuple[int, int]]] = None,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     """Inter-channel squared coherence as a tidy DataFrame.
 
     Parameters
@@ -287,16 +299,26 @@ def coherence_table(
                     "pair":      label,
                     "coherence": float(coh[fi, i, j]),
                 })
-    return pd.DataFrame(rows, columns=[
+    df = pd.DataFrame(rows, columns=[
         "station", "freq", "period", "ch_i", "ch_j", "pair", "coherence"
     ])
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="coherence_table",
+        kind="emtools.spectra.coherence",
+        source=sp_input,
+        description="Squared coherence by station, frequency, and channel pair.",
+    )
 
 
 def snr_table(
     sp_input: Any,
     *,
     pairs: Optional[List[Tuple[int, int]]] = None,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     r"""Signal-to-noise ratio estimated from squared coherence.
 
     Uses the coherence-based estimator:
@@ -326,7 +348,15 @@ def snr_table(
     df = df.copy()
     df["snr"]    = snr
     df["snr_db"] = snr_db
-    return df
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="snr_table",
+        kind="emtools.spectra.snr",
+        source=sp_input,
+        description="Coherence-derived signal-to-noise ratio table.",
+    )
 
 
 def band_select(
@@ -408,7 +438,7 @@ def mask_low_coherence(
     return flags.any(axis=1)
 
 
-def spectra_summary(sp: Any) -> pd.DataFrame:
+def spectra_summary(sp: Any, *, api: bool | None = None) -> Any:
     """Compact per-frequency summary table.
 
     Columns: ``freq``, ``period``, ``bw``, ``avgt``, ``rotspec``,
@@ -443,7 +473,16 @@ def spectra_summary(sp: Any) -> pd.DataFrame:
             row["mean_coherence"] = float(np.nanmean(pairs_val))
         rows.append(row)
 
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="spectra_summary",
+        kind="emtools.spectra.summary",
+        source=sp,
+        description="Compact per-frequency spectra summary.",
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

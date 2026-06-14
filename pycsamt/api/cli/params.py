@@ -175,9 +175,66 @@ class StationList(click.ParamType):
         return parts
 
 
+# ---------------------------------------------------------------------------
+# PipeStepList — comma-separated step codes/names → list[str] of codes
+# ---------------------------------------------------------------------------
+
+class PipeStepList(click.ParamType):
+    """Parse a comma-separated list of pipeline step codes or names.
+
+    Each token is validated against the step registry, so the user gets
+    an immediate error with a hint if they mistype a code.
+
+    Examples
+    --------
+    ``--steps NR001,FREQ002,FREQ001,FREQ004,SS001``
+        → ``['NR001', 'FREQ002', 'FREQ001', 'FREQ004', 'SS001']``
+
+    ``--steps notch_powerline,drop_duplicates,align_grid``
+        → ``['NR001', 'FREQ002', 'FREQ004']``
+    """
+
+    name = "STEP_LIST"
+
+    def convert(
+        self,
+        value: Any,
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> list[str]:
+        if isinstance(value, list):
+            return value
+        tokens = [t.strip() for t in str(value).split(",") if t.strip()]
+        if not tokens:
+            self.fail(
+                f"{value!r} is not a valid step list.  "
+                "Provide comma-separated codes, e.g. NR001,FREQ001,SS001",
+                param,
+                ctx,
+            )
+        try:
+            from pycsamt.pipeline import lookup_step  # noqa: PLC0415
+        except ImportError:
+            return tokens  # best-effort if pipeline not yet importable
+        codes: list[str] = []
+        for token in tokens:
+            try:
+                spec = lookup_step(token)
+                codes.append(spec.code)
+            except KeyError:
+                self.fail(
+                    f"Unknown step {token!r}.  "
+                    "Run  pycsamt pipe steps  to see all available steps.",
+                    param,
+                    ctx,
+                )
+        return codes
+
+
 __all__ = [
     "EDIDir",
     "EDIPath",
     "FreqRange",
+    "PipeStepList",
     "StationList",
 ]

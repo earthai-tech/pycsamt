@@ -11,7 +11,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
-from pycsamt.api.property import PyCSAMTObject
+from ..api.property import PyCSAMTObject
 
 PathLike = str | Path
 

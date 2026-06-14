@@ -42,7 +42,7 @@ _STATUS    = {"success", "failed", "needs_review"}
 _DEFAULT_MODELS = {
     "claude": "claude-sonnet-4-6",
     "openai": "gpt-4o",
-    "gemini": "gemini-1.5-pro",
+    "gemini": "gemini-2.0-flash",
 }
 
 _RETRY_DELAYS = (1.0, 2.0, 4.0)   # seconds between LLM retries

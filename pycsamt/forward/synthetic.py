@@ -50,48 +50,22 @@ from typing import Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
+from ..metadata.geology import CATALOG as _GEO_CATALOG, geology_prior as _geology_prior
+
 __all__ = [
     "LayeredModel",
     "GEOLOGY_PRIORS",
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Geological prior definitions
+# Geological prior definitions — delegate to metadata.geology
 # ─────────────────────────────────────────────────────────────────────────────
 
-#: Ready-to-use parameter bounds for ``LayeredModel.from_geology``.
-#: Each entry: (n_layers_range, log10_rho_range, depth_max_range, description)
+#: Backwards-compatible view of the geology catalog.
+#: Prefer ``from pycsamt.metadata.geology import CATALOG`` for new code.
 GEOLOGY_PRIORS: Dict[str, dict] = {
-    "sedimentary": dict(
-        n_layers=(3, 7),
-        log_rho_range=(0.5, 3.5),   # 3 – 3162 Ω·m
-        depth_max_range=(500, 3000),
-        description="Alternating clay/shale and sand/carbonate layers",
-    ),
-    "crystalline": dict(
-        n_layers=(3, 6),
-        log_rho_range=(2.0, 4.5),   # 100 – 31 623 Ω·m
-        depth_max_range=(5000, 30000),
-        description="Resistive upper to conductive lower crust",
-    ),
-    "geothermal": dict(
-        n_layers=(3, 5),
-        log_rho_range=(0.3, 4.0),
-        depth_max_range=(500, 5000),
-        description="Resistive cap over conductive geothermal reservoir",
-    ),
-    "marine": dict(
-        n_layers=(3, 6),
-        log_rho_range=(-0.5, 3.0),  # seawater 0.3 Ω·m to resistive sand
-        depth_max_range=(100, 2000),
-        description="Seawater over possible HC reservoir (CSEM)",
-    ),
-    "permafrost": dict(
-        n_layers=(3, 5),
-        log_rho_range=(1.0, 4.5),
-        depth_max_range=(50, 500),
-        description="Frozen resistive layer over conductive unfrozen sediments",
-    ),
+    name: _geology_prior(name)
+    for name in _GEO_CATALOG.names()
 }
 
 
@@ -358,13 +332,14 @@ class LayeredModel:
         KeyError
             If *name* is not in :data:`GEOLOGY_PRIORS`.
         """
-        if name not in GEOLOGY_PRIORS:
+        try:
+            p = _geology_prior(name)
+        except KeyError:
             raise KeyError(
                 f"Unknown geology {name!r}. "
-                f"Available: {list(GEOLOGY_PRIORS)}"
+                f"Available: {_GEO_CATALOG.names()}"
             )
         rng = _ensure_rng(seed)
-        p = GEOLOGY_PRIORS[name]
 
         n_lo, n_hi = p["n_layers"]
         n = int(rng.integers(n_lo, n_hi + 1))

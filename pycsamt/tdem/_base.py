@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from pycsamt.api.property import PyCSAMTObject
+from ..api.property import PyCSAMTObject
 
 __all__ = ["TEMSounding"]
 

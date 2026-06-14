@@ -80,6 +80,33 @@ overwrite_option = click.option(
 )
 
 # ---------------------------------------------------------------------------
+# Survey / data-source options
+# ---------------------------------------------------------------------------
+
+survey_option = click.option(
+    "-S", "--survey",
+    "survey_path",
+    type=click.Path(exists=True, path_type=Path),
+    default=None,
+    metavar="EDI_DIR",
+    help=(
+        "EDI directory or file to use as the survey source.  "
+        "When omitted the active survey set via "
+        "'pycsamt survey set' is used automatically."
+    ),
+)
+
+fresh_option = click.option(
+    "--fresh",
+    is_flag=True,
+    default=False,
+    help=(
+        "Force re-parse of the survey from disk, ignoring the cache.  "
+        "Useful after editing EDI files."
+    ),
+)
+
+# ---------------------------------------------------------------------------
 # Processing / build options
 # ---------------------------------------------------------------------------
 
@@ -118,10 +145,12 @@ def common_options(f):
 __all__ = [
     "common_options",
     "format_option",
+    "fresh_option",
     "n_jobs_option",
     "no_cache_option",
     "no_color_option",
     "output_dir_option",
     "overwrite_option",
+    "survey_option",
     "verbose_option",
 ]

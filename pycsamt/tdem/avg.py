@@ -9,7 +9,7 @@ from typing import Any
 
 import numpy as np
 
-from pycsamt.api.property import PyCSAMTObject
+from ..api.property import PyCSAMTObject
 
 from ._base import TEMSounding
 

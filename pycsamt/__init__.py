@@ -19,7 +19,7 @@ except Exception:
     __version__ = "2.0.0"
 
 # ── Logging ───────────────────────────────────────────────────────────────────
-from pycsamt.log._config import init_logging
+from .log._config import init_logging
 init_logging()
 
 # ── Hard-dependency check ────────────────────────────────────────────────────
@@ -55,6 +55,15 @@ from . import interp  # noqa: F401  geological interpretation / export
 from . import inversion  # noqa: F401  physics-based EM inversion API
 from . import tdem    # noqa: F401  time-domain EM → EDICollection
 
+# ── Pipeline — top-level convenience exports ──────────────────────────────────
+from .pipeline import (    # noqa: F401
+    Pipeline,
+    Step,
+    configure_pipe,
+    reset_pipe,
+    PYCSAMT_PIPE,
+)
+
 # ── AI agents (optional — requires anthropic / openai / google-generativeai) ──
 try:
     from . import agents  # noqa: F401
@@ -62,7 +71,7 @@ except Exception:          # ImportError or any initialisation error
     pass
 
 # ── Backend API ───────────────────────────────────────────────────────────────
-from pycsamt.backends import (
+from .backends import (
     auto_detect,
     get_backend,
     get_backend_instance,
@@ -106,6 +115,12 @@ __all__ = [
     "tdem",
     "z",
     "zonge",
+    # pipeline — top-level shortcuts
+    "Pipeline",
+    "Step",
+    "configure_pipe",
+    "reset_pipe",
+    "PYCSAMT_PIPE",
     # backend helpers
     "auto_detect",
     "get_backend",

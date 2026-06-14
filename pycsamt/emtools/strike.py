@@ -309,7 +309,7 @@ def rotate_to_strike(
         ed = next(_iter_items(Si))
         st = getattr(ed, "station", None) or getattr(ed, "name", None)
         ang = float(amap.get(st, 0.0))
-        return _edit.rotate(Si, angle=ang, inplace=inplace)
+        return _edit.rotate(Si, ang, inplace=inplace)
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 

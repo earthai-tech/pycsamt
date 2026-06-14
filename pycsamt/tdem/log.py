@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from pycsamt.api.property import PyCSAMTObject
+from ..api.property import PyCSAMTObject
 
 PathLike = str | Path
 

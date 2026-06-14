@@ -13,13 +13,26 @@ API reference
    :maxdepth: 1
 
    pycsamt
+   api
+   core
    io
    emtools
    z
+   jones
+   zonge
+   seg
+   tdem
+   transformers
    site
    forward
    inversion
-   models
-   ai
    interp
+   ai
+   agents
+   pipeline
+   app
+   metadata
+   gis
+   models
    backends
+   utils

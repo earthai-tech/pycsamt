@@ -45,6 +45,11 @@ from .export import (
     pack_zip,
 )
 
+from .report import (
+    SiteReport,
+    SitesReport,
+)
+
 __all__ = [
     # base
     "SiteMixin",
@@ -82,4 +87,7 @@ __all__ = [
     "write_site",
     "write_sites",
     "pack_zip",
+    # report
+    "SiteReport",
+    "SitesReport",
 ]

@@ -16,6 +16,7 @@ from ._core import (
 from .tensor import build_phase_tensor_table
 from ..api._rose_style import _UNSET
 from ..api.style import PYCSAMT_STYLE
+from ..api.view import maybe_wrap_frame
 
 
 def _rho_det_from_z(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
@@ -93,7 +94,8 @@ def estimate_ss_ama(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     S = ensure_sites(
         sites,
         recursive=recursive, on_dup=on_dup,
@@ -102,9 +104,14 @@ def estimate_ss_ama(
     items = _order_sites(S, sort_by=sort_by)
     n = len(items)
     if n == 0:
-        return pd.DataFrame(
+        df = pd.DataFrame(
             columns=["station", "delta_log10_rho", "fac_rho",
                      "fac_z", "n_used"]
+        )
+
+        return maybe_wrap_frame(
+            df, api=api, name="estimate_ss_ama",
+            kind="emtools.ss.ama", source=sites,
         )
 
     # optional skew mask via phase-tensor table
@@ -143,9 +150,14 @@ def estimate_ss_ama(
         LR.append(lr1)
 
     if not ST:
-        return pd.DataFrame(
+        df = pd.DataFrame(
             columns=["station", "delta_log10_rho", "fac_rho",
                      "fac_z", "n_used"]
+        )
+
+        return maybe_wrap_frame(
+            df, api=api, name="estimate_ss_ama",
+            kind="emtools.ss.ama", source=sites,
         )
 
     # compute AMA trend and deltas
@@ -193,7 +205,16 @@ def estimate_ss_ama(
         )
 
     tbl = pd.DataFrame.from_records(rows)
-    return tbl.sort_values("station").reset_index(drop=True)
+    df = tbl.sort_values("station").reset_index(drop=True)
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="estimate_ss_ama",
+        kind="emtools.ss.ama",
+        source=sites,
+        description="AMA static-shift correction factors by station.",
+    )
 
 
 def _scale_site_Z(ed: Any, s: float) -> None:
@@ -229,6 +250,11 @@ def apply_ss_factors(
         recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
     )
+    # Unwrap APIFrame so the isinstance check below works
+    _inner = getattr(factors, "df", None)
+    if isinstance(_inner, pd.DataFrame):
+        factors = _inner
+
     if isinstance(factors, pd.DataFrame):
         if "station" in factors.columns and key in factors.columns:
             fmap = {r.station: float(r[key]) for _, r in
@@ -419,16 +445,22 @@ def estimate_ss_loess(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     ST, FR, LR = _prep_lr_curves(
         sites, pband=pband, max_skew=max_skew,
         recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
     )
     if not ST:
-        return pd.DataFrame(
+        df = pd.DataFrame(
             columns=["station", "delta_log10_rho",
                      "fac_rho", "fac_z", "n_used"]
+        )
+
+        return maybe_wrap_frame(
+            df, api=api, name="estimate_ss_loess",
+            kind="emtools.ss.loess", source=sites,
         )
     rows = []
     for i, st in enumerate(ST):
@@ -451,9 +483,18 @@ def estimate_ss_loess(
                 n_used=int(np.isfinite(d).sum()),
             )
         )
-    return pd.DataFrame.from_records(rows).sort_values(
+    df = pd.DataFrame.from_records(rows).sort_values(
         "station"
     ).reset_index(drop=True)
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="estimate_ss_loess",
+        kind="emtools.ss.loess",
+        source=sites,
+        description="LOESS static-shift correction factors by station.",
+    )
 
 
 def _bilateral_trend_for_site(
@@ -505,16 +546,22 @@ def estimate_ss_bilateral(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     ST, FR, LR = _prep_lr_curves(
         sites, pband=pband, max_skew=max_skew,
         recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
     )
     if not ST:
-        return pd.DataFrame(
+        df = pd.DataFrame(
             columns=["station", "delta_log10_rho",
                      "fac_rho", "fac_z", "n_used"]
+        )
+
+        return maybe_wrap_frame(
+            df, api=api, name="estimate_ss_bilateral",
+            kind="emtools.ss.bilateral", source=sites,
         )
     rows = []
     for i, st in enumerate(ST):
@@ -534,9 +581,18 @@ def estimate_ss_bilateral(
                 n_used=int(np.isfinite(d).sum()),
             )
         )
-    return pd.DataFrame.from_records(rows).sort_values(
+    df = pd.DataFrame.from_records(rows).sort_values(
         "station"
     ).reset_index(drop=True)
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="estimate_ss_bilateral",
+        kind="emtools.ss.bilateral",
+        source=sites,
+        description="Bilateral static-shift correction factors by station.",
+    )
 
 
 def estimate_ss_refmedian(
@@ -550,16 +606,22 @@ def estimate_ss_refmedian(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     ST, FR, LR = _prep_lr_curves(
         sites, pband=pband, max_skew=max_skew,
         recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
     )
     if not ST:
-        return pd.DataFrame(
+        df = pd.DataFrame(
             columns=["station", "delta_log10_rho",
                      "fac_rho", "fac_z", "n_used"]
+        )
+
+        return maybe_wrap_frame(
+            df, api=api, name="estimate_ss_refmedian",
+            kind="emtools.ss.refmedian", source=sites,
         )
     # build a global ref via frequency-wise median
     # grid = union of all frequencies
@@ -591,9 +653,18 @@ def estimate_ss_refmedian(
                 n_used=int(np.isfinite(d).sum()),
             )
         )
-    return pd.DataFrame.from_records(rows).sort_values(
+    df = pd.DataFrame.from_records(rows).sort_values(
         "station"
     ).reset_index(drop=True)
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="estimate_ss_refmedian",
+        kind="emtools.ss.refmedian",
+        source=sites,
+        description="Reference-median static-shift factors by station.",
+    )
 
 # ----------------------- SS visualization (QC) --------------------------- #
 
@@ -2011,7 +2082,8 @@ def detect_near_surface(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     """
     Detect and classify near-surface distortion in CSAMT/MT apparent
     resistivity curves.
@@ -2130,7 +2202,15 @@ def detect_near_surface(
         LR.append(lr1)
 
     if not ST:
-        return pd.DataFrame(columns=_NS_COLS)
+        df = pd.DataFrame(columns=_NS_COLS)
+
+        return maybe_wrap_frame(
+            df,
+            api=api,
+            name="near_surface_detection",
+            kind="emtools.ss.near_surface",
+            source=sites,
+        )
 
     residuals = _ama_residuals_ns(FR, LR,
                                   half_window=half_window, weights=weights)
@@ -2187,7 +2267,16 @@ def detect_near_surface(
             "distortion_type": dtype,
         })
 
-    return pd.DataFrame(rows, columns=_NS_COLS)
+    df = pd.DataFrame(rows, columns=_NS_COLS)
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="near_surface_detection",
+        kind="emtools.ss.near_surface",
+        source=sites,
+        description="Near-surface and static-shift distortion diagnostics.",
+    )
 
 
 def plot_ns_detection(

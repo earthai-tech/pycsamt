@@ -10,7 +10,7 @@ from dataclasses import dataclass, is_dataclass, field, fields as dc_fields
 from typing import Any, Dict, Optional, Protocol
 from typing import Iterable, Mapping
 
-from pycsamt.api.property import PyCSAMTObject
+from ..api.property import PyCSAMTObject
 
 from .config import StationNamePolicy, get_config, get_adapter
 

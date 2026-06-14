@@ -35,17 +35,20 @@ from .config import (
 from .options import (
     common_options,
     format_option,
+    fresh_option,
     n_jobs_option,
     no_cache_option,
     no_color_option,
     output_dir_option,
     overwrite_option,
+    survey_option,
     verbose_option,
 )
 from .params import (
     EDIDir,
     EDIPath,
     FreqRange,
+    PipeStepList,
     StationList,
 )
 
@@ -61,15 +64,18 @@ __all__ = [
     # options
     "common_options",
     "format_option",
+    "fresh_option",
     "n_jobs_option",
     "no_cache_option",
     "no_color_option",
     "output_dir_option",
     "overwrite_option",
+    "survey_option",
     "verbose_option",
     # params
     "EDIDir",
     "EDIPath",
     "FreqRange",
+    "PipeStepList",
     "StationList",
 ]

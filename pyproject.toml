@@ -48,6 +48,7 @@ dependencies = [
     "pyyaml>=5.4",
     "tqdm>=4.60",
     "click>=8.1",
+    "rich>=13.0",
 ]
 
 # ---------------------------------------------------------------------------
@@ -67,6 +68,7 @@ tensorflow = [
 geo = [
     "pyproj>=3.3",
     "xarray>=2022.6",
+    "contextily>=1.6",
 ]
 
 # Development & testing
@@ -85,12 +87,24 @@ docs = [
     "myst-parser>=2.0",
     "sphinx-copybutton>=0.5",
     "sphinx-design>=0.5",
+    "sphinx-gallery>=0.16",
+    "sphinx-autodoc-typehints>=2.0",
     "sphinx-autobuild>=2024.2",
+]
+
+# Desktop + web application
+app = [
+    "PySide6>=6.9",
+    "pyqtgraph>=0.13",
+    "contextily>=1.6",
+    "dash>=2.18",
+    "dash-bootstrap-components>=1.6",
+    "diskcache>=5.6",
 ]
 
 # Everything
 full = [
-    "pycsamt[torch,tensorflow,geo,dev,docs]",
+    "pycsamt[torch,tensorflow,geo,dev,docs,app]",
 ]
 
 # ---------------------------------------------------------------------------
@@ -107,7 +121,8 @@ Changelog       = "https://pycsamt.readthedocs.io/en/latest/changelog.html"
 # Entry points
 # ---------------------------------------------------------------------------
 [project.scripts]
-pycsamt = "pycsamt.cli:main"
+pycsamt     = "pycsamt.cli:main"
+pycsamt-gui = "pycsamt.app.desktop.__main__:main"
 
 # ---------------------------------------------------------------------------
 # Setuptools configuration

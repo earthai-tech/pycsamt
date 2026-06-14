@@ -7,8 +7,10 @@ from typing import List, Tuple
 import numpy as np
 import pytest
 
+from pycsamt.api import APIFrame, reset_api_view
 from pycsamt.seg.edi import EDIFile 
 from pycsamt.site.base import Site, Sites
+from pycsamt.site.report import SiteReport, SitesReport
 
 
 def _load_edi(p: Path) -> EDIFile:
@@ -139,6 +141,40 @@ def test_sites_edit_all_mask(tmp_path: Path,
     assert np.all(np.isnan(first_row.values))
 
 
+def test_site_to_dataframe_api_flag(tmp_path: Path,
+                                    simulated_edi: Path) -> None:
+    import pandas as pd
+
+    s1, _ = _mk_two_sites(tmp_path, simulated_edi, "V01",
+                          "V02")
+
+    plain = Site(s1.edi).to_dataframe("z", api=False)
+    view = Site(s1.edi).to_dataframe("z", api=True)
+
+    assert isinstance(plain, pd.DataFrame)
+    assert isinstance(view, APIFrame)
+    assert view.df.equals(plain)
+
+
+def test_site_reports_to_dataframe_api_flag(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
+    reset_api_view()
+    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "R21",
+                           "R22")
+
+    site_plain = SiteReport(s1).to_dataframe("z", api=False)
+    site_view = SiteReport(s1).to_dataframe("z", api=True)
+    sites_plain = SitesReport([s1, s2]).to_dataframe(api=False)
+    sites_view = SitesReport([s1, s2]).to_dataframe(api=True)
+
+    assert isinstance(site_view, APIFrame)
+    assert site_view.df.equals(site_plain)
+    assert isinstance(sites_view, APIFrame)
+    assert sites_view.kind == "site.report"
+    assert sites_view.df.equals(sites_plain)
+
+
 def test_sites_with_topography(tmp_path: Path,
                                simulated_edi: Path) -> None:
     pd = pytest.importorskip("pandas")
@@ -203,4 +239,3 @@ def test_sites_write(tmp_path: Path, simulated_edi: Path) -> None:
     assert len(out) == 2
     for p in out:
         assert p.exists()
-

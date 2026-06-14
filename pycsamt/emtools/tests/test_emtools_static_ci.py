@@ -12,6 +12,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
 
+from pycsamt.api import (
+    APIFrame,
+    APIResult,
+    configure_api_view,
+    reset_api_view,
+)
 from pycsamt.emtools.remove_noise import (
     apply_emap_filter,
     confidence_gated_emap_filter,
@@ -693,6 +699,30 @@ class TestPlotConfidenceProfile:
         assert tb["confidence"].between(0.0, 1.0).all()
         assert tb["confidence_err"].between(0.0, 1.0).all()
 
+    def test_station_confidence_table_api_flag(self):
+        sites = self._sites_mixed()
+        plain = station_confidence_table(sites, method="composite", api=False)
+        view = station_confidence_table(sites, method="composite", api=True)
+
+        assert isinstance(view, APIFrame)
+        assert view.kind == "emtools.qc.station_confidence"
+        assert view.df.equals(plain)
+
+    def test_station_confidence_table_obeys_disabled_api_view(self):
+        """With global disabled, api=None returns raw pandas; api=True still forces APIFrame."""
+        sites = self._sites_mixed()
+        try:
+            configure_api_view(backend=False)
+
+            out_default = station_confidence_table(sites, method="composite")
+            assert not isinstance(out_default, APIFrame)
+            assert "confidence" in out_default.columns
+
+            out_forced = station_confidence_table(sites, method="composite", api=True)
+            assert isinstance(out_forced, APIFrame)
+        finally:
+            reset_api_view()
+
     def test_composite_confidence_penalizes_bad_station(self):
         sites = self._sites_mixed()
         tb = station_confidence_table(sites, method="composite")
@@ -727,6 +757,15 @@ class TestPlotConfidenceProfile:
         }
         assert expected.issubset(tb.columns)
         assert tb["confidence"].between(0.0, 1.0).all()
+
+    def test_frequency_confidence_table_api_flag(self):
+        sites = self._sites_mixed()
+        plain = frequency_confidence_table(sites, method="presence", api=False)
+        view = frequency_confidence_table(sites, method="presence", api=True)
+
+        assert isinstance(view, APIFrame)
+        assert view.kind == "emtools.qc.frequency_confidence"
+        assert view.df.equals(plain)
 
     def test_frequency_confidence_table_has_one_row_per_sample(self):
         sites = self._sites_mixed()
@@ -862,6 +901,23 @@ class TestConfidenceFrequencyEditing:
         assert int(row["n_freq_after"]) == 5
         assert int(row["n_dropped"]) == 1
 
+    def test_frequency_edit_report_api_flag(self):
+        before = self._site_with_recoverable_rows()
+        sites = self._site_with_recoverable_rows()
+        out = recover_low_confidence_frequencies(
+            sites,
+            method="presence",
+            ci_hi=0.90,
+            ci_lo=0.50,
+            reject="drop",
+        )
+        plain = frequency_edit_report(before, out, method="presence", api=False)
+        view = frequency_edit_report(before, out, method="presence", api=True)
+
+        assert isinstance(view, APIFrame)
+        assert view.kind == "emtools.frequency.edit_report"
+        assert view.df.equals(plain)
+
     def test_frequency_edit_decision_table_marks_recovery_and_drop(self):
         before = self._site_with_recoverable_rows()
         sites = self._site_with_recoverable_rows()
@@ -882,6 +938,28 @@ class TestConfidenceFrequencyEditing:
         assert "recovered" in actions
         assert "dropped" in actions
 
+    def test_frequency_edit_decision_table_api_flag(self):
+        before = self._site_with_recoverable_rows()
+        sites = self._site_with_recoverable_rows()
+        out = recover_low_confidence_frequencies(
+            sites,
+            method="presence",
+            ci_hi=0.90,
+            ci_lo=0.50,
+            reject="drop",
+        )
+        plain = frequency_edit_decision_table(before, out, method="presence", api=False)
+        view = frequency_edit_decision_table(
+            before,
+            out,
+            method="presence",
+            api=True,
+        )
+
+        assert isinstance(view, APIFrame)
+        assert view.kind == "emtools.frequency.edit_decisions"
+        assert view.df.equals(plain)
+
     def test_edit_frequencies_by_confidence_returns_result(self):
         before = self._site_with_recoverable_rows()
         sites = self._site_with_recoverable_rows()
@@ -893,6 +971,7 @@ class TestConfidenceFrequencyEditing:
             ci_hi=0.90,
             ci_lo=0.50,
             reject="drop",
+            api=False,
         )
 
         assert isinstance(result, FrequencyEditResult)
@@ -900,6 +979,64 @@ class TestConfidenceFrequencyEditing:
         assert not result.decisions.empty
         assert result.n_dropped == 1
         assert result.n_recovered >= 1
+
+    def test_edit_frequencies_by_confidence_api_result(self):
+        before = self._site_with_recoverable_rows()
+        sites = self._site_with_recoverable_rows()
+        result = edit_frequencies_by_confidence(
+            sites,
+            before_sites=before,
+            mode="recover",
+            method="presence",
+            ci_hi=0.90,
+            ci_lo=0.50,
+            reject="drop",
+            api=True,
+        )
+
+        assert isinstance(result, APIResult)
+        assert isinstance(result.report, APIFrame)
+        assert isinstance(result.decisions, APIFrame)
+        assert result.kind == "emtools.frequency.edit"
+        assert result.n_dropped == 1
+        assert result.n_recovered >= 1
+        assert "dropped" in set(result.decisions.df["action"])
+
+    def test_edit_frequencies_by_confidence_api_result_can_be_disabled(self):
+        """With global disabled: api=None returns FrequencyEditResult; api=True still forces APIResult."""
+        before = self._site_with_recoverable_rows()
+        sites = self._site_with_recoverable_rows()
+        try:
+            configure_api_view(backend=False)
+
+            # Default (api=None) respects global disabled → raw result.
+            result_default = edit_frequencies_by_confidence(
+                sites,
+                before_sites=before,
+                mode="recover",
+                method="presence",
+                ci_hi=0.90,
+                ci_lo=0.50,
+                reject="drop",
+            )
+            assert isinstance(result_default, FrequencyEditResult)
+            assert not isinstance(result_default, APIResult)
+            assert result_default.n_dropped == 1
+
+            # Explicit api=True overrides global disabled → APIResult.
+            result_forced = edit_frequencies_by_confidence(
+                sites,
+                before_sites=before,
+                mode="recover",
+                method="presence",
+                ci_hi=0.90,
+                ci_lo=0.50,
+                reject="drop",
+                api=True,
+            )
+            assert isinstance(result_forced, APIResult)
+        finally:
+            reset_api_view()
 
     def test_edit_frequencies_by_confidence_rejects_bad_mode(self):
         sites = self._site_with_recoverable_rows()

@@ -48,7 +48,7 @@ import matplotlib.pyplot as plt
 
 _LOAD_BLOCK = """\
 # ── load MT data ──────────────────────────────────────────────────────────────
-from pycsamt.emtools._core import ensure_sites
+from ..emtools._core import ensure_sites
 sites = ensure_sites({path!r}, verbose=0)
 print(f"Loaded {{len(list(sites))}} stations")
 
@@ -56,7 +56,7 @@ print(f"Loaded {{len(list(sites))}} stations")
 
 _QC_BLOCK = """\
 # ── quality control ───────────────────────────────────────────────────────────
-from pycsamt.emtools.qc import (
+from ..emtools.qc import (
     build_qc_table, qc_flags, plot_frequency_confidence_psection,
 )
 qc_table = build_qc_table(sites)
@@ -68,18 +68,18 @@ fig_qc.savefig({out!r} + "/qc_confidence.png", dpi=150, bbox_inches="tight")
 
 _SS_BLOCK = """\
 # ── static-shift correction ───────────────────────────────────────────────────
-from pycsamt.emtools.ss import correct_ss_ama
+from ..emtools.ss import correct_ss_ama
 sites_corr = correct_ss_ama(sites, half_window={hw})
 
 """
 
 _PT_BLOCK = """\
 # ── phase tensor analysis ─────────────────────────────────────────────────────
-from pycsamt.emtools.tensor import (
+from ..emtools.tensor import (
     build_phase_tensor_table, plot_phase_tensor_psection,
 )
-from pycsamt.emtools.strike import estimate_strike_consensus, plot_strike_analysis
-from pycsamt.emtools.dimensionality import classify_dimensionality
+from ..emtools.strike import estimate_strike_consensus, plot_strike_analysis
+from ..emtools.dimensionality import classify_dimensionality
 
 pt_table   = build_phase_tensor_table(sites_corr)
 dim_table  = classify_dimensionality(sites_corr, skew_th={skew_th}, ellipt_th={ellipt_th})
@@ -95,7 +95,7 @@ fig_strike.savefig({out!r} + "/strike_analysis.png", dpi=150, bbox_inches="tight
 
 _FWD_BLOCK = """\
 # ── 1-D MT forward model ──────────────────────────────────────────────────────
-from pycsamt.forward import MT1DForward, LayeredModel, plot_response_and_model_1d
+from ..forward import MT1DForward, LayeredModel, plot_response_and_model_1d
 
 layered  = LayeredModel(
     resistivities={rhos},

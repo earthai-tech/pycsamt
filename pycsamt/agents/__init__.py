@@ -26,8 +26,9 @@ Agent catalogue
     Phase tensor, strike, dimensionality, Mohr circles, Argand diagrams.
 :class:`ForwardModelAgent`
     1-D, 2-D, and 3-D MT forward modelling.
-:class:`InversionPrepAgent` / :class:`Occam2DAgent` / :class:`ModEmAgent`
-    Write Occam2D or ModEM3D inversion input files.
+:class:`InversionPrepAgent` / :class:`Occam2DAgent` / :class:`ModEmAgent` / :class:`Mare2DEMAgent`
+    Write Occam2D, ModEM3D, or MARE2DEM inversion input files; optionally run
+    the binary and scan results.
 :class:`InversionEvaluationAgent`
     Compute RMS, residual PT section, misfit pseudosection.
 :class:`InterpretationAgent`
@@ -149,6 +150,8 @@ _LAZY: dict[str, str] = {
     "ResistivityMapAgent":        ".resistivity_map",
     "BatchSurveyAgent":           ".batch_survey",
     "InversionBackendAgent":      ".inversion_backend",
+    "PipelineAgent":              ".pipeline_agent",
+    "Mare2DEMAgent":              ".mare2dem_agent",
 }
 
 
@@ -193,6 +196,8 @@ if TYPE_CHECKING:
     from .resistivity_map       import ResistivityMapAgent
     from .batch_survey          import BatchSurveyAgent
     from .inversion_backend     import InversionBackendAgent
+    from .pipeline_agent        import PipelineAgent
+    from .mare2dem_agent        import Mare2DEMAgent
 
 
 __version__ = "2.0.0"
@@ -246,4 +251,6 @@ __all__ = [
     "ResistivityMapAgent",
     "BatchSurveyAgent",
     "InversionBackendAgent",
+    "PipelineAgent",
+    "Mare2DEMAgent",
 ]

@@ -40,6 +40,13 @@ def configure_logging(
     Configure logging, but if any handler has a *relative* filename,
     remap it into <data_home>/logs/<that-filename>.
     """
+    if os.environ.get("PYCSAMT_DOCS_BUILD") == "1":
+        logging.basicConfig(
+            level=logging.WARNING,
+            format="%(levelname)-8s [%(name)s] %(message)s",
+        )
+        return
+
     if use_default:
         logging.basicConfig(
             level=logging.INFO,

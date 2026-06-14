@@ -8,11 +8,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle as _Rect
 
-from pycsamt.api.section import PYCSAMT_SECTION, SectionStyle
-from pycsamt.api.station import (
+from ..api.section import PYCSAMT_SECTION, SectionStyle
+from ..api.station import (
     PYCSAMT_STATION_RENDERING,
     StationAxisStyle,
 )
+from ..api.view import maybe_wrap_frame
 
 from ._core import (
     ensure_sites,
@@ -308,7 +309,8 @@ def build_qc_table(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -376,7 +378,16 @@ def build_qc_table(
     ]
     if include_skew:
         cols += ["skew_med", "skew_iqr"]
-    return pd.DataFrame.from_records(rows, columns=cols)
+    df = pd.DataFrame.from_records(rows, columns=cols)
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="qc_table",
+        kind="emtools.qc",
+        source=sites,
+        description="Station-level transfer-function quality summary.",
+    )
 
 
 def qc_flags(
@@ -431,7 +442,8 @@ def station_confidence_table(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     """Return station-level confidence scores for EM transfer functions.
 
     ``method="presence"`` reproduces the legacy criterion based only on
@@ -521,13 +533,21 @@ def station_confidence_table(
             )
         )
     if not rows:
-        return pd.DataFrame(
+        df = pd.DataFrame(
             columns=[
                 "station", "distance_m", "confidence", "method",
                 "confidence_err", "n_freq", "n_ok", "coverage",
                 "uncertainty", "offdiag", "diagonal", "phase",
                 "spatial",
             ]
+        )
+
+        return maybe_wrap_frame(
+            df,
+            api=api,
+            name="station_confidence_table",
+            kind="emtools.qc.station_confidence",
+            source=sites,
         )
     spatial_scores = _station_spatial_scores(
         np.asarray(med_logrho, dtype=float),
@@ -560,7 +580,16 @@ def station_confidence_table(
                 if i < spatial_scores.size
                 else np.nan
             )
-    return pd.DataFrame.from_records(rows)
+    df = pd.DataFrame.from_records(rows)
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="station_confidence_table",
+        kind="emtools.qc.station_confidence",
+        source=sites,
+        description="Station-level composite confidence scores.",
+    )
 
 
 def frequency_confidence_table(
@@ -580,7 +609,8 @@ def frequency_confidence_table(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> pd.DataFrame:
+    api: bool | None = None,
+) -> Any:
     """Return frequency-level confidence scores for EM stations.
 
     The returned table has one row for each station-frequency sample.  It is
@@ -716,7 +746,15 @@ def frequency_confidence_table(
         "diagonal", "phase", "spatial", "logrho_proxy", "flags",
     ]
     if not rows:
-        return pd.DataFrame(columns=columns)
+        df = pd.DataFrame(columns=columns)
+
+        return maybe_wrap_frame(
+            df,
+            api=api,
+            name="frequency_confidence_table",
+            kind="emtools.qc.frequency_confidence",
+            source=sites,
+        )
     table = pd.DataFrame.from_records(rows, columns=columns)
     spatial = _frequency_spatial_scores(table, spatial_tolerance_log10)
     table["spatial"] = spatial
@@ -740,7 +778,15 @@ def frequency_confidence_table(
         _frequency_flags(row, ci_hi, ci_lo)
         for _, row in table.iterrows()
     ]
-    return table
+
+    return maybe_wrap_frame(
+        table,
+        api=api,
+        name="frequency_confidence_table",
+        kind="emtools.qc.frequency_confidence",
+        source=sites,
+        description="Frequency-level transfer-function confidence scores.",
+    )
 
 
 # -------------------- confidence profile (Kouadio et al. 2024 Fig. 3) --- #
@@ -1062,7 +1108,8 @@ def plot_frequency_confidence_psection(
 ) -> plt.Axes:
     """Plot frequency confidence as a station-period pseudo-section."""
     section_style = _resolve_section_style(section)
-    section_style.axis.y_direction = "up"
+    # "down" triggers invert_yaxis() so short T (high freq, shallow) is at TOP.
+    section_style.axis.y_direction = "down"
     tb = frequency_confidence_table(
         sites,
         method=method,
@@ -1521,7 +1568,8 @@ def plot_coverage_psection(
     ax: Optional[plt.Axes] = None,
 ) -> plt.Axes:
     section_style = _resolve_section_style(section)
-    section_style.axis.y_direction = "up"
+    # "down" triggers invert_yaxis() so short T (high freq, shallow) is at TOP.
+    section_style.axis.y_direction = "down"
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -1535,7 +1583,7 @@ def plot_coverage_psection(
     As: List[np.ndarray] = []
     for i, ed in enumerate(_iter_items(S)):
         st = _name(ed, i)
-        Z, z, fr = _get_z_block(ed, return_errors=True)
+        Z, z, fr = _get_z_block(ed)
         if Z is None:
             continue
         sts.append(st)
@@ -1545,13 +1593,18 @@ def plot_coverage_psection(
             M = _offdiag_logmag(z)
         elif metric == "snr":
             ze = Z[3] if isinstance(Z, tuple) else None
-            ze = getattr(ed.Z, "z_err", None) if ze is None else ze
+            if ze is None:
+                _Zobj = getattr(ed, "Z", None) or getattr(
+                    getattr(ed, "edi", None), "Z", None)
+                ze = getattr(_Zobj, "z_err", None)
             M = _snr_rows(z, ze)
         else:
             M = _row_ok_z(z).astype(float)
         Ms.append(M.astype(float))
         if alpha_by == "snr":
-            ze = getattr(ed.Z, "z_err", None)
+            _Zobj = getattr(ed, "Z", None) or getattr(
+                getattr(ed, "edi", None), "Z", None)
+            ze = getattr(_Zobj, "z_err", None)
             A = _snr_rows(z, ze)
         else:
             A = np.ones_like(M, dtype=float)
@@ -1649,22 +1702,33 @@ def plot_snr_hist(
     )
     vals: List[float] = []
     for _, ed in enumerate(_iter_items(S)):
-        Z, z, fr = _get_z_block(ed, return_errors=True)
+        Z, z, fr = _get_z_block(ed)
         if Z is None:
             continue
         if isinstance(Z, tuple) and len(Z) == 4:
             _, z, fr, ze = Z
         else:
-            ze = getattr(ed.Z, "z_err", None)
+            _Zobj = getattr(ed, "Z", None) or getattr(
+                getattr(ed, "edi", None), "Z", None)
+            ze = getattr(_Zobj, "z_err", None)
         snr = _snr_rows(z, ze)
         vals.extend(list(snr))
     v = np.array(vals, dtype=float)
     v = v[np.isfinite(v)]
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
-    ax.hist(v, bins=int(max(8, bins)))
+    if v.size == 0:
+        ax.text(
+            0.5, 0.5,
+            "SNR histogram requires impedance\nerror data (z_err not available)",
+            ha="center", va="center", fontsize=9, color="#888888",
+            transform=ax.transAxes,
+        )
+    else:
+        ax.hist(v, bins=int(max(8, bins)))
     ax.set_xlabel("row SNR (|Z|/σ)")
     ax.set_ylabel("count")
+    ax.set_title("SNR Histogram")
     return ax
 
 
@@ -1717,7 +1781,7 @@ def plot_qc_quicklook(
 
 def _zblk(ed: Any, need_err: bool = False):
     try:
-        return _get_z_block(ed, return_errors=need_err)
+        return _get_z_block(ed, with_errors=need_err)
     except TypeError:
         try:
             return _get_z_block(ed, with_errors=need_err)

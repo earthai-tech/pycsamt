@@ -8,12 +8,12 @@ import copy
 
 import numpy as np
 
-from pycsamt.api.control import PYCSAMT_CONTROL
-from pycsamt.api.plot import add_colorbar, save_fig
-from pycsamt.api.property import PyCSAMTObject
-from pycsamt.api.section import PYCSAMT_SECTION, SectionStyle
-from pycsamt.api.station import PYCSAMT_STATION_RENDERING
-from pycsamt.api.style import PYCSAMT_STYLE
+from ..api.control import PYCSAMT_CONTROL
+from ..api.plot import add_colorbar, save_fig
+from ..api.property import PyCSAMTObject
+from ..api.section import PYCSAMT_SECTION, SectionStyle
+from ..api.station import PYCSAMT_STATION_RENDERING
+from ..api.style import PYCSAMT_STYLE
 
 __all__ = [
     "PlotDecayCurve",

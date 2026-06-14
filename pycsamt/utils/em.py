@@ -2301,6 +2301,7 @@ def plot_skew_2d(
     plot_contours: bool = ...,
     ax: Optional[plt.Axes] = None,
     savefig: Optional[str] = ...,
+    verbose: int = 0,
 ) -> plt.Axes:
     """
     Plot phase-sensitive skew (η) or rotational invariant (μ) in 2-D.

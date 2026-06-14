@@ -2,11 +2,18 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
-pycsamt.app — lightweight web / desktop application  (placeholder, v2 in progress).
+pycsamt.app — desktop and web applications for pycsamt.
 
-Planned components
-------------------
-dashboard   Streamlit-based interactive data browser and QC panel
-viewer      EDICollection map + apparent-resistivity / phase viewer
-wizard      step-by-step survey → processing → inversion workflow guide
+Desktop (PySide6)::
+
+    python -m pycsamt.app.desktop
+    # or
+    pycsamt-gui
+
+Web (Dash)::
+
+    python -m pycsamt.app.web
+    # → http://localhost:8050
+
+See pycsamt/app/PLAN.md for the full implementation plan.
 """

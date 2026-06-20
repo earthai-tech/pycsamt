@@ -23,19 +23,37 @@ Install the application extra:
 
    pip install "pycsamt[app]"
 
-Start the local web server:
+Start the web app launcher:
 
 .. code-block:: bash
    :linenos:
 
-   python -m pycsamt.app.web
+   pycsamt-web
 
-By default the application starts on:
+The launcher starts the local Dash server and opens the app in your default
+browser. By default it binds to ``127.0.0.1`` and prefers port ``8050``:
 
 .. code-block:: text
    :linenos:
 
-   http://localhost:8050
+   http://127.0.0.1:8050
+
+If port ``8050`` is already in use, ``pycsamt-web`` automatically chooses a
+free port and opens the browser at the correct address.
+
+Advanced launch options:
+
+.. code-block:: bash
+   :linenos:
+
+   pycsamt-web --no-browser
+   pycsamt-web --port 8060
+   pycsamt-web --port 0
+   pycsamt-web --host 0.0.0.0
+   pycsamt-web --debug
+
+Use ``--host 0.0.0.0`` only when you intentionally want the app to be reachable
+from another machine on the local network.
 
 Current Architecture
 --------------------
@@ -50,7 +68,7 @@ The web application lives under :mod:`pycsamt.app.web`.
      - Role
    * - ``app.py``
      - Dash application factory, Flask asset routes, callback registration,
-       and ``python -m pycsamt.app.web`` entry point.
+       and the ``pycsamt-web`` launcher.
    * - ``layout.py``
      - Top-level browser layout and navigation composition.
    * - ``pages/``

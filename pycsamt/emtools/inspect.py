@@ -14,7 +14,7 @@ import matplotlib.gridspec as gridspec
 
 from ..api.style import PYCSAMT_STYLE
 from ..api.view import maybe_wrap_frame
-from ._core import ensure_sites, _get_z_block, _get_t_block
+from ._core import ensure_sites, _axes_list, _get_z_block, _get_t_block
 
 # ------------------------- small helpers --------------------------------- #
 
@@ -766,6 +766,7 @@ def plot_station_response(
     show_error_bars: bool = True,
     show_rms: bool = True,
     title: str = "",
+    axes=None,
     figsize: Optional[Tuple[float, float]] = None,
     recursive: bool = True,
     on_dup: str = "replace",
@@ -859,8 +860,13 @@ def plot_station_response(
     T_obs, t_obs, _ = _get_t_block(ed_obs)
     tip_err_obs = getattr(T_obs, "tipper_err", None) if T_obs else None
 
+    axes_given = _axes_list(axes, 1) if axes is not None else None
     if rho_obs is None or phase_obs is None or z_obs is None:
-        fig, ax = plt.subplots(figsize=figsize or (10, 6))
+        if axes_given is None:
+            fig, ax = plt.subplots(figsize=figsize or (10, 6))
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no impedance data", ha="center", va="center",
                 transform=ax.transAxes)
         return fig
@@ -921,22 +927,30 @@ def plot_station_response(
     if figsize is None:
         figsize = (3.4 * max(n_comp, 4) + 0.6, 4.5 + (1.8 if has_tipper else 0))
 
-    fig = plt.figure(figsize=figsize, constrained_layout=True)
-    gs = gridspec.GridSpec(
-        n_rows, max(n_comp, 4) if has_tipper else n_comp,
-        figure=fig,
-        height_ratios=h_ratios,
-        hspace=0.08,
-        wspace=0.28,
-    )
+    n_required_axes = (2 * n_comp) + (4 if has_tipper else 0)
+    axes_given = _axes_list(axes, n_required_axes) if axes is not None else None
+    if axes_given is None:
+        fig = plt.figure(figsize=figsize, constrained_layout=True)
+        gs = gridspec.GridSpec(
+            n_rows, max(n_comp, 4) if has_tipper else n_comp,
+            figure=fig,
+            height_ratios=h_ratios,
+            hspace=0.08,
+            wspace=0.28,
+        )
 
-    # Build axes: [rho row, phase row] share x across columns
-    ax_rho   = [fig.add_subplot(gs[0, c]) for c in range(n_comp)]
-    ax_phase = [fig.add_subplot(gs[1, c], sharex=ax_rho[c]) for c in range(n_comp)]
-    if has_tipper:
-        ax_tip = [fig.add_subplot(gs[2, c]) for c in range(4)]
+        # Build axes: [rho row, phase row] share x across columns
+        ax_rho   = [fig.add_subplot(gs[0, c]) for c in range(n_comp)]
+        ax_phase = [fig.add_subplot(gs[1, c], sharex=ax_rho[c]) for c in range(n_comp)]
+        if has_tipper:
+            ax_tip = [fig.add_subplot(gs[2, c]) for c in range(4)]
+        else:
+            ax_tip = []
     else:
-        ax_tip = []
+        fig = axes_given[0].figure
+        ax_rho = axes_given[:n_comp]
+        ax_phase = axes_given[n_comp:2 * n_comp]
+        ax_tip = axes_given[2 * n_comp:2 * n_comp + 4] if has_tipper else []
 
     # ── 5. per-component RMS store ────────────────────────────────────────
     rms_dict: dict = {}

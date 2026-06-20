@@ -122,6 +122,185 @@ ADVANCED_GROUPS: list = [
     ("Conversion",         []),   # empty — specialized UI
 ]
 
+ADVANCED_GROUP_ICONS: dict[str, str] = {
+    "Strike Analysis": "strike-analyzer",
+    "Phase Tensor": "phase-tensor",
+    "Induction / Tipper": "induction",
+    "Impedance / Z": "impendance-tensor",
+    "Depth Imaging": "depth",
+    "Survey Tools": "survey-tools",
+    "Topography": "topography",
+    "Conversion": "conversion",
+}
+
+ADVANCED_PLOT_DESCRIPTIONS: dict[str, str] = {
+    "plot_strike_rose": (
+        "Rose diagram of preferred geoelectric strike directions across the "
+        "loaded survey."
+    ),
+    "plot_strike_rose_by_line": (
+        "Compares strike azimuth distributions for profile-line groupings."
+    ),
+    "plot_strike_analysis": (
+        "Full strike-analysis summary with rose statistics and stability "
+        "diagnostics."
+    ),
+    "plot_theta_rose_grid": (
+        "Grid of phase-tensor theta rose diagrams by period band or station "
+        "group."
+    ),
+    "plot_theta_vs_period": (
+        "Tracks phase-tensor theta as a function of period for each station."
+    ),
+    "plot_theta_stability_stripe": (
+        "Station-period stripe showing strike/theta stability and uncertainty "
+        "through the sounding band."
+    ),
+    "plot_strike_ribbon": (
+        "Station profile of dominant strike with an uncertainty ribbon."
+    ),
+    "plot_strike_mapsticks": (
+        "Map view of strike sticks at station locations for checking lateral "
+        "orientation trends."
+    ),
+    "plot_strike_stability_bands": (
+        "Period-band stability summary for strike directions."
+    ),
+    "plot_phase_tensor_map": (
+        "Phase-tensor ellipses drawn on the station map at the selected "
+        "period."
+    ),
+    "plot_phase_tensor_rose": (
+        "Rose diagram summarizing phase-tensor principal directions."
+    ),
+    "plot_phase_tensor_summary": (
+        "Multi-panel phase-tensor summary combining ellipses, dimensionality, "
+        "and skew diagnostics."
+    ),
+    "plot_phasor_wheel": (
+        "Polar phasor view of impedance phase behavior."
+    ),
+    "plot_pt_period_clock": (
+        "Period-clock summary of phase-tensor behavior across sounding bands."
+    ),
+    "plot_skew_ellipt_density": (
+        "Density plot of phase-tensor skew versus ellipticity for "
+        "dimensionality assessment."
+    ),
+    "plot_dimensionality_ternary": (
+        "Ternary summary of 1-D, 2-D, and 3-D dimensionality indicators."
+    ),
+    "plot_induction_arrows": (
+        "Station-index induction arrows for a selected period and convention."
+    ),
+    "plot_induction_map": (
+        "Map view of induction arrows at station locations."
+    ),
+    "plot_induction_section": (
+        "Station-period pseudosection of tipper magnitude or components."
+    ),
+    "plot_induction_rose": (
+        "Rose diagram of induction-arrow azimuths."
+    ),
+    "plot_tipper_polar": (
+        "Polar view of tipper direction and magnitude through period."
+    ),
+    "plot_tipper_hodograms": (
+        "Tipper hodograms for inspecting complex induction-vector paths."
+    ),
+    "plot_induction_multiperiod_map": (
+        "Stacked maps of induction arrows at several representative periods."
+    ),
+    "plot_induction_convention": (
+        "Side-by-side comparison of common induction-arrow sign conventions."
+    ),
+    "plot_impedance_mohr_circles": (
+        "Mohr-circle view of impedance tensor rotation behavior."
+    ),
+    "plot_zt_argand": (
+        "Argand diagram of impedance/tipper complex response components."
+    ),
+    "plot_z_invariants_section": (
+        "Station-period panels of impedance rotation-invariant quantities."
+    ),
+    "plot_rho_phase_bode": (
+        "Bode-style apparent-resistivity and phase curves."
+    ),
+    "plot_apparent_resistivity_polar": (
+        "Polar apparent-resistivity response for directional inspection."
+    ),
+    "plot_xyyx_crossover_map": (
+        "Map of stations where XY/YX apparent-resistivity behavior crosses "
+        "or diverges."
+    ),
+    "plot_offdiag_antisym_residual": (
+        "Pseudosection of off-diagonal impedance antisymmetry residual."
+    ),
+    "plot_anisotropy": (
+        "Station-period anisotropy section from XY/YX resistivity contrast "
+        "and related tensor metrics."
+    ),
+    "plot_ellipticity_psection": (
+        "Station-period pseudosection of phase-tensor ellipticity."
+    ),
+    "plot_depth_section": (
+        "Bostick depth pseudosection for a first-pass depth-of-investigation "
+        "view."
+    ),
+    "plot_apparent_depth_psection": (
+        "Apparent-depth pseudosection estimated from determinant "
+        "resistivity and frequency."
+    ),
+    "plot_gradient_section": (
+        "Gradient apparent-resistivity pseudosection emphasizing lateral and "
+        "frequency-domain contrasts."
+    ),
+    "plot_sensitivity_depth_section": (
+        "Bostick sensitivity-depth section showing vertical resolution "
+        "around interpreted depths."
+    ),
+    "plot_mt_composite_section": (
+        "Aligned multi-row pseudosection of resistivity, phase, skew, theta, "
+        "and SNR."
+    ),
+    "plot_atom_psection": (
+        "Dictionary-learning ATOM pseudosection; train the survey dictionary "
+        "before rendering."
+    ),
+    "plot_survey_fingerprint": (
+        "Compact fingerprint panels summarizing survey response patterns."
+    ),
+    "plot_distortion_radar": (
+        "Radar summary of distortion indicators over the survey."
+    ),
+    "plot_sites_compare": (
+        "Compares selected site responses in one diagnostic figure."
+    ),
+    "plot_sites_panels": (
+        "Station response panels for detailed per-site inspection."
+    ),
+    "plot_normalized_response": (
+        "Normalized-response diagnostic for near-field/source-effect review."
+    ),
+    "plot_tf_coherence_network": (
+        "Network view of transfer-function coherence between stations."
+    ),
+    "plot_dim_map": (
+        "Map of dimensionality class or confidence at station locations."
+    ),
+    "plot_dim_occupancy_area": (
+        "Occupancy-area summary of dimensionality classes across the survey."
+    ),
+}
+
+
+def describe_advanced_plot(fn_name: str) -> str:
+    """Return the user-facing description for an Advanced Tools plot."""
+    return ADVANCED_PLOT_DESCRIPTIONS.get(
+        fn_name,
+        "Render this Advanced Tools diagnostic plot.",
+    )
+
 # Indices for the specialized panels
 TOPO_INDEX = 6
 CONV_INDEX = 7
@@ -173,7 +352,7 @@ class AdvancedController:
 
     # ── Main entry-point ──────────────────────────────────────────────────────
 
-    def draw(self, fn_name: str, has_ax: bool, fig) -> Optional[object]:
+    def draw(self, fn_name: str, has_ax: bool, fig, **kwargs) -> Optional[object]:
         """
         Render *fn_name*.
 
@@ -187,6 +366,9 @@ class AdvancedController:
                     can hand it to MplCanvas.show_figure().
         fig : matplotlib.figure.Figure
             Target figure (mutated when has_ax=True or on error).
+        **kwargs
+            Extra keyword arguments forwarded to the emtools function
+            (e.g. ``ip=2`` for period-index, ``cmap="jet"``).
 
         Returns
         -------
@@ -217,7 +399,7 @@ class AdvancedController:
 
         # plot_atom_psection needs a trained dictionary model — dispatch specially.
         if fn_name == "plot_atom_psection":
-            self._draw_atom_psection(fn, fig)
+            self._draw_atom_psection(fn, fig, **kwargs)
             return None
 
         try:
@@ -226,9 +408,13 @@ class AdvancedController:
                     ax = fig.add_subplot(111, projection="polar")
                 else:
                     ax = fig.add_subplot(111)
-                fn(self._sites, ax=ax, verbose=0)
+                # Forward kwargs but ignore ones the function doesn't accept
+                try:
+                    fn(self._sites, ax=ax, verbose=0, **kwargs)
+                except TypeError:
+                    fn(self._sites, ax=ax, verbose=0)
             else:
-                src_fig = self._call_figure_fn(fn)
+                src_fig = self._call_figure_fn(fn, **kwargs)
                 if src_fig is None:
                     ax = fig.add_subplot(111)
                     _annotate_empty(ax, "No figure produced")
@@ -253,7 +439,7 @@ class AdvancedController:
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
-    def _draw_atom_psection(self, fn, fig) -> None:
+    def _draw_atom_psection(self, fn, fig, **kwargs) -> None:
         """Render plot_atom_psection using the stored dim model."""
         if self._dim_model is None:
             ax = fig.add_subplot(111)
@@ -267,7 +453,10 @@ class AdvancedController:
             return
         try:
             ax = fig.add_subplot(111)
-            fn(self._sites, self._dim_model, ax=ax, verbose=0)
+            try:
+                fn(self._sites, self._dim_model, ax=ax, verbose=0, **kwargs)
+            except TypeError:
+                fn(self._sites, self._dim_model, ax=ax, verbose=0)
         except Exception as exc:
             fig.clear()
             ax = fig.add_subplot(111)
@@ -278,10 +467,13 @@ class AdvancedController:
         except Exception:
             pass
 
-    def _call_figure_fn(self, fn) -> Optional[object]:
+    def _call_figure_fn(self, fn, **kwargs) -> Optional[object]:
         """Call a multi-axes function and return the Figure it creates."""
         before = set(plt.get_fignums())
-        result = fn(self._sites, verbose=0)
+        try:
+            result = fn(self._sites, verbose=0, **kwargs)
+        except TypeError:
+            result = fn(self._sites, verbose=0)
         after  = set(plt.get_fignums())
         if hasattr(result, "get_axes"):
             return result
@@ -679,6 +871,134 @@ class ConversionController:
         self._source_type = type_str
         self._source_path = path
 
+    @staticmethod
+    def _freq_order(value: object) -> str:
+        text = str(value or "").strip().lower()
+        if text in {"ascending", "asc", "up"}:
+            return "asc"
+        if text in {"descending", "desc", "down"}:
+            return "desc"
+        return "desc"
+
+    @staticmethod
+    def _split_labels(value: object, default: tuple[str, str]) -> tuple[str, str]:
+        if isinstance(value, (tuple, list)):
+            labels = [str(v).strip() for v in value if str(v).strip()]
+        else:
+            labels = [
+                part.strip()
+                for part in str(value or "").replace(";", ",").split(",")
+                if part.strip()
+            ]
+        labels = labels[:2]
+        while len(labels) < 2:
+            labels.append(default[len(labels)])
+        return tuple(labels)  # type: ignore[return-value]
+
+    @staticmethod
+    def _jedi_transform_kwargs(options: dict) -> dict:
+        out: dict = {}
+        for key in ("name", "station_id"):
+            value = options.get(key)
+            if value not in (None, ""):
+                out[key] = value
+        return out
+
+    @classmethod
+    def _core_config_kwargs(cls, options: dict) -> dict:
+        config: dict = {
+            "freq_order": cls._freq_order(options.get("freq_order")),
+        }
+        if options.get("freq_tol") not in (None, ""):
+            config["freq_tol"] = float(options["freq_tol"])
+        if "compute_z" in options:
+            config["compute_z_from_res"] = bool(options["compute_z"])
+        if "compute_rho_phi" in options:
+            config["compute_res_from_z"] = bool(options["compute_rho_phi"])
+        return config
+
+    @staticmethod
+    def _as_int_or_none(value: object) -> int | None:
+        text = str(value or "").strip()
+        if not text:
+            return None
+        return int(text)
+
+    def _avg_source(self, path: str, options: dict):
+        stn_path = str(options.get("stn_path", "") or "").strip()
+        if not stn_path:
+            return path
+
+        from pycsamt.zonge.avg import AVG
+
+        avg = AVG.from_file(path)
+        avg.add_topography(
+            stn_path,
+            utm_zone=str(options.get("utm_zone", "") or "").strip() or None,
+            epsg=self._as_int_or_none(options.get("epsg")),
+        )
+
+        if bool(options.get("convert_stn_coords", True)):
+            if not (
+                str(options.get("utm_zone", "") or "").strip()
+                or str(options.get("epsg", "") or "").strip()
+            ):
+                raise ValueError(
+                    "AVG station profile coordinate conversion requires "
+                    "an EPSG code or a UTM zone."
+                )
+            topo = getattr(avg, "topo", None)
+            if topo is not None:
+                topo.convert_coords(to="ll", inplace=True)
+        return avg
+
+    @staticmethod
+    def _write_collection(collection, output_dir: object) -> int:
+        out_dir = str(output_dir or "").strip()
+        if not out_dir or collection is None:
+            return 0
+
+        from pathlib import Path
+        from pycsamt.emtools._core import _iter_items
+
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        written = 0
+        for ed in _iter_items(collection):
+            write_fn = (
+                getattr(ed, "write_edifile", None)
+                or getattr(ed, "write", None)
+            )
+            if write_fn is None:
+                continue
+            write_fn(save_dir=out_dir)
+            written += 1
+        return written
+
+    @classmethod
+    def _spectra_kwargs(cls, options: dict) -> tuple[dict, dict]:
+        init_kw: dict = {
+            "e_labels": cls._split_labels(options.get("e_labels"), ("EX", "EY")),
+            "h_labels": cls._split_labels(options.get("h_labels"), ("HX", "HY")),
+            "estimate_error": bool(
+                options.get("estimate_error", options.get("estimate_errors", False))
+            ),
+            "use_remote": bool(
+                options.get("use_remote", options.get("use_remote_ref", False))
+            ),
+            "skip_errors": bool(options.get("skip_errors", True)),
+        }
+        suffix = str(options.get("station_suffix", "") or "").strip()
+        if suffix:
+            init_kw["station_suffix"] = suffix
+        transform_kw: dict = {}
+        output_dir = str(options.get("output_dir", "") or "").strip()
+        if output_dir:
+            transform_kw["output_dir"] = output_dir
+        station_name = str(options.get("station_name", "") or "").strip()
+        if station_name:
+            transform_kw["station_name"] = station_name
+        return init_kw, transform_kw
+
     def run(self, options: dict):
         """
         Run transformation synchronously.
@@ -693,16 +1013,32 @@ class ConversionController:
         collection = None
 
         if src in ("AVG -> EDI", "AVG → EDI"):
+            from pycsamt.core.config import config_context
             from pycsamt.transformers import AVGtoEDI
-            collection = AVGtoEDI().transform(path, **options)
+            with config_context(**self._core_config_kwargs(options)):
+                collection = AVGtoEDI().transform(
+                    self._avg_source(path, options),
+                    **self._jedi_transform_kwargs(options),
+                )
+            self._write_collection(collection, options.get("output_dir"))
 
         elif src in ("J -> EDI", "J → EDI"):
+            from pycsamt.core.config import config_context
             from pycsamt.transformers import JtoEDI
-            collection = JtoEDI().transform(path, **options)
+            with config_context(**self._core_config_kwargs(options)):
+                collection = JtoEDI().transform(
+                    path,
+                    **self._jedi_transform_kwargs(options),
+                )
+            self._write_collection(collection, options.get("output_dir"))
 
         elif src in ("Spectra -> EDI", "Spectra → EDI"):
             from pycsamt.transformers import SpectraToEDI
-            result     = SpectraToEDI(**options).transform_batch(path)
+            init_kw, transform_kw = self._spectra_kwargs(options)
+            result     = SpectraToEDI(**init_kw).transform_batch(
+                path,
+                **transform_kw,
+            )
             collection = result.collection
             failures   = getattr(result, "failures", [])
 
@@ -753,11 +1089,27 @@ class ConversionController:
                 except Exception:
                     pass
 
+                lat = lon = elev = float("nan")
+                try:
+                    h = ed.get_section("head")
+                    if h is not None:
+                        if getattr(h, "lat", None) is not None:
+                            lat = float(h.lat)
+                        if getattr(h, "long", None) is not None:
+                            lon = float(h.long)
+                        if getattr(h, "elev", None) is not None:
+                            elev = float(h.elev)
+                except Exception:
+                    pass
+
                 rows.append({
                     "station":    station,
                     "n_freqs":    n_freqs,
                     "f_min":      f_min,
                     "f_max":      f_max,
+                    "lat":        lat,
+                    "lon":        lon,
+                    "elev":       elev,
                     "has_Z":      has_z,
                     "has_tipper": has_tipper,
                 })

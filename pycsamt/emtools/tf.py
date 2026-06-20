@@ -8,10 +8,12 @@ from matplotlib.patches import FancyArrowPatch
 
 from ._core import (
     ensure_sites,
+    _axes_list,
     _iter_items,
     _get_t_block,
     _get_z_block,
     _name,
+    hide_polar_radius_labels,
 )
 
 from .tensor import build_phase_tensor_table
@@ -19,6 +21,7 @@ from ..api._rose_style import _UNSET, RoseStyle, resolve_rose_style
 from ..api.style import PYCSAMT_STYLE
 from ..api.control import PYCSAMT_CONTROL
 from ..api.section import PYCSAMT_SECTION, SectionStyle
+from ..api.labels import LOG10_PERIOD_LABEL
 from ..api.station import PYCSAMT_STATION_RENDERING
 from ..api.plot import add_colorbar, add_polar_colorbar
 
@@ -121,6 +124,7 @@ def plot_tipper_hodograms(
     lw: float = 1.0,
     ls: str = "-",
     unit_circle: bool = True,
+    axes=None,
     figsize: Tuple[float, float] = (6.4, 3.2),
     recursive: bool = True,
     on_dup: str = "replace",
@@ -133,9 +137,14 @@ def plot_tipper_hodograms(
     )
     st, ed = _pick_station(S, station)
     T, t, fr = _get_t_block(ed)
+    axes_given = _axes_list(axes, 1) if axes is not None else None
     if T is None or t is None:
-        fig = plt.figure(figsize=figsize)
-        ax = fig.add_subplot(111)
+        if axes_given is None:
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(111)
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no tipper", ha="center", va="center")
         return fig
     per = 1.0 / fr
@@ -144,9 +153,14 @@ def plot_tipper_hodograms(
         cols = [plt.cm.viridis(c) for c in np.linspace(0, 1, len(Ms))]
     else:
         cols = list(colors)[: len(Ms)]
-    fig = plt.figure(figsize=figsize)
-    gs = fig.add_gridspec(1, 2, wspace=0.25)
-    axX = fig.add_subplot(gs[0]); axY = fig.add_subplot(gs[1])
+    axes_given = _axes_list(axes, 2) if axes is not None else None
+    if axes_given is None:
+        fig = plt.figure(figsize=figsize)
+        gs = fig.add_gridspec(1, 2, wspace=0.25)
+        axX = fig.add_subplot(gs[0]); axY = fig.add_subplot(gs[1])
+    else:
+        axX, axY = axes_given
+        fig = axX.figure
     for k, m in enumerate(Ms):
         if not np.any(m):
             continue
@@ -652,7 +666,7 @@ def plot_induction_section(
     if y_log[0] > y_log[-1]:
         ax.invert_yaxis()
 
-    sty.apply_axis(ax, xlabel="Station", ylabel=r"$\log_{10}T$ (s)")
+    sty.apply_axis(ax, xlabel="Station", ylabel=LOG10_PERIOD_LABEL)
     sty.apply_stations(ax, st_x, names)
     ax.set_title(title or f"Tipper section  [{component}]",
                  fontsize=10, pad=6)
@@ -671,6 +685,7 @@ def plot_induction_convention(
     scale: float = _UNSET,
     station_labels: bool = True,
     title: str = "",
+    axes=None,
     figsize: Tuple[float, float] = (11, 10),
     recursive: bool = True,
     on_dup: str = "replace",
@@ -708,12 +723,18 @@ def plot_induction_convention(
         x, y = _station_xy(ed, i)
         xs.append(x); ys.append(y); names.append(_name(ed, i))
 
+    axes_given = _axes_list(axes, 4) if axes is not None else None
     if not names:
-        fig, axs = plt.subplots(2, 2, figsize=figsize)
-        for ax in axs.ravel():
+        if axes_given is None:
+            fig, axs = plt.subplots(2, 2, figsize=figsize)
+            axs_flat = axs.ravel()
+        else:
+            axs_flat = np.asarray(axes_given, dtype=object)
+            fig = axs_flat[0].figure
+        for ax in axs_flat:
             ax.text(0.5, 0.5, "no tipper", ha="center", va="center",
                     transform=ax.transAxes)
-        return axs
+        return np.asarray(axs_flat, dtype=object).reshape(2, 2)
 
     xs  = np.array(xs, float); ys  = np.array(ys, float)
     txs = np.array(txs); tys = np.array(tys)
@@ -748,7 +769,12 @@ def plot_induction_convention(
         ax.set_xlabel("x  (m)", fontsize=8); ax.set_ylabel("y  (m)", fontsize=8)
         _spine_style(ax)
 
-    fig, axs = plt.subplots(2, 2, figsize=figsize, constrained_layout=True)
+    axes_given = _axes_list(axes, 4) if axes is not None else None
+    if axes_given is None:
+        fig, axs = plt.subplots(2, 2, figsize=figsize, constrained_layout=True)
+    else:
+        axs = np.asarray(axes_given, dtype=object).reshape(2, 2)
+        fig = axs.ravel()[0].figure
     _panel(axs[0,0], park_re, "Parkinson — Real")
     _panel(axs[0,1], park_im, "Parkinson — Imaginary")
     _panel(axs[1,0], wies_re, "Wiese — Real")
@@ -808,6 +834,7 @@ def plot_tipper_polar(
     if T is None or t is None:
         if ax is None:
             fig = plt.figure(figsize=figsize); ax = fig.add_subplot(111, polar=True)
+        hide_polar_radius_labels(ax)
         ax.set_title("no tipper"); return ax
 
     per = 1.0 / fr
@@ -836,6 +863,7 @@ def plot_tipper_polar(
 
     ax.set_theta_zero_location("N"); ax.set_theta_direction(-1)
     ax.grid(True, alpha=0.3)
+    hide_polar_radius_labels(ax)
     ax.set_title(title or f"{st} — tipper polar [{component}]",
                  fontsize=10, pad=10)
     cbar = add_polar_colorbar(
@@ -909,6 +937,7 @@ def plot_induction_rose(
     if not azimuths:
         if ax is None:
             fig = plt.figure(figsize=figsize); ax = fig.add_subplot(111, polar=True)
+        hide_polar_radius_labels(ax)
         ax.set_title("no arrows"); return ax
 
     az = np.array(azimuths, float)
@@ -942,6 +971,7 @@ def plot_induction_rose(
 
     ax.set_theta_zero_location("N"); ax.set_theta_direction(-1)
     ax.grid(True, alpha=0.25)
+    hide_polar_radius_labels(ax)
     ax.set_title(title or f"Induction arrow rose [{component}]",
                  fontsize=10, pad=12)
     return ax
@@ -1058,6 +1088,7 @@ def plot_tipper_polar_from_spectra(
     component: str = "real",
     cmap: str = "viridis",
     title: str = "",
+    ax=None,
     figsize: Tuple[float, float] = (5.5, 5.5),
 ) -> plt.Axes:
     """Polar tipper from a :class:`~pycsamt.seg.spectra.Spectra` object.
@@ -1074,7 +1105,11 @@ def plot_tipper_polar_from_spectra(
     """
     tip_dict, freq_dict = _tipper_from_spectra(sp)
     if not tip_dict:
-        fig = plt.figure(figsize=figsize); ax = fig.add_subplot(111,polar=True)
+        if ax is None:
+            fig = plt.figure(figsize=figsize); ax = fig.add_subplot(111,polar=True)
+        else:
+            fig = ax.figure
+        hide_polar_radius_labels(ax)
         ax.set_title("no tipper"); return ax
 
     name  = list(tip_dict.keys())[0]
@@ -1092,14 +1127,18 @@ def plot_tipper_polar_from_spectra(
     log_per   = np.log10(np.maximum(per, 1e-9))
     norm      = mcolors.Normalize(vmin=log_per.min(), vmax=log_per.max())
 
-    fig = plt.figure(figsize=figsize)
-    ax  = fig.add_subplot(111, polar=True)
+    if ax is None:
+        fig = plt.figure(figsize=figsize)
+        ax  = fig.add_subplot(111, polar=True)
+    else:
+        fig = ax.figure
     sc  = ax.scatter(azimuth, magnitude, c=log_per, cmap=cmap, norm=norm,
                      s=30, alpha=0.85, edgecolors="none", zorder=4)
     order = np.argsort(per)
     ax.plot(azimuth[order], magnitude[order], lw=0.8, alpha=0.4, color="0.6")
     ax.set_theta_zero_location("N"); ax.set_theta_direction(-1)
     ax.grid(True, alpha=0.3)
+    hide_polar_radius_labels(ax)
     ax.set_title(title or f"{name} — polar tipper [{component}]",
                  fontsize=10, pad=10)
     add_polar_colorbar(
@@ -1162,6 +1201,7 @@ def plot_induction_rose_from_spectra(
     if not azimuths:
         if ax is None:
             fig = plt.figure(figsize=figsize); ax = fig.add_subplot(111,polar=True)
+        hide_polar_radius_labels(ax)
         ax.set_title("no arrows"); return ax
 
     az    = np.array(azimuths, float)
@@ -1196,6 +1236,7 @@ def plot_induction_rose_from_spectra(
 
     ax.set_theta_zero_location("N"); ax.set_theta_direction(-1)
     ax.grid(True, alpha=0.25)
+    hide_polar_radius_labels(ax)
     ax.set_title(title or f"Induction rose (spectra) [{component}]",
                  fontsize=10, pad=12)
     return ax
@@ -1253,6 +1294,7 @@ def plot_induction_multiperiod_map(
     annotation_color: str = "navy",
     annotation_fontsize: float = 8.0,
     title: str = "",
+    axes=None,
     figsize: Any = _UNSET,
     panel_height: float = 3.0,
     panel_width:  float = 8.5,
@@ -1397,9 +1439,14 @@ def plot_induction_multiperiod_map(
     st_xy = np.array(st_xy, float)  # (n, 2)
     n_st  = len(st_names)
 
+    axes_given = _axes_list(axes, 1) if axes is not None else None
     if n_st == 0:
-        fig = plt.figure()
-        ax  = fig.add_subplot(111)
+        if axes_given is None:
+            fig = plt.figure()
+            ax  = fig.add_subplot(111)
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no sites", ha="center", va="center",
                 transform=ax.transAxes)
         return fig, np.array([ax])
@@ -1473,16 +1520,21 @@ def plot_induction_multiperiod_map(
     if figsize is _UNSET:
         figsize = (panel_width, panel_height * n_per + 0.6)
 
-    fig = plt.figure(figsize=figsize)
-    gs  = gridspec.GridSpec(
-        n_per, 1,
-        figure=fig,
-        hspace=0.04,                   # minimal gap between panels
-        left=0.12, right=0.97,
-        top=0.95 if title else 0.97,
-        bottom=0.06,
-    )
-    axs = [fig.add_subplot(gs[k]) for k in range(n_per)]
+    axes_given = _axes_list(axes, n_per) if axes is not None else None
+    if axes_given is None:
+        fig = plt.figure(figsize=figsize)
+        gs  = gridspec.GridSpec(
+            n_per, 1,
+            figure=fig,
+            hspace=0.04,                   # minimal gap between panels
+            left=0.12, right=0.97,
+            top=0.95 if title else 0.97,
+            bottom=0.06,
+        )
+        axs = [fig.add_subplot(gs[k]) for k in range(n_per)]
+    else:
+        axs = list(axes_given)
+        fig = axs[0].figure
     # share axes
     for ax in axs[1:]:
         ax.sharex(axs[0])

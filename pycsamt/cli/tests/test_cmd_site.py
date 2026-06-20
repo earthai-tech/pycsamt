@@ -51,7 +51,8 @@ class TestSiteGroup:
     def test_help(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["site", "--help"])
         assert result.exit_code == 0
-        for sub in ("info", "select", "edit", "export", "compute"):
+        for sub in ("info", "select", "edit", "export",
+                    "recompute", "compute"):
             assert sub in result.output
 
     def test_compute_subgroup_help(self, runner: CliRunner) -> None:
@@ -420,6 +421,105 @@ class TestSiteExport:
             ["site", "export", str(site_edi_dir), "--output-dir", str(out)],
         )
         assert result.exception is None or isinstance(result.exception, SystemExit)
+
+
+# ---------------------------------------------------------------------------
+# pycsamt site recompute
+# ---------------------------------------------------------------------------
+
+class TestSiteRecompute:
+    def test_help(self, runner: CliRunner) -> None:
+        result = runner.invoke(main, ["site", "recompute", "--help"])
+        assert result.exit_code == 0
+        for opt in ("--rotate", "--components", "--freq",
+                    "--flatten", "--output-name", "--progress"):
+            assert opt in result.output
+
+    def test_no_source_fails(
+        self, runner: CliRunner, isolated_home: Path
+    ) -> None:
+        result = runner.invoke(main, ["site", "recompute"])
+        assert result.exit_code != 0
+        assert "No EDI source" in result.output
+
+    def test_line_folder_default_output(
+        self,
+        runner: CliRunner,
+        site_edi_dir: Path,
+        tmp_path: Path,
+    ) -> None:
+        root = tmp_path / "WILLY_DATA"
+        line = root / "L18PLT"
+        shutil.copytree(site_edi_dir, line)
+
+        result = runner.invoke(
+            main,
+            [
+                "site",
+                "recompute",
+                str(line),
+                "--template",
+                "{source_stem}.edi",
+                "--overwrite",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "Recomputed" in result.output
+        outdir = root / "recomputed_edis" / "L18PLT"
+        assert outdir.exists()
+        assert len(list(outdir.glob("*.edi"))) == len(
+            list(line.glob("*.edi"))
+        )
+        assert (root / "recomputed_edis" / "manifest.csv").exists()
+
+    def test_survey_folder_flatten_output(
+        self,
+        runner: CliRunner,
+        site_edi_dir: Path,
+        tmp_path: Path,
+    ) -> None:
+        root = tmp_path / "WILLY_DATA"
+        shutil.copytree(site_edi_dir, root / "L18PLT")
+        shutil.copytree(site_edi_dir, root / "L32PLT")
+
+        result = runner.invoke(
+            main,
+            [
+                "site",
+                "recompute",
+                str(root),
+                "--flatten",
+                "--template",
+                "{line}_{source_stem}.edi",
+                "--overwrite",
+            ],
+        )
+
+        assert result.exit_code == 0
+        outdir = root / "recomputed_edis"
+        assert outdir.exists()
+        assert list(outdir.glob("*.edi"))
+        assert not (outdir / "L18PLT").exists()
+
+    def test_dry_run_writes_nothing(
+        self,
+        runner: CliRunner,
+        site_edi_dir: Path,
+        tmp_path: Path,
+    ) -> None:
+        root = tmp_path / "WILLY_DATA"
+        line = root / "L18PLT"
+        shutil.copytree(site_edi_dir, line)
+
+        result = runner.invoke(
+            main,
+            ["site", "recompute", str(line), "--dry-run"],
+        )
+
+        assert result.exit_code == 0
+        assert "Dry run" in result.output
+        assert not (root / "recomputed_edis").exists()
 
 
 # ---------------------------------------------------------------------------

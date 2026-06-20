@@ -76,6 +76,78 @@ survey and interpretation target require 3-D inversion products.
        "output_dir": "/out/willy_modem",
    })
 
+.. _agent-mare2dem:
+
+Mare2DEMAgent
+-------------
+
+``Mare2DEMAgent`` orchestrates MARE2DEM 2.5-D EM inversion preparation and,
+when a compiled binary is available, execution.  It is the specialized agent
+to use when the target workflow needs MARE2DEM ``.emdata``, ``.resistivity``,
+``.settings``, and run-directory products rather than Occam2D or ModEM files.
+
+The agent can work in three modes:
+
+``"prepare"``
+    Write input files only.  This is the safest default and is appropriate
+    when the run will be launched manually on a workstation or cluster.
+
+``"run"``
+    Write inputs and launch the configured MARE2DEM binary.  Use this only
+    after confirming the binary, MPI configuration, and source tree.
+
+``"report"``
+    Inspect an existing run directory and summarize result state without
+    writing new inputs or launching the binary.
+
+Typical input keys include ``emdata`` for an existing data file, ``mt`` or
+``csem`` dictionaries for building survey data, optional ``topo``, optional
+``resistivity``, ``output_dir``, ``source_dir``, ``n_procs``,
+``max_iterations``, ``target_rms``, and ``initial_rho``.
+
+.. code-block:: python
+   :linenos:
+
+   from pycsamt.agents import Mare2DEMAgent
+
+   prepared = Mare2DEMAgent(n_procs=8).execute({
+       "emdata": "/data/willy.emdata",
+       "output_dir": "/out/willy_mare2dem",
+       "mode": "prepare",
+       "initial_rho": 100.0,
+       "target_rms": 1.0,
+   })
+
+   print(prepared["data_path"])
+   print(prepared["settings_path"])
+   print(prepared["binary_found"])
+
+When building from survey parameters, pass the MARE2DEM survey configuration
+through ``mt`` or ``csem``:
+
+.. code-block:: python
+   :linenos:
+
+   import numpy as np
+   from pycsamt.agents import Mare2DEMAgent
+
+   result = Mare2DEMAgent(n_procs=16).execute({
+       "mt": {
+           "frequencies": list(np.logspace(-3, 3, 20)),
+           "rx_y": list(np.linspace(-5000, 5000, 20)),
+           "rx_type": "land",
+           "lTE": True,
+           "lTM": True,
+       },
+       "topo": 0.0,
+       "output_dir": "/out/synthetic_mare2dem",
+       "mode": "prepare",
+   })
+
+Use ``Mare2DEMAgent`` after QC, static-shift correction, tensor rotation, and
+frequency selection.  Use ``InversionEvaluationAgent`` afterwards when a run
+directory contains results that need RMS, convergence, or residual summaries.
+
 .. _agent-inversion-backend:
 
 InversionBackendAgent
@@ -137,7 +209,7 @@ Typical Physics-Based Chain
 
    MTLoaderAgent -> DataQCAgent -> StaticShiftAgent
    -> PhaseAnalysisAgent -> FrequencyDecimationAgent
-   -> Occam2DAgent or ModEmAgent
+   -> Occam2DAgent or ModEmAgent or Mare2DEMAgent
    -> InversionEvaluationAgent
 
 Use ``InversionComparisonAgent`` when multiple model outputs need to be

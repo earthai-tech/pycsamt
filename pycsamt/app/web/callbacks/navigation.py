@@ -151,16 +151,32 @@ def register_navigation(app) -> None:
 
     # ── Welcome overlay ──────────────────────────────────────────────────────
 
-    # STORE_DATA populated → animate overlay out, then hide it (sole writer)
+    # STORE_DATA populated → animate overlay out, then hide it permanently.
+    #
+    # CRITICAL: must return the actual className string (not no_update).
+    # Returning no_update leaves Dash's VirtualDOM thinking className is
+    # still "wlc-overlay".  When the many server callbacks triggered by
+    # STORE_DATA all settle and React reconciles the full component tree, it
+    # resets the element to the VirtualDOM value — stripping wlc-hiding and
+    # restoring pointer-events, which makes the welcome cards clickable again
+    # and re-opens the modal on accidental clicks.
+    #
+    # By returning the real class string, Dash records it in the prop store
+    # so React reconciliation keeps it.  The final display:none is applied
+    # via inline style (outside React's control) after the animation ends.
     clientside_callback(
         """
         function(store_data) {
-            var ov = document.getElementById('welcome-overlay');
-            if (!ov || !store_data || !store_data.n_stations)
+            if (!store_data || !store_data.n_stations)
                 return window.dash_clientside.no_update;
-            ov.classList.add('wlc-hiding');
-            setTimeout(function() { ov.classList.add('wlc-gone'); }, 920);
-            return window.dash_clientside.no_update;
+            // Force full removal via inline style after the 0.9 s animation.
+            // Inline style is not managed by React (no style prop on this div),
+            // so it survives subsequent reconciliation passes.
+            var ov = document.getElementById('welcome-overlay');
+            if (ov) {
+                setTimeout(function() { ov.style.display = 'none'; }, 1000);
+            }
+            return 'wlc-overlay wlc-hiding';
         }
         """,
         Output(IDs.WELCOME_OVERLAY, "className"),

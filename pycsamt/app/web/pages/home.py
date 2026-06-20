@@ -23,37 +23,42 @@ _OVERLAY_OPTIONS = [
 
 # ── helpers ────────────────────────────────────────────────────────────────────
 def _station_panel():
-    cols = [{"name": c, "id": c}
-            for c in ["ID", "Latitude", "Longitude", "Elevation", "N_freq"]]
-    return dbc.Card([
-        dbc.CardHeader(
-            html.Span([_icon("station-response"), "Stations"],
-                      className="panel-title"),
-            className="py-2 px-3",
-        ),
-        dbc.CardBody([
-            html.Div("No stations loaded", id=IDs.STATION_SUMMARY,
-                     className="mb-1 text-muted small"),
-            dash_table.DataTable(
-                id=IDs.STATION_TABLE, columns=cols, data=[],
-                row_selectable="single", page_size=20,
-                style_table={"overflowY": "auto", "height": "340px", "overflowX": "hidden"},
-                style_as_list_view=True,
-                style_header={"backgroundColor": "#181825", "color": "#a6adc8",
-                              "fontWeight": "600", "fontSize": "12px", "border": "none"},
-                style_cell={"backgroundColor": "#1e1e2e", "color": "#cdd6f4",
-                            "border": "none", "fontSize": "12px", "padding": "4px 8px",
-                            "textOverflow": "ellipsis", "maxWidth": "80px"},
-                style_data_conditional=[
-                    {"if": {"state": "selected"},
-                     "backgroundColor": "#313244", "color": "#89b4fa", "border": "none"},
-                    {"if": {"row_index": "odd"}, "backgroundColor": "#181825"},
-                ],
-                sort_action="native", filter_action="native",
-                filter_options={"placeholder_text": "Filter…"},
+    _hidden_cols = [{"name": c, "id": c}
+                    for c in ["ID", "Line", "Latitude", "Longitude",
+                               "Elevation", "N_freq"]]
+    return dbc.Card(
+        [
+            dbc.CardHeader(
+                html.Div([
+                    html.Span([_icon("station-response"), "Stations"],
+                              className="panel-title"),
+                    html.Span(id=IDs.STATION_SUMMARY, className="stat-chip",
+                              children="0 sites"),
+                ], style={"display": "flex", "alignItems": "center",
+                          "justifyContent": "space-between"}),
+                className="py-2 px-3",
             ),
-        ], className="p-2"),
-    ], style={"height": "100%"})
+            # line filter pills
+            html.Div(id=IDs.STATION_LINE_PILLS,
+                     className="sta-line-pills-row", children=[]),
+            # scrollable station list
+            html.Div(
+                html.Div(id=IDs.STATION_LIST_BODY, className="sta-list-body"),
+                style={"overflowY": "auto", "flex": "1", "minHeight": "0",
+                       "padding": "0"},
+            ),
+            # hidden DataTable keeps existing callbacks wired
+            dash_table.DataTable(
+                id=IDs.STATION_TABLE,
+                columns=_hidden_cols,
+                data=[],
+                row_selectable="single",
+                style_table={"display": "none", "height": "0"},
+            ),
+        ],
+        style={"height": "100%", "display": "flex", "flexDirection": "column",
+               "overflow": "hidden"},
+    )
 
 
 def _map_panel():
@@ -63,7 +68,7 @@ def _map_panel():
                 dbc.Col(html.Span([_icon("map-view"), "Station Map"],
                                   className="panel-title"), width="auto"),
                 dbc.Col(
-                    dbc.Select(id=IDs.MAP_OVERLAY, options=_OVERLAY_OPTIONS,
+                    dbc.Select(id=IDs.HOME_MAP_OVERLAY, options=_OVERLAY_OPTIONS,
                                value="Index", size="sm",
                                style={"maxWidth": "200px"}),
                     width="auto", className="ms-auto",
@@ -73,7 +78,7 @@ def _map_panel():
         ),
         dbc.CardBody(
             dcc.Graph(
-                id=IDs.MAP_GRAPH, figure=_empty_map(dark=True),
+                id=IDs.HOME_MAP_GRAPH, figure=_empty_map(dark=True),
                 config={"displayModeBar": True,
                         "modeBarButtonsToRemove": ["lasso2d"],
                         "scrollZoom": True, "displaylogo": False},

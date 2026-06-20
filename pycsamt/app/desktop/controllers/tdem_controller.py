@@ -40,7 +40,9 @@ from pycsamt.app.desktop.controllers.qc_controller import (
 
 DECAY_PLOTS: list = [
     ("Decay curves",           "PlotDecayCurve",       True,  "soundings"),
-    ("Apparent resistivity",   "PlotTransformedRho",   True,  "soundings"),
+    # PlotTransformedRho.plot() needs 2 axes when show_phase=True; let it
+    # create its own figure (has_ax=False) so _call_figure_cls handles it.
+    ("Apparent resistivity",   "PlotTransformedRho",   False, "soundings"),
 ]
 
 SECTION_PLOTS: list = [
@@ -192,9 +194,12 @@ class TDEMController:
 
             if has_ax:
                 ax = fig.add_subplot(111)
-                plot_obj = cls(data) if data_key != "dashboard" else \
-                    cls(self._survey.get() if hasattr(self._survey, 'get') else self._survey,
-                        self._survey, self._soundings)
+                if data_key == "dashboard":
+                    # Dashboard always uses has_ax=False in the catalogue, but
+                    # guard here defensively.
+                    plot_obj = cls(self._survey, self._survey, self._soundings)
+                else:
+                    plot_obj = cls(data)
                 import inspect
                 sig = inspect.signature(plot_obj.plot)
                 if "axes" in sig.parameters:
@@ -229,14 +234,20 @@ class TDEMController:
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     def _call_figure_cls(self, cls, data) -> Optional[object]:
-        """Instantiate cls(data).plot() and return the Figure it creates."""
+        """Instantiate cls(data).plot() and return the Figure it creates.
+
+        For the dashboard, `data` is None and both avg/zplot come from the
+        survey (TEMSurvey supports both _avg_records and _z_records).
+        """
         before = set(plt.get_fignums())
         try:
             if data is not None:
                 result = cls(data).plot()
             else:
+                # PlotTEMDashboard(avg, zplot, soundings)
+                # Pass survey for both avg and zplot — both accept TEMSurvey.
                 result = cls(self._survey, self._survey, self._soundings).plot()
-        except Exception as exc:
+        except Exception:
             return None
         after = set(plt.get_fignums())
         if hasattr(result, "get_axes"):

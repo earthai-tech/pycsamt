@@ -42,8 +42,8 @@ from pathlib import Path
 
 import numpy as np
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QFont, QIcon
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QDialog,
@@ -73,6 +73,15 @@ _EXCLUDED = QColor("#e0e0e0")
 # regardless of whether the OS is in dark or light mode.
 _FG_NORMAL   = QColor("#1a1a1a")
 _FG_EXCLUDED = QColor("#666666")
+_ICONS = Path(__file__).resolve().parents[1] / "resources" / "icons"
+
+
+def _icon(name: str) -> QIcon:
+    for candidate in (name, f"{name}.svg", f"{name}.png"):
+        path = _ICONS / candidate
+        if path.exists():
+            return QIcon(str(path))
+    return QIcon()
 
 # ── Column layout ─────────────────────────────────────────────────────────────
 _COLS = [
@@ -183,12 +192,20 @@ class EDIValidatorDialog(QDialog):
         Populated when the user clicks *Apply to Survey* and the dialog
         accepts.  Contains the filtered / renamed list of site objects.
 
+    Signals
+    -------
+    open_recompute_requested
+        Emitted when the user clicks *Recompute EDIs…* inside this dialog.
+        MainWindow connects this to ``_open_recompute()``.
+
     Parameters
     ----------
     sites : any
         Loaded survey (from MainWindow._controller.sites).
     parent : QWidget, optional
     """
+
+    open_recompute_requested = Signal()
 
     def __init__(self, sites, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -291,9 +308,22 @@ class EDIValidatorDialog(QDialog):
         root.addWidget(self._table, stretch=1)
 
         # ── Bottom buttons ────────────────────────────────────────────────
+        bottom = QHBoxLayout()
+        bottom.setSpacing(6)
+        btn_recompute = QPushButton("Recompute EDIs…")
+        btn_recompute.setIcon(_icon("recompute"))
+        btn_recompute.setToolTip(
+            "Open the Recompute EDIs panel to rotate, filter and rewrite the survey EDIs.\n"
+            "Recomputed stations are marked with ◈ in the main station list."
+        )
+        btn_recompute.setObjectName("RecomputeShortcutBtn")
+        btn_recompute.clicked.connect(self.open_recompute_requested)
+        bottom.addWidget(btn_recompute)
+        bottom.addStretch()
         box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         box.rejected.connect(self.reject)
-        root.addWidget(box)
+        bottom.addWidget(box)
+        root.addLayout(bottom)
 
     # ── QC run ────────────────────────────────────────────────────────────────
 

@@ -83,9 +83,14 @@ def _build_unet2d(
             )
             # Bridge
             self.bridge = _conv_block(ch[n_stages - 1], ch[-1], dropout)
-            # Decoder stages (reverse)
-            dec_in = [ch[-1] + ch[i] for i in range(n_stages - 1, -1, -1)]
+            # Decoder stages (reverse order: bridge→skip[last] → ... → skip[0])
+            # skip channels (reversed): ch[n_stages-1], ch[n_stages-2], ..., ch[0]
+            # decoder[j] receives cat(prev_output, skip[j])
+            #   prev_output channels: ch[-1] for j=0, ch[n_stages-1-j+1] for j>0
             dec_out = [ch[i] for i in range(n_stages - 1, -1, -1)]
+            prev_ch = [ch[-1]] + dec_out[:-1]          # output of previous stage
+            skip_ch = dec_out                            # skip == encoder output width
+            dec_in  = [prev_ch[j] + skip_ch[j] for j in range(n_stages)]
             self.decoders = nn.ModuleList(
                 [_conv_block(dec_in[i], dec_out[i], dropout)
                  for i in range(n_stages)]

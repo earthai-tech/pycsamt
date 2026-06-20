@@ -8,14 +8,18 @@ import matplotlib.pyplot as plt
 
 from ._core import (
     ensure_sites,
+    _axes_list,
     _iter_items,
     _apply_each,
     _get_z_block,
     _name,
+    hide_polar_radius_labels,
 )
 from .tensor import build_phase_tensor_table
 from ..api._rose_style import _UNSET
 from ..api.style import PYCSAMT_STYLE
+from ..api.station import PYCSAMT_STATION_RENDERING
+from ..api.labels import LOG10_PERIOD_LABEL, PERIOD_LABEL
 from ..api.view import maybe_wrap_frame
 
 
@@ -754,15 +758,21 @@ def plot_ss_delta_psection(
         vmin=-(vlim or 0.5),
         vmax=(vlim or 0.5),
     )
-    ax.set_xlabel("Station")
-    ax.set_ylabel("LogPeriod (s)" if axis_y == "logperiod"
-                  else "Period (s)")
-    ax.set_xticks(np.arange(len(labs)))
-    ax.set_xticklabels(labs, rotation=90)
+    ax.set_ylabel(LOG10_PERIOD_LABEL if axis_y == "logperiod"
+                  else PERIOD_LABEL)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(len(labs), dtype=float),
+        labs,
+        preset="pseudosection",
+        xlim=(-0.5, len(labs) - 0.5),
+    )
     yt = np.linspace(0, Z.shape[0] - 1, num=min(8, Z.shape[0]))
     yv = np.linspace(yg.min(), yg.max(), num=yt.size)
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yv])
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
     cb = plt.colorbar(im, ax=ax)
     cb.set_label("Δ log10 ρ_det (after − before)")
     return ax
@@ -876,9 +886,13 @@ def plot_ss_delta_profile(
     ax.axhline(0.0, color="0.7", lw=1.0)
     ax.bar(x, deltas, width=0.8)
     ax.set_ylabel("Δ log10 ρ_det (after − before)")
-    ax.set_xlabel("Station")
-    ax.set_xticks(x)
-    ax.set_xticklabels(labs, rotation=90)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        x.astype(float),
+        labs,
+        preset="pseudosection",
+        xlim=(-0.5, len(labs) - 0.5),
+    )
     return ax
 
 
@@ -1175,13 +1189,23 @@ def plot_ss_comparison_psection(
         cb_d.set_label(delta_colorbar_label, fontsize=8)
         cb_d.ax.tick_params(labelsize=7)
 
-    # ── x-axis ticks (bottom panel; shared via sharex) ────────────────────
-    _set_station_xticks(
-        axes[-1], n_st, station_labels,
-        rotation=tick_label_rotation,
-        fontsize=tick_fontsize,
-        xlabel=xlabel,
+    # ── station axis (top panel; shared x across panels) ─────────────────
+    PYCSAMT_STATION_RENDERING.apply(
+        axes[0],
+        x_centres,
+        station_labels,
+        preset="pseudosection",
+        xlim=(x_centres[0] - 0.5, x_centres[-1] + 0.5),
     )
+    for ax in axes[1:]:
+        ax.tick_params(
+            axis="x",
+            which="both",
+            top=False,
+            bottom=False,
+            labeltop=False,
+            labelbottom=False,
+        )
 
     if suptitle:
         fig.suptitle(suptitle, fontsize=10, fontweight="bold", y=1.005)
@@ -1213,6 +1237,7 @@ def plot_ss_1d_curves(
     annotation_fontsize: int = 7,
     ylabel: str = r"$\log_{10}\,\rho_a$ (Ω·m)",
     xlabel: str = "Period (s)",
+    axes=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     legend_loc: str = "best",
@@ -1306,12 +1331,17 @@ def plot_ss_1d_curves(
     if figsize is None:
         figsize = (n_cols * 3.2, n_rows * 2.8)
 
-    fig, axes_grid = plt.subplots(
-        n_rows, n_cols,
-        figsize=figsize,
-        squeeze=False,
-    )
-    axes_flat = axes_grid.ravel()
+    axes_given = _axes_list(axes, n_shown) if axes is not None else None
+    if axes_given is None:
+        fig, axes_grid = plt.subplots(
+            n_rows, n_cols,
+            figsize=figsize,
+            squeeze=False,
+        )
+        axes_flat = axes_grid.ravel()
+    else:
+        axes_flat = np.asarray(axes_given, dtype=object)
+        fig = axes_flat[0].figure
 
     # sort periods ascending for clean curves
     order  = np.argsort(1.0 / freqs)
@@ -1397,6 +1427,7 @@ def plot_ss_summary(
     shift_bar_neg_color: str = "#c44e52",
     shift_robust: str = "median",
     suptitle: str = "",
+    axes=None,
     figsize: Optional[Tuple[float, float]] = None,
 ) -> plt.Figure:
     """
@@ -1456,20 +1487,25 @@ def plot_ss_summary(
         station_labels = [str(i) for i in range(n_st)]
     x_centres = np.arange(n_st, dtype=float)
 
-    if figsize is None:
-        figsize = (13.0, 14.0)
+    axes_given = _axes_list(axes, 4)
+    if axes_given is None:
+        if figsize is None:
+            figsize = (13.0, 14.0)
 
-    fig = plt.figure(figsize=figsize)
-    gs  = fig.add_gridspec(
-        3, 2,
-        height_ratios=[1, 1, 0.55],
-        hspace=0.46,
-        wspace=0.20,
-    )
-    ax_before = fig.add_subplot(gs[0, 0])
-    ax_after  = fig.add_subplot(gs[0, 1], sharey=ax_before)
-    ax_delta  = fig.add_subplot(gs[1, :])
-    ax_bar    = fig.add_subplot(gs[2, :])
+        fig = plt.figure(figsize=figsize)
+        gs  = fig.add_gridspec(
+            3, 2,
+            height_ratios=[1, 1, 0.55],
+            hspace=0.46,
+            wspace=0.20,
+        )
+        ax_before = fig.add_subplot(gs[0, 0])
+        ax_after  = fig.add_subplot(gs[0, 1], sharey=ax_before)
+        ax_delta  = fig.add_subplot(gs[1, :])
+        ax_bar    = fig.add_subplot(gs[2, :])
+    else:
+        ax_before, ax_after, ax_delta, ax_bar = axes_given
+        fig = ax_before.figure
 
     # ── colour limits ──────────────────────────────────────────────────────
     if clim is None:
@@ -1905,6 +1941,19 @@ def plot_ss_radar(
     if lw     is _UNSET: lw     = _mt.xy.lw
     if ls     is _UNSET: ls     = _mt.xy.ls
 
+    def _ensure_polar_axis(axis: Optional[plt.Axes]) -> plt.Axes:
+        if axis is None:
+            _, new_ax = plt.subplots(
+                figsize=figsize, subplot_kw={"polar": True}
+            )
+            return new_ax
+        if getattr(axis, "name", "") == "polar":
+            return axis
+        fig = axis.figure
+        pos = axis.get_position()
+        axis.remove()
+        return fig.add_axes(pos, projection="polar")
+
     S = ensure_sites(
         sites, recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
@@ -1914,20 +1963,20 @@ def plot_ss_radar(
     for i, ed in enumerate(_iter_items(S)):
         sel[_name(ed, i)] = ed
     if not sel:
-        if ax is None: _, ax = plt.subplots(subplot_kw={"polar": True})
+        ax = _ensure_polar_axis(ax)
         ax.text(0.5, 0.5, "no sites", ha="center", va="center")
         return ax
     if station is None:
         station = sorted(sel.keys())[0]
     ed = sel.get(station, None)
     if ed is None:
-        if ax is None: _, ax = plt.subplots(subplot_kw={"polar": True})
+        ax = _ensure_polar_axis(ax)
         ax.text(0.5, 0.5, "station not found",
                 ha="center", va="center")
         return ax
     Z, z, fr = _get_z_block(ed)
     if Z is None:
-        if ax is None: _, ax = plt.subplots(subplot_kw={"polar": True})
+        ax = _ensure_polar_axis(ax)
         ax.text(0.5, 0.5, "no Z", ha="center", va="center")
         return ax
 
@@ -1970,13 +2019,11 @@ def plot_ss_radar(
 
     th = th[m]; r1 = r_xy[m]; r2 = r_yx[m]
 
-    if ax is None:
-        _, ax = plt.subplots(
-            figsize=figsize, subplot_kw={"polar": True}
-        )
+    ax = _ensure_polar_axis(ax)
     # set polar style: 0 at north, CW
     ax.set_theta_zero_location("N")
     ax.set_theta_direction(-1)
+    hide_polar_radius_labels(ax)
 
     # plot
     ax.plot(th, r1, ls=ls, lw=lw, marker=marker,
@@ -1988,13 +2035,9 @@ def plot_ss_radar(
         ax.fill_between(th, lo, hi, color="0.5", alpha=0.10)
 
     ax.grid(True, alpha=0.25)
+    hide_polar_radius_labels(ax)
     ax.set_title(str(station), pad=10)
-    if radial == "rho":
-        ax.set_rlabel_position(135)
-        ax.set_ylabel("ρa (Ω·m)")
-    else:
-        ax.set_rlabel_position(135)
-        ax.set_ylabel("log10 ρa")
+    ax.set_ylabel("")
     ax.legend(loc="lower left", bbox_to_anchor=(0.02, 0.02),
               frameon=False, fontsize=8)
     return ax

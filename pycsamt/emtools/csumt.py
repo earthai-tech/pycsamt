@@ -11,6 +11,7 @@ from ._core import (
     _get_z_block,
     _name,
 )
+from ..api.station import PYCSAMT_STATION_RENDERING
 
 __all__ = [
     # pure survey-planning functions (no sites required)
@@ -558,8 +559,13 @@ def plot_depth_section(
     ys = np.arange(len(all_y) + 1) - 0.5
     im = ax.pcolormesh(xs, ys, plot_data, cmap=cmap, shading="auto")
 
-    ax.set_xticks(range(len(stations)))
-    ax.set_xticklabels(stations, rotation=45, ha="right", fontsize=8)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(len(stations), dtype=float),
+        stations,
+        preset="pseudosection",
+        xlim=(-0.5, len(stations) - 0.5),
+    )
 
     n_ytick = min(8, len(all_y))
     step = max(1, len(all_y) // n_ytick)
@@ -567,7 +573,8 @@ def plot_depth_section(
     ax.set_yticks(tick_idx)
     ax.set_yticklabels([f"{all_y[k]:.3g}" for k in tick_idx], fontsize=8)
     ax.set_ylabel("Period (s)" if period_axis else "Frequency (Hz)")
-    ax.set_xlabel("Station")
+    if period_axis and not ax.yaxis_inverted():
+        ax.invert_yaxis()
     ax.set_title("Bostick Depth Section  D = 356√(ρ_a / f)")
 
     cb = plt.colorbar(im, ax=ax)

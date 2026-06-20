@@ -98,17 +98,26 @@ class LoadDataDialog(QDialog):
 
     After ``exec()`` returns ``QDialog.Accepted``, read ``selected_paths``
     for the confirmed file paths.
+
+    Parameters
+    ----------
+    recomputed_dir : Path or str, optional
+        If provided and the directory exists, a *Load Recomputed EDIs* button
+        is shown so the user can instantly load the output of the last
+        EDIRecomputer run without navigating manually.
     """
 
     def __init__(
         self,
         parent: QWidget | None = None,
         last_dir: str = "",
+        recomputed_dir=None,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Open Survey Data")
         self.setMinimumSize(580, 460)
         self._last_dir = last_dir or str(Path.home())
+        self._recomputed_dir = Path(recomputed_dir) if recomputed_dir else None
         self.selected_paths: List[str] = []
         self._build_ui()
 
@@ -148,6 +157,17 @@ class LoadDataDialog(QDialog):
         btn_folder.clicked.connect(self._browse_folder)
         browse_row.addWidget(btn_files)
         browse_row.addWidget(btn_folder)
+
+        # Show shortcut only when a previous recompute output folder exists.
+        if self._recomputed_dir and self._recomputed_dir.is_dir():
+            btn_recomp = QPushButton("◈  Load Recomputed EDIs")
+            btn_recomp.setObjectName("BrowseButton")
+            btn_recomp.setToolTip(
+                f"Load all EDI files from the last recomputed output:\n{self._recomputed_dir}"
+            )
+            btn_recomp.clicked.connect(self._load_recomputed)
+            browse_row.addWidget(btn_recomp)
+
         browse_row.addStretch()
         root.addLayout(browse_row)
 
@@ -228,6 +248,16 @@ class LoadDataDialog(QDialog):
             )
 
     # ── Browse slots ───────────────────────────────────────────────
+
+    def _load_recomputed(self) -> None:
+        """Load all EDI files from the last EDIRecomputer output folder."""
+        if not (self._recomputed_dir and self._recomputed_dir.is_dir()):
+            return
+        found = sorted(str(p) for p in self._recomputed_dir.rglob("*.edi"))
+        if found:
+            self._set_paths(found)
+        else:
+            self._drop_zone.setText("⚠  No EDI files found in recomputed folder")
 
     def _browse_files(self) -> None:
         exts     = " ".join(_FORMAT_MAP[self._fmt_combo.currentText()])

@@ -132,6 +132,28 @@ CATALOGUE: Dict[str, Dict[str, Dict]] = {
                 ParamSpec("also", "Apply to",     "combo", "both", ["both", "z", "tipper"]),
             ],
         },
+        "ρ/φ trend smoothing": {
+            "fn":   "smooth_rho_phase",
+            "desc": "Polynomial trend smoothing of apparent resistivity and "
+                    "phase versus log-frequency. ρ is fitted in log space and "
+                    "phase is unwrapped before fitting; the complex impedance "
+                    "tensor is then rebuilt so ρ and φ remain consistent.",
+            "params": [
+                ParamSpec("components", "Components", "combo", "offdiag",
+                          ["offdiag", "all", "xy", "yx", "xx", "yy", "diagonal"],
+                          "Tensor components to smooth. offdiag = xy and yx."),
+                ParamSpec("degree", "Poly degree", "spin", 3, (0, 8, 1),
+                          "Polynomial degree in log10(frequency)."),
+                ParamSpec("smooth_rho", "Smooth ρ", "check", True, None,
+                          "Smooth apparent-resistivity amplitude."),
+                ParamSpec("smooth_phase", "Smooth φ", "check", True, None,
+                          "Smooth unwrapped impedance phase."),
+                ParamSpec("blend", "Blend", "dspin", 1.0, (0.0, 1.0, 0.05),
+                          "0 keeps original curves; 1 fully applies the trend."),
+                ParamSpec("robust", "Robust fit", "check", True, None,
+                          "Down-weight isolated spikes during polynomial fitting."),
+            ],
+        },
     },
 
     "Source Effects": {

@@ -42,7 +42,14 @@ from ..api.style import PYCSAMT_STYLE
 from ..api.plot import add_colorbar
 from ..api.station import PYCSAMT_STATION_RENDERING
 
-from ._core import ensure_sites, _iter_items, _name, _get_z_block, _get_t_block
+from ._core import (
+    ensure_sites,
+    _iter_items,
+    _name,
+    _get_z_block,
+    _get_t_block,
+    hide_polar_radius_labels,
+)
 from .tensor import build_phase_tensor_table
 
     
@@ -80,6 +87,21 @@ def _z_at_theta(z0: np.ndarray, theta: float) -> np.ndarray:
     return R @ z0 @ R.T
 
 
+def _axes_list(axes: Any, n: int, *, label: str = "axes") -> Optional[List[Any]]:
+    """Return *n* flattened axes, or ``None`` when axes were not supplied."""
+    if axes is None:
+        return None
+    if isinstance(axes, np.ndarray):
+        out = list(axes.ravel())
+    elif isinstance(axes, (list, tuple)):
+        out = list(np.asarray(axes, dtype=object).ravel())
+    else:
+        out = [axes]
+    if len(out) < n:
+        raise ValueError(f"{label} must provide at least {n} axes; got {len(out)}.")
+    return out[:n]
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Impedance Mohr Circles
 # ─────────────────────────────────────────────────────────────────────────────
@@ -95,6 +117,7 @@ def plot_impedance_mohr_circles(
     cmap: str = "plasma",
     alpha: float = 0.75,
     mark_zero: bool = True,
+    axes=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -190,9 +213,14 @@ def plot_impedance_mohr_circles(
     cmap_obj = plt.get_cmap(cmap)
     norm_p = mcolors.LogNorm(vmin=per_vals.min(), vmax=per_vals.max())
 
-    if figsize is None:
-        figsize = (10, 5)
-    fig, (ax_re, ax_im) = plt.subplots(1, 2, figsize=figsize)
+    axes_given = _axes_list(axes, 2)
+    if axes_given is None:
+        if figsize is None:
+            figsize = (10, 5)
+        fig, (ax_re, ax_im) = plt.subplots(1, 2, figsize=figsize)
+    else:
+        ax_re, ax_im = axes_given
+        fig = ax_re.figure
 
     for pi in pidx:
         z0 = z[pi]
@@ -255,6 +283,7 @@ def plot_zt_argand(
     ms: float = 4.5,
     arrow_every: int = 4,
     normalize: bool = False,
+    axes=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -337,11 +366,18 @@ def plot_zt_argand(
 
     n_comp = len(components)
     mt = PYCSAMT_STYLE.mt
-    if figsize is None:
-        figsize = (4.5 * n_comp, 4.5)
-    fig, axes = plt.subplots(1, n_comp, figsize=figsize)
-    if n_comp == 1:
-        axes = [axes]
+    axes_given = _axes_list(axes, n_comp)
+    if axes_given is None:
+        if figsize is None:
+            figsize = (4.5 * n_comp, 4.5)
+        fig, axes_list = plt.subplots(1, n_comp, figsize=figsize)
+        if n_comp == 1:
+            axes_list = [axes_list]
+        else:
+            axes_list = list(axes_list)
+    else:
+        axes_list = axes_given
+        fig = axes_list[0].figure
 
     cmap_obj = plt.get_cmap(cmap)
     lper = np.log10(per)
@@ -349,7 +385,7 @@ def plot_zt_argand(
 
     for ci, comp in enumerate(components):
         ri, cj = _COMP_IDX[comp.lower()]
-        ax = axes[ci]
+        ax = axes_list[ci]
         vals = z[:, ri, cj]
         if normalize:
             scale = np.abs(vals).max() + 1e-30
@@ -424,6 +460,7 @@ def plot_survey_fingerprint(
     period_range: Optional[Tuple[float, float]] = None,
     station_order: Optional[List[str]] = None,
     cell_aspect: float = 1.0,
+    axes=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -484,8 +521,13 @@ def plot_survey_fingerprint(
         sites, recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
     )
+    axes_given = _axes_list(axes, 1) if axes is not None else None
     if df.empty:
-        fig, ax = plt.subplots()
+        if axes_given is None:
+            fig, ax = plt.subplots()
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no phase tensor data", ha="center", va="center")
         return fig
 
@@ -509,12 +551,17 @@ def plot_survey_fingerprint(
     if figsize is None:
         figsize = (max(8, n_sta * 0.3 + 2.5), 2.8 * n_q + 0.8)
 
-    fig = plt.figure(figsize=figsize, constrained_layout=False)
-    gs = gridspec.GridSpec(
-        n_q, 1, figure=fig,
-        hspace=0.35, left=0.12, right=0.88,
-        top=0.92, bottom=0.06,
-    )
+    axes_given = _axes_list(axes, n_q) if axes is not None else None
+    if axes_given is None:
+        fig = plt.figure(figsize=figsize, constrained_layout=False)
+        gs = gridspec.GridSpec(
+            n_q, 1, figure=fig,
+            hspace=0.35, left=0.12, right=0.88,
+            top=0.92, bottom=0.06,
+        )
+    else:
+        fig = axes_given[0].figure
+        gs = None
 
     for qi, qty in enumerate(quantities):
         if qty not in _FINGERPRINT_QUANTITIES:
@@ -524,7 +571,7 @@ def plot_survey_fingerprint(
         if col is None or col not in df.columns:
             continue
 
-        ax = fig.add_subplot(gs[qi])
+        ax = axes_given[qi] if axes_given is not None else fig.add_subplot(gs[qi])
 
         # build station × period image
         img = np.full((n_grid, n_sta), np.nan)
@@ -613,6 +660,7 @@ def plot_sensitivity_depth_section(
     rho_lim: Optional[Tuple[float, float]] = None,
     station_order: Optional[List[str]] = None,
     show_bostick_depth: bool = True,
+    ax=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -708,7 +756,10 @@ def plot_sensitivity_depth_section(
                              depth=d_b, sens_half=sens_half))
 
     if not rows:
-        fig, ax = plt.subplots(figsize=figsize or (10, 5))
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize or (10, 5))
+        else:
+            fig = ax.figure
         ax.text(0.5, 0.5, "no data", ha="center", va="center"); return fig
 
     import pandas as _pd
@@ -741,9 +792,12 @@ def plot_sensitivity_depth_section(
     if depth_max is not None:
         d_max_plot = float(depth_max)
 
-    if figsize is None:
-        figsize = (max(9, n_st * 0.35 + 2), 5.5)
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        if figsize is None:
+            figsize = (max(9, n_st * 0.35 + 2), 5.5)
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
 
     for _, row in df.iterrows():
         st   = row["station"]
@@ -846,6 +900,7 @@ def plot_dimensionality_ternary(
     ms: float = 4.0,
     alpha: float = 0.65,
     add_density: bool = True,
+    ax=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -909,7 +964,10 @@ def plot_dimensionality_ternary(
         strict=strict, verbose=verbose,
     )
     if df.empty:
-        fig, ax = plt.subplots(figsize=figsize or (6, 6))
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize or (6, 6))
+        else:
+            fig = ax.figure
         ax.text(0.5, 0.5, "no phase tensor data", ha="center", va="center")
         return fig
 
@@ -948,9 +1006,12 @@ def plot_dimensionality_ternary(
         cb_label = "Station index"
         cm = cmap
 
-    if figsize is None:
-        figsize = (7.5, 7.0)
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        if figsize is None:
+            figsize = (7.5, 7.0)
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
     _draw_ternary_frame(ax)
 
     if add_density:
@@ -1075,6 +1136,7 @@ def plot_distortion_radar(
     line_alpha: float = 0.85,
     lw: float = 1.5,
     cmap: str = "tab10",
+    ax=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -1135,7 +1197,10 @@ def plot_distortion_radar(
         eds_all = eds_all[::step][:max_stations]
 
     if not eds_all:
-        fig, ax = plt.subplots(figsize=figsize or (6, 6))
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize or (6, 6))
+        else:
+            fig = ax.figure
         ax.text(0.5, 0.5, "no stations", ha="center", va="center"); return fig
 
     n_axes = len(_RADAR_LABELS)
@@ -1143,16 +1208,19 @@ def plot_distortion_radar(
     angles_plot = angles + [angles[0]]
 
     cmap_obj = plt.get_cmap(cmap)
-    if figsize is None:
-        figsize = (7.5, 7.0)
-    fig, ax = plt.subplots(figsize=figsize, subplot_kw=dict(polar=True))
+    if ax is None:
+        if figsize is None:
+            figsize = (7.5, 7.0)
+        fig, ax = plt.subplots(figsize=figsize, subplot_kw=dict(polar=True))
+    else:
+        fig = ax.figure
 
     ax.set_theta_offset(np.pi / 2)
     ax.set_theta_direction(-1)
     ax.set_thetagrids(np.degrees(angles), labels=_RADAR_LABELS, fontsize=9)
     ax.set_ylim(0, 1)
     ax.set_yticks([0.25, 0.5, 0.75, 1.0])
-    ax.set_yticklabels(["0.25", "0.5", "0.75", "1.0"], fontsize=7, color="0.4")
+    hide_polar_radius_labels(ax)
     ax.grid(True, alpha=0.3, lw=0.7)
 
     for k, (_, nm, ed) in enumerate(eds_all):
@@ -1206,6 +1274,7 @@ def plot_tf_coherence_network(
     node_ms: float = 8.0,
     lw_max: float = 2.5,
     alpha_edge: float = 0.65,
+    ax=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -1285,7 +1354,10 @@ def plot_tf_coherence_network(
         sta_data[nm] = dict(lat=lat, lon=lon, rho=rho_c, per=per_c)
 
     if len(sta_data) < 2:
-        fig, ax = plt.subplots(figsize=figsize or (8, 6))
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize or (8, 6))
+        else:
+            fig = ax.figure
         ax.text(0.5, 0.5, "insufficient coord data", ha="center", va="center")
         return fig
 
@@ -1356,7 +1428,10 @@ def plot_tf_coherence_network(
         w = max(7, lon_r * 1200)
         h = max(6, lat_r * 1200)
         figsize = (w, h)
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
 
     # draw edges
     r_vals = [e[2] for e in edges]
@@ -1426,6 +1501,7 @@ def plot_strike_stability_bands(
     fill_alpha: float = 0.25,
     line_alpha: float = 0.90,
     consensus_alpha: float = 0.18,
+    ax=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -1527,7 +1603,10 @@ def plot_strike_stability_bands(
             data["tipper"] = np.array(tip_rows, float)
 
     if not data:
-        fig, ax = plt.subplots(figsize=figsize or (10, 4))
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize or (10, 4))
+        else:
+            fig = ax.figure
         ax.text(0.5, 0.5, "no strike data", ha="center", va="center"); return fig
 
     # ── period grid ───────────────────────────────────────────────────────
@@ -1574,9 +1653,12 @@ def plot_strike_stability_bands(
         )
 
     # ── figure ────────────────────────────────────────────────────────────
-    if figsize is None:
-        figsize = (11, 4.5)
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        if figsize is None:
+            figsize = (11, 4.5)
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
 
     for meth, st in stats.items():
         col = _colors.get(meth, "C0")
@@ -1636,6 +1718,7 @@ def plot_rho_phase_bode(
     component: str = "xy",
     period_range: Optional[Tuple[float, float]] = None,
     smooth_window: int = 0,
+    axes=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -1722,9 +1805,14 @@ def plot_rho_phase_bode(
 
     mt = PYCSAMT_STYLE.mt
     comp_upper = component.upper()
-    if figsize is None:
-        figsize = (9, 6)
-    fig, (ax_rho, ax_phi) = plt.subplots(2, 1, figsize=figsize, sharex=True)
+    axes_given = _axes_list(axes, 2)
+    if axes_given is None:
+        if figsize is None:
+            figsize = (9, 6)
+        fig, (ax_rho, ax_phi) = plt.subplots(2, 1, figsize=figsize, sharex=True)
+    else:
+        ax_rho, ax_phi = axes_given
+        fig = ax_rho.figure
 
     ax_rho.loglog(per, rho, color=mt.xy.color, lw=1.8, marker="o",
                   ms=3.5, label=f"$\\rho_{{a,{comp_upper}}}$")
@@ -1767,6 +1855,7 @@ def plot_pt_period_clock(
     n_rings: int = 6,
     period_range: Optional[Tuple[float, float]] = None,
     cmap: str = "plasma",
+    ax=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -1807,7 +1896,10 @@ def plot_pt_period_clock(
         strict=strict, verbose=verbose,
     )
     if df.empty:
-        fig, ax = plt.subplots(figsize=figsize or (6, 6))
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize or (6, 6))
+        else:
+            fig = ax.figure
         ax.text(0.5, 0.5, "no PT data", ha="center", va="center")
         return fig
 
@@ -1834,9 +1926,12 @@ def plot_pt_period_clock(
     lp_max = np.log10(per_rings[-1] + 1e-30)
     per_norm = Normalize(vmin=lp_min, vmax=lp_max)
 
-    if figsize is None:
-        figsize = (7.5, 7.5)
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        if figsize is None:
+            figsize = (7.5, 7.5)
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
     ax.set_xlim(-1.25, 1.25); ax.set_ylim(-1.25, 1.25)
     ax.set_aspect("equal"); ax.axis("off")
 
@@ -1894,6 +1989,7 @@ def plot_apparent_resistivity_polar(
     period_range: Optional[Tuple[float, float]] = None,
     normalize: bool = True,
     cmap: str = "plasma",
+    ax=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -1961,11 +2057,15 @@ def plot_apparent_resistivity_polar(
     theta_arr = np.linspace(0, 2 * np.pi, 361)
     n_th = len(theta_arr)
 
-    if figsize is None:
-        figsize = (7, 7)
-    fig, ax = plt.subplots(figsize=figsize, subplot_kw={"projection": "polar"})
+    if ax is None:
+        if figsize is None:
+            figsize = (7, 7)
+        fig, ax = plt.subplots(figsize=figsize, subplot_kw={"projection": "polar"})
+    else:
+        fig = ax.figure
     ax.set_theta_zero_location("N")
     ax.set_theta_direction(-1)
+    hide_polar_radius_labels(ax)
 
     for pi in pidx:
         z0 = z[pi]; fi = float(fr[pi])
@@ -1989,10 +2089,10 @@ def plot_apparent_resistivity_polar(
     cb.set_label("Period (s)", fontsize=8)
     cb.ax.tick_params(labelsize=7)
 
-    r_label = "ρa (norm.)" if normalize else "ρa (Ω·m)"
     ax.set_title(title or f"ρa polar diagram — {st_name}", fontsize=10,
                  fontweight="bold", pad=16)
     ax.tick_params(labelsize=8)
+    hide_polar_radius_labels(ax)
     fig.tight_layout()
     return fig
 
@@ -2067,6 +2167,7 @@ def plot_apparent_anisotropy_section(
     cmap: str = "RdBu_r",
     vmax: float = 1.0,
     station_order: Optional[List[str]] = None,
+    ax=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -2122,9 +2223,12 @@ def plot_apparent_anisotropy_section(
     n_st = len(all_st)
     n_grid = img.shape[0]
 
-    if figsize is None:
-        figsize = (max(9, n_st * 0.35 + 2), 5.5)
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        if figsize is None:
+            figsize = (max(9, n_st * 0.35 + 2), 5.5)
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
 
     lp = np.log10(per_grid + 1e-30)
     ax.imshow(
@@ -2169,6 +2273,7 @@ def plot_dimensionality_depth_profile(
     depth_unit: str = "km",
     cmap: str = "RdYlGn_r",
     station_order: Optional[List[str]] = None,
+    ax=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -2249,7 +2354,10 @@ def plot_dimensionality_depth_profile(
             rows.append(dict(station=nm, depth=d_b, u3d=u3d))
 
     if not rows:
-        fig, ax = plt.subplots(figsize=figsize or (10, 5))
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize or (10, 5))
+        else:
+            fig = ax.figure
         ax.text(0.5, 0.5, "no data", ha="center", va="center"); return fig
 
     import pandas as _pd
@@ -2263,9 +2371,12 @@ def plot_dimensionality_depth_profile(
     if depth_max is not None:
         d_max_plot = float(depth_max)
 
-    if figsize is None:
-        figsize = (max(9, n_st * 0.35 + 2), 5.5)
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        if figsize is None:
+            figsize = (max(9, n_st * 0.35 + 2), 5.5)
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
 
     cmap_obj = plt.get_cmap(cmap)
     u3d_vals = df["u3d"].to_numpy(float)
@@ -2328,6 +2439,7 @@ def plot_mt_composite_section(
     quantities: Optional[List[str]] = None,
     period_range: Optional[Tuple[float, float]] = None,
     station_order: Optional[List[str]] = None,
+    axes=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -2401,8 +2513,13 @@ def plot_mt_composite_section(
     all_st = station_order if station_order is not None \
         else list(rho_d.keys())
     n_st = len(all_st)
+    axes_given = _axes_list(axes, 1) if axes is not None else None
     if n_st == 0:
-        fig, ax = plt.subplots()
+        if axes_given is None:
+            fig, ax = plt.subplots()
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no data", ha="center", va="center"); return fig
 
     all_per = np.concatenate([rho_d[s][0] for s in all_st if s in rho_d])
@@ -2451,14 +2568,23 @@ def plot_mt_composite_section(
 
     n_q = len([q for q in quantities if q in imgs])
     if n_q == 0:
-        fig, ax = plt.subplots()
+        if axes_given is None:
+            fig, ax = plt.subplots()
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no data", ha="center", va="center"); return fig
 
-    if figsize is None:
-        figsize = (max(9, n_st * 0.35 + 2), 2.5 * n_q + 0.6)
-    fig = plt.figure(figsize=figsize, constrained_layout=False)
-    gs = gridspec.GridSpec(n_q, 1, figure=fig, hspace=0.30,
-                           left=0.10, right=0.88, top=0.92, bottom=0.04)
+    axes_given = _axes_list(axes, n_q) if axes is not None else None
+    if axes_given is None:
+        if figsize is None:
+            figsize = (max(9, n_st * 0.35 + 2), 2.5 * n_q + 0.6)
+        fig = plt.figure(figsize=figsize, constrained_layout=False)
+        gs = gridspec.GridSpec(n_q, 1, figure=fig, hspace=0.30,
+                               left=0.10, right=0.88, top=0.92, bottom=0.04)
+    else:
+        fig = axes_given[0].figure
+        gs = None
 
     lp = np.log10(per_grid + 1e-30)
     valid_qs = [q for q in quantities if q in imgs]
@@ -2473,7 +2599,7 @@ def plot_mt_composite_section(
         if vmin == vmax_:
             vmax_ = vmin + 1.0
 
-        ax = fig.add_subplot(gs[qi])
+        ax = axes_given[qi] if axes_given is not None else fig.add_subplot(gs[qi])
         im = ax.imshow(
             img, aspect="auto", origin="upper",
             extent=(-0.5, n_st - 0.5, lp[-1], lp[0]),
@@ -2515,6 +2641,7 @@ def plot_snr_section(
     cmap: str = "RdYlGn",
     vmax: float = 10.0,
     station_order: Optional[List[str]] = None,
+    axes=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -2579,8 +2706,13 @@ def plot_snr_section(
     all_st = station_order if station_order is not None else all_st_order
     n_st = len(all_st)
 
+    axes_given = _axes_list(axes, 1) if axes is not None else None
     if n_st == 0:
-        fig, ax = plt.subplots()
+        if axes_given is None:
+            fig, ax = plt.subplots()
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no data", ha="center", va="center"); return fig
 
     all_per = np.concatenate([
@@ -2605,16 +2737,21 @@ def plot_snr_section(
                     img[gi, si] = v_s[j]
         return img
 
-    if figsize is None:
-        figsize = (max(9, n_st * 0.35 + 2), 4.5 * n_comp)
-    fig = plt.figure(figsize=figsize, constrained_layout=False)
-    gs = gridspec.GridSpec(n_comp, 1, figure=fig, hspace=0.30,
-                           left=0.10, right=0.88, top=0.92, bottom=0.04)
+    axes_given = _axes_list(axes, n_comp) if axes is not None else None
+    if axes_given is None:
+        if figsize is None:
+            figsize = (max(9, n_st * 0.35 + 2), 4.5 * n_comp)
+        fig = plt.figure(figsize=figsize, constrained_layout=False)
+        gs = gridspec.GridSpec(n_comp, 1, figure=fig, hspace=0.30,
+                               left=0.10, right=0.88, top=0.92, bottom=0.04)
+    else:
+        fig = axes_given[0].figure
+        gs = None
 
     lp = np.log10(per_grid + 1e-30)
     for pi, comp in enumerate(components):
         img = _img(snr_dicts[pi])
-        ax = fig.add_subplot(gs[pi])
+        ax = axes_given[pi] if axes_given is not None else fig.add_subplot(gs[pi])
         im = ax.imshow(
             np.clip(img, 0, float(vmax)),
             aspect="auto", origin="upper",
@@ -2663,6 +2800,7 @@ def plot_z_invariants_section(
     *,
     period_range: Optional[Tuple[float, float]] = None,
     station_order: Optional[List[str]] = None,
+    axes=None,
     figsize: Optional[Tuple[float, float]] = None,
     title: str = "",
     recursive: bool = True,
@@ -2748,8 +2886,13 @@ def plot_z_invariants_section(
     all_st = station_order if station_order is not None else all_st_order
     n_st = len(all_st)
 
+    axes_given = _axes_list(axes, 1) if axes is not None else None
     if n_st == 0:
-        fig, ax = plt.subplots()
+        if axes_given is None:
+            fig, ax = plt.subplots()
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no data", ha="center", va="center"); return fig
 
     all_per = np.concatenate([rows[s][0] for s in all_st if s in rows])
@@ -2774,11 +2917,16 @@ def plot_z_invariants_section(
                     img[gi, si] = v_s[j]
         imgs.append(img)
 
-    if figsize is None:
-        figsize = (max(9, n_st * 0.35 + 2), 2.8 * 4 + 0.6)
-    fig = plt.figure(figsize=figsize, constrained_layout=False)
-    gs = gridspec.GridSpec(4, 1, figure=fig, hspace=0.30,
-                           left=0.10, right=0.88, top=0.92, bottom=0.04)
+    axes_given = _axes_list(axes, 4) if axes is not None else None
+    if axes_given is None:
+        if figsize is None:
+            figsize = (max(9, n_st * 0.35 + 2), 2.8 * 4 + 0.6)
+        fig = plt.figure(figsize=figsize, constrained_layout=False)
+        gs = gridspec.GridSpec(4, 1, figure=fig, hspace=0.30,
+                               left=0.10, right=0.88, top=0.92, bottom=0.04)
+    else:
+        fig = axes_given[0].figure
+        gs = None
     lp = np.log10(per_grid + 1e-30)
 
     for inv_idx, (img, meta) in enumerate(zip(imgs, _INV_META)):
@@ -2790,7 +2938,7 @@ def plot_z_invariants_section(
         if vmin == vmax_:
             vmax_ = vmin + 1.0
 
-        ax = fig.add_subplot(gs[inv_idx])
+        ax = axes_given[inv_idx] if axes_given is not None else fig.add_subplot(gs[inv_idx])
         im = ax.imshow(
             img, aspect="auto", origin="upper",
             extent=(-0.5, n_st - 0.5, lp[-1], lp[0]),

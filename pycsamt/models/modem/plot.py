@@ -28,6 +28,9 @@ __all__ = [
     "PlotSection",
     "PlotResponse",
     "PlotPseudo",
+    "PlotDepthMap",
+    "PlotAllProfiles",
+    "PlotCovariance",
 ]
 
 
@@ -498,56 +501,94 @@ def _calibrate_z_ref(
 class PlotSection(_ModEmPlotBase):
     """Plot a vertical cross-section with topography and station markers.
 
-    ``PlotSection`` cuts a North-South (or East-West) slice through the
-    3-D model at a chosen easting (or northing) offset and displays the
-    resistivity, the terrain surface, and the station positions along
-    the profile.  It replicates the style of the reference BMP plots
-    produced by the ModEM MATLAB toolbox (``pMod3Dlldepsec``), using a
-    jet colourmap on a log₁₀ scale from 0 to 3 (1–1000 Ω·m).
+    ``PlotSection`` has two operating modes:
+
+    **Axis-aligned mode** (default)
+        Cuts a North-South or East-West slice at a fixed perpendicular
+        offset, replicating the MATLAB ``pMod3Dlldepsec`` output.
+        Controlled by *profile_offset* and *direction*.
+
+    **Arbitrary-azimuth mode**
+        Pass *start_point* and *end_point* to cut a profile at any
+        azimuth, like the MATLAB ``Mod2D`` function.  Points can be
+        given in model-centre metres (default) or in decimal-degree
+        lat/lon when *use_latlon=True*.
 
     The terrain polygon is inferred directly from the model: cells with
     resistivity above the air threshold (~10⁵ Ω·m, ``rho_loge > 11.5``)
-    are treated as air.  The upper boundary of the first earth layer in
-    each column is drawn as the terrain surface.
+    are treated as air.
 
     Parameters
     ----------
     result : InversionResult, optional
         Loaded inversion result.
     profile_offset : float, default 0.0
-        Offset in metres from the model centre along the axis
-        perpendicular to the section.  For a North-South section
-        (``direction="NS"``) this is the easting (Y coordinate of
-        stations).  For an East-West section it is the northing.
+        **Axis-aligned mode only.** Perpendicular offset from the model
+        centre (metres).  For ``direction="NS"`` this is the easting;
+        for ``direction="EW"`` it is the northing.
     direction : {"NS", "EW"}, default "NS"
-        Orientation of the section.
+        **Axis-aligned mode only.** Profile orientation.
+    start_point : tuple of float, optional
+        **Arbitrary-azimuth mode.** Profile start as ``(x_m, y_m)``
+        in model-centre metres, or ``(lat, lon)`` when *use_latlon=True*.
+        Setting this activates arbitrary-azimuth mode.
+    end_point : tuple of float, optional
+        **Arbitrary-azimuth mode.** Profile end, same coordinate system
+        as *start_point*.
+    use_latlon : bool, default False
+        Interpret *start_point* / *end_point* as ``(lat°N, lon°E)``.
+        Requires *origin_lat* and *origin_lon*.
+    origin_lat, origin_lon : float, optional
+        Geographic coordinates of the model centre.  Required when
+        *use_latlon=True*.
+    n_samples : int, default 200
+        **Arbitrary-azimuth mode.** Number of sampling points along the
+        profile.  Higher values give smoother sections at the cost of
+        slightly more compute.
     which : {"final", "initial"}, default "final"
         Which model to display.
     depth_max : float, default 2000.0
         Maximum depth below sea level to display (metres).
     rho_min, rho_max : float, default 1.0, 1000.0
-        Resistivity colour-scale limits (Ω·m, plotted as log₁₀).
+        Colour-scale limits (Ω·m, log₁₀).
     cmap : str, default "jet_r"
         Matplotlib colourmap.
     show_terrain : bool, default True
-        Whether to draw the terrain surface and fill the air zone.
+        Draw terrain surface and fill the air zone white.
     show_stations : bool, default True
-        Whether to plot station markers on the terrain surface.
+        Plot station markers on the terrain surface.
+    show_station_names : bool, default True
+        Annotate each station marker with its name.
     station_tol : float, default 300.0
-        Distance in metres perpendicular to the profile within which
-        stations are included.
+        Max perpendicular distance (metres) for including stations.
     figsize : tuple of float, optional
-        Figure size in inches.  Defaults to ``(11, 5)``.
+        Figure size.  Defaults to ``(11, 5)``.
     title : str, optional
-        Figure title.  A default is derived from the model and profile.
+        Figure title.  A default is derived from the profile geometry.
 
     Examples
     --------
-    >>> from pycsamt.models.modem.results import InversionResult
-    >>> from pycsamt.models.modem.plot import PlotSection
-    >>> result = InversionResult("modem_run")
-    >>> # North-South profile at easting +360 m (profile L18)
+    Axis-aligned NS profile at easting +360 m:
+
     >>> fig = PlotSection(result=result, profile_offset=360).plot()
+
+    Arbitrary azimuth defined by model-centre coordinates (metres):
+
+    >>> fig = PlotSection(
+    ...     result=result,
+    ...     start_point=(-5000, -2000),
+    ...     end_point=(5000, 3000),
+    ... ).plot()
+
+    Arbitrary azimuth defined by lat/lon:
+
+    >>> fig = PlotSection(
+    ...     result=result,
+    ...     start_point=(32.05, 119.08),
+    ...     end_point=(32.22, 119.19),
+    ...     use_latlon=True,
+    ...     origin_lat=32.129, origin_lon=119.125,
+    ... ).plot()
     """
 
     def __init__(
@@ -555,6 +596,14 @@ class PlotSection(_ModEmPlotBase):
         result: InversionResult | None = None,
         profile_offset: float = 0.0,
         direction: str = "NS",
+        # ── Arbitrary-azimuth parameters ────────────────────────────────
+        start_point: tuple[float, float] | None = None,
+        end_point: tuple[float, float] | None = None,
+        use_latlon: bool = False,
+        origin_lat: float | None = None,
+        origin_lon: float | None = None,
+        n_samples: int = 200,
+        # ── Shared parameters ────────────────────────────────────────────
         which: str = "final",
         depth_max: float = 2000.0,
         rho_min: float = 1.0,
@@ -571,6 +620,18 @@ class PlotSection(_ModEmPlotBase):
         super().__init__(result=result, **kwargs)
         self.profile_offset = float(profile_offset)
         self.direction = direction.upper()
+        self.start_point = (
+            tuple(float(v) for v in start_point)
+            if start_point is not None else None
+        )
+        self.end_point = (
+            tuple(float(v) for v in end_point)
+            if end_point is not None else None
+        )
+        self.use_latlon = bool(use_latlon)
+        self.origin_lat = origin_lat
+        self.origin_lon = origin_lon
+        self.n_samples = max(2, int(n_samples))
         self.which = which
         self.depth_max = float(depth_max)
         self.rho_min = float(rho_min)
@@ -606,6 +667,10 @@ class PlotSection(_ModEmPlotBase):
         )
         if model is None:
             raise ValueError(f"No {self.which} model in InversionResult.")
+
+        # Dispatch to arbitrary-azimuth path when start/end are given
+        if self.start_point is not None and self.end_point is not None:
+            return self._plot_arbitrary(r, model)
 
         # In the ModEM Mod3Dxy grid convention used by this dataset:
         #   x_widths (nx=168) → N-S (northing) direction
@@ -802,6 +867,229 @@ class PlotSection(_ModEmPlotBase):
             f"({self.which})"
         )
         ax.set_title(title, fontsize=10)
+
+        fig.tight_layout()
+        return fig
+
+    # ------------------------------------------------------------------
+    # Arbitrary-azimuth profile (Phase 2)
+    # ------------------------------------------------------------------
+
+    def _plot_arbitrary(self, r, model):
+        """Cut and display a profile at an arbitrary azimuth.
+
+        Called automatically by ``plot()`` when *start_point* /
+        *end_point* are set.  Equivalent to MATLAB ``Mod2D``.
+        """
+        import matplotlib.colors as mcolors
+        import matplotlib.pyplot as plt
+
+        # ── Resolve start/end in model-centre coordinates (metres) ────
+        if self.use_latlon:
+            if self.origin_lat is None or self.origin_lon is None:
+                raise ValueError(
+                    "origin_lat and origin_lon are required "
+                    "when use_latlon=True."
+                )
+            x1, y1 = _latlon_to_model_xy(
+                self.start_point[0], self.start_point[1],
+                self.origin_lat, self.origin_lon,
+            )
+            x2, y2 = _latlon_to_model_xy(
+                self.end_point[0], self.end_point[1],
+                self.origin_lat, self.origin_lon,
+            )
+        else:
+            x1, y1 = float(self.start_point[0]), float(self.start_point[1])
+            x2, y2 = float(self.end_point[0]),   float(self.end_point[1])
+
+        # ── Convert model-centre → model-edge coords ──────────────────
+        x_nodes = model.x_nodes
+        y_nodes = model.y_nodes
+        z_nodes = model.z_nodes
+        cx = float(x_nodes[-1]) / 2.0
+        cy = float(y_nodes[-1]) / 2.0
+
+        x1e, y1e = x1 + cx, y1 + cy
+        x2e, y2e = x2 + cx, y2 + cy
+
+        dx = x2e - x1e
+        dy = y2e - y1e
+        total_m = float(np.sqrt(dx ** 2 + dy ** 2))
+        if total_m < 1.0:
+            raise ValueError(
+                "start_point and end_point are too close together "
+                f"(separation {total_m:.1f} m)."
+            )
+        ux, uy = dx / total_m, dy / total_m   # unit vector along profile
+
+        # ── Sample n_samples points, nearest-cell lookup ───────────────
+        n = self.n_samples
+        t = np.linspace(0.0, total_m, n)    # along-profile distances (m)
+        xs = x1e + t * ux                   # northing at each sample (m)
+        ys = y1e + t * uy                   # easting  at each sample (m)
+
+        rho_2d = np.full((model.nz, n), np.nan)
+        for k in range(n):
+            xi = max(0, min(
+                int(np.searchsorted(x_nodes, xs[k], side="right")) - 1,
+                model.nx - 1,
+            ))
+            yi = max(0, min(
+                int(np.searchsorted(y_nodes, ys[k], side="right")) - 1,
+                model.ny - 1,
+            ))
+            rho_2d[:, k] = model.rho_loge[:, yi, xi]
+
+        # ── Elevation reference ────────────────────────────────────────
+        if r.data_obs is not None:
+            z_ref = _calibrate_z_ref_arbitrary(
+                model, x1e, y1e, ux, uy,
+                r.data_obs.site_coords, self.station_tol,
+            )
+        else:
+            z_ref = 380.0
+
+        elev_m    = z_ref - z_nodes
+        elev_km   = elev_m / 1e3
+        iz_max    = int(np.searchsorted(z_nodes, z_ref + self.depth_max))
+        iz_max    = min(max(iz_max, 1), model.nz)
+
+        rho_crop      = rho_2d[:iz_max, :]
+        elev_km_crop  = elev_km[:iz_max + 1]
+
+        # ── Terrain mask ───────────────────────────────────────────────
+        terrain_idx = _detect_terrain(rho_crop)
+
+        rho_disp = rho_crop.copy().astype(float)
+        for j in range(rho_disp.shape[1]):
+            rho_disp[:terrain_idx[j], j] = np.nan
+        log10_rho = rho_disp / np.log(10.0)
+
+        terrain_elev_km = np.array([
+            float(elev_km[terrain_idx[j]])
+            for j in range(rho_crop.shape[1])
+        ])
+
+        # Node edges for pcolormesh (n+1 values) and cell centres (n-1)
+        dist_edges = np.linspace(0.0, total_m / 1e3, n + 1)  # km
+        dist_c     = 0.5 * (dist_edges[:-1] + dist_edges[1:])  # centres
+
+        # ── Figure ────────────────────────────────────────────────────
+        fig, ax = plt.subplots(figsize=self.figsize)
+
+        norm = mcolors.Normalize(
+            vmin=np.log10(self.rho_min), vmax=np.log10(self.rho_max)
+        )
+        pm = ax.pcolormesh(
+            dist_edges, elev_km_crop, log10_rho,
+            norm=norm, cmap=self.cmap, shading="flat",
+        )
+        cb = fig.colorbar(pm, ax=ax, pad=0.02, shrink=0.85)
+        cb.set_label("Resistivity (Ω·m)", fontsize=9)
+        ticks = [1, 10, 100, 1000]
+        tick_vals = [
+            np.log10(tv) for tv in ticks
+            if self.rho_min <= tv <= self.rho_max
+        ]
+        cb.set_ticks(tick_vals)
+        cb.set_ticklabels([
+            str(tv) for tv in ticks
+            if self.rho_min <= tv <= self.rho_max
+        ])
+
+        # ── Terrain fill ───────────────────────────────────────────────
+        if self.show_terrain and terrain_idx.any():
+            top_y = float(elev_km_crop[0])
+            terrain_plot = np.where(
+                terrain_idx < len(elev_km_crop),
+                terrain_elev_km, top_y,
+            )
+            terrain_x = np.concatenate(
+                [[dist_edges[0]], dist_c, [dist_edges[-1]]]
+            )
+            terrain_y = np.concatenate([[top_y], terrain_plot, [top_y]])
+            ax.fill_between(
+                terrain_x, terrain_y, top_y,
+                color="white", zorder=3, linewidth=0,
+            )
+            ax.plot(dist_c, terrain_plot, color="k", lw=1.0, zorder=4)
+
+        # ── Station markers ────────────────────────────────────────────
+        _MK_PAD = 0.018
+        _NM_PAD = 0.050
+        st_xs:   list[float] = []
+        st_ys:   list[float] = []
+        st_names: list[str]  = []
+        if self.show_stations and r.data_obs is not None:
+            mk = PYCSAMT_STATION_RENDERING.style_for("inversion").marker
+            for nm, (x_m, y_m, _) in r.data_obs.site_coords.items():
+                xme = float(x_m) + cx
+                yme = float(y_m) + cy
+                dxs    = xme - x1e
+                dys    = yme - y1e
+                along_m = dxs * ux + dys * uy
+                perp    = abs(dys * ux - dxs * uy)
+                if (
+                    perp > self.station_tol
+                    or along_m < 0.0
+                    or along_m > total_m
+                ):
+                    continue
+                col_j = int(np.argmin(np.abs(t - along_m)))
+                col_j = max(0, min(col_j, len(terrain_elev_km) - 1))
+                st_xs.append(along_m / 1e3)
+                st_ys.append(float(terrain_elev_km[col_j]))
+                st_names.append(nm)
+            if st_xs:
+                ax.scatter(
+                    st_xs,
+                    [y + _MK_PAD for y in st_ys],
+                    **mk.kwargs(s=30, zorder=6, clip_on=False),
+                )
+                if self.show_station_names:
+                    order = np.argsort(st_xs)
+                    for i in order:
+                        label = st_names[i].split("-")[-1]
+                        ax.text(
+                            st_xs[i], st_ys[i] + _NM_PAD, label,
+                            rotation=90, ha="center", va="bottom",
+                            fontsize=5, color="k", zorder=7, clip_on=False,
+                        )
+
+        # ── Axis limits ────────────────────────────────────────────────
+        if st_xs:
+            margin = 0.5
+            ax.set_xlim(min(st_xs) - margin, max(st_xs) + margin)
+        else:
+            ax.set_xlim(float(dist_edges[0]), float(dist_edges[-1]))
+        ax.set_ylim(float(elev_km_crop[-1]), float(elev_km_crop[0]))
+
+        # Azimuth: angle from geographic north (clockwise)
+        azimuth_deg = (90.0 - np.degrees(np.arctan2(dx, dy))) % 360.0
+        ax.set_xlabel(
+            f"Distance along profile (km)  [azimuth {azimuth_deg:.1f}°]",
+            fontsize=9,
+        )
+        ax.set_ylabel("Elevation (km)", fontsize=9)
+
+        if self.title:
+            ax.set_title(self.title, fontsize=10)
+        else:
+            if self.use_latlon:
+                label = (
+                    f"({self.start_point[0]:.4f}°N,{self.start_point[1]:.4f}°E)"
+                    f" → "
+                    f"({self.end_point[0]:.4f}°N,{self.end_point[1]:.4f}°E)"
+                )
+            else:
+                label = (
+                    f"({x1:.0f},{y1:.0f}) → ({x2:.0f},{y2:.0f}) m"
+                )
+            ax.set_title(
+                f"ModEM arbitrary section — {label}  ({self.which})",
+                fontsize=10,
+            )
 
         fig.tight_layout()
         return fig
@@ -1234,5 +1522,731 @@ class PlotPseudo(_ModEmPlotBase):
             f"ModEM pseudo-section - {self.component} phase"
         )
 
+        fig.tight_layout()
+        return fig
+
+
+# ======================================================================
+# Shared helpers for the new plot classes
+# ======================================================================
+
+def _latlon_to_model_xy(lat, lon, origin_lat, origin_lon):
+    """Convert a lat/lon point to model-centre XY coordinates (metres).
+
+    Inverse of ``_xy_nodes_to_geo``.  Returns ``(x_m, y_m)`` where
+    positive x is north and positive y is east of the model centre.
+    """
+    m_per_deg_lat = 111_195.0
+    m_per_deg_lon = 111_195.0 * np.cos(np.radians(float(origin_lat)))
+    x_m = (float(lat) - float(origin_lat)) * m_per_deg_lat
+    y_m = (float(lon) - float(origin_lon)) * m_per_deg_lon
+    return x_m, y_m
+
+
+def _calibrate_z_ref_arbitrary(
+    model, x1e, y1e, ux, uy, site_coords, station_tol
+):
+    """Estimate the elevation reference for an arbitrary-azimuth profile.
+
+    Projects each station onto the profile line and uses the model cell
+    at that location to find the terrain z-node.  Mirrors the logic of
+    ``_calibrate_z_ref`` but works for any profile orientation.
+
+    Parameters
+    ----------
+    model : ModEmModel3D
+    x1e, y1e : float
+        Profile start point in model-edge coordinates (metres).
+    ux, uy : float
+        Unit vector along the profile direction.
+    site_coords : dict
+        ``name → (x_m, y_m, z_m)`` in model-centre coordinates.
+    station_tol : float
+        Maximum perpendicular distance (m) for a station to be included.
+
+    Returns
+    -------
+    float
+        Estimated z_ref (metres), defaulting to 380.0.
+    """
+    cx = float(model.x_nodes[-1]) / 2.0
+    cy = float(model.y_nodes[-1]) / 2.0
+    refs: list[float] = []
+    for _, (x_m, y_m, z_m) in site_coords.items():
+        xme = float(x_m) + cx
+        yme = float(y_m) + cy
+        dxs = xme - x1e
+        dys = yme - y1e
+        perp = abs(dys * ux - dxs * uy)
+        if perp > station_tol:
+            continue
+        xi = max(0, min(
+            int(np.searchsorted(model.x_nodes, xme, side="right")) - 1,
+            model.nx - 1,
+        ))
+        yi = max(0, min(
+            int(np.searchsorted(model.y_nodes, yme, side="right")) - 1,
+            model.ny - 1,
+        ))
+        col = model.rho_loge[:, yi, xi]
+        hits = np.where(col < _AIR_LOGE)[0]
+        if not hits.size:
+            continue
+        refs.append(float(model.z_nodes[hits[0]]) - float(z_m))
+    return float(np.median(refs)) if refs else 380.0
+
+
+def _xy_nodes_to_geo(x_nodes, y_nodes, origin_lat, origin_lon):
+    """Convert model XY nodes (metres from model edge) to lat/lon arrays.
+
+    Uses a flat-Earth approximation valid for areas < a few hundred km.
+    The model geometric centre maps to (origin_lat, origin_lon).
+    """
+    cx = float(x_nodes[-1]) / 2.0
+    cy = float(y_nodes[-1]) / 2.0
+    m_per_deg_lat = 111_195.0
+    m_per_deg_lon = 111_195.0 * np.cos(np.radians(float(origin_lat)))
+    lat_nodes = float(origin_lat) + (x_nodes - cx) / m_per_deg_lat
+    lon_nodes = float(origin_lon) + (y_nodes - cy) / m_per_deg_lon
+    return lat_nodes, lon_nodes
+
+
+def _build_cov_ind(cov):
+    """Reconstruct the 3-D covariance indicator array from mask_blocks.
+
+    Returns ndarray shape (nx_earth, ny_earth, nz_earth), int32.
+    Equivalent to MATLAB ``c1.ind``.
+    """
+    ind = np.zeros(
+        (cov.nx_earth, cov.ny_earth, cov.nz_earth), dtype=np.int32
+    )
+    for blk in cov.mask_blocks:
+        l0 = max(0, int(blk["layer_start"]) - 1)   # 0-based
+        l1 = min(cov.nz_earth, int(blk["layer_end"]))
+        mask = np.asarray(blk["mask"], dtype=np.int32)
+        if mask.shape == (cov.nx_earth, cov.ny_earth):
+            ind[:, :, l0:l1] = mask[:, :, np.newaxis]
+    return ind
+
+
+def _section_slice(model, col_idx, direction="NS"):
+    """Extract a 2-D (nz × n_along) log-e resistivity slice.
+
+    Parameters
+    ----------
+    model : ModEmModel3D
+    col_idx : int
+        Index along the perpendicular axis.
+    direction : {"NS", "EW"}
+
+    Returns
+    -------
+    rho_loge_2d : ndarray (nz, n_along)
+    z_nodes     : ndarray (nz+1,)
+    prof_nodes  : ndarray (n_along+1,) relative to model centre
+    """
+    cx = float(model.x_nodes[-1]) / 2.0
+    cy = float(model.y_nodes[-1]) / 2.0
+    if direction == "NS":
+        col_idx = max(0, min(int(col_idx), model.ny - 1))
+        rho_2d = model.rho_loge[:, col_idx, :]
+        prof_nodes = model.x_nodes - cx
+    else:
+        col_idx = max(0, min(int(col_idx), model.nx - 1))
+        rho_2d = model.rho_loge[:, :, col_idx]
+        prof_nodes = model.y_nodes - cy
+    return rho_2d, model.z_nodes, prof_nodes
+
+
+# ======================================================================
+# PlotDepthMap
+# ======================================================================
+
+class PlotDepthMap(_ModEmPlotBase):
+    """Geo-referenced horizontal depth slices through a 3-D ModEM model.
+
+    Each selected depth is displayed as a plan-view resistivity map.
+    When *origin_lat* / *origin_lon* are provided the axes show decimal
+    degrees (lat north, lon east); otherwise axes are in km from the
+    model centre — equivalent to the MATLAB ``pMod3Dlldepsec`` and
+    ``m_pcolor`` layer maps from the post-inversion scripts.
+
+    Parameters
+    ----------
+    result : InversionResult, optional
+    depths : sequence of float, optional
+        Depths below the model surface (metres). Defaults to the first
+        four active earth-layer centres.
+    which : {"final", "initial"}, default "final"
+    origin_lat, origin_lon : float, optional
+        Geographic coordinates of the model centre. When provided the
+        axes show decimal degrees.
+    rho_min, rho_max : float, default 1.0, 1000.0
+        Colour-scale limits (Ω·m), displayed as log₁₀.
+    cmap : str, default "jet_r"
+    n_cols : int, default 2
+    show_stations : bool, default True
+
+    Examples
+    --------
+    >>> from pycsamt.models.modem.plot import PlotDepthMap
+    >>> fig = PlotDepthMap(
+    ...     result=result,
+    ...     depths=[200, 500, 1000, 2000],
+    ...     origin_lat=32.129, origin_lon=119.125,
+    ... ).plot()
+    """
+
+    def __init__(
+        self,
+        result: InversionResult | None = None,
+        depths: Sequence[float] | None = None,
+        which: str = "final",
+        origin_lat: float | None = None,
+        origin_lon: float | None = None,
+        rho_min: float = 1.0,
+        rho_max: float = 1000.0,
+        cmap: str = "jet_r",
+        n_cols: int = 2,
+        show_stations: bool = True,
+        **kwargs,
+    ):
+        super().__init__(result=result, **kwargs)
+        self.depths = depths
+        self.which = which
+        self.origin_lat = origin_lat
+        self.origin_lon = origin_lon
+        self.rho_min = float(rho_min)
+        self.rho_max = float(rho_max)
+        self.cmap = cmap
+        self.n_cols = int(n_cols)
+        self.show_stations = show_stations
+
+    def plot(self):
+        """Return a matplotlib Figure with geo-referenced depth maps.
+
+        Raises
+        ------
+        ValueError
+            If no result or model is attached.
+        """
+        import matplotlib.colors as mcolors
+        import matplotlib.pyplot as plt
+
+        r = self._check_result()
+        model = r.model_final if self.which == "final" else r.model_initial
+        if model is None:
+            raise ValueError(f"No {self.which} model in InversionResult.")
+
+        z_nodes = model.z_nodes
+        z_centres = 0.5 * (z_nodes[:-1] + z_nodes[1:])
+        n_air = model.n_air
+
+        if self.depths is None:
+            active = z_centres[n_air: n_air + 4]
+        else:
+            active = np.asarray(self.depths, dtype=float)
+
+        iz_list = [int(np.argmin(np.abs(z_centres - d))) for d in active]
+        n_slices = len(iz_list)
+        n_cols = min(self.n_cols, n_slices)
+        n_rows = int(np.ceil(n_slices / n_cols))
+
+        use_geo = self.origin_lat is not None and self.origin_lon is not None
+        if use_geo:
+            lat_nodes, lon_nodes = _xy_nodes_to_geo(
+                model.x_nodes, model.y_nodes,
+                self.origin_lat, self.origin_lon,
+            )
+            x_axis = lon_nodes   # easting on x-axis
+            y_axis = lat_nodes   # northing on y-axis
+            xlabel, ylabel = "Longitude (°E)", "Latitude (°N)"
+        else:
+            cx = float(model.x_nodes[-1]) / 2e3
+            cy = float(model.y_nodes[-1]) / 2e3
+            x_axis = model.y_nodes / 1e3 - cy
+            y_axis = model.x_nodes / 1e3 - cx
+            xlabel = "Easting from centre (km)"
+            ylabel = "Northing from centre (km)"
+
+        # Station positions
+        sta_x = sta_y = None
+        mk = None
+        if self.show_stations and r.data_obs is not None:
+            mk = PYCSAMT_STATION_RENDERING.style_for("inversion").marker
+            if use_geo:
+                m_lat = 111_195.0
+                m_lon = 111_195.0 * np.cos(np.radians(self.origin_lat))
+                sta_x = np.array([
+                    self.origin_lon + ym / m_lon
+                    for _, (_, ym, _) in r.data_obs.site_coords.items()
+                ])
+                sta_y = np.array([
+                    self.origin_lat + xm / m_lat
+                    for _, (xm, _, _) in r.data_obs.site_coords.items()
+                ])
+            else:
+                sta_x = r.data_obs.y_coords / 1e3
+                sta_y = r.data_obs.x_coords / 1e3
+
+        log_vmin = np.log10(max(self.rho_min, 1e-6))
+        log_vmax = np.log10(max(self.rho_max, self.rho_min * 10))
+        norm = mcolors.Normalize(vmin=log_vmin, vmax=log_vmax)
+
+        fig, axes = plt.subplots(
+            n_rows, n_cols,
+            figsize=(5.5 * n_cols, 4.5 * n_rows),
+            squeeze=False,
+        )
+
+        for k, iz in enumerate(iz_list):
+            row, col = divmod(k, n_cols)
+            ax = axes[row][col]
+
+            rho_slice = model.rho_linear[iz, :, :]       # (ny, nx)
+            log10_rho = np.log10(np.clip(rho_slice, 1e-6, None)).T  # (nx, ny)
+
+            pm = ax.pcolormesh(
+                x_axis, y_axis, log10_rho,
+                norm=norm, cmap=self.cmap, shading="flat",
+            )
+            cb = fig.colorbar(pm, ax=ax, pad=0.02, shrink=0.80)
+            cb.set_label("Resistivity (Ω·m)", fontsize=8)
+            ticks_rho = [t for t in [1, 10, 100, 1000, 10000]
+                         if self.rho_min <= t <= self.rho_max]
+            cb.set_ticks([np.log10(t) for t in ticks_rho])
+            cb.set_ticklabels([str(t) for t in ticks_rho])
+
+            depth_km = float(z_centres[iz]) / 1e3
+            ax.set_title(f"z = {depth_km:.2f} km", fontsize=9)
+            ax.set_xlabel(xlabel, fontsize=8)
+            ax.set_ylabel(ylabel, fontsize=8)
+
+            if sta_x is not None and mk is not None:
+                ax.scatter(sta_x, sta_y, **mk.kwargs(s=12))
+
+        for k in range(n_slices, n_rows * n_cols):
+            row, col = divmod(k, n_cols)
+            axes[row][col].set_visible(False)
+
+        geo_label = (
+            f"  (origin {self.origin_lat:.4f}°N, {self.origin_lon:.4f}°E)"
+            if use_geo else ""
+        )
+        fig.suptitle(
+            f"ModEM depth maps — {self.which}{geo_label}",
+            y=1.01, fontsize=10,
+        )
+        fig.tight_layout()
+        return fig
+
+
+# ======================================================================
+# PlotAllProfiles
+# ======================================================================
+
+class PlotAllProfiles(_ModEmPlotBase):
+    """Multiple parallel vertical cross-sections in a subplot grid.
+
+    Cuts *n* profiles from the 3-D model at fixed perpendicular offsets
+    and lays them out as a grid of subplots — the Python equivalent of
+    the ``plotmod2.m`` MATLAB loop that writes ``xylogz`` dat files for
+    L18, L22, L26, L30, L34.
+
+    Parameters
+    ----------
+    result : InversionResult, optional
+    profile_offsets : sequence of float, optional
+        Perpendicular offsets in metres from the model centre.  For NS
+        profiles this is the easting offset; for EW the northing offset.
+        If omitted, *n_profiles* evenly-spaced offsets within the inner
+        70 % of the model range are used.
+    profile_names : sequence of str, optional
+        Subplot titles for each profile (e.g. ``["L18", "L22", …]``).
+    n_profiles : int, default 5
+        Number of auto-generated profiles when *profile_offsets* is None.
+    direction : {"NS", "EW"}, default "NS"
+    which : {"final", "initial"}, default "final"
+    depth_max : float, default 2000.0
+        Maximum depth to display (metres).
+    rho_min, rho_max : float, default 1.0, 1000.0
+        Colour-scale limits (Ω·m), log₁₀.
+    cmap : str, default "jet_r"
+    n_cols : int, default 3
+    show_terrain : bool, default True
+        Blank out air cells and draw the terrain line.
+    show_stations : bool, default True
+    station_tol : float, default 500.0
+        Max perpendicular offset (m) for including a station on a profile.
+    figsize : tuple of float, optional
+
+    Examples
+    --------
+    >>> from pycsamt.models.modem.plot import PlotAllProfiles
+    >>> fig = PlotAllProfiles(
+    ...     result=result,
+    ...     profile_offsets=[-360, -160, 40, 240, 440],
+    ...     profile_names=["L18", "L22", "L26", "L30", "L34"],
+    ... ).plot()
+    """
+
+    def __init__(
+        self,
+        result: InversionResult | None = None,
+        profile_offsets: Sequence[float] | None = None,
+        profile_names: Sequence[str] | None = None,
+        n_profiles: int = 5,
+        direction: str = "NS",
+        which: str = "final",
+        depth_max: float = 2000.0,
+        rho_min: float = 1.0,
+        rho_max: float = 1000.0,
+        cmap: str = "jet_r",
+        n_cols: int = 3,
+        show_terrain: bool = True,
+        show_stations: bool = True,
+        station_tol: float = 500.0,
+        figsize: tuple[float, float] | None = None,
+        **kwargs,
+    ):
+        super().__init__(result=result, **kwargs)
+        self.profile_offsets = (
+            list(profile_offsets) if profile_offsets is not None else None
+        )
+        self.profile_names = (
+            list(profile_names) if profile_names is not None else None
+        )
+        self.n_profiles = int(n_profiles)
+        self.direction = direction.upper()
+        self.which = which
+        self.depth_max = float(depth_max)
+        self.rho_min = float(rho_min)
+        self.rho_max = float(rho_max)
+        self.cmap = cmap
+        self.n_cols = int(n_cols)
+        self.show_terrain = show_terrain
+        self.show_stations = show_stations
+        self.station_tol = float(station_tol)
+        self.figsize = figsize
+
+    def _auto_offsets(self, model) -> list[float]:
+        nodes = model.y_nodes if self.direction == "NS" else model.x_nodes
+        half = float(nodes[-1]) / 2.0 * 0.70
+        return list(np.linspace(-half, half, self.n_profiles))
+
+    def plot(self):
+        """Return a matplotlib Figure with all profile sections."""
+        import matplotlib.colors as mcolors
+        import matplotlib.pyplot as plt
+
+        r = self._check_result()
+        model = r.model_final if self.which == "final" else r.model_initial
+        if model is None:
+            raise ValueError(f"No {self.which} model in InversionResult.")
+
+        offsets = self.profile_offsets or self._auto_offsets(model)
+        n = len(offsets)
+        names = list(self.profile_names or [])
+        while len(names) < n:
+            names.append(
+                f"{self.direction} offset {offsets[len(names)]:+.0f} m"
+            )
+
+        n_cols = min(self.n_cols, n)
+        n_rows = int(np.ceil(n / n_cols))
+        fig, axes = plt.subplots(
+            n_rows, n_cols,
+            figsize=self.figsize or (5.5 * n_cols, 3.8 * n_rows),
+            squeeze=False,
+        )
+
+        log_vmin = np.log10(max(self.rho_min, 1e-6))
+        log_vmax = np.log10(max(self.rho_max, self.rho_min * 10))
+        norm = mcolors.Normalize(vmin=log_vmin, vmax=log_vmax)
+
+        x_nodes = model.x_nodes
+        y_nodes = model.y_nodes
+        cx = float(x_nodes[-1]) / 2.0
+        cy = float(y_nodes[-1]) / 2.0
+
+        site_list: list[tuple[str, float, float]] = []
+        mk = None
+        if self.show_stations and r.data_obs is not None:
+            mk = PYCSAMT_STATION_RENDERING.style_for("inversion").marker
+            for nm, (xm, ym, _) in r.data_obs.site_coords.items():
+                site_list.append((nm, float(xm), float(ym)))
+
+        for k, (offset, label) in enumerate(zip(offsets, names)):
+            row, col = divmod(k, n_cols)
+            ax = axes[row][col]
+
+            if self.direction == "NS":
+                target = float(offset) + cy
+                col_idx = int(np.argmin(np.abs(y_nodes - target)))
+                col_idx = max(0, min(col_idx, model.ny - 1))
+            else:
+                target = float(offset) + cx
+                col_idx = int(np.argmin(np.abs(x_nodes - target)))
+                col_idx = max(0, min(col_idx, model.nx - 1))
+
+            rho_2d, z_nodes, prof_nodes = _section_slice(
+                model, col_idx, self.direction
+            )
+            prof_km = prof_nodes / 1e3
+
+            iz_max = int(np.searchsorted(z_nodes, self.depth_max))
+            iz_max = min(max(iz_max, 1), model.nz)
+            rho_crop = rho_2d[:iz_max, :]            # (iz_max, n_along)
+            depth_km = -z_nodes[: iz_max + 1] / 1e3  # negative = depth
+
+            terrain_idx = _detect_terrain(rho_crop)
+
+            rho_disp = rho_crop.copy().astype(float)
+            if self.show_terrain:
+                for j in range(rho_disp.shape[1]):
+                    rho_disp[: terrain_idx[j], j] = np.nan
+            log10_rho = rho_disp / np.log(10.0)
+
+            pm = ax.pcolormesh(
+                prof_km, depth_km, log10_rho,
+                norm=norm, cmap=self.cmap, shading="flat",
+            )
+
+            if self.show_terrain and terrain_idx.any():
+                prof_c = 0.5 * (prof_km[:-1] + prof_km[1:])
+                top_y = float(depth_km[0])
+                terrain_d = np.array([
+                    -float(z_nodes[terrain_idx[j]]) / 1e3
+                    for j in range(rho_crop.shape[1])
+                ])
+                terrain_x = np.concatenate(
+                    [[prof_km[0]], prof_c, [prof_km[-1]]]
+                )
+                terrain_y = np.concatenate(
+                    [[top_y], terrain_d, [top_y]]
+                )
+                ax.fill_between(
+                    terrain_x, terrain_y, top_y,
+                    color="white", zorder=3, linewidth=0,
+                )
+                ax.plot(prof_c, terrain_d, color="k", lw=0.8, zorder=4)
+
+            if site_list and mk is not None:
+                for _, xm, ym in site_list:
+                    perp = ym if self.direction == "NS" else xm
+                    along = xm if self.direction == "NS" else ym
+                    if abs(perp - float(offset)) <= self.station_tol:
+                        col_a = int(np.argmin(np.abs(prof_nodes - along)))
+                        col_a = max(0, min(col_a, len(terrain_idx) - 1))
+                        t_d = -float(z_nodes[terrain_idx[col_a]]) / 1e3
+                        ax.scatter(
+                            [along / 1e3], [t_d],
+                            **mk.kwargs(s=20, zorder=6, clip_on=False),
+                        )
+
+            ax.set_ylim(float(depth_km[-1]), float(depth_km[0]))
+            ax.set_xlabel("Distance from centre (km)", fontsize=7)
+            ax.set_ylabel("Depth (km)", fontsize=7)
+            ax.set_title(label, fontsize=9)
+            ax.tick_params(labelsize=7)
+
+            if col == n_cols - 1 or k == n - 1:
+                cb = fig.colorbar(pm, ax=ax, pad=0.02, shrink=0.85)
+                cb.set_label("Resistivity (Ω·m)", fontsize=7)
+                ticks_rho = [t for t in [1, 10, 100, 1000, 10000]
+                             if self.rho_min <= t <= self.rho_max]
+                cb.set_ticks([np.log10(t) for t in ticks_rho])
+                cb.set_ticklabels([str(t) for t in ticks_rho], fontsize=7)
+
+        for k in range(n, n_rows * n_cols):
+            row, col = divmod(k, n_cols)
+            axes[row][col].set_visible(False)
+
+        fig.suptitle(
+            f"ModEM {self.direction} profiles — {self.which}  "
+            f"(depth ≤ {self.depth_max / 1e3:.1f} km)",
+            fontsize=10, y=1.01,
+        )
+        fig.tight_layout()
+        return fig
+
+
+# ======================================================================
+# PlotCovariance
+# ======================================================================
+
+class PlotCovariance(_ModEmPlotBase):
+    """Three-panel covariance activation map from a ModEM .cov file.
+
+    Shows three orthogonal projections of the 3-D smoothing mask:
+
+    * **Plan** — ``ind.sum(axis=2)``, one value per (NS, EW) cell
+    * **N-S × depth** — ``ind.sum(axis=1)``
+    * **E-W × depth** — ``ind.sum(axis=0)``
+
+    Equivalent to the MATLAB diagnostic in ``script_run001_no_topo.m``::
+
+        subplot(131); imagesc(squeeze(sum(c1.ind, 3)));
+        subplot(132); imagesc(squeeze(sum(c1.ind, 2)));
+        subplot(133); imagesc(squeeze(sum(c1.ind, 1)));
+
+    Parameters
+    ----------
+    result : InversionResult, optional
+    which : {"final", "initial"}, default "final"
+        Model used only for depth-axis labels on cross-section panels.
+    show_smoothing : bool, default True
+        Add a fourth panel: horizontal smoothing coefficients vs depth.
+    cmap_mask : str, default "Blues"
+    figsize : tuple of float, optional
+
+    Examples
+    --------
+    >>> from pycsamt.models.modem.plot import PlotCovariance
+    >>> fig = PlotCovariance(result=result, show_smoothing=True).plot()
+    """
+
+    def __init__(
+        self,
+        result: InversionResult | None = None,
+        which: str = "final",
+        show_smoothing: bool = True,
+        cmap_mask: str = "Blues",
+        figsize: tuple[float, float] | None = None,
+        **kwargs,
+    ):
+        super().__init__(result=result, **kwargs)
+        self.which = which
+        self.show_smoothing = show_smoothing
+        self.cmap_mask = cmap_mask
+        self.figsize = figsize
+
+    def plot(self):
+        """Return a matplotlib Figure with covariance diagnostics.
+
+        Raises
+        ------
+        ValueError
+            If the result has no covariance loaded.
+        """
+        import matplotlib.pyplot as plt
+
+        r = self._check_result()
+        cov = r.covariance
+        if cov is None:
+            raise ValueError(
+                "InversionResult has no covariance loaded.  "
+                "Ensure the .cov file is in the result directory."
+            )
+
+        ind = _build_cov_ind(cov)   # (nx_earth, ny_earth, nz_earth)
+
+        model = r.model_final if self.which == "final" else r.model_initial
+        depth_km = None
+        if model is not None and model.nz >= cov.nz_earth:
+            z_nodes_earth = model.z_nodes[model.n_air:]
+            if len(z_nodes_earth) > cov.nz_earth:
+                depth_km = z_nodes_earth[: cov.nz_earth + 1] / 1e3
+
+        n_panels = 4 if self.show_smoothing else 3
+        fig, axes = plt.subplots(
+            1, n_panels,
+            figsize=self.figsize or (4.5 * n_panels, 4.5),
+        )
+
+        # Panel 1: plan view (sum over depth)
+        plan = ind.sum(axis=2)   # (nx, ny)
+        ax = axes[0]
+        im = ax.imshow(
+            plan, cmap=self.cmap_mask,
+            aspect="auto", origin="upper", interpolation="nearest",
+        )
+        fig.colorbar(im, ax=ax, label="Σ mask (depth layers)", shrink=0.85)
+        ax.set_xlabel("EW cell index")
+        ax.set_ylabel("NS cell index")
+        ax.set_title("Plan view\n(sum over depth)")
+
+        # Panel 2: NS × depth (sum over EW)
+        xz = ind.sum(axis=1)     # (nx, nz)
+        ax = axes[1]
+        if depth_km is not None:
+            extent = [0, cov.nx_earth,
+                      float(depth_km[-1]), float(depth_km[0])]
+            im2 = ax.imshow(
+                xz.T, cmap=self.cmap_mask,
+                aspect="auto", origin="upper",
+                extent=extent, interpolation="nearest",
+            )
+            ax.set_ylabel("Depth (km)")
+        else:
+            im2 = ax.imshow(
+                xz.T, cmap=self.cmap_mask,
+                aspect="auto", origin="upper", interpolation="nearest",
+            )
+            ax.set_ylabel("Depth layer index")
+        fig.colorbar(im2, ax=ax, label="Σ mask (EW)", shrink=0.85)
+        ax.set_xlabel("NS cell index")
+        ax.set_title("N-S × depth\n(sum over EW)")
+
+        # Panel 3: EW × depth (sum over NS)
+        yz = ind.sum(axis=0)     # (ny, nz)
+        ax = axes[2]
+        if depth_km is not None:
+            extent = [0, cov.ny_earth,
+                      float(depth_km[-1]), float(depth_km[0])]
+            im3 = ax.imshow(
+                yz.T, cmap=self.cmap_mask,
+                aspect="auto", origin="upper",
+                extent=extent, interpolation="nearest",
+            )
+            ax.set_ylabel("Depth (km)")
+        else:
+            im3 = ax.imshow(
+                yz.T, cmap=self.cmap_mask,
+                aspect="auto", origin="upper", interpolation="nearest",
+            )
+            ax.set_ylabel("Depth layer index")
+        fig.colorbar(im3, ax=ax, label="Σ mask (NS)", shrink=0.85)
+        ax.set_xlabel("EW cell index")
+        ax.set_title("E-W × depth\n(sum over NS)")
+
+        # Panel 4: smoothing coefficients vs depth
+        if self.show_smoothing:
+            ax = axes[3]
+            nz_e = cov.nz_earth
+            if depth_km is not None and len(depth_km) > nz_e:
+                z_plot = 0.5 * (depth_km[:nz_e] + depth_km[1: nz_e + 1])
+                z_label = "Depth (km)"
+                ax.invert_yaxis()
+            else:
+                z_plot = np.arange(nz_e, dtype=float)
+                z_label = "Layer index"
+
+            sx = getattr(cov, "smooth_x", None)
+            sy = getattr(cov, "smooth_y", None)
+            sz = getattr(cov, "smooth_z", None)
+
+            if sx is not None and len(sx) == nz_e:
+                ax.plot(sx, z_plot, "b-o", ms=3, lw=1.2,
+                        label="smooth_x (NS)")
+            if sy is not None and len(sy) == nz_e:
+                ax.plot(sy, z_plot, "r--s", ms=3, lw=1.2,
+                        label="smooth_y (EW)")
+            if sz is not None:
+                ax.axvline(
+                    float(sz), color="gray", ls=":", lw=1.0,
+                    label=f"smooth_z={float(sz):.2f}",
+                )
+            ax.set_xlabel("Smoothing coefficient")
+            ax.set_ylabel(z_label)
+            ax.set_title("Smoothing\ncoefficients vs depth")
+            ax.legend(fontsize=7, loc="best")
+            ax.grid(True, lw=0.4, alpha=0.5)
+
+        fig.suptitle(
+            f"ModEM covariance — "
+            f"{cov.nx_earth}×{cov.ny_earth}×{cov.nz_earth} earth cells",
+            fontsize=10,
+        )
         fig.tight_layout()
         return fig

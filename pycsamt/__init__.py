@@ -5,13 +5,14 @@
 pycsamt v2 — Python toolbox for audio-magnetotellurics (AMT & CSAMT).
 
 Documentation: https://pycsamt.readthedocs.io/en/latest/
-Source:        https://github.com/WEgeophysics/pycsamt
+Source:        https://github.com/earthai-tech/pycsamt
 """
 
-import importlib
-import warnings
+from __future__ import annotations
 
-# ── Version ──────────────────────────────────────────────────────────────────
+import importlib
+
+# ── Version ───────────────────────────────────────────────────────────────────
 try:
     from importlib.metadata import version as _pkg_version
     __version__ = _pkg_version(__name__)
@@ -19,76 +20,49 @@ except Exception:
     __version__ = "2.0.0"
 
 # ── Logging ───────────────────────────────────────────────────────────────────
-from .log._config import init_logging
-init_logging()
+# Configures the root 'pycsamt' logger; no heavy deps loaded here.
+from .log._config import init_logging as _init_logging
+_init_logging()
+del _init_logging
 
-# ── Hard-dependency check ────────────────────────────────────────────────────
-_required = [
-    ("numpy",       "numpy"),
-    ("pandas",      "pandas"),
-    ("scipy",       "scipy"),
-    ("matplotlib",  "matplotlib"),
-    ("tqdm",        "tqdm"),
-    ("scikit-learn","sklearn"),
-]
-_missing = []
-for _pkg_name, _import_name in _required:
-    try:
-        importlib.import_module(_import_name)
-    except ImportError:
-        _missing.append(_pkg_name)
 
-if _missing:
-    warnings.warn(
-        "pycsamt: some dependencies are not installed; "
-        "affected features will raise ImportError at use time:\n  "
-        + ", ".join(_missing),
-        ImportWarning,
-        stacklevel=2,
-    )
-del _required, _pkg_name, _import_name, _missing
+# ── Lazy registry ─────────────────────────────────────────────────────────────
+# Subpackages — imported on first attribute access.
+_SUBPACKAGES = frozenset({
+    "ai", "agents", "backends", "emtools", "forward", "gis",
+    "interp", "inversion", "io", "jones", "log", "models",
+    "pipeline", "seg", "site", "tdem", "z", "zonge",
+})
 
-# ── Eagerly loaded subpackages ────────────────────────────────────────────────
-# Only the two packages that are always needed at the module level are loaded
-# here; everything else is imported on demand by the user.
-from . import interp  # noqa: F401  geological interpretation / export
-from . import inversion  # noqa: F401  physics-based EM inversion API
-from . import tdem    # noqa: F401  time-domain EM → EDICollection
-
-# ── Pipeline — top-level convenience exports ──────────────────────────────────
-from .pipeline import (    # noqa: F401
-    Pipeline,
-    Step,
-    configure_pipe,
-    reset_pipe,
-    PYCSAMT_PIPE,
-)
-
-# ── AI agents (optional — requires anthropic / openai / google-generativeai) ──
-try:
-    from . import agents  # noqa: F401
-except Exception:          # ImportError or any initialisation error
-    pass
-
-# ── Backend API ───────────────────────────────────────────────────────────────
-from .backends import (
-    auto_detect,
-    get_backend,
-    get_backend_instance,
-    list_backends,
-    set_backend,
-)
-
-# ── Graceful errors for removed v1 names ─────────────────────────────────────
-_REMOVED = {
-    "geodrill":    "Use 'pycsamt.interp' instead.",
-    "bases":       "Removed in v2 (was an internal v1 serialisation helper).",
-    "_csamtpylog": "Removed in v2; use 'pycsamt.log.logger.get_logger'.",
-    "_path":       "Removed in v2; use standard pathlib paths.",
+# Top-level convenience symbols — resolved from their home module on first use.
+_LAZY_SYMBOLS: dict[str, str] = {
+    # pipeline
+    "Pipeline":       ".pipeline",
+    "Step":           ".pipeline",
+    "configure_pipe": ".pipeline",
+    "reset_pipe":     ".pipeline",
+    "PYCSAMT_PIPE":   ".pipeline",
+    # backends
+    "auto_detect":          ".backends",
+    "get_backend":          ".backends",
+    "get_backend_instance": ".backends",
+    "list_backends":        ".backends",
+    "set_backend":          ".backends",
 }
 
 
 def __getattr__(name: str):
+    if name in _SUBPACKAGES:
+        mod = importlib.import_module(f".{name}", __name__)
+        globals()[name] = mod
+        return mod
+
+    if name in _LAZY_SYMBOLS:
+        mod = importlib.import_module(_LAZY_SYMBOLS[name], __name__)
+        sym = getattr(mod, name)
+        globals()[name] = sym
+        return sym
+
     if name in _REMOVED:
         raise AttributeError(
             f"'pycsamt.{name}' was removed in pycsamt v2.  {_REMOVED[name]}"
@@ -99,32 +73,13 @@ def __getattr__(name: str):
 # ── Public API ────────────────────────────────────────────────────────────────
 __all__ = [
     "__version__",
-    # subpackages (importable as `import pycsamt.seg` etc.)
-    "ai",
-    "backends",
-    "emtools",
-    "forward",
-    "gis",
-    "interp",
-    "inversion",
-    "io",
-    "jones",
-    "models",
-    "seg",
-    "site",
-    "tdem",
-    "z",
-    "zonge",
-    # pipeline — top-level shortcuts
-    "Pipeline",
-    "Step",
-    "configure_pipe",
-    "reset_pipe",
-    "PYCSAMT_PIPE",
+    # subpackages
+    "ai", "agents", "backends", "emtools", "forward", "gis",
+    "interp", "inversion", "io", "jones", "models",
+    "pipeline", "seg", "site", "tdem", "z", "zonge",
+    # pipeline shortcuts
+    "Pipeline", "Step", "configure_pipe", "reset_pipe", "PYCSAMT_PIPE",
     # backend helpers
-    "auto_detect",
-    "get_backend",
-    "get_backend_instance",
-    "list_backends",
-    "set_backend",
+    "auto_detect", "get_backend", "get_backend_instance",
+    "list_backends", "set_backend",
 ]

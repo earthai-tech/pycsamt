@@ -3,107 +3,230 @@
 Forward Modelling
 =================
 
-:mod:`pycsamt.forward` contains pyCSAMT's in-process forward modelling and
-synthetic data generation tools. These tools are used to test physical
-assumptions, generate training data for AI inversion, compare model responses,
-and prepare intuition before running expensive inversion workflows.
+:mod:`pycsamt.forward` contains the in-process forward modelling layer of
+pyCSAMT v2. It provides resistivity model containers, 1-D/2-D/quasi-3-D
+electromagnetic solvers, synthetic dataset generators, noise models, and
+diagnostic plotting utilities.
 
-Forward modelling answers the question:
+Forward modelling answers a controlled physical question:
 
-   If this resistivity model were true, what response would the survey record?
+   If this earth model were true, what response would the survey record?
 
-That question is essential for inversion. Inversion searches for a model that
-matches observed data, while forward modelling computes the data predicted by
-one known model. A reliable inversion workflow therefore depends on forward
-models for synthetic tests, sensitivity checks, data-feature design, and
-quality control.
+That question sits underneath every serious inversion workflow. Inversion
+searches for a model that explains observed data; forward modelling computes
+the data predicted by a known model. A good inversion setup therefore depends
+on forward modelling for sensitivity tests, synthetic recovery experiments,
+training data, uncertainty design, and quality control.
 
-Forward And Models
-------------------
+What This Section Covers
+------------------------
 
-The :mod:`pycsamt.forward` and :mod:`pycsamt.models` packages are related but
-serve different purposes.
+The forward documentation is organized around the full lifecycle of a
+synthetic experiment:
+
+.. grid:: 2
+   :gutter: 3
+
+   .. grid-item-card:: Concepts
+      :link: concepts
+      :link-type: doc
+
+      Forward operators, model dimensionality, response quantities, noise, and
+      the relationship between synthetic responses and inversion.
+
+   .. grid-item-card:: Configuration
+      :link: configuration
+      :link-type: doc
+
+      Reproducible ``ForwardConfig``, ``ForwardConfig2D``, and
+      ``ForwardConfig3D`` files for synthetic runs and solver setup.
+
+   .. grid-item-card:: Solvers and grids
+      :link: solvers_and_grids
+      :link-type: doc
+
+      ``LayeredModel``, ``Grid2D``, ``Grid3D``, 1-D MT/CSAMT/TEM solvers,
+      2-D MT profiles, and quasi-3-D tensor responses.
+
+   .. grid-item-card:: Synthetic datasets
+      :link: synthetic_datasets
+      :link-type: doc
+
+      Dataset generation for regression tests, survey experiments, and
+      AI-assisted inversion training.
+
+   .. grid-item-card:: Plotting
+      :link: plotting
+      :link-type: doc
+
+      Response curves, model sections, pseudo-sections, 3-D maps, tensor
+      panels, dataset checks, and publication-ready figure hooks.
+
+   .. grid-item-card:: Forward to inversion
+      :link: forward_to_inversion
+      :link-type: doc
+
+      The handoff contract between synthetic forward responses and inversion
+      backends, including units, shapes, geometry, and error models.
+
+Forward And Model Integrations
+------------------------------
+
+The :mod:`pycsamt.forward` and :mod:`pycsamt.models` packages are related, but
+they should not be treated as the same layer.
 
 .. list-table::
    :header-rows: 1
-   :widths: 26 37 37
+   :widths: 24 38 38
 
    * - Package
-     - Main purpose
+     - Main responsibility
      - Typical use
    * - :mod:`pycsamt.forward`
-     - In-process 1-D, 2-D, quasi-3-D forward responses, synthetic models,
-       noise, datasets, and plotting.
-     - Generate synthetic data, test model sensitivity, train AI inversion
-       networks, and inspect response behaviour.
+     - Compute controlled synthetic responses inside Python using pyCSAMT
+       model containers, solvers, dataset generators, noise models, and
+       plotting helpers.
+     - Test survey design, generate training data, validate inversion
+       assumptions, compare response behaviour, and build reproducible
+       synthetic examples.
    * - :mod:`pycsamt.models`
-     - Integration with external modelling and inversion engines such as
-       Occam2D, ModEM, and MARE2DEM.
-     - Prepare native files, run external binaries, load outputs, and plot
-       engine-specific results.
+     - Integrate external modelling and inversion engines such as Occam2D,
+       ModEM, and MARE2DEM.
+     - Prepare native engine files, run external binaries, load engine
+       outputs, and manage backend-specific inversion projects.
 
-Use ``forward`` when you need a controlled synthetic response. Use ``models``
-when you need to prepare or load a native external-engine project.
+Use :mod:`pycsamt.forward` when you need a controlled synthetic response from
+a known model. Use :mod:`pycsamt.models` when you need to prepare, run, or load
+a native external-engine project. The two layers meet when a forward synthetic
+experiment is converted into an inversion benchmark.
 
 Package Map
 -----------
 
+The public forward API is built around a small set of object families.
+
 .. list-table::
    :header-rows: 1
-   :widths: 28 72
+   :widths: 28 34 38
 
-   * - Object or module
+   * - Object family
+     - Main objects
      - Role
-   * - ``ForwardConfig``
-     - Configuration for 1-D MT, CSAMT, and TEM dataset generation.
-   * - ``ForwardConfig2D``
-     - Configuration for 2-D MT finite-difference runs.
-   * - ``ForwardConfig3D``
-     - Configuration for quasi-3-D MT forward runs.
-   * - ``LayeredModel``
-     - 1-D layered earth model used by MT1D, CSAMT1D, TEM1D, and synthetic
-       dataset generation.
-   * - ``Grid2D`` and ``Grid3D``
-     - Non-uniform resistivity grids with station layouts.
-   * - ``MT1DForward``, ``CSAMT1DForward``, ``TEM1DForward``
-     - 1-D electromagnetic forward solvers.
-   * - ``MT2DForward``
-     - 2-D MT finite-difference forward solver returning TE and TM responses.
-   * - ``MT3DForward``
-     - Quasi-3-D MT forward solver returning impedance tensor components.
-   * - ``ForwardDataset`` and ``SurveyDataset3D``
-     - Containers for synthetic datasets saved as compressed ``.npz`` files.
-   * - ``GaussianNoise``, ``MultiplicativeNoise``, ``FieldRealisticNoise``
-     - Noise models used to make synthetic responses more field-like.
-   * - ``plot_*`` functions
-     - Diagnostic plots for 1-D responses, 2-D models, pseudo-sections, 3-D
-       maps, and tensor components.
+   * - Configuration
+     - ``ForwardConfig``, ``ForwardConfig2D``, ``ForwardConfig3D``
+     - Store reproducible frequency/time axes, model ranges, station layouts,
+       solver options, noise settings, and output choices.
+   * - Model containers
+     - ``LayeredModel``, ``Grid2D``, ``Grid3D``
+     - Represent 1-D layered earths, 2-D profile grids, and quasi-3-D
+       resistivity volumes.
+   * - Solvers
+     - ``MT1DForward``, ``CSAMT1DForward``, ``TEM1DForward``, ``MT2DForward``,
+       ``MT3DForward``
+     - Compute predicted electromagnetic responses from model containers.
+   * - Response containers
+     - ``ForwardResponse``, ``ForwardResponse2D``, ``ForwardResponse3D``
+     - Hold predicted apparent resistivity, phase, transient values,
+       impedance components, station geometry, and array conversion helpers.
+   * - Noise models
+     - ``GaussianNoise``, ``MultiplicativeNoise``, ``FieldRealisticNoise``
+     - Convert ideal synthetic responses into more realistic observations.
+   * - Dataset containers
+     - ``ForwardDataset``, ``SurveyDataset3D``
+     - Store synthetic feature and target arrays, metadata, splits, and
+       compressed ``.npz`` archives.
+   * - Plotting helpers
+     - ``plot_response_1d``, ``plot_model_2d``, ``plot_pseudosection_2d``,
+       ``plot_model_3d``, ``plot_response_map_3d``, and related functions
+     - Inspect models, responses, tensor components, noisy examples, and
+       generated datasets before they are trusted downstream.
 
-Recommended Reading Order
--------------------------
+Core Workflow
+-------------
 
-For a user who wants to understand the forward layer:
+A typical forward modelling workflow has six stages.
 
-#. Read :doc:`concepts`.
-#. Read :doc:`configuration`.
-#. Read :doc:`solvers_and_grids`.
-#. Read :doc:`synthetic_datasets`.
-#. Read :doc:`plotting`.
-#. Read :doc:`forward_to_inversion` to connect synthetic tests with inversion.
+.. code-block:: python
+   :linenos:
 
-For AI-assisted inversion or training datasets:
+   import numpy as np
 
-#. Start with :doc:`synthetic_datasets`.
-#. Review :doc:`configuration` for reproducible source-of-truth files.
-#. Use :doc:`plotting` to inspect generated examples.
-#. Continue to :doc:`../agents/ai_model_zoo_agents` and
-   :doc:`../user_guide/ai_inversion`.
+   from pycsamt.forward import LayeredModel, MT1DForward, plot_response_and_model_1d
 
-Contents
---------
+   freqs = np.logspace(-2, 3, 40)
+   model = LayeredModel(
+       resistivity=[100.0, 15.0, 800.0],
+       thickness=[250.0, 700.0],
+   )
+
+   solver = MT1DForward(freqs)
+   response = solver.run(model)
+
+   fig = plot_response_and_model_1d(response, model)
+   fig.savefig("runs/forward/mt1d_response.png", dpi=200)
+
+For production work, the same idea should be driven by a configuration file
+and archived with outputs:
+
+#. define the physical question and target dimensionality;
+#. create a ``ForwardConfig*`` template;
+#. build a model or grid from the configuration;
+#. run the selected solver;
+#. apply a documented noise model when simulating observations;
+#. plot and archive the model, response, configuration, and metadata.
+
+Choosing A Path
+---------------
+
+Different users enter the forward section with different goals.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 34 36
+
+   * - Goal
+     - Start here
+     - Then read
+   * - Understand the physics and vocabulary
+     - :doc:`concepts`
+     - :doc:`solvers_and_grids`, :doc:`plotting`
+   * - Build a reproducible synthetic run
+     - :doc:`configuration`
+     - :doc:`solvers_and_grids`, :doc:`forward_to_inversion`
+   * - Generate training data for AI inversion
+     - :doc:`synthetic_datasets`
+     - :doc:`configuration`, :doc:`plotting`,
+       :doc:`../agents/ai_model_zoo_agents`
+   * - Compare 1-D, 2-D, and quasi-3-D behaviour
+     - :doc:`solvers_and_grids`
+     - :doc:`concepts`, :doc:`plotting`
+   * - Prepare an inversion benchmark
+     - :doc:`forward_to_inversion`
+     - :doc:`../models/index`, :doc:`../pipeline/index`
+   * - Diagnose a generated dataset or response
+     - :doc:`plotting`
+     - :doc:`synthetic_datasets`, :doc:`forward_to_inversion`
+
+Relationship To Theory
+----------------------
+
+Forward modelling is practical, but it is not detached from theory. When a
+plot or synthetic response looks surprising, the relevant background pages are:
+
+* :doc:`../theory/csamt_amt_mt_overview` for the distinction between CSAMT,
+  AMT, MT, and TDEM survey assumptions;
+* :doc:`../theory/impedance_tensor` for impedance, apparent resistivity, phase,
+  and tensor notation;
+* :doc:`../theory/static_shift` for shallow distortion effects that can make
+  synthetic and field curves disagree;
+* :doc:`../theory/inversion_concepts` for how forward responses are used inside
+  objective functions and regularized inversion.
+
+Documentation Contents
+----------------------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    concepts
    configuration

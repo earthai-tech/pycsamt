@@ -2082,7 +2082,34 @@ def _prepare_sensitivity(
             elif key == "dataid":
                 sites = [obj.Head.dataid for obj in po.ediObjs_]
 
-    return skew, mu, freqs, ymat, mode_norm, sites
+    # ---- coordinate-based station distances --------------------------------
+    # Use haversine distances from lat/lon; fall back to uniform if unavailable.
+    try:
+        from math import radians, sin, cos, sqrt, atan2 as _atan2
+
+        lats = np.array([e.meta.get("lat", 0.0) for e in po.ediObjs_], dtype=float)
+        lons = np.array([e.meta.get("lon", 0.0) for e in po.ediObjs_], dtype=float)
+
+        if np.all(lats == 0) and np.all(lons == 0):
+            x_coords: np.ndarray | None = None
+        else:
+            _R = 6_371_000.0
+            _cd = [0.0]
+            for _i in range(1, len(lats)):
+                _dlat = radians(lats[_i] - lats[_i - 1])
+                _dlon = radians(lons[_i] - lons[_i - 1])
+                _a = (
+                    sin(_dlat / 2) ** 2
+                    + cos(radians(lats[_i - 1]))
+                    * cos(radians(lats[_i]))
+                    * sin(_dlon / 2) ** 2
+                )
+                _cd.append(_cd[-1] + 2 * _R * _atan2(sqrt(_a), sqrt(1 - _a)))
+            x_coords = np.array(_cd)
+    except Exception:
+        x_coords = None
+
+    return skew, mu, freqs, ymat, mode_norm, sites, x_coords
 
 
 @compat_alias(
@@ -2377,7 +2404,7 @@ def plot_skew_2d(
     from ..plot.utils import plot2d  # newer location
     
     # Compute sensitivity matrices and axis labels.
-    skew, mu, freqs, ymat, mode_out, sites = _prepare_sensitivity(
+    skew, mu, freqs, ymat, mode_out, sites, x_coords = _prepare_sensitivity(
         edis_list,
         mode=mode,
         sensitivity=sensitivity,
@@ -2399,10 +2426,15 @@ def plot_skew_2d(
     # Contours default to False unless explicitly True (legacy match).
     do_contours = not (plot_contours in (False, ...))
 
+    # Use real coordinate-derived distances when available; fall back to
+    # uniform spacing so the x-axis reflects true station positions.
+    x_plot = x_coords if x_coords is not None else None
+
     # Draw the 2-D image (helper creates fig/ax as needed).
     ax = plot2d(
         ymat,
         y=y_plot,
+        x=x_plot,
         cmap=cmap,
         cb_label=cb_label,
         top_label=top_label,

@@ -50,7 +50,12 @@ from PySide6.QtWidgets import (
 )
 
 from pycsamt.app.desktop.panels.map_panel   import MapPanel
-from pycsamt.app.desktop.windows._base      import PanelWindow, make_group, icon_button
+from pycsamt.app.desktop.windows._base      import (
+    PanelWindow,
+    make_group,
+    icon_button,
+    _icon,
+)
 
 
 # ── available colormaps ───────────────────────────────────────────────────────
@@ -71,6 +76,21 @@ _BASEMAP_ITEMS = [
     "CartoDB Positron",
     "CartoDB DarkMatter",
 ]
+
+_MAP_TYPE_ICONS = {
+    "Station": "station-response",
+    "Elevation": "elevation",
+    "Depth": "depth",
+    "Resistivity": "resistivity",
+}
+
+
+def _add_icon_item(combo: QComboBox, label: str, icon_name: str) -> None:
+    icon = _icon(icon_name)
+    if icon.isNull():
+        combo.addItem(label)
+    else:
+        combo.addItem(icon, label)
 
 
 class _VSep(QFrame):
@@ -107,7 +127,11 @@ class MapViewerWindow(PanelWindow):
         grp_type, lay_type = make_group("Map Type")
         self._combo_type = QComboBox()
         for item in ("Station", "Elevation", "Depth", "Resistivity"):
-            self._combo_type.addItem(item)
+            _add_icon_item(
+                self._combo_type,
+                item,
+                _MAP_TYPE_ICONS.get(item, "map-view"),
+            )
         self._combo_type.currentTextChanged.connect(self._on_type_changed)
         lay_type.addWidget(self._combo_type)
         layout.addWidget(grp_type)
@@ -722,7 +746,11 @@ class MapDetailWindow(QDialog):
         row.addWidget(QLabel("Type:"))
         self._combo_type = QComboBox()
         for t in ("Station", "Elevation", "Depth", "Resistivity"):
-            self._combo_type.addItem(t)
+            _add_icon_item(
+                self._combo_type,
+                t,
+                _MAP_TYPE_ICONS.get(t, "map-view"),
+            )
         self._combo_type.currentTextChanged.connect(self._on_type_changed)
         row.addWidget(self._combo_type)
 

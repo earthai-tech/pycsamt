@@ -206,14 +206,14 @@ def _build_steps() -> List[PipelineStep]:
                                             min_val=0.0, max_val=20.0, decimals=1),
                 }),
                 MethodSpec("loess", "LOESS spatial smoothing", params={
-                    "frac": ParamSpec("float", "Smoothing fraction", 0.5,
-                                     min_val=0.1, max_val=1.0, decimals=2),
+                    "half_window": ParamSpec("int", "Half window (stations)", 3,
+                                            min_val=1, max_val=20),
                 }),
                 MethodSpec("bilateral", "Bilateral filter", params={
-                    "sigma_s": ParamSpec("float", "Spatial σ (m)", 200.0,
-                                        min_val=10.0, max_val=5000.0, decimals=0),
-                    "sigma_r": ParamSpec("float", "Range σ", 0.3,
-                                        min_val=0.05, max_val=2.0, decimals=2),
+                    "sig_dist": ParamSpec("float", "Distance σ (stations)", 2.0,
+                                         min_val=0.5, max_val=20.0, decimals=1),
+                    "sig_val":  ParamSpec("float", "Value σ (log-ρ)", 0.5,
+                                         min_val=0.05, max_val=5.0, decimals=2),
                 }),
                 MethodSpec("refmedian", "Reference median", params={
                     "pband": ParamSpec("combo", "Period band", "none",
@@ -487,15 +487,15 @@ class PipelineController:
                     max_skew=sk, inplace=False
                 )
             elif meth == "loess":
-                frac = float(prm.get("frac", 0.5))
-                log(f"LOESS static-shift correction (frac={frac}).")
-                tbl = et.estimate_ss_loess(sites_in, frac=frac)
+                hw = int(prm.get("half_window", 3))
+                log(f"LOESS static-shift correction (half_window={hw}).")
+                tbl = et.estimate_ss_loess(sites_in, half_window=hw)
                 result = et.apply_ss_factors(sites_in, tbl, inplace=False)
             elif meth == "bilateral":
-                ss = float(prm.get("sigma_s", 200.0))
-                sr = float(prm.get("sigma_r", 0.3))
-                log(f"Bilateral static-shift correction (σs={ss}, σr={sr}).")
-                tbl = et.estimate_ss_bilateral(sites_in, sigma_s=ss, sigma_r=sr)
+                sd = float(prm.get("sig_dist", 2.0))
+                sv = float(prm.get("sig_val",  0.5))
+                log(f"Bilateral static-shift correction (sig_dist={sd}, sig_val={sv}).")
+                tbl = et.estimate_ss_bilateral(sites_in, sig_dist=sd, sig_val=sv)
                 result = et.apply_ss_factors(sites_in, tbl, inplace=False)
             else:
                 log("Reference-median static-shift correction.")

@@ -35,6 +35,7 @@ from ._core import (
     _get_z_block,
     _name,
 )
+from ..api.station import PYCSAMT_STATION_RENDERING
 
 __all__ = [
     "ANISO_RATIO_THRESH",
@@ -391,6 +392,10 @@ def plot_anisotropy(
             grid[fi, si] = row[metric]
 
     y_vals = 1.0 / freqs_all if period_axis else freqs_all
+    if period_axis:
+        order = np.argsort(y_vals)
+        y_vals = y_vals[order]
+        grid = grid[order]
     x_vals = np.arange(len(stations))
     X, Y   = np.meshgrid(x_vals, y_vals)
 
@@ -412,14 +417,19 @@ def plot_anisotropy(
             ax.contour(X, Y, grid, levels=[0.0],
                        colors="white", linewidths=1.2, linestyles="--")
 
-    ax.set_xticks(x_vals)
-    ax.set_xticklabels(stations, rotation=45, ha="right", fontsize=8)
-    ax.set_xlabel("Station")
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        x_vals,
+        stations,
+        preset="pseudosection",
+        xlim=(-0.5, len(stations) - 0.5),
+    )
     if log_y:
         ax.set_yscale("log")
     if period_axis:
         ax.set_ylabel("Period (s)")
-        ax.invert_yaxis()
+        if not ax.yaxis_inverted():
+            ax.invert_yaxis()
     else:
         ax.set_ylabel("Frequency (Hz)")
 

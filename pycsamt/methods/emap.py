@@ -56,12 +56,20 @@ def _suppress_outliers(arr: np.ndarray, sigma: float = 3.0) -> np.ndarray:
 
 def _interp_to_grid(freqs_src: np.ndarray, vals: np.ndarray,
                     freqs_tgt: np.ndarray) -> np.ndarray:
-    """Log-linear interpolation of *vals* from *freqs_src* to *freqs_tgt*."""
+    """Log-linear interpolation of *vals* from *freqs_src* to *freqs_tgt*.
+
+    ``np.interp`` requires the knot array (xp) to be strictly ascending.
+    Frequencies are often stored in descending order (MT convention), so we
+    sort before interpolating.
+    """
     if freqs_src.size == 0 or vals.size == 0:
         return np.full(freqs_tgt.size, np.nan)
-    lf_src = np.log10(np.clip(freqs_src, 1e-10, None))
+    # Sort knots ascending so np.interp works correctly.
+    asc = np.argsort(freqs_src)
+    lf_src = np.log10(np.clip(freqs_src[asc], 1e-10, None))
+    vals_asc = vals[asc]
     lf_tgt = np.log10(np.clip(freqs_tgt, 1e-10, None))
-    return np.interp(lf_tgt, lf_src, vals, left=np.nan, right=np.nan)
+    return np.interp(lf_tgt, lf_src, vals_asc, left=np.nan, right=np.nan)
 
 
 # ── EMAP class ────────────────────────────────────────────────────────────────

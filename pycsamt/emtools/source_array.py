@@ -33,6 +33,8 @@ from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 
+from ._core import hide_polar_radius_labels
+
 __all__ = [
     "wavenumber",
     "sdas_element_pattern",
@@ -467,6 +469,7 @@ def plot_radiation_pattern(
     if polar:
         ax.set_theta_zero_location("N")
         ax.set_theta_direction(-1)
+        hide_polar_radius_labels(ax)
         ax.set_title(title, pad=15)
     else:
         ax.set_xlabel("Broadside angle θ [deg]")

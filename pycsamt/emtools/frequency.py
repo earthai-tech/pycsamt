@@ -16,6 +16,7 @@ from ._core import (
 
 # re-use package editors when it saves code
 from ..site import edit as _edit
+from ..api.station import PYCSAMT_STATION_RENDERING
 from ..api.view import PYCSAMT_API_VIEW, maybe_wrap_frame, wrap_result
 
 _BACKWARD_SINCE = "2.0.0"
@@ -1644,25 +1645,40 @@ def plot_coverage_quality_heatmap(
     for i, (fr, q) in enumerate(zip(frs, quals)):
         idx = _nearest_idx(grid, fr)
         M[i, idx] = q
-    # 0..1 quality; 0 means absent/low confidence
     if axis == "period":
         ylab = "period (s)"
+        y_values = 1.0 / np.maximum(grid, 1e-24)
+        row_order = np.argsort(y_values)
+        y_values = y_values[row_order]
+        image = M.T[row_order]
     else:
         ylab = "freq (Hz)"
+        y_values = grid
+        image = M.T
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     im = ax.imshow(
-        M.T,
+        image,
         aspect="auto",
         origin="lower",
         interpolation="nearest",
         vmin=0.0,
         vmax=1.0,
     )
-    ax.set_xlabel("station")
     ax.set_ylabel(ylab)
-    ax.set_xticks(np.arange(len(labs)))
-    ax.set_xticklabels(labs, rotation=90)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(len(labs)),
+        labs,
+        preset="pseudosection",
+        xlim=(-0.5, len(labs) - 0.5),
+    )
+    yt = np.linspace(0, image.shape[0] - 1, num=min(8, image.shape[0]))
+    yv = np.linspace(y_values.min(), y_values.max(), num=yt.size)
+    ax.set_yticks(yt)
+    ax.set_yticklabels([f"{v:.2g}" for v in yv])
+    if axis == "period" and not ax.yaxis_inverted():
+        ax.invert_yaxis()
     cb = plt.colorbar(im, ax=ax)
     cb.set_label("quality (1/(1+rel_err))")
     return ax
@@ -1741,6 +1757,8 @@ def plot_apparent_depth_psection(
         aggfunc=agg,
     )
     piv = piv.sort_index()
+    if axis_y == "period":
+        piv = piv.sort_index(ascending=True)
     # piv has shape (n_periods, n_stations); do NOT transpose so that
     # imshow maps x → stations and y → periods.
     Zm = piv.to_numpy(dtype=float)
@@ -1758,16 +1776,22 @@ def plot_apparent_depth_psection(
         origin="lower",
         interpolation="nearest",
     )
-    ax.set_xlabel("station")
-    ax.set_ylabel(ykey)
-    ax.set_xticks(np.arange(Zplot.shape[1]))   # shape[1] = n_stations
-    ax.set_xticklabels(piv.columns, rotation=90)
+    ax.set_ylabel("Period (s)" if axis_y == "period" else "Frequency (Hz)")
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(Zplot.shape[1], dtype=float),
+        list(piv.columns),
+        preset="pseudosection",
+        xlim=(-0.5, Zplot.shape[1] - 0.5),
+    )
     yt = np.linspace(0, Zplot.shape[0] - 1,
                      num=min(8, Zplot.shape[0]))  # shape[0] = n_periods
     yv = np.linspace(piv.index.min(), piv.index.max(),
                      num=min(8, len(piv.index)))
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.3g}" for v in yv])
+    if axis_y == "period" and not ax.yaxis_inverted():
+        ax.invert_yaxis()
     cb = plt.colorbar(im, ax=ax)
     cb.set_label(cblab)
     return ax

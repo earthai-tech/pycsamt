@@ -7,17 +7,17 @@ build-backend = "setuptools.build_meta"
 # ---------------------------------------------------------------------------
 [project]
 name        = "pycsamt"
-dynamic     = ["version"]
+version     = "2.0.0"
 description = "Python toolkit for audio-frequency magnetotelluric (MT/AMT/CSAMT/CSEM) data processing, inversion, and geological interpretation"
 readme      = "README.md"
 license     = { text = "LGPL-3.0-or-later" }
 requires-python = ">=3.9"
 
 authors = [
-    { name = "Kouadio K. Laurent", email = "etanoyau@gmail.com" },
+    { name = "Laurent Kouadio", email = "etanoyau@gmail.com" },
 ]
 maintainers = [
-    { name = "Kouadio K. Laurent", email = "etanoyau@gmail.com" },
+    { name = "Laurent Kouadio", email = "etanoyau@gmail.com" },
 ]
 
 keywords = [
@@ -92,19 +92,31 @@ docs = [
     "sphinx-autobuild>=2024.2",
 ]
 
-# Desktop + web application
-app = [
+# Desktop application
+desktop = [
     "PySide6>=6.9",
     "pyqtgraph>=0.13",
     "contextily>=1.6",
+]
+
+# Dash web application
+web = [
     "dash>=2.18",
     "dash-bootstrap-components>=1.6",
     "diskcache>=5.6",
+    "multiprocess>=0.70",
+    "plotly>=5.20",
+    "Pillow>=10.0",
 ]
 
-# Everything
+# Desktop + web application
+app = [
+    "pycsamt[desktop,web]",
+]
+
+# Everything # by default we prefer torch backend 
 full = [
-    "pycsamt[torch,tensorflow,geo,dev,docs,app]",
+    "pycsamt[torch,geo,dev,docs,app]",
 ]
 
 # ---------------------------------------------------------------------------
@@ -123,6 +135,7 @@ Changelog       = "https://pycsamt.readthedocs.io/en/latest/changelog.html"
 [project.scripts]
 pycsamt     = "pycsamt.cli:main"
 pycsamt-gui = "pycsamt.app.desktop.__main__:main"
+pycsamt-web = "pycsamt.app.web.__main__:main"
 
 # ---------------------------------------------------------------------------
 # Setuptools configuration
@@ -130,31 +143,18 @@ pycsamt-gui = "pycsamt.app.desktop.__main__:main"
 [tool.setuptools]
 include-package-data = true
 
-[tool.setuptools.dynamic]
-version = { attr = "pycsamt.__version__" }
-
 [tool.setuptools.packages.find]
 where   = ["."]
 include = ["pycsamt*"]
-exclude = [
-    "pycsamt.*_v1*",
-    "pycsamt.geodrill*",
-    "pycsamt.gui_v1*",
-    "pycsamt.cli_v1*",
-    "pycsamt.modeling_v1*",
-    "pycsamt.plot_v1*",
-    "pycsamt.processing_v1*",
-    "pycsamt._core_v1*",
-    "pycsamt.utils_v1*",
-    "pycsamt.geodrill_v2*",
-    "pycsamt.view*",
-]
 
 [tool.setuptools.package-data]
 "pycsamt" = [
     "log/p.configlog.yml",
     "metadata/*.json",
     "metadata/*.yml",
+    "app/desktop/resources/*.qss",
+    "app/desktop/resources/icons/*",
+    "app/web/assets/*",
     "models/occam2d/_source/*",
     "models/modem/_source/**/*",
     "data/occam2d/*",
@@ -176,17 +176,13 @@ target-version = "py39"
 select = ["E", "F", "W", "I", "UP", "B"]
 ignore = ["E501", "B008"]
 exclude = [
-    "*_v1*",
-    "geodrill*",
-    "geodrill_v2*",
-    "gui_v1*",
-    "cli_v1*",
-    "modeling_v1*",
-    "plot_v1*",
-    "processing_v1*",
-    "_core_v1*",
-    "utils_v1*",
-    "view*",
+    "__pycache__",
+    ".git",
+    ".pytest_cache",
+    ".ruff_cache",
+    "build",
+    "dist",
+    "docs/build",
 ]
 
 [tool.ruff.per-file-ignores]
@@ -195,9 +191,7 @@ exclude = [
 [tool.coverage.run]
 source = ["pycsamt"]
 omit   = [
-    "*_v1*", "*geodrill*", "*gui_v1*", "*cli_v1*",
-    "*modeling_v1*", "*plot_v1*", "*processing_v1*",
-    "*_core_v1*", "*utils_v1*", "*view*",
+    "*/__pycache__/*",
 ]
 
 [tool.coverage.report]

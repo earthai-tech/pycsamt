@@ -596,16 +596,31 @@ class InterpController:
                       polar: bool = False, **kw) -> "Figure":
         if self.state.sites is None:
             return self._no_sites_fig()
+        import inspect
         import matplotlib.pyplot as plt
         import pycsamt.emtools as et
         fn = getattr(et, fn_name, None)
         if fn is None:
             return self._not_implemented(fn_name)
         try:
+            params = inspect.signature(fn).parameters
             subplot_kw = {"projection": "polar"} if polar else {}
             fig, ax = plt.subplots(figsize=(12, 5), subplot_kw=subplot_kw)
             self._apply_fig_style(fig, ax)
-            fn(self.state.sites, ax=ax, verbose=0)
+            if "ax" in params:
+                result = fn(self.state.sites, ax=ax, verbose=0, **kw)
+            elif "axes" in params:
+                result = fn(self.state.sites, axes=ax, verbose=0, **kw)
+            else:
+                # Function manages its own figure; close the placeholder
+                plt.close(fig)
+                result = fn(self.state.sites, verbose=0, **kw)
+                fig = None
+            if isinstance(result, plt.Figure):
+                if fig is not None and result is not fig:
+                    plt.close(fig)
+                fig = result
+                self._apply_fig_style_minimal(fig)
             return fig
         except Exception as exc:
             return self._error_fig(f"{fn_name}: {exc}")

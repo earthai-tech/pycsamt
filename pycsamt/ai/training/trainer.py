@@ -137,7 +137,7 @@ class EMTrainer:
             weight_decay=self.weight_decay,
         )
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimiser, mode="min", factor=0.5, patience=10, verbose=False
+            optimiser, mode="min", factor=0.5, patience=10
         )
 
         train_loader = DataLoader(

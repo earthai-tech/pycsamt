@@ -202,7 +202,7 @@ class TensorFlowBackend(NeuralBackend):
         n_in = spec.get("n_in", 4)
         n_out = spec.get("n_out", 1)
         channels = spec.get("channels", (32, 64, 128, 256, 512))
-        dropout = spec.get("n_freqs", 32)  # use n_freqs as spatial hint
+        dropout = spec.get("dropout", 0.2)
 
         def _conv2_block(x, ch, d):
             x = layers.Conv2D(ch, 3, padding="same", activation="relu")(x)

@@ -87,6 +87,13 @@ class DataController:
         if self._sites is None:
             return pd.DataFrame(columns=self.STATION_COLUMNS)
 
+        if not hasattr(self._sites, "as_list"):
+            try:
+                from pycsamt.site.base import to_sites
+                self._sites = to_sites(self._sites)
+            except Exception:
+                return pd.DataFrame(columns=self.STATION_COLUMNS)
+
         rows: List[Dict] = []
         for edi in self._sites.as_list():
             # sites.as_list() returns EDIFile objects; Sites.get() returns a
@@ -117,7 +124,7 @@ class DataController:
                 "Longitude": s.get("lon", float("nan")),
                 "Elevation": s.get("elev", float("nan")),
                 "N_freq":    s.get("nfreq", 0),
-                "Tipper":    bool(s.get("tipper", False)),
+                "Tipper":    bool(s.get("tipper", False)) or bool(edi.has_tipper),
             })
 
         df = pd.DataFrame(rows, columns=self.STATION_COLUMNS)

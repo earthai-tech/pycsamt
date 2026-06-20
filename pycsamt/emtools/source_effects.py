@@ -30,6 +30,7 @@ from ._core import (
     _get_z_block,
     _name,
 )
+from ..api.station import PYCSAMT_STATION_RENDERING
 
 __all__ = [
     "BETA_THRESH_PCT",
@@ -516,6 +517,10 @@ def plot_overprint_section(
             grid_beta[fi, si] = row["beta_pct"]
 
     y_vals = 1.0 / freqs_all if period_axis else freqs_all
+    if period_axis:
+        order = np.argsort(y_vals)
+        y_vals = y_vals[order]
+        grid_beta = grid_beta[order]
     x_vals = np.arange(len(stations))
 
     vmin = max(grid_beta[np.isfinite(grid_beta)].min(), 1e-3) \
@@ -545,9 +550,13 @@ def plot_overprint_section(
                        colors="white", linewidths=1.4,
                        linestyles="--")
 
-    ax.set_xticks(x_vals)
-    ax.set_xticklabels(stations, rotation=45, ha="right", fontsize=8)
-    ax.set_xlabel("Station")
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        x_vals,
+        stations,
+        preset="pseudosection",
+        xlim=(-0.5, len(stations) - 0.5),
+    )
     if log_y:
         ax.set_yscale("log")
 

@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Optional, Tuple 
+from typing import Any, Iterable, List, Optional, Tuple 
 import warnings
 
 import numpy as np 
@@ -9,6 +9,36 @@ import numpy as np
 from typing import Callable
 from ..seg.collection import EDICollection
 from ..site.base import Sites
+
+
+def _axes_list(axes: Any, n: int, *, label: str = "axes") -> Optional[List[Any]]:
+    """Return *n* flattened matplotlib axes, or ``None`` if not supplied."""
+    if axes is None:
+        return None
+    if isinstance(axes, np.ndarray):
+        out = list(axes.ravel())
+    elif isinstance(axes, (list, tuple)):
+        out = list(np.asarray(axes, dtype=object).ravel())
+    else:
+        out = [axes]
+    if len(out) < n:
+        raise ValueError(f"{label} must provide at least {n} axes; got {len(out)}.")
+    return out[:n]
+
+
+def hide_polar_radius_labels(ax: Any) -> Any:
+    """Hide radial tick labels on a polar axes while keeping grid rings."""
+    if ax is None or getattr(ax, "name", "") != "polar":
+        return ax
+    try:
+        ax.set_yticklabels([])
+    except Exception:
+        pass
+    try:
+        ax.tick_params(axis="y", labelleft=False, labelright=False)
+    except Exception:
+        pass
+    return ax
 
 
 def _wrap_one(ed):
@@ -63,6 +93,20 @@ def _iter_items(sites: Any) -> Iterable[Any]:
     if isinstance(items, dict):
         for _, it in items.items():
             yield it
+
+
+def _unwrap(ed: Any) -> Any:
+    """Return the raw EDI object behind a Site wrapper when possible."""
+    try:
+        from ..site.base import to_edis
+
+        raw = to_edis(ed, strict=False)
+        if isinstance(raw, list):
+            return raw[0] if raw else ed
+        return raw if raw is not None else ed
+    except Exception:
+        edi = getattr(ed, "edi", None)
+        return edi if edi is not None else ed
 
 
 def _name(ed: Any, i: int) -> str:

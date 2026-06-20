@@ -906,7 +906,21 @@ AGENT_REGISTRY: Dict[str, AgentEntry] = {
         "params": {
             "default_workflow": {
                 "type": "combo",
-                "options": ["qc", "inversion", "interpretation", "full"],
+                "options": [
+                    "qc",
+                    "phase_analysis",
+                    "pre_inversion",
+                    "ai_inversion",
+                    "inv2d",
+                    "inv3d",
+                    "ensemble_inversion",
+                    "joint_inversion",
+                    "modem",
+                    "tipper",
+                    "sensitivity",
+                    "rotation",
+                    "full",
+                ],
                 "default": "qc",
                 "label": "Default workflow",
                 "tip": "Fallback workflow when the NL request is ambiguous.",
@@ -940,7 +954,13 @@ AGENT_REGISTRY: Dict[str, AgentEntry] = {
         "params": {
             "workflow": {
                 "type": "combo",
-                "options": ["qc", "inversion", "full"],
+                "options": [
+                    "qc",
+                    "phase_analysis",
+                    "pre_inversion",
+                    "ai_inversion",
+                    "full",
+                ],
                 "default": "qc",
                 "label": "Workflow",
             },

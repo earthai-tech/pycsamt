@@ -87,6 +87,13 @@
 
       Occam2D, ModEM, MARE2DEM, native files, and external runners.
 
+   .. grid-item-card:: Site tools
+      :link: site/index
+      :link-type: doc
+
+      Station containers, coordinate handling, selection, editing, export,
+      and site reports.
+
    .. grid-item-card:: Applications
       :link: applications/index
       :link-type: doc
@@ -137,6 +144,7 @@
    pipeline/index
    forward/index
    models/index
+   site/index
    applications/index
 
 .. toctree::

@@ -22,6 +22,7 @@ from pycsamt.emtools.remove_noise import (
     apply_emap_filter,
     confidence_gated_emap_filter,
     correct_static_shift,
+    drop_freqs_manual,
     EMAPFilterResult,
     emap_filter_report,
     fixed_length_moving_average,
@@ -1079,3 +1080,19 @@ class TestConfidenceFrequencyEditing:
         assert "decisions" in ax.get_title().lower()
         assert ax.xaxis.get_label_position() == "top"
         plt.close("all")
+
+
+class TestManualFrequencyDrop:
+    def test_drop_freqs_manual_removes_rows_without_injecting_nan(self):
+        site = _site("S00", n=6)
+        drop = float(site.freq[2])
+
+        out = drop_freqs_manual([site], drop_freqs=[drop])
+        edited = list(out)[0]
+        raw = getattr(edited, "edi", edited)
+        Z = raw.Z
+
+        assert Z.freq.size == 5
+        assert Z.z.shape == (5, 2, 2)
+        assert not np.any(np.isclose(Z.freq, drop))
+        assert np.isfinite(Z.z).all()

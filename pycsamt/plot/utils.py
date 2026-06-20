@@ -152,13 +152,23 @@ def plot2d(
     if cb_label:
         cbar.set_label(cb_label, fontsize=1.2 * font_size)
 
-    # Twin top-axis with station labels
+    # Twin top-axis with station labels aligned to real x positions.
+    # Subsample when there are many stations so labels don't overlap.
     axe2 = axe.twiny()
     axe2.set_xlim(axe.get_xlim())
-    axe2.set_xticks(range(len(x_vec)))
+    _max_lbl = 20
+    if n_cols > _max_lbl:
+        _step = max(1, n_cols // _max_lbl)
+        _tick_x   = x_vec[::_step]
+        _tick_lbl = [stnlist[i] for i in range(0, n_cols, _step)]
+    else:
+        _tick_x   = x_vec
+        _tick_lbl = list(stnlist)
+    axe2.set_xticks(_tick_x)
+    axe2.set_xticklabels(_tick_lbl,
+                         rotation=rotate_xlabel if rotate_xlabel else 90,
+                         fontsize=font_size, ha="left")
     axe2.tick_params(labelsize=font_size)
-    _get_xticks_formatage(axe2, np.asarray(stnlist),
-                          fmt="S{:02}", auto=True, rotation=rotate_xlabel)
     if top_label:
         axe2.set_xlabel(top_label, fontsize=1.5 * font_size)
 

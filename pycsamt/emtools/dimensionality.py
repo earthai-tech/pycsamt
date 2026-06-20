@@ -19,6 +19,8 @@ from ._core import (
     _get_z_block, 
 )
 from .tensor import build_phase_tensor_table
+from ..api.labels import LOG10_PERIOD_LABEL
+from ..api.station import PYCSAMT_STATION_RENDERING
 from ..api.view import maybe_wrap_frame
 
 # -------------------------- local helpers ------------------------------- #
@@ -634,14 +636,20 @@ def plot_atom_psection(
         origin="lower",
         interpolation="nearest",
     )
-    ax.set_xlabel("Station")
-    ax.set_ylabel("LogPeriod (s)")
-    ax.set_xticks(np.arange(nx))
-    ax.set_xticklabels(sts, rotation=90)
+    ax.set_ylabel(LOG10_PERIOD_LABEL)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(nx, dtype=float),
+        sts,
+        preset="pseudosection",
+        xlim=(-0.5, nx - 0.5),
+    )
     yt = np.linspace(0, ny - 1, num=min(8, ny))
     yv = np.linspace(ygrid.min(), ygrid.max(), num=yt.size)
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yv])
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
     # legend: colored squares for a few atoms
     from matplotlib.lines import Line2D
     max_lab = min(k, 10)
@@ -728,15 +736,21 @@ def plot_dim_confidence_grid(
         origin="lower",
         interpolation="nearest",
     )
-    ax.set_xlabel("Station")
-    ax.set_ylabel("LogPeriod (s)")
-    ax.set_xticks(np.arange(D.shape[1]))          # shape[1] = n_stations
-    ax.set_xticklabels(piv_d.columns, rotation=90)
+    ax.set_ylabel(LOG10_PERIOD_LABEL)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(D.shape[1], dtype=float),
+        list(piv_d.columns),
+        preset="pseudosection",
+        xlim=(-0.5, D.shape[1] - 0.5),
+    )
     yt = np.linspace(0, D.shape[0] - 1, num=min(8, D.shape[0]))  # shape[0] = n_logp
     yv = np.linspace(piv_d.index.min(), piv_d.index.max(),
                      num=min(8, len(piv_d.index)))
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yv])
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
     # legend
     handles = [
         Line2D([0], [0], marker="s", ls="",

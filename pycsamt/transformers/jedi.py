@@ -566,8 +566,9 @@ class AVGtoEDI(TransformerMixin):
         lon_col = _pick(("longitude", "lon", "long", "LON", "LONG"))
         elv_col = _pick(("elevation", "elev", "alt", "ALT"))
     
-        lat = _num(row[lat_col].iloc[0]) if lat_col else 0.0
-        lon = _num(row[lon_col].iloc[0]) if lon_col else 0.0
+        has_latlon = lat_col is not None and lon_col is not None
+        lat = _num(row[lat_col].iloc[0]) if has_latlon else None
+        lon = _num(row[lon_col].iloc[0]) if has_latlon else None
         elv = _num(row[elv_col].iloc[0]) if elv_col else 0.0
     
         h = ed.get_section("head")
@@ -578,14 +579,16 @@ class AVGtoEDI(TransformerMixin):
                 empty=self._empty(),
             )
     
-        h.lat = lat
-        h.long = lon
+        if has_latlon:
+            h.lat = lat
+            h.long = lon
         h.elev = elv
     
         dm = ed.get_section("definemeas")
         if dm is not None:
-            dm.reflat = lat
-            dm.reflong = lon
+            if has_latlon:
+                dm.reflat = lat
+                dm.reflong = lon
             dm.refelev = elv
         
 
@@ -1357,5 +1360,4 @@ class JtoEDI(TransformerMixin):
             mt.ey = ids["EY"]
         if has_tip:
             mt.hz = ids["HZ"]
-
 

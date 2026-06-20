@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle as _Rect
 
 from ..api.section import PYCSAMT_SECTION, SectionStyle
+from ..api.labels import LOG10_PERIOD_LABEL
 from ..api.station import (
     PYCSAMT_STATION_RENDERING,
     StationAxisStyle,
@@ -17,6 +18,7 @@ from ..api.view import maybe_wrap_frame
 
 from ._core import (
     ensure_sites,
+    _axes_list,
     _iter_items,
     _get_z_block,
     _get_t_block,
@@ -1339,6 +1341,7 @@ def plot_station_confidence_dashboard(
     method: str = "composite",
     ci_hi: float = 0.95,
     ci_lo: float = 0.50,
+    axes=None,
     figsize: Tuple[float, float] = (10.5, 6.0),
     spacing_m: float = 200.0,
     recursive: bool = True,
@@ -1363,15 +1366,20 @@ def plot_station_confidence_dashboard(
         strict=strict,
         verbose=verbose,
     )
-    fig, axes = plt.subplots(
-        2,
-        3,
-        figsize=figsize,
-        sharex=True,
-        sharey=True,
-        constrained_layout=True,
-    )
-    flat_axes = axes.ravel()
+    axes_given = _axes_list(axes, 6) if axes is not None else None
+    if axes_given is None:
+        fig, axes_grid = plt.subplots(
+            2,
+            3,
+            figsize=figsize,
+            sharex=True,
+            sharey=True,
+            constrained_layout=True,
+        )
+        flat_axes = axes_grid.ravel()
+    else:
+        flat_axes = np.asarray(axes_given, dtype=object)
+        fig = flat_axes[0].figure
     if tb.empty:
         flat_axes[0].text(0.5, 0.5, "no stations", ha="center", va="center")
         return fig
@@ -1446,9 +1454,10 @@ def plot_station_confidence_dashboard(
                 ax.set_ylim(-0.03, 1.05)
                 ax.grid(True, ls=":", alpha=0.35)
         ax.set_title(title, fontsize=9)
-    for ax in axes[:, 0]:
+    axes_grid = np.asarray(flat_axes, dtype=object).reshape(2, 3)
+    for ax in axes_grid[:, 0]:
         ax.set_ylabel("Confidence")
-    for ax in axes[-1, :]:
+    for ax in axes_grid[-1, :]:
         ax.set_xlabel(r"$\log_{10}T$ (s)")
     fig.suptitle(
         f"{station} frequency-confidence dashboard ({method})",
@@ -1737,17 +1746,23 @@ def plot_snr_hist(
 def plot_qc_quicklook(
     sites: Any,
     *,
+    axes=None,
     figsize: Tuple[float, float] = (10.0, 8.0),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
 ):
-    fig = plt.figure(figsize=figsize)
-    gs = fig.add_gridspec(2, 2, hspace=0.35, wspace=0.25)
-    ax1 = fig.add_subplot(gs[0, :])
-    ax2 = fig.add_subplot(gs[1, 0])
-    ax3 = fig.add_subplot(gs[1, 1])
+    axes_given = _axes_list(axes, 3) if axes is not None else None
+    if axes_given is None:
+        fig = plt.figure(figsize=figsize)
+        gs = fig.add_gridspec(2, 2, hspace=0.35, wspace=0.25)
+        ax1 = fig.add_subplot(gs[0, :])
+        ax2 = fig.add_subplot(gs[1, 0])
+        ax3 = fig.add_subplot(gs[1, 1])
+    else:
+        ax1, ax2, ax3 = axes_given
+        fig = ax1.figure
     plot_coverage_psection(
         sites,
         metric="presence",
@@ -1989,16 +2004,22 @@ def plot_xyyx_crossover_map(
                 ha="center", va="center")
         return ax
     ax.scatter(Xs, Ys, s=16, c="crimson", alpha=0.8)
-    ax.set_xlabel("Station")
-    ax.set_ylabel("LogPeriod (s)")
-    ax.set_xticks(np.arange(len(sts)))
-    ax.set_xticklabels(sts, rotation=90)
+    ax.set_ylabel(LOG10_PERIOD_LABEL)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(len(sts), dtype=float),
+        sts,
+        preset="pseudosection",
+        xlim=(-0.5, len(sts) - 0.5),
+    )
     # y ticks from Ys
     yall = np.array(Ys, dtype=float)
     yt, yl = _y_ticks(yall, 8)
     ax.set_yticks(yt)
     lo, hi = float(np.nanmin(yall)), float(np.nanmax(yall))
     ax.set_ylim(lo - 0.05 * (hi - lo), hi + 0.05 * (hi - lo))
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
     return ax
 
 

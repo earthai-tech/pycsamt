@@ -9,7 +9,11 @@ from ._core import (
     _iter_items,
     _get_z_block,
     _name,
+    _axes_list,
+    hide_polar_radius_labels,
 )
+from ..api.labels import LOG10_PERIOD_LABEL
+from ..api.station import PYCSAMT_STATION_RENDERING
 
 # default colors consistent with plot.py
 _COL = {
@@ -72,6 +76,7 @@ def plot_phasor_wheel(
     if not sel:
         if ax is None:
             _, ax = plt.subplots(subplot_kw={"polar": True})
+        hide_polar_radius_labels(ax)
         ax.text(0.5, 0.5, "no sites", ha="center", va="center")
         return ax
     if station is None:
@@ -80,6 +85,7 @@ def plot_phasor_wheel(
     if ed is None:
         if ax is None:
             _, ax = plt.subplots(subplot_kw={"polar": True})
+        hide_polar_radius_labels(ax)
         ax.text(0.5, 0.5, "station not found",
                 ha="center", va="center")
         return ax
@@ -87,6 +93,7 @@ def plot_phasor_wheel(
     if Z is None:
         if ax is None:
             _, ax = plt.subplots(subplot_kw={"polar": True})
+        hide_polar_radius_labels(ax)
         ax.text(0.5, 0.5, "no Z", ha="center", va="center")
         return ax
 
@@ -116,6 +123,7 @@ def plot_phasor_wheel(
         )
     ax.set_theta_zero_location("E")
     ax.set_theta_direction(-1)
+    hide_polar_radius_labels(ax)
     for c in components:
         col = cmap_cols.get(c, "k")
         ax.scatter(
@@ -130,6 +138,7 @@ def plot_phasor_wheel(
                 "-", lw=lw, color=col, alpha=0.6,
             )
     ax.grid(True, alpha=0.25)
+    hide_polar_radius_labels(ax)
     ax.set_title(str(station), pad=8)
     ax.legend(loc="lower left", bbox_to_anchor=(0.02, 0.02),
               frameon=False, fontsize=8)
@@ -196,6 +205,9 @@ def plot_offdiag_antisym_residual(
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     lp = _logper(G)
+    order = np.argsort(lp)
+    lp = lp[order]
+    ZI = ZI[order]
     v = ZI[np.isfinite(ZI)]
     if vlim is None and v.size:
         vlim = float(max(0.2, np.nanpercentile(v, 95)))
@@ -208,14 +220,20 @@ def plot_offdiag_antisym_residual(
         vmin=0.0,
         vmax=(vlim or 1.0),
     )
-    ax.set_xlabel("Station")
-    ax.set_ylabel("LogPeriod (s)")
-    ax.set_xticks(np.arange(len(labs)))
-    ax.set_xticklabels(labs, rotation=90)
+    ax.set_ylabel(LOG10_PERIOD_LABEL)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(len(labs), dtype=float),
+        labs,
+        preset="pseudosection",
+        xlim=(-0.5, len(labs) - 0.5),
+    )
     yt = np.linspace(0, len(lp) - 1, num=min(8, len(lp)))
     yv = np.linspace(lp.min(), lp.max(), num=yt.size)
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yv])
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
     cb = plt.colorbar(im, ax=ax)
     cb.set_label("|Zxy+Zyx|/(|Zxy|+|Zyx|)")
     return ax
@@ -268,6 +286,7 @@ def plot_determinant_track(
     pcts: Tuple[float, float, float] = (10.0, 50.0, 90.0),
     n_draws: int = 200,
     height_ratio: Tuple[int, int] = (2, 1),
+    axes=None,
     figsize: Tuple[float, float] = (6.4, 3.8),
     color_mag: str = "C0",
     color_phase: str = "C3",
@@ -284,17 +303,26 @@ def plot_determinant_track(
     sel = {}
     for i, ed in enumerate(_iter_items(S)):
         sel[_name(ed, i)] = ed
+    axes_given = _axes_list(axes, 1) if axes is not None else None
     if not sel:
-        fig = plt.figure(figsize=figsize)
-        ax = fig.add_subplot(111)
+        if axes_given is None:
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(111)
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no sites", ha="center", va="center")
         return fig
     if station is None:
         station = sorted(sel.keys())[0]
     ed = sel.get(station, None)
     if ed is None:
-        fig = plt.figure(figsize=figsize)
-        ax = fig.add_subplot(111)
+        if axes_given is None:
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(111)
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "station not found",
                 ha="center", va="center")
         return fig
@@ -304,8 +332,12 @@ def plot_determinant_track(
     else:
         _, z, fr = out[:3]; ze = None
     if z is None or fr is None:
-        fig = plt.figure(figsize=figsize)
-        ax = fig.add_subplot(111)
+        if axes_given is None:
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(111)
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no Z", ha="center", va="center")
         return fig
 
@@ -319,12 +351,17 @@ def plot_determinant_track(
         pcts=pcts, n_draws=n_draws,
     )
     x = per[m]
-    fig = plt.figure(figsize=figsize)
-    gs = fig.add_gridspec(
-        2, 1, height_ratios=height_ratio, hspace=0.06
-    )
-    ax1 = fig.add_subplot(gs[0]); ax2 = fig.add_subplot(gs[1],
-                                                       sharex=ax1)
+    axes_given = _axes_list(axes, 2) if axes is not None else None
+    if axes_given is None:
+        fig = plt.figure(figsize=figsize)
+        gs = fig.add_gridspec(
+            2, 1, height_ratios=height_ratio, hspace=0.06
+        )
+        ax1 = fig.add_subplot(gs[0]); ax2 = fig.add_subplot(gs[1],
+                                                           sharex=ax1)
+    else:
+        ax1, ax2 = axes_given
+        fig = ax1.figure
     ax1.set_xscale("log"); ax2.set_xscale("log")
     ax1.fill_between(
         x, band[:, 0], band[:, 1], color=color_mag, alpha=fill_alpha

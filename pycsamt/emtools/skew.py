@@ -14,6 +14,8 @@ from ._core import (
     _name,
 )
 from .tensor import build_phase_tensor_table
+from ..api.station import PYCSAMT_STATION_RENDERING
+from ..api.labels import LOG10_PERIOD_LABEL, PERIOD_LABEL
 
 
 # ---------- Bahr skewness ----------
@@ -433,10 +435,10 @@ def plot_skew_traffic_psection(
     df["conf"] = conf
     if axis_y == "logperiod":
         df["yy"] = np.log10(df["period"].to_numpy())
-        ylab = "LogPeriod (s)"
+        ylab = LOG10_PERIOD_LABEL
     else:
         df["yy"] = df["period"].to_numpy()
-        ylab = "Period (s)"
+        ylab = PERIOD_LABEL
     sts = list(df["station"].unique())
     sidx = {s: i for i, s in enumerate(sts)}
     X = df["station"].map(sidx).to_numpy(dtype=int)
@@ -460,14 +462,20 @@ def plot_skew_traffic_psection(
         H, aspect="auto", origin="lower",
         interpolation="nearest",
     )
-    ax.set_xlabel("Station")
     ax.set_ylabel(ylab)
-    ax.set_xticks(np.arange(len(sts)))
-    ax.set_xticklabels(sts, rotation=90)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(len(sts), dtype=float),
+        sts,
+        preset="pseudosection",
+        xlim=(-0.5, len(sts) - 0.5),
+    )
     yt = np.linspace(0, yall.size - 1, num=min(8, yall.size))
     yv = np.linspace(yall.min(), yall.max(), num=yt.size)
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yv])
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
     return ax
 
 

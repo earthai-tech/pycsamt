@@ -6,9 +6,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from ..api.station import PYCSAMT_STATION_RENDERING
+from ..api.labels import LOG10_PERIOD_LABEL
 from ._core import (
     ensure_sites,
     _apply_each,
+    _axes_list,
     _iter_items,
     _get_z_block,
     _get_t_block,
@@ -253,6 +256,304 @@ def smooth_logfreq(
         return Si
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
+
+
+# ----------------------- rho/phase trend smoothing ----------------------- #
+
+_COMPONENT_INDEX: Dict[str, Tuple[int, int]] = {
+    "xx": (0, 0),
+    "xy": (0, 1),
+    "yx": (1, 0),
+    "yy": (1, 1),
+}
+
+
+def _resolve_components(components: str | Sequence[str]) -> Tuple[str, ...]:
+    if isinstance(components, str):
+        key = components.strip().lower().replace("-", "_")
+        aliases = {
+            "offdiag": ("xy", "yx"),
+            "off_diagonal": ("xy", "yx"),
+            "offdiagonal": ("xy", "yx"),
+            "diagonal": ("xx", "yy"),
+            "diag": ("xx", "yy"),
+            "all": ("xx", "xy", "yx", "yy"),
+            "both": ("xy", "yx"),
+        }
+        if key in aliases:
+            return aliases[key]
+        if key in _COMPONENT_INDEX:
+            return (key,)
+        parts = [p.strip().lower() for p in key.replace(",", " ").split()]
+    else:
+        parts = [str(p).strip().lower() for p in components]
+    out: List[str] = []
+    for part in parts:
+        if part not in _COMPONENT_INDEX:
+            raise ValueError(
+                "components must be one of 'offdiag', 'diagonal', 'all', "
+                "'xx', 'xy', 'yx', 'yy', or a sequence of those values; "
+                f"got {part!r}."
+            )
+        if part not in out:
+            out.append(part)
+    if not out:
+        raise ValueError("components cannot be empty.")
+    return tuple(out)
+
+
+def _robust_polyfit_predict(
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    degree: int,
+    min_points: int,
+    robust: bool,
+    robust_iters: int,
+) -> np.ndarray:
+    out = np.asarray(y, dtype=float).copy()
+    good = np.isfinite(x) & np.isfinite(y)
+    if np.count_nonzero(good) < max(2, int(min_points)):
+        return out
+    xv = np.asarray(x[good], dtype=float)
+    yv = np.asarray(y[good], dtype=float)
+    deg = int(max(0, min(int(degree), xv.size - 1)))
+    if deg == 0:
+        out[good] = np.nanmedian(yv)
+        return out
+
+    weights = np.ones_like(yv, dtype=float)
+    coeff = None
+    n_iter = max(1, int(robust_iters) if robust else 1)
+    for _ in range(n_iter):
+        try:
+            coeff = np.polyfit(xv, yv, deg=deg, w=weights)
+        except (np.linalg.LinAlgError, ValueError, TypeError):
+            return out
+        pred = np.polyval(coeff, xv)
+        if not robust:
+            break
+        resid = yv - pred
+        scale = 1.4826 * np.nanmedian(np.abs(resid - np.nanmedian(resid)))
+        if not np.isfinite(scale) or scale <= 0:
+            break
+        u = resid / (4.685 * scale)
+        weights = (1.0 - u**2) ** 2
+        weights[np.abs(u) >= 1.0] = 0.0
+        if np.count_nonzero(weights > 0) <= deg:
+            break
+    if coeff is not None:
+        out[good] = np.polyval(coeff, xv)
+    return out
+
+
+def _smooth_phase_deg(
+    x: np.ndarray,
+    phase_deg: np.ndarray,
+    *,
+    degree: int,
+    min_points: int,
+    robust: bool,
+    robust_iters: int,
+) -> np.ndarray:
+    phase_deg = np.asarray(phase_deg, dtype=float)
+    out = phase_deg.copy()
+    good = np.isfinite(x) & np.isfinite(phase_deg)
+    if np.count_nonzero(good) < max(2, int(min_points)):
+        return out
+    idx = np.flatnonzero(good)
+    order = idx[np.argsort(x[idx])]
+    unwrapped = np.unwrap(np.deg2rad(phase_deg[order]))
+    smoothed = _robust_polyfit_predict(
+        x[order],
+        unwrapped,
+        degree=degree,
+        min_points=min_points,
+        robust=robust,
+        robust_iters=robust_iters,
+    )
+    out[order] = np.rad2deg(smoothed)
+    return out
+
+
+def smooth_rho_phase(
+    sites: Any,
+    *,
+    components: str | Sequence[str] = "offdiag",
+    degree: int = 3,
+    min_points: Optional[int] = None,
+    smooth_rho: bool = True,
+    smooth_phase: bool = True,
+    robust: bool = True,
+    robust_iters: int = 3,
+    blend: float = 1.0,
+    inplace: bool = False,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> Any:
+    r"""
+    Smooth apparent resistivity and phase trends, then rebuild ``Z``.
+
+    The function operates station-by-station along the frequency axis.  It
+    fits polynomial trends versus :math:`\log_{10}(f)` to
+    :math:`\log_{10}(\rho_a)` and to unwrapped impedance phase, then writes
+    the corresponding complex impedance back into each selected tensor
+    component.  This keeps apparent resistivity and phase physically coupled
+    through the same complex ``Z`` tensor instead of only smoothing display
+    arrays.
+
+    Parameters
+    ----------
+    sites : object
+        Any input accepted by :func:`ensure_sites`.
+    components : {"offdiag", "diagonal", "all", "xx", "xy", "yx", "yy"} \
+or sequence, default "offdiag"
+        Tensor components to smooth.  The default targets ``xy`` and ``yx``
+        because they are the usual MT/CSAMT apparent-resistivity and phase
+        components used for interpretation and 2-D preparation.
+    degree : int, default 3
+        Polynomial degree for the log-frequency trend.  It is automatically
+        reduced when a station has too few valid frequencies.
+    min_points : int or None, default None
+        Minimum number of finite points required per component.  If ``None``,
+        uses ``degree + 2``.
+    smooth_rho, smooth_phase : bool, default True
+        Select whether the impedance amplitude, phase angle, or both are
+        replaced by the fitted trend.
+    robust : bool, default True
+        Use a Tukey-style iteratively reweighted polynomial fit to reduce the
+        influence of isolated spikes.
+    robust_iters : int, default 3
+        Maximum robust reweighting iterations.
+    blend : float, default 1.0
+        Blend between original and smoothed curves.  ``1`` fully applies the
+        trend; ``0.5`` applies half of the correction.
+    inplace : bool, default False
+        If ``True``, mutate the normalized input sites.  Otherwise work on a
+        best-effort copy of the underlying EDI objects and return new
+        ``Sites``.
+    recursive, on_dup, strict, verbose
+        Forwarded to :func:`ensure_sites` / ``to_edis``.
+
+    Returns
+    -------
+    pycsamt.site.base.Sites
+        Sites containing the smoothed impedance tensors.
+
+    Notes
+    -----
+    Apparent resistivity is smoothed in logarithmic space because
+    :math:`\rho_a` commonly spans orders of magnitude.  Phase is unwrapped
+    before fitting so that crossings near :math:`\pm 180^\circ` do not create
+    artificial jumps.
+    """
+    if not smooth_rho and not smooth_phase:
+        return ensure_sites(
+            sites, recursive=recursive, on_dup=on_dup,
+            strict=strict, verbose=verbose,
+        )
+
+    comps = _resolve_components(components)
+    blend = float(np.clip(blend, 0.0, 1.0))
+    degree = int(max(0, degree))
+    min_points = int(min_points if min_points is not None else degree + 2)
+
+    if inplace:
+        S = ensure_sites(
+            sites, recursive=recursive, on_dup=on_dup,
+            strict=strict, verbose=verbose,
+        )
+    else:
+        from ..site.base import to_edis
+
+        edis = to_edis(
+            sites,
+            copy=True,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
+        S = ensure_sites(
+            edis, recursive=False, on_dup=on_dup,
+            strict=strict, verbose=verbose,
+        )
+
+    for ed in _iter_items(S):
+        Z, z, fr = _get_z_block(ed)
+        if Z is None:
+            continue
+        z2 = np.asarray(z, dtype=np.complex128).copy()
+        fr = np.asarray(fr, dtype=float).ravel()
+        n = min(z2.shape[0], fr.size)
+        if n == 0:
+            continue
+        z2 = z2[:n].copy()
+        fr = fr[:n]
+        valid_freq = np.isfinite(fr) & (fr > 0.0)
+        if np.count_nonzero(valid_freq) < max(2, min_points):
+            continue
+        x = np.full(fr.shape, np.nan, dtype=float)
+        x[valid_freq] = np.log10(fr[valid_freq])
+
+        for comp in comps:
+            i, j = _COMPONENT_INDEX[comp]
+            zij = z2[:, i, j]
+            amp = np.abs(zij)
+            phase = np.rad2deg(np.angle(zij))
+
+            amp_new = amp.copy()
+            if smooth_rho:
+                rho = np.full_like(fr, np.nan, dtype=float)
+                ok_rho = valid_freq & np.isfinite(amp) & (amp > 0.0)
+                rho[ok_rho] = (amp[ok_rho] ** 2) / (5.0 * fr[ok_rho])
+                log_rho = np.full_like(rho, np.nan, dtype=float)
+                ok_log = ok_rho & (rho > 0.0)
+                log_rho[ok_log] = np.log10(rho[ok_log])
+                log_rho_fit = _robust_polyfit_predict(
+                    x,
+                    log_rho,
+                    degree=degree,
+                    min_points=min_points,
+                    robust=robust,
+                    robust_iters=robust_iters,
+                )
+                if blend < 1.0:
+                    log_rho_fit = (
+                        (1.0 - blend) * log_rho + blend * log_rho_fit
+                    )
+                rho_fit = 10.0 ** log_rho_fit
+                ok_fit = ok_rho & np.isfinite(rho_fit) & (rho_fit > 0.0)
+                amp_new[ok_fit] = np.sqrt(5.0 * fr[ok_fit] * rho_fit[ok_fit])
+
+            phase_new = phase.copy()
+            if smooth_phase:
+                phase_fit = _smooth_phase_deg(
+                    x,
+                    phase,
+                    degree=degree,
+                    min_points=min_points,
+                    robust=robust,
+                    robust_iters=robust_iters,
+                )
+                if blend < 1.0:
+                    phase_fit = (1.0 - blend) * phase + blend * phase_fit
+                ok_phi = valid_freq & np.isfinite(phase_fit)
+                phase_new[ok_phi] = phase_fit[ok_phi]
+
+            ok = valid_freq & np.isfinite(amp_new) & np.isfinite(phase_new)
+            z2[ok, i, j] = amp_new[ok] * np.exp(1j * np.deg2rad(phase_new[ok]))
+
+        try:
+            z_full = np.asarray(getattr(Z, "z"), dtype=np.complex128).copy()
+            z_full[:n] = z2
+            Z.z = z_full
+        except Exception:
+            Z.z = z2
+
+    return S
 
 
 # --------------------- group-trend shrinkage (robust) -------------------- #
@@ -763,6 +1064,158 @@ def mask_incoherent_freqs(
         return Si
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
+
+
+def drop_freqs_manual(
+    sites: Any,
+    *,
+    drop_freqs: Sequence[float] = (),
+    tol_rel: float = 0.005,
+    inplace: bool = False,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> Any:
+    """Drop Z (and tipper) rows at user-specified frequencies.
+
+    Parameters
+    ----------
+    sites : object
+        Any input accepted by :func:`ensure_sites`.
+    drop_freqs : sequence of float
+        Frequencies (Hz) to remove.  Each value is matched within
+        ``tol_rel`` relative tolerance: ``|f - f_drop| / f_drop < tol_rel``.
+    tol_rel : float, default 0.005
+        Relative frequency tolerance for matching (≈0.5%).
+    inplace : bool, default False
+        If ``True`` mutate; otherwise work on a copy.
+
+    Returns
+    -------
+    Sites
+        Sites with the specified frequency rows removed from Z, Z errors,
+        apparent resistivity/phase, and tipper arrays where present.
+    """
+    drop_arr = np.asarray([float(f) for f in (drop_freqs or ())], dtype=float)
+    drop_arr = drop_arr[np.isfinite(drop_arr) & (drop_arr > 0.0)]
+
+    if drop_arr.size == 0:
+        return ensure_sites(
+            sites, recursive=recursive, on_dup=on_dup,
+            strict=strict, verbose=verbose,
+        )
+
+    if inplace:
+        S = ensure_sites(
+            sites, recursive=recursive, on_dup=on_dup,
+            strict=strict, verbose=verbose,
+        )
+    else:
+        from ..site.base import to_edis
+        edis = to_edis(
+            sites, copy=True,
+            recursive=recursive, on_dup=on_dup,
+            strict=strict, verbose=verbose,
+        )
+        S = ensure_sites(edis, recursive=False, on_dup=on_dup,
+                         strict=strict, verbose=verbose)
+
+    def _mask_for(fr: np.ndarray) -> np.ndarray:
+        fr = np.asarray(fr, dtype=float)
+        mask = np.zeros(fr.size, dtype=bool)
+        for fd in drop_arr:
+            mask |= np.abs(fr - fd) / (fd + 1e-30) < float(tol_rel)
+        return mask
+
+    def _assign(obj, public_name: str, private_name: str, value) -> None:
+        assigned = False
+        try:
+            setattr(obj, public_name, value)
+            assigned = True
+        except Exception:
+            pass
+        if private_name and (not assigned or hasattr(obj, private_name)):
+            try:
+                setattr(obj, private_name, value)
+            except Exception:
+                pass
+
+    def _slice_first_axis(arr, keep):
+        if arr is None:
+            return None
+        try:
+            a = np.asarray(arr)
+        except Exception:
+            return None
+        if a.ndim < 1 or a.shape[0] != keep.size:
+            return None
+        return a[keep].copy()
+
+    def _trim_z_block(Z, z, fr, keep):
+        _assign(Z, "freq", "_freq", np.asarray(fr, dtype=float)[keep].copy())
+        _assign(Z, "z", "_z", np.asarray(z, dtype=np.complex128)[keep].copy())
+        for public_name, private_name in (
+            ("z_err", "_z_err"),
+            ("rho", "_rho"),
+            ("resistivity", "_rho"),
+            ("phase", "_phase"),
+            ("rho_err", "_rho_err"),
+            ("resistivity_err", "_rho_err"),
+            ("phase_err", "_phase_err"),
+        ):
+            value = getattr(Z, public_name, None)
+            sliced = _slice_first_axis(value, keep)
+            if sliced is not None:
+                _assign(Z, public_name, private_name, sliced)
+        try:
+            rot = getattr(Z, "rotation_angle", None)
+            sliced = _slice_first_axis(rot, keep)
+            if sliced is not None:
+                Z.rotation_angle = sliced
+        except Exception:
+            pass
+        try:
+            Z.compute_resistivity_phase()
+        except Exception:
+            pass
+
+    def _trim_t_block(Tt, t, ft, keep):
+        _assign(Tt, "freq", "_freq", np.asarray(ft, dtype=float)[keep].copy())
+        _assign(Tt, "tipper", "_tipper", np.asarray(t)[keep].copy())
+        for public_name, private_name in (
+            ("tipper_err", "_tipper_err"),
+            ("amplitude", "_amplitude"),
+            ("phase", "_phase"),
+            ("amplitude_err", "_amplitude_err"),
+            ("phase_err", "_phase_err"),
+        ):
+            value = getattr(Tt, public_name, None)
+            sliced = _slice_first_axis(value, keep)
+            if sliced is not None:
+                _assign(Tt, public_name, private_name, sliced)
+        try:
+            Tt.compute_amp_phase()
+        except Exception:
+            pass
+
+    for ed in _iter_items(S):
+        Z, z, fr = _get_z_block(ed)
+        if Z is not None:
+            mask = _mask_for(fr)
+            if mask.any():
+                keep = ~mask
+                if keep.any():
+                    _trim_z_block(Z, z, fr, keep)
+        Tt, t, ft = _get_t_block(ed)
+        if Tt is not None:
+            mask_t = _mask_for(ft)
+            if mask_t.any():
+                keep_t = ~mask_t
+                if keep_t.any():
+                    _trim_t_block(Tt, t, ft, keep_t)
+
+    return S
 
 
 # --------- 6) Static-shift removal — Torres-Verdín & Bostick (1992) ----- #
@@ -1730,6 +2183,7 @@ def plot_emap_filter_psection(
     clim_pct: Tuple[float, float] = (2.0, 98.0),
     delta_vlim: Optional[float] = None,
     delta_vlim_pct: float = 95.0,
+    axes=None,
     figsize: Tuple[float, float] = (11.0, 8.2),
     station_label_step: Optional[int] = 1,
     station_preset: str = "pseudosection",
@@ -1751,15 +2205,21 @@ def plot_emap_filter_psection(
         )
     st0, G0, M0 = _union_component_logmag_matrix(before_sites, component)
     st1, G1, M1 = _union_component_logmag_matrix(after_sites, component)
-    fig, axes = plt.subplots(
-        3,
-        1,
-        figsize=figsize,
-        sharex=True,
-        gridspec_kw={"hspace": 0.24},
-    )
+    axes_given = _axes_list(axes, 3) if axes is not None else None
+    if axes_given is None:
+        fig, axes_arr = plt.subplots(
+            3,
+            1,
+            figsize=figsize,
+            sharex=True,
+            gridspec_kw={"hspace": 0.24},
+        )
+        axes_arr = np.asarray(axes_arr, dtype=object).ravel()
+    else:
+        axes_arr = np.asarray(axes_given, dtype=object)
+        fig = axes_arr[0].figure
     if not st0 or not st1:
-        axes[1].text(0.5, 0.5, "no paired data", ha="center", va="center")
+        axes_arr[1].text(0.5, 0.5, "no paired data", ha="center", va="center")
         return fig
 
     labels = [station for station in st0 if station in set(st1)]
@@ -1807,11 +2267,11 @@ def plot_emap_filter_psection(
 
     extent = (-0.5, len(labels) - 0.5, y_sorted.min(), y_sorted.max())
     panels = [
-        (before[:, order].T, axes[0], cmap, vmin, vmax, "Before"),
-        (after[:, order].T, axes[1], cmap, vmin, vmax, "After"),
+        (before[:, order].T, axes_arr[0], cmap, vmin, vmax, "Before"),
+        (after[:, order].T, axes_arr[1], cmap, vmin, vmax, "After"),
         (
             delta[:, order].T,
-            axes[2],
+            axes_arr[2],
             delta_cmap,
             -float(delta_vlim),
             float(delta_vlim),
@@ -1831,18 +2291,20 @@ def plot_emap_filter_psection(
             extent=extent,
         )
         images.append(im)
-        ax.set_ylabel(r"$\log_{10}T$ (s)")
+        ax.set_ylabel(LOG10_PERIOD_LABEL)
         ax.set_title(title, fontsize=9)
         ax.grid(False)
+        if not ax.yaxis_inverted():
+            ax.invert_yaxis()
 
     _station_style_top(
-        axes[0],
+        axes_arr[0],
         labels,
         station_label_step=station_label_step,
         station_preset=station_preset,
         station_style=station_style,
     )
-    for ax in axes[1:]:
+    for ax in axes_arr[1:]:
         ax.tick_params(
             axis="x",
             which="both",
@@ -1853,7 +2315,7 @@ def plot_emap_filter_psection(
         )
     cb_main = fig.colorbar(
         images[0],
-        ax=[axes[0], axes[1]],
+        ax=[axes_arr[0], axes_arr[1]],
         fraction=0.018,
         pad=0.012,
         aspect=35,
@@ -1861,7 +2323,7 @@ def plot_emap_filter_psection(
     cb_main.set_label(rf"$\log_{{10}}|Z_{{{component.upper()}}}|$")
     cb_delta = fig.colorbar(
         images[2],
-        ax=axes[2],
+        ax=axes_arr[2],
         fraction=0.018,
         pad=0.012,
         aspect=35,
@@ -1922,6 +2384,9 @@ def nr_qc_delta_offdiag_psection(
     if vlim is None and v.size:
         vlim = float(max(0.1, np.nanpercentile(np.abs(v), 95)))
     lp = np.log10(1.0 / G)
+    order = np.argsort(lp)
+    lp = lp[order]
+    D = D[order]
     im = ax.imshow(
         D,
         aspect="auto",
@@ -1931,10 +2396,16 @@ def nr_qc_delta_offdiag_psection(
         vmin=-(vlim or 0.5),
         vmax=(vlim or 0.5),
     )
-    ax.set_xlabel("Station")
-    ax.set_ylabel("LogPeriod (s)")
-    ax.set_xticks(np.arange(len(labs)))
-    ax.set_xticklabels(labs, rotation=90)
+    ax.set_ylabel(LOG10_PERIOD_LABEL)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(len(labs)),
+        labs,
+        preset="pseudosection",
+        xlim=(-0.5, len(labs) - 0.5),
+    )
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
     yt = np.linspace(0, len(lp) - 1, num=min(8, len(lp)))
     yv = np.linspace(lp.min(), lp.max(), num=yt.size)
     ax.set_yticks(yt)
@@ -2060,10 +2531,14 @@ def nr_qc_harmonic_waterfall(
         interpolation="nearest",
         cmap="viridis",
     )
-    ax.set_xlabel("Station")
     ax.set_ylabel("Harmonic index k (k·mains)")
-    ax.set_xticks(np.arange(len(sts)))
-    ax.set_xticklabels(sts, rotation=90)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(len(sts)),
+        sts,
+        preset="pseudosection",
+        xlim=(-0.5, len(sts) - 0.5),
+    )
     yt = np.linspace(0, D.shape[0] - 1, num=min(8, D.shape[0]))
     yv = np.linspace(1, D.shape[0], num=yt.size)
     ax.set_yticks(yt)

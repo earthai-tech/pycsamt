@@ -20,14 +20,18 @@ from ..z import utils as zutils
 
 from ._core import (
     ensure_sites,
+    _axes_list,
     _iter_items,
     _name,
     _get_z_block,
     _get_t_block,
-    _apply_each
+    _apply_each,
+    hide_polar_radius_labels,
 )
 from ..api._rose_style import RoseStyle, resolve_rose_style, _UNSET
+from ..api.labels import LOG10_PERIOD_LABEL, PERIOD_LABEL
 from ..api.style import PYCSAMT_STYLE
+from ..api.station import PYCSAMT_STATION_RENDERING
 
 _BACKWARD_SINCE = "2.0.0"
 _BACKWARD_REMOVE = "2.17.0"
@@ -92,7 +96,7 @@ def rotate(
         strict=strict,
         verbose=verbose,
     )
-    return _edit.rotate(S, angle=angle, inplace=inplace)
+    return _edit.rotate(S, angle, inplace=inplace)
 
 
 def rotate_by_map(
@@ -118,7 +122,7 @@ def rotate_by_map(
         ed = next(_iter_items(Si))
         name = getattr(ed, "station", None) or getattr(ed, "name", None)
         ang = float(angle_by_station.get(name, 0.0))
-        return _edit.rotate(Si, angle=ang, inplace=inplace)
+        return _edit.rotate(Si, ang, inplace=inplace)
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 
@@ -146,16 +150,11 @@ def antisymmetrize(
 
     def _one(Si: Sites) -> Sites:
         ed = next(_iter_items(Si))
-        Z = getattr(ed, "Z", None) or getattr(ed, "z", None)
-        if Z is None:
+        Z, z, _ = _get_z_block(ed)
+        if Z is None or z is None:
             return Si
-        z = getattr(Z, "z", None)
         ze = getattr(Z, "z_err", None)
-        if z is None:
-            return Si
-        z2, ze2 = zutils.enforce_offdiag_antisymmetry(
-            z, ze, how=how
-        )
+        z2, ze2 = zutils.enforce_offdiag_antisymmetry(z, ze)
         try:
             Z.z = z2
             if ze is not None and ze2 is not None:
@@ -189,13 +188,10 @@ def invert(
 
     def _one(Si: Sites) -> Sites:
         ed = next(_iter_items(Si))
-        Z = getattr(ed, "Z", None) or getattr(ed, "z", None)
-        if Z is None:
+        Z, z, _ = _get_z_block(ed)
+        if Z is None or z is None:
             return Si
-        z = getattr(Z, "z", None)
         ze = getattr(Z, "z_err", None)
-        if z is None:
-            return Si
         z2, ze2 = zutils.invert_z(z, ze)
         try:
             Z.z = z2
@@ -235,13 +231,10 @@ def orient_from_sensors(
 
     def _one(Si: Sites) -> Sites:
         ed = next(_iter_items(Si))
-        Z = getattr(ed, "Z", None) or getattr(ed, "z", None)
-        if Z is None:
+        Z, z, _ = _get_z_block(ed)
+        if Z is None or z is None:
             return Si
-        z = getattr(Z, "z", None)
         ze = getattr(Z, "z_err", None)
-        if z is None:
-            return Si
         z2, ze2 = zutils.correct_for_sensor_orientation(
             z,
             ex=ex, ey=ey, bx=bx, by=by,
@@ -282,13 +275,10 @@ def sigma_clip_z(
 
     def _one(Si: Sites) -> Sites:
         ed = next(_iter_items(Si))
-        Z = getattr(ed, "Z", None) or getattr(ed, "z", None)
-        if Z is None:
+        Z, z, _ = _get_z_block(ed)
+        if Z is None or z is None:
             return Si
-        z = getattr(Z, "z", None)
-        if z is None:
-            return Si
-        mask = zutils.sigma_clip_mask(z, sigma=sigma)
+        mask = zutils.sigma_clip_mask(z, nsigma=sigma)
         z2 = z.copy()
         z2[~mask] = np.nan
         try:
@@ -323,11 +313,8 @@ def balance_offdiag(
 
     def _one(Si: Sites) -> Sites:
         ed = next(_iter_items(Si))
-        Z = getattr(ed, "Z", None) or getattr(ed, "z", None)
-        if Z is None:
-            return Si
-        z = getattr(Z, "z", None)
-        if z is None:
+        Z, z, _ = _get_z_block(ed)
+        if Z is None or z is None:
             return Si
         zx = z[:, 0, 1]
         zy = z[:, 1, 0]
@@ -829,17 +816,19 @@ def plot_phase_tensor_psection(
     else:
         ax.set_ylim(y_hi + margin, y_lo - margin)  # short period at top
 
-    # x-ticks: station names
-    ax.set_xticks(np.arange(n_st))
-    ax.set_xticklabels(st_list, rotation=tick_label_rotation,
-                       ha="right", fontsize=8)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(n_st, dtype=float),
+        st_list,
+        preset="pseudosection",
+        xlim=(-0.6, n_st - 0.4),
+    )
 
     # y-ticks: integer log10 values
     y_int = np.arange(int(np.floor(y_lo)), int(np.ceil(y_hi)) + 1)
     ax.set_yticks(y_int)
     ax.set_yticklabels([str(int(v)) for v in y_int], fontsize=8)
 
-    ax.set_xlabel(xlabel or "Station", fontsize=9)
     ax.set_ylabel(ylab, fontsize=9)
     if title:
         ax.set_title(title, fontsize=10)
@@ -906,11 +895,11 @@ def plot_phase_tensor_skewmap(
     if axis_y == "logperiod":
         df = df.copy()
         df["y"] = np.log10(df["period"].to_numpy())
-        ylab = "LogPeriod (s)"
+        ylab = LOG10_PERIOD_LABEL
     else:
         df = df.copy()
         df["y"] = df["period"].to_numpy()
-        ylab = "Period (s)"
+        ylab = PERIOD_LABEL
     piv = df.pivot_table(
         index="y",
         columns="station",
@@ -927,15 +916,21 @@ def plot_phase_tensor_skewmap(
         origin="lower",
         interpolation="nearest",
     )
-    ax.set_xlabel("Station")
     ax.set_ylabel(ylab)
-    ax.set_xticks(np.arange(len(piv.columns)))
-    ax.set_xticklabels(piv.columns, rotation=90)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(len(piv.columns), dtype=float),
+        list(piv.columns),
+        preset="pseudosection",
+        xlim=(-0.5, len(piv.columns) - 0.5),
+    )
     yt = np.linspace(0, Z.shape[0] - 1, num=min(8, Z.shape[0]))
     yvals = np.linspace(piv.index.min(), piv.index.max(),
                         num=min(8, len(piv.index)))
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.3g}" for v in yvals])
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
     cb = plt.colorbar(im, ax=ax)
     cb.set_label("skew")
     return ax
@@ -1031,15 +1026,21 @@ def plot_ellipticity_psection(
         origin="lower",
         interpolation="nearest",
     )
-    ax.set_xlabel("Station")
-    ax.set_ylabel("LogPeriod (s)")
-    ax.set_xticks(np.arange(Z.shape[1]))          # shape[1] = n_stations
-    ax.set_xticklabels(piv.columns, rotation=90)
+    ax.set_ylabel(LOG10_PERIOD_LABEL)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(Z.shape[1], dtype=float),
+        list(piv.columns),
+        preset="pseudosection",
+        xlim=(-0.5, Z.shape[1] - 0.5),
+    )
     yt = np.linspace(0, Z.shape[0] - 1, num=min(8, Z.shape[0]))  # shape[0] = n_logp
     yvals = np.linspace(piv.index.min(), piv.index.max(),
                         num=min(8, len(piv.index)))
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yvals])
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
     cb = plt.colorbar(im, ax=ax)
     cb.set_label("ellipticity")
     return ax
@@ -1094,10 +1095,16 @@ def plot_dimensionality_psection(
         origin="lower",
         interpolation="nearest",
     )
-    ax.set_xlabel("Station")
-    ax.set_ylabel("LogPeriod (s)")
-    ax.set_xticks(np.arange(Z.shape[1]))          # shape[1] = n_stations
-    ax.set_xticklabels(piv.columns, rotation=90)
+    ax.set_ylabel(LOG10_PERIOD_LABEL)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(Z.shape[1]),
+        list(piv.columns),
+        preset="pseudosection",
+        xlim=(-0.5, Z.shape[1] - 0.5),
+    )
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
     yt = np.linspace(0, Z.shape[0] - 1, num=min(8, Z.shape[0]))  # shape[0] = n_logp
     yvals = np.linspace(piv.index.min(), piv.index.max(),
                         num=min(8, len(piv.index)))
@@ -1429,9 +1436,10 @@ def plot_phase_tensor_rose(
     ax.set_theta_zero_location("N")
     ax.set_theta_direction(-1)
 
-    # hide default radial ticks/labels; we draw our own
+    # hide radial tick labels; keep custom rings without numeric radius text
     ax.set_yticklabels([])
     ax.set_yticks([])
+    hide_polar_radius_labels(ax)
     ax.yaxis.grid(False)
     ax.xaxis.grid(False)
     ax.set_frame_on(False)
@@ -1492,18 +1500,6 @@ def plot_phase_tensor_rose(
     for rv in r_levels:
         ax.plot(theta_full, np.full_like(theta_full, rv),
                 color=ring_color, ls=ring_ls, lw=ring_lw, zorder=0)
-
-    # ring count annotations
-    lbl_theta = np.radians(ring_label_angle)
-    for rv in r_levels:
-        ax.text(
-            lbl_theta, rv,
-            ring_label_fmt.format(rv),
-            ha="center", va="center",
-            fontsize=ring_label_fontsize,
-            color=ring_label_color,
-            zorder=5,
-        )
 
     # ── radial spokes ─────────────────────────────────────────────────────
     n_spokes = int(round(360.0 / spoke_every))
@@ -2101,6 +2097,7 @@ def plot_phase_tensor_summary(
     clim: Optional[Tuple[float, float]] = None,
     skew_threshold = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
     ellipt_threshold: float = 0.2,
+    axes=None,
     figsize: Tuple[float, float] = (12.0, 9.0),
     recursive: bool = True,
     on_dup: str = "replace",
@@ -2170,17 +2167,22 @@ def plot_phase_tensor_summary(
         df = df[(df["period"] >= lo) & (df["period"] <= hi)]
 
     # ── layout: 2 rows × 2 cols; row-0 spans both columns ────────────────
-    import matplotlib.gridspec as gridspec
-    fig = plt.figure(figsize=figsize)
-    gs  = gridspec.GridSpec(
-        2, 2,
-        figure=fig,
-        height_ratios=[1.5, 1.0],
-        hspace=0.38, wspace=0.35,
-    )
-    ax_ell  = fig.add_subplot(gs[0, :])   # (a) full-width ellipse section
-    ax_dim  = fig.add_subplot(gs[1, 0])   # (b) dimensionality grid
-    ax_den  = fig.add_subplot(gs[1, 1])   # (c) skew-ellipticity density
+    axes_given = _axes_list(axes, 3) if axes is not None else None
+    if axes_given is None:
+        import matplotlib.gridspec as gridspec
+        fig = plt.figure(figsize=figsize)
+        gs  = gridspec.GridSpec(
+            2, 2,
+            figure=fig,
+            height_ratios=[1.5, 1.0],
+            hspace=0.38, wspace=0.35,
+        )
+        ax_ell  = fig.add_subplot(gs[0, :])   # (a) full-width ellipse section
+        ax_dim  = fig.add_subplot(gs[1, 0])   # (b) dimensionality grid
+        ax_den  = fig.add_subplot(gs[1, 1])   # (c) skew-ellipticity density
+    else:
+        ax_ell, ax_dim, ax_den = axes_given
+        fig = ax_ell.figure
 
     # ── panel (a): ellipse pseudo-section ────────────────────────────────
     if df.empty:
@@ -2256,16 +2258,22 @@ def _draw_dim_grid(
 
     ax.imshow(Z, aspect="auto", origin="lower", interpolation="nearest",
               cmap=cmap_d, norm=norm_d)
-    ax.set_xlabel("Station", fontsize=8)
-    ax.set_ylabel(r"$\log_{10}(T)$ (s)", fontsize=8)
+    ax.set_ylabel(LOG10_PERIOD_LABEL, fontsize=8)
     n_st = len(st_list)
-    ax.set_xticks(np.arange(n_st))
-    ax.set_xticklabels(st_list, rotation=45, ha="right", fontsize=7)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(n_st, dtype=float),
+        st_list,
+        preset="pseudosection",
+        xlim=(-0.5, n_st - 0.5),
+    )
     n_logp = Z.shape[0]   # shape[0] = n_logp now that .T is removed
     y_ticks = np.linspace(0, n_logp - 1, num=min(6, n_logp))
     y_vals  = np.linspace(piv.index.min(), piv.index.max(), num=min(6, n_logp))
     ax.set_yticks(y_ticks)
     ax.set_yticklabels([f"{v:.1f}" for v in y_vals], fontsize=7)
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
 
     from matplotlib.patches import Patch
     ax.legend(
@@ -2438,15 +2446,21 @@ def plot_dimensionality_grid(
         origin="lower",
         interpolation="nearest",
     )
-    ax.set_xlabel("Station")
-    ax.set_ylabel("LogPeriod (s)")
-    ax.set_xticks(np.arange(len(piv.columns)))
-    ax.set_xticklabels(piv.columns, rotation=90)
+    ax.set_ylabel(LOG10_PERIOD_LABEL)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(len(piv.columns), dtype=float),
+        list(piv.columns),
+        preset="pseudosection",
+        xlim=(-0.5, len(piv.columns) - 0.5),
+    )
     yt = np.linspace(0, Z.shape[0] - 1, num=min(8, Z.shape[0]))  # shape[0] = n_logp
     yv = np.linspace(piv.index.min(), piv.index.max(),
                      num=min(8, len(piv.index)))
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yv])
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
     cb = plt.colorbar(im, ax=ax)
     cb.set_label("dim (0=1D,1=2D,2=3D)")
     return ax
@@ -2527,10 +2541,16 @@ def plot_theta_stability_stripe(
         origin="lower",
         interpolation="nearest",
     )
-    ax.set_xlabel("Station")
-    ax.set_ylabel("LogPeriod (s)")
-    ax.set_xticks(np.arange(len(sts)))
-    ax.set_xticklabels(sts, rotation=90)
+    ax.set_ylabel(LOG10_PERIOD_LABEL)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(len(sts)),
+        sts,
+        preset="pseudosection",
+        xlim=(-0.5, len(sts) - 0.5),
+    )
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
     yt = np.linspace(0, len(yall) - 1, num=min(8, len(yall)))
     yv = np.linspace(yall.min(), yall.max(),
                      num=min(8, len(yall)))
@@ -2595,6 +2615,7 @@ def plot_theta_rose_grid(
     sites: Any,
     *,
     n_bands: int = 6,
+    axes=None,
     figsize: Tuple[float, float] = (13.0, 3.8),
     bins: int = 24,
     style: "str | RoseStyle | None" = "pycsamt",
@@ -2651,9 +2672,14 @@ def plot_theta_rose_grid(
         strict=strict,
         verbose=verbose,
     )
+    axes_given = _axes_list(axes, 1) if axes is not None else None
     if df.empty:
-        fig = plt.figure(figsize=figsize)
-        ax = fig.add_subplot(111, polar=True)
+        if axes_given is None:
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(111, polar=True)
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no phase tensor", ha="center", va="center")
         return fig
 
@@ -2668,10 +2694,11 @@ def plot_theta_rose_grid(
     ang_mid = np.radians(0.5 * (edges_deg[1:] + edges_deg[:-1]))
 
     # ── constrained_layout avoids blank space when suptitle is added ─────
-    fig = plt.figure(figsize=figsize, constrained_layout=True)
+    axes_given = _axes_list(axes, n_bands) if axes is not None else None
+    fig = plt.figure(figsize=figsize, constrained_layout=True) if axes_given is None else axes_given[0].figure
 
     for i in range(n_bands):
-        ax = fig.add_subplot(1, n_bands, i + 1, polar=True)
+        ax = axes_given[i] if axes_given is not None else fig.add_subplot(1, n_bands, i + 1, polar=True)
         m = (p >= edges[i]) & (p < edges[i + 1])
         th_deg = df.loc[m, "theta"].to_numpy(float) % 180.0
         n_obs = int(np.sum(m))
@@ -2685,6 +2712,7 @@ def plot_theta_rose_grid(
         ax.set_theta_direction(-1)
         ax.set_yticklabels([])
         ax.set_yticks([])
+        hide_polar_radius_labels(ax)
         ax.yaxis.grid(False)
         ax.xaxis.grid(False)
         ax.set_frame_on(False)
@@ -2717,14 +2745,6 @@ def plot_theta_rose_grid(
             ax.plot(theta_full, np.full_like(theta_full, rv),
                     color=rs.ring_color, ls=rs.ring_ls,
                     lw=rs.ring_lw, zorder=0)
-
-        # ring count labels (outermost ring only to avoid clutter)
-        lbl_theta = np.radians(rs.ring_label_angle)
-        ax.text(lbl_theta, r_levels[-1],
-                rs.ring_label_fmt.format(r_levels[-1]),
-                ha="center", va="center",
-                fontsize=rs.ring_label_fontsize,
-                color=rs.ring_label_color, zorder=5)
 
         # ── radial spokes ─────────────────────────────────────────────────
         n_spokes = int(round(360.0 / rs.spoke_every))
@@ -2798,4 +2818,3 @@ def plot_theta_rose_grid(
         )
 
     return fig
-

@@ -21,6 +21,11 @@ from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 _COLUMNS = ["ID", "Latitude", "Longitude", "Elevation", "N_freq", "Tipper"]
 _PRECISION = {"Latitude": 5, "Longitude": 5, "Elevation": 1}
 
+# Unicode badge appended to station IDs that have been recomputed
+_RECOMPUTED_BADGE = " ◈"
+
+from PySide6.QtGui import QBrush, QColor
+
 
 class StationModel(QAbstractTableModel):
     """Qt table model backed by a pandas DataFrame."""
@@ -28,17 +33,34 @@ class StationModel(QAbstractTableModel):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._df = pd.DataFrame(columns=_COLUMNS)
+        self._recomputed_ids: set[str] = set()
 
     # ── Public mutators ───────────────────────────────────────────────
 
     def set_dataframe(self, df: pd.DataFrame) -> None:
         """Replace the backing DataFrame and refresh all views."""
+        self._recomputed_ids.clear()   # clear before reset so views never see stale badges
         self.beginResetModel()
         self._df = df.reset_index(drop=True)
         self.endResetModel()
 
     def clear(self) -> None:
         self.set_dataframe(pd.DataFrame(columns=_COLUMNS))
+
+    def mark_recomputed(self, station_ids: set[str]) -> None:
+        """Mark a set of station IDs as recomputed (adds badge in the ID column)."""
+        self._recomputed_ids = set(station_ids)
+        # Notify the view that column 0 (ID) needs repainting.
+        # Pass [] for roles so Qt treats all roles as changed (avoids PySide6
+        # strict-int issues with enum values in QList<int>).
+        if len(self._df) > 0:
+            top    = self.index(0, 0)
+            bottom = self.index(len(self._df) - 1, 0)
+            self.dataChanged.emit(top, bottom, [])
+
+    def clear_recomputed(self) -> None:
+        """Remove all recomputed badges."""
+        self.mark_recomputed(set())
 
     # ── QAbstractTableModel interface ─────────────────────────────────
 
@@ -66,10 +88,24 @@ class StationModel(QAbstractTableModel):
                 return f"{float(value):.{prec}f}"
             if col_name == "Tipper":
                 return "yes" if value else "no"
-            return str(value)
+            text = str(value)
+            if col_name == "ID" and text in self._recomputed_ids:
+                return text + _RECOMPUTED_BADGE
+            return text
 
         if role == Qt.ItemDataRole.UserRole:
             return value
+
+        if role == Qt.ItemDataRole.ForegroundRole:
+            if col_name == "ID" and str(value) in self._recomputed_ids:
+                # Teal-green accent — visible in both dark and light themes
+                return QBrush(QColor("#89dceb"))
+            return None
+
+        if role == Qt.ItemDataRole.ToolTipRole:
+            if col_name == "ID" and str(value) in self._recomputed_ids:
+                return "This station has been recomputed with EDIRecomputer (◈)"
+            return None
 
         if role == Qt.ItemDataRole.TextAlignmentRole:
             if col_name == "ID":

@@ -35,6 +35,7 @@ from ._core import (
     _iter_items,
     _get_z_block,
     _name,
+    hide_polar_radius_labels,
 )
 
 __all__ = [
@@ -399,6 +400,7 @@ def plot_polar_coverage(
 
     if ax is None:
         _, ax = plt.subplots(subplot_kw={"projection": "polar"}, figsize=figsize)
+    hide_polar_radius_labels(ax)
 
     if df.empty:
         ax.set_title(title + " (no data)")
@@ -428,6 +430,7 @@ def plot_polar_coverage(
         ax.plot([t, t], [lo, hi], color="gray", lw=0.5, alpha=0.35, zorder=1)
 
     emp_cov = float(covered.mean())
+    hide_polar_radius_labels(ax)
     ax.set_title(f"{title}\ncoverage = {emp_cov:.3f}", pad=15)
     ax.legend(loc="lower right", fontsize=7)
     return ax
@@ -466,6 +469,7 @@ def plot_polar_errors(
 
     if ax is None:
         _, ax = plt.subplots(subplot_kw={"projection": "polar"}, figsize=figsize)
+    hide_polar_radius_labels(ax)
 
     if df.empty or df["rel_err_pct"].isna().all():
         ax.set_title(title + " (no data)")
@@ -493,6 +497,7 @@ def plot_polar_errors(
 
     colors = ["#e74c3c" if s >= 0 else "#2980b9" for s in signs]
     ax.bar(theta, heights, width=bw * 0.85, color=colors, alpha=0.72, bottom=0)
+    hide_polar_radius_labels(ax)
     ax.set_title(f"{title}\nred=over-pred, blue=under-pred", pad=15)
     return ax
 
@@ -543,6 +548,8 @@ def plot_width_drift(
                                  figsize=figsize)
         else:
             _, ax = plt.subplots(figsize=figsize)
+    if polar:
+        hide_polar_radius_labels(ax)
 
     if df.empty:
         ax.set_title(title + " (no data)")
@@ -571,6 +578,7 @@ def plot_width_drift(
         ax.bar(theta, mean_w, width=bw * 0.85, alpha=0.78)
         ax.set_xticks(theta)
         ax.set_xticklabels(labels, fontsize=7)
+        hide_polar_radius_labels(ax)
     else:
         x = np.arange(n_bands)
         ax.bar(x, mean_w, color="#3498db", alpha=0.8)

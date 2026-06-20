@@ -15,15 +15,19 @@ import pandas as pd
 
 from ._core import (
     ensure_sites,
+    _axes_list,
     _iter_items,
     _apply_each,
     _get_z_block,
     _get_t_block,
     _name,
+    hide_polar_radius_labels,
 )
 from ..site import edit as _edit
 from .tensor import build_phase_tensor_table
 from ..api._rose_style import RoseStyle, resolve_rose_style, _UNSET
+from ..api.labels import LOG10_PERIOD_LABEL
+from ..api.station import PYCSAMT_STATION_RENDERING
 
 # -------------------------- small helpers ------------------------------- #
 
@@ -380,6 +384,7 @@ def plot_strike_rose_by_line(
     method: str = "consensus",  # consensus|sweep|pt
     bins: int = 36,
     weight: str = "inv_iqr",  # inv_iqr|uniform
+    axes=None,
     figsize: tuple[float, float] = (8.6, 4.6),
     recursive: bool = True,
     on_dup: str = "replace",
@@ -407,9 +412,14 @@ def plot_strike_rose_by_line(
             S, band=band, recursive=False, on_dup=on_dup,
             strict=False, verbose=verbose,
         )
+    axes_given = _axes_list(axes, 1) if axes is not None else None
     if TB.empty:
-        fig = plt.figure(figsize=figsize)
-        ax = fig.add_subplot(111, polar=True)
+        if axes_given is None:
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(111, polar=True)
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no strikes", ha="center", va="center")
         return fig
     TB = TB.copy()
@@ -433,16 +443,21 @@ def plot_strike_rose_by_line(
     # keep groups with at least 2 stations
     groups = {g: v for g, v in groups.items() if len(v) >= 2}
     if not groups:
-        fig = plt.figure(figsize=figsize)
-        ax = fig.add_subplot(111, polar=True)
+        if axes_given is None:
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(111, polar=True)
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no groups", ha="center", va="center")
         return fig
     # 3) figure grid
     G = list(groups.keys())
     n = len(G)
-    fig = plt.figure(figsize=figsize)
+    axes_given = _axes_list(axes, n) if axes is not None else None
+    fig = plt.figure(figsize=figsize) if axes_given is None else axes_given[0].figure
     for i, g in enumerate(G, 1):
-        ax = fig.add_subplot(1, n, i, polar=True)
+        ax = axes_given[i - 1] if axes_given is not None else fig.add_subplot(1, n, i, polar=True)
         subset = TB[TB["station"].isin(groups[g])]
         if subset.empty:
             ax.text(0.5, 0.5, "empty", ha="center", va="center")
@@ -485,6 +500,7 @@ def plot_strike_rose_by_line(
         # polar cosmetics
         ax.set_theta_zero_location("N")
         ax.set_theta_direction(-1)
+        hide_polar_radius_labels(ax)
         ax.set_title(str(g), pad=12.0)
     fig.tight_layout()
     return fig
@@ -550,6 +566,7 @@ def plot_strike_rose(
     # ── layout ───────────────────────────────────────────────────────────
     subplot_size: float = 3.2,
     n_cols: Optional[int] = None,
+    axes=None,
     figsize: Optional[Tuple[float, float]] = None,
     suptitle: str = "",
     suptitle_fontsize: float = 10.0,
@@ -755,8 +772,13 @@ def plot_strike_rose(
 
     TB = _est(band)
     if TB.empty:
-        fig = plt.figure(figsize=figsize or (4.0, 4.0))
-        ax = fig.add_subplot(111, polar=True)
+        axes_given = _axes_list(axes, 1) if axes is not None else None
+        if axes_given is None:
+            fig = plt.figure(figsize=figsize or (4.0, 4.0))
+            ax = fig.add_subplot(111, polar=True)
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no strikes", ha="center", va="center",
                 transform=ax.transAxes)
         return fig
@@ -806,8 +828,13 @@ def plot_strike_rose(
         if all_st:
             groups = {"All": all_st}
         else:
-            fig = plt.figure(figsize=figsize or (4.0, 4.0))
-            ax = fig.add_subplot(111, polar=True)
+            axes_given = _axes_list(axes, 1) if axes is not None else None
+            if axes_given is None:
+                fig = plt.figure(figsize=figsize or (4.0, 4.0))
+                ax = fig.add_subplot(111, polar=True)
+            else:
+                ax = axes_given[0]
+                fig = ax.figure
             ax.text(0.5, 0.5, "no groups", ha="center", va="center",
                     transform=ax.transAxes)
             return fig
@@ -821,14 +848,15 @@ def plot_strike_rose(
         figsize = (subplot_size * ncols + 0.4,
                    subplot_size * nrows + (0.6 if suptitle else 0.2))
 
-    fig = plt.figure(figsize=figsize)
+    axes_given = _axes_list(axes, n_g) if axes is not None else None
+    fig = plt.figure(figsize=figsize) if axes_given is None else axes_given[0].figure
 
     bins_ = int(max(12, bins))
     edges = np.linspace(0.0, 180.0, bins_ + 1)
     dw = np.radians(180.0 / bins_)
 
     for idx, g in enumerate(G):
-        ax = fig.add_subplot(nrows, ncols, idx + 1, polar=True)
+        ax = axes_given[idx] if axes_given is not None else fig.add_subplot(nrows, ncols, idx + 1, polar=True)
         ax.set_theta_zero_location("N")
         ax.set_theta_direction(-1)
 
@@ -926,14 +954,7 @@ def plot_strike_rose(
             step = rmax / max(1, n_rings)
             r_levels = [step * k for k in range(1, n_rings + 1)] if n_rings > 0 else []
         ax.set_yticks(r_levels)
-        ax.set_yticklabels([])
-        # text annotations at ring_label_angle
-        lbl_theta = np.radians(ring_label_angle)
-        for rv in r_levels:
-            ax.text(lbl_theta, rv, ring_label_fmt.format(rv),
-                    ha="center", va="center",
-                    fontsize=ring_label_fontsize,
-                    color=ring_label_color, zorder=5)
+        hide_polar_radius_labels(ax)
 
         # ---- angular ticks / compass labels -----------------------------
         spoke_angles = np.arange(0.0, 360.0, float(spoke_every))
@@ -1071,14 +1092,20 @@ def plot_strike_ribbon(
         origin="lower",
         interpolation="nearest",
     )
-    ax.set_xlabel("Station")
-    ax.set_ylabel("LogPeriod (s)")
-    ax.set_xticks(np.arange(len(sts)))
-    ax.set_xticklabels(sts, rotation=90)
+    ax.set_ylabel(LOG10_PERIOD_LABEL)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(len(sts), dtype=float),
+        sts,
+        preset="pseudosection",
+        xlim=(-0.5, len(sts) - 0.5),
+    )
     yt = np.linspace(0, len(ygrid) - 1, num=min(8, len(ygrid)))
     yv = np.linspace(ygrid.min(), ygrid.max(), num=yt.size)
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yv])
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
 
     # ── colorbar: hue → strike angle (0–180°) ────────────────────────────
     if show_colorbar:
@@ -1330,14 +1357,7 @@ def _draw_rose_on_ax(
 
     ax.set_rmax(rline * 1.18)
     ax.set_yticks(r_levels)
-    ax.set_yticklabels([])
-
-    lbl_theta = np.radians(rs.ring_label_angle)
-    for rv in r_levels:
-        ax.text(lbl_theta, rv, rs.ring_label_fmt.format(rv),
-                ha="center", va="center",
-                fontsize=rs.ring_label_fontsize,
-                color=rs.ring_label_color, zorder=5)
+    hide_polar_radius_labels(ax)
 
     # ── spokes / compass labels ───────────────────────────────────────────────
     spoke_angles = np.arange(0.0, 360.0, float(rs.spoke_every))
@@ -1426,6 +1446,7 @@ def plot_strike_analysis(
     title_fc_tipper: str = "#d5e8ff",
     title_ec: str = "0.35",
     # ── layout ───────────────────────────────────────────────────────────
+    axes=None,
     figsize: Optional[Tuple[float, float]] = None,
     subplot_size: float = 3.8,
     suptitle: str = "",
@@ -1570,24 +1591,29 @@ def plot_strike_analysis(
     # ── figure ───────────────────────────────────────────────────────────────
     if figsize is None:
         figsize = (subplot_size * 3 + 0.6, subplot_size + 0.5)
-    fig, axes = plt.subplots(
-        1, 3, figsize=figsize, subplot_kw=dict(polar=True),
-    )
+    axes_given = _axes_list(axes, 3)
+    if axes_given is None:
+        fig, axes_arr = plt.subplots(
+            1, 3, figsize=figsize, subplot_kw=dict(polar=True),
+        )
+    else:
+        axes_arr = np.asarray(axes_given, dtype=object)
+        fig = axes_arr[0].figure
 
     _draw_rose_on_ax(
-        axes[0], ang_z, rs,
+        axes_arr[0], ang_z, rs,
         bins=bins, cmap_override=cmap_z,
         title="Strike (Z)",
         title_fc=title_fc_z, title_ec=title_ec,
     )
     _draw_rose_on_ax(
-        axes[1], ang_pt, rs,
+        axes_arr[1], ang_pt, rs,
         bins=bins, cmap_override=cmap_pt,
         title="PT Azimuth",
         title_fc=title_fc_pt, title_ec=title_ec,
     )
     _draw_rose_on_ax(
-        axes[2], ang_tipper, rs,
+        axes_arr[2], ang_tipper, rs,
         bins=bins, cmap_override=cmap_tipper,
         title="Tipper Strike",
         title_fc=title_fc_tipper, title_ec=title_ec,

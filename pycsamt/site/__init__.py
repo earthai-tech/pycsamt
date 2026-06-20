@@ -3,6 +3,7 @@ from .base import (
     SiteMixin,
     Site,
     Sites,
+    to_edis,
 )
 
 from .edit import (
@@ -45,6 +46,14 @@ from .export import (
     pack_zip,
 )
 
+from .recompute import (
+    EDIRecomputeRecord,
+    EDIRecomputeResult,
+    EDIRecomputer,
+    recompute_edi,
+    recompute_edis,
+)
+
 from .report import (
     SiteReport,
     SitesReport,
@@ -55,6 +64,7 @@ __all__ = [
     "SiteMixin",
     "Site",
     "Sites",
+    "to_edis",
     # edit
     "rotate",
     "select_freq",
@@ -87,6 +97,12 @@ __all__ = [
     "write_site",
     "write_sites",
     "pack_zip",
+    # recompute
+    "EDIRecomputeRecord",
+    "EDIRecomputeResult",
+    "EDIRecomputer",
+    "recompute_edi",
+    "recompute_edis",
     # report
     "SiteReport",
     "SitesReport",

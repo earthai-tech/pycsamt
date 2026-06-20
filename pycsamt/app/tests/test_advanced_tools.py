@@ -765,6 +765,193 @@ class TestConversionController:
             style = conv_ctrl._get_style()
             assert "bg" in style and "fg" in style
 
+    def test_avg_run_uses_config_freq_order_not_transform_kw(
+        self,
+        conv_ctrl,
+        monkeypatch,
+    ):
+        calls = {}
+
+        class FakeAVG:
+            def transform(self, path, **kw):
+                from pycsamt.core.config import get_config
+                calls["path"] = path
+                calls["kw"] = kw
+                calls["freq_order"] = get_config().freq_order
+                return ["edi"]
+
+        import pycsamt.transformers as transformers
+        monkeypatch.setattr(transformers, "AVGtoEDI", lambda: FakeAVG())
+
+        conv_ctrl.set_source("AVG -> EDI", "/tmp/in.avg")
+        collection, failures = conv_ctrl.run({"freq_order": "ascending"})
+
+        assert collection == ["edi"]
+        assert failures == []
+        assert calls["path"] == "/tmp/in.avg"
+        assert calls["kw"] == {}
+        assert calls["freq_order"] == "asc"
+
+    def test_avg_run_attaches_station_profile(self, conv_ctrl, monkeypatch):
+        calls = {}
+
+        class FakeTopo:
+            def convert_coords(self, *, to, inplace):
+                calls["convert"] = (to, inplace)
+
+        class FakeAVGObject:
+            topo = FakeTopo()
+
+            def add_topography(self, stn_file, *, utm_zone=None, epsg=None):
+                calls["topography"] = (stn_file, utm_zone, epsg)
+                return self
+
+        class FakeAVG:
+            @classmethod
+            def from_file(cls, path):
+                calls["avg_path"] = path
+                return FakeAVGObject()
+
+        class FakeAVGtoEDI:
+            def transform(self, source, **kw):
+                from pycsamt.core.config import get_config
+                calls["source"] = source
+                calls["kw"] = kw
+                calls["freq_tol"] = get_config().freq_tol
+                calls["compute_z"] = get_config().compute_z_from_res
+                calls["compute_rho_phi"] = get_config().compute_res_from_z
+                return ["edi"]
+
+        import pycsamt.transformers as transformers
+        import pycsamt.zonge.avg as avg_mod
+        monkeypatch.setattr(transformers, "AVGtoEDI", lambda: FakeAVGtoEDI())
+        monkeypatch.setattr(avg_mod, "AVG", FakeAVG)
+
+        conv_ctrl.set_source("AVG -> EDI", "/tmp/in.avg")
+        collection, failures = conv_ctrl.run({
+            "freq_order": "ascending",
+            "freq_tol": 1e-6,
+            "compute_z": True,
+            "compute_rho_phi": True,
+            "stn_path": "/tmp/K1.stn",
+            "utm_zone": "50N",
+            "epsg": "32650",
+            "convert_stn_coords": True,
+            "name": "K1",
+        })
+
+        assert collection == ["edi"]
+        assert failures == []
+        assert calls["avg_path"] == "/tmp/in.avg"
+        assert calls["topography"] == ("/tmp/K1.stn", "50N", 32650)
+        assert calls["convert"] == ("ll", True)
+        assert isinstance(calls["source"], FakeAVGObject)
+        assert calls["kw"] == {"name": "K1"}
+        assert calls["freq_tol"] == 1e-6
+        assert calls["compute_z"] is True
+        assert calls["compute_rho_phi"] is True
+
+    def test_avg_run_with_real_stn_utm_populates_edi_coordinates(self, conv_ctrl):
+        avg_path = _ROOT / "data" / "avg" / "K1.AVG"
+        stn_path = _ROOT / "data" / "avg" / "K1.stn"
+        if not avg_path.exists() or not stn_path.exists():
+            pytest.skip("K1 AVG/STN fixtures are not available")
+
+        conv_ctrl.set_source("AVG -> EDI", str(avg_path))
+        collection, failures = conv_ctrl.run({
+            "freq_order": "descending",
+            "stn_path": str(stn_path),
+            "utm_zone": "49N",
+            "convert_stn_coords": True,
+        })
+
+        assert failures == []
+        assert len(collection) >= 1
+
+        first = next(iter(collection))
+        head = first.get_section("head")
+        definemeas = first.get_section("definemeas")
+        assert head is not None
+        assert definemeas is not None
+        assert head.lat == pytest.approx(26.052401, abs=1e-6)
+        assert head.long == pytest.approx(113.487159, abs=1e-6)
+        assert head.elev == pytest.approx(574.5, abs=1e-6)
+        assert definemeas.reflat == pytest.approx(head.lat, abs=1e-6)
+        assert definemeas.reflong == pytest.approx(head.long, abs=1e-6)
+        assert definemeas.refelev == pytest.approx(head.elev, abs=1e-6)
+
+        stats = conv_ctrl.build_stats(collection, failures)
+        first_row = stats["rows"][0]
+        assert first_row["lat"] == pytest.approx(head.lat, abs=1e-6)
+        assert first_row["lon"] == pytest.approx(head.long, abs=1e-6)
+        assert first_row["elev"] == pytest.approx(head.elev, abs=1e-6)
+
+    def test_j_run_drops_ui_only_options(self, conv_ctrl, monkeypatch):
+        calls = {}
+
+        class FakeJ:
+            def transform(self, path, **kw):
+                calls["path"] = path
+                calls["kw"] = kw
+                return ["edi"]
+
+        import pycsamt.transformers as transformers
+        monkeypatch.setattr(transformers, "JtoEDI", lambda: FakeJ())
+
+        conv_ctrl.set_source("J -> EDI", "/tmp/in.j")
+        collection, failures = conv_ctrl.run({
+            "freq_order": "descending",
+            "station_suffix": "_IMP",
+        })
+
+        assert collection == ["edi"]
+        assert failures == []
+        assert calls["path"] == "/tmp/in.j"
+        assert calls["kw"] == {}
+
+    def test_spectra_run_maps_ui_options(self, conv_ctrl, monkeypatch):
+        calls = {}
+
+        class FakeResult:
+            collection = ["edi"]
+            failures = ["bad"]
+
+        class FakeSpectra:
+            def __init__(self, **kw):
+                calls["init"] = kw
+
+            def transform_batch(self, path, **kw):
+                calls["path"] = path
+                calls["transform"] = kw
+                return FakeResult()
+
+        import pycsamt.transformers as transformers
+        monkeypatch.setattr(transformers, "SpectraToEDI", FakeSpectra)
+
+        conv_ctrl.set_source("Spectra -> EDI", "/tmp/spec")
+        collection, failures = conv_ctrl.run({
+            "e_labels": "EX,EY",
+            "h_labels": "HX,HY",
+            "estimate_errors": True,
+            "use_remote_ref": True,
+            "station_suffix": "_IMP",
+            "skip_errors": False,
+            "output_dir": "/tmp/out",
+        })
+
+        assert collection == ["edi"]
+        assert failures == ["bad"]
+        assert calls["path"] == "/tmp/spec"
+        assert calls["init"] == {
+            "e_labels": ("EX", "EY"),
+            "h_labels": ("HX", "HY"),
+            "estimate_error": True,
+            "use_remote": True,
+            "skip_errors": False,
+            "station_suffix": "_IMP",
+        }
+        assert calls["transform"] == {"output_dir": "/tmp/out"}
+
 
 # ── AdvancedController dark/light mode ───────────────────────────────────────
 

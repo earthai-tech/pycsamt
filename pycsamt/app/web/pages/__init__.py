@@ -11,10 +11,12 @@ Each module exposes:
 """
 from pycsamt.app.web.pages import (
     home, qc_page, correction, advanced, tdem,
-    pipeline, forward, inversion, interpretation, agents_page,
+    pipeline, forward, inversion, interpretation, map3d, agents_page,
+    inv_results,
 )
 
 ALL_PAGES = [
     home, qc_page, correction, advanced, tdem,
-    pipeline, forward, inversion, interpretation, agents_page,
+    pipeline, forward, inversion, interpretation, map3d, agents_page,
+    inv_results,
 ]

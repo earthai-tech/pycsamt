@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
 )
 
 from pycsamt.app.desktop.panels.profile_panel import ProfilePanel
+from pycsamt.app.desktop.widgets.searchable_combo import SearchableComboBox
 from pycsamt.app.desktop.windows._base import PanelWindow, make_group, icon_button
 
 
@@ -58,12 +59,15 @@ class ProfileViewerWindow(PanelWindow):
     def _build_params(self, layout: QVBoxLayout) -> None:
         # ── Station ───────────────────────────────────────────────────
         grp_sta, lay_sta = make_group("Station")
-        self._combo_station = QComboBox()
-        self._combo_station.addItem("— select a station —")
+
+        # SearchableComboBox: closed = shows selected name / placeholder;
+        # open = popup with a live-filter search row + scrollable list (12 max).
+        self._combo_station = SearchableComboBox(max_visible=12, parent=self)
         self._combo_station.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
-        self._combo_station.currentTextChanged.connect(self._on_station_changed)
+        self._combo_station.station_selected.connect(self._on_station_picked)
+
         lay_sta.addWidget(self._combo_station)
         layout.addWidget(grp_sta)
 
@@ -200,18 +204,30 @@ class ProfileViewerWindow(PanelWindow):
 
     def set_sites(self, sites) -> None:
         super().set_sites(sites)
-        self._profile_panel.set_sites(sites)
+        try:
+            self._profile_panel.set_sites(sites)
+        except Exception:
+            pass   # panel redraw errors must not block combo population
         self._populate_station_combo(sites)
         self._update_period_range(sites)
 
     def set_station(self, station_id: str) -> None:
-        """Select a station by ID — called from main window."""
-        idx = self._combo_station.findText(station_id)
-        if idx >= 0:
-            self._combo_station.setCurrentIndex(idx)
-        else:
-            self._profile_panel.set_selected_station(station_id)
-        self._info_lbl.setText(f"Showing: {station_id}")
+        """Select a station by ID — called from main window on double-click."""
+        self._apply_station(station_id)
+
+    # ── Station selection (internal) ──────────────────────────────────
+
+    def _on_station_picked(self, name: str) -> None:
+        """Fired by SearchableComboBox when the user confirms a choice."""
+        self._apply_station(name)
+
+    def _apply_station(self, name: str) -> None:
+        """Push *name* to the panel and sync the combo without re-emitting."""
+        if not name:
+            return
+        self._combo_station.select_station(name)
+        self._profile_panel.set_selected_station(name)
+        self._info_lbl.setText(f"Station: {name}")
 
     def set_dark_mode(self, dark: bool) -> None:
         super().set_dark_mode(dark)
@@ -249,12 +265,6 @@ class ProfileViewerWindow(PanelWindow):
                 self._profile_panel._section_panel._redraw()
 
     # ── Slots ─────────────────────────────────────────────────────────
-
-    def _on_station_changed(self, name: str) -> None:
-        if name.startswith("—") or not name:
-            return
-        self._profile_panel.set_selected_station(name)
-        self._info_lbl.setText(f"Station: {name}")
 
     def _on_errbar_toggled(self, checked: bool) -> None:
         self._profile_panel._ctrl.set_show_errbar(checked)
@@ -309,6 +319,9 @@ class ProfileViewerWindow(PanelWindow):
         _label, ymin, ymax = self._PHASE_RANGES[idx]
         self._profile_panel._ctrl.set_phase_ylim(ymin, ymax)
         self._profile_panel._ctrl.set_period_range(T_min, T_max)
+        # Explicit refresh → force the Phase Tensor tab to fully recompute,
+        # even if the panel-level key would otherwise say "nothing changed".
+        self._profile_panel.invalidate_phase_tensor()
         self._profile_panel._redraw_current_tab()
 
     def _on_export(self) -> None:
@@ -331,8 +344,8 @@ class ProfileViewerWindow(PanelWindow):
             PublicationViewDialog,
         )
         ctrl  = self._profile_panel._ctrl
-        name  = self._combo_station.currentText()
-        if name.startswith("—") or not name:
+        name  = self._combo_station.current_station()
+        if not name:
             self._info_lbl.setText("Select a station before opening Publication View.")
             return
         # Push current component / errbar state
@@ -348,15 +361,14 @@ class ProfileViewerWindow(PanelWindow):
     # ── Helpers ───────────────────────────────────────────────────────
 
     def _populate_station_combo(self, sites) -> None:
-        self._combo_station.blockSignals(True)
-        self._combo_station.clear()
-        self._combo_station.addItem("— select a station —")
+        """Populate the SearchableComboBox with station names from *sites*."""
+        names: list[str] = []
         try:
             for site in sites:
-                self._combo_station.addItem(site.name)
+                names.append(site.name)
         except Exception:
             pass
-        self._combo_station.blockSignals(False)
+        self._combo_station.set_names(names)
 
     def _update_period_range(self, sites) -> None:
         import numpy as np

@@ -76,6 +76,7 @@ from ..api.section import PYCSAMT_SECTION, SectionStyle
 from ..api.station import PYCSAMT_STATION_RENDERING
 from ..api.plot import add_colorbar
 from ..api.view import maybe_wrap_frame
+from ._core import _axes_list
 
 __all__ = [
     # analysis
@@ -567,6 +568,7 @@ def plot_coherence(
     lw: float = _UNSET,
     alpha: float = _UNSET,
     title: str = "",
+    axes=None,
     figsize: Optional[Tuple[float, float]] = None,
 ) -> np.ndarray:
     """Plot squared coherence for selected channel pairs.
@@ -608,10 +610,15 @@ def plot_coherence(
     if figsize is None:
         figsize = (4.0 * ncols, 3.5 * nrows)
 
-    fig, axs_raw = plt.subplots(
-        nrows, ncols, figsize=figsize, constrained_layout=True
-    )
-    axs = np.asarray(axs_raw).ravel()
+    axes_given = _axes_list(axes, n) if axes is not None else None
+    if axes_given is None:
+        fig, axs_raw = plt.subplots(
+            nrows, ncols, figsize=figsize, constrained_layout=True
+        )
+        axs = np.asarray(axs_raw).ravel()
+    else:
+        axs = np.asarray(axes_given, dtype=object)
+        fig = axs[0].figure
     cols = _ml.colors(n)
     x    = _x_vals(sp.freq)
 
@@ -653,6 +660,7 @@ def plot_spectra_matrix(
     cmap: str = _UNSET,
     log_scale: bool = True,
     title: str = "",
+    ax=None,
     figsize: Tuple[float, float] = (7, 6),
 ) -> Figure:
     """Visualise the full cross-spectral density matrix at one frequency.
@@ -716,7 +724,10 @@ def plot_spectra_matrix(
 
     labels = [_chan_label(sp, k) for k in range(nc)]
 
-    fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+    else:
+        fig = ax.figure
     im = ax.imshow(data, cmap=cmap, aspect="equal", origin="upper")
     add_colorbar(im, ax, label=cb_label, size="4%", pad=0.04)
 
@@ -746,6 +757,7 @@ def plot_z_from_spectra(
     estimate_error: bool = False,
     show_error: bool = True,
     title: str = "",
+    axes=None,
     figsize: Tuple[float, float] = (10, 5),
 ) -> Figure:
     """Plot apparent resistivity and phase recovered from spectra.
@@ -789,9 +801,14 @@ def plot_z_from_spectra(
     phi   = z_obj.phase         # (nf, 2, 2)
     z_err = z_obj.z_err         # None or (nf, 2, 2)
 
-    fig, (ax_r, ax_p) = plt.subplots(
-        1, 2, figsize=figsize, constrained_layout=True
-    )
+    axes_given = _axes_list(axes, 2)
+    if axes_given is None:
+        fig, (ax_r, ax_p) = plt.subplots(
+            1, 2, figsize=figsize, constrained_layout=True
+        )
+    else:
+        ax_r, ax_p = axes_given
+        fig = ax_r.figure
 
     pairs = [
         ("xy", (0, 1), _st.xy),
@@ -844,6 +861,7 @@ def plot_tipper_from_spectra(
     estimate_error: bool = False,
     show_error: bool = True,
     title: str = "",
+    axes=None,
     figsize: Tuple[float, float] = (10, 5),
 ) -> np.ndarray:
     """Plot the induction tipper magnitude and phase from spectra.
@@ -874,7 +892,11 @@ def plot_tipper_from_spectra(
     )
 
     if tip is None:
-        _, axs = plt.subplots(1, 2, figsize=figsize, constrained_layout=True)
+        axes_given = _axes_list(axes, 2) if axes is not None else None
+        if axes_given is None:
+            _, axs = plt.subplots(1, 2, figsize=figsize, constrained_layout=True)
+        else:
+            axs = axes_given
         for ax in axs:
             ax.text(0.5, 0.5, "No tipper (HZ not found)",
                     ha="center", va="center", transform=ax.transAxes,
@@ -887,9 +909,14 @@ def plot_tipper_from_spectra(
     T_err  = (tip.tipper_err[:, 0, :] if tip.tipper_err is not None
               else None)
 
-    fig, (ax_a, ax_p) = plt.subplots(
-        1, 2, figsize=figsize, constrained_layout=True
-    )
+    axes_given = _axes_list(axes, 2)
+    if axes_given is None:
+        fig, (ax_a, ax_p) = plt.subplots(
+            1, 2, figsize=figsize, constrained_layout=True
+        )
+    else:
+        ax_a, ax_p = axes_given
+        fig = ax_a.figure
 
     _st = PYCSAMT_STYLE.mt
     specs = [

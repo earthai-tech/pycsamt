@@ -57,7 +57,11 @@ def style_axes(ax, dark: bool = True) -> None:
     ax.title.set_color(s["title_color"])
     ax.xaxis.label.set_color(s["labelcolor"])
     ax.yaxis.label.set_color(s["labelcolor"])
-    ax.tick_params(**s["tick_params"])
+    # Use explicit labelcolor so set_xticklabels() Text objects are also covered
+    tc = s["tick_params"]["colors"]
+    ax.tick_params(axis="both", which="both",
+                   colors=tc, labelcolor=tc,
+                   labelsize=s["tick_params"]["labelsize"])
     for spine in ax.spines.values():
         spine.set_edgecolor(s["spines_color"])
     ax.grid(True, color=s["grid_color"], alpha=s["grid_alpha"],
@@ -65,6 +69,71 @@ def style_axes(ax, dark: bool = True) -> None:
     fig = ax.get_figure()
     if fig is not None:
         fig.patch.set_facecolor("#1e1e2e" if dark else "#e6e9ef")
+
+
+def _style_figure_full(ref_ax, dark: bool) -> None:
+    """
+    Post-process every axes in the figure, then fix theme-unaware elements
+    produced by emtools (hardcoded white bboxes, black reference ellipse, etc.).
+
+    Call AFTER emtools functions + style_axes on the primary axes.
+    """
+    s    = _DARK if dark else _LIGHT
+    fig  = ref_ax.get_figure()
+    if fig is None:
+        return
+
+    # ── 1. Style ALL axes (catches colorbar / inset axes) ────────────────
+    for ax in fig.axes:
+        ax.set_facecolor(s["facecolor"])
+        ax.xaxis.label.set_color(s["labelcolor"])
+        ax.yaxis.label.set_color(s["labelcolor"])
+        tc = s["tick_params"]["colors"]
+        ax.tick_params(axis="both", which="both",
+                       colors=tc, labelcolor=tc,
+                       labelsize=s["tick_params"]["labelsize"])
+        for spine in ax.spines.values():
+            spine.set_edgecolor(s["spines_color"])
+        try:
+            ax.title.set_color(s["title_color"])
+        except Exception:
+            pass
+
+    # ── 2. Fix annotation Text boxes (emtools hard-codes fc="white") ──────
+    if dark:
+        bbox_fc  = "#1a1a2e"      # near-black, slightly blue-tinted
+        bbox_ec  = "#45475a"      # subtle border
+        # Remap the annotation text colours to palette variants visible on dark
+        _COL_MAP = {
+            "#2166ac": "#89b4fa",  # dark-blue → Catppuccin blue
+            "#b2182b": "#f38ba8",  # dark-red  → Catppuccin red
+        }
+    else:
+        bbox_fc  = "white"
+        bbox_ec  = "none"
+        _COL_MAP = {}             # no remapping in light mode
+
+    for txt in ref_ax.texts:
+        bb = txt.get_bbox_patch()
+        if bb is not None:
+            bb.set_facecolor(bbox_fc)
+            bb.set_edgecolor(bbox_ec)
+            bb.set_alpha(0.88)
+        if dark:
+            col = txt.get_color()
+            txt.set_color(_COL_MAP.get(col, col))
+
+    # ── 3. Fix free text (no bbox) — reference ellipse label, etc. ───────
+    if dark:
+        for txt in ref_ax.texts:
+            if txt.get_bbox_patch() is None:
+                txt.set_color(s["labelcolor"])
+
+    # ── 4. Fix unfilled patches: reference ellipse edgecolor "k" → visible
+    ref_ec = "#cccccc" if dark else "#444444"
+    for patch in ref_ax.patches:
+        if not patch.get_fill():
+            patch.set_edgecolor(ref_ec)
 
 
 def _annotate_empty(ax, msg: str = "No data") -> None:
@@ -229,11 +298,15 @@ class PlotController:
         self._show_errbar:  bool = True
         self._bw_mode:      bool = False
         self.dark: bool     = True
+        # Phase-tensor DataFrame cache: id(sites) → built DataFrame
+        # Avoids re-running build_phase_tensor_table() on every tab switch.
+        self._pt_df_cache: dict = {}
 
     # ── State setters ──────────────────────────────────────────────────
 
     def set_sites(self, sites) -> None:
         self._sites = sites
+        self._pt_df_cache.clear()   # stale when new data loaded
 
     def set_station(self, station_id: Optional[str]) -> None:
         self._station_id = station_id
@@ -284,9 +357,35 @@ class PlotController:
         """
         return r"$\log_{10}(T)\ \mathrm{(s)}$"
 
+    def phase_tensor_key(self) -> tuple:
+        """Return a tuple that uniquely identifies the current PT plot settings.
+
+        Panel-level code compares this to the key stored after the last draw
+        and skips the full redraw when they match.
+        """
+        return (id(self._sites), self._period_range, self.dark)
+
+    def invalidate_phase_tensor(self) -> None:
+        """Force the next draw_phase_tensor() call to recompute from scratch."""
+        self._pt_df_cache.clear()
+
+    def _get_or_build_pt_df(self):
+        """Return the cached phase-tensor DataFrame, building it if needed."""
+        import pandas as pd
+        if self._sites is None:
+            return pd.DataFrame()
+        key = id(self._sites)
+        if key not in self._pt_df_cache:
+            from pycsamt.emtools.tensor import build_phase_tensor_table
+            self._pt_df_cache[key] = build_phase_tensor_table(
+                self._sites, verbose=0
+            )
+        return self._pt_df_cache[key]
+
     def clear(self) -> None:
         self._sites      = None
         self._station_id = None
+        self._pt_df_cache.clear()
 
     # ── Period-range filter helpers ────────────────────────────────────
 
@@ -490,6 +589,7 @@ class PlotController:
         except Exception as exc:
             _annotate_empty(ax, f"Pseudosection error:\n{exc}")
         style_axes(ax, self.dark)
+        _style_figure_full(ax, self.dark)
 
     # ── Phase pseudosection ────────────────────────────────────────────
 
@@ -516,6 +616,7 @@ class PlotController:
         except Exception as exc:
             _annotate_empty(ax, f"Pseudosection error:\n{exc}")
         style_axes(ax, self.dark)
+        _style_figure_full(ax, self.dark)
 
     # ── Tipper ────────────────────────────────────────────────────────
 
@@ -541,11 +642,21 @@ class PlotController:
         except Exception as exc:
             _annotate_empty(ax, f"Tipper error:\n{exc}")
         style_axes(ax, self.dark)
+        _style_figure_full(ax, self.dark)
 
     # ── Phase tensor ──────────────────────────────────────────────────
 
     def draw_phase_tensor(self, ax) -> None:
-        """Draw phase-tensor pseudosection — stations at TOP, short period at TOP."""
+        """Draw phase-tensor pseudosection — stations at TOP, short period at TOP.
+
+        The phase-tensor DataFrame is built once and cached keyed by the Sites
+        object identity.  Subsequent calls for the same survey (e.g. period
+        range or dark-mode changes) reuse the cached DataFrame and skip the
+        expensive build_phase_tensor_table() step.
+
+        Dark mode: pass a light edgecolor so ellipses are visible against the
+        dark background.  The rest of the contrast fixes are in _style_figure_full.
+        """
         import numpy as np
         import pycsamt.emtools as et
         if self._sites is None:
@@ -553,12 +664,23 @@ class PlotController:
             style_axes(ax, self.dark)
             return
         try:
+            # Use cached DataFrame when available (avoids expensive recomputation)
+            pt_df = self._get_or_build_pt_df()
+
+            # In dark mode use a light edge so ellipses are visible on #181825.
+            # In light mode keep the default "k" border.
+            edge_kw = dict(
+                edgecolor="#cccccc" if self.dark else "k",
+                linewidth=0.35,
+            )
+
             et.plot_phase_tensor_psection(
-                self._sites,
+                pt_df,             # pre-built DataFrame → skips build step
                 ax=ax,
                 period_range=self._active_period_range(),
                 period_up=False,   # high freq (short T, near-surface) at TOP
                 verbose=0,
+                **edge_kw,
             )
 
             # ── Station labels and markers at top ─────────────────────
@@ -598,9 +720,19 @@ class PlotController:
                 r"Phase Tensor $\beta$ — Pseudosection",
                 fontsize=10, pad=3,
             )
+
+            # Explicitly recolor station tick labels — set_xticklabels()
+            # creates Text objects whose color isn't always updated by the
+            # later tick_params call when ticks have been moved to top.
+            tick_col = (_DARK if self.dark else _LIGHT)["tick_params"]["colors"]
+            for lbl in ax.get_xticklabels():
+                lbl.set_color(tick_col)
+
         except Exception as exc:
             _annotate_empty(ax, f"Phase tensor error:\n{exc}")
+
         style_axes(ax, self.dark)
+        _style_figure_full(ax, self.dark)
 
     # ── Publication-quality multi-panel view ──────────────────────────
 

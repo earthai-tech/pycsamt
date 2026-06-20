@@ -177,7 +177,14 @@ class APIFrame(PyCSAMTObject):
         return self._df.__getitem__(key)
 
     def __setitem__(self, key: Any, value: Any) -> None:
-        self._df.__setitem__(key, value)
+        if isinstance(key, tuple) and len(key) == 2:
+            rows, column = key
+            self._df.loc[rows, column] = value
+            return
+        if isinstance(key, str) and key in self._df.columns:
+            self._df.loc[:, key] = value
+            return
+        self._df[key] = value
 
     def __array__(self, dtype: Any = None) -> np.ndarray:
         arr = self.data

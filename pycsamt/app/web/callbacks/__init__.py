@@ -40,6 +40,10 @@ from pycsamt.app.web.callbacks.tools       import register_tools
 from pycsamt.app.web.callbacks.settings    import register_settings
 from pycsamt.app.web.callbacks.help        import register_help
 from pycsamt.app.web.callbacks.dashboard   import register_dashboard
+from pycsamt.app.web.callbacks.recompute   import register_recompute
+from pycsamt.app.web.callbacks.lines       import register_lines
+from pycsamt.app.web.callbacks.map3d       import register_map3d
+from pycsamt.app.web.callbacks.inv_results import register_inv_results
 
 
 def register_callbacks(app) -> None:
@@ -64,6 +68,10 @@ def register_callbacks(app) -> None:
     register_settings(app)
     register_help(app)
     register_dashboard(app)
+    register_recompute(app)
+    register_lines(app)
+    register_map3d(app)
+    register_inv_results(app)
     # Page-level card/selection callbacks
     from pycsamt.app.web.pages.agents_page import register_callbacks as _reg_agents_page
     _reg_agents_page(app)

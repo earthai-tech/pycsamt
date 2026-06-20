@@ -318,11 +318,19 @@ Verify the desktop entry point:
 
    pycsamt-gui --help
 
+Verify the web launcher:
+
+.. code-block:: console
+   :linenos:
+
+   pycsamt-web --no-browser --port 0
+
 The ``app`` extra installs ``PySide6``, ``pyqtgraph``, ``dash``,
-``dash-bootstrap-components``, ``diskcache``, and ``contextily``.  On Linux,
-Qt may also require system libraries for X11, Wayland, OpenGL, and font
-rendering.  If the GUI starts but the window is blank, first test a minimal
-PySide6 example in the same environment.
+``dash-bootstrap-components``, ``diskcache``, ``multiprocess``, ``plotly``,
+``Pillow``, and ``contextily``.  On Linux, Qt may also require system
+libraries for X11, Wayland, OpenGL, and font rendering.  If the GUI starts
+but the window is blank, first test a minimal PySide6 example in the same
+environment.
 
 Documentation Build Dependencies
 --------------------------------

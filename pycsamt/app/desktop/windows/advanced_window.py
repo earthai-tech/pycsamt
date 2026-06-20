@@ -21,7 +21,7 @@ Right content
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtWidgets import (
     QCheckBox,
     QColorDialog,
@@ -50,11 +50,18 @@ from pycsamt.app.desktop.controllers.advanced_controller import (
     ConversionWorker,
     DimModelWorker,
     ADVANCED_GROUPS,
+    ADVANCED_GROUP_ICONS,
     TOPO_INDEX,
     CONV_INDEX,
+    describe_advanced_plot,
 )
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
-from pycsamt.app.desktop.windows._base import PanelWindow, make_group, icon_button
+from pycsamt.app.desktop.windows._base import (
+    PanelWindow,
+    make_group,
+    icon_button,
+    _icon,
+)
 
 
 class AdvancedToolsWindow(PanelWindow):
@@ -85,6 +92,7 @@ class AdvancedToolsWindow(PanelWindow):
 
         # Conversion worker handle + result rows
         self._conv_worker: ConversionWorker | None = None
+        self._conv_running = False
         self._conv_result_stats: list = []
 
         # Dictionary-model training worker
@@ -93,11 +101,12 @@ class AdvancedToolsWindow(PanelWindow):
         super().__init__(
             title="Advanced Tools",
             session_key="advanced_tools",
-            params_width=265,
+            params_width=310,
             icon_name="advanced-tools",
             parent=parent,
         )
         self.resize(1240, 820)
+        self._auto_rendered = False
         self._populate_category_combo()
         self._on_category_changed(0)
 
@@ -412,6 +421,7 @@ class AdvancedToolsWindow(PanelWindow):
         h_cfile.setContentsMargins(0, 0, 0, 0)
         self._edit_conv_path = QLineEdit()
         self._edit_conv_path.setPlaceholderText("File or directory path…")
+        self._edit_conv_path.textChanged.connect(self._update_conv_run_state)
         btn_browse_conv = QPushButton("📂")
         btn_browse_conv.setFixedWidth(28)
         btn_browse_conv.clicked.connect(self._browse_conv_path)
@@ -455,8 +465,9 @@ class AdvancedToolsWindow(PanelWindow):
         self._j_freq_order = QComboBox()
         self._j_freq_order.addItems(["ascending", "descending"])
         j_form.addRow("Freq order:", self._j_freq_order)
-        self._j_station_suffix = QLineEdit()
-        j_form.addRow("Station suffix:", self._j_station_suffix)
+        self._j_station_name = QLineEdit()
+        self._j_station_name.setPlaceholderText("Optional single-station name")
+        j_form.addRow("Station name:", self._j_station_name)
         self._conv_opts_stack.addWidget(j_page)
 
         # Page 2 — Spectra opts
@@ -480,6 +491,53 @@ class AdvancedToolsWindow(PanelWindow):
 
         lay_opts.addWidget(self._conv_opts_stack)
         vlay.addWidget(grp_opts)
+
+        # ── AVG topography / station profile group ───────────────────
+        self._avg_topo_group, lay_avg_topo = make_group(
+            "Add topography / station profile"
+        )
+        topo_hint = QLabel(
+            "Optional: attach a Zonge .stn station profile so converted EDI "
+            "files receive station elevation, longitude, and latitude."
+        )
+        topo_hint.setObjectName("InfoLabel")
+        topo_hint.setWordWrap(True)
+        lay_avg_topo.addWidget(topo_hint)
+
+        row_stn = QWidget()
+        h_stn = QHBoxLayout(row_stn)
+        h_stn.setContentsMargins(0, 0, 0, 0)
+        h_stn.addWidget(QLabel("File"))
+        self._avg_stn_path = QLineEdit()
+        self._avg_stn_path.setPlaceholderText("K1.stn or station profile file...")
+        btn_stn = QPushButton("Browse...")
+        btn_stn.setFixedWidth(76)
+        btn_stn.clicked.connect(self._browse_avg_stn_path)
+        h_stn.addWidget(self._avg_stn_path)
+        h_stn.addWidget(btn_stn)
+        lay_avg_topo.addWidget(row_stn)
+
+        avg_topo_form = QFormLayout()
+        avg_topo_form.setSpacing(5)
+        self._avg_convert_coords = QCheckBox()
+        self._avg_convert_coords.setChecked(True)
+        avg_topo_form.addRow("Convert UTM → lat/lon:", self._avg_convert_coords)
+        self._avg_epsg = QLineEdit()
+        self._avg_epsg.setPlaceholderText("EPSG code, e.g. 32650")
+        avg_topo_form.addRow("EPSG:", self._avg_epsg)
+        self._avg_utm_zone = QLineEdit()
+        self._avg_utm_zone.setPlaceholderText("UTM zone, e.g. 50N")
+        avg_topo_form.addRow("UTM zone:", self._avg_utm_zone)
+        lay_avg_topo.addLayout(avg_topo_form)
+        coord_hint = QLabel(
+            "If conversion is enabled, provide either EPSG or UTM zone. "
+            "Disable it only when the profile already contains latitude and "
+            "longitude columns."
+        )
+        coord_hint.setObjectName("InfoLabel")
+        coord_hint.setWordWrap(True)
+        lay_avg_topo.addWidget(coord_hint)
+        vlay.addWidget(self._avg_topo_group)
 
         # ── Output group (optional) ───────────────────────────────────
         grp_out, lay_out = make_group("Output")
@@ -527,6 +585,7 @@ class AdvancedToolsWindow(PanelWindow):
         lay_ca.addWidget(self._btn_conv_export)
         lay_ca.addWidget(self._btn_conv_clear)
         vlay.addWidget(grp_ca)
+        self._update_conv_run_state()
 
         self._conv_progress = QProgressBar()
         self._conv_progress.setRange(0, 0)  # indeterminate
@@ -628,15 +687,22 @@ class AdvancedToolsWindow(PanelWindow):
         super().set_sites(sites)
         self._ctrl.set_sites(sites)
         self._topo_ctrl.set_sites(sites)
+        self._auto_rendered = False
         # Refresh topo preview if that page is active
         if self._combo_category.currentIndex() == TOPO_INDEX:
             self._refresh_topo_preview()
+        else:
+            self._auto_render_if_ready()
 
     def set_dark_mode(self, dark: bool) -> None:
         super().set_dark_mode(dark)
         self._ctrl.dark = dark
         self._topo_ctrl.dark = dark
         self._conv_ctrl.dark = dark
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        super().showEvent(event)
+        self._auto_render_if_ready()
 
     # ── Category slot ─────────────────────────────────────────────────
 
@@ -702,6 +768,20 @@ class AdvancedToolsWindow(PanelWindow):
     def _on_export(self) -> None:
         from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
         ExportDialog(figure=self._canvas.figure, parent=self).exec()
+
+    def _auto_render_if_ready(self) -> None:
+        if self._auto_rendered or self._ctrl._sites is None:
+            return
+        if not self.isVisible():
+            return
+        cat_row = self._combo_category.currentIndex()
+        if cat_row < 0 or cat_row >= len(ADVANCED_GROUPS):
+            return
+        _label, plots = ADVANCED_GROUPS[cat_row]
+        if not plots:
+            return
+        self._auto_rendered = True
+        QTimer.singleShot(0, self._on_run)
 
     # ── Plot-selection slot ───────────────────────────────────────────
 
@@ -894,6 +974,16 @@ class AdvancedToolsWindow(PanelWindow):
 
     def _on_conv_type_changed(self, idx: int) -> None:
         self._conv_opts_stack.setCurrentIndex(idx)
+        if hasattr(self, "_avg_topo_group"):
+            self._avg_topo_group.setVisible(idx == 0)
+        self._update_conv_run_state()
+
+    def _update_conv_run_state(self) -> None:
+        if not hasattr(self, "_btn_conv_run"):
+            return
+        has_source = bool(getattr(self, "_edit_conv_path", None)
+                          and self._edit_conv_path.text().strip())
+        self._btn_conv_run.setEnabled(has_source and not self._conv_running)
 
     def _browse_conv_path(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -915,6 +1005,16 @@ class AdvancedToolsWindow(PanelWindow):
         if path:
             self._edit_out_dir.setText(path)
 
+    def _browse_avg_stn_path(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select AVG topography / station profile",
+            "",
+            "Station files (*.stn *.txt *.csv);;All Files (*)",
+        )
+        if path:
+            self._avg_stn_path.setText(path)
+
     def _on_conv_run(self) -> None:
         path = self._edit_conv_path.text().strip()
         if not path:
@@ -935,16 +1035,28 @@ class AdvancedToolsWindow(PanelWindow):
                     options["compute_z"] = True
                 if self._avg_compute_rho.isChecked():
                     options["compute_rho_phi"] = True
+                stn_path = self._avg_stn_path.text().strip()
+                if stn_path:
+                    options["stn_path"] = stn_path
+                    options["convert_stn_coords"] = (
+                        self._avg_convert_coords.isChecked()
+                    )
+                epsg = self._avg_epsg.text().strip()
+                if epsg:
+                    options["epsg"] = epsg
+                utm_zone = self._avg_utm_zone.text().strip()
+                if utm_zone:
+                    options["utm_zone"] = utm_zone
             elif idx == 1:  # J
                 options["freq_order"] = self._j_freq_order.currentText()
-                suf = self._j_station_suffix.text().strip()
-                if suf:
-                    options["station_suffix"] = suf
+                station_name = self._j_station_name.text().strip()
+                if station_name:
+                    options["name"] = station_name
             elif idx == 2:  # Spectra
                 options["e_labels"]    = self._sp_e_labels.text()
                 options["h_labels"]    = self._sp_h_labels.text()
-                options["estimate_errors"] = self._sp_estimate_errors.isChecked()
-                options["use_remote_ref"]  = self._sp_remote_ref.isChecked()
+                options["estimate_error"] = self._sp_estimate_errors.isChecked()
+                options["use_remote"]     = self._sp_remote_ref.isChecked()
                 suf = self._sp_station_suffix.text().strip()
                 if suf:
                     options["station_suffix"] = suf
@@ -958,7 +1070,8 @@ class AdvancedToolsWindow(PanelWindow):
                 options["output_dir"] = out_dir
 
         self._conv_progress.setVisible(True)
-        self._btn_conv_run.setEnabled(False)
+        self._conv_running = True
+        self._update_conv_run_state()
         self._conv_status.setText(f"Running {type_str}…")
 
         self._conv_worker = ConversionWorker(self._conv_ctrl, options)
@@ -968,7 +1081,8 @@ class AdvancedToolsWindow(PanelWindow):
 
     def _on_conv_finished(self, collection, failures: list) -> None:
         self._conv_progress.setVisible(False)
-        self._btn_conv_run.setEnabled(True)
+        self._conv_running = False
+        self._update_conv_run_state()
 
         self._conv_ctrl._result   = collection
         stats = self._conv_ctrl.build_stats(collection, failures)
@@ -977,11 +1091,23 @@ class AdvancedToolsWindow(PanelWindow):
 
         # Populate table
         rows_data = stats.get("rows", [])
-        cols = ["Station", "N Freqs", "F min (Hz)", "F max (Hz)",
-                "Has Z", "Has Tipper"]
+        cols = [
+            "Station", "N Freqs", "F min (Hz)", "F max (Hz)",
+            "Latitude", "Longitude", "Elevation", "Has Z", "Has Tipper",
+        ]
         self._conv_table.setColumnCount(len(cols))
         self._conv_table.setHorizontalHeaderLabels(cols)
         self._conv_table.setRowCount(len(rows_data))
+
+        def _fmt_coord(value, digits=6):
+            try:
+                value = float(value)
+                if value == value:
+                    return f"{value:.{digits}f}"
+            except Exception:
+                pass
+            return "—"
+
         for r, row in enumerate(rows_data):
             self._conv_table.setItem(r, 0, QTableWidgetItem(row["station"]))
             self._conv_table.setItem(r, 1, QTableWidgetItem(str(row["n_freqs"])))
@@ -995,10 +1121,19 @@ class AdvancedToolsWindow(PanelWindow):
                 QTableWidgetItem(f"{row['f_max']:.4g}"
                                  if row["f_max"] == row["f_max"] else "—")
             )
-            self._conv_table.setItem(r, 4, QTableWidgetItem(
+            self._conv_table.setItem(
+                r, 4, QTableWidgetItem(_fmt_coord(row.get("lat")))
+            )
+            self._conv_table.setItem(
+                r, 5, QTableWidgetItem(_fmt_coord(row.get("lon")))
+            )
+            self._conv_table.setItem(
+                r, 6, QTableWidgetItem(_fmt_coord(row.get("elev"), digits=2))
+            )
+            self._conv_table.setItem(r, 7, QTableWidgetItem(
                 "Yes" if row["has_Z"] else "No"
             ))
-            self._conv_table.setItem(r, 5, QTableWidgetItem(
+            self._conv_table.setItem(r, 8, QTableWidgetItem(
                 "Yes" if row["has_tipper"] else "No"
             ))
 
@@ -1019,7 +1154,8 @@ class AdvancedToolsWindow(PanelWindow):
 
     def _on_conv_error(self, msg: str) -> None:
         self._conv_progress.setVisible(False)
-        self._btn_conv_run.setEnabled(True)
+        self._conv_running = False
+        self._update_conv_run_state()
         self._conv_status.setText(f"Error: {msg}")
 
     def _on_conv_commit(self) -> None:
@@ -1072,7 +1208,12 @@ class AdvancedToolsWindow(PanelWindow):
     def _populate_category_combo(self) -> None:
         self._combo_category.blockSignals(True)
         for group_label, _plots in ADVANCED_GROUPS:
-            self._combo_category.addItem(group_label)
+            icon_name = ADVANCED_GROUP_ICONS.get(group_label, "advanced-tools")
+            icon = _icon(icon_name)
+            if icon.isNull():
+                self._combo_category.addItem(group_label)
+            else:
+                self._combo_category.addItem(icon, group_label)
         self._combo_category.blockSignals(False)
 
     def _update_desc(self, cat_row: int, plot_row: int) -> None:
@@ -1087,9 +1228,10 @@ class AdvancedToolsWindow(PanelWindow):
                     "pycsamt.app.desktop.controllers.advanced_controller",
                     fromlist=["_POLAR_FNS"]
                 )._POLAR_FNS else ""
+            desc = describe_advanced_plot(fn_name)
             self._desc_lbl.setText(
                 f"<b>{plot_label}</b>{proj}<br/>"
-                f"<small style='color:#888'>et.{fn_name}()</small>"
+                f"<small style='color:#888'>{desc}</small>"
             )
         except Exception:
             self._desc_lbl.setText("")

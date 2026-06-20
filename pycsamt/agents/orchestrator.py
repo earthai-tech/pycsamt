@@ -429,10 +429,14 @@ class WorkflowOrchestratorAgent(BaseAgent):
                 workflow_type, reasoning = _keyword_classify(request)
 
         if workflow_type not in _WORKFLOW_STEPS:
-            workflow_type = self.default_workflow
+            candidate = self.default_workflow
+            if candidate not in _WORKFLOW_STEPS:
+                candidate = "qc"
             warnings.append(
-                f"Could not classify workflow; defaulting to {workflow_type!r}."
+                f"Workflow {workflow_type!r} is not recognised; "
+                f"falling back to {candidate!r}."
             )
+            workflow_type = candidate
 
         steps_spec = _WORKFLOW_STEPS[workflow_type]
 

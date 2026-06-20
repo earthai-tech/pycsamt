@@ -141,7 +141,12 @@ class TensorBase(AVGComponentBase):
 
         # Aggregate duplicates if needed
         if agg:
-            gb = work.groupby(keys, sort=True, dropna=False)
+            gb = work.groupby(
+                keys,
+                sort=True,
+                dropna=False,
+                observed=False,
+            )
             work = gb[var].agg(agg).to_frame(var).reset_index()
         return work
 

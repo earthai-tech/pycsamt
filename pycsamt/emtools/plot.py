@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 from ._core import (
     ensure_sites,
+    _axes_list,
     _iter_items,
     _get_t_block,
     _get_z_block,
@@ -345,6 +346,7 @@ def plot_sites_panels(
     wspace: float = 0.20,
     hspace: float = 0.08,
     height_ratio: Tuple[int, int] = (2, 1),
+    axes=None,
     figsize_scale: Tuple[float, float] = (2.6, 2.6),
     colors: Optional[Dict[str, str]] = None,  # None → from PYCSAMT_STYLE.mt
     marker         = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.marker
@@ -387,39 +389,49 @@ def plot_sites_panels(
             continue
         items.append((st, ed))
     if not items:
-        fig = plt.figure(figsize=(6, 3))
-        ax = fig.add_subplot(111)
+        axes_given = _axes_list(axes, 1) if axes is not None else None
+        if axes_given is None:
+            fig = plt.figure(figsize=(6, 3))
+            ax = fig.add_subplot(111)
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no sites", ha="center", va="center")
         return fig
     n = len(items)
     ncols = max(1, int(ncols))
     nrows = (n + ncols - 1) // ncols
     W, H = figsize_scale
-    fig = plt.figure(
-        figsize=(W * ncols, H * nrows),
-        constrained_layout=False,
-    )
-    outer = fig.add_gridspec(
-        nrows, ncols, wspace=wspace, hspace=hspace
-    )
-    axs: List[plt.Axes] = []
-    for k in range(nrows * ncols):
-        r, c = divmod(k, ncols)
-        if k >= n:
-            # filler invisible axes
+    axes_given = _axes_list(axes, n * 2) if axes is not None else None
+    if axes_given is None:
+        fig = plt.figure(
+            figsize=(W * ncols, H * nrows),
+            constrained_layout=False,
+        )
+        outer = fig.add_gridspec(
+            nrows, ncols, wspace=wspace, hspace=hspace
+        )
+        axs: List[plt.Axes] = []
+        for k in range(nrows * ncols):
+            r, c = divmod(k, ncols)
+            if k >= n:
+                # filler invisible axes
+                gs = outer[r, c].subgridspec(
+                    2, 1, hspace=0.02, height_ratios=height_ratio
+                )
+                ax1 = fig.add_subplot(gs[0]); ax1.axis("off")
+                ax2 = fig.add_subplot(gs[1]); ax2.axis("off")
+                axs += [ax1, ax2]
+                continue
             gs = outer[r, c].subgridspec(
                 2, 1, hspace=0.02, height_ratios=height_ratio
             )
-            ax1 = fig.add_subplot(gs[0]); ax1.axis("off")
-            ax2 = fig.add_subplot(gs[1]); ax2.axis("off")
-            axs += [ax1, ax2]
-            continue
-        gs = outer[r, c].subgridspec(
-            2, 1, hspace=0.02, height_ratios=height_ratio
-        )
-        axR = fig.add_subplot(gs[0])
-        axP = fig.add_subplot(gs[1], sharex=axR)
-        axs += [axR, axP]
+            axR = fig.add_subplot(gs[0])
+            axP = fig.add_subplot(gs[1], sharex=axR)
+            axs += [axR, axP]
+    else:
+        axs = axes_given
+        fig = axs[0].figure
 
     # draw each station
     for idx, (st, ed) in enumerate(items):
@@ -514,6 +526,7 @@ def plot_raw_sites_1d(
     comp_wspace: float = 0.12,
     group_hspace: float = 0.25,
     height_ratio: Tuple[int, int] = (2, 1),
+    axes=None,
     figsize_scale: Tuple[float, float] = (4.2, 3.1),
     colors: Optional[Dict[str, str]] = None,
     title_group_fmt: str = "{station}",
@@ -564,8 +577,13 @@ def plot_raw_sites_1d(
             continue
         items.append((st, ed))
     if not items:
-        fig = plt.figure(figsize=(6, 3))
-        ax = fig.add_subplot(111)
+        axes_given = _axes_list(axes, 1) if axes is not None else None
+        if axes_given is None:
+            fig = plt.figure(figsize=(6, 3))
+            ax = fig.add_subplot(111)
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no stations", ha="center", va="center")
         return fig
 
@@ -573,36 +591,48 @@ def plot_raw_sites_1d(
     ncols_groups = max(1, int(ncols_groups))
     nrows = (n + ncols_groups - 1) // ncols_groups
     W, H = figsize_scale
-    fig = plt.figure(
-        figsize=(W * ncols_groups, H * nrows),
-        constrained_layout=False,
-    )
-    outer = fig.add_gridspec(
-        nrows,
-        ncols_groups,
-        wspace=0.35,
-        hspace=group_hspace,
-    )
-
-    axes: list[tuple[list[plt.Axes], list[plt.Axes]]] = []
-    for g in range(n):
-        r, c = divmod(g, ncols_groups)
-        gs = outer[r, c].subgridspec(
-            2,
-            len(comps),
-            hspace=0.02,
-            wspace=comp_wspace,
-            height_ratios=height_ratio,
+    axes_given = _axes_list(axes, n * len(comps) * 2) if axes is not None else None
+    if axes_given is None:
+        fig = plt.figure(
+            figsize=(W * ncols_groups, H * nrows),
+            constrained_layout=False,
         )
-        ax_rho = [fig.add_subplot(gs[0, j]) for j in range(len(comps))]
-        ax_phase = [
-            fig.add_subplot(gs[1, j], sharex=ax_rho[j])
-            for j in range(len(comps))
-        ]
-        axes.append((ax_rho, ax_phase))
+        outer = fig.add_gridspec(
+            nrows,
+            ncols_groups,
+            wspace=0.35,
+            hspace=group_hspace,
+        )
+
+        panel_axes: list[tuple[list[plt.Axes], list[plt.Axes]]] = []
+        for g in range(n):
+            r, c = divmod(g, ncols_groups)
+            gs = outer[r, c].subgridspec(
+                2,
+                len(comps),
+                hspace=0.02,
+                wspace=comp_wspace,
+                height_ratios=height_ratio,
+            )
+            ax_rho = [fig.add_subplot(gs[0, j]) for j in range(len(comps))]
+            ax_phase = [
+                fig.add_subplot(gs[1, j], sharex=ax_rho[j])
+                for j in range(len(comps))
+            ]
+            panel_axes.append((ax_rho, ax_phase))
+    else:
+        fig = axes_given[0].figure
+        panel_axes = []
+        width = len(comps)
+        for g in range(n):
+            base = g * width * 2
+            panel_axes.append((
+                axes_given[base:base + width],
+                axes_given[base + width:base + 2 * width],
+            ))
 
     for g, (station, ed) in enumerate(items):
-        ax_rho, ax_phase = axes[g]
+        ax_rho, ax_phase = panel_axes[g]
         station_label = title_group_fmt.format(station=station)
         if not use_shared_labels:
             ax_rho[0].set_title(station_label, pad=6)
@@ -856,6 +886,7 @@ def plot_response_tipper(
     comp_wspace: float = 0.12,
     group_hspace: float = 0.32,
     height_ratios: Tuple[float, ...] = (2.2, 1.1, 0.75, 0.75),
+    axes=None,
     figsize_scale: Tuple[float, float] = (4.8, 4.6),
     colors: Optional[Dict[str, str]] = None,
     tipper_span_group: bool = False,
@@ -1017,8 +1048,13 @@ def plot_response_tipper(
             continue
         items.append((st, ed))
     if not items:
-        fig = plt.figure(figsize=(6, 3))
-        ax = fig.add_subplot(111)
+        axes_given = _axes_list(axes, 1) if axes is not None else None
+        if axes_given is None:
+            fig = plt.figure(figsize=(6, 3))
+            ax = fig.add_subplot(111)
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no stations", ha="center", va="center")
         return fig
 
@@ -1026,49 +1062,70 @@ def plot_response_tipper(
     ncols_groups = max(1, int(ncols_groups))
     nrows = (n + ncols_groups - 1) // ncols_groups
     W, H = figsize_scale
-    fig = plt.figure(
-        figsize=(W * ncols_groups, H * nrows),
-        constrained_layout=False,
-    )
-    outer = fig.add_gridspec(
-        nrows,
-        ncols_groups,
-        wspace=0.35,
-        hspace=group_hspace,
-    )
-
     row_names = ("rho", "phase", *tips)
     ratios = tuple(height_ratios[: len(row_names)])
     if len(ratios) < len(row_names):
         ratios = ratios + tuple([0.75] * (len(row_names) - len(ratios)))
 
+    axes_per_group = 2 * len(comps) + (
+        len(tips) if tipper_span_group else len(tips) * len(comps)
+    )
+    axes_given = _axes_list(axes, n * axes_per_group) if axes is not None else None
     groups: list[dict[str, Any]] = []
-    for g in range(n):
-        r, c = divmod(g, ncols_groups)
-        gs = outer[r, c].subgridspec(
-            len(row_names),
-            len(comps),
-            hspace=0.28,
-            wspace=comp_wspace,
-            height_ratios=ratios,
+    if axes_given is None:
+        fig = plt.figure(
+            figsize=(W * ncols_groups, H * nrows),
+            constrained_layout=False,
         )
-        ax_rho = [fig.add_subplot(gs[0, j]) for j in range(len(comps))]
-        ax_phase = [
-            fig.add_subplot(gs[1, j], sharex=ax_rho[j])
-            for j in range(len(comps))
-        ]
-        tip_axes: dict[str, plt.Axes | list[plt.Axes]] = {}
-        for row, tip in enumerate(tips, start=2):
-            if tipper_span_group:
-                tip_axes[tip] = fig.add_subplot(gs[row, :], sharex=ax_rho[0])
-            else:
-                tip_axes[tip] = [
-                    fig.add_subplot(gs[row, j], sharex=ax_rho[j])
-                    for j in range(len(comps))
-                ]
-        groups.append(
-            {"rho": ax_rho, "phase": ax_phase, "tip": tip_axes}
+        outer = fig.add_gridspec(
+            nrows,
+            ncols_groups,
+            wspace=0.35,
+            hspace=group_hspace,
         )
+        for g in range(n):
+            r, c = divmod(g, ncols_groups)
+            gs = outer[r, c].subgridspec(
+                len(row_names),
+                len(comps),
+                hspace=0.28,
+                wspace=comp_wspace,
+                height_ratios=ratios,
+            )
+            ax_rho = [fig.add_subplot(gs[0, j]) for j in range(len(comps))]
+            ax_phase = [
+                fig.add_subplot(gs[1, j], sharex=ax_rho[j])
+                for j in range(len(comps))
+            ]
+            tip_axes: dict[str, plt.Axes | list[plt.Axes]] = {}
+            for row, tip in enumerate(tips, start=2):
+                if tipper_span_group:
+                    tip_axes[tip] = fig.add_subplot(gs[row, :], sharex=ax_rho[0])
+                else:
+                    tip_axes[tip] = [
+                        fig.add_subplot(gs[row, j], sharex=ax_rho[j])
+                        for j in range(len(comps))
+                    ]
+            groups.append(
+                {"rho": ax_rho, "phase": ax_phase, "tip": tip_axes}
+            )
+    else:
+        fig = axes_given[0].figure
+        width = len(comps)
+        for g in range(n):
+            base = g * axes_per_group
+            ax_rho = axes_given[base:base + width]
+            ax_phase = axes_given[base + width:base + 2 * width]
+            cursor = base + 2 * width
+            tip_axes: dict[str, plt.Axes | list[plt.Axes]] = {}
+            for tip in tips:
+                if tipper_span_group:
+                    tip_axes[tip] = axes_given[cursor]
+                    cursor += 1
+                else:
+                    tip_axes[tip] = axes_given[cursor:cursor + width]
+                    cursor += width
+            groups.append({"rho": ax_rho, "phase": ax_phase, "tip": tip_axes})
 
     for g, (station, ed) in enumerate(items):
         group = groups[g]
@@ -1084,7 +1141,10 @@ def plot_response_tipper(
             _, z, fr = z_out[:3]
             ze = None
         if z is None or fr is None:
-            for ax in ax_rho + ax_phase + list(tip_axes.values()):
+            flat_tip_axes = []
+            for value in tip_axes.values():
+                flat_tip_axes.extend(value if isinstance(value, list) else [value])
+            for ax in ax_rho + ax_phase + flat_tip_axes:
                 ax.axis("off")
             continue
         fr = np.asarray(fr, dtype=float)
@@ -1370,6 +1430,7 @@ def plot_sites_compare(
     pair_wspace: float = 0.06,   # space between raw/after
     hspace: float = 0.06,
     height_ratio: Tuple[int, int] = (2, 1),
+    axes=None,
     figsize_scale: Tuple[float, float] = (3.0, 3.0),
     colors: Optional[Dict[str, str]] = None,  # None → from PYCSAMT_STYLE.mt
     marker         = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.marker
@@ -1403,8 +1464,13 @@ def plot_sites_compare(
         keep = set(stations)
         pairs = [p for p in pairs if p[0] in keep]
     if not pairs:
-        fig = plt.figure(figsize=(6, 3))
-        ax = fig.add_subplot(111)
+        axes_given = _axes_list(axes, 1) if axes is not None else None
+        if axes_given is None:
+            fig = plt.figure(figsize=(6, 3))
+            ax = fig.add_subplot(111)
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no stations",
                 ha="center", va="center")
         return fig
@@ -1414,28 +1480,35 @@ def plot_sites_compare(
     ncols_groups = max(1, int(ncols_groups))
     nrows = (n + ncols_groups - 1) // ncols_groups
     W, H = figsize_scale
-    fig = plt.figure(
-        figsize=(W * ncols_groups * cols_per_grp, H * nrows),
-        constrained_layout=False,
-    )
-    outer = fig.add_gridspec(
-        nrows, ncols_groups, wspace=group_gap, hspace=hspace
-    )
-
     # prebuild inner axes
     AxR: List[List[plt.Axes]] = []
     AxP: List[List[plt.Axes]] = []
-    for g in range(n):
-        r, c = divmod(g, ncols_groups)
-        gs = outer[r, c].subgridspec(
-            2, cols_per_grp,
-            hspace=0.02, wspace=pair_wspace,
-            height_ratios=height_ratio,
+    axes_given = _axes_list(axes, n * cols_per_grp * 2) if axes is not None else None
+    if axes_given is None:
+        fig = plt.figure(
+            figsize=(W * ncols_groups * cols_per_grp, H * nrows),
+            constrained_layout=False,
         )
-        axR = [fig.add_subplot(gs[0, j]) for j in range(cols_per_grp)]
-        axP = [fig.add_subplot(gs[1, j], sharex=axR[0])
-               for j in range(cols_per_grp)]
-        AxR.append(axR); AxP.append(axP)
+        outer = fig.add_gridspec(
+            nrows, ncols_groups, wspace=group_gap, hspace=hspace
+        )
+        for g in range(n):
+            r, c = divmod(g, ncols_groups)
+            gs = outer[r, c].subgridspec(
+                2, cols_per_grp,
+                hspace=0.02, wspace=pair_wspace,
+                height_ratios=height_ratio,
+            )
+            axR = [fig.add_subplot(gs[0, j]) for j in range(cols_per_grp)]
+            axP = [fig.add_subplot(gs[1, j], sharex=axR[0])
+                   for j in range(cols_per_grp)]
+            AxR.append(axR); AxP.append(axP)
+    else:
+        fig = axes_given[0].figure
+        for g in range(n):
+            base = g * cols_per_grp * 2
+            AxR.append(axes_given[base:base + cols_per_grp])
+            AxP.append(axes_given[base + cols_per_grp:base + 2 * cols_per_grp])
 
     # draw each group
     for g, (st, ed0, ed1) in enumerate(pairs):
@@ -1606,6 +1679,7 @@ def plot_sites_fit_grid(
     comp_wspace: float = 0.10,   # space between components
     group_hspace: float = 0.18,
     height_ratio: Tuple[int, int] = (2, 1),
+    axes=None,
     figsize_scale: Tuple[float, float] = (4.0, 3.0),
     colors_meas: Optional[Dict[str, str]] = None,  # None → PYCSAMT_STYLE.mt
     color_fit_te   = _UNSET,   # default: PYCSAMT_STYLE.mt.te.color
@@ -1643,8 +1717,13 @@ def plot_sites_fit_grid(
         keep = set(stations)
         pairs = [p for p in pairs if p[0] in keep]
     if not pairs:
-        fig = plt.figure(figsize=(6, 3))
-        ax = fig.add_subplot(111)
+        axes_given = _axes_list(axes, 1) if axes is not None else None
+        if axes_given is None:
+            fig = plt.figure(figsize=(6, 3))
+            ax = fig.add_subplot(111)
+        else:
+            ax = axes_given[0]
+            fig = ax.figure
         ax.text(0.5, 0.5, "no matching stations",
                 ha="center", va="center")
         return fig
@@ -1652,27 +1731,37 @@ def plot_sites_fit_grid(
     ncols_groups = max(1, int(ncols_groups))
     nrows = (n + ncols_groups - 1) // ncols_groups
     W, H = figsize_scale
-    fig = plt.figure(
-        figsize=(W * ncols_groups, H * nrows),
-        constrained_layout=False,
-    )
-    outer = fig.add_gridspec(
-        nrows, ncols_groups, wspace=0.35, hspace=group_hspace
-    )
-
     # build axes per group: 2 x ncomp
     AX = []
-    for g in range(n):
-        r, c = divmod(g, ncols_groups)
-        gs = outer[r, c].subgridspec(
-            2, len(comps),
-            hspace=0.02, wspace=comp_wspace,
-            height_ratios=height_ratio,
+    axes_given = _axes_list(axes, n * len(comps) * 2) if axes is not None else None
+    if axes_given is None:
+        fig = plt.figure(
+            figsize=(W * ncols_groups, H * nrows),
+            constrained_layout=False,
         )
-        axR = [fig.add_subplot(gs[0, j]) for j in range(len(comps))]
-        axP = [fig.add_subplot(gs[1, j], sharex=axR[0])
-               for j in range(len(comps))]
-        AX.append((axR, axP))
+        outer = fig.add_gridspec(
+            nrows, ncols_groups, wspace=0.35, hspace=group_hspace
+        )
+        for g in range(n):
+            r, c = divmod(g, ncols_groups)
+            gs = outer[r, c].subgridspec(
+                2, len(comps),
+                hspace=0.02, wspace=comp_wspace,
+                height_ratios=height_ratio,
+            )
+            axR = [fig.add_subplot(gs[0, j]) for j in range(len(comps))]
+            axP = [fig.add_subplot(gs[1, j], sharex=axR[0])
+                   for j in range(len(comps))]
+            AX.append((axR, axP))
+    else:
+        fig = axes_given[0].figure
+        width = len(comps)
+        for g in range(n):
+            base = g * width * 2
+            AX.append((
+                axes_given[base:base + width],
+                axes_given[base + width:base + 2 * width],
+            ))
 
     # draw each station group
     for g, (st, edm, edp) in enumerate(pairs):

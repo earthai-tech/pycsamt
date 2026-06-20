@@ -1,23 +1,26 @@
 /**
- * popout.js — pop-out / lightbox for every .fig-area image in pyCSAMT.
+ * popout.js — pop-out / lightbox for pyCSAMT figures.
  *
- * Strategy: MutationObserver watches for .fig-area elements added by Dash
- * and injects a small pop-out button (top-right corner, visible on hover).
- * No Dash callbacks involved — everything is pure DOM.
+ * Strategy: MutationObserver watches for image based .fig-area elements and
+ * Plotly based .tool-graph elements added by Dash. It injects a small pop-out
+ * button (top-right corner, visible on hover). No Dash callbacks involved.
  */
 (function () {
     'use strict';
 
     /* ── Lightbox API ────────────────────────────────────────────── */
 
-    function openLightbox(src) {
+    function openLightbox(src, filename) {
         var lb  = document.getElementById('lightbox-overlay');
         var img = document.getElementById('lightbox-img');
         var dl  = document.getElementById('lightbox-download');
         if (!lb || !img) return;
 
         img.src = src;
-        if (dl) dl.href = src;                   // wire Save button
+        if (dl) {
+            dl.href = src;                       // wire Save button
+            dl.download = filename || 'pycsamt_figure.png';
+        }
 
         lb.style.display = 'flex';
         lb.classList.remove('lb-hidden');
@@ -51,7 +54,40 @@
         }
     }
 
-    /* ── Inject pop-out button into one .fig-area ────────────────── */
+    function plotTitle(gd) {
+        var title = gd && gd._fullLayout && gd._fullLayout.title;
+        if (!title) return 'pycsamt_figure';
+        if (typeof title === 'string') return title;
+        return title.text || 'pycsamt_figure';
+    }
+
+    function safeFilename(text) {
+        return String(text || 'pycsamt_figure')
+            .toLowerCase()
+            .replace(/<[^>]+>/g, '')
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .slice(0, 80) || 'pycsamt_figure';
+    }
+
+    function openPlotly(area) {
+        var gd = area.querySelector('.js-plotly-plot');
+        if (!gd || !window.Plotly || !window.Plotly.toImage) return false;
+        var filename = safeFilename(plotTitle(gd)) + '.png';
+        window.Plotly.toImage(gd, {
+            format: 'png',
+            scale: 2,
+            width: Math.max(900, gd.clientWidth || 900),
+            height: Math.max(560, gd.clientHeight || 560)
+        }).then(function (src) {
+            openLightbox(src, filename);
+        }).catch(function (err) {
+            console.warn('pyCSAMT plot pop-out failed', err);
+        });
+        return true;
+    }
+
+    /* ── Inject pop-out button into one figure container ─────────── */
 
     function injectPopout(area) {
         if (area.dataset.popoutDone) return;
@@ -65,6 +101,10 @@
 
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
+            e.preventDefault();
+
+            if (openPlotly(area)) return;
+
             /* find the first real <img> inside the fig-area */
             var img = area.querySelector('img:not(.popout-icon)');
             if (img && img.src && img.src.length > 200) {
@@ -75,10 +115,12 @@
         area.appendChild(btn);
     }
 
-    /* ── Scan DOM for unprocessed .fig-area elements ─────────────── */
+    /* ── Scan DOM for unprocessed figure containers ──────────────── */
 
     function scan() {
-        document.querySelectorAll('.fig-area:not([data-popout-done])').forEach(injectPopout);
+        document.querySelectorAll(
+            '.fig-area:not([data-popout-done]), .tool-graph:not([data-popout-done])'
+        ).forEach(injectPopout);
         wireCloseButton();
     }
 
@@ -89,10 +131,16 @@
         mutations.forEach(function (m) {
             m.addedNodes.forEach(function (node) {
                 if (node.nodeType !== 1) return;
-                if (node.classList && node.classList.contains('fig-area')) {
+                if (
+                    node.classList &&
+                    (node.classList.contains('fig-area') ||
+                     node.classList.contains('tool-graph'))
+                ) {
                     injectPopout(node);
                 } else if (node.querySelectorAll) {
-                    node.querySelectorAll('.fig-area:not([data-popout-done])').forEach(injectPopout);
+                    node.querySelectorAll(
+                        '.fig-area:not([data-popout-done]), .tool-graph:not([data-popout-done])'
+                    ).forEach(injectPopout);
                 }
                 needScan = true;
             });

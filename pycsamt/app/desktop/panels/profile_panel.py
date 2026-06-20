@@ -43,6 +43,10 @@ class ProfilePanel(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._ctrl = PlotController()
+        # Phase-tensor tab cache key: tuple returned by PlotController.phase_tensor_key()
+        # stored after the last successful draw.  When the current key matches,
+        # skip the full matplotlib redraw and just repaint the existing canvas.
+        self._pt_last_key: tuple | None = None
         self._build_ui()
 
     # ── Construction ──────────────────────────────────────────────────
@@ -96,6 +100,7 @@ class ProfilePanel(QWidget):
 
     def set_sites(self, sites) -> None:
         """Load a Sites collection and redraw all tabs."""
+        self._pt_last_key = None   # new data always means a fresh PT draw
         self._ctrl.set_sites(sites)
         try:
             freqs = []
@@ -109,7 +114,10 @@ class ProfilePanel(QWidget):
                 self._freq_sel.set_freq_range(f_min, f_max)
         except Exception:
             pass
-        self._redraw_all()
+        try:
+            self._redraw_all()
+        except Exception:
+            pass   # never let a canvas draw block the caller's post-set_sites work
 
     def set_selected_station(self, station_id: str) -> None:
         """Highlight a station; redraw ρₐ/φ tab and mark active pseudosection."""
@@ -126,7 +134,19 @@ class ProfilePanel(QWidget):
     def set_dark_mode(self, dark: bool) -> None:
         self._ctrl.dark = dark
         self._section_panel.set_dark_mode(dark)
+        # Dark mode changes the PT plot styling → force a full redraw next time
+        self._pt_last_key = None
         self._redraw_current_tab()
+
+    def invalidate_phase_tensor(self) -> None:
+        """Force the Phase Tensor tab to recompute and redraw on the next visit.
+
+        Call this before an explicit user-triggered refresh so the DataFrame
+        cache is also cleared (useful when the user changes settings and wants
+        a fresh computation, not just a repaint of cached data).
+        """
+        self._pt_last_key = None
+        self._ctrl.invalidate_phase_tensor()
 
     def set_inversion_result(self, result) -> None:
         """Load an InversionResult into the 2D Section tab."""
@@ -221,9 +241,24 @@ class ProfilePanel(QWidget):
         self._canvas_tipper.draw()
 
     def _redraw_phase_tensor(self) -> None:
+        """Redraw the Phase Tensor tab — skips the full matplotlib draw when
+        the current plot key matches the last drawn key (tab revisit with no
+        setting change).  Only the expensive initial draw and explicit refreshes
+        trigger a full recompute + redraw cycle.
+        """
+        current_key = self._ctrl.phase_tensor_key()
+        if (self._pt_last_key is not None
+                and current_key == self._pt_last_key
+                and len(self._canvas_pt.figure.axes) > 0):
+            # Nothing changed — just repaint the existing figure (fast path).
+            self._canvas_pt.draw()
+            return
+
         fig = self._canvas_pt.figure
         fig.clear()
         ax = fig.add_subplot(111)
         self._canvas_pt.axes = ax
         self._ctrl.draw_phase_tensor(ax)
         self._canvas_pt.draw()
+        # Record the key so the next identical tab visit is free.
+        self._pt_last_key = current_key

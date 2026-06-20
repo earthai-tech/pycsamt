@@ -20,7 +20,7 @@
 
 ## Status
 
-pyCSAMT v2 is a major rewrite of the original pyCSAMT project. The package is being organized as a larger scientific Python library with:
+pyCSAMT v2 is a rewrite of the original pyCSAMT project. The package is being organized as a scientific Python library with:
 
 - a scikit-learn-style documentation structure using the PyData Sphinx theme,
 - a command-line interface for field and production workflows,

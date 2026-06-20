@@ -155,6 +155,8 @@ class MainWindow(QMainWindow):
         self._session    = SessionState.load()
         self._controller = AppController(self._session)
         self._loader     = None      # LoaderWorker kept alive while running
+        self._recomputed_ids: set[str] = set()   # stations marked recomputed
+        self._last_recompute_output = None        # Path to last recomputed EDI folder
 
         # Settings controller — load saved profile (silently no-ops if absent)
         from pycsamt.app.desktop.controllers.settings_controller import SettingsController
@@ -454,6 +456,16 @@ class MainWindow(QMainWindow):
 
         tools_menu.addSeparator()
 
+        act_recompute = QAction(_icon("recompute"), "&Recompute EDIs…", self)
+        act_recompute.setShortcut("Ctrl+Shift+X")
+        act_recompute.setStatusTip(
+            "Recompute EDI files: rotate, filter frequencies, fill missing, rewrite"
+        )
+        act_recompute.triggered.connect(self._open_recompute)
+        tools_menu.addAction(act_recompute)
+
+        tools_menu.addSeparator()
+
         act_conv = QAction(_icon("format-converter"), "&Format Converter…", self)
         act_conv.setShortcut("Ctrl+Shift+C")
         act_conv.setStatusTip("Export survey to EDI / CSV / JSON")
@@ -525,6 +537,7 @@ class MainWindow(QMainWindow):
         self._all_icon_actions.extend([
             (act_strike,         "strike-analyzer"),
             (act_valid,          "EDI-validator"),
+            (act_recompute,      "recompute"),
             (act_conv,           "format-converter"),
             (act_batch,          "batch-export"),
             (act_coord,          "coordinate-transformer"),
@@ -686,9 +699,9 @@ class MainWindow(QMainWindow):
 
         # Track More-menu actions so _apply_theme can re-ice them on theme switch
         self._all_icon_actions.extend([
-            (_act_tdem, "tdem"),
-            (_act_adv,  "advanced-tools"),
-            (_act_exp,  "export"),
+            (_act_tdem,  "tdem"),
+            (_act_adv,   "advanced-tools"),
+            (_act_exp,   "export"),
         ])
 
         self._more_btn = QToolButton(self)
@@ -771,7 +784,11 @@ class MainWindow(QMainWindow):
 
     def _open_files(self) -> None:
         from pycsamt.app.desktop.dialogs.load_data_dlg import LoadDataDialog
-        dlg = LoadDataDialog(self, last_dir=self._session.last_data_dir)
+        dlg = LoadDataDialog(
+            self,
+            last_dir=self._session.last_data_dir,
+            recomputed_dir=self._last_recompute_output,
+        )
         if dlg.exec() != LoadDataDialog.DialogCode.Accepted:
             return
         paths = dlg.selected_paths
@@ -797,33 +814,45 @@ class MainWindow(QMainWindow):
         self._loader.start()
 
     def _on_data_loaded(self, sites) -> None:
+        # Fresh load → clear the local set; StationModel.set_dataframe() will
+        # clear its own _recomputed_ids automatically.
+        self._recomputed_ids.clear()
+
         ctrl = self._controller
         df   = None
         if self._loader is not None:
             df = self._loader.data_controller.dataframe
 
-        if df is not None:
-            self._station_panel.set_dataframe(df)
-            self._survey_overview.update_survey(
-                df, getattr(self, "_loaded_paths", None)
-            )
-            # Feed all panel windows (pass full df so Elevation/N_freq are available)
-            self._correction_win.set_sites(sites)
-            self._profile_win.set_sites(sites)
-            self._map_win.set_dataframe(df)
-            self._map_win.set_sites(sites)
-            self._qc_win.set_sites(sites)
-            self._advanced_win.set_sites(sites)
-            self._pipeline_win.set_input_sites(sites)
-            self._forward_win.set_observed_sites(sites)
-            self._inversion_win.set_sites(sites)
-            self._interp_win.set_sites(sites)
-
-        n = ctrl.n_stations
-        self._status_file_lbl.setText(f"{n} stations loaded")
-        self._progress_bar.setVisible(False)
-        self._status_ready_lbl.setText("Ready  ●")
-        self._log(f"Loaded {n} stations.")
+        try:
+            if df is not None:
+                self._station_panel.set_dataframe(df)
+                self._survey_overview.update_survey(
+                    df, getattr(self, "_loaded_paths", None)
+                )
+                # Feed all panel windows
+                for _call in [
+                    lambda: self._correction_win.set_sites(sites),
+                    lambda: self._profile_win.set_sites(sites),
+                    lambda: self._map_win.set_dataframe(df),
+                    lambda: self._map_win.set_sites(sites),
+                    lambda: self._qc_win.set_sites(sites),
+                    lambda: self._advanced_win.set_sites(sites),
+                    lambda: self._pipeline_win.set_input_sites(sites),
+                    lambda: self._forward_win.set_observed_sites(sites),
+                    lambda: self._inversion_win.set_sites(sites),
+                    lambda: self._interp_win.set_sites(sites),
+                ]:
+                    try:
+                        _call()
+                    except Exception:
+                        pass   # never let a panel window block the status update
+        finally:
+            # Always update the status bar — even if a panel window throws.
+            n = ctrl.n_stations
+            self._status_file_lbl.setText(f"{n} stations loaded")
+            self._progress_bar.setVisible(False)
+            self._status_ready_lbl.setText("Ready  ●")
+            self._log(f"Loaded {n} stations.")
 
     # ── Station selection ──────────────────────────────────────────────
 
@@ -904,6 +933,13 @@ class MainWindow(QMainWindow):
 
     def _on_conversion_committed(self, converted_sites) -> None:
         """Replace global sites with an EDICollection converted by AdvancedToolsWindow."""
+        try:
+            from pycsamt.site.base import to_sites
+            converted_sites = to_sites(converted_sites)
+        except Exception as exc:
+            self._log(f"Could not commit converted dataset: {exc}")
+            return
+
         self._controller.set_sites(converted_sites)
         from pycsamt.app.desktop.controllers.data_controller import DataController
         dc = DataController()
@@ -1108,6 +1144,7 @@ class MainWindow(QMainWindow):
             return
         from pycsamt.app.desktop.tools.validator_tool import EDIValidatorDialog
         dlg = EDIValidatorDialog(getattr(self._controller, "sites", None), parent=self)
+        dlg.open_recompute_requested.connect(self._open_recompute)
         if dlg.exec() and dlg.modified_sites is not None:
             self._apply_modified_sites(dlg.modified_sites, source="EDI Validator")
 
@@ -1193,6 +1230,51 @@ class MainWindow(QMainWindow):
             return
         from pycsamt.app.desktop.tools.elevation_tool import ElevationEnrichDialog
         ElevationEnrichDialog(getattr(self._controller, "sites", None), parent=self).exec()
+
+    def _open_recompute(self) -> None:
+        from PySide6.QtWidgets import QMessageBox
+        from pycsamt.app.desktop.dialogs.recompute_dlg import RecomputeDialog
+
+        sites = getattr(self._controller, "sites", None)
+
+        # If already recomputed — warn and ask for confirmation before re-opening
+        if self._recomputed_ids:
+            n   = len(self._recomputed_ids)
+            ans = QMessageBox.question(
+                self,
+                "Already Recomputed",
+                f"{n} station(s) in this survey have already been recomputed.\n\n"
+                "Do you want to recompute again with new settings?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if ans != QMessageBox.StandardButton.Yes:
+                return
+
+        dlg = RecomputeDialog(sites=sites, parent=self)
+        dlg.recompute_committed.connect(self._on_recompute_committed)
+        dlg.exec()
+
+    def _on_recompute_committed(self, result) -> None:
+        """Apply a completed recompute result back into the app."""
+        new_ids = {rec.station for rec in result.records if rec.status == "ok"}
+        self._recomputed_ids.update(new_ids)
+        self._last_recompute_output = result.output_root
+
+        # Load first: set_dataframe() clears model's _recomputed_ids internally.
+        # Badges must be applied AFTER the new DataFrame is in place so the
+        # station IDs from the fresh data are the ones being matched.
+        recomputed_sites = result.sites
+        self._apply_modified_sites(recomputed_sites, source="Recompute")
+
+        # Now stamp the badges onto the freshly-loaded model rows.
+        self._station_panel._table._model.mark_recomputed(self._recomputed_ids)
+
+        n = len(new_ids)
+        self._log(f"Recompute committed — {n} station(s) marked with ◈ badge.")
+        self.statusBar().showMessage(
+            f"Recomputed {n} station(s). Marked with ◈ in the station list.", 6000
+        )
 
     def _apply_modified_sites(self, new_sites, *, source: str = "") -> None:
         """Push a modified site list back into the controller and refresh all panels."""

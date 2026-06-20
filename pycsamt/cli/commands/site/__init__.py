@@ -20,6 +20,7 @@ info        ``pycsamt site info``    — rich survey / single-station report.
 select      ``pycsamt site select``  — filter by name, freq, bbox, quality.
 edit        ``pycsamt site edit``    — rotate, slice, fill, re-coordinate.
 export      ``pycsamt site export``  — write EDIs or zip archive.
+recompute   ``pycsamt site recompute`` — normalize and rewrite EDI files.
 compute     ``pycsamt site compute`` — strike, resistivity, phase-slope, tipper.
 """
 
@@ -31,6 +32,7 @@ from . import info     # noqa: F401
 from . import select   # noqa: F401
 from . import edit     # noqa: F401
 from . import export   # noqa: F401
+from . import recompute  # noqa: F401
 from . import compute  # noqa: F401
 
 __all__ = ["site"]

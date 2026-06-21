@@ -30,8 +30,11 @@ from datetime import datetime
 from typing import Any
 
 import matplotlib
-matplotlib.use("Agg")
+matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
+# Silence plt.show() globally — agent code
+# must never open OS windows in a web app.
+plt.show = lambda *a, **kw: None
 
 from dash import ALL, Input, Output, State
 from dash import ctx, html, no_update
@@ -1307,7 +1310,14 @@ def register_chat(app) -> None:
         prevent_initial_call=True,
     )
     def open_fig_modal(n_clicks, fig_store):
-        if not any(n_clicks):
+        # Require the triggered button itself to
+        # have a positive click count — prevents
+        # auto-open when a new figure card is
+        # dynamically added while an older button
+        # still has n_clicks > 0.
+        if not ctx.triggered:
+            raise PreventUpdate
+        if not ctx.triggered[0].get("value"):
             raise PreventUpdate
         triggered = ctx.triggered_id
         if not triggered:

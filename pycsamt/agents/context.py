@@ -35,15 +35,36 @@ logger = logging.getLogger(__name__)
 # ── constants ─────────────────────────────────────────────────────────────────
 
 _KNOWN_WORKFLOWS = {
-    "qc":               "Data quality control and preprocessing",
-    "static_shift":     "Static-shift detection and correction",
-    "phase_analysis":   "Phase tensor, strike, dimensionality analysis",
-    "forward":          "Forward modelling (1D / 2D / 3D)",
-    "inversion_prep":   "Prepare Occam2D / ModEM inversion data files",
-    "inversion_eval":   "Evaluate inversion result quality",
-    "interpretation":   "Geological interpretation of resistivity model",
-    "report":           "Generate survey report",
-    "full":             "Full pipeline: QC → analysis → inversion prep → report",
+    # --- core processing ---
+    "qc":                 "Data quality control and preprocessing",
+    "static_shift":       "Static-shift detection and correction",
+    "phase_analysis":     "Phase tensor, strike, dimensionality analysis",
+    "forward":            "Forward modelling (1D / 2D / 3D)",
+    "inversion_prep":     "Prepare Occam2D / ModEM inversion files",
+    "pre_inversion":      "Prepare Occam2D / ModEM inversion files",
+    "inversion_eval":     "Evaluate inversion result quality",
+    "interpretation":     "Geological interpretation",
+    "report":             "Generate survey report",
+    "full":               "Full pipeline: QC to report",
+    # --- AI / DL inversion ---
+    "ai_inversion":       "AI 1-D inversion (EMInverter1D / CNN)",
+    "inv1d":              "AI 1-D inversion (EMInverter1D / CNN)",
+    "inv2d":              "U-Net 2-D profile AI inversion",
+    "inv3d":              "GCN 3-D spatial AI inversion",
+    "ensemble_inversion": "Ensemble 1-D inversion with uncertainty",
+    "joint_inversion":    "Multi-modal DRCNN joint inversion",
+    # --- external codes ---
+    "modem":              "ModEM 3-D inversion file preparation",
+    "occam2d":            "Occam2D 2-D inversion file preparation",
+    # --- geophysical analysis ---
+    "tipper":             "Tipper / induction arrow analysis",
+    "sensitivity":        "Bostick sensitivity and DOI analysis",
+    "rotation":           "Tensor rotation to principal axes",
+    "freq_decimation":    "Frequency decimation / period selection",
+    # --- survey-level ---
+    "batch":              "Batch processing of multiple profiles",
+    "comparison":         "Compare inversion results",
+    "full_ai_workflow":   "Full AI-assisted pipeline",
 }
 
 _KNOWN_INVERSION_CODES = {"occam2d", "modem", "nlcg", "zonal", "smooth2d"}
@@ -60,23 +81,40 @@ configuration dictionary with the following schema (include only keys \
 that are clearly mentioned or can be reasonably inferred):
 
 {
-  "workflow":       string — one of: qc, static_shift, phase_analysis,
-                    forward, inversion_prep, inversion_eval, interpretation,
-                    report, full,
-  "data_path":      string — absolute or relative path to EDI file(s) or directory,
+  "workflow":       string — one of:
+                    qc, static_shift, phase_analysis, forward,
+                    inversion_prep, pre_inversion, inversion_eval,
+                    interpretation, report, full,
+                    ai_inversion, inv1d, inv2d, inv3d,
+                    ensemble_inversion, joint_inversion,
+                    modem, occam2d,
+                    tipper, sensitivity, rotation,
+                    freq_decimation, batch, comparison,
+                    full_ai_workflow,
+  "data_path":      string — absolute or relative path to EDI
+                    file(s) or directory,
   "output_dir":     string — where to write results / figures,
   "period_range":   [T_min_seconds, T_max_seconds],
-  "component":      string — "xy" | "yx" | "all" | "off_diagonal",
-  "station":        string or null — specific station name, null = all,
-  "inversion_code": string — "occam2d" | "modem" | null,
+  "component":      string — "xy"|"yx"|"all"|"off_diagonal",
+  "station":        string or null,
+  "inversion_code": string — "occam2d"|"modem"|null,
   "depth_max_km":   float or null,
   "n_periods":      int or null,
   "verbose":        bool
 }
 
 Rules:
-- If a period range is given in frequency (Hz), convert to period (s = 1/f).
-- If the path looks like it refers to a profile line (e.g. L22, L12), note it.
+- Choose "ai_inversion" for CNN / 1-D neural-network / deep-learning
+  inversion requests.
+- Choose "inv2d" for U-Net / 2-D neural / profile AI inversion.
+- Choose "inv3d" for GCN / graph-convolutional / 3-D AI inversion.
+- Choose "ensemble_inversion" for ensemble / uncertainty / Bayesian.
+- Choose "joint_inversion" for joint / multi-modal / TEM+MT.
+- Choose "full_ai_workflow" when both AI inversion and full pipeline
+  are requested together.
+- If a period range is given in frequency (Hz), convert to period
+  (s = 1/f).
+- Preserve the full absolute path exactly as given.
 - Return ONLY the JSON object — no markdown fences, no prose.
 """
 
@@ -174,32 +212,54 @@ class ContextInputAgent(BaseAgent):
         config = _normalise_config(config, request)
         warnings = _validate_config(config)
 
-        # ── optional LLM summary ─────────────────────────────────────────────
+        # ── build validated WorkflowPlan ──────────────────────────
+        from ._workflow_plan import WorkflowPlan
+        plan = WorkflowPlan.from_config(
+            config,
+            request=request,
+            provider=(
+                self.llm_provider if self.api_key else "offline"
+            ),
+        )
+
+        # ── optional LLM summary ──────────────────────────────────
         interpretation: str | None = None
         if self.api_key and config.get("data_path"):
             interp_prompt = (
-                f"Briefly summarise in 2 sentences what the following pycsamt "
-                f"workflow configuration will do:\n{config}"
+                "Briefly summarise in 2 sentences what the "
+                "following pycsamt workflow configuration "
+                f"will do:\n{config}"
             )
             interpretation = self.query_llm(
                 interp_prompt,
                 system_message=(
-                    "You are a concise MT data processing assistant. "
-                    "Reply in plain English, no bullet points."
+                    "You are a concise MT data processing "
+                    "assistant. Reply in plain English, no "
+                    "bullet points."
                 ),
                 max_tokens=120,
             )
 
         elapsed = time.time() - t0
         summary = (
-            f"Config extracted: workflow={config.get('workflow', '?')!r}, "
+            f"Config extracted: "
+            f"workflow={config.get('workflow', '?')!r}, "
             f"path={config.get('data_path', '?')!r}."
         )
 
         return AgentResult(
-            status="success" if config.get("data_path") else "needs_review",
+            status=(
+                "success"
+                if config.get("data_path")
+                else "needs_review"
+            ),
             summary=summary,
-            data={"config": config, "raw_request": request, "llm_raw": llm_raw},
+            data={
+                "config":        config,
+                "workflow_plan": plan,
+                "raw_request":   request,
+                "llm_raw":       llm_raw,
+            },
             warnings=warnings,
             llm_interpretation=interpretation,
             elapsed_seconds=elapsed,
@@ -222,12 +282,14 @@ def _regex_extract(text: str) -> dict[str, Any]:
     # plain words like "EDI" that appear before the actual path.
     path_patterns = [
         # keyword immediately followed by an absolute/home path
-        r'(?:load(?:ing)?|read(?:ing)?|from|in|at|path[:\s]+)'
+        r'(?:load(?:ing)?|read(?:ing)?|from|on|in|at|path[:\s]+)'
         r'\s+["\']?([/~][\w/\\\-\.]+)["\']?',
         # quoted absolute path (any extension)
         r'["\']([/~][\w/\\\-\.]+)["\']',
-        # bare absolute path anywhere in text (no keyword required)
-        r'\b([/~][\w/\\\-\.]{5,})',
+        # bare absolute path — must NOT be preceded by a
+        # word char or slash (prevents matching inner components
+        # of a path like the "/willy" in "/data/willy")
+        r'(?<![/\w])([/~][\w/\\\-\.]{5,})',
     ]
     for pat in path_patterns:
         m = re.search(pat, text, re.IGNORECASE)
@@ -245,23 +307,205 @@ def _regex_extract(text: str) -> dict[str, Any]:
     if m:
         cfg["output_dir"] = str(Path(m.group(1)).expanduser())
 
-    # ── workflow ──────────────────────────────────────────────────────────────
+    # ── workflow ──────────────────────────────────────────────────────────
+    # Priority order: most-specific first so "gcn" does not match "qc"
     workflow_keywords = {
-        "qc":               ["qc", "quality control", "quality check",
-                             "clean", "flag", "snr"],
-        "static_shift":     ["static shift", "static-shift", "galvanic"],
-        "phase_analysis":   ["phase tensor", "strike", "dimensionality",
-                             "skew", "mohr", "argand", "pt analysis"],
-        "forward":          ["forward model", "synthetic", "simulate"],
-        "inversion_prep":   ["inversion prep", "occam", "modem", "prepare inversion",
-                             "data file"],
-        "inversion_eval":   ["evaluate inversion", "inversion result", "rms",
-                             "misfit", "residual pt"],
-        "interpretation":   ["interpret", "geology", "lithology", "resistor",
-                             "conductor"],
-        "report":           ["report", "pdf", "html", "summary"],
-        "full":             ["full pipeline", "full workflow", "complete",
-                             "all steps"],
+        # Most-specific first so narrow phrases
+        # are not swallowed by bare keywords
+        # like "inversion" or "joint" below.
+        "full_ai_workflow": [
+            "full ai workflow",
+            "full ai pipeline",
+            "ai full pipeline",
+        ],
+        "full": [
+            "full pipeline",
+            "full workflow",
+            "end to end",
+            "all steps",
+        ],
+        "joint_inversion": [
+            "joint inversion",
+            "multi-modal",
+            "multi-physics",
+            "tem+mt", "mt+tem",
+            "combined modality",
+        ],
+        "ensemble_inversion": [
+            "ensemble inversion",
+            "ensemble method",
+            "ensemble",
+            "uncertainty quantification",
+        ],
+        "inv3d": [
+            "gcn",
+            "graph convolutional",
+            "3d ai", "3d gcn",
+            "spatial inversion",
+            "3d neural", "graph network",
+        ],
+        "inv2d": [
+            "unet", "u-net",
+            "2d ai", "2d neural", "2d deep",
+            "profile inversion",
+            "lateral continuity ai",
+        ],
+        "pinn_inversion": [
+            "pinn inversion", "pinn",
+            "physics-informed",
+            "physics informed",
+            "no training data",
+            "gradient descent inversion",
+        ],
+        "hybrid_inversion": [
+            "hybrid inversion", "two-stage",
+            "two stage", "ai + physics",
+            "warm start", "ai warmstart",
+            "stage 1 stage 2",
+        ],
+        "comparison": [
+            "compare",
+            "comparison",
+            "versus",
+            "before after",
+        ],
+        # inversion_eval, modem, pre_inversion all
+        # before ai_inversion so specific keywords
+        # ("modem", "occam2d", "inversion result")
+        # are not swallowed by bare "inversion".
+        "inversion_eval": [
+            "evaluate inversion",
+            "inversion result",
+            "inversion quality",
+            "check inversion",
+            "rms", "misfit",
+            "residual pt",
+        ],
+        "modem": [
+            "modem",
+            "3d inversion",
+            "3d model",
+        ],
+        "pre_inversion": [
+            "occam2d", "occam",
+            "2d inversion", "mesh",
+            "startup", "pre-inversion",
+            "pre inversion", "inversion prep",
+            "prepare inversion",
+            "inversion data file",
+            "inversion data",
+            "data file for inversion",
+        ],
+        # catch bare "inversion/invert" only
+        # after all specific variants matched
+        "ai_inversion": [
+            "ai inversion",
+            "neural", "cnn",
+            "deep learning",
+            "machine learning",
+            "inverter", "inv1d", "1d ai",
+            "1d neural", "1d inversion",
+            "inversion", "invert", "inverting",
+            "run inversion", "do inversion",
+            "perform inversion",
+            "start inversion",
+        ],
+        "tipper": [
+            "tipper", "induction arrow",
+            "wiese", "parkinson",
+        ],
+        "sensitivity": [
+            "sensitivity",
+            "depth of investigation",
+            "bostick",
+        ],
+        "rotation": [
+            "rotate", "rotation",
+            "strike rotation",
+            "tensor rotation",
+        ],
+        "freq_decimation": [
+            "decimate", "period selection",
+            "frequency selection", "dead band",
+        ],
+        "batch": [
+            "batch process",
+            "batch mode",
+            "batch run",
+            "multiple profiles",
+            "all profiles",
+            "survey batch",
+        ],
+        # Action-verb workflows before content
+        # keywords so "write code for X" routes
+        # to code_gen, not X's workflow.
+        "code_gen": [
+            "write code", "generate code",
+            "python script", "code for",
+            "script for", "write a script",
+            "write function", "write class",
+            "create notebook",
+            "notebook for",
+        ],
+        "report": [
+            "generate report",
+            "write report",
+            "survey report",
+            "create report",
+            "make report",
+        ],
+        "denoise": [
+            "denoise", "denoising",
+            "remove noise",
+            "noise reduction",
+            "filter noise",
+        ],
+        # Use multi-word phrases to avoid false
+        # positives on bare "strike", "skew",
+        # "mohr", "argand".
+        "phase_analysis": [
+            "phase tensor",
+            "phase analysis",
+            "pt analysis",
+            "phase tensor analysis",
+            "mohr circle",
+            "argand diagram",
+            "strike analysis",
+            "dimensionality analysis",
+            "bahr skew",
+        ],
+        "static_shift": [
+            "static shift",
+            "static-shift",
+            "galvanic distortion",
+            "galvanic",
+        ],
+        "forward": [
+            "forward model",
+            "forward modeling",
+            "synthetic data",
+            "simulate",
+        ],
+        # Removed bare "geology", "resistor",
+        # "conductor" -- too broad for MT text.
+        "interpretation": [
+            "geological interpretation",
+            "lithological interpretation",
+            "geological context",
+            "geological unit",
+            "interpret geology",
+            "interpret",
+            "lithology",
+            "geological",
+            "lithological",
+        ],
+        "qc": [
+            "qc", "quality control",
+            "quality check",
+            "data quality",
+            "remove noisy",
+            "remove bad data",
+        ],
     }
     for wf, kws in workflow_keywords.items():
         if any(kw in t for kw in kws):
@@ -335,13 +579,46 @@ def _regex_extract(text: str) -> dict[str, Any]:
 # ── normalise & validate ──────────────────────────────────────────────────────
 
 _WORKFLOW_ALIASES: dict[str, str] = {
-    "qc_preprocessing": "qc",
-    "preprocessing":    "qc",
-    "pre-inversion":    "inversion_prep",
-    "post-inversion":   "inversion_eval",
-    "analysis":         "phase_analysis",
-    "tensor":           "phase_analysis",
-    "full_pipeline":    "full",
+    "qc_preprocessing":        "qc",
+    "preprocessing":           "qc",
+    # galvanic distortion -> static shift
+    "galvanic":                "static_shift",
+    "pre-inversion":           "pre_inversion",
+    "pre_inversion_prep":      "pre_inversion",
+    "post-inversion":          "inversion_eval",
+    "interpretation":          "interpret",
+    "report":                  "report",
+    "full_pipeline":           "full",
+    "1d_inversion":            "ai_inversion",
+    "1d_ai":                   "ai_inversion",
+    "ai_1d":                   "ai_inversion",
+    "ai1d":                    "ai_inversion",
+    "2d_inversion":            "inv2d",
+    "ai_2d":                   "inv2d",
+    "3d_inversion":            "inv3d",
+    "ai_3d":                   "inv3d",
+    "ensemble":                "ensemble_inversion",
+    "joint":                   "joint_inversion",
+    "occam":                   "pre_inversion",
+    "occam2d":                 "pre_inversion",
+    "full_ai":                 "full_ai_workflow",
+    # PINN / Hybrid aliases
+    "pinn":                    "pinn_inversion",
+    "physics_informed":        "pinn_inversion",
+    "physics-informed":        "pinn_inversion",
+    "pinn_inv":                "pinn_inversion",
+    "hybrid":                  "hybrid_inversion",
+    "two_stage":               "hybrid_inversion",
+    "hybrid_inv":              "hybrid_inversion",
+    "ai_physics":              "hybrid_inversion",
+    # Agent-focused workflow aliases
+    "code_generation":         "code_gen",
+    "codegen":                 "code_gen",
+    "write_code":              "code_gen",
+    "denoising":               "denoise",
+    "noise_removal":           "denoise",
+    "doi":                     "sensitivity",
+    "depth_of_investigation":  "sensitivity",
 }
 
 
@@ -351,8 +628,9 @@ def _normalise_config(cfg: dict[str, Any], original_text: str) -> dict[str, Any]
     wf = str(cfg.get("workflow", "")).lower().replace("-", "_").replace(" ", "_")
     cfg["workflow"] = _WORKFLOW_ALIASES.get(wf, wf) or "qc"
 
-    # ensure workflow is known
-    if cfg["workflow"] not in _KNOWN_WORKFLOWS:
+    # keep unrecognised workflows as-is — the orchestrator will
+    # report a proper error rather than silently running QC
+    if not cfg["workflow"]:
         cfg["workflow"] = "qc"
 
     # path normalisation

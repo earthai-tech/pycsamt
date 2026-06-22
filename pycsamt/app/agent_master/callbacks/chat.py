@@ -1829,6 +1829,26 @@ def _run_agent(
                 except Exception:
                     pass
 
+        # Fall back to the assistant project registry: a named survey
+        # line ("run static shift on L22PLT") resolves to its real EDI
+        # directory, so workflows run without loading data manually.
+        _resolved_line = None
+        if not edi_path:
+            try:
+                from pycsamt.assistant.tools.project_registry import (
+                    ProjectRegistry,
+                )
+                _reg = ProjectRegistry.from_default()
+                if _reg is not None:
+                    _ln = _reg.find_line_in_text(text)
+                    if _ln:
+                        _info = _reg.resolve_line(_ln)
+                        if _info.get("exists"):
+                            edi_path = _info["edi_dir"]
+                            _resolved_line = _ln
+            except Exception:  # noqa: BLE001
+                pass
+
         output_dir = (
             settings.get("output_dir") or ""
         ).strip() or "pycsamt_workflow_output"
@@ -2157,6 +2177,27 @@ def _record_run(
         pass
 
 
+def _names_registry_line(text: str) -> bool:
+    """True when *text* names a survey line that resolves to real data.
+
+    Lets the no-EDI guard pass for "run X on line L22PLT" — _run_agent
+    then resolves the line via the project registry.
+    """
+    try:
+        from pycsamt.assistant.tools.project_registry import (
+            ProjectRegistry,
+        )
+        reg = ProjectRegistry.from_default()
+        if reg is None:
+            return False
+        line = reg.find_line_in_text(text)
+        if not line:
+            return False
+        return bool(reg.resolve_line(line).get("exists"))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _recent_runs(n: int = 8) -> list[dict]:
     """Most-recent workflow runs (newest first), or []."""
     try:
@@ -2374,10 +2415,13 @@ def register_chat(app) -> None:
             )
 
         # ── guard: no EDI loaded ──────────────
+        # Skip the guard when the request names a known survey line —
+        # _run_agent resolves it via the project registry, so the user
+        # need not load EDIs manually for "run X on line L22PLT".
         edi_path = (edi_store or {}).get(
             "path", ""
         )
-        if not edi_path:
+        if not edi_path and not _names_registry_line(text):
             _no_edi = (
                 "No EDI dataset is loaded.\n"
                 "Please click Load EDI "

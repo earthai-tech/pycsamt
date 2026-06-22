@@ -303,6 +303,80 @@ class TestCodeBlockCollapsible(unittest.TestCase):
 
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
+class TestNamedLineWorkflow(unittest.TestCase):
+    """A named survey line runs without manually loading EDI data."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        import pycsamt.assistant.tools.project_registry as pr
+
+        self.tmp = Path(tempfile.mkdtemp())
+        edi = self.tmp / "L22PLT"
+        edi.mkdir()
+        (edi / "22-001.edi").write_text(">HEAD\n", encoding="utf-8")
+        self._edi_dir = str(edi)
+
+        class _Reg:
+            def __init__(self, p):
+                self._p = p
+
+            def find_line_in_text(self, t):
+                return "L22PLT" if "l22plt" in t.lower() else None
+
+            def resolve_line(self, name):
+                return {
+                    "line": "L22PLT", "edi_dir": str(self._p),
+                    "exists": True, "n_edi_files": 1,
+                }
+
+        self._orig = pr.ProjectRegistry.from_default
+        pr.ProjectRegistry.from_default = classmethod(
+            lambda cls, root=None: _Reg(edi)
+        )
+
+    def tearDown(self):
+        import pycsamt.assistant.tools.project_registry as pr
+        pr.ProjectRegistry.from_default = self._orig
+
+    def test_names_registry_line(self):
+        import pycsamt.app.agent_master.callbacks.chat as C
+        self.assertTrue(
+            C._names_registry_line("run static shift on line L22PLT")
+        )
+        self.assertFalse(C._names_registry_line("run static shift"))
+
+    def test_run_agent_resolves_line_without_edi(self):
+        import pycsamt.app.agent_master.callbacks.chat as C
+        import pycsamt.agents.orchestrator as O
+        from pycsamt.agents._base import AgentResult
+
+        captured = {}
+
+        def fake_exec(self, input_data):
+            captured["data_path"] = input_data.get("data_path")
+            return AgentResult(
+                "success", "stub",
+                {"result": AgentResult("success", "i", {})},
+            )
+
+        orig = O.WorkflowOrchestratorAgent.execute
+        O.WorkflowOrchestratorAgent.execute = fake_exec
+        try:
+            jid = C._new_job()
+            # empty edi_store → must resolve the named line
+            C._run_agent(
+                jid, "run static shift on line L22PLT",
+                {}, {"provider": "offline"}, {}, [],
+            )
+        finally:
+            O.WorkflowOrchestratorAgent.execute = orig
+
+        self.assertEqual(captured.get("data_path"), self._edi_dir)
+        self.assertNotEqual(C._get_job(jid).get("kind"), "error")
+
+
+@unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestRecentRuns(unittest.TestCase):
     """Workflow trace recording + sidebar render."""
 

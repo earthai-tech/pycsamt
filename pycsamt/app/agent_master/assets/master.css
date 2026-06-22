@@ -2292,7 +2292,20 @@ body {
   border-radius: 14px;
   background: var(--bg-agent);
   border: 1px solid var(--srf1);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition:
+    border-color var(--t-fast),
+    color var(--t-fast),
+    background var(--t-fast);
 }
+.am-help-ex:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: var(--step-bg);
+}
+.am-help-ex:active { transform: scale(.97); }
 .am-help-tips {
   list-style: none;
   margin: 0; padding: 0;

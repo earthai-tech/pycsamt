@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from dash import Input, Output, State
+from dash import ALL, Input, Output, State, ctx
 from dash.exceptions import PreventUpdate
 
 from .._ids import IDs
@@ -24,3 +24,32 @@ def register_help(app) -> None:
         if not (_open or _close):
             raise PreventUpdate
         return not is_open
+
+    # Click an example prompt → drop it into the chat input and close
+    # the Help modal so the user can review / edit / send it.
+    @app.callback(
+        Output(IDs.INPUT, "value", allow_duplicate=True),
+        Output(
+            IDs.MODAL_HELP, "is_open",
+            allow_duplicate=True,
+        ),
+        Input(
+            {"type": IDs.HELP_CHIP, "index": ALL},
+            "n_clicks",
+        ),
+        prevent_initial_call=True,
+    )
+    def use_example(_clicks):
+        if not ctx.triggered or not ctx.triggered[0].get(
+            "value"
+        ):
+            raise PreventUpdate
+        trig = ctx.triggered_id
+        if not isinstance(trig, dict):
+            raise PreventUpdate
+        from ..layout import _HELP_EXAMPLES
+        try:
+            text = _HELP_EXAMPLES[trig["index"]]
+        except (IndexError, KeyError, TypeError):
+            raise PreventUpdate
+        return text, False

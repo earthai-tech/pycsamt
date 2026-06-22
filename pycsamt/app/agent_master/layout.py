@@ -1868,6 +1868,19 @@ def _inv_params_canvas() -> dbc.Offcanvas:
 
 # ── Help / About modal ─────────────────────────────
 
+# Example prompts shown in the Help modal. Clicking one drops it into
+# the chat input (see callbacks/help.py). Kept module-level so the
+# callback can map a clicked index back to its text.
+_HELP_EXAMPLES = [
+    "What does StaticShiftAgent do?",
+    "How do I access impedance Z values?",
+    "Run phase tensor and dimensionality analysis",
+    "Correct static shift on the loaded data",
+    "Run a 1-D AI inversion",
+    "Generate code for static shift",
+]
+
+
 def _help_capability(icon, color, title, desc) -> html.Div:
     return html.Div(
         [
@@ -1905,15 +1918,6 @@ def _help_modal() -> dbc.Modal:
         _ver = _v("pycsamt")
     except Exception:
         _ver = "2.0"
-
-    examples = [
-        "What does StaticShiftAgent do?",
-        "How do I access impedance Z values?",
-        "Run phase tensor and dimensionality analysis",
-        "Correct static shift on the loaded data",
-        "Run a 1-D AI inversion",
-        "Generate code for static shift",
-    ]
 
     return dbc.Modal(
         [
@@ -1999,10 +2003,19 @@ def _help_modal() -> dbc.Modal:
                     ),
                     html.Div(
                         [
-                            html.Span(
-                                ex, className="am-help-ex"
+                            html.Button(
+                                ex,
+                                id={
+                                    "type": IDs.HELP_CHIP,
+                                    "index": i,
+                                },
+                                className="am-help-ex",
+                                title="Use this prompt",
+                                n_clicks=0,
                             )
-                            for ex in examples
+                            for i, ex in enumerate(
+                                _HELP_EXAMPLES
+                            )
                         ],
                         className="am-help-examples",
                     ),

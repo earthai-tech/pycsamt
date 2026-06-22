@@ -108,6 +108,60 @@ class TestPinLogic(unittest.TestCase):
 
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
+class TestWorkflowNotForcedByStaleConfig(unittest.TestCase):
+    """A persisted param-modal workflow must not hijack later requests."""
+
+    def test_drop_workflow_strips_only_workflow(self):
+        import pycsamt.app.agent_master.callbacks.chat as C
+        ic = {"workflow": "ai_inversion", "n_layers": 10,
+              "epochs": 500}
+        out = C._drop_workflow(ic)
+        self.assertNotIn("workflow", out)
+        self.assertEqual(out["n_layers"], 10)
+        self.assertEqual(out["epochs"], 500)
+
+    def test_drop_workflow_handles_none(self):
+        import pycsamt.app.agent_master.callbacks.chat as C
+        self.assertEqual(C._drop_workflow(None), {})
+
+    def test_request_routes_by_text_not_stale_workflow(self):
+        import io, contextlib
+        import pycsamt.app.agent_master.callbacks.chat as C
+        import pycsamt.agents.orchestrator as O
+        from pycsamt.agents._base import AgentResult
+
+        captured = {}
+
+        def fake_execute(self, input_data):
+            captured["wf"] = (
+                input_data.get("config", {}).get("workflow")
+            )
+            return AgentResult(
+                "success", "stub",
+                {"result": AgentResult("success", "i", {})},
+            )
+
+        orig = O.WorkflowOrchestratorAgent.execute
+        O.WorkflowOrchestratorAgent.execute = fake_execute
+        try:
+            # Simulate the contaminated localStorage config, cleaned by
+            # the caller (send_message / line_sel) before _run_agent.
+            stale = {"workflow": "ai_inversion", "n_layers": 10}
+            clean = C._drop_workflow(stale)
+            jid = C._new_job()
+            with contextlib.redirect_stdout(io.StringIO()):
+                C._run_agent(
+                    jid, "run static shift",
+                    {"path": "/x", "groups": {}},
+                    {"provider": "offline"}, clean, [],
+                )
+        finally:
+            O.WorkflowOrchestratorAgent.execute = orig
+
+        self.assertEqual(captured.get("wf"), "static_shift")
+
+
+@unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestPinCallbacksRegistered(unittest.TestCase):
 
     def test_pin_callbacks_present(self):

@@ -1677,12 +1677,21 @@ def register_params(app) -> None:
             daemon=True,
         ).start()
 
+        # Persist inversion PARAMS only — never the transient workflow
+        # selection. STORE_INV_CONFIG is localStorage; persisting
+        # "workflow" here would force every later request through this
+        # workflow (e.g. all requests routed to ai_inversion). The
+        # current run still gets its workflow via new_ic passed to the
+        # thread above.
+        persist_ic = {
+            k: v for k, v in new_ic.items() if k != "workflow"
+        }
         return (
             msgs,
             {"jid": jid},
             False,
             stored_msgs or [],
-            new_ic,
+            persist_ic,
             {},
             False,
         )

@@ -22,6 +22,7 @@ from .._ids import IDs
 from .chat import (
     _new_job,
     _run_agent,
+    _drop_workflow,
     _thinking_bubble,
     _ts,
     _waiting_bubble,
@@ -227,13 +228,16 @@ def register_line_sel(app) -> None:
 
         _edi_use = dict(edi_store or {})
         _edi_use["selected_lines"] = sel
+        # Drop any persisted "workflow" — it must be classified from the
+        # request text, not carried over from a prior param-modal run.
+        _inv_clean = _drop_workflow(inv_config)
         jid = _new_job()
         threading.Thread(
             target=_run_agent,
             args=(
                 jid, text, _edi_use,
                 settings or {},
-                inv_config or {},
+                _inv_clean,
             ),
             daemon=True,
         ).start()

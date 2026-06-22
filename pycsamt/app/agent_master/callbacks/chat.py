@@ -138,6 +138,21 @@ def _fmt_elapsed(seconds: float) -> str:
     return f"{s // 60}:{s % 60:02d}"
 
 
+def _drop_workflow(inv_config: dict | None) -> dict:
+    """Return *inv_config* without a persisted ``workflow`` key.
+
+    STORE_INV_CONFIG (localStorage) holds inversion *parameters*, but a
+    param-modal run also stamps the chosen ``workflow`` into it. Carrying
+    that over would force every later request through the same workflow
+    (e.g. all requests routed to ai_inversion). Normal/line-picker runs
+    must classify the workflow from the request text, so they strip it.
+    """
+    return {
+        k: v for k, v in (inv_config or {}).items()
+        if k != "workflow"
+    }
+
+
 def _update_job(
     jid: str, **kw: Any
 ) -> None:
@@ -2126,6 +2141,13 @@ def register_chat(app) -> None:
                 "", new_stored, {},
             )
 
+        # Strip any persisted "workflow" from the inversion-config
+        # store: the workflow type must be classified per-request from
+        # the text, never carried over from a previous param-modal run
+        # (STORE_INV_CONFIG is localStorage). Only the param-modal
+        # submit (params.py) sets the workflow for its own run.
+        _inv_clean = _drop_workflow(inv_config)
+
         # ── quick intent gate ─────────────────
         # Questions, code, and capability requests
         # don't need data — skip the EDI guard,
@@ -2150,7 +2172,7 @@ def register_chat(app) -> None:
                     jid, text,
                     dict(edi_store or {}),
                     settings or {},
-                    inv_config or {},
+                    _inv_clean,
                     new_stored,
                 ),
                 daemon=True,
@@ -2269,7 +2291,7 @@ def register_chat(app) -> None:
                 jid, text,
                 _edi_use,
                 settings or {},
-                inv_config or {},
+                _inv_clean,
                 new_stored,
             ),
             daemon=True,

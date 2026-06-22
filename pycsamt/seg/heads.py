@@ -13,13 +13,30 @@ from typing import List, Optional, Sequence, Union, Iterable, Tuple
 from .. import __version__ as _PKG_VERSION
 from ..log.logger import get_logger
 
-from ..gis.utils import dms_to_decimal, decimal_to_dms
+try:
+    from ..gis.utils import dms_to_decimal, decimal_to_dms
+except (ImportError, RuntimeError):
+    def dms_to_decimal(s, hem=None):  # type: ignore[misc]
+        try:
+            return float(str(s).strip())
+        except Exception:
+            return float("nan")
+
+    def decimal_to_dms(v, hem="N"):  # type: ignore[misc]
+        return f"{float(v):.6f}"
 from ..exceptions import (
     HeaderError,
     EdIDataError,
     FileHandlingError,
 )
-from ..loc import Location
+try:
+    from ..loc import Location
+except (ImportError, RuntimeError):
+    class Location:  # type: ignore[no-redef]
+        def __init__(self):
+            self.latitude = None
+            self.longitude = None
+            self.elevation = None
 
 from .base import EDIComponentBase
 from .property import Source, Processing, Copyright, Software

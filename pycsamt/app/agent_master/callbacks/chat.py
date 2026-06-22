@@ -1,0 +1,1872 @@
+# -*- coding: utf-8 -*-
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
+r"""
+Chat dispatch callbacks.
+
+Flow
+----
+1. User types + clicks Send.
+2. Message stored; thinking bubble shown.
+3. Background thread runs agent chain.
+4. dcc.Interval polls shared _JOBS dict.
+5. On completion: append agent bubble,
+   disable interval.
+
+Figures embedded in agent output are stored
+in STORE_FIGS keyed by UUID; each rendered
+as an am-fig-card with view + export buttons.
+"""
+
+from __future__ import annotations
+
+import base64
+import io
+import re
+import threading
+import time
+import uuid
+from datetime import datetime
+from typing import Any
+
+import matplotlib
+matplotlib.use("Agg", force=True)
+import matplotlib.pyplot as plt
+# Silence plt.show() globally — agent code
+# must never open OS windows in a web app.
+plt.show = lambda *a, **kw: None
+
+from contextlib import nullcontext as _nullctx
+
+from dash import ALL, Input, Output, State
+from dash import ctx, html, no_update
+from dash.exceptions import PreventUpdate
+import dash_bootstrap_components as dbc
+
+from .._ids import IDs
+
+# ── shared job registry ────────────────────────────
+_JOBS: dict[str, dict] = {}
+_JOBS_LOCK = threading.Lock()
+
+# Corrected-sites cache keyed by job ID.
+# Populated after correction workflows so the
+# post-processing modal can export EDI files.
+_CORR_CACHE: dict[str, Any] = {}
+
+# Workflows that produce corrected_sites data.
+_CORRECTION_WFLOWS = frozenset({
+    "static_shift",
+    "denoise",
+    "qc",
+    "pre_inversion",
+    "full",
+})
+
+
+def _new_job() -> str:
+    jid = str(uuid.uuid4())
+    with _JOBS_LOCK:
+        _JOBS[jid] = {
+            "status": "running",
+            "steps": [],
+            "result": None,
+            "figs": {},
+            "error": None,
+        }
+    return jid
+
+
+def _update_job(
+    jid: str, **kw: Any
+) -> None:
+    with _JOBS_LOCK:
+        if jid in _JOBS:
+            _JOBS[jid].update(kw)
+
+
+def _get_job(
+    jid: str,
+) -> dict | None:
+    with _JOBS_LOCK:
+        return _JOBS.get(jid)
+
+
+# ── figure helpers ─────────────────────────────────
+
+def _fig_to_b64(fig: Any) -> str:
+    buf = io.BytesIO()
+    fig.savefig(
+        buf,
+        format="png",
+        dpi=150,
+        bbox_inches="tight",
+    )
+    buf.seek(0)
+    return base64.b64encode(
+        buf.read()
+    ).decode()
+
+
+def _fig_thumb_item(
+    fig_key: str,
+    title: str,
+    b64: str,
+) -> html.Div:
+    """Compact thumbnail tile inside the accordion."""
+    short = (
+        title if len(title) <= 28
+        else title[:26] + "..."
+    )
+    return html.Div(
+        [
+            html.Img(
+                src=(
+                    f"data:image/png;base64,{b64}"
+                ),
+                className="am-fig-thumb",
+                id={
+                    "type": "am-fig-img",
+                    "key": fig_key,
+                },
+                title=title,
+            ),
+            html.Div(
+                short,
+                className="am-fig-thumb-label",
+                title=title,
+            ),
+            html.Button(
+                [
+                    html.I(
+                        className=(
+                            "bi bi-arrows-fullscreen"
+                            " me-1"
+                        )
+                    ),
+                    "View",
+                ],
+                className=(
+                    "am-fig-btn am-fig-thumb-btn"
+                ),
+                id={
+                    "type": "am-fig-open",
+                    "key": fig_key,
+                },
+                n_clicks=0,
+            ),
+        ],
+        className="am-fig-thumb-item",
+    )
+
+
+def _fig_accordion(figs: dict) -> html.Div:
+    """
+    Collapsible accordion for all figures.
+
+    Shows a compact thumbnail grid when expanded.
+    Collapsed by default to save space.
+    """
+    n = len(figs)
+    thumbs = [
+        _fig_thumb_item(k, v["title"], v["b64"])
+        for k, v in figs.items()
+    ]
+    header = html.Span(
+        [
+            html.I(
+                className=(
+                    "bi bi-bar-chart-fill me-2"
+                ),
+                style={"color": "var(--blue)"},
+            ),
+            f"Figures ({n})",
+            html.Span(
+                f"{n}",
+                className="am-fig-badge",
+            ),
+        ],
+        className="am-fig-acc-title",
+    )
+    return html.Div(
+        dbc.Accordion(
+            dbc.AccordionItem(
+                html.Div(
+                    thumbs,
+                    className="am-fig-grid",
+                ),
+                title=header,
+                item_id="figs",
+            ),
+            start_collapsed=True,
+            flush=True,
+            className="am-fig-accordion",
+        ),
+        className="am-fig-accordion-wrap",
+    )
+
+
+# ── message bubble builders ────────────────────────
+
+def _ts() -> str:
+    return datetime.now().strftime("%H:%M")
+
+
+def _user_bubble(text: str) -> html.Div:
+    return html.Div(
+        [
+            html.Div(
+                html.Div(
+                    [
+                        html.Div(
+                            text,
+                            className=(
+                                "am-bubble user"
+                            ),
+                        ),
+                        html.Div(
+                            _ts(),
+                            className="am-ts",
+                        ),
+                        html.Div(
+                            [
+                                html.Button(
+                                    html.I(
+                                        className=(
+                                            "bi "
+                                            "bi-clipboard"
+                                        )
+                                    ),
+                                    className=(
+                                        "am-msg-action"
+                                        " am-copy-btn"
+                                    ),
+                                    title="Copy",
+                                    n_clicks=0,
+                                ),
+                                html.Button(
+                                    html.I(
+                                        className=(
+                                            "bi "
+                                            "bi-folder2"
+                                            "-open"
+                                        )
+                                    ),
+                                    className=(
+                                        "am-msg-action"
+                                        " am-edi-msg-btn"
+                                    ),
+                                    title=(
+                                        "Load EDI"
+                                    ),
+                                    n_clicks=0,
+                                ),
+                            ],
+                            className=(
+                                "am-msg-toolbar"
+                            ),
+                        ),
+                    ]
+                ),
+                style={"maxWidth": "100%"},
+            ),
+            html.Div(
+                html.I(
+                    className="bi bi-person-fill"
+                ),
+                className="am-avatar user",
+            ),
+        ],
+        className="am-msg-row user",
+    )
+
+
+def _thinking_bubble(steps: list[dict]) -> html.Div:
+    step_els = [
+        html.Div(
+            [
+                html.I(
+                    className=(
+                        "bi bi-check-circle-fill"
+                        " am-step-icon"
+                        if s["status"] == "done"
+                        else (
+                            "bi bi-exclamation-triangle"
+                            "-fill am-step-icon"
+                            if s["status"] == "error"
+                            else
+                            "bi bi-arrow-repeat"
+                            " am-step-icon"
+                        )
+                    )
+                ),
+                html.Span(s["label"]),
+            ],
+            className=(
+                f"am-step {s['status']}"
+            ),
+        )
+        for s in steps
+    ]
+    dots = html.Div(
+        [
+            html.Div(
+                [
+                    html.I(
+                        className=(
+                            "bi bi-robot me-2"
+                        )
+                    ),
+                    html.Span("Thinking"),
+                    html.Div(
+                        [
+                            html.Span(),
+                            html.Span(),
+                            html.Span(),
+                        ],
+                        className="am-dots",
+                    ),
+                ],
+                className="am-thinking",
+            ),
+            html.Div(
+                step_els,
+                className="am-steps",
+            )
+            if step_els
+            else html.Div(),
+        ]
+    )
+    return html.Div(
+        [
+            html.Div(
+                html.I(className="bi bi-robot"),
+                className="am-avatar agent",
+            ),
+            html.Div(
+                dots,
+                className="am-bubble agent",
+            ),
+        ],
+        className="am-msg-row",
+        id="am-thinking-bubble",
+    )
+
+
+def _code_block(code: str) -> html.Div:
+    """Render a syntax-highlighted Python code block."""
+    import uuid as _uuid
+    copy_id = f"am-copy-{_uuid.uuid4().hex[:8]}"
+    return html.Div(
+        [
+            # header bar
+            html.Div(
+                [
+                    html.Span(
+                        [
+                            html.I(
+                                className=(
+                                    "bi bi-code-slash"
+                                    " me-1"
+                                ),
+                                style={
+                                    "color": "#61afef"
+                                },
+                            ),
+                            "python",
+                        ],
+                        className="am-code-lang",
+                    ),
+                    html.Button(
+                        [
+                            html.I(
+                                className=(
+                                    "bi bi-clipboard"
+                                    " me-1"
+                                )
+                            ),
+                            "Copy",
+                        ],
+                        id=copy_id,
+                        className="am-code-copy-btn",
+                        title="Copy to clipboard",
+                        **{"data-code": code},
+                        n_clicks=0,
+                    ),
+                ],
+                className="am-code-header",
+            ),
+            # code body — hljs highlights this
+            html.Pre(
+                html.Code(
+                    code,
+                    className="language-python",
+                ),
+            ),
+        ],
+        className="am-code-block",
+    )
+
+
+def _agent_bubble(
+    text: str,
+    steps: list[dict] | None = None,
+    figs: dict | None = None,
+    code: str = "",
+) -> html.Div:
+    children: list = []
+    # plain text / markdown (rendered as plain)
+    for line in (text or "").split("\n"):
+        if line.startswith("**") and line.endswith(
+            "**"
+        ):
+            children.append(
+                html.Strong(line[2:-2])
+            )
+        elif line.startswith("- "):
+            children.append(
+                html.Li(
+                    line[2:],
+                    style={"marginLeft": "12px"},
+                )
+            )
+        elif line.startswith("```"):
+            pass
+        else:
+            children.append(html.P(line))
+
+    # step summary
+    if steps:
+        step_divs = [
+            html.Div(
+                [
+                    html.I(
+                        className=(
+                            "bi bi-check-circle-fill"
+                            " am-step-icon"
+                        )
+                    ),
+                    html.Span(s["label"]),
+                ],
+                className="am-step done",
+            )
+            for s in steps
+        ]
+        children.append(
+            html.Div(
+                step_divs,
+                className="am-steps",
+            )
+        )
+
+    # generated code block
+    if code and code.strip():
+        children.append(_code_block(code))
+
+    # figures go to sidebar only; show a compact
+    # chip in the chat bubble so the user knows
+    # results are ready without a full preview.
+    if figs:
+        n = len(figs)
+        children.append(
+            html.Div(
+                [
+                    html.I(
+                        className=(
+                            "bi bi-bar-chart-fill"
+                            " me-2"
+                        ),
+                        style={
+                            "color": "var(--blue)"
+                        },
+                    ),
+                    html.Span(
+                        f"{n} figure"
+                        f"{'s' if n != 1 else ''}"
+                        " generated — open the"
+                        " Figures panel to view.",
+                        style={
+                            "fontSize": "12px",
+                            "color": "var(--sub1)",
+                        },
+                    ),
+                ],
+                className="am-fig-notice",
+            )
+        )
+
+    return html.Div(
+        [
+            html.Div(
+                html.I(className="bi bi-robot"),
+                className="am-avatar agent",
+            ),
+            html.Div(
+                [
+                    html.Div(children),
+                    html.Div(
+                        _ts(), className="am-ts"
+                    ),
+                ],
+                className="am-bubble agent",
+            ),
+        ],
+        className="am-msg-row",
+    )
+
+
+# ── Workflow figure filter ────────────────────────
+# Maps workflow type → step names whose figures
+# should appear in the agent bubble response.
+# Steps NOT in this set are prerequisite steps
+# (load, qc, denoise) whose figures are suppressed
+# unless the user explicitly asked for them.
+# None means "show figures from all steps."
+_WORKFLOW_FIGURE_STEPS: dict[
+    str, set[str] | None
+] = {
+    "qc":               {"qc", "static_shift", "report"},
+    "static_shift":     {"static_shift"},
+    "phase_analysis":   {"phase_analysis", "report"},
+    "ai_inversion":     {"ai_inv", "interpret", "report"},
+    "inv1d":            {"ai_inv", "interpret", "report"},
+    "inv2d":            {"inv2d", "interpret", "report"},
+    "inv3d":            {"inv3d", "interpret", "report"},
+    "ensemble_inversion": {
+        "ensemble", "interpret", "report",
+    },
+    "pinn_inversion":   {
+        "pinn_inv", "interpret", "report",
+    },
+    "hybrid_inversion": {
+        "hybrid_inv", "interpret", "report",
+    },
+    "joint_inversion":  {
+        "joint", "interpret", "report",
+    },
+    "tipper":           {"tipper", "report"},
+    "modem":            {"modem", "report"},
+    "occam2d":          {"occam2d", "report"},
+    "pre_inversion":    {
+        "phase_analysis", "occam2d", "report",
+    },
+    "sensitivity":      {"sensitivity", "report"},
+    "rotation":         {"rotate"},
+    "freq_decimation":  {"decimate", "report"},
+    "batch":            {"batch", "report"},
+    "comparison":       {"compare", "report"},
+    "full":             None,  # show everything
+}
+# Default set for unlisted workflows: skip
+# only load and denoise steps.
+_SKIP_ALWAYS: frozenset[str] = frozenset(
+    {"load", "denoise"}
+)
+
+
+# ── Smart param detection ─────────────────────────
+
+# Workflows that require user parameters
+# before the job can start.
+# Workflows that REQUIRE user parameters before
+# starting.  Simple data-processing workflows
+# (qc, static_shift, phase_analysis, tipper,
+# rotation) run with sensible defaults and do
+# NOT need a param modal.  Only inversion and
+# a few analytical workflows need user input.
+_NEEDS_PARAMS: frozenset[str] = frozenset({
+    # Inversion workflows (model params needed)
+    "ai_inversion", "inv1d",
+    "inv2d", "inv3d",
+    "pinn_inversion", "hybrid_inversion",
+    "ensemble_inversion",
+    "pre_inversion", "modem",
+    # Analysis workflows (optional params)
+    "denoise",
+    "sensitivity",
+    "interpret", "interpretation",
+    "report",
+    "code_gen",
+})
+
+_WF_LABELS: dict[str, str] = {
+    "ai_inversion":       "1-D AI inversion",
+    "inv1d":              "1-D AI inversion",
+    "inv2d":              "2-D U-Net inversion",
+    "inv3d":              "3-D GCN inversion",
+    "pinn_inversion":     "PINN inversion",
+    "hybrid_inversion":   "hybrid inversion",
+    "ensemble_inversion": "ensemble inversion",
+    "pre_inversion":      "pre-inversion setup",
+    "modem":              "ModEM preparation",
+    "qc":                 "QC pipeline",
+    "phase_analysis":     "phase tensor analysis",
+    "static_shift":    "static shift correction",
+    "tipper":             "tipper analysis",
+    "rotation":           "data rotation",
+    "interpret":     "geological interpretation",
+    "interpretation": "geological interpretation",
+    "report":             "survey report",
+    "code_gen":           "code generation",
+    "denoise":            "data denoising",
+    "sensitivity":    "sensitivity / DOI analysis",
+}
+
+
+def _quick_workflow(text: str) -> str | None:
+    """
+    Fast regex classification.
+
+    Returns workflow type string if user
+    parameters are needed before the job
+    can start, else None.
+    """
+    try:
+        from pycsamt.agents.context import (
+            _regex_extract,
+            _normalise_config,
+        )
+        cfg = _regex_extract(text)
+        cfg = _normalise_config(cfg, text)
+        wf = cfg.get("workflow", "")
+        return wf if wf in _NEEDS_PARAMS else None
+    except Exception:
+        return None
+
+
+def _waiting_bubble(wf: str) -> html.Div:
+    label = _WF_LABELS.get(
+        wf, wf.replace("_", " ")
+    )
+    return html.Div(
+        [
+            html.Div(
+                html.I(className="bi bi-robot"),
+                className="am-avatar agent",
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.I(
+                                className=(
+                                    "bi bi-sliders2"
+                                    " me-2"
+                                ),
+                                style={
+                                    "color": (
+                                        "var(--blue)"
+                                    )
+                                },
+                            ),
+                            html.Span(
+                                f"To run {label},"
+                                " I need a few"
+                                " parameters."
+                            ),
+                            html.Span(
+                                " Please fill in"
+                                " the form above"
+                                " and click"
+                                " Run Workflow.",
+                                style={
+                                    "opacity": ".7"
+                                },
+                            ),
+                        ]
+                    ),
+                    html.Div(
+                        _ts(), className="am-ts"
+                    ),
+                ],
+                className="am-bubble agent",
+            ),
+        ],
+        className="am-msg-row",
+        id="am-waiting-bubble",
+    )
+
+
+def _line_waiting_bubble() -> html.Div:
+    """Bubble shown while the line picker is open."""
+    return html.Div(
+        [
+            html.Div(
+                html.I(className="bi bi-robot"),
+                className="am-avatar agent",
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.I(
+                                className=(
+                                    "bi bi-layers"
+                                    " me-2"
+                                ),
+                                style={
+                                    "color": (
+                                        "var(--blue)"
+                                    )
+                                },
+                            ),
+                            html.Span(
+                                "Multiple survey"
+                                " lines are loaded."
+                                " Please select"
+                                " which line(s) to"
+                                " process using"
+                                " the panel above.",
+                            ),
+                        ]
+                    ),
+                    html.Div(
+                        _ts(), className="am-ts"
+                    ),
+                ],
+                className="am-bubble agent",
+            ),
+        ],
+        className="am-msg-row",
+        id="am-line-waiting-bubble",
+    )
+
+
+def _extract_line_ref(
+    text: str, groups: dict
+) -> str | None:
+    """Detect a line/profile reference in text.
+
+    Checks known group names first (direct match),
+    then 'line N' / 'profile N' patterns, then
+    ordinal words ('first line', etc.).
+    Returns the matched token or None.
+    """
+    t = text.lower()
+    for key in groups:
+        if key.lower() in t:
+            return key
+    m = re.search(
+        r"\b(?:line|profile)\s+(\S+)", t
+    )
+    if m:
+        return m.group(1)
+    _ordinals = {
+        "first": "1", "second": "2",
+        "third": "3", "fourth": "4",
+        "fifth": "5", "sixth": "6",
+        "seventh": "7", "eighth": "8",
+        "ninth": "9", "tenth": "10",
+    }
+    for word, num in _ordinals.items():
+        if (
+            f"{word} line" in t
+            or f"{word} profile" in t
+        ):
+            return num
+    return None
+
+
+def _match_group(
+    ref: str, groups: dict
+) -> str | None:
+    """Return the group key matching ref exactly
+    or case-insensitively. No ordinal resolution —
+    numeric refs always trigger the line picker.
+    """
+    if ref in groups:
+        return ref
+    ref_l = ref.lower()
+    for key in groups:
+        if key.lower() == ref_l:
+            return key
+    return None
+
+
+# ── PINN / Hybrid keyword detection ───────────────
+
+_PINN_KWS = frozenset({
+    "pinn", "physics-informed",
+    "physics informed", "no training data",
+    "gradient descent",
+})
+_HYBRID_KWS = frozenset({
+    "hybrid", "two-stage", "two stage",
+    "ai + physics", "warm start", "warmstart",
+})
+
+
+def _is_pinn_or_hybrid(text: str) -> bool:
+    t = text.lower()
+    return (
+        any(kw in t for kw in _PINN_KWS)
+        or any(kw in t for kw in _HYBRID_KWS)
+    )
+
+
+# ── Web App launcher ──────────────────────────────
+
+_WEB_APP_KWS: frozenset[str] = frozenset({
+    "open web app",
+    "launch web app",
+    "open the web",
+    "web interface",
+    "full interface",
+    "full app",
+    "go to web app",
+    "pycsamt web",
+    "web application",
+    "launch app",
+    "full web",
+    "open web",
+    "start web app",
+    "open full app",
+})
+
+# Tasks too complex for chat → redirect
+_COMPLEX_VIZ_KWS: frozenset[str] = frozenset({
+    "3d map",
+    "station map",
+    "explore results",
+    "browse data",
+    "browse edis",
+    "pseudosection viewer",
+    "phase tensor map",
+    "full visualization",
+    "map view",
+    "3d visualization",
+    "interactive plot",
+    "interactive map",
+    "interactive pseudosection",
+    "full pipeline editor",
+})
+
+_webapp_state: dict = {
+    "url": None,
+    "running": False,
+}
+_webapp_lock = threading.Lock()
+
+
+def _is_web_app_request(text: str) -> bool:
+    t = text.lower()
+    return any(kw in t for kw in _WEB_APP_KWS)
+
+
+def _is_complex_viz(text: str) -> bool:
+    t = text.lower()
+    return any(
+        kw in t for kw in _COMPLEX_VIZ_KWS
+    )
+
+
+def _free_port(preferred: int = 8051) -> int:
+    import socket as _socket
+    try:
+        with _socket.socket(
+            _socket.AF_INET,
+            _socket.SOCK_STREAM,
+        ) as s:
+            s.setsockopt(
+                _socket.SOL_SOCKET,
+                _socket.SO_REUSEADDR,
+                1,
+            )
+            s.bind(("127.0.0.1", preferred))
+        return preferred
+    except OSError:
+        with _socket.socket(
+            _socket.AF_INET,
+            _socket.SOCK_STREAM,
+        ) as s:
+            s.bind(("127.0.0.1", 0))
+            return int(s.getsockname()[1])
+
+
+def _ensure_web_app() -> str:
+    """
+    Start the full pyCSAMT web app in a
+    background thread if not already running.
+    Returns the URL string.
+    """
+    global _webapp_state
+    with _webapp_lock:
+        if _webapp_state["running"]:
+            return _webapp_state["url"]
+
+        port = _free_port(8051)
+        url = f"http://127.0.0.1:{port}"
+
+        def _run_webapp():
+            try:
+                from pycsamt.app.web.app import (
+                    create_app,
+                )
+                wa = create_app(debug=False)
+                wa.run(
+                    host="127.0.0.1",
+                    port=port,
+                    debug=False,
+                    use_reloader=False,
+                )
+            except Exception:
+                pass
+
+        t = threading.Thread(
+            target=_run_webapp,
+            daemon=True,
+        )
+        t.start()
+        _webapp_state["url"] = url
+        _webapp_state["running"] = True
+        return url
+
+
+def _web_app_bubble(
+    url: str,
+    reason: str = "",
+) -> html.Div:
+    desc = reason or (
+        "The full pyCSAMT web application"
+        " provides interactive station maps,"
+        " pseudosection viewers, phase-tensor"
+        " tools, pipeline editor, inversion"
+        " pages, and more — beyond what the"
+        " agent chat can display."
+    )
+    return html.Div(
+        [
+            html.Div(
+                html.I(className="bi bi-robot"),
+                className="am-avatar agent",
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div(
+                                [
+                                    html.I(
+                                        className=(
+                                            "bi bi-window"
+                                            "-fullscreen"
+                                            " me-2"
+                                        ),
+                                        style={
+                                            "color": (
+                                                "var(--green)"
+                                            )
+                                        },
+                                    ),
+                                    html.Strong(
+                                        "Launching"
+                                        " pyCSAMT"
+                                        " Web App"
+                                    ),
+                                ],
+                                className=(
+                                    "am-webapp-hdr"
+                                ),
+                            ),
+                            html.P(
+                                desc,
+                                className=(
+                                    "am-webapp-desc"
+                                ),
+                            ),
+                            html.A(
+                                [
+                                    html.I(
+                                        className=(
+                                            "bi bi-box"
+                                            "-arrow-up"
+                                            "-right me-2"
+                                        )
+                                    ),
+                                    url,
+                                ],
+                                href=url,
+                                target="_blank",
+                                rel="noopener",
+                                className=(
+                                    "am-webapp-link"
+                                ),
+                            ),
+                            html.Div(
+                                [
+                                    html.I(
+                                        className=(
+                                            "bi bi-info"
+                                            "-circle me-1"
+                                        )
+                                    ),
+                                    "Server is"
+                                    " starting —"
+                                    " the link"
+                                    " will be ready"
+                                    " in a few"
+                                    " seconds.",
+                                ],
+                                className=(
+                                    "am-webapp-note"
+                                ),
+                            ),
+                        ],
+                        className="am-webapp-card",
+                    ),
+                    html.Div(
+                        _ts(), className="am-ts"
+                    ),
+                ],
+                className="am-bubble agent",
+            ),
+        ],
+        className="am-msg-row",
+    )
+
+
+# ── agent runner ───────────────────────────────────
+
+def _run_agent(
+    jid: str,
+    text: str,
+    edi_store: dict,
+    settings: dict,
+    inv_config: dict | None = None,
+) -> None:
+    """
+    Execute in a background thread.
+    Writes steps + result to _JOBS[jid].
+    """
+    def _step(label: str, status: str = "done"):
+        with _JOBS_LOCK:
+            _JOBS[jid]["steps"].append(
+                {"label": label, "status": status}
+            )
+
+    try:
+        _step("Parsing request...", "done")
+
+        # configure provider + api key
+        provider = settings.get(
+            "provider", "offline"
+        )
+        key_map = {
+            "claude": "ANTHROPIC_API_KEY",
+            "openai": "OPENAI_API_KEY",
+            "gemini": "GOOGLE_API_KEY",
+            "deepseek": "DEEPSEEK_API_KEY",
+        }
+        api_key: str | None = None
+        if provider in key_map:
+            api_key = (
+                settings.get(
+                    f"key_{provider}", ""
+                ) or None
+            )
+            if api_key:
+                import os
+                os.environ[
+                    key_map[provider]
+                ] = api_key
+
+        # "offline" maps to "claude" provider
+        # name so BaseAgent validates it, but
+        # api_key stays None → regex fallback.
+        llm_prov = (
+            provider
+            if provider != "offline"
+            else "claude"
+        )
+        sel_model = settings.get(
+            f"model_{llm_prov}"
+        ) or None
+
+        # import agents lazily
+        from pycsamt.agents.context import (
+            ContextInputAgent,
+        )
+        from pycsamt.agents.orchestrator import (
+            WorkflowOrchestratorAgent,
+        )
+        from pycsamt.api.agents import AGENT_CONFIG
+
+        # When truly offline, use AGENT_CONFIG.offline()
+        # around every agent creation + execution so
+        # that env-based keys (e.g. ANTHROPIC_API_KEY
+        # from .env.local) are never picked up.
+        # _nullctx is used for online providers so the
+        # same code path works for both cases.
+        _offline = provider == "offline"
+
+        _step("Classifying workflow...", "done")
+
+        with (
+            AGENT_CONFIG.offline()
+            if _offline else _nullctx()
+        ):
+            ctx_agent = ContextInputAgent(
+                llm_provider=llm_prov,
+                api_key=api_key,
+                model=sel_model,
+            )
+            ctx_result = ctx_agent.execute(
+                {"request": text}
+            )
+
+        if ctx_result.status == "failed":
+            _update_job(
+                jid,
+                status="done",
+                result=(
+                    "I could not classify your "
+                    "request. Please try rephrasing "
+                    "or load an EDI dataset first."
+                ),
+                steps=_JOBS[jid]["steps"],
+            )
+            return
+
+        cfg = ctx_result.data.get("config", {})
+
+        # inject workflow-specific params
+        _ic = inv_config or {}
+        # param-modal workflow takes precedence
+        # over re-classification from text alone
+        if _ic.get("workflow"):
+            cfg["workflow"] = _ic["workflow"]
+        wtype = cfg.get("workflow", "qc")
+        _step(f"Workflow: {wtype}", "done")
+        if wtype in (
+            "pinn_inversion", "hybrid_inversion"
+        ):
+            _pi = {
+                "dim": _ic.get("dim", 1),
+                "n_layers": _ic.get(
+                    "n_layers", 10
+                ),
+                "depth_max": _ic.get(
+                    "depth_max", 2000.0
+                ),
+                "epochs": _ic.get("epochs", 500),
+                "lr": _ic.get("lr", 0.01),
+                "smoothness_weight": _ic.get(
+                    "smoothness_weight", 0.01
+                ),
+                "lateral_weight": _ic.get(
+                    "lateral_weight", 0.005
+                ),
+                "graph_weight": _ic.get(
+                    "graph_weight", 0.005
+                ),
+                "radius": _ic.get(
+                    "radius", 5000.0
+                ),
+                "solver": _ic.get(
+                    "solver", "mt1d"
+                ),
+            }
+            cfg["pinn_params"] = _pi
+            cfg["hybrid_params"] = _pi
+            cfg["checkpoint"] = _ic.get(
+                "checkpoint", ""
+            )
+        elif wtype in (
+            "ai_inversion", "inv1d",
+            "inv2d", "inv3d",
+            "ensemble_inversion",
+        ):
+            cfg["ai_inv_params"] = {
+                "n_layers": int(
+                    _ic.get("n_layers", 10)
+                ),
+                "depth_max": float(
+                    _ic.get("depth_max", 2000.0)
+                ),
+                "epochs": int(
+                    _ic.get("epochs", 500)
+                ),
+                "lr": float(
+                    _ic.get("lr", 0.01)
+                ),
+                "lateral_weight": float(
+                    _ic.get(
+                        "lateral_weight", 0.005
+                    )
+                ),
+                "graph_weight": float(
+                    _ic.get(
+                        "graph_weight", 0.005
+                    )
+                ),
+                "radius": float(
+                    _ic.get("radius", 5000.0)
+                ),
+            }
+            cfg["checkpoint"] = _ic.get(
+                "checkpoint", ""
+            )
+
+        # Pass pipeline step params into cfg
+        _step_p = _ic.get("step_params")
+        if _step_p:
+            cfg["step_params"] = _step_p
+
+        # build orchestrator input_data
+        edi_path = (
+            edi_store.get("path", "")
+            if edi_store
+            else ""
+        ) or cfg.get("data_path", "")
+
+        # Filter to selected lines if set
+        sel_lines = (edi_store or {}).get(
+            "selected_lines", []
+        )
+        if sel_lines:
+            grp = (edi_store or {}).get(
+                "groups", {}
+            )
+            file_list: list[str] = []
+            for ln in sel_lines:
+                file_list.extend(
+                    grp.get(ln, [])
+                )
+            if file_list:
+                edi_path = file_list
+
+        # Fall back to YAML line registry when no
+        # EDI is loaded but user names a survey line.
+        if not edi_path:
+            _reg_yaml = (settings or {}).get(
+                "line_registry", ""
+            )
+            if _reg_yaml:
+                try:
+                    import yaml as _yaml
+                    _reg = (
+                        _yaml.safe_load(_reg_yaml)
+                        or {}
+                    )
+                    _tl = text.lower()
+                    for _ln, _lp in _reg.items():
+                        if (
+                            str(_ln).lower() in _tl
+                        ):
+                            edi_path = str(_lp)
+                            break
+                except Exception:
+                    pass
+
+        output_dir = (
+            settings.get("output_dir") or ""
+        ).strip() or "pycsamt_workflow_output"
+
+        # Guard: workflows that need EDI data
+        # must have a valid path.
+        _EDI_REQUIRED = frozenset({
+            "qc", "static_shift",
+            "phase_analysis", "ai_inversion",
+            "inv1d", "inv2d", "inv3d",
+            "pinn_inversion", "hybrid_inversion",
+            "ensemble_inversion", "pre_inversion",
+            "modem", "tipper", "rotation",
+            "denoise", "sensitivity",
+            "freq_decimation",
+        })
+        if (
+            wtype in _EDI_REQUIRED
+            and not edi_path
+        ):
+            _update_job(
+                jid,
+                status="done",
+                result=(
+                    "No EDI data loaded. "
+                    "Please load an EDI dataset "
+                    "first using the Load EDI "
+                    "button, then retry."
+                ),
+                steps=_JOBS[jid]["steps"],
+            )
+            return
+
+        orch_input = {
+            "config":     cfg,
+            "request":    text,
+            "data_path":  edi_path,
+            "output_dir": output_dir,
+        }
+
+        with (
+            AGENT_CONFIG.offline()
+            if _offline else _nullctx()
+        ):
+            orch = WorkflowOrchestratorAgent(
+                llm_provider=llm_prov,
+                api_key=api_key,
+                model=sel_model,
+            )
+            _step(
+                f"Executing {wtype}...",
+                "running",
+            )
+            result = orch.execute(orch_input)
+
+        _step(
+            f"Completed {wtype}",
+            "done"
+            if result.status != "failed"
+            else "error",
+        )
+
+        # collect figures and generated code
+        # result.data["result"] = coordinator AgentResult
+        # coordinator AgentResult.data = {step: AgentResult}
+        # each step AgentResult.data may have "figures"
+        figs: dict = {}
+        generated_code: str = ""
+        step_results: dict = {}
+        if result.status != "failed":
+            exec_res = (
+                result.data or {}
+            ).get("result")
+            step_results = (
+                exec_res.data
+                if exec_res and exec_res.data
+                else {}
+            )
+            _fig_steps = (
+                _WORKFLOW_FIGURE_STEPS.get(wtype)
+            )
+            # None means "show all steps";
+            # a set means only those steps.
+            # For unlisted workflows, skip
+            # load/denoise by default.
+            if (
+                _fig_steps is None
+                and wtype
+                not in _WORKFLOW_FIGURE_STEPS
+            ):
+                _fig_steps = None  # show all
+            for sname, sres in step_results.items():
+                if not hasattr(sres, "data"):
+                    continue
+                # Skip prerequisite step figures
+                # unless the workflow explicitly
+                # keeps them (None = keep all).
+                if _fig_steps is not None:
+                    if sname not in _fig_steps:
+                        # close any open figs for
+                        # this suppressed step
+                        _sf = (
+                            sres.data or {}
+                        ).get("figures", {})
+                        for _f in (
+                            _sf or {}
+                        ).values():
+                            if isinstance(
+                                _f, plt.Figure
+                            ):
+                                plt.close(_f)
+                        continue
+                elif sname in _SKIP_ALWAYS:
+                    continue
+                step_figs = (
+                    sres.data or {}
+                ).get("figures", {})
+                for fname, fig in (
+                    step_figs or {}
+                ).items():
+                    if isinstance(fig, plt.Figure):
+                        b64 = _fig_to_b64(fig)
+                        plt.close(fig)
+                        figs[str(uuid.uuid4())] = {
+                            "title": (
+                                f"[{sname}] {fname}"
+                            ),
+                            "b64": b64,
+                        }
+
+            # extract generated code (code_gen step)
+            code_res = step_results.get("code_gen")
+            if code_res and hasattr(
+                code_res, "data"
+            ):
+                generated_code = (
+                    (code_res.data or {}).get(
+                        "code", ""
+                    ) or ""
+                )
+
+        # cache corrected sites for post-proc modal
+        if (
+            result.status != "failed"
+            and wtype in _CORRECTION_WFLOWS
+        ):
+            for _sn, _sr in (
+                step_results.items()
+            ):
+                _d = (
+                    getattr(_sr, "data", None)
+                    or {}
+                )
+                _corr = _d.get(
+                    "corrected_sites"
+                )
+                if _corr is not None:
+                    _CORR_CACHE[jid] = _corr
+                    _update_job(
+                        jid,
+                        postproc={
+                            "jid": jid,
+                            "workflow": wtype,
+                            "output_dir": output_dir,
+                        },
+                    )
+                    break
+
+        # AgentResult.summary is the text field
+        summary = (
+            result.summary
+            or result.error
+            or "Workflow completed."
+        )
+
+        _update_job(
+            jid,
+            status="done",
+            result=summary,
+            steps=_JOBS[jid]["steps"],
+            figs=figs,
+            code=generated_code,
+        )
+
+    except Exception as exc:  # noqa: BLE001
+        _update_job(
+            jid,
+            status="error",
+            error=str(exc),
+            result=(
+                f"An error occurred: {exc}\n\n"
+                "Check that the EDI path is set "
+                "and your API key is configured "
+                "in Settings if needed."
+            ),
+            steps=_JOBS[jid]["steps"],
+        )
+
+
+# ── callbacks ──────────────────────────────────────
+
+def register_chat(app) -> None:
+
+    # 1. Send message → add user bubble,
+    #    detect if params needed or start job
+    @app.callback(
+        Output(IDs.CHAT_WINDOW, "children"),
+        Output(IDs.STORE_JOB, "data"),
+        Output(
+            IDs.INTERVAL_POLL, "disabled"
+        ),
+        Output(IDs.INPUT, "value"),
+        Output(IDs.STORE_MESSAGES, "data"),
+        Output(IDs.STORE_PENDING, "data"),
+        Input(IDs.BTN_SEND, "n_clicks"),
+        Input(
+            {"type": "am-chip", "index": ALL},
+            "n_clicks",
+        ),
+        State(IDs.INPUT, "value"),
+        State(IDs.CHAT_WINDOW, "children"),
+        State(IDs.STORE_EDI, "data"),
+        State(IDs.STORE_SETTINGS, "data"),
+        State(
+            IDs.STORE_INV_CONFIG, "data"
+        ),
+        State(IDs.STORE_MESSAGES, "data"),
+        prevent_initial_call=True,
+    )
+    def send_message(
+        n_send,
+        chip_clicks,
+        text,
+        current_msgs,
+        edi_store,
+        settings,
+        inv_config,
+        stored_messages,
+    ):
+        triggered = ctx.triggered_id
+        if (
+            isinstance(triggered, dict)
+            and triggered.get("type")
+            == "am-chip"
+        ):
+            idx = triggered["index"]
+            from ..layout import _PROMPT_CHIPS
+            text = _PROMPT_CHIPS[idx]
+
+        if not text or not text.strip():
+            raise PreventUpdate
+
+        text = text.strip()
+
+        new_stored = list(
+            stored_messages or []
+        )
+        new_stored.append({
+            "role": "user",
+            "content": text,
+            "ts": _ts(),
+        })
+
+        msgs = [
+            c for c in (current_msgs or [])
+            if not (
+                isinstance(c, dict)
+                and c.get("props", {}).get("id")
+                == IDs.WELCOME
+            )
+        ]
+        msgs.append(_user_bubble(text))
+
+        # ── web app redirect ──────────────────
+        # Explicit launch request, or a task
+        # too complex for the chat interface
+        # (interactive viz, 3-D maps, etc.).
+        # Both bypass the EDI guard because
+        # the web app loads its own data.
+        _is_web = _is_web_app_request(text)
+        _is_viz = (
+            not _is_web
+            and _is_complex_viz(text)
+        )
+        if _is_web or _is_viz:
+            reason = (
+                ""
+                if _is_web
+                else (
+                    "This task requires"
+                    " interactive visualization"
+                    " tools that go beyond the"
+                    " agent chat. Launching the"
+                    " full pyCSAMT web app"
+                    " instead."
+                )
+            )
+            wa_url = _ensure_web_app()
+            wb = _web_app_bubble(wa_url, reason)
+            msgs.append(wb)
+            _wa_msg = (
+                f"Redirecting to web app:"
+                f" {wa_url}"
+            )
+            new_stored.append({
+                "role": "assistant",
+                "content": _wa_msg,
+                "ts": _ts(),
+            })
+            return (
+                msgs, no_update, True,
+                "", new_stored, {},
+            )
+
+        # ── guard: no EDI loaded ──────────────
+        edi_path = (edi_store or {}).get(
+            "path", ""
+        )
+        if not edi_path:
+            _no_edi = (
+                "No EDI dataset is loaded.\n"
+                "Please click Load EDI "
+                "(top-left) to select your "
+                "files, then confirm."
+            )
+            msgs.append(_agent_bubble(_no_edi))
+            new_stored.append({
+                "role": "assistant",
+                "content": _no_edi,
+                "ts": _ts(),
+            })
+            return (
+                msgs, no_update, True,
+                "", new_stored, {},
+            )
+
+        # ── line disambiguation ───────────────
+        # Detect if the user named a specific line
+        # that can't be resolved to a group key.
+        # If ambiguous: show the line picker modal.
+        # If exact match: pre-filter edi_store.
+        _groups = (edi_store or {}).get(
+            "groups", {}
+        )
+        _sel_lines: list[str] = []
+        if _groups and len(_groups) > 1:
+            _ref = _extract_line_ref(
+                text, _groups
+            )
+            if _ref is not None:
+                _exact = _match_group(
+                    _ref, _groups
+                )
+                if _exact is None:
+                    # Ambiguous → show picker
+                    msgs.append(
+                        _line_waiting_bubble()
+                    )
+                    pending = {
+                        "disambiguation": "lines",
+                        "text": text,
+                        "groups": {
+                            k: list(v)
+                            for k, v in
+                            _groups.items()
+                        },
+                    }
+                    return (
+                        msgs, {}, True,
+                        "", new_stored, pending,
+                    )
+                else:
+                    _sel_lines = [_exact]
+
+        # ── param detection ───────────────────
+        wf = _quick_workflow(text)
+        if wf:
+            msgs.append(_waiting_bubble(wf))
+            pending = {
+                "workflow": wf,
+                "text": text,
+                # snapshot edi_path so _submit_params
+                # can fall back if STORE_EDI is None
+                "edi_path": (
+                    (edi_store or {}).get(
+                        "path", ""
+                    ) or ""
+                ),
+                "edi_groups": (
+                    (edi_store or {}).get(
+                        "groups", {}
+                    )
+                ),
+            }
+            if _sel_lines:
+                pending["selected_lines"] = (
+                    _sel_lines
+                )
+            return (
+                msgs, {}, True,
+                "", new_stored, pending,
+            )
+
+        # ── normal flow: start job ────────────
+        msgs.append(
+            _thinking_bubble([{
+                "label": "Parsing request...",
+                "status": "running",
+            }])
+        )
+        _edi_use = dict(edi_store or {})
+        if _sel_lines:
+            _edi_use["selected_lines"] = (
+                _sel_lines
+            )
+        jid = _new_job()
+        t = threading.Thread(
+            target=_run_agent,
+            args=(
+                jid, text,
+                _edi_use,
+                settings or {},
+                inv_config or {},
+            ),
+            daemon=True,
+        )
+        t.start()
+
+        return (
+            msgs, {"jid": jid}, False,
+            "", new_stored, {},
+        )
+
+    # 2. Poll → update thinking / finish
+    @app.callback(
+        Output(
+            IDs.CHAT_WINDOW,
+            "children",
+            allow_duplicate=True,
+        ),
+        Output(
+            IDs.INTERVAL_POLL,
+            "disabled",
+            allow_duplicate=True,
+        ),
+        Output(IDs.STORE_FIGS, "data"),
+        Output(
+            IDs.STORE_MESSAGES,
+            "data",
+            allow_duplicate=True,
+        ),
+        Output(
+            IDs.STORE_POSTPROC, "data"
+        ),
+        Input(IDs.INTERVAL_POLL, "n_intervals"),
+        State(IDs.STORE_JOB, "data"),
+        State(IDs.CHAT_WINDOW, "children"),
+        State(IDs.STORE_FIGS, "data"),
+        State(IDs.STORE_MESSAGES, "data"),
+        prevent_initial_call=True,
+    )
+    def poll_job(
+        _n,
+        job_store,
+        current_msgs,
+        fig_store,
+        stored_messages,
+    ):
+        if not job_store:
+            raise PreventUpdate
+        jid = job_store.get("jid")
+        if not jid:
+            raise PreventUpdate
+
+        job = _get_job(jid)
+        if not job:
+            raise PreventUpdate
+
+        steps = job.get("steps", [])
+        status = job.get("status", "running")
+
+        # replace last thinking bubble with
+        # updated thinking bubble
+        msgs = list(current_msgs or [])
+        thinking_idx = None
+        for i, child in enumerate(msgs):
+            if isinstance(child, dict):
+                cid = child.get(
+                    "props", {}
+                ).get("id", "")
+                if cid == "am-thinking-bubble":
+                    thinking_idx = i
+                    break
+
+        if status == "running":
+            new_thinking = _thinking_bubble(
+                steps
+            )
+            if thinking_idx is not None:
+                msgs[thinking_idx] = new_thinking
+            return (
+                msgs, False, no_update,
+                no_update, no_update,
+            )
+
+        # job done / error
+        result_text = (
+            job.get("result")
+            or job.get("error")
+            or "Done."
+        )
+        figs = job.get("figs", {})
+        code = job.get("code", "")
+
+        # merge figs into store
+        new_fig_store = dict(fig_store or {})
+        new_fig_store.update(figs)
+
+        agent_bub = _agent_bubble(
+            result_text, steps, figs,
+            code=code,
+        )
+
+        # replace thinking with agent bubble
+        if thinking_idx is not None:
+            msgs[thinking_idx] = agent_bub
+        else:
+            msgs.append(agent_bub)
+
+        postproc = job.get("postproc")
+
+        # clean up registry
+        with _JOBS_LOCK:
+            _JOBS.pop(jid, None)
+
+        new_stored = list(
+            stored_messages or []
+        )
+        new_stored.append({
+            "role": "assistant",
+            "content": result_text,
+            "ts": _ts(),
+        })
+        return (
+            msgs, True, new_fig_store,
+            new_stored,
+            postproc if postproc else no_update,
+        )
+
+    # 3. Auto-scroll chat to bottom on update
+    app.clientside_callback(
+        """
+        function(children) {
+            setTimeout(function() {
+                var el = document.getElementById(
+                    'am-chat-window'
+                );
+                if (el) {
+                    el.scrollTop = el.scrollHeight;
+                }
+            }, 60);
+            return window.dash_clientside
+                .no_update;
+        }
+        """,
+        Output("am-scroll-dummy", "data"),
+        Input(IDs.CHAT_WINDOW, "children"),
+        prevent_initial_call=True,
+    )
+
+    # 4. Figure open → modal
+    @app.callback(
+        Output(IDs.MODAL_FIG, "is_open"),
+        Output(IDs.MODAL_FIG_IMG, "src"),
+        Output(IDs.MODAL_FIG_TITLE, "children"),
+        Output(IDs.MODAL_FIG_KEY, "data"),
+        Input(
+            {"type": "am-fig-open", "key": ALL},
+            "n_clicks",
+        ),
+        State(IDs.STORE_FIGS, "data"),
+        prevent_initial_call=True,
+    )
+    def open_fig_modal(n_clicks, fig_store):
+        # Require the triggered button itself to
+        # have a positive click count — prevents
+        # auto-open when a new figure card is
+        # dynamically added while an older button
+        # still has n_clicks > 0.
+        if not ctx.triggered:
+            raise PreventUpdate
+        if not ctx.triggered[0].get("value"):
+            raise PreventUpdate
+        triggered = ctx.triggered_id
+        if not triggered:
+            raise PreventUpdate
+        fig_key = triggered.get("key")
+        if not fig_store or fig_key not in (
+            fig_store
+        ):
+            raise PreventUpdate
+        info = fig_store[fig_key]
+        src = (
+            f"data:image/png;base64,"
+            f"{info['b64']}"
+        )
+        return (
+            True,
+            src,
+            info.get("title", "Figure"),
+            fig_key,
+        )

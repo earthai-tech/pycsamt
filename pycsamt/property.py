@@ -18,8 +18,8 @@ from typing import List
 
 import numpy as np
 
-from pycsamt.log.logger import get_logger
-from pycsamt.exceptions import FileHandlingError
+from .log.logger import get_logger
+from .exceptions import FileHandlingError
 
 logger = get_logger(__name__)
 

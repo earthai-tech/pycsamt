@@ -1,195 +1,269 @@
-# -*- coding: utf-8 -*-
-#       Author: LKouadio <etanoyau@gmail.com>
-#       License: LGPL-3.0 
+"""Shared typing helpers for PyCSAMT.
 
+This module centralizes type aliases used across the v2 codebase.
+It intentionally keeps the legacy names that appeared in v1
+annotations, while mapping them to safer runtime objects.  The goal is
+to let old annotations such as ``ArrayLike[DType[float]]`` continue to
+evaluate, and to provide clearer aliases for new code.
+
+Most aliases in this module are documentation and static-analysis
+helpers.  They should not be used for runtime validation.  Use
+validators from :mod:`pycsamt.utils.validation` or local parsing code
+when input values must be checked.
+
+Examples
+--------
+>>> from pycsamt.api.typing import ArrayLike, NDArray, PathLike
+>>> def normalize(values: ArrayLike[float]) -> NDArray[float]:
+...     ...
+
+>>> def read_any(path: PathLike) -> str:
+...     ...
 """
-`pycsamt` Type variables
-========================
 
-.. |CSAMT| replace:: Controlled-Source Audio-Magnetotellurics
-
-.. _pycsamt: https://github.com/your-repo/pycsamt/
-.. _pandas DataFrame: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html
-.. _Series: https://pandas.pydata.org/docs/reference/api/pandas.Series.html
-
-Some customized type variables need to be explained for easy
-understanding in the whole package. Indeed, customized type
-hints are used to define the type of arguments.
-
-**M**: Represents an integer variable `IntVar` to denote the
-    number of rows in an ``Array``.
-
-**N**: Similar to ``M``, *N* represents the number of columns
-    in an ``Array``. It is bound to an integer variable.
-
-**T**: A generic type, standing for `Any` type of variable.
-
-**U**: Stands for a single dimension in an array. For instance:
-    >>> import numpy as np
-    >>> array = np.arange(4).shape
-    ... (4, )
-
-**S**: Indicates the `Shape` status. It is bound by `M`, `U`,
-    `N`. 'U' stands for a single dimension in a 1D array.
-    The `AddShape` class allows for extending arrays beyond two
-    dimensions.
-
-**D**: Stands for dtype object. It is bound with :class:`DType`.
-
-**Array**: Defines a one-dimensional array where `DType` can be
-    specified. For instance:
-    >>> import numpy as np
-    >>> from pycsamt.api.typing import TypeVar, Array, DType
-    >>> T = TypeVar ('T', float)
-    >>> A = TypeVar ('A', str, bytes )
-    >>> arr1:Array[T, DType[T]] = np.arange(21) # dtype ='float'
-    >>> arr2: Array[A, DType[A]] = arr1.astype ('str') # dtype ='str'
-
-**NDArray**: Stands for multi-dimensional arrays (more than one
-    dimension).
-
-**Sub**: Represents a subset of an ``Array``. For example,
-    extracting a specific zone from a |CSAMT| data line.
-
-**SP**: Stands for Station Positions. The unit of position may
-    vary, but the default is in meters, starting from position 0.
-
-**Series**: A generic type hint for a `pandas Series`_ object.
-
-**DataFrame**: A generic type hint for a `pandas DataFrame`_
-    object.
-
-**EDIO**: Stands for Electrical Data Interchange (EDI) Object.
-    It is an object built from `pycsamt`_ or `MTpy`_ packages.
-
----
-Additional definition for common arguments
-===========================================
-
-**data_array**: A data array, typically holding apparent
-    resistivity values. The type hint is usually
-    ``Array[float, DType[float]]`` or ``List[float]``.
-
-**p**: Represents station location positions. The type hint is
-    ``Array[int, DType[int]]`` or ``List[int]``. Values are
-    expected to be integers.
-
-**cz**: Stands for Conductive Zone. It is a subset of a data
-    array and shares the same type hint. The ``Sub`` type is
-    used for better demarcation.
-"""
 from __future__ import annotations
 
-from typing import (
-    List,
-    Tuple,
-    Sequence,
-    Dict,
-    Iterable,
+from collections.abc import (
     Callable,
-    Union,
-    Any,
-    Generic,
-    Optional,
-    Type,
-    Mapping,
-    Text,
-    TypeVar,
+    Iterable,
     Iterator,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
+from os import PathLike as OSPathLike
+from pathlib import Path
+from typing import (
+    Any,
+    ClassVar,
+    Generic,
+    Literal,
+    Optional,
+    Protocol,
+    SupportsFloat,
     SupportsInt,
+    Text,
+    TypeAlias,
+    TypeGuard,
+    TypeVar,
+    Union,
+    overload,
 )
 
+import numpy as np
+from numpy.typing import ArrayLike as NumpyArrayLike
+from numpy.typing import DTypeLike
+from numpy.typing import NDArray as NumpyNDArray
+
+try:  # pragma: no cover - pandas is expected but kept optional.
+    import pandas as _pd
+except Exception:  # pragma: no cover
+    _pd = None
+
 __all__ = [
-    "List", "Tuple", "Sequence", "Dict", "Iterable",
-    "Callable", "Any", "Generic", "Optional", "Union",
-    "Type", "Mapping", "Text", "Shape", "DType", "NDArray",
-    "ArrayLike", "EDIO", "Sub", "SP", "F", "T", "V",
-    "Series", "Iterator", "SupportsInt", "ZO"
+    "Any",
+    "Array",
+    "Array1D",
+    "Array2D",
+    "ArrayLike",
+    "Callable",
+    "ClassVar",
+    "DataFrame",
+    "DataFrameLike",
+    "Dict",
+    "DType",
+    "DTypeLike",
+    "EDIO",
+    "F",
+    "FloatArray",
+    "Generic",
+    "IndexLike",
+    "IntArray",
+    "Iterable",
+    "Iterator",
+    "K",
+    "List",
+    "Literal",
+    "M",
+    "Mapping",
+    "MutableMapping",
+    "N",
+    "NDArray",
+    "NumpyArrayLike",
+    "NumpyNDArray",
+    "Numeric",
+    "Optional",
+    "Path",
+    "PathLike",
+    "Protocol",
+    "SP",
+    "Scalar",
+    "Sequence",
+    "Series",
+    "SeriesLike",
+    "Shape",
+    "Sub",
+    "SupportsArray",
+    "SupportsFloat",
+    "SupportsInt",
+    "T",
+    "Text",
+    "Type",
+    "TypeAlias",
+    "TypeGuard",
+    "Tuple",
+    "U",
+    "Union",
+    "V",
+    "ZO",
+    "overload",
 ]
 
-T = TypeVar('T')
-V = TypeVar('V')
-K = TypeVar('K')
-M = TypeVar('M', bound=int)
-N = TypeVar('N', bound=int)
-U = TypeVar('U')
-D = TypeVar('D', bound='DType')
-S = TypeVar('S', bound='Shape')
+
+# ---------------------------------------------------------------------------
+# Standard-library compatibility exports
+# ---------------------------------------------------------------------------
+
+# The v1 module exported names from :mod:`typing`.  Keep those names so
+# older modules can continue to import from ``pycsamt.api.typing``.
+List = list
+Tuple = tuple
+Dict = dict
+Type = type
+
+T = TypeVar("T")
+V = TypeVar("V")
+K = TypeVar("K")
+M = TypeVar("M", bound=int)
+N = TypeVar("N", bound=int)
+U = TypeVar("U")
+F = TypeVar("F", bound=Callable[..., Any])
 
 
-class AddShape(Generic[S]):
-    """ An extra bound to top the `Shape` for dimensions > 2."""
+# ---------------------------------------------------------------------------
+# Modern v2 aliases
+# ---------------------------------------------------------------------------
+
+PathLike: TypeAlias = str | bytes | Path | OSPathLike[str]
+"""Path accepted by PyCSAMT readers and writers."""
+
+Scalar: TypeAlias = str | bytes | int | float | complex | bool
+"""Common scalar value accepted by lightweight utilities."""
+
+Numeric: TypeAlias = int | float | complex | np.number
+"""Python or NumPy numeric scalar."""
+
+Array: TypeAlias = NumpyNDArray[Any]
+"""Concrete NumPy array with arbitrary dtype and shape."""
+
+Array1D: TypeAlias = NumpyNDArray[Any]
+"""One-dimensional NumPy array by convention."""
+
+Array2D: TypeAlias = NumpyNDArray[Any]
+"""Two-dimensional NumPy array by convention."""
+
+FloatArray: TypeAlias = NumpyNDArray[np.floating[Any]]
+"""NumPy array with floating dtype."""
+
+IntArray: TypeAlias = NumpyNDArray[np.integer[Any]]
+"""NumPy array with integer dtype."""
+
+IndexLike: TypeAlias = int | slice | Sequence[int] | NumpyNDArray[Any]
+"""Index selector accepted by array utilities."""
+
+SeriesLike: TypeAlias = Any
+"""Object behaving like a pandas Series."""
+
+DataFrameLike: TypeAlias = Any
+"""Object behaving like a pandas DataFrame."""
 
 
-class Shape(Generic[M, S], AddShape[S]):
-    """ Generic to construct a tuple shape for NDarray."""
-    def __getitem__(self, M, N) -> S:
-        ...
+if _pd is not None:
+    Series = _pd.Series
+    DataFrame = _pd.DataFrame
+else:  # pragma: no cover
+    class Series:  # noqa: D101
+        def __class_getitem__(cls, item: Any) -> type[Series]:
+            return cls
+
+    class DataFrame:  # noqa: D101
+        def __class_getitem__(cls, item: Any) -> type[DataFrame]:
+            return cls
 
 
-class DType(Generic[T]):
-    """ DType can be Any Type so it holds 'T' type variable. """
-    def __getitem__(self, T) -> T:
-        ...
+# ---------------------------------------------------------------------------
+# Legacy-compatible generic names
+# ---------------------------------------------------------------------------
 
+class _CompatAlias:
+    """Runtime-safe base for legacy subscripted aliases.
 
-class ArrayLike(Generic[T, D]):
-    """ Array Type here means the 1D array. """
-    def __getitem__(self, T) -> Union['ArrayLike', T]:
-        ...
-
-
-class NDArray(ArrayLike[T, DType[T]], Generic[T, D]):
-    """ NDarray has M-rows, N-columns, Shape and DType object."""
-    def __getitem__(self, T) -> T:
-        ...
-
-
-class F(Generic[T]):
-    """ Generic class for functions, methods and classes. """
-    def __getitem__(
-        self, item: Callable[..., T]
-    ) -> Union['F', Callable[..., T], T, Any]:
-        return self
-
-
-class Sub(Generic[T]):
-    """ Return subset of an Array. """
-    ...
-
-
-class SP(Generic[T, D]):
-    """ Station position arrays hold integer values. """
-    ...
-
-
-class Series(DType[T], Generic[T]):
-    """ To reference the pandas `Series`_ object. """
-    def __getitem__(self, item: T) -> 'Series':
-        return self
-
-
-class EDIO(Generic[T]):
+    Older modules use aliases with several incompatible shapes, for
+    example ``ArrayLike[DType[float]]`` and
+    ``ArrayLike[float, DType[float]]``.  Returning the class from
+    ``__class_getitem__`` preserves runtime evaluation without
+    pretending that these aliases perform validation.
     """
-    EDIO stands for Electrical Data Interchange (EDI) Object.
-    It is an EDI object built from `pycsamt` or `MTpy`.
+
+    __args__: ClassVar[tuple[Any, ...]] = ()
+
+    def __class_getitem__(cls, item: Any) -> type[_CompatAlias]:
+        return cls
+
+
+class Shape(_CompatAlias):
+    """Shape marker kept for legacy annotations."""
+
+
+class DType(_CompatAlias):
+    """Dtype marker kept for legacy annotations.
+
+    New code should prefer :class:`numpy.typing.DTypeLike` or a concrete
+    NumPy dtype annotation.
     """
-    def __getitem__(self, T: str | T) -> object:
-        ...
 
 
-class ZO(Generic[T]):
+class ArrayLike(_CompatAlias):
+    """Array-like input accepted by NumPy conversion routines.
+
+    New code may use :class:`numpy.typing.ArrayLike` directly.  This
+    compatibility alias remains subscriptable with one or two arguments
+    for old PyCSAMT annotations.
     """
-    ZO stands for Impedance tensor Object. It is an Impedance
-    tensor object built from `pycsamt.core.z.Z` or
-    `mtpy.core.z.Z`. It is a 3D data with dimensions
-    (n_freq, 2, 2).
+
+
+class NDArray(_CompatAlias):
+    """NumPy array marker kept for legacy annotations.
+
+    New code may use :class:`numpy.typing.NDArray` directly for stricter
+    dtype annotations.
     """
-    def __getitem__(self, T: str | T) -> object:
-        ...
 
 
-class DataFrame(Series[T], Generic[T]):
-    """ Type hint for a `pandas DataFrame`_ object. """
-    def __getitem__(self, item: T) -> 'DataFrame':
-        return self
+class Sub(_CompatAlias):
+    """Subset marker for legacy array annotations."""
+
+
+class SP(_CompatAlias):
+    """Station-position marker for legacy annotations."""
+
+
+class EDIO(_CompatAlias):
+    """Electrical Data Interchange object marker."""
+
+
+class ZO(_CompatAlias):
+    """Impedance tensor object marker."""
+
+
+class SupportsArray(Protocol):
+    """Protocol for objects convertible to NumPy arrays."""
+
+    def __array__(self, dtype: DTypeLike | None = None) -> np.ndarray:
+        """Return a NumPy representation of the object."""
+
+
+def is_path_like(value: object) -> TypeGuard[PathLike]:
+    """Return whether ``value`` can be treated as a path."""
+
+    return isinstance(value, (str, bytes, Path, OSPathLike))

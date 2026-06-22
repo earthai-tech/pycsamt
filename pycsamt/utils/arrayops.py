@@ -624,10 +624,24 @@ def interpolate_grid (
     y1 = yy[~arr.mask]
     newarr = arr[~arr.mask]
     
+    # Need at least 4 finite points for any triangulation-based interpolator;
+    # fall back to fill-only when data are too sparse or entirely masked.
+    if x1.size < 4:
+        arri = arr.data.copy().astype(float)
+        if fill_value == 'auto':
+            arri = _fill_nan(arri, method='both ')
+        else:
+            arri[np.isnan(arri)] = float(
+                _assert_all_types(fill_value, float, int, objname="'fill_value'")
+            )
+        if not is2d:
+            arri = arri[0]
+        return arri
+
     arri = spi.griddata(
         (x1, y1),
         newarr.ravel(),
-        (xx, yy), 
+        (xx, yy),
         method=method
         )
     

@@ -1,6 +1,6 @@
 
 import os
-from pycsamt.io.config import Config
+from .config import Config
 
 
 def read_any(path: str, **kwargs):

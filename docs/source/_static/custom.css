@@ -1,0 +1,26 @@
+/* pyCSAMT v2 — brand colour overrides for pydata-sphinx-theme */
+
+:root {
+  --pst-color-primary:         #f15a29;   /* orange-red — accent */
+  --pst-color-secondary:       #3e65b0;   /* blue */
+  --pst-color-accent:          #fbb040;   /* orange */
+  --pst-color-link:            #3e65b0;
+  --pst-color-link-hover:      #f15a29;
+  --pst-color-inline-code-links: #f15a29;
+}
+
+/* Navbar brand colour */
+.navbar-brand img {
+  max-height: 36px;
+}
+
+/* Sidebar section headers */
+.bd-sidebar .nav > li > a {
+  color: var(--pst-color-secondary);
+  font-weight: 500;
+}
+
+/* API reference: parameter names */
+dt code.sig-name {
+  color: var(--pst-color-primary);
+}

@@ -21,18 +21,18 @@ from ..api.bunch import Bunch
 from ..context import nullify_output
 from ..compat.aliases import compat_alias 
 from ..exceptions import EdIDataError, EMError
-from ..property import IsEdi
+from ..seg.validation import IsEdi
 
-from .arrayops import ( 
-    reshape, 
-    is_iterable, 
-    concat_array_from_list, 
+from .arrayops import (
+    reshape,
+    is_iterable,
+    concat_array_from_list,
     interpolate_grid
 )
 from .cleaner import ismissing
 from .conversion import convert_value
 from .stats import get_confidence_ratio, remove_outliers
-from .validation import isinstance_relaxed, assert_ratio, check_y
+from .validation import isinstance_relaxed, assert_ratio
 from .plot import plot_errorbar
 
 __all__ =[ 
@@ -106,7 +106,7 @@ def check_em_kind(objs, /) -> str: # _assert_z_or_edi_objs
     'Z'
     """
     # Local imports to avoid import cycles during module init.
-    from ..seg.edi import Edi
+    from ..seg.edi import EDIFile as Edi  # v2: EDIFile replaced Edi
     from ..z.z import Z
 
     # Basic iterable validation (exclude str/bytes).
@@ -415,16 +415,19 @@ def align_tensor(                         # fittensor
     5
     """
     # Validate and normalize reference frequency as a 1-D array.
-    ref_freq = check_y(ref_freq, input_name="Reference array 'ref_freq'")
+    ref_freq = np.asarray(ref_freq, dtype=float).ravel()
 
     # Map site frequencies onto the reference grid.
-    # `ismissing` returns a tuple: (freq_like_ref, mask_on_ref)
-    freq_like_ref, mask = ismissing(
+    # `ismissing` returns (filled_ref, absence_mask) where absence_mask
+    # is True where ref_freq[i] is NOT in site_freq (gap positions).
+    freq_like_ref, absence_mask = ismissing(
         refarr=ref_freq,
         arr=site_freq,
         return_index="mask",
         fill_value=fill_value,
     )
+    # presence_mask is True where site values should be placed
+    presence_mask = ~absence_mask
 
     # Prepare an output array filled with the sentinel value.
     z_aligned = np.full_like(
@@ -435,16 +438,17 @@ def align_tensor(                         # fittensor
 
     # Ensure shape compatibility between the mask and provided z.
     z_flat = reshape(z)  # robust 1-D view
-    if len(z_aligned[mask]) != len(z_flat):
+    if len(z_aligned[presence_mask]) != len(z_flat):
         raise EMError(
             "Inconsistent frequency lengths: tensor values do not "
             "match the number of mapped site frequencies. Frequencies "
             "in `z` must be a subset of the complete `ref_freq`. "
-            f"Got {len(z_flat)} values for {mask.sum()} mapped positions."
+            f"Got {len(z_flat)} values for {presence_mask.sum()} "
+            "mapped positions."
         )
 
     # Place site tensor values at their positions on the reference grid.
-    z_aligned[mask] = z_flat
+    z_aligned[presence_mask] = z_flat
 
     return z_aligned
 
@@ -627,9 +631,8 @@ def plot_confidence(   # plot_confidence_in
     ...     figsize=(6, 3), fontsize=5
     ... )
     """
-    # Lazy imports to avoid circular dependencies at module import time.
+    # Lazy import shared by 1D path only; 2D plot2d imported inside block.
     from .plot import _get_xticks_formatage
-    from ..plot.utils import plot2d
 
     # Normalize options
     view = str(view).strip().lower()
@@ -690,6 +693,7 @@ def plot_confidence(   # plot_confidence_in
     )
 
     if view == "2d":
+        from ..plot.utils import plot2d  # only needed for 2D path
         # Optional outlier removal for cleaner 2-D maps.
         ar2d = (
             remove_outliers(rerr, fill_value=np.nan)
@@ -938,9 +942,7 @@ def tensor2d(                                                 # get2dtensor
         freqs = full_freq(z_or_edis_obj_list, **kws)
     else:
         # Validate provided grid and coerce to a safe 1-D view.
-        freqs = check_y(
-            freqs, input_name="Reference array 'freqs'"
-        )
+        freqs = np.asarray(freqs, dtype=float).ravel()
 
     # Component index mapping (rows=freqs).
     idx_map = {
@@ -966,9 +968,10 @@ def tensor2d(                                                 # get2dtensor
         def _site_freq(obj):
             container = obj.Z if kind_in == "EDI" else obj
             # Accept both private and public freq attributes.
-            return getattr(container, "_freq", None) or getattr(
-                container, "freq", None
-            )
+            f = getattr(container, "_freq", None)
+            if f is None:
+                f = getattr(container, "freq", None)
+            return f
 
         aligned = [
             align_tensor(
@@ -1272,9 +1275,9 @@ def full_freq(
         """Extract frequency array from Edi/Z with robust attribute
         lookup; raise meaningful error if missing."""
         container = obj.Z if kind == "EDI" else obj
-        f = getattr(container, "_freq", None) or getattr(
-            container, "freq", None
-        )
+        f = getattr(container, "_freq", None)
+        if f is None:
+            f = getattr(container, "freq", None)
         if f is None:
             raise EMError(
                 "Frequency attribute not found on object. Expected "
@@ -2079,7 +2082,34 @@ def _prepare_sensitivity(
             elif key == "dataid":
                 sites = [obj.Head.dataid for obj in po.ediObjs_]
 
-    return skew, mu, freqs, ymat, mode_norm, sites
+    # ---- coordinate-based station distances --------------------------------
+    # Use haversine distances from lat/lon; fall back to uniform if unavailable.
+    try:
+        from math import radians, sin, cos, sqrt, atan2 as _atan2
+
+        lats = np.array([e.meta.get("lat", 0.0) for e in po.ediObjs_], dtype=float)
+        lons = np.array([e.meta.get("lon", 0.0) for e in po.ediObjs_], dtype=float)
+
+        if np.all(lats == 0) and np.all(lons == 0):
+            x_coords: np.ndarray | None = None
+        else:
+            _R = 6_371_000.0
+            _cd = [0.0]
+            for _i in range(1, len(lats)):
+                _dlat = radians(lats[_i] - lats[_i - 1])
+                _dlon = radians(lons[_i] - lons[_i - 1])
+                _a = (
+                    sin(_dlat / 2) ** 2
+                    + cos(radians(lats[_i - 1]))
+                    * cos(radians(lats[_i]))
+                    * sin(_dlon / 2) ** 2
+                )
+                _cd.append(_cd[-1] + 2 * _R * _atan2(sqrt(_a), sqrt(1 - _a)))
+            x_coords = np.array(_cd)
+    except Exception:
+        x_coords = None
+
+    return skew, mu, freqs, ymat, mode_norm, sites, x_coords
 
 
 @compat_alias(
@@ -2298,6 +2328,7 @@ def plot_skew_2d(
     plot_contours: bool = ...,
     ax: Optional[plt.Axes] = None,
     savefig: Optional[str] = ...,
+    verbose: int = 0,
 ) -> plt.Axes:
     """
     Plot phase-sensitive skew (η) or rotational invariant (μ) in 2-D.
@@ -2373,7 +2404,7 @@ def plot_skew_2d(
     from ..plot.utils import plot2d  # newer location
     
     # Compute sensitivity matrices and axis labels.
-    skew, mu, freqs, ymat, mode_out, sites = _prepare_sensitivity(
+    skew, mu, freqs, ymat, mode_out, sites, x_coords = _prepare_sensitivity(
         edis_list,
         mode=mode,
         sensitivity=sensitivity,
@@ -2395,10 +2426,15 @@ def plot_skew_2d(
     # Contours default to False unless explicitly True (legacy match).
     do_contours = not (plot_contours in (False, ...))
 
+    # Use real coordinate-derived distances when available; fall back to
+    # uniform spacing so the x-axis reflects true station positions.
+    x_plot = x_coords if x_coords is not None else None
+
     # Draw the 2-D image (helper creates fig/ax as needed).
     ax = plot2d(
         ymat,
         y=y_plot,
+        x=x_plot,
         cmap=cmap,
         cb_label=cb_label,
         top_label=top_label,

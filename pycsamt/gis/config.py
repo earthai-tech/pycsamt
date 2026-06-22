@@ -43,8 +43,8 @@ from typing import Dict
 
 import numpy as np
 
-from pycsamt.decorators import GdalDataCheck
-from pycsamt.log.logger import get_logger
+from ..decorators import GdalDataCheck
+from ..log.logger import get_logger
 
 logger = get_logger(__name__)
 

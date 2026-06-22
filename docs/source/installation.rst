@@ -1,69 +1,62 @@
+.. _installation:
+
 Installation
 ============
 
-Installing via pip 
-------------------
-To install the `pycsamt` package from the Python package index into an established
-Python environment, use the pip command:
+Requirements
+------------
 
-.. code-block:: bash
-   
-   pip install pycsamt 
-   pip install --user pycsamt (for window users) 
-   
-However, it is recommended the installation from the repository to get the latest development code.
+* Python **3.9** or later
+* NumPy ≥ 1.22, SciPy ≥ 1.8, Matplotlib ≥ 3.5
 
-Intalling from source 
-----------------------
-To install from source, clone the project with git: 
-
-.. code-block:: bash 
-
-   git clone https://github.com/WEgeophysics/pycsamt.git 
-  
-Or download the latest version from the project webpage: https://github.com/WEgeophysics/pycsamt
-
-In the source directory use the command
+Install from PyPI
+-----------------
 
 .. code-block:: bash
 
-   python setup.py install
-   
-   
-Required Dependencies
----------------------
-`pycsamt` was originally built on python 3.6. However, the last version requires at least **python 3.8**.
+   pip install pycsamt
 
-It calls on the core Python data analytics stack, and a third party parsing library:
+With AI/ML back-ends
+~~~~~~~~~~~~~~~~~~~~
 
-* Numpy
-* Scipy
-* Pandas
-* MTpy
-* xlrd
-* regex
-* tqdm
-* pytest
-* flake8
-* pyyaml
-* qtpy
-* netcdf4
+Install with `PyTorch <https://pytorch.org>`_ (recommended):
 
-These modules should build automatically if you are installing via `pip`. If you are building from
-the source code, or if pip fails to load them, they can be loaded with the same `pip` syntax as
-above.   
+.. code-block:: bash
 
-Optional Dependencies
----------------------
-In order to plot results from the model as shown in :doc:`quick start <../quick_start>`:
+   pip install pycsamt[torch]
 
-* Matplotlib
-* Numba 
+Install with `TensorFlow <https://tensorflow.org>`_:
 
-Additional Resources
---------------------
-The `pycsamt user guide <https://github.com/WEgeophysics/pyCSAMT/blob/master/docs/user_guide.pdf>`_ contains recipes that can help you get start up with pycsamt.
-Moreover, to go through step by step installation, one may refer to `Step by Step Installation Guide <https://github.com/WEgeophysics/pyCSAMT/wiki/pyCSAMT-installation-guide-for-Windows--and-Linux>`_.
+.. code-block:: bash
 
+   pip install pycsamt[tensorflow]
 
+Install everything (both back-ends + optional scientific extras):
 
+.. code-block:: bash
+
+   pip install pycsamt[full]
+
+Install from source
+-------------------
+
+.. code-block:: bash
+
+   git clone https://github.com/earthai-tech/pycsamt.git
+   cd pycsamt
+   pip install -e ".[full]"
+
+.. note::
+
+   The inversion solvers (Occam2D, ModEM) are distributed as Fortran
+   source code under ``pycsamt/models/*/``_source/``.  They are compiled
+   on first use via ``f2py``.  A Fortran compiler (``gfortran``) must be
+   available on the system.
+
+Verify installation
+-------------------
+
+.. code-block:: python
+
+   import pycsamt
+   print(pycsamt.__version__)

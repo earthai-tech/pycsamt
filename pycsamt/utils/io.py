@@ -13,7 +13,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from typing import Tuple, Union, Dict, Optional 
 
-from pycsamt.exceptions import ValidationError, PycsamtError 
+from ..exceptions import ValidationError, PycsamtError 
 
 
 __all__ = [

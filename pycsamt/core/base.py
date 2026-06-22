@@ -9,12 +9,13 @@ import numpy as np
 from dataclasses import dataclass, is_dataclass, field, fields as dc_fields
 from typing import Any, Dict, Optional, Protocol
 from typing import Iterable, Mapping
+
+from ..api.property import PyCSAMTObject
+
 from .config import StationNamePolicy, get_config, get_adapter
 
 __all__ = [
     "TFBundle",
-    "CoreObject", 
-    "MTBase", 
     "SupportsToBundle",
     "SupportsFromBundle",
     "ensure_station",
@@ -23,7 +24,7 @@ __all__ = [
 ]
 
 
-class CoreObject:
+class CoreObject(PyCSAMTObject):
     r"""
     Minimal base class for PyCSAMT objects and mixins.
 
@@ -140,11 +141,15 @@ class CoreObject:
             * dataclasses → declared field names
             * objects     → public attributes in ``__dict__``
         """
+        exclude = set(getattr(self, "__repr_exclude__", set()))
         if is_dataclass(self):
-            return (f.name for f in dc_fields(self))
+            return (
+                f.name for f in dc_fields(self)
+                if f.name not in exclude
+            )
         if hasattr(self, "__dict__"):
             return (k for k in self.__dict__.keys()
-                    if not k.startswith("_"))
+                    if not k.startswith("_") and k not in exclude)
         return ()  # pragma: no cover
 
 

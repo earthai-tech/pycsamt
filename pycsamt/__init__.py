@@ -1,101 +1,99 @@
 # -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
-# License: GPL-3.0
-
+# License: LGPL-3.0
 """
-pycsamt: A Python Toolbox for audio-magnetotellurics (AMT & CSAMT)
-
-Provides fast & robust data processing, signal recovery, and
-**drilling-location optimization** for AMT and CSAMT surveys.
+pycsamt v2 — Python toolbox for audio-magnetotellurics (AMT & CSAMT).
 
 Documentation: https://pycsamt.readthedocs.io/en/latest/
-Source:        https://github.com/WEgeophysics/pycsamt
+Source:        https://github.com/earthai-tech/pycsamt
 """
 
-import sys
-import warnings
-import importlib
-import types
+from __future__ import annotations
 
-# Version
+import importlib
+
+# ── Version ───────────────────────────────────────────────────────────────────
 try:
-    from importlib.metadata import version
-    __version__ = version(__name__)
+    from importlib.metadata import version as _pkg_version
+    __version__ = _pkg_version(__name__)
 except Exception:
     __version__ = "2.0.0"
 
-# Configure logging early
+# ── Removed v1 names ──────────────────────────────────────────────────────────
+# Defined BEFORE logging (and before __getattr__) so this dict is always
+# present in the module dict, even if the logging import fails mid-reload.
+_REMOVED = {
+    "geodrill":    "Use 'pycsamt.interp' instead.",
+    "bases":       "Removed in v2 (was an internal v1 serialisation helper).",
+    "_csamtpylog": "Removed in v2; use 'pycsamt.log.logger.get_logger'.",
+    "_path":       "Removed in v2; use standard pathlib paths.",
+}
 
-from pycsamt.log._config import init_logging
-init_logging()  # loads p.configlog.yml or falls back to basicConfig
+# ── Lazy registry ─────────────────────────────────────────────────────────────
+# All pure-Python constants — no external imports needed.
+_SUBPACKAGES = frozenset({
+    "ai", "agents", "backends", "emtools", "forward", "gis",
+    "interp", "inversion", "io", "jones", "log", "models",
+    "pipeline", "seg", "site", "tdem", "z", "zonge",
+})
 
-
-# Dependency resolution
-_required_dependencies = [
-    ("numpy", None),
-    ("pandas", None),
-    ("scipy", None),
-    ("matplotlib", None),
-    ("tqdm", None),
-    ("scikit-learn", "sklearn"),
-    ("numba", None),
-    ("mtpy", None),
-    ("pyyaml", None),
-]
-_missing_deps = []
-
-def _lazy_import(module, alias=None):
-    """Lazily load a module to defer import time."""
-    def _loader():
-        return importlib.import_module(module)
-    globals()[alias or module] = _loader
-
-for pkg, alias in _required_dependencies:
-    try:
-        if alias:
-            _lazy_import(alias, alias)
-        else:
-            _lazy_import(pkg)
-    except ImportError as e:
-        _missing_deps.append(f"{pkg}: {e}")
-
-if _missing_deps:
-    warnings.warn(
-        "Missing pycsamt dependencies; some features may be unavailable:\n"
-        + "\n".join(_missing_deps),
-        ImportWarning
-    )
-
-# Expose installer utility for on-the-fly fixes
-from .utils.generic import ensure_package # Noqa 
+_LAZY_SYMBOLS: dict[str, str] = {
+    # pipeline
+    "Pipeline":       ".pipeline",
+    "Step":           ".pipeline",
+    "configure_pipe": ".pipeline",
+    "reset_pipe":     ".pipeline",
+    "PYCSAMT_PIPE":   ".pipeline",
+    # backends
+    "auto_detect":          ".backends",
+    "get_backend":          ".backends",
+    "get_backend_instance": ".backends",
+    "list_backends":        ".backends",
+    "set_backend":          ".backends",
+}
 
 
-# Optional submodules fallback 
-_optional_modules = ["geodrill"]
-for mod in _optional_modules:
-    try:
-        globals()[mod] = importlib.import_module(f"pycsamt.{mod}")
-    except ImportError:
-        dummy = types.ModuleType(f"pycsamt.{mod}")
-        sys.modules[f"pycsamt.{mod}"] = dummy
-        globals()[mod] = dummy
+def __getattr__(name: str):
+    if name in _SUBPACKAGES:
+        mod = importlib.import_module(f".{name}", __name__)
+        globals()[name] = mod
+        return mod
 
-# __getattr__ for install hints
-def __getattr__(name):
-    if name in _optional_modules:
-        raise ImportError(
-            f"Optional submodule 'pycsamt.{name}' is not installed. "
-            f"Install via: pip install pycsamt[{name}]"
+    if name in _LAZY_SYMBOLS:
+        mod = importlib.import_module(_LAZY_SYMBOLS[name], __name__)
+        sym = getattr(mod, name)
+        globals()[name] = sym
+        return sym
+
+    if name in _REMOVED:
+        raise AttributeError(
+            f"'pycsamt.{name}' was removed in pycsamt v2.  {_REMOVED[name]}"
         )
-    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+    raise AttributeError(f"module 'pycsamt' has no attribute {name!r}")
 
 
-# Public API
+# ── Logging ───────────────────────────────────────────────────────────────────
+# Placed AFTER __getattr__ and _REMOVED so any import side-effect that
+# triggers __getattr__ (e.g. via Werkzeug hot-reload) is always safe.
+# Wrapped in try/except: yaml not yet installed won't break the import.
+try:
+    from .log._config import init_logging as _init_logging
+    _init_logging()
+    del _init_logging
+except Exception:
+    pass
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
 __all__ = [
     "__version__",
-    "is_installing",
-] + _optional_modules
-
-
-
-
+    # subpackages
+    "ai", "agents", "backends", "emtools", "forward", "gis",
+    "interp", "inversion", "io", "jones", "models",
+    "pipeline", "seg", "site", "tdem", "z", "zonge",
+    # pipeline shortcuts
+    "Pipeline", "Step", "configure_pipe", "reset_pipe", "PYCSAMT_PIPE",
+    # backend helpers
+    "auto_detect", "get_backend", "get_backend_instance",
+    "list_backends", "set_backend",
+]

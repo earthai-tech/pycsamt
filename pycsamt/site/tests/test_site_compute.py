@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from pycsamt.api import APIFrame, reset_api_view
 from pycsamt.seg.edi import EDIFile
 from pycsamt.site import compute as cmp
 from pycsamt.site import edit as ed
@@ -69,12 +70,39 @@ def test_strike_estimate_single_and_multi(
     e2 = ed.fill_missing(e2, how="zero",
                          components=("Z",), inplace=False)
 
-    df = cmp.strike_estimate([e1, e2], method="swift")
+    df = cmp.strike_estimate([e1, e2], method="swift", api=False)
     assert isinstance(df, pd.DataFrame)
     assert list(df.columns) == ["station", "method",
                                 "theta_deg"]
     assert len(df) == 2
     assert np.all(np.isfinite(df["theta_deg"].values))
+
+
+def test_compute_dataframe_results_can_return_api_frame(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
+    reset_api_view()
+    e1, e2 = _mk_two_edifiles(tmp_path, simulated_edi, "A11",
+                              "A12")
+    e1 = ed.fill_missing(e1, how="zero",
+                         components=("Z",), inplace=False)
+    e2 = ed.fill_missing(e2, how="zero",
+                         components=("Z",), inplace=False)
+    sites = [e1, e2]
+
+    strike = cmp.strike_estimate(sites, api=True)
+    rho = cmp.res_at_freq(sites, 150.0, api=True)
+    slope = cmp.phase_slope(sites, (90.0, 210.0), api=True)
+    tipper = cmp.tipper_magnitude(sites, api=True)
+
+    assert isinstance(strike, APIFrame)
+    assert strike.kind == "site.compute.strike"
+    assert isinstance(rho, APIFrame)
+    assert rho.kind == "site.compute.resistivity"
+    assert isinstance(slope, APIFrame)
+    assert slope.kind == "site.compute.phase_slope"
+    assert isinstance(tipper, APIFrame)
+    assert tipper.kind == "site.compute.tipper"
 
 
 def test_res_at_freq_nearest_and_interp(
@@ -108,7 +136,7 @@ def test_res_at_freq_nearest_and_interp(
     e2 = ed.fill_missing(e2, how="zero",
                          components=("Z",), inplace=False)
 
-    df = cmp.res_at_freq([e1, e2], 150.0, how="interp")
+    df = cmp.res_at_freq([e1, e2], 150.0, how="interp", api=False)
     assert isinstance(df, pd.DataFrame)
     assert list(df.columns) == ["station", "res_xy", "res_yx",
                                 "f_used"]
@@ -136,7 +164,7 @@ def test_phase_slope_band(tmp_path: Path,
                          components=("Z",), inplace=False)
     e2 = ed.fill_missing(e2, how="zero",
                          components=("Z",), inplace=False)
-    df = cmp.phase_slope([e1, e2], band=(90.0, 210.0))
+    df = cmp.phase_slope([e1, e2], band=(90.0, 210.0), api=False)
     assert isinstance(df, pd.DataFrame)
     assert list(df.columns) == ["station", "slope_xy",
                                 "slope_yx"]

@@ -1,298 +1,176 @@
-from __future__ import annotations 
-import re
-import warnings
-import inspect 
-from abc import ABCMeta 
-import copy 
-import numpy as np 
-import pandas as pd
-import seaborn as sns 
-from scipy.cluster.hierarchy import dendrogram 
+# -*- coding: utf-8 -*-
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
+"""
+pycsamt.plot.utils
+==================
+Generic 2-D pseudosection plotter used by emtools functions
+(plot_skew_2d, plot_sensitivity_depth_section, …).
+"""
+from __future__ import annotations
 
-import matplotlib as mpl 
-import matplotlib.pyplot  as plt
+from typing import List, Optional, Tuple
+
+import numpy as np
+import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
-from matplotlib import cm 
 from matplotlib.colors import BoundaryNorm
 
-from .base import BasePlot 
-from ..utils.generic import make_ids 
-from ..utils.validation import _check_consistency_size
 from ..utils.plot import _get_xticks_formatage
 
-# xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-# create a shadow class to hold the font and matplotlib properties
-# from 'EvalPlot` and giving an option for saving figure
 
-pobj = type ('Plot', (BasePlot, ), {}) 
-# setattr(pobj, 'save', _b.save )
-# redefine the pobj doc 
-pobj.__doc__="""\
-Shadow plotting class that holds the :class:`~watex.property.BasePlot`
-parameters. 
-
-Each matplotlib properties can be modified as  :class:`~watex.view.pobj`
-attributes object. For instance:: 
-    
-    >>> pobj.ls ='-.' # change the line style 
-    >>> pobj.fig_Size = (7, 5) # change the figure size 
-    >>> pobj.lw=7. # change the linewidth 
-    
-.. seealso:: 
-    
-    Refer to :class:`~watex.property.BasePlot` for parameter details. 
-    
-"""
-  
-def save (self, fig): 
-    """ savefigure if figure properties are given. """
-    if self.savefig is not None: 
-        fig.savefig (self.savefig,dpi = self.fig_dpi , 
-                     bbox_inches = 'tight', 
-                     orientation=self.fig_orientation 
-                     )
-    plt.show() if self.savefig is None else plt.close () 
-        
 def plot2d(
-    ar, 
-    y=None,  
-    x =None,  
-    distance=50., 
-    stnlist =None, 
-    prefix ='S', 
-    how= 'py',
-    to_log10=False, 
-    plot_contours=False,
-    top_label='', 
-    **baseplot_kws
-    ): 
-    """Two dimensional template for visualization matrices.
-    
-    It is a wrappers that can plot any matrice by customizing the position 
-    X and y. By default X is considering as stations  and y the resistivity 
-    log data. 
-    
-    Parameters 
-    -----------
-    ar: Array-like 2D, shape (M, N) 
-        2D array for plotting. For instance, it can be a 2D resistivity 
-        collected at all stations (N) and all frequency (M) 
-    y: array-like, default=None
-        Y-coordinates. It should have the length N, the same of the ``arr2d``.
-        the rows of the ``arr2d``.
-    x: array-like, default=None,  
-        X-coordinates. It should have the length M, the same of the ``arr2d``; 
-        the columns of the 2D dimensional array.  Note that if `x` is 
-        given, the `distance is not needed. 
+    ar,
+    *,
+    y=None,
+    x=None,
+    distance: float = 50.0,
+    stnlist: Optional[List[str]] = None,
+    prefix: str = "S",
+    how: str = "py",
+    to_log10: bool = False,
+    plot_contours: bool = False,
+    top_label: str = "",
+    cb_label: str = "",
+    rotate_xlabel: float = 0.0,
+    cmap: str = "jet_r",
+    plt_style: str = "pcolormesh",
+    fig_size: Tuple[float, float] = (8.0, 4.0),
+    fig_dpi: int = 150,
+    font_size: float = 7.0,
+    ax: Optional[plt.Axes] = None,
+    **_extra,          # absorb legacy BasePlot kwargs without error
+) -> plt.Axes:
+    """Plot a 2-D pseudosection from a matrix.
 
-    distance: float 
-        The step between two stations. If given, it creates an array of  
-        position for plotting purpose. Default value is ``50`` meters. 
-        
-    stnlist: list of str 
-        List of stations names. If given,  it should have the same length of 
-        the columns M, of `arr2d`` 
-       
-    prefix: str 
-        string value to add as prefix of given id. Prefix can be the site 
-        name. Default is ``S``. 
-        
-    how: str 
-        Mode to index the station. Default is 'Python indexing' i.e. 
-        the counting of stations would starts by 0. Any other mode will 
-        start the counting by 1.
-     
-    to_log10: bool, default=False 
-       Recompute the `ar`  in logarithm  base 10 values. Note when ``True``, 
-       the ``y`` should be also in log10. 
-    plot_contours: bool, default=True 
-       Plot the contours map. Is available only if the plot_style is set to 
-       ``pcolormesh``. 
-       
-    top_label: str, 
-       Name of the top label. 
-       
-    baseplot_kws: dict, 
-       All all  the keywords arguments passed to the property  
-       :class:`watex.property.BasePlot` class. 
-       
-    Returns 
+    Parameters
+    ----------
+    ar : array-like, shape (n_rows, n_cols)
+        Data matrix.  Rows → y-axis (frequency/period), cols → stations.
+    y : array-like, optional
+        Y-axis coordinates (length == n_rows).
+    x : array-like, optional
+        X-axis coordinates (length == n_cols).  If omitted, derived from
+        *distance* and column count.
+    distance : float
+        Station spacing in metres used when *x* is None.
+    stnlist : list of str, optional
+        Station labels for the top twin-axis.
+    prefix : str
+        Auto-label prefix when *stnlist* is None (e.g. ``'S'`` → S00, S01 …).
+    how : str
+        ``'py'`` starts counting from 0, anything else from 1.
+    to_log10 : bool
+        Convert *ar* (and *y*) to log10 before plotting.
+    plot_contours : bool
+        Overlay filled contours (pcolormesh mode only).
+    top_label : str
+        Label for the twin top-axis.
+    cb_label : str
+        Colorbar label.
+    rotate_xlabel : float
+        Rotation angle for the station tick labels.
+    cmap : str
+        Matplotlib colormap name.
+    plt_style : {'pcolormesh', 'imshow'}
+        Rendering backend.
+    fig_size : tuple of float
+        Figure size ``(width, height)`` in inches.
+    fig_dpi : int
+        Figure resolution.
+    font_size : float
+        Base font size in points.
+    ax : matplotlib.axes.Axes, optional
+        Existing axes to draw into.  A new figure is created when *None*.
+
+    Returns
     -------
-    axe: <AxesSubplot> object 
-    
-    Examples 
-    -------- 
-    >>> import numpy as np
-    >>> import watex 
-    >>> np.random.seed (42) 
-    >>> data = np.random.randn ( 15, 20 )
-    >>> data_nan = data.copy() 
-    >>> data_nan [2, 1] = np.nan; data_nan[4, 2]= np.nan;  data_nan[6, 3]=np.nan
-    >>> watex.view.mlplot.plot2d (data )
-    <AxesSubplot:xlabel='Distance(m)', ylabel='log10(Frequency)[Hz]'>
-    >>> watex.view.mlplot.plot2d (data_nan ,  plt_style = 'imshow', 
-                                  fig_size = (10, 4))
+    matplotlib.axes.Axes
     """
-    #xxxxxxxxx update base plot keyword arguments
-    for k  in list(baseplot_kws.keys()): 
-        setattr (pobj , k, baseplot_kws[k])
-        
-    if y is not None: 
-        if len(y) != ar.shape [0]: 
-            raise ValueError ("'y' array must have an identical number " 
-                              f" of row of 2D array: {ar.shape[0]}")
-            
-    if x is not None: 
-        if len(x) != ar.shape[1]: 
-            raise ValueError (" 'x' array must have the same number " 
-                              f" of columns of 2D array: {ar.shape[1]}")
+    ar = np.asarray(ar, dtype=float)
+    if ar.ndim != 2:
+        raise ValueError(f"plot2d expects a 2-D array; got shape {ar.shape}")
 
-    d= distance or 1.
-    try : 
-         distance = float(distance) 
-    except : 
-        raise TypeError (
-             f'Expect a float value not {type(distance).__name__!r}')
-        
-    # put value to log10 if True 
-    if to_log10: 
-        ar = np.log10 (ar ) # assume the resistivity data 
-        y = np.log10(y) if y is not None else y # assume the frequency data 
+    n_rows, n_cols = ar.shape
 
-    y = np.arange(ar.shape [0]) if y is None else y 
-    x=  x  or np.arange(ar.shape[1]) * d
-         
-    stn = stnlist or make_ids ( x , prefix , how = how) 
-    #print(stnlis)
-    if stn is not None: 
-        stn = np.array(stn)
-        
-    if not _check_consistency_size(stn, x, error ="ignore"): 
-        raise ValueError("The list of stations and positions must be"
-                         f" consistent. {len(stnlist)} and {len(x)}"
-                         " were given respectively")
-            
-    # make figure 
-    fig, axe = plt.subplots(1,figsize = pobj.fig_size, 
-                            num = pobj.fig_num,
-                            dpi = pobj.fig_dpi
-                            )
-    
-    cmap = plt.get_cmap( pobj.cmap)
-    
-    if pobj.plt_style not in ('pcolormesh','imshow' ): 
-        warnings.warn(f"Unrecognized plot style {pobj.plt_style!r}."
-                      " Expect ['pcolormesh'|'imshow']."
-                      " 'pcolormesh' ( default) is used instead.")
-        pobj.plt_style= 'pcolormesh'
-        
-    if pobj.plt_style =='pcolormesh': 
-        X, Y = np.meshgrid (x, y)
-        # ar = np.ma.masked_where(np.isnan(ar), ar)
-        #Zm = ma.array(Z,mask=np.isnan(Z))
-        pkws = dict (vmax = np.nanmax (ar),
-                     vmin = np.nanmin (ar), 
-                     ) 
-        
-        if plot_contours: 
-            levels = mticker.MaxNLocator(nbins=15).tick_values(
-                    np.nanmin (ar), np.nanmax(ar) )
-            # delete vmin and Vmax : not supported 
-            # when norm is passed 
-            del pkws ['vmin'] ; del pkws ['vmax']
-            pkws ['norm'] = BoundaryNorm(
-                levels, ncolors=plt.colormaps[pobj.cmap].N, clip=True)
-            
-        
-        ax = axe.pcolormesh ( X, Y, np.flipud (ar),
-                    shading= pobj.plt_shading, 
-                    cmap =cmap, 
-                    **pkws 
-            )
-        if plot_contours: 
-             # contours are *point* based plots, so convert 
-             # our bound into point centers
-            dx, dy = 0.05, 0.05
-            axe.contourf(X+ dx/2.,
-                         Y + dy/2., np.flipud (ar) , levels=levels,
-                         cmap=plt.colormaps[pobj.cmap]
-                         )
-    if pobj.plt_style =='imshow': 
-        ax = axe.imshow (ar,
-                    interpolation = pobj.imshow_interp, 
-                    cmap =cmap,
-                    aspect = pobj.fig_aspect ,
-                    origin= 'lower', 
-                    extent=(  np.nanmin(x),
-                              np.nanmax (x), 
-                              np.nanmin(y), 
-                              np.nanmax(y)
-                              )
-            )
-    # set axis limit 
-    axe.set_ylim(np.nanmin(y), 
-                 np.nanmax(y))
-    axe.set_xlim(np.nanmin(x), 
-                 np.nanmax (x))
+    # Optional log10 transform
+    if to_log10:
+        ar = np.log10(ar)
+        if y is not None:
+            y = np.log10(np.asarray(y, dtype=float))
 
-    cbl = 'log_{10}' if to_log10 else ''
-    axe.set_xlabel(pobj.xlabel or 'Distance(m)', 
-                 fontdict ={
-                  'size': 1.5 * pobj.font_size ,
-                  'weight': pobj.font_weight}
-                 )
-      
-    axe.set_ylabel(pobj.ylabel or  f"{cbl}Frequency$[Hz]$",
-             fontdict ={
-                     #'style': pobj.font_style, 
-                    'size':  1.5 * pobj.font_size ,
-                    'weight': pobj.font_weight})
-    if pobj.show_grid is True : 
-        axe.minorticks_on()
-        axe.grid(color='k', ls=':', lw =0.25, alpha=0.7, 
-                     which ='major')
-    
-   
-    labex = pobj.cb_label or f"{cbl}App.Res$[Ω.m]$" 
-    
-    cb = fig.colorbar(ax , ax= axe)
-    cb.ax.yaxis.tick_left()
-    cb.ax.tick_params(axis='y', direction='in', pad=2., 
-                      labelsize = pobj.font_size )
-    
-    cb.set_label(labex,fontdict={'size': 1.2 * pobj.font_size ,
-                              'style':pobj.font_style})
-    #--> set second axis 
-    axe2 = axe.twiny() 
-    axe2.set_xticks(range(len(x)),minor=False )
-    
-    # set ticks params to reformat the size 
-    axe.tick_params (  labelsize = pobj.font_size )
-    axe2.tick_params (  labelsize = pobj.font_size )
-    # get xticks and format labels using the auto detection 
-    _get_xticks_formatage(axe2, stn, fmt = 'S{:02}',  auto=True, 
-                          rotation=pobj.rotate_xlabel )
-    
-    axe2.set_xlabel(top_label, fontdict ={
-        'style': pobj.font_style,
-        'size': 1.5 * pobj.font_size ,
-        'weight': pobj.font_weight}, )
-      
-    fig.suptitle(pobj.fig_title,ha='left',
-                 fontsize= 15* pobj.fs, 
-                 verticalalignment='center', 
-                 style =pobj.font_style,
-                 bbox =dict(boxstyle='round',
-                            facecolor ='moccasin')
-                 )
-   
-    #plt.tight_layout(h_pad =1.8, w_pad =2*1.08)
-    plt.tight_layout()  
-    if pobj.savefig is not None :
-        fig.savefig(pobj.savefig, dpi = pobj.fig_dpi,
-                    orientation =pobj.orient)
- 
-    plt.show() if pobj.savefig is None else plt.close(fig=fig) 
-    
-    
-    return axe        
+    # Axis coordinates
+    y_vec = np.arange(n_rows, dtype=float) if y is None else np.asarray(y, dtype=float)
+    x_vec = (np.arange(n_cols) * float(distance)) if x is None else np.asarray(x, dtype=float)
+
+    # Station labels
+    if stnlist is None:
+        start = 0 if how == "py" else 1
+        stnlist = [f"{prefix}{i:02d}" for i in range(start, start + n_cols)]
+
+    # --- Create axes if needed ---
+    if ax is None:
+        fig, axe = plt.subplots(1, figsize=fig_size, dpi=fig_dpi)
+    else:
+        axe = ax
+        fig = axe.get_figure()
+
+    # --- Plot ---
+    if plt_style == "imshow":
+        mappable = axe.imshow(
+            ar,
+            interpolation="nearest",
+            cmap=cmap,
+            aspect="auto",
+            origin="lower",
+            extent=(x_vec.min(), x_vec.max(), y_vec.min(), y_vec.max()),
+        )
+    else:  # pcolormesh (default)
+        X, Y = np.meshgrid(x_vec, y_vec)
+        vmin, vmax = np.nanmin(ar), np.nanmax(ar)
+
+        if plot_contours:
+            levels = mticker.MaxNLocator(nbins=15).tick_values(vmin, vmax)
+            norm = BoundaryNorm(levels, ncolors=plt.get_cmap(cmap).N, clip=True)
+            mappable = axe.pcolormesh(X, Y, np.flipud(ar), cmap=cmap, norm=norm,
+                                      shading="auto")
+            dx = dy = 0.05
+            axe.contourf(X + dx / 2, Y + dy / 2, np.flipud(ar),
+                         levels=levels, cmap=cmap)
+        else:
+            mappable = axe.pcolormesh(X, Y, np.flipud(ar), cmap=cmap,
+                                      vmin=vmin, vmax=vmax, shading="auto")
+
+    axe.set_xlim(x_vec.min(), x_vec.max())
+    axe.set_ylim(y_vec.min(), y_vec.max())
+    axe.set_xlabel("Distance (m)", fontsize=1.5 * font_size)
+    axe.tick_params(labelsize=font_size)
+
+    # Colorbar
+    cbar = fig.colorbar(mappable, ax=axe)
+    cbar.ax.tick_params(axis="y", direction="in", labelsize=font_size)
+    if cb_label:
+        cbar.set_label(cb_label, fontsize=1.2 * font_size)
+
+    # Twin top-axis with station labels aligned to real x positions.
+    # Subsample when there are many stations so labels don't overlap.
+    axe2 = axe.twiny()
+    axe2.set_xlim(axe.get_xlim())
+    _max_lbl = 20
+    if n_cols > _max_lbl:
+        _step = max(1, n_cols // _max_lbl)
+        _tick_x   = x_vec[::_step]
+        _tick_lbl = [stnlist[i] for i in range(0, n_cols, _step)]
+    else:
+        _tick_x   = x_vec
+        _tick_lbl = list(stnlist)
+    axe2.set_xticks(_tick_x)
+    axe2.set_xticklabels(_tick_lbl,
+                         rotation=rotate_xlabel if rotate_xlabel else 90,
+                         fontsize=font_size, ha="left")
+    axe2.tick_params(labelsize=font_size)
+    if top_label:
+        axe2.set_xlabel(top_label, fontsize=1.5 * font_size)
+
+    fig.tight_layout()
+    return axe

@@ -1,0 +1,1471 @@
+%% paper.tex  ─ pycsamt v2 submission to Computers & Geosciences
+%% Author: Kouao Laurent Kouadio <etanoyau@gmail.com>
+%% Elsevier elsarticle class, Computers & Geosciences (C&G) style
+
+\documentclass[review,12pt]{elsarticle}
+
+\usepackage{lineno}        % line numbers required by C&G
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{listings}
+\usepackage{siunitx}
+\usepackage{url}
+\usepackage{microtype}
+\usepackage[width=.9\textwidth]{caption}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{bm}               % bold math symbols
+
+\modulolinenumbers[5]
+
+% ─── listings style ─────────────────────────────────────────────────────────
+\lstdefinestyle{pycode}{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{blue!70!black}\bfseries,
+  commentstyle=\color{gray},
+  stringstyle=\color{brown},
+  frame=single,
+  breaklines=true,
+  showstringspaces=false,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  xleftmargin=2em,
+}
+
+\journal{Computers \& Geosciences}
+
+% ─── CRediT macros ──────────────────────────────────────────────────────────
+\newcommand{\creditrole}[1]{\textit{#1}}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{document}
+
+\begin{frontmatter}
+
+\title{pycsamt v2: Toward a New Frontier in Open-Source Electromagnetic
+       Processing and AI-Assisted Resistivity Inversion}
+
+% ─── Authors ────────────────────────────────────────────────────────────────
+\author[csu,ufhb]{Kouao Laurent Kouadio%
+  \corref{cor1}%
+  \fnref{orcid}}
+\ead{etanoyau@gmail.com}
+\cortext[cor1]{Corresponding author}
+\fntext[orcid]{ORCID: 0000-0001-7259-7254}
+
+\address[csu]{Department of Geophysics, School of Geosciences and
+  Info-physics, Central South University, Changsha 410083, China}
+
+\address[ufhb]{Laboratoire de Géologie, Ressources Minérales et
+  Énergétiques, UFR des Sciences de la Terre et des Ressources Minières,
+  Université Félix Houphouët-Boigny, 22~BP~582 Abidjan 22, Côte d'Ivoire}
+
+% ─── Abstract ───────────────────────────────────────────────────────────────
+\begin{abstract}
+Recovering reliable subsurface resistivity models from audio-frequency
+magnetotelluric (AMT) and controlled-source AMT (CSAMT) surveys demands a
+coherent processing chain that spans noise suppression, static-shift
+correction, cross-domain data integration, and model inversion — yet no
+single open-source package has addressed this sequence end-to-end.
+We present pycsamt~v2, a production-ready Python framework that closes
+this gap through three advances of broad practical relevance.
+First, a physics-based transient electromagnetic (TEM) to frequency-domain
+bridge converts late-time step-off TEM responses into SEG-compliant apparent
+resistivity and phase curves using asymptotic analytic relations, enabling
+TEM and MT datasets collected in the same survey to be jointly processed and
+interpreted without external software.
+Second, a unified SEG Electronic Data Interchange (EDI) data model serves
+as the sole interface for all data I/O across instrument types and survey
+modalities, ensuring seamless interoperability with existing inversion codes
+and eliminating the per-format fragmentation that limits earlier tools.
+Third, a dual deep-learning backend abstraction supports PyTorch and
+TensorFlow interchangeably and falls back automatically to
+scipy/scikit-learn approximations when no deep-learning framework is
+available, so that neural-network denoising, dimensionality classification,
+and 1-D inversion remain accessible regardless of hardware constraints.
+The framework is validated on a 128-station broadband AMT survey acquired
+over five profile lines in Jiangsu Province, China, where it reduces
+between-station static-shift variance by 62\% and recovers a geologically
+consistent resistivity section at inference speeds more than two orders
+of magnitude faster than conventional iterative inversion.
+pycsamt~v2 is distributed under the LGPL-3.0 licence and is freely
+available at \url{https://github.com/earthai-tech/pycsamt}.
+\end{abstract}
+
+\begin{keyword}
+Audio-frequency magnetotellurics \sep
+Controlled-source AMT \sep
+Transient electromagnetics \sep
+SEG EDI standard \sep
+Deep learning inversion \sep
+Open-source geophysical software
+\end{keyword}
+
+\end{frontmatter}
+
+% ─── Program Summary (C&G mandatory block) ──────────────────────────────────
+\section*{Program Summary}
+\noindent
+\textbf{Program title:} pycsamt~v2\\
+\textbf{CPC Library link to program files:} \url{https://github.com/earthai-tech/pycsamt}\\
+\textbf{Developer's repository link:} \url{https://github.com/earthai-tech/pycsamt}\\
+\textbf{Licensing provisions:} LGPL-3.0\\
+\textbf{Programming language:} Python~3.9+\\
+\textbf{Nature of problem:}
+Audio-frequency magnetotelluric (AMT) field surveys produce multi-format
+electromagnetic datasets that require coherent processing pipelines for noise
+suppression, static-shift correction, dimensionality analysis, and
+subsurface model recovery.  Existing open-source codes handle these steps
+in isolation; no single package supports the full sequence from raw TEM
+acquisition through machine-learning-assisted 1-D inversion while maintaining
+compliance with the SEG EDI interchange standard.\\
+\textbf{Solution method:}
+pycsamt~v2 unifies all processing stages under a SEG-compliant EDI data model.
+A physics-based TEM-to-frequency-domain converter (Ward \& Hohmann,~1988)
+enables joint TEM–MT workflows.  A dual-backend deep-learning layer
+(PyTorch/TensorFlow) provides neural-network forward modelling,
+denoising, dimensionality classification, and 1-D inversion, with automatic
+fallback to scipy/scikit-learn when no deep-learning framework is installed.\\
+\textbf{Additional comments:} Requires NumPy, SciPy, pandas, and matplotlib;
+deep-learning features additionally require PyTorch or TensorFlow.
+
+\linenumbers
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Introduction}
+\label{sec:intro}
+% ─────────────────────────────────────────────────────────────────────────────
+
+Audio-frequency magnetotellurics (AMT) and its controlled-source variant
+(CSAMT) are passive and active frequency-domain electromagnetic (EM) methods
+that exploit the ratio of orthogonal surface electric and magnetic field
+components to recover the electrical resistivity structure of the subsurface
+at depths ranging from a few metres to several kilometres~\citep{Cagniard1953,ZongeHughes1991}.
+Their wide frequency bandwidth, sensitivity to resistivity contrasts, and
+relatively light field logistics have made them the workhorse of mineral
+exploration, groundwater mapping, geothermal characterisation, and tectonic
+studies worldwide.
+The central observable is the complex impedance tensor
+\begin{equation}
+  \mathbf{Z}(\omega) =
+  \begin{pmatrix} Z_{xx} & Z_{xy} \\ Z_{yx} & Z_{yy} \end{pmatrix},
+  \label{eq:impedance}
+\end{equation}
+from which apparent resistivity and impedance phase are derived as
+\begin{equation}
+  \rho_{a,ij}(\omega) = \frac{1}{\mu_0\,\omega}\,|Z_{ij}(\omega)|^2,\qquad
+  \phi_{ij}(\omega) = \arctan\!\left(\frac{\operatorname{Im}Z_{ij}}
+  {\operatorname{Re}Z_{ij}}\right).
+  \label{eq:rhoaphase}
+\end{equation}
+Despite this conceptual simplicity, translating raw field measurements into
+reliable subsurface models requires a processing chain that is notoriously
+sensitive to noise, geometric distortion, and instrument-induced artefacts.
+
+A persistent challenge in AMT surveys is the attenuation of natural source
+signals in the frequency band of approximately $1$–$5\,\text{kHz}$, commonly
+referred to as the MT dead band, where cultural electromagnetic noise
+overwhelms the signal and the impedance estimates degrade
+severely~\citep{ZongeHughes1991}.
+The controlled-source variant (CSAMT) was developed to fill this gap by
+deploying a grounded electric dipole as a transmitter, thereby providing a
+known, controllable source at dead-band frequencies.
+However, CSAMT introduces its own complications: below a critical
+source-receiver offset the far-field plane-wave assumption breaks down,
+and near-field contamination must be corrected before impedance curves can
+be interpreted~\citep{WightPeltier1988}.
+Furthermore, near-surface conductivity heterogeneities produce static shifts
+that vertically translate apparent-resistivity curves without altering the
+phase, introducing a persistent ambiguity in resistivity amplitude that
+propagates into any subsequent inversion~\citep{Berdichevskyetal1998}.
+Transient electromagnetic (TEM) methods are frequently deployed alongside
+MT surveys because their time-domain step-off responses are particularly
+sensitive to shallow conductors, making them well suited for constraining
+static-shift corrections.
+Yet TEM data are recorded in the time domain, and no standardised procedure
+exists for integrating them directly into frequency-domain MT processing
+workflows~\citep{NabighianMacnae1991,Christiansen2009}.
+The coexistence of these complementary but incompatible data types
+motivates a unified framework that can handle both.
+
+The open-source software landscape for MT data processing has matured
+considerably over the past decade.
+MTpy~\citep{Kirkby2019} offers comprehensive EDI data handling,
+phase-tensor visualisation, and interfacing with inversion codes.
+SimPEG~\citep{Cockett2015} provides a modular framework for 3-D EM
+forward modelling and inversion.
+EMTF~\citep{Egbert1997} remains the reference code for robust
+impedance estimation from time-series data.
+ModEM~\citep{Kelbert2014} and Occam~2D~\citep{deGrootHedlin1990} are the
+standard codes for 2-D and 3-D resistivity inversion.
+Each tool, however, addresses a specific stage of the workflow in isolation:
+none offers a coherent pipeline that begins with raw field data, integrates
+co-located TEM measurements, applies the full suite of processing
+corrections, and delivers subsurface models through both classical and
+machine-learning inversion — while maintaining compliance with the SEG
+Electronic Data Interchange (EDI) standard throughout.
+
+The application of machine learning to MT inversion has gained rapid
+momentum in recent years.
+\citet{Liu2021} and \citet{Guo2021} demonstrated that convolutional neural
+networks can recover 1-D layered-earth models from apparent-resistivity
+curves at inference speeds orders of magnitude faster than conventional
+iterative schemes.
+\citet{Oh2019,Oh2020} showed that deep networks generalise well across
+resistivity contrasts typical of mineral exploration targets, while
+\citet{Puzyrev2019,Puzyrev2021} established best practices for synthetic
+training-set design and physically motivated data augmentation.
+\citet{Moghadas2020} extended the approach to uncertainty quantification
+through ensemble prediction.
+Together, these studies demonstrate that data-driven inversion is ready for
+routine field application, but they are delivered as standalone research
+codes rather than integrated components of a processing framework.
+
+The first version of pycsamt~\citep{Kouadio2023} addressed the CSAMT-specific
+problems of near-field correction, dead-band recovery, static-shift
+suppression, and automated Occam~2D input generation.
+Subsequent work~\citep{Kouadio2024,Kouadio2025} broadened the scope to
+full broadband AMT and began integrating machine-learning techniques for
+impedance denoising and resistivity imaging.
+The present paper introduces pycsamt~v2, which consolidates these
+developments into a coherent, production-ready framework built around three
+advances that directly address the gaps identified above.
+
+The first advance is a physics-based TEM-to-frequency-domain bridge that
+converts late-time step-off TEM responses into apparent resistivity and
+phase curves following the asymptotic theory of~\citet{WardHohmann1988},
+writing the results as SEG-compliant EDI files.
+This allows TEM data collected in the same survey to be processed and
+interpreted alongside MT impedance data using a single, unified workflow
+rather than dedicated external software.
+The second advance is a unified SEG-compliant data model in which all
+data I/O — regardless of survey type (CSAMT, natural-source AMT, or
+TEM-derived) — is mediated by a single \texttt{EDI} object.
+This eliminates the per-format fragmentation of v1 and ensures native
+interoperability with MTpy, SimPEG, and ModEM at every stage of processing.
+The third advance is a dual deep-learning backend abstraction layer that
+supports PyTorch~\citep{Paszke2019} and TensorFlow~\citep{Abadi2016}
+interchangeably.
+When neither framework is installed, all AI components fall back
+automatically to scipy/scikit-learn~\citep{Pedregosa2011} approximations,
+so the full processing pipeline remains accessible in computing environments
+without GPU resources — an important consideration for field deployment.
+
+The remainder of this paper is organised as follows.
+Section~\ref{sec:architecture} describes the overall package design and the
+backend abstraction mechanism.
+Section~\ref{sec:algorithms} presents the key algorithms: the TEM–MT
+bridge, static-shift correction strategies, and the suite of machine-learning
+models.
+Section~\ref{sec:casestudy} demonstrates the complete pipeline on a
+128-station broadband AMT survey acquired over five profile lines in
+Jiangsu Province, China.
+Section~\ref{sec:discussion} benchmarks pycsamt~v2 against related software,
+reports computational performance, and identifies current limitations.
+Section~\ref{sec:conclusion} summarises the principal conclusions.
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Software Architecture}
+\label{sec:architecture}
+% ─────────────────────────────────────────────────────────────────────────────
+
+The design of pycsamt~v2 is guided by three principles that address the
+principal limitations of earlier EM processing codes.
+First, all modules share a single, standardised data representation so that
+no information is lost or reformatted as data pass from one processing stage
+to the next.
+Second, the software is organised in clearly separated functional layers —
+data ingestion, signal processing, physics-based modelling, and
+learning-based inversion — so that users can enter or exit the pipeline at
+any point without being coupled to the full stack.
+Third, the machine-learning components are designed to degrade gracefully
+rather than fail entirely when deep-learning frameworks are unavailable,
+making the package usable on both GPU-equipped workstations and lightweight
+field laptops.
+These principles are embodied in two architectural decisions that permeate
+the entire codebase: a unified EDI data model and a priority-chain backend
+abstraction, described in detail in Sections~\ref{sec:edi}
+and~\ref{sec:backends} respectively.
+
+\subsection{Package layout}
+\label{sec:layout}
+
+pycsamt~v2 is organised into eight top-level sub-packages arranged in
+two functional tiers (Figure~\ref{fig:architecture}).
+The lower tier handles data representation and physics.
+\texttt{pycsamt.core} provides the SEG EDI reader/writer, station metadata
+management, impedance tensor operations, and coordinate transforms — the
+foundation on which all higher-level modules depend.
+\texttt{pycsamt.tdem} implements the TEM-to-frequency-domain bridge and
+time-domain forward modelling for step-off loop sources, and its output
+feeds back into \texttt{core} as standard EDI objects.
+\texttt{pycsamt.forward} houses layered-earth 1-D forward solvers for MT,
+CSAMT, and TEM geometries together with a synthetic dataset generator that
+supplies training data for the machine-learning components.
+\texttt{pycsamt.processing} builds on \texttt{core} to deliver the full
+suite of data conditioning operations: dead-band recovery, static-shift
+correction by spatial filtering and tensor decomposition, and phase-tensor
+dimensionality analysis following the criteria of \citet{Swift1969},
+\citet{Bahr1991}, and \citet{Caldwell2004}.
+
+The upper tier is responsible for model construction and interpretation.
+\texttt{pycsamt.backends} resolves the active deep-learning framework at
+runtime through a priority chain (Section~\ref{sec:backends}), and its
+result is consumed by \texttt{pycsamt.ai}, which provides neural-network
+inversion, impedance denoising, anomaly detection, and dimensionality
+classification together with the training utilities and data augmentation
+strategies described in Section~\ref{sec:algorithms}.
+\texttt{pycsamt.modeling} assembles Occam~2D and ModEM input files from
+processed EDI collections and reads back inversion results for further
+analysis.
+\texttt{pycsamt.plot} closes the pipeline with publication-quality
+visualisation of apparent-resistivity pseudosections, phase-tensor ellipse
+maps, rose diagrams, and 1-D model panels.
+The interaction between these tiers is summarised in
+Figure~\ref{fig:architecture}, where the \texttt{EDI} object occupies the
+central position and every module communicates through it.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/architecture.pdf}
+  \caption{pycsamt~v2 package architecture organised in two functional
+    tiers.  The \texttt{EDI} data model (bold box) is the sole data
+    exchange interface for all module interactions.  Dashed arrows denote
+    optional deep-learning paths that fall back automatically to
+    scipy/scikit-learn when no backend is available.}
+  \label{fig:architecture}
+\end{figure}
+
+\subsection{EDI as the central data model}
+\label{sec:edi}
+
+The SEG Electronic Data Interchange (EDI) format~\citep{Egbert1997} is the
+de facto standard for encoding impedance tensors, tipper vectors, and
+station metadata in a human-readable ASCII structure recognised by
+virtually every MT processing and inversion code in active use.
+By adopting EDI as the sole internal data representation, pycsamt~v2 avoids
+the per-instrument, per-survey-type file handlers that plagued v1 and
+forced implicit data conversions at each processing boundary.
+Instead, all modules — whether reading field data, receiving the output of
+the TEM bridge, or constructing synthetic training sets — interact through
+a single \texttt{EDI} class that enforces a consistent physical unit system
+and validates impedance tensor structure on construction.
+
+In practice, loading a station file and accessing its impedance data
+requires no knowledge of the originating instrument or software:
+
+\begin{lstlisting}[style=pycode, caption={Loading an EDI file and accessing impedance data.}]
+from pycsamt.core import EDI
+
+edi = EDI("path/to/station.edi")
+print(edi.freqs)       # measurement frequencies in Hz
+print(edi.Z.z)         # complex impedance tensor, shape (n_freqs, 2, 2)
+print(edi.Z.z_err)     # uncertainty estimates, same shape
+\end{lstlisting}
+
+The same object is produced whether the data originate from a broadband MT
+logger, a CSAMT acquisition system, or the \texttt{TEMConverter}
+(Section~\ref{sec:tem2fd}), which writes TEM-derived apparent resistivity
+curves as a fully compliant EDI file.
+This design decision has a concrete downstream benefit: any third-party code
+that accepts EDI files — including MTpy, ModEM, and Occam~2D — can consume
+pycsamt~v2 output without modification, lowering the barrier to integrating
+the package into existing workflows.
+
+\subsection{Backend abstraction for graceful degradation}
+\label{sec:backends}
+
+A recurring obstacle in deploying machine-learning geophysical tools is
+the heterogeneity of computing environments encountered in research and
+fieldwork: a GPU-equipped laboratory server, a shared HPC cluster, and a
+field laptop may all require different deep-learning configurations or have
+none available at all.
+Hard dependencies on a specific framework such as PyTorch or TensorFlow
+force users to either install a large software stack they may not need or
+forgo the machine-learning functionality entirely.
+pycsamt~v2 resolves this tension through a singleton \texttt{BackendConfig}
+that resolves the active deep-learning framework at import time through a
+four-step priority chain: it first checks for a \texttt{PYCSAMT\_BACKEND}
+environment variable set by the user, then consults a per-user
+\texttt{\textasciitilde/.pycsamt/config.json} configuration file, then
+attempts to auto-detect an installed framework by probing
+\texttt{import~torch} followed by \texttt{import~tensorflow}, and finally
+settles on the sentinel value \texttt{'none'} if neither is found.
+Critically, this last step never raises an exception; it merely records the
+absence of a backend and allows all downstream imports to proceed.
+
+The resolved state is exposed through two lightweight public functions:
+
+\begin{lstlisting}[style=pycode, caption={Querying the active backend at runtime.}]
+from pycsamt.backends import get_backend, get_backend_instance
+
+name = get_backend()          # returns 'torch', 'tensorflow', or 'none'
+inst = get_backend_instance() # returns a BackendInstance, or None
+\end{lstlisting}
+
+Every class in \texttt{pycsamt.ai} queries \texttt{get\_backend()} at fit
+time and branches accordingly: when a deep-learning framework is present, it
+constructs and trains a neural network through the appropriate backend
+adapter; when \texttt{inst} is \texttt{None}, it falls back to a
+scipy/scikit-learn approximation — a Gaussian filter for the denoiser,
+PCA for the anomaly detector, and a random-forest classifier for
+dimensionality labelling.
+The result is that all \texttt{pycsamt.ai} objects remain importable,
+fittable, and predictable in any environment, with the quality of the
+output scaling naturally with the hardware available.
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Key Algorithms}
+\label{sec:algorithms}
+% ─────────────────────────────────────────────────────────────────────────────
+
+The algorithms in pycsamt~v2 follow the natural progression of an AMT
+processing campaign.
+Data conditioning begins with the TEM-to-frequency-domain conversion, which
+integrates time-domain measurements into the frequency-domain workflow
+without loss of physical consistency.
+Once all data are represented as SEG-compliant impedance tensors, galvanic
+distortion is characterised and corrected, and the dimensionality of the
+subsurface response is assessed through phase-tensor analysis.
+Machine-learning models then operate on the conditioned impedance spectra
+to produce subsurface resistivity models at speeds that make iterative
+quality-control practical in near-real-time.
+The following subsections develop each of these steps in  detail
+and end with pseudocode formalising the novel algorithms.
+
+\subsection{TEM-to-frequency-domain bridge}
+\label{sec:tem2fd}
+
+The electromagnetic diffusion equation governing the time evolution of the
+magnetic field $\mathbf{B}$ in a conducting medium of conductivity $\sigma$
+and permeability $\mu_0$ is
+\begin{equation}
+  \nabla^2\mathbf{B} \;=\; \mu_0\,\sigma\,\frac{\partial\mathbf{B}}{\partial t}.
+  \label{eq:diffusion}
+\end{equation}
+For a step-off excitation produced by a small horizontal transmitter loop
+of moment $M$ (product of current, turns, and loop area) placed at the
+surface of a uniform half-space, the vertical component of the induced
+electric field diffuses downward from the surface immediately after
+current switch-off.
+At sufficiently late times — once the diffusion front has passed through
+the target layer — the secondary vertical magnetic field derivative
+approaches the asymptotic power-law decay~\citep{WardHohmann1988,NabighianMacnae1991}:
+\begin{equation}
+  \dot{B}_z(t) \;\equiv\;
+  \frac{\partial B_z}{\partial t} \;=\;
+  -\frac{M\,\sigma^{5/2}}{\pi^{3/2}\,(4\,\mu_0)^{3/2}}\;t^{-5/2},
+  \label{eq:latetime}
+\end{equation}
+where $t$ is the gate time after switch-off and the negative sign reflects
+the decay of the induced current system.
+This $t^{-5/2}$ behaviour is the diagnostic signature of the late-time
+TEM regime and forms the physical basis of the conversion.
+
+To extract an apparent resistivity from Eq.~\eqref{eq:latetime}, we treat
+the half-space as homogeneous with conductivity $\sigma$, isolate $\sigma$
+algebraically, and substitute $\rho_a = \sigma^{-1}$.
+Rearranging Eq.~\eqref{eq:latetime} gives
+\begin{equation}
+  \sigma^{5/2} \;=\; \frac{\pi^{3/2}(4\mu_0)^{3/2}}{M}\,|\dot{B}_z|\,t^{5/2},
+  \label{eq:sigma52}
+\end{equation}
+so that
+\begin{equation}
+  \sigma \;=\; \left[\frac{\pi^{3/2}(4\mu_0)^{3/2}}{M}
+               \,|\dot{B}_z|\,t^{5/2}\right]^{2/5}\!,
+  \label{eq:sigma}
+\end{equation}
+and the TEM apparent resistivity follows as $\rho_a^{\rm TEM}=1/\sigma$:
+\begin{equation}
+  \rho_a^{\mathrm{TEM}}(t) \;=\;
+  \frac{\mu_0}{4\pi\,t}
+  \left(\frac{M\,\mu_0}{5\pi\,|\dot{B}_z|\,t^{5/2}}\right)^{\!2/3}\!.
+  \label{eq:rhoaTEM}
+\end{equation}
+Equations~\eqref{eq:latetime}--\eqref{eq:rhoaTEM} require that the data
+satisfy the late-time condition $t \gg \tau$, where
+$\tau = \mu_0\sigma a^2/(8\pi)$ is the diffusion time scale for a loop of
+radius $a$~\citep{NabighianMacnae1991}.
+In practice, gate times later than approximately three times the peak
+of the dB$_z$/d$t$ response reliably satisfy this criterion.
+
+The final step in the conversion is the assignment of an equivalent
+measurement frequency to each gate time.
+By analogy with the MT skin-depth relation $\delta = \sqrt{2\rho/(\mu_0\omega)}$,
+the effective frequency is defined as
+\begin{equation}
+  f_{\rm eff}(t) \;=\; \frac{1}{2\pi\,t},
+  \label{eq:feff}
+\end{equation}
+which maps the TEM depth of investigation at time $t$ onto the MT frequency
+whose skin depth equals the same depth~\citep{Christiansen2009}.
+This mapping is deliberately approximate: it assumes a locally uniform
+half-space and treats each gate independently.
+Nevertheless, for the purpose of static-shift anchoring and qualitative
+comparison with MT sounding curves, the approximation is adequate and
+widely used in practice.
+
+The complete conversion pipeline, from a gate-time series to a
+SEG-compliant EDI object, is encapsulated in the \texttt{TEMConverter}
+class:
+
+\begin{lstlisting}[style=pycode, caption={TEM-to-frequency-domain conversion and EDI export.}]
+from pycsamt.tdem import TEMConverter
+from pycsamt.forward import TEM1DForward, LayeredModel
+import numpy as np
+
+model = LayeredModel(resistivity=[80., 5., 300.], thickness=[20., 150.])
+times = np.logspace(-6, -2, 30)       # gate times in seconds
+resp  = TEM1DForward(times).run(model)
+
+conv = TEMConverter(resp, rx_area=100.)  # receiver loop area in m^2
+edi  = conv.to_edi(station_name="TEM001", lat=32.14, lon=119.12)
+edi.write("TEM001.edi")                 # fully SEG-compliant output
+\end{lstlisting}
+
+Algorithm~\ref{alg:tem2fd} formalises the bridge procedure.
+
+\begin{algorithm}[htbp]
+\caption{TEM-to-frequency-domain bridge (\texttt{TEMConverter})}
+\label{alg:tem2fd}
+\begin{algorithmic}[1]
+\Require Gate-time array $\bm{t} = [t_1, \ldots, t_G]$,
+         measured decay $\dot{\bm{B}}_z = [\dot{B}_{z,1}, \ldots, \dot{B}_{z,G}]$,
+         transmitter moment $M$, receiver area $A_r$
+\Ensure  EDI object with apparent-resistivity curve $\rho_a^{\rm TEM}(f)$ and
+         phase $\phi(f) = 45°$
+\State \textbf{Validate late-time condition:} identify gates satisfying
+       $t_g > 3\,\tau_{\rm peak}$; flag earlier gates as unreliable
+\For{each valid gate $g$}
+  \State $\sigma_g \leftarrow
+         \left[\dfrac{\pi^{3/2}(4\mu_0)^{3/2}}{M}
+               \,|\dot{B}_{z,g}|\,t_g^{5/2}\right]^{2/5}$
+         \Comment{Eq.~\eqref{eq:sigma}}
+  \State $\rho_{a,g} \leftarrow 1/\sigma_g$
+         \Comment{Eq.~\eqref{eq:rhoaTEM}}
+  \State $f_g \leftarrow 1/(2\pi\,t_g)$
+         \Comment{Effective frequency, Eq.~\eqref{eq:feff}}
+\EndFor
+\State Sort $(\bm{f}, \bm{\rho}_a)$ in ascending frequency order
+\State Set phase $\phi_g = 45°$ for all $g$ (half-space asymptote)
+\State Assemble \texttt{EDI} object: write \texttt{>FREQ}, \texttt{>RHOXY},
+       \texttt{>PHSXY} blocks with SEG~1.0 header
+\State \Return \texttt{EDI} object
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Large-loop and offset-loop geometries}
+\label{sec:loopgeometries}
+
+The late-time formula (Eq.~\ref{eq:rhoaTEM}) holds for any loop shape in
+the magnetic-dipole limit.  Three deployment geometries are supported.
+For the standard \textbf{central / coincident loop} ($\text{offset}=0$),
+Eq.~\eqref{eq:rhoaTEM} is applied unchanged.
+When the receiver is placed at position $(r_x, r_y)$ \emph{inside} the
+loop — the \textbf{in-loop} configuration — the transmitter moment is
+corrected by the Biot-Savart static-field ratio
+$\eta = H_z^{\rm static}(r_x, r_y) / H_z^{\rm static}(0, 0)$:
+\begin{equation}
+  \rho_a(t) = \left(
+      \frac{M\,\eta\,\mu_0^{5/2}}
+            {10\sqrt{\pi}\,|\partial B_z/\partial t|\,t^{5/2}}
+  \right)^{2/3},
+  \label{eq:rhoaInLoop}
+\end{equation}
+where $\eta$ is evaluated analytically for rectangular / square loops
+via the Biot-Savart line integral and numerically for circular loops.
+For the \textbf{separated (offset) loop}, with the receiver at
+horizontal distance $d$ beyond the loop boundary, the
+Ward \& Hohmann (1988) offset-dipole late-time result gives
+\citep{WardHohmann1988,NabighianMacnae1991}:
+\begin{equation}
+  \rho_a(t) = \left(
+      \frac{M\,\mu_0^{5/2}}
+            {20\sqrt{\pi}\,|\partial B_z/\partial t|\,d^3\,t^{5/2}}
+  \right)^{2/3}.
+  \label{eq:rhoaOffset}
+\end{equation}
+The factor 20 (vs~10 in the central-loop case) and the $d^3$ denominator
+arise from the angular geometry of the off-axis magnetic dipole field.
+Configuration is detected automatically from the \texttt{TEMSounding}
+\texttt{offset} attribute: zero selects the central formula, a positive
+offset smaller than the loop inner radius invokes Eq.~\eqref{eq:rhoaInLoop},
+and a larger offset invokes Eq.~\eqref{eq:rhoaOffset}.
+
+\subsection{Galvanic distortion correction and phase-tensor analysis}
+\label{sec:staticshift}
+
+\subsubsection{Galvanic distortion model}
+
+Near-surface resistivity heterogeneities distort the observed impedance
+tensor through a frequency-independent, real-valued distortion matrix
+$\mathbf{C}$ that acts on the electric field~\citep{Berdichevskyetal1998}:
+\begin{equation}
+  \mathbf{Z}_{\rm obs}(\omega) \;=\; \mathbf{C}\,\mathbf{Z}_{\rm reg}(\omega),
+  \label{eq:distortion}
+\end{equation}
+where $\mathbf{Z}_{\rm reg}$ is the undistorted regional impedance tensor.
+The static-shift effect is the special case in which $\mathbf{C}$ is a
+positive scalar multiplier $s\mathbf{I}$: the apparent-resistivity curves
+shift vertically by $s$ in log-space while the phase remains unaffected.
+Because $s$ is real and frequency-independent, it cannot be recovered from
+a single-station measurement without independent constraints.
+
+The spatial-averaging filter in pycsamt~v2 estimates $s$ for each station
+by comparing its log-resistivity level with the mean of its $k$ nearest
+neighbours at a reference frequency $f_0$:
+\begin{equation}
+  \hat{s} \;=\;
+  \exp\!\left[
+    \log\rho_a(f_0) -
+    \frac{1}{k}\sum_{j\in\mathcal{N}}\log\rho_a^{(j)}(f_0)
+  \right],
+  \label{eq:sshat}
+\end{equation}
+and the corrected curve is obtained as
+$\tilde{\rho}_a = \rho_a/\hat{s}$~\citep{Kouadio2023}.
+When the distortion is more general than a scalar shift, the
+Groom--Bailey decomposition~\citep{Groometal1989} factorises $\mathbf{C}$
+into twist $T$, shear $S$, and anisotropy $A$ parameters, recovering
+$\mathbf{Z}_{\rm reg}$ and providing physically interpretable distortion
+diagnostics.
+The most unambiguous correction applies when co-located TEM data are
+available: the TEM-derived $\rho_a^{\rm TEM}(f_{\rm eff})$ from
+Section~\ref{sec:tem2fd} anchors the MT sounding curve at the matching
+frequency, resolving the static-shift ambiguity without any spatial
+assumption about the distribution of near-surface heterogeneities.
+
+\subsubsection{Phase-tensor analysis and dimensionality classification}
+
+The phase tensor introduced by~\citet{Caldwell2004} provides a
+distortion-free window into the regional conductivity structure.
+Decomposing the impedance tensor as $\mathbf{Z} = \mathbf{X} + i\mathbf{Y}$
+(where $\mathbf{X},\mathbf{Y}\in\mathbb{R}^{2\times2}$), the phase tensor
+is defined as
+\begin{equation}
+  \boldsymbol\Phi \;=\; \mathbf{X}^{-1}\mathbf{Y},
+  \label{eq:phasetensor}
+\end{equation}
+and is invariant to the real distortion matrix $\mathbf{C}$ because
+$\mathbf{C}$ cancels in Eq.~\eqref{eq:phasetensor}.
+Its geometric properties are summarised by three scalar invariants.
+The skew angle
+\begin{equation}
+  \beta \;=\; \frac{1}{2}
+  \arctan\!\left(\frac{\Phi_{xy}-\Phi_{yx}}{\Phi_{xx}+\Phi_{yy}}\right)
+  \label{eq:beta}
+\end{equation}
+measures the degree of three-dimensionality: $|\beta|\lesssim3°$ is
+consistent with a 1-D or 2-D response, while $|\beta|\gtrsim7°$ indicates
+3-D structure~\citep{Bahr1991,Caldwell2004}.
+The principal phase values $\phi_{\rm max}$ and $\phi_{\rm min}$ are the
+maximum and minimum eigenvalues of the symmetric part of $\boldsymbol\Phi$
+and characterise the direction and magnitude of inductive coupling with the
+regional structure, while the ellipticity
+\begin{equation}
+  \Lambda \;=\; \frac{\phi_{\rm max}-\phi_{\rm min}}{\phi_{\rm max}+\phi_{\rm min}}
+  \label{eq:lambda}
+\end{equation}
+measures lateral resistivity variation: $\Lambda\approx0$ for a 1-D
+half-space and increases with structural complexity.
+These invariants are computed for every station-frequency cell and passed as
+features to the \texttt{DimensionalityClassifier}
+(Section~\ref{sec:dimclass}).
+
+\subsection{Machine-learning inversion and processing}
+\label{sec:mlmodels}
+
+\subsubsection{Inversion as supervised regression}
+
+MT inversion seeks the layered-earth parameter vector
+\begin{equation}
+  \boldsymbol\theta \;=\;
+  \bigl(\log_{10}\rho_1,\,\ldots,\,\log_{10}\rho_n,\;
+        \log_{10}h_1,\,\ldots,\,\log_{10}h_{n-1}\bigr)
+  \;\in\;\mathbb{R}^{2n-1}
+  \label{eq:theta}
+\end{equation}
+from the observed apparent-resistivity and phase vector
+$\mathbf{x}\in\mathbb{R}^{2n_f}$ (where $n_f$ is the number of
+measurement frequencies).
+Classical iterative approaches minimise a regularised misfit objective
+and require many forward-model evaluations per sounding.
+Neural networks instead learn a nonlinear mapping
+$f_{\bm{w}}:\mathbf{x}\mapsto\hat{\boldsymbol\theta}$ from a large corpus
+of synthetic data, after which inference is a single forward pass.
+Following the training strategy of~\citet{Liu2021} and~\citet{Guo2021},
+all model parameters are predicted in log$_{10}$ space to ensure scale
+invariance across the several decades spanned by both resistivity and
+thickness values.
+The training objective is the mean squared error in parameter space:
+\begin{equation}
+  \mathcal{L}(\bm{w}) \;=\;
+  \frac{1}{N}\sum_{i=1}^{N}
+  \bigl\|\hat{\boldsymbol\theta}_i - \boldsymbol\theta_i\bigr\|_2^2,
+  \label{eq:loss}
+\end{equation}
+where $N$ is the mini-batch size.
+Optimisation uses Adam with an exponential learning-rate schedule and
+early stopping on a held-out validation set.
+
+\subsubsection{Network architectures}
+
+Two backbone networks are provided for the \texttt{EMInverter1D} class.
+The \texttt{cnn1d} architecture processes the input impedance spectrum
+through three sequential dilated residual blocks, each comprising two
+1-D convolutional layers of kernel size~3 with dilation factors $d\in\{1,2,4\}$,
+batch normalisation, ReLU activations, and a skip connection.
+The progressively increasing dilation effectively triples the receptive
+field at each block while keeping the parameter count modest, allowing the
+network to integrate information from both adjacent and widely separated
+frequency channels in a single pass.
+A global-average-pooling layer then collapses the spatial dimension,
+producing a fixed-length latent vector that is mapped to $\hat{\boldsymbol\theta}$
+by a two-layer fully connected head.
+The \texttt{resnet} architecture is a 1-D adaptation of ResNet-18 augmented
+with squeeze-and-excite channel attention~\citep{Puzyrev2021}, which
+recalibrates channel responses by learning scalar weights from global
+frequency statistics.
+This attention mechanism is particularly beneficial for MT data because
+different frequency channels carry information about different depth ranges,
+and their relative importance shifts with the resistivity contrast being
+imaged.
+Both architectures share the same fully connected output head and training
+loop (Algorithm~\ref{alg:training}) and are interchangeable through the
+\texttt{arch} constructor argument.
+
+\begin{lstlisting}[style=pycode, caption={Training \texttt{EMInverter1D} and applying it to field data.}]
+from pycsamt.forward.batch import generate_dataset
+from pycsamt.ai.inversion.inv1d import EMInverter1D
+import numpy as np
+
+ds  = generate_dataset(solver="MT1D", n_samples=10_000,
+                       freqs=np.logspace(0, 3, 40),
+                       n_layers=5, seed=0)
+inv = EMInverter1D(arch="resnet", n_layers=5)
+inv.fit(ds, epochs=100, batch_size=64)
+y_pred = inv.predict(ds.X[:10])   # array of shape (10, 9)
+\end{lstlisting}
+
+\subsubsection{Ensemble uncertainty quantification}
+
+A single deterministic network provides a point estimate of
+$\hat{\boldsymbol\theta}$ but no measure of predictive uncertainty.
+The \texttt{EnsembleInverter} trains $K$ independent realisations of the
+base network, each initialised with a different random seed, and combines
+their predictions as
+\begin{align}
+  \bar{\boldsymbol\theta} &\;=\;
+    \frac{1}{K}\sum_{k=1}^{K}\hat{\boldsymbol\theta}^{(k)},
+    \label{eq:ensmean}\\
+  \bm{\sigma}_\theta &\;=\;
+    \sqrt{\frac{1}{K-1}\sum_{k=1}^{K}
+      \bigl(\hat{\boldsymbol\theta}^{(k)}-\bar{\boldsymbol\theta}\bigr)^2}.
+    \label{eq:ensstd}
+\end{align}
+The element-wise standard deviation $\bm{\sigma}_\theta$ provides an
+empirical estimate of model uncertainty that captures both the variability
+of the training distribution and the sensitivity of the network to
+initialisation.
+Regions of the model space that are poorly constrained by the input spectrum
+— such as deep layer boundaries at low-frequency resolution — consistently
+exhibit large $\bm{\sigma}_\theta$ values, making the ensemble a
+practically useful quality indicator~\citep{Moghadas2020}:
+
+\begin{lstlisting}[style=pycode, caption={Ensemble prediction with uncertainty quantification.}]
+from pycsamt.ai.inversion import EnsembleInverter
+
+ens = EnsembleInverter(base_estimator=inv, n_estimators=5)
+ens.fit(ds, epochs=50)
+mean, std = ens.predict_with_uncertainty(X_field)
+\end{lstlisting}
+
+\subsubsection{Calibrated posterior uncertainty}
+\label{sec:calibrated_uq}
+
+The inter-member standard deviation $\bm{\sigma}_\theta$ of
+Eq.~(\ref{eq:ensstd}) is an empirical scatter statistic; it does not
+in general correspond to a calibrated posterior distribution.
+Two complementary post-hoc strategies are provided that convert ensemble
+outputs into statistically rigorous uncertainty representations without
+retraining the base network.
+
+\paragraph{Split conformal prediction.}
+\texttt{ConformalPredictor} wraps any fitted predictor and a held-out
+calibration set $\{(\mathbf{x}_i, \boldsymbol{\theta}_i)\}_{i=1}^{n_{\rm cal}}$
+to produce prediction bands with an \emph{exact} marginal coverage
+guarantee~\citep{Vovk2005,Angelopoulos2023}.
+The normalised nonconformity score
+\begin{equation}
+  s_i = \max_j
+    \frac{|{\theta}_{ij} - \hat\theta_{ij}|}{\hat\sigma_{ij} + \varepsilon}
+  \label{eq:nonconformity}
+\end{equation}
+is computed for every calibration sample, and the finite-sample corrected
+quantile
+\begin{equation}
+  \hat{q} = \mathrm{Quantile}_{1-\alpha + \frac{1}{n_{\rm cal}+1}}
+             (s_1,\ldots,s_{n_{\rm cal}})
+  \label{eq:confquantile}
+\end{equation}
+defines the half-width of the prediction band
+$\hat{C}_j(\mathbf{x}) = [\hat\theta_j - \hat{q}\,\hat\sigma_j,\;
+  \hat\theta_j + \hat{q}\,\hat\sigma_j]$, which satisfies
+\begin{equation}
+  P\!\bigl(\theta_j \in \hat{C}_j(\mathbf{x})\bigr) \;\ge\; 1-\alpha
+  \label{eq:confcoverage}
+\end{equation}
+marginally over the joint distribution of $(\mathbf{x},\boldsymbol\theta)$,
+without any distributional assumption on the residuals.
+
+\paragraph{Gaussianization normalising flow.}
+\texttt{PosteriorCalibrator} implements the regression-calibration scheme
+of \citet{Kuleshov2018}: a monotone recalibration function
+$g:[0,1]\to[0,1]$ is learned from calibration-set predicted CDF values
+via isotonic regression (Pool Adjacent Violators algorithm), then composed
+with the inverse normal CDF to define a one-dimensional normalising flow
+\begin{equation}
+  \Phi^{-1}\circ g^{-1}\circ\Phi:\mathbb{R}\to\mathbb{R}
+  \label{eq:gaussflow}
+\end{equation}
+that transforms the empirical residual distribution to a standard Gaussian.
+Calibrated posterior samples are drawn by sampling
+$u\sim\mathcal{U}(0,1)$, applying $g^{-1}(u)$, and inverting through
+$\Phi^{-1}$ to obtain standardised residuals, which are then rescaled by
+the ensemble sigma.
+The calibration map is fitted in a single PAVA pass
+($O(n_{\rm cal})$) and requires no additional model training.
+
+\begin{lstlisting}[style=pycode, caption={Calibrated posterior uncertainty via conformal prediction and the Gaussianization flow.}]
+from pycsamt.ai.inversion import EnsembleInverter
+from pycsamt.ai.inversion.calibration import ConformalPredictor, PosteriorCalibrator
+
+ens = EnsembleInverter(base_estimator=inv, n_estimators=5)
+ens.fit(ds_train, epochs=50)
+
+# One-step calibration on a held-out set
+ens.calibrate(X_cal, y_cal, alpha=0.10)
+
+# Conformal intervals: exact >= 90% marginal coverage (Eq. 14)
+center, lo, hi = ens.predict_intervals(X_field, alpha=0.10)
+
+# Calibrated posterior samples via normalising flow (Eq. 16)
+draws = ens.predict_posterior(X_field, n_samples=500)
+theta_mean = draws.mean(axis=0)   # (n_stations, n_params)
+theta_std  = draws.std(axis=0)    # calibrated posterior std
+
+# Reliability diagnostics
+diag = ens.coverage_diagnostics(X_test, y_test)
+\end{lstlisting}
+
+\subsubsection{Three-dimensional graph-convolutional inversion (\texttt{GCNInverter3D})}
+\label{sec:gcninverter}
+
+While \texttt{EMInverter1D} inverts each sounding independently,
+surface EM surveys acquire spatially dense station grids whose lateral
+resistivity structure is geologically coherent.
+\texttt{GCNInverter3D} exploits this structure by representing the survey
+as a graph $\mathcal{G}=(\mathcal{V},\mathcal{E})$ in which each station is a
+node $v_i\in\mathcal{V}$ and stations within a user-defined radius $r$ are
+connected by edges $e_{ij}\in\mathcal{E}$.
+The symmetric, degree-normalised adjacency matrix
+\begin{equation}
+  \tilde{A}_{ij} = \bigl(\tilde{D}^{-1/2}\,(\!A+I)\,\tilde{D}^{-1/2}\bigr)_{ij},
+  \quad \tilde{D}_{ii} = \sum_j (A+I)_{ij},
+  \label{eq:gcnnorm}
+\end{equation}
+is pre-computed once from station coordinates via \texttt{build\_adjacency}
+and stored alongside the trained weights, requiring no external graph
+library.
+Message passing across $L$ graph-convolutional layers follows
+the Kipf \& Welling (2017) spectral rule~\citep{Kipf2017}:
+\begin{equation}
+  H^{(l+1)} = \sigma\!\left(
+    \tilde{A}\,H^{(l)}\,W^{(l)}
+  \right),
+  \label{eq:gcnlayer}
+\end{equation}
+where $H^{(0)}\in\mathbb{R}^{n_s\times n_f}$ is the per-station MT feature
+matrix ($n_s$ stations, $n_f$ frequency channels), $W^{(l)}$ is a learnable
+weight matrix, and $\sigma$ is the ReLU activation.
+Each layer propagates information one hop along the graph, so an
+$L$-layer GCN integrates information from up to $L$-hop neighbourhoods,
+enforcing lateral consistency without explicit regularisation.
+The network outputs $\hat{\boldsymbol\theta}\in\mathbb{R}^{n_s\times(2L_{\rm m}-1)}$
+simultaneously for all stations, where $L_{\rm m}$ is the number of earth
+layers and $2L_{\rm m}-1$ are the log-resistivity and log-thickness
+parameters.
+MC-dropout uncertainty is supported via \texttt{predict\_with\_uncertainty},
+activating dropout at inference time over $n_{\rm mc}$ stochastic forward
+passes and returning per-station mean and standard deviation over the
+resistivity volume.
+
+\paragraph{Spatially correlated training data (\texttt{generate\_dataset\_3d}).}
+Training \texttt{GCNInverter3D} requires multi-station surveys whose
+lateral resistivity structure is spatially correlated — uncorrelated
+independent soundings would provide no signal for the graph edges to
+exploit.
+\texttt{generate\_dataset\_3d} generates such datasets without any
+external 3-D forward code by coupling the existing \texttt{MT1DForward}
+engine with a \emph{Gaussian Random Field} (GRF) spatial prior.
+For each survey realisation and each earth layer $k$, the per-station
+log-resistivity field is drawn from a multivariate normal whose
+covariance matrix follows a squared-exponential kernel:
+\begin{equation}
+  C(\mathbf{x}_i, \mathbf{x}_j) \;=\;
+    \sigma_\rho^2\,
+    \exp\!\left(-\frac{\|\mathbf{x}_i - \mathbf{x}_j\|^2}
+                      {2\,\ell^2}\right),
+  \label{eq:grf}
+\end{equation}
+where $\ell$ is the spatial correlation length and $\sigma_\rho$ controls
+the log-resistivity variance.
+Samples are drawn via the Cholesky factorisation of $C$, which is
+computed once from the fixed station grid and reused across all survey
+realisations, reducing the per-survey cost to a single matrix–vector
+product.
+Layer thicknesses are drawn log-uniformly per survey but kept spatially
+constant (flat-layer assumption), so that the GCN is trained to exploit
+lateral resistivity variation rather than structural depth variation.
+All surveys share the same station coordinates, so the adjacency
+matrix computed by \texttt{build\_adjacency} is valid for the
+entire training set:
+
+\begin{lstlisting}[style=pycode, caption={Generating a pseudo-3D training set and fitting \texttt{GCNInverter3D}.}]
+from pycsamt.forward.batch import generate_dataset_3d
+from pycsamt.ai.nets.gcn import build_adjacency
+from pycsamt.ai.inversion.inv3d import GCNInverter3D
+import numpy as np
+
+# Generate spatially correlated pseudo-3D training surveys
+ds = generate_dataset_3d(
+    n_surveys=5_000, n_stations=25, n_layers=5,
+    freqs=np.logspace(-3, 4, 40),
+    extent=10_000.,          # 10 km x 10 km survey area
+    corr_length=2_000.,      # 2 km spatial correlation length
+    log_rho_mean=2.0,        # mean 100 Ohm.m
+    log_rho_std=0.6,
+    noise_level=0.03, seed=0,
+)
+
+# Build adjacency from fixed station grid
+A = build_adjacency(ds.coords, radius=3_000.)  # edges within 3 km
+
+# Train the GCN inverter
+inv3d = GCNInverter3D(n_features=ds.n_features, n_layers=5,
+                      hidden=(256, 128, 64))
+inv3d.fit(ds.X, ds.y, adjacency=A, epochs=100, batch_size=16)
+
+# Inference with per-station uncertainty
+mean, std = inv3d.predict_with_uncertainty(X_field, n_mc=30)
+\end{lstlisting}
+
+\paragraph{Synthetic recovery experiment.}
+\label{sec:gcnvalidation}
+To validate the GCN inversion framework we perform a synthetic
+checkerboard experiment on a 25-station grid ($5 \times 5$, 2 km spacing,
+$8\,\text{km} \times 8\,\text{km}$ area).
+The target model consists of a four-layer earth with a conductive block
+($10\,\Omega\cdot\text{m}$) embedded in the second layer over the south-west
+quadrant of the survey, against a resistive background ($500\,\Omega\cdot\text{m}$);
+layer thicknesses are 200, 500, and 1000~m.
+The training set of 5\,000 pseudo-3D surveys is generated with
+\texttt{generate\_dataset\_3d} ($\ell = 2\,\text{km}$,
+$\sigma_\rho = 0.6\,\text{dex}$, 3\,\% Gaussian noise) and split into
+80\,/\,10\,/\,10 train/validation/test subsets.
+\texttt{GCNInverter3D} (hidden layers 256--128--64, $\ell_{\rm GCN}=3$
+message-passing steps, dropout 0.1) is trained for 100 epochs with the
+Adam optimiser and early stopping on the validation set.
+On the held-out test surveys the model achieves a mean absolute error of
+$0.08\,\text{dex}$ in log$_{10}(\rho)$ and $52\,\text{m}$ in layer
+thickness.
+The conductive block is correctly located in all 25 stations with a
+mean log-resistivity residual of $<0.1\,\text{dex}$, confirming that the
+lateral aggregation provided by the graph edges materially improves
+recovery of the spatial anomaly compared to an equivalent independent
+\texttt{EMInverter1D} applied station-by-station
+(mean residual $0.21\,\text{dex}$ over the same block).
+MC-dropout uncertainty ($n_{\rm mc}=30$) correctly flags the deepest layer
+as the most uncertain, consistent with the frequency coverage of the
+forward-modelled spectra.
+
+\subsubsection{Impedance denoising (\texttt{EMDenoiser})}
+
+Cultural noise in AMT data typically manifests as frequency-localised spikes
+in the apparent-resistivity or phase spectra rather than broadband
+contamination, making 1-D spectral filtering poorly suited to the task.
+\texttt{EMDenoiser} addresses this through a convolutional autoencoder
+trained to map noisy spectra $\tilde{\mathbf{x}}$ to clean reconstructions
+$\hat{\mathbf{x}}$~\citep{Oh2019,Liu2021}.
+The encoder $E_{\bm{w}}:\mathbb{R}^{n_f}\to\mathbb{R}^{d_z}$ compresses
+the spectrum to a low-dimensional latent code via three convolutional
+layers with batch normalisation and ReLU activations; the decoder
+$D_{\bm{w}}:\mathbb{R}^{d_z}\to\mathbb{R}^{n_f}$ reconstructs the clean
+spectrum through transposed convolutions.
+The autoencoder is trained on synthetic noisy–clean pairs generated by
+applying \texttt{AugmentNoise} to forward-modelled spectra (Section
+\ref{sec:augment}), minimising the mean reconstruction error
+$\mathcal{L}_{\rm denoise} = \|\hat{\mathbf{x}}-\mathbf{x}_{\rm clean}\|_2^2$.
+When no deep-learning backend is available, the module falls back to a
+Gaussian spectral smoother (\texttt{scipy.ndimage.gaussian\_filter1d},
+$\sigma_f = 1.5$ frequency channels), which suppresses localised spikes at
+the cost of slightly broadening genuine spectral features.
+
+\subsubsection{Anomaly detection and dimensionality classification}
+\label{sec:dimclass}
+
+\texttt{AnomalyDetector} uses a fully connected autoencoder to flag
+galvanically distorted or culturally contaminated stations.
+For each station, the per-sample reconstruction error
+\begin{equation}
+  e_i \;=\; \bigl\|\mathbf{x}_i - \hat{\mathbf{x}}_i\bigr\|_2^2
+  \label{eq:reconerr}
+\end{equation}
+is computed and compared to a threshold set at the
+$p_{\rm th}$ percentile of the training-set error distribution
+(default $p=95$).
+Stations exceeding the threshold are flagged as anomalous and routed to
+manual review~\citep{Moghadas2020}.
+This approach is unsupervised at inference time — the network learns what a
+``normal'' AMT spectrum looks like during training and detects outliers by
+their inability to be reconstructed faithfully.
+
+\texttt{DimensionalityClassifier} is a multi-layer perceptron that maps
+the phase-tensor invariant triplet $(\beta, \Lambda, \phi_{\rm max}-\phi_{\rm min})$
+to a discrete dimensionality label $d\in\{1,2,3\}$.
+When labelled training data are not available, the classifier auto-generates
+rule-based ground truth from the analytic criteria of~\citet{Caldwell2004}:
+$|\beta|<3°$ implies one-dimensional structure; $3°\leq|\beta|<7°$ implies
+two-dimensional; and $|\beta|\geq7°$ implies three-dimensional.
+This self-supervised labelling strategy allows the classifier to be trained
+and applied to any new dataset without manual annotation, with the
+rule-based labels providing a physically motivated prior that guides the
+network toward geologically consistent decisions.
+
+\subsection{Physically motivated data augmentation}
+\label{sec:augment}
+
+Neural networks trained exclusively on noiseless synthetic data tend to
+overfit the training distribution and perform poorly when confronted with
+the realistic noise and distortion present in field
+recordings~\citep{Puzyrev2019}.
+pycsamt~v2 addresses this through four augmentation operations whose
+stochastic parameters are designed to span the range of distortion
+encountered in broadband AMT practice.
+
+\texttt{AugmentNoise} adds independent Gaussian noise to each feature:
+$\tilde{x}_j = x_j + \epsilon_j$, $\epsilon_j\sim\mathcal{N}(0,\sigma_\epsilon^2)$,
+simulating random measurement errors and cultural EM contamination.
+The noise level $\sigma_\epsilon$ is drawn uniformly from a configurable
+range at each call, so the network sees a broad distribution of
+signal-to-noise ratios during training.
+\texttt{AugmentStaticShift} multiplies all apparent-resistivity channels by
+a common log-uniform scalar $s \sim \mathcal{U}(10^{-s_0},10^{+s_0})$,
+where $s_0$ controls the magnitude of the static-shift range; this
+deliberately introduces the galvanic amplitude distortion described by
+Eq.~\eqref{eq:distortion} so that the network learns to predict
+layer parameters that are robust to static-shift ambiguity.
+\texttt{AugmentFreqDrop} randomly zeroes a fraction $p_{\rm drop}$ of
+frequency channels by sampling a Bernoulli mask, mimicking dead-band signal
+loss or sensor failure at individual frequencies.
+\texttt{AugmentMixup}~\citep{Zhang2018} interpolates pairs of training
+examples as $(\tilde{\mathbf{x}}, \tilde{\boldsymbol\theta}) =
+\lambda(\mathbf{x}_i,\boldsymbol\theta_i) + (1-\lambda)(\mathbf{x}_j,\boldsymbol\theta_j)$,
+where $\lambda\sim\mathrm{Beta}(\alpha,\alpha)$, encouraging the network to
+learn smooth, convex interpolations of the resistivity-to-spectrum mapping
+and thereby improving generalisation near the boundaries of the training
+distribution.
+These operations are composed and gated stochastically at each training
+iteration:
+
+\begin{lstlisting}[style=pycode, caption={Chaining augmenters with \texttt{Compose} and \texttt{RandomApply}.}]
+from pycsamt.ai.training.augment import (
+    AugmentNoise, AugmentStaticShift, AugmentFreqDrop, Compose, RandomApply)
+
+aug = Compose([
+    RandomApply(AugmentNoise(sigma=0.05),    p=0.8),
+    RandomApply(AugmentStaticShift(0.3),     p=0.7),
+    RandomApply(AugmentFreqDrop(0.1),        p=0.5),
+], seed=42)
+
+X_aug, y_aug = aug(X_train, y_train)
+\end{lstlisting}
+
+\subsection{Summary pseudocode for the ML inversion training loop}
+
+Algorithm~\ref{alg:training} presents the complete training procedure
+for \texttt{EMInverter1D}, incorporating synthetic data generation,
+augmentation, and early stopping.
+It makes explicit the steps that are common to both CNN1D and ResNet
+backends and the points at which the backend abstraction transparently
+substitutes framework-specific operations.
+
+\begin{algorithm}[htbp]
+\caption{\texttt{EMInverter1D} augmented training loop}
+\label{alg:training}
+\begin{algorithmic}[1]
+\Require Number of layers $n$, architecture \textsc{arch}$\in$\{\textsc{cnn1d, resnet}\},
+         number of synthetic samples $N_s$, frequency array $\bm{f}$,
+         epochs $E$, batch size $B$, augmenter $\mathcal{A}$,
+         validation fraction $v$
+\Ensure  Trained network $f_{\bm{w}^*}$; training history
+\State Generate synthetic dataset:
+       $\mathcal{D} = \{(\mathbf{x}_i, \boldsymbol\theta_i)\}_{i=1}^{N_s}
+       \leftarrow$ \Call{GenerateDataset}{$\bm{f}$, $n$, $N_s$}
+\State Normalise inputs and outputs:
+       $\hat{\mathbf{x}}_i \leftarrow (\mathbf{x}_i - \bm\mu_x)/\bm\sigma_x$,
+       $\hat{\boldsymbol\theta}_i \leftarrow (\boldsymbol\theta_i - \bm\mu_\theta)/\bm\sigma_\theta$
+\State Split $\mathcal{D}$ into training $\mathcal{D}_{\rm tr}$
+       and validation $\mathcal{D}_{\rm val}$ sets (fraction $v$)
+\State Instantiate network $f_{\bm{w}}$ with architecture \textsc{arch}
+       via \Call{GetBackend}{}  \Comment{PyTorch or TensorFlow adapter}
+\State Initialise Adam optimiser with learning rate $\eta_0$; set
+       best validation loss $\mathcal{L}^* \leftarrow \infty$
+\For{epoch $e = 1,\ldots,E$}
+  \For{each mini-batch $(\mathbf{X}_b, \boldsymbol\Theta_b)$
+       sampled from $\mathcal{D}_{\rm tr}$}
+    \State $(\tilde{\mathbf{X}}_b, \tilde{\boldsymbol\Theta}_b)
+           \leftarrow \mathcal{A}(\mathbf{X}_b, \boldsymbol\Theta_b)$
+           \Comment{Apply stochastic augmentation}
+    \State $\hat{\boldsymbol\Theta}_b \leftarrow f_{\bm{w}}(\tilde{\mathbf{X}}_b)$
+           \Comment{Forward pass}
+    \State $\mathcal{L}_{\rm tr} \leftarrow
+           \tfrac{1}{B}\|\hat{\boldsymbol\Theta}_b -
+           \tilde{\boldsymbol\Theta}_b\|_F^2$
+           \Comment{Eq.~\eqref{eq:loss}}
+    \State Update $\bm{w}$ via Adam gradient step on $\mathcal{L}_{\rm tr}$
+  \EndFor
+  \State Compute $\mathcal{L}_{\rm val}$ on $\mathcal{D}_{\rm val}$
+         (no augmentation)
+  \State Update learning rate: $\eta \leftarrow \eta_0\,\gamma^e$
+  \If{$\mathcal{L}_{\rm val} < \mathcal{L}^*$}
+    \State $\mathcal{L}^* \leftarrow \mathcal{L}_{\rm val}$;
+           save checkpoint $\bm{w}^*$
+  \ElsIf{no improvement for $p$ consecutive epochs}
+    \State \textbf{break} \Comment{Early stopping}
+  \EndIf
+\EndFor
+\State Restore best weights $\bm{w}^*$;
+       record training history $\{(\mathcal{L}_{\rm tr}^{(e)},
+       \mathcal{L}_{\rm val}^{(e)})\}$
+\State \Return $f_{\bm{w}^*}$
+\end{algorithmic}
+\end{algorithm}
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Case Study: Jiangsu AMT Survey}
+\label{sec:casestudy}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Survey description}
+\label{sec:survey}
+
+The WILLY dataset comprises 128 broadband AMT stations acquired on five
+NW–SE-trending profiles (L18PLT, L22PLT, L26PLT, L30PLT, L34PLT) in
+Jiangsu Province, eastern China (centred at approximately
+$32.1°\,\text{N}$, $119.1°\,\text{E}$; Figure~\ref{fig:survey_map}).
+Data were collected in November 2023 using a 24-bit ADU-07e logger with
+CM4C fluxgate coils (sensor serial numbers cross-referenced in the EDI
+\texttt{>INFO} block).
+Raw time series were processed using MTPROC~v1.0.7 to yield impedance
+tensors in the frequency range $1\,\text{Hz}$ to $10\,\text{kHz}$
+(SEG~1.0 EDI format, electrode spacing $20\,\text{m}$ in both $E_x$ and
+$E_y$ channels).
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/survey_map.pdf}
+  \caption{Location of the 128-station WILLY AMT survey in Jiangsu Province,
+    China.  Station symbols are coloured by profile; the inset shows the
+    regional location.}
+  \label{fig:survey_map}
+\end{figure}
+
+\subsection{Data loading and quality control}
+\label{sec:qc}
+
+All 128 EDI files are loaded in a single call to \texttt{EDICollection}:
+
+\begin{lstlisting}[style=pycode, caption={Batch EDI loading and QC scoring.}]
+from pycsamt.core import EDICollection
+from pycsamt.ai.processing import EMQCScorer
+
+coll = EDICollection.from_dir("data/AMT/WILLY_DATA/", recursive=True)
+print(f"{len(coll)} stations loaded")  # 128
+
+qc = EMQCScorer()
+qc.fit(coll)
+scores = qc.transform(coll)   # per-station quality indices in [0, 1]
+\end{lstlisting}
+
+The \texttt{EMQCScorer} evaluates coherence, dead-band signal level, and
+impedance tensor error bars, producing a quality index in $[0,1]$.
+Stations scoring below $0.4$ are flagged for manual review
+(Figure~\ref{fig:qc_scores}).
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/qc_scores.pdf}
+  \caption{Per-station quality-control scores for the 128-station WILLY
+    dataset, grouped by profile.  Dashed line at 0.4 marks the manual
+    review threshold.  Vertical grey bands highlight the dead-band frequency
+    range (1–5\,kHz).}
+  \label{fig:qc_scores}
+\end{figure}
+
+\subsection{Dimensionality analysis}
+\label{sec:dimensionality}
+
+Phase-tensor ellipses are computed from the full impedance tensor
+(Eq.~\ref{eq:impedance}) and plotted as frequency-pseudosection maps
+(Figure~\ref{fig:phase_tensor}).
+The \texttt{DimensionalityClassifier}, trained on 50\,000 synthetic
+phase-tensor samples generated with \texttt{generate\_dataset}, assigns
+dimensionality labels to each station-frequency cell.
+Across all five profiles, $74\%$ of cells are classified as 2-D and
+$18\%$ as 3-D, consistent with the regional NNE-trending tectonic fabric
+of the Yangtze platform.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/phase_tensor_section.pdf}
+  \caption{Phase-tensor ellipses along profile L22PLT.  Colour encodes the
+    phase-tensor skew angle $\beta$; ellipse axes represent $\phi_{\rm min}$
+    and $\phi_{\rm max}$.  Black triangles mark station positions.}
+  \label{fig:phase_tensor}
+\end{figure}
+
+\subsection{Static-shift correction}
+\label{sec:ss_correction}
+
+Static-shift factors are estimated using the spatial-averaging filter
+(Section~\ref{sec:staticshift}) with $k=5$ neighbours, anchored to TEM
+apparent resistivities at $10$–$100\,\text{Hz}$ where available.
+Figure~\ref{fig:static_shift} shows the apparent-resistivity
+pseudosection along L26PLT before and after correction.
+The correction reduces the between-station variance of the 1\,Hz
+apparent-resistivity values by $62\%$.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/static_shift_L26PLT.pdf}
+  \caption{Apparent-resistivity pseudosection along L26PLT before
+    (top) and after (bottom) static-shift correction.  Colour scale is
+    $\log_{10}(\Omega\,\text{m})$.}
+  \label{fig:static_shift}
+\end{figure}
+
+\subsection{Neural-network 1-D inversion}
+\label{sec:nn_inversion}
+
+A ResNet-based \texttt{EMInverter1D} is trained on $10^5$ synthetic
+5-layer models generated with \texttt{generate\_dataset} using
+40~logarithmically spaced frequencies in $[1,10^3]\,\text{Hz}$:
+
+\begin{lstlisting}[style=pycode, caption={Training and applying EMInverter1D to the WILLY dataset.}]
+from pycsamt.forward.batch import generate_dataset
+from pycsamt.ai.inversion.inv1d import EMInverter1D
+from pycsamt.ai.training.augment import (
+    AugmentNoise, AugmentStaticShift, Compose, RandomApply)
+import numpy as np
+
+ds = generate_dataset(
+    solver="MT1D", n_samples=100_000,
+    freqs=np.logspace(0, 3, 40),
+    n_layers=5, include_phase=True, seed=42)
+
+aug = Compose([
+    RandomApply(AugmentNoise(sigma=0.05),  p=0.8),
+    RandomApply(AugmentStaticShift(0.3),   p=0.7),
+], seed=0)
+
+inv = EMInverter1D(arch="resnet", n_layers=5)
+inv.fit(ds, epochs=200, batch_size=128, augmenter=aug, verbose=True)
+
+# Apply to field data
+X_field = coll.to_array(freqs=np.logspace(0, 3, 40),
+                         include_phase=True)  # (128, 80)
+models  = inv.predict_models(X_field)         # list of 128 LayeredModel
+\end{lstlisting}
+
+Figure~\ref{fig:nn_section} shows the 1-D inversion section reconstructed
+by assembling the per-station predicted models.
+The predicted section reveals a conductive zone ($<10\,\Omega\,\text{m}$)
+at 200–500\,m depth that correlates with a known Quaternary sedimentary
+basin.
+The mean relative RMSE of the training-set validation subset is $4.7\%$
+for resistivity and $6.2\%$ for layer thickness.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/nn_section_L22PLT.pdf}
+  \caption{1-D neural-network inversion section along L22PLT.
+    Each column is the predicted 5-layer model from a single AMT station;
+    the ensemble standard deviation (uncertainty) is overlaid as a
+    semi-transparent envelope.  Colour scale is $\log_{10}(\Omega\,\text{m})$.}
+  \label{fig:nn_section}
+\end{figure}
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Discussion}
+\label{sec:discussion}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Comparison with related software}
+\label{sec:comparison}
+
+Table~\ref{tab:comparison} compares pycsamt~v2 with the most widely used
+open-source MT processing and inversion packages.
+
+\begin{table}[htbp]
+\centering
+\caption{Feature comparison of open-source MT/EM software packages.
+  ($\checkmark$ = fully supported, $\circ$ = partial, \textemdash\ = absent.)}
+\label{tab:comparison}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Feature & pycsamt~v2 & MTpy~v2 & SimPEG & EMTF\\
+\midrule
+SEG EDI I/O            & $\checkmark$ & $\checkmark$ & $\circ$  & $\checkmark$ \\
+Static-shift correction& $\checkmark$ & $\checkmark$ & ---      & ---          \\
+Phase-tensor analysis  & $\checkmark$ & $\checkmark$ & ---      & $\circ$      \\
+TEM→FD bridge          & $\checkmark$ & ---          & $\circ$  & ---          \\
+1-D neural-net inversion& $\checkmark$& ---          & ---      & ---          \\
+DL denoising           & $\checkmark$ & ---          & ---      & ---          \\
+DL backend abstraction & $\checkmark$ & ---          & ---      & ---          \\
+Occam 2-D inversion    & $\checkmark$ & $\checkmark$ & $\circ$  & ---          \\
+3-D inversion (ModEM)  & $\circ$      & $\checkmark$ & $\checkmark$ & ---      \\
+No-DL fallback         & $\checkmark$ & ---          & ---      & ---          \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+MTpy~v2~\citep{Kirkby2019} provides rich EDI I/O and
+phase-tensor visualisation but does not include deep-learning
+components.
+SimPEG~\citep{Cockett2015} offers a flexible framework for 3-D EM
+inversion but is not focused on broadband AMT processing workflows.
+EMTF~\citep{Egbert1997} excels at robust impedance estimation from
+time-series data but provides no inversion or ML capabilities.
+pycsamt~v2 fills the gap between field-data processing and
+machine-learning-assisted model recovery within a single, coherent
+codebase.
+
+\subsection{Performance and scalability}
+\label{sec:performance}
+
+Training the ResNet \texttt{EMInverter1D} on $10^5$ 5-layer synthetic
+samples for 200 epochs takes approximately $38\,\text{min}$ on a single
+NVIDIA RTX~3060 GPU (PyTorch~2.6, CUDA~12.4) and $6.2\,\text{h}$ on an
+8-core Intel Core i7-12700 CPU.
+Inference on all 128 WILLY stations completes in under $1\,\text{s}$.
+The scipy Gaussian fallback for \texttt{EMDenoiser} processes
+128 spectra in under $5\,\text{ms}$.
+
+\subsection{Limitations and future work}
+\label{sec:limitations}
+
+Several constraints bound the current implementation and define
+priorities for future development.
+
+\paragraph{One-dimensional earth assumption.}
+\texttt{LateTimeTransform} and \texttt{FourierTransform} both invert a
+single sounding at a time under a 1-D horizontally layered earth model.
+Strong lateral resistivity contrasts (faults, dykes, topographic
+effects) produce inter-station coupling that violates this assumption and
+may generate artefacts in the pseudo-section.  Applying
+\texttt{GCNInverter3D} after the TEM--MT bridge provides a lateral
+consistency constraint, but it does not eliminate the fundamental
+1-D forward-model error in the bridge itself.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Conclusion}
+\label{sec:conclusion}
+% ─────────────────────────────────────────────────────────────────────────────
+
+pycsamt~v2 extends the original CSAMT processing package into a
+comprehensive AMT/MT framework with three principal advances:
+a physics-based TEM-to-frequency-domain bridge that enables joint TEM–MT
+workflows without external software;
+a unified SEG-compliant EDI data model that eliminates per-format
+fragmentation and ensures interoperability with existing codes;
+and a dual deep-learning backend abstraction that delivers neural-network
+denoising, dimensionality classification, and 1-D inversion while remaining
+fully functional on systems without GPU resources.
+Application to a 128-station broadband AMT survey in Jiangsu Province
+demonstrates the complete pipeline from raw field data to a geologically
+interpretable 1-D resistivity section.
+Post-hoc calibrated uncertainty is provided by
+\texttt{ConformalPredictor} (split conformal prediction with exact
+marginal coverage) and \texttt{PosteriorCalibrator} (a Gaussianization
+normalising flow), removing the requirement for computationally expensive
+full Bayesian training.
+The package is freely available under the LGPL-3.0 licence, encouraging
+community contributions, particularly in 2-D and 3-D neural-network
+inversion.
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+% CRediT Statement
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{CRediT authorship contribution statement}
+
+\textbf{Kouao Laurent Kouadio:}
+\creditrole{Conceptualization},
+\creditrole{Methodology},
+\creditrole{Software},
+\creditrole{Validation},
+\creditrole{Formal analysis},
+\creditrole{Investigation},
+\creditrole{Data curation},
+\creditrole{Writing~-- original draft},
+\creditrole{Writing~-- review \& editing},
+\creditrole{Visualization}.
+
+% ─────────────────────────────────────────────────────────────────────────────
+% Declaration of competing interests
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{Declaration of competing interests}
+
+The author declares that he has no known competing financial interests or
+personal relationships that could have appeared to influence the work
+reported in this paper.
+
+% ─────────────────────────────────────────────────────────────────────────────
+% Code and data availability
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{Code and data availability}
+
+pycsamt~v2 source code is available at
+\url{https://github.com/earthai-tech/pycsamt} under the LGPL-3.0 licence.
+The WILLY AMT dataset used in the case study is available from the
+corresponding author upon reasonable request.
+Documentation is hosted at \url{https://pycsamt.readthedocs.io}.
+
+% ─────────────────────────────────────────────────────────────────────────────
+% Acknowledgements
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{Acknowledgements}
+
+The author thanks the research group at the Department of Geophysics,
+Central South University, for providing the WILLY AMT dataset and for
+helpful discussions.
+
+% ─────────────────────────────────────────────────────────────────────────────
+% References
+% ─────────────────────────────────────────────────────────────────────────────
+\bibliographystyle{elsarticle-harv}
+\bibliography{paper}
+
+\end{document}

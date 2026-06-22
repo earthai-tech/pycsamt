@@ -1,6 +1,227 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
+requires      = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
+
+# ---------------------------------------------------------------------------
+# Project metadata  (PEP 621)
+# ---------------------------------------------------------------------------
+[project]
+name        = "pycsamt"
+version     = "2.0.0"
+description = "Python toolkit for audio-frequency magnetotelluric (MT/AMT/CSAMT/CSEM) data processing, inversion, and geological interpretation"
+readme      = "README.md"
+license     = { text = "LGPL-3.0-or-later" }
+requires-python = ">=3.9"
+
+authors = [
+    { name = "Laurent Kouadio", email = "etanoyau@gmail.com" },
+]
+maintainers = [
+    { name = "Laurent Kouadio", email = "etanoyau@gmail.com" },
+]
+
+keywords = [
+    "magnetotelluric", "electromagnetic", "geophysics",
+    "MT", "AMT", "CSAMT", "CSEM",
+    "inversion", "deep-learning", "resistivity",
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "numpy>=1.22",
+    "scipy>=1.8",
+    "matplotlib>=3.5",
+    "pandas>=1.4",
+    "pyyaml>=5.4",
+    "tqdm>=4.60",
+    "click>=8.1",
+    "rich>=13.0",
+]
+
+# ---------------------------------------------------------------------------
+# Optional dependency groups
+# ---------------------------------------------------------------------------
+[project.optional-dependencies]
+
+# AI / ML back-ends (choose one or both)
+torch = [
+    "torch>=1.13",
+]
+tensorflow = [
+    "tensorflow>=2.10",
+]
+
+# Scientific extras
+geo = [
+    "pyproj>=3.3",
+    "xarray>=2022.6",
+    "contextily>=1.6",
+]
+
+# Development & testing
+dev = [
+    "pytest>=7.2",
+    "pytest-cov>=4.0",
+    "ruff>=0.4",
+    "pre-commit>=3.0",
+]
+
+# Documentation build
+docs = [
+    "sphinx>=7.2",
+    "pydata-sphinx-theme>=0.15",
+    "numpydoc>=1.7",
+    "myst-parser>=2.0",
+    "sphinx-copybutton>=0.5",
+    "sphinx-design>=0.5",
+    "sphinx-gallery>=0.16",
+    "sphinx-autodoc-typehints>=2.0",
+    "sphinx-autobuild>=2024.2",
+]
+
+# Desktop application
+desktop = [
+    "PySide6>=6.9",
+    "pyqtgraph>=0.13",
+    "contextily>=1.6",
+]
+
+# LLM provider clients used by the agent layer.
+# anthropic  → Claude (claude-sonnet-4-6, etc.)
+# openai     → OpenAI models AND DeepSeek
+#              (DeepSeek reuses the openai SDK
+#              with a custom base_url)
+# google-generativeai → Gemini models
+agents = [
+    "anthropic>=0.40",
+    "openai>=1.54",
+    "google-generativeai>=0.8",
+]
+
+# Dash web application (legacy pycsamt/app/web)
+web = [
+    "dash>=2.18",
+    "dash-bootstrap-components>=1.6",
+    "diskcache>=5.6",
+    "multiprocess>=0.70",
+    "plotly>=5.20",
+    "Pillow>=10.0",
+]
+
+# Agent Master web application
+# Requires Dash 4 + DBC 2 + all LLM providers.
+agent-master = [
+    "pycsamt[agents]",
+    "dash>=4.0",
+    "dash-bootstrap-components>=2.0",
+    "diskcache>=5.6",
+    "multiprocess>=0.70",
+    "plotly>=5.20",
+    "Pillow>=10.0",
+]
+
+# Desktop + web application
+app = [
+    "pycsamt[desktop,web]",
+]
+
+# Everything (prefers torch backend)
+full = [
+    "pycsamt[torch,geo,dev,docs,app,agents]",
+]
+
+# ---------------------------------------------------------------------------
+# Project URLs
+# ---------------------------------------------------------------------------
+[project.urls]
+Homepage        = "https://github.com/earthai-tech/pycsamt"
+Documentation   = "https://pycsamt.readthedocs.io"
+"Bug Tracker"   = "https://github.com/earthai-tech/pycsamt/issues"
+"Source Code"   = "https://github.com/earthai-tech/pycsamt"
+Changelog       = "https://pycsamt.readthedocs.io/en/latest/changelog.html"
+
+# ---------------------------------------------------------------------------
+# Entry points
+# ---------------------------------------------------------------------------
+[project.scripts]
+pycsamt        = "pycsamt.cli:main"
+pycsamt-gui    = "pycsamt.app.desktop.__main__:main"
+pycsamt-web    = "pycsamt.app.web.__main__:main"
+pycsamt-agent  = "pycsamt.app.agent_master.__main__:main"
+
+# ---------------------------------------------------------------------------
+# Setuptools configuration
+# ---------------------------------------------------------------------------
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where   = ["."]
+include = ["pycsamt*"]
+
+[tool.setuptools.package-data]
+"pycsamt" = [
+    "log/p.configlog.yml",
+    "metadata/*.json",
+    "metadata/*.yml",
+    "app/desktop/resources/*.qss",
+    "app/desktop/resources/icons/*",
+    "app/web/assets/*",
+    "models/occam2d/_source/*",
+    "models/modem/_source/**/*",
+    "data/occam2d/*",
+    "data/3edis/*.edi",
+    "data/inversionFiles/*",
+]
+
+# ---------------------------------------------------------------------------
+# Tool configuration
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "7.2"
+addopts    = "-ra -q --tb=short"
+testpaths  = ["pycsamt"]
+markers    = [
+    "live: tests that require an LLM API key (deselect with -m 'not live')",
+]
+
+[tool.ruff]
+line-length = 62
+target-version = "py39"
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["B008"]
+exclude = [
+    "__pycache__",
+    ".git",
+    ".pytest_cache",
+    ".ruff_cache",
+    "build",
+    "dist",
+    "docs/build",
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.coverage.run]
+source = ["pycsamt"]
+omit   = [
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false

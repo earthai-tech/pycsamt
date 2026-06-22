@@ -9,6 +9,8 @@ from typing import List, Tuple, Sequence, Dict, Union
 
 import copy
 from pathlib import Path
+from os import PathLike
+import warnings
 
 import math 
 import numpy as np
@@ -18,7 +20,6 @@ from ..core.base import CoreObject
 from ..seg.edi import EDIFile
 from ..seg.collection import EDICollection
 from ..session import normalize_session
-
 from ..gis.utils import (
     assert_lat_value,
     assert_lon_value,
@@ -29,11 +30,12 @@ from .utils import (
     set_coords as _set_coords,
     maybe_copy as _maybe_copy,
     _get_head,
-    _ensure_head, 
-    as_edicollection       
+    _ensure_head,
+    as_edicollection
 )
+from ..api.view import maybe_wrap_frame, iter_progress
 
-__all__ = ["SiteMixin", "Site", "Sites", "to_sites"]
+__all__ = ["SiteMixin", "Site", "Sites", "to_sites", "to_edis"]
 
 class SiteMixin(CoreObject):
     r"""
@@ -241,7 +243,7 @@ class SiteMixin(CoreObject):
             out["INFO"] = dict(getattr(info, "__dict__", {}))
         return out
 
-    def to_dataframe(self, kind: str = "z") -> pd.DataFrame:
+    def to_dataframe(self, kind: str = "z", *, api: bool | None = None) -> Any:
         r"""
         Export core arrays to a tidy :class:`pandas.DataFrame`.
 
@@ -287,13 +289,23 @@ class SiteMixin(CoreObject):
              if arrs["freq"] is not None
              else np.asarray([], float))
         idx = pd.Index(f, name="f")
+
+        def _out(df: pd.DataFrame) -> Any:
+
+            return maybe_wrap_frame(
+                df,
+                api=api,
+                name=f"site_{kind.strip().lower()}",
+                kind=f"site.{kind.strip().lower()}",
+                source=getattr(self, "name", None),
+            )
     
         k = kind.strip().lower()
         if k in ("z", "imp", "impedance"):
             z = arrs["z"]
             z = None if z is None else _z_to_2d(z)
             if z is None or z.size == 0:
-                return pd.DataFrame(index=idx)
+                return _out(pd.DataFrame(index=idx))
             cols = _component_names()
             data: Dict[str, Any] = {}
             for i, c in enumerate(cols):
@@ -301,7 +313,7 @@ class SiteMixin(CoreObject):
                     data[c] = z[:, i]
                 except Exception:
                     data[c] = np.full(idx.size, np.nan, float)
-            return pd.DataFrame(data, index=idx)
+            return _out(pd.DataFrame(data, index=idx))
     
         if k in ("resphase", "rp", "rho_phase"):
             rho = arrs["rho"]
@@ -325,12 +337,12 @@ class SiteMixin(CoreObject):
                     pass
                 data[f"rho_{c.lower()}"] = rr
                 data[f"phi_{c.lower()}"] = pp
-            return pd.DataFrame(data, index=idx)
+            return _out(pd.DataFrame(data, index=idx))
     
         if k in ("tip", "tipper", "t"):
             tip = arrs["tipper"]
             if tip is None:
-                return pd.DataFrame(index=idx)
+                return _out(pd.DataFrame(index=idx))
             tip = np.asarray(tip)
             data: Dict[str, Any] = {}
             for i, c in enumerate(("Tx", "Ty")):
@@ -338,7 +350,7 @@ class SiteMixin(CoreObject):
                     data[c] = tip[:, i]
                 except Exception:
                     data[c] = np.full(idx.size, np.nan, float)
-            return pd.DataFrame(data, index=idx)
+            return _out(pd.DataFrame(data, index=idx))
     
         raise ValueError(f"Unknown kind: {kind!r}")
 
@@ -410,7 +422,10 @@ class SiteMixin(CoreObject):
             tip = _extract_z_arrays(self.edi)["tipper"]
             if tip is None:
                 return False
-            a = np.asarray(tip)
+            try:
+                a = np.asarray(tip, dtype=np.complex128)
+            except (TypeError, ValueError):
+                return False
             return a.size > 0 and np.any(np.isfinite(a))
     
         z = _extract_z_arrays(self.edi)["z"]
@@ -756,6 +771,31 @@ class Site(SiteMixin):
         except Exception:
             pass
 
+    def to_edi(self, *, copy: bool = False) -> EDIFile:
+        r"""
+        Return the underlying EDI object.
+
+        Parameters
+        ----------
+        copy : bool, default False
+            If ``True``, return a best-effort deep copy of the
+            wrapped EDI object. If copying fails, the original
+            object is returned.
+
+        Returns
+        -------
+        pycsamt.seg.edi.EDIFile
+            EDI object wrapped by this ``Site``.
+
+        See Also
+        --------
+        pycsamt.site.base.to_edis
+            General unwrapping helper for ``Site``/``Sites`` and
+            mixed inputs.
+        """
+
+        return _maybe_copy(self.edi) if copy else self.edi
+
 
     def __repr__(self) -> str:
         r"""
@@ -938,6 +978,9 @@ class Sites(CoreObject):
         self,
         edic: Union[EDICollection, Sequence[EDIFile]],
     ) -> None:
+        if isinstance (edic, EDIFile): 
+            edic= [edic] 
+            
         items = list(edic)
         self._items: List[Site] = [Site(e) for e in items]
 
@@ -1102,6 +1145,79 @@ class Sites(CoreObject):
         """
 
         return [s.edi for s in self._items]
+
+    def to_edis(
+        self,
+        *,
+        copy: bool = False,
+        progress: bool | str = False,
+        verbose: int = 0,
+    ) -> List[EDIFile]:
+        r"""
+        Return the underlying EDI objects as a list.
+
+        Parameters
+        ----------
+        copy : bool, default False
+            If ``True``, return best-effort deep copies of the EDI
+            objects.
+        progress : bool or {'auto'}, default False
+            Enable progress display while unwrapping.
+        verbose : int, default 0
+            Verbosity forwarded to progress/reporting helpers.
+
+        Returns
+        -------
+        list of pycsamt.seg.edi.EDIFile
+            EDI objects in site order.
+
+        See Also
+        --------
+        to_edicollection : Return an ``EDICollection`` instead.
+        pycsamt.site.base.to_edis : General unwrapping helper.
+        """
+
+        out = to_edis(
+            self,
+            copy=copy,
+            progress=progress,
+            verbose=verbose,
+        )
+        return out if isinstance(out, list) else [out]
+
+    def to_edicollection(
+        self,
+        *,
+        copy: bool = False,
+        progress: bool | str = False,
+        verbose: int = 0,
+    ) -> EDICollection:
+        r"""
+        Return the underlying EDI objects as an ``EDICollection``.
+
+        Parameters
+        ----------
+        copy : bool, default False
+            If ``True``, return best-effort deep copies of the EDI
+            objects.
+        progress : bool or {'auto'}, default False
+            Enable progress display while unwrapping.
+        verbose : int, default 0
+            Verbosity assigned to the returned collection.
+
+        Returns
+        -------
+        pycsamt.seg.collection.EDICollection
+            Collection built from the underlying EDI objects.
+        """
+
+        return to_edis(
+            self,
+            as_collection=True,
+            copy=copy,
+            progress=progress,
+            verbose=verbose,
+        )
 
     def closest(
         self,
@@ -1613,7 +1729,14 @@ class Sites(CoreObject):
             "sites": [s for _, s in items],
         }
 
-def to_sites (x: Any): 
+def to_sites (
+    x: Any, 
+    *, 
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    ): 
     r"""
     Coerce an arbitrary EDI-like input into a ``Sites`` wrapper.
     
@@ -1678,39 +1801,440 @@ def to_sites (x: Any):
     pycsamt.site.base.Sites.from_any :
         Alternate constructor with session normalization.
     """
-    return _to_sites (x )
+    return _to_sites (
+        x, recursive = recursive, 
+        on_dup =on_dup, 
+        strict= strict, 
+        verbose= verbose 
+    )
 
-def _to_sites(x: Any):
+
+def to_edis(
+    x: Any,
+    *,
+    as_collection: bool = False,
+    copy: bool = False,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    progress: bool | str = False,
+):
     r"""
-    Internal helper that implements :func:`to_sites`.
-    
-    Prefer :func:`to_sites` in user code. This function performs
-    the same coercion but is kept internal to allow refactoring
-    without breaking imports.
-    
+    Unwrap site-like inputs to raw EDI objects.
+
+    This is the inverse boundary of :func:`to_sites`. It accepts a
+    single :class:`Site`, a :class:`Sites` collection, an
+    ``EDICollection``, raw EDI objects, path-like inputs, or mixed
+    iterables containing those forms. The returned objects are the
+    underlying EDI containers used by low-level writers, exporters,
+    and EM processing functions.
+
     Parameters
     ----------
     x : Any
-        See :func:`to_sites`.
-    
+        Site-like input to unwrap. Supported values include ``Site``,
+        ``Sites``, ``EDIFile``, ``EDICollection``, path-like inputs,
+        or iterables containing site/EDI-like objects.
+    as_collection : bool, default False
+        If ``True``, return an :class:`~pycsamt.seg.collection.EDICollection`.
+        Otherwise a single input returns one EDI object and multi-item
+        inputs return a list.
+    copy : bool, default False
+        If ``True``, return best-effort deep copies of the EDI objects.
+        If copying fails for an item, that item is returned unchanged.
+    recursive : bool, default True
+        Forwarded to path-like discovery through ``EDICollection``.
+    on_dup : {'replace', 'keep', 'keep_first', 'keep_last', 'raise'}, default 'replace'
+        Duplicate station policy. ``replace`` and ``keep`` are forwarded
+        to path loading. ``keep_first``, ``keep_last``, and ``raise`` are
+        enforced after collection construction.
+    strict : bool, default False
+        If ``True``, raise when an object cannot be unwrapped to EDI.
+        If ``False``, invalid items are skipped.
+    verbose : int, default 0
+        Verbosity forwarded to collection construction and duplicate
+        policy diagnostics.
+    progress : bool or {'auto'}, default False
+        Enable progress display while unwrapping iterable inputs.
+
     Returns
     -------
-    pycsamt.site.base.Sites
-        See :func:`to_sites`.
-    
+    EDIFile, list of EDIFile, or EDICollection
+        Raw EDI object(s), depending on the input shape and
+        ``as_collection``.
+
     Notes
     -----
-    This function imports ``Sites`` lazily to avoid import cycles
-    during package initialization.
+    The operation is shallow by default. It returns the same EDI objects
+    wrapped by ``Site`` or ``Sites``. Pass ``copy=True`` when the caller
+    should be able to mutate the returned objects independently.
+
+    Examples
+    --------
+    >>> from pycsamt.site.base import Site, Sites, to_edis
+    >>> site = Site(edi)
+    >>> raw = to_edis(site)
+    >>> raw is edi
+    True
+    >>> raws = to_edis(Sites([edi]))
+    >>> len(raws)
+    1
+    >>> coll = to_edis(Sites([edi]), as_collection=True)
+    >>> len(coll)
+    1
+
+    See Also
+    --------
+    to_sites : Wrap raw EDI-like inputs into ``Sites``.
+    Site.to_edi : Convenience method for one ``Site``.
+    Sites.to_edis : Convenience method for a ``Sites`` collection.
     """
 
+    single = _is_single_edi_input(x)
+    items = _collect_edis(
+        x,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+        progress=progress,
+    )
+    if copy:
+        items = [_maybe_copy(ed) for ed in items]
+
+    coll = _edis_collection_from_items(
+        items,
+        on_dup=on_dup,
+        verbose=verbose,
+    )
+
+    if as_collection:
+        return coll
+    if single:
+        if items:
+            return items[0]
+        if strict:
+            raise ValueError(
+                "to_edis(strict=True): no EDI-like item could be "
+                "unwrapped from the provided input."
+            )
+    return list(coll)
+
+
+def _is_pathlike(obj: Any) -> bool:
+    return isinstance(obj, (str, bytes, Path, PathLike))
+
+
+def _is_seq_of_pathlike(x: Any) -> bool:
+    if isinstance(x, (str, bytes, Path, PathLike)):
+        return False  # single path-like handled elsewhere
+    try:
+        it = iter(x)  # noqa: F841
+    except Exception:
+        return False
+    # Heuristic: non-empty and all items path-like
+    try:
+        xs = list(x)
+    except Exception:
+        return False
+    return len(xs) > 0 and all(_is_pathlike(t) for t in xs)
+
+
+def _is_edi_like(obj: Any) -> bool:
+    return (
+        obj is not None
+        and hasattr(obj, "get_section")
+        and hasattr(obj, "Z")
+    )
+
+
+def _is_single_edi_input(x: Any) -> bool:
+    if isinstance(x, Site):
+        return True
+    if _is_edi_like(x):
+        return True
+    if _is_pathlike(x):
+        return False
+    return False
+
+
+def _unwrap_one_edi(x: Any, *, strict: bool = False) -> EDIFile | None:
+    if isinstance(x, Site):
+        return x.edi
+    edi = getattr(x, "edi", None)
+    if _is_edi_like(edi):
+        return edi
+    if _is_edi_like(x):
+        return x
+    if strict:
+        raise TypeError(
+            "Object cannot be unwrapped to an EDI-like item: "
+            f"{type(x).__name__}."
+        )
+    return None
+
+
+def _edis_collection_from_items(
+    items: Sequence[Any],
+    *,
+    on_dup: str = "replace",
+    verbose: int = 0,
+) -> EDICollection:
+    try:
+        coll = EDICollection(items=items, verbose=verbose)
+    except TypeError:
+        coll = EDICollection(items, verbose=verbose)  # type: ignore
+    if on_dup.strip().lower() in {"keep_first", "keep_last", "raise"}:
+        coll = _dedup_collection_names(
+            coll,
+            policy=on_dup,
+            verbose=verbose,
+        )
+    return coll
+
+
+def _collect_edis(
+    x: Any,
+    *,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    progress: bool | str = False,
+) -> List[EDIFile]:
+    if isinstance(x, Sites):
+        seq = list(x)
+    elif isinstance(x, Site) or _is_edi_like(x):
+        seq = [x]
+    elif _is_pathlike(x) or _is_seq_of_pathlike(x):
+        coll_on_dup = _map_on_dup_for_collection(on_dup)
+        coll = EDICollection.from_sources(
+            x,
+            recursive=recursive,
+            strict=strict,
+            on_dup=coll_on_dup,
+            verbose=verbose,
+        )
+        if on_dup.strip().lower() == "raise":
+            coll = _dedup_collection_names(
+                coll,
+                policy="raise",
+                verbose=verbose,
+            )
+        seq = list(coll)
+    elif isinstance(x, EDICollection):
+        seq = list(x)
+    else:
+        try:
+            seq = list(x)
+        except Exception:
+            seq = [x]
+
+    out: List[EDIFile] = []
+    iterator = iter_progress(
+        seq,
+        enabled=progress,
+        desc="Unwrapping EDI",
+        unit="site",
+        total=len(seq),
+    )
+    for item in iterator:
+        if isinstance(item, (Sites, EDICollection)) or _is_pathlike(item):
+            out.extend(
+                _collect_edis(
+                    item,
+                    recursive=recursive,
+                    on_dup=on_dup,
+                    strict=strict,
+                    verbose=verbose,
+                    progress=False,
+                )
+            )
+            continue
+        if _is_seq_of_pathlike(item):
+            out.extend(
+                _collect_edis(
+                    item,
+                    recursive=recursive,
+                    on_dup=on_dup,
+                    strict=strict,
+                    verbose=verbose,
+                    progress=False,
+                )
+            )
+            continue
+        ed = _unwrap_one_edi(item, strict=strict)
+        if ed is not None:
+            out.append(ed)
+    if strict and not out:
+        raise ValueError(
+            "to_edis(strict=True): no EDI-like items could be "
+            "unwrapped from the provided input."
+        )
+    return out
+
+
+def _map_on_dup_for_collection(on_dup: str) -> str:
+    """
+    EDICollection.from_sources supports {'replace', 'keep'}.
+    Map broader API to that set.
+    """
+    key = (on_dup or "replace").strip().lower()
+    if key in {"replace", "keep"}:
+        return key
+    if key in {"keep_first"}:
+        return "keep"
+    if key in {"keep_last"}:
+        return "replace"
+    if key in {"raise"}:
+        # no native support; we'll handle after construction
+        return "replace"
+    raise ValueError(
+        "Invalid on_dup policy. Allowed: "
+        "'replace', 'keep', 'keep_first', 'keep_last', 'raise'."
+    )
+
+
+def _dedup_collection_names(
+    coll, *, policy: str, verbose: int = 0
+):
+    """
+    Apply post-hoc duplicate policy ('keep_first', 'keep_last', 'raise')
+    when the collection was built from non-path inputs.
+    """
+    key = (policy or "replace").strip().lower()
+    if key in {"replace", "keep"}:
+        return coll  # already handled at load time
+    # Build index by item name
+    try:
+        items = list(coll.items.values())
+    except Exception:
+        # Fallback: assume EDICollection-like iterability
+        items = list(coll)
+
+    def _name(it, i):
+        for attr in ("station", "name", "site", "id"):
+            if hasattr(it, attr):
+                v = getattr(it, attr)
+                if isinstance(v, str) and v:
+                    return v
+        return f"site_{i}"
+
+    name_to_idx: Dict[str, int] = {}
+    names: List[str] = []
+    for i, it in enumerate(items):
+        n = _name(it, i)
+        names.append(n)
+        if key == "keep_first":
+            name_to_idx.setdefault(n, i)
+        elif key == "keep_last":
+            name_to_idx[n] = i
+        elif key == "raise":
+            if n in name_to_idx:
+                raise ValueError(
+                    f"Duplicate site '{n}' encountered with "
+                    "on_dup='raise'."
+                )
+            name_to_idx[n] = i
+
+    if verbose > 0:
+        dups = sorted({n for n in names if names.count(n) > 1})
+        if dups:
+            warnings.warn(
+                f"to_sites: duplicates {dups} handled with "
+                f"policy='{key}'.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+
+    kept = [items[i] for i in sorted(name_to_idx.values())]
+
+    # Rebuild a new collection of the same class with filtered items
+    CollCls = coll.__class__
+    try:
+        return CollCls(items=kept, verbose=getattr(coll, "verbose", 0))
+    except TypeError:
+        return CollCls(kept, verbose=getattr(coll, "verbose", 0))
+
+
+def _to_sites(
+    x: Any,
+    *,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+):
+    r"""
+    Internal helper that implements :func:`to_sites`.
+
+    See :func:`to_sites` for parameters and behavior.
+    This version additionally recognizes path-like inputs and
+    uses EDICollection.from_sources(...) to honor discovery
+    controls (recursive/strict/on_dup/verbose).
+    """
+
+    # Fast path
     if isinstance(x, Sites):
         return x
-    coll = as_edicollection(x) or []
+
+    # 1) Path-like (single or sequence) → from_sources(...)
+    if _is_pathlike(x) or _is_seq_of_pathlike(x):
+        coll_on_dup = _map_on_dup_for_collection(on_dup)
+        coll = EDICollection.from_sources(
+            x,
+            recursive=recursive,
+            strict=strict,
+            on_dup=coll_on_dup,
+            verbose=verbose,
+        )
+        # If caller asked for 'raise', enforce it now.
+        if on_dup.strip().lower() == "raise":
+            coll = _dedup_collection_names(
+                coll, policy="raise", verbose=verbose
+            )
+        # Wrap in Sites
+        try:
+            return Sites(coll)
+        except TypeError:
+            return Sites(edic=coll)
+
+    # 2a) Single Site object — wrap its EDIFile directly
+    if isinstance(x, Site):
+        return Sites([x.edi])
+
+    # 2b) Non-path inputs → coerce to collection
+
+    try:
+        coll = as_edicollection(
+            x,
+            strict=strict,
+            verbose=verbose,
+        )
+    except TypeError:
+        coll = as_edicollection(x)
+
+    if coll is None:
+        if strict:
+            raise ValueError(
+                "to_sites(strict=True): no EDI-like items could be "
+                "coerced from the provided input."
+            )
+        coll = EDICollection(items=[], verbose=verbose)
+
+    # Enforce any post-hoc duplicate policy not covered by the collection
+    if on_dup.strip().lower() in {"keep_first", "keep_last", "raise"}:
+        coll = _dedup_collection_names(
+            coll, policy=on_dup, verbose=verbose
+        )
+
+    # Sites wrapper
     try:
         return Sites(coll)
     except TypeError:
         return Sites(edic=coll)
+
 
 def _station_name(edi: EDIFile) -> str:
     h = _get_head(edi)
@@ -1801,7 +2325,7 @@ def _extract_z_arrays(ed: EDIFile) -> Dict[str, Any]:
     )
     out["rho"] = _safe_get(Z, "rho", "res", "resistivity")
     out["phase"] = _safe_get(Z, "phase", "phi")
-    tip = _safe_get(ed, "T", "TIP")
+    tip = _safe_get(ed, "T", "TIP", "Tip", "tipper", "Tipper")
     if tip is None:
         tip = _safe_get(Z, "tipper", "tip")
     out["tipper"] = tip

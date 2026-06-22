@@ -105,6 +105,18 @@ def asarray(x, dtype=None, copy=None):
 default_int = np.intp if IS_NP2 else np.int_
 
 
+# --- ptp (peak-to-peak) replacement ----------------------------------------
+# np.ptp() was deprecated in NumPy 1.24 and ndarray.ptp() was removed in 2.x.
+# Use max - min directly; this shim makes call sites explicit.
+
+def ptp(a, axis=None):
+    """Peak-to-peak (max − min) along *axis*. Safe for NumPy 1.x and 2.x."""
+    a = np.asarray(a)
+    if axis is None:
+        return a.max() - a.min()
+    return a.max(axis=axis) - a.min(axis=axis)
+
+
 # --- find_common_type replacement ------------------------------------------
 
 
@@ -153,4 +165,5 @@ __all__ = [
     "asarray",
     "default_int",
     "find_common_type",
+    "ptp",
 ]

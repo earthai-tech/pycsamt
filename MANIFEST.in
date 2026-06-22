@@ -1,17 +1,41 @@
+# MANIFEST.in — pyCSAMT v2
+# Controls which files are bundled in the source distribution (sdist).
+# Binary packages (wheels) use pyproject.toml [tool.setuptools.package-data].
 
-graft docs
-
-include setup.py
-include MANIFEST.in 
-include LICENSE.md
-include COPYING.LESSER
+# Project root files
 include README.md
+include LICENSE.md
+include pyproject.toml
+include MANIFEST.in
 
-exclude .travis.yml .readthedocs.yml 
-exclude project_description.md
-exclude _demo_user_guide.py
-exclude pycsamt_user_guide/*
-exclude mpl.rcParams_infos.py 
+# Documentation source
+graft docs/source
 
-exclude Scripts
-global-exclude *.py[cod] __pycache__/* *.so *.dylib .coverage .coverage.* 
+# Package data (mirrors [tool.setuptools.package-data] in pyproject.toml)
+include pycsamt/log/p.configlog.yml
+recursive-include pycsamt/metadata *.json *.yml
+recursive-include pycsamt/models/occam2d/_source *
+recursive-include pycsamt/models/modem/_source *
+recursive-include pycsamt/data/occam2d *
+include pycsamt/data/3edis/*.edi
+recursive-include pycsamt/data/inversionFiles *
+
+# Exclude build artefacts and caches
+global-exclude *.py[cod]
+global-exclude __pycache__/*
+global-exclude *.so *.dylib
+global-exclude .coverage .coverage.*
+global-exclude .DS_Store
+
+# Exclude legacy v1 artefacts
+prune pycsamt/*_v1*
+prune pycsamt/geodrill*
+prune pycsamt/view*
+prune pycsamt/gui_v1*
+prune pycsamt/cli_v1*
+prune pycsamt/modeling_v1*
+prune pycsamt/plot_v1*
+prune pycsamt/processing_v1*
+prune pycsamt/_core_v1*
+prune pycsamt/utils_v1*
+exclude setup.py

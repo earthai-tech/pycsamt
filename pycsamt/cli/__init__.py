@@ -1,38 +1,28 @@
+# -*- coding: utf-8 -*-
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
+"""
+pycsamt.cli — command-line interface.
 
+Entry point
+-----------
+``pyproject.toml`` wires ``pycsamt = "pycsamt.cli:main"`` so that
+``pip install .`` installs a ``pycsamt`` executable on the PATH.
 
-def poof_cli_usage (obj:str,
-                    topmarker ='>',
-                    bottommarker ='<',
-                    mlen =77): 
-    """
-    Function focuses on display of the usage of each interpreter 
-    command line (CLI). It uses the documentation of each command line
-    module and give an illustrative example. It highlighted to instruct 
-    the user how to introduce the CLI parameters 
-    
-    Parameters
-    ----------
-    obj : str 
-        string module documentation.
-    topmarker : str, optional
-        Marker to introduce the section of usage. The default is '>'.
-    bottommarker : str, optional
-        Marker to end the section of usage. The default is '<'.
-    mlen : int
-        Marker length. The default is 77
-    Returns
-    -------
-    string object to display
-    
-    Example
-    -------
-    >>> import pycsamt 
-    >>> pycsamt.cli.poof_cli_usage (pycsamt.nm.__doc__)
+Programmatic use
+----------------
+::
 
+    from pycsamt.cli import main
+    main(["info", "station.edi"])
+    main(["convert", "survey/", "--output-dir", "edis/"])
 
-    """ 
-    usage_doc = [obj]
-    usage_doc .insert(0, topmarker * mlen + '\n')
-    usage_doc.append(bottommarker * (mlen + 5) )
-    
-    return ''.join(usage_doc)  
+Available commands
+------------------
+info        Inspect EDI file / directory metadata.
+convert     Convert AVG / J / TEM files to EDI.
+"""
+
+from ._base import main
+
+__all__ = ["main"]

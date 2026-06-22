@@ -10,7 +10,7 @@ import re
 import sys
 import numpy as np
 
-from pycsamt.utils.decorator import gdal_data_check
+from .decorator import gdal_data_check
 
 def set_GDAL () : 
     # Check for gdal availability at module level so we don't have to

@@ -244,3 +244,5 @@ paper_repro/outputs/
 paper_repro/models/*.npz
 paper_repro/models/*_metadata.json
 *updated.zip # zip files should be excluded 
+# RAG index (generated)
+.pycsamt_rag/

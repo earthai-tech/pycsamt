@@ -202,13 +202,15 @@ def build_retriever(
     *,
     chunks: list[RAGChunk] | None = None,
     use_cache: bool = True,
+    prefer_persisted: bool = True,
 ) -> Retriever:
     """Build (or fetch a cached) :class:`Retriever`.
 
-    With *chunks* given, builds directly from them (no disk scan).
-    Otherwise ingests the repo via
-    :func:`pycsamt.assistant.rag.ingest.build_chunks` and caches the
-    result keyed by root.
+    Resolution order when *chunks* is not given:
+
+    1. process cache (keyed by root);
+    2. the persisted ``.pycsamt_rag`` index (fast), if *prefer_persisted*;
+    3. a fresh repo ingest (slow) as the fallback.
     """
     if chunks is not None:
         return Retriever(chunks)
@@ -218,7 +220,13 @@ def build_retriever(
     key = str(root or repo_root())
     if use_cache and key in _CACHE:
         return _CACHE[key]
-    retr = Retriever(build_chunks(root))
+
+    loaded = None
+    if prefer_persisted:
+        from .index_store import load_index
+        loaded = load_index(root=root)
+
+    retr = Retriever(loaded if loaded else build_chunks(root))
     if use_cache:
         _CACHE[key] = retr
     return retr

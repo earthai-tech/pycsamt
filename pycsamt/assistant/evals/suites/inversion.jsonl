@@ -1,0 +1,5 @@
+{"query": "run a 1-D AI inversion", "expected_intent": "workflow", "expected_workflow": "ai_inversion"}
+{"query": "prepare an Occam2D inversion", "expected_workflow": "pre_inversion"}
+{"query": "run a GCN 3D inversion", "expected_workflow": "inv3d"}
+{"query": "U-Net 2D profile inversion", "expected_workflow": "inv2d"}
+{"query": "write ModEM 3D data file", "expected_workflow": "modem"}

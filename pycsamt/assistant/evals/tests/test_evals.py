@@ -16,31 +16,32 @@ import unittest
 from pycsamt.assistant.evals.harness import (
     EvalReport,
     evaluate,
-    load_suite,
+    load_all_suites,
     suites_dir,
 )
 from pycsamt.assistant.rag.retriever import Retriever
 from pycsamt.assistant.rag.schemas import RAGChunk
 
 
-# ── thresholds (kept below observed: intent 90 / wf 100 / line 100 /
-#    symbol-recall 100) so honest dips don't false-fail, real ones do ──
-_MIN_INTENT = 0.80
-_MIN_WORKFLOW = 0.90
+# ── thresholds (kept below observed over all suites: intent ~92 /
+#    wf ~91 / line 100 / symbol-recall 100) so honest dips don't
+#    false-fail, real regressions do ──
+_MIN_INTENT = 0.85
+_MIN_WORKFLOW = 0.85
 _MIN_LINE = 0.90
-_MIN_SYMBOL_RECALL = 0.70
+_MIN_SYMBOL_RECALL = 0.80
 
 
 class TestEvalSuiteGate(unittest.TestCase):
-    """End-to-end gate over the real corpus + project registry."""
+    """End-to-end gate over all suites + the real corpus + registry."""
 
     @classmethod
     def setUpClass(cls):
-        cls.records = load_suite(suites_dir() / "rag_questions.jsonl")
+        cls.records = load_all_suites()
         cls.report = evaluate(cls.records)
 
     def test_suite_nonempty(self):
-        self.assertGreaterEqual(len(self.records), 5)
+        self.assertGreaterEqual(len(self.records), 20)
 
     def test_intent_accuracy(self):
         self.assertGreaterEqual(

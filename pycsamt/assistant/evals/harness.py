@@ -29,7 +29,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-__all__ = ["EvalReport", "load_suite", "evaluate", "suites_dir"]
+__all__ = [
+    "EvalReport", "load_suite", "load_all_suites", "evaluate", "suites_dir",
+]
 
 
 def suites_dir() -> Path:
@@ -45,6 +47,15 @@ def load_suite(path: str | Path) -> list[dict[str, Any]]:
             line = line.strip()
             if line and not line.startswith("#"):
                 out.append(json.loads(line))
+    return out
+
+
+def load_all_suites(directory: str | Path | None = None) -> list[dict[str, Any]]:
+    """Load and concatenate every ``*.jsonl`` suite in *directory*."""
+    d = Path(directory) if directory is not None else suites_dir()
+    out: list[dict[str, Any]] = []
+    for p in sorted(d.glob("*.jsonl")):
+        out.extend(load_suite(p))
     return out
 
 
@@ -85,7 +96,33 @@ def evaluate(
     *retriever* / *registry* default to the project's built ones.
     """
     from pycsamt.agents.router import IntentRouter
+    from pycsamt.agents._workflows import classify_workflow
     from pycsamt.assistant.rag.config import infer_workflow
+
+    # Strip code-request phrasing so the *subject* workflow is scored
+    # (matches what the assistant's code path does).
+    _CODE_PHRASES = (
+        "generate code for", "write code for", "code for", "script for",
+        "generate code", "write code", "python script",
+        "write a script", "create notebook", "notebook for",
+        "give me code", "show me code",
+    )
+
+    def _subject_workflow(q: str) -> str | None:
+        # Registry (handles phrasing: "occam2d inversion" -> pre_inversion).
+        wf = classify_workflow(q, default=None)
+        if wf == "code_gen":
+            t = " " + q.lower() + " "
+            for p in _CODE_PHRASES:
+                t = t.replace(p, " ")
+            wf = classify_workflow(t, default=None)
+            if wf == "code_gen":
+                wf = None
+        # Fallback to symbol-name keywords ("StaticShiftAgent",
+        # "estimate_ss_ama") that the phrase registry doesn't cover.
+        if wf is None:
+            wf = infer_workflow(q)
+        return wf
 
     if retriever is None:
         from pycsamt.assistant.rag.retriever import build_retriever
@@ -111,7 +148,7 @@ def evaluate(
     for rec in records:
         q = rec["query"]
         got_intent = router.route(q).intent
-        got_wf = infer_workflow(q)
+        got_wf = _subject_workflow(q)
         got_line = (
             registry.find_line_in_text(q) if registry else None
         )

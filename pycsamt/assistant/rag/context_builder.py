@@ -17,6 +17,7 @@ chunks, so the assistant is useful even without an LLM key.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -33,18 +34,29 @@ _SNIPPET_CHARS = 700
 
 
 def _snippet(chunk: RAGChunk, max_len: int = _SNIPPET_CHARS) -> str:
-    """Most informative slice of a chunk (docstring/body over raw code)."""
+    """Most informative prose slice of a chunk.
+
+    For code chunks: the docstring. For doc/recipe chunks: the body with
+    the (separately-shown) heading and embedded code fences stripped, so
+    the offline answer reads cleanly instead of dumping raw markdown.
+    """
     text = chunk.text or ""
     if "Docstring:" in text:
-        after = text.split("Docstring:", 1)[1]
-        body = after.split("\nCode:", 1)[0].strip()
-        if body:
+        body = text.split("Docstring:", 1)[1].split("\nCode:", 1)[0]
+        if body.strip():
             text = body
     elif text.startswith("Document:"):
-        # drop the "Document: <path>" first line
-        text = text.split("\n", 1)[-1].strip()
-    text = text.strip()
-    return text if len(text) <= max_len else text[:max_len] + " …"
+        text = text.split("\n", 1)[-1]  # drop "Document: <path>"
+        # drop a leading heading line equal to the chunk title (it is
+        # already shown as the block label) and any fenced code blocks
+        title = (chunk.title or "").strip()
+        lines = text.splitlines()
+        if lines and lines[0].strip() == title:
+            lines = lines[1:]
+        text = "\n".join(lines)
+        text = re.sub(r"```.*?```", "", text, flags=re.S)
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text if len(text) <= max_len else text[:max_len].rstrip() + " …"
 
 
 @dataclass
@@ -61,34 +73,88 @@ class AssembledContext:
     def is_empty(self) -> bool:
         return not self.chunks and not self.project_context
 
+    def _lead_chunk(self) -> RAGChunk | None:
+        """Pick the best 'definition' chunk to open the answer.
+
+        Prefer a code symbol whose leaf name is mentioned in the query
+        (e.g. "StaticShiftAgent"), else the first code symbol, else the
+        first chunk.
+        """
+        ql = self.query.lower()
+        code_kinds = ("python_symbol", "python_method", "module_doc")
+        for c in self.chunks:
+            if c.symbol and c.kind in code_kinds:
+                leaf = c.symbol.rsplit(".", 1)[-1].lower()
+                if len(leaf) >= 3 and leaf in ql:
+                    return c
+        for c in self.chunks:
+            if c.symbol and c.kind in code_kinds:
+                return c
+        return self.chunks[0] if self.chunks else None
+
     def compose_offline_answer(self, top: int = 3) -> str:
-        """A readable, no-LLM answer assembled from the top chunks."""
+        """A readable, no-LLM answer assembled from the top chunks.
+
+        Leads with the most relevant symbol's docstring, then adds a
+        couple of supporting snippets and the key/related symbols. (With
+        an API key the LLM synthesises a fluent answer from the same
+        retrieved context instead.)
+        """
         if self.is_empty():
             return (
                 "I couldn't find anything relevant in the pyCSAMT "
                 "reference for that. Try naming a class, function or "
                 "workflow (e.g. static shift, phase tensor, AI inversion)."
             )
+
         parts: list[str] = []
         if self.project_context:
             pc = self.project_context
             parts.append(
-                f"**Project line {pc.get('line')}** → "
+                f"**Survey line {pc.get('line')}** — "
                 f"{pc.get('n_edi_files', 0)} EDI file(s) at "
                 f"`{pc.get('edi_dir')}`"
                 + ("" if pc.get("exists") else "  (path not found)")
             )
-        parts.append("Based on the pyCSAMT reference:")
-        for c in self.chunks[:top]:
+
+        lead = self._lead_chunk()
+        seen: set[str] = set()
+        shown = 0
+        for c in ([lead] + self.chunks) if lead else self.chunks:
+            if shown >= top:
+                break
             label = c.symbol or c.title or c.source_path
-            parts.append(f"\n**{label}**\n{_snippet(c, 360)}")
+            if label in seen:
+                continue
+            body = _snippet(c, 420)
+            if not body:
+                continue
+            seen.add(label)
+            parts.append(f"**{label}**\n{body}")
+            shown += 1
+
+        # related API symbols (dedup, skip the lead + test fixtures)
+        rel = []
+        for s in self.symbols:
+            sym = s.get("symbol")
+            if not sym or sym in rel or sym in seen:
+                continue
+            if ".tests." in sym or ".test_" in sym:
+                continue
+            rel.append(sym)
+        if rel:
+            parts.append(
+                "Related symbols: "
+                + ", ".join(f"`{s}`" for s in rel[:6])
+            )
+
         if self.citations:
             cites = "  ".join(
                 f"[{c['n']}] {c['source_path']}"
                 for c in self.citations[:top]
             )
-            parts.append(f"\nSources: {cites}")
-        return "\n".join(parts)
+            parts.append(f"Sources: {cites}")
+        return "\n\n".join(parts)
 
 
 class ContextBuilder:

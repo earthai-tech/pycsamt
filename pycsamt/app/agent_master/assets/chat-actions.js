@@ -61,6 +61,30 @@
           return;
         }
 
+        /* agent answer copy: data-copy attr (exact answer text) */
+        var copyAttr = copyBtn.getAttribute(
+          "data-copy"
+        );
+        if (copyAttr) {
+          if (navigator.clipboard) {
+            navigator.clipboard
+              .writeText(copyAttr)
+              .then(function () {
+                var ic =
+                  copyBtn.querySelector("i");
+                if (ic) {
+                  ic.className =
+                    "bi bi-clipboard-check";
+                  setTimeout(function () {
+                    ic.className =
+                      "bi bi-clipboard";
+                  }, 1800);
+                }
+              });
+          }
+          return;
+        }
+
         /* user bubble copy: text content */
         var row = copyBtn.closest(
           ".am-msg-row"

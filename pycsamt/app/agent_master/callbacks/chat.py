@@ -762,7 +762,20 @@ def _agent_bubble(
                         _ts(), className="am-ts"
                     ),
                     html.Div(
-                        [_pin_button(mid)],
+                        [
+                            html.Button(
+                                html.I(
+                                    className="bi bi-clipboard"
+                                ),
+                                className=(
+                                    "am-msg-action am-copy-btn"
+                                ),
+                                title="Copy answer",
+                                n_clicks=0,
+                                **{"data-copy": text or ""},
+                            ),
+                            _pin_button(mid),
+                        ],
                         className="am-msg-toolbar",
                     ) if mid else html.Div(),
                 ],

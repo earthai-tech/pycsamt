@@ -86,8 +86,11 @@ class TestContextBuilder(unittest.TestCase):
     def test_offline_answer_composed(self):
         ac = self.builder.build("static shift")
         ans = ac.compose_offline_answer()
-        self.assertIn("pyCSAMT reference", ans)
+        # leads with a real symbol's docstring, ends with citations,
+        # and has no empty code fences
+        self.assertIn("estimate_ss_ama", ans)
         self.assertIn("Sources:", ans)
+        self.assertNotIn("```", ans)
 
     def test_empty_context(self):
         empty = AssembledContext(query="x")

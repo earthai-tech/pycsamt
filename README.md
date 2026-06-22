@@ -1,8 +1,6 @@
 <div align="center">
-  <img src="docs/source/_static/pycsamt_logo.svg" alt="pyCSAMT logo" width="340"/>
+  <img src="docs/source/_static/pycsamt-v2-symbol-logo.svg" alt="pyCSAMT v2 logo" width="340"/>
 </div>
-
-<h1 align="center">pyCSAMT v2</h1>
 
 <p align="center">
   <strong>Scientific Python toolkit for MT, AMT, CSAMT, CSEM, and TDEM survey processing, inversion, interpretation, and reproducible workflow automation.</strong>
@@ -22,12 +20,10 @@
 
 pyCSAMT v2 is a rewrite of the original pyCSAMT project. The package is being organized as a scientific Python library with:
 
-- a scikit-learn-style documentation structure using the PyData Sphinx theme,
 - a command-line interface for field and production workflows,
 - a declarative pipeline system for reproducible processing,
 - physics-based inversion support for electromagnetic methods,
 - AI-assisted agents for workflow guidance, QC, inversion preparation, reporting, and automation,
-- developer documentation for API policy, docstring style, and documentation builds.
 
 The v2 documentation and API are under active development. Some examples may evolve before the stable v2 release.
 
@@ -177,7 +173,7 @@ See `docs/source/pipeline/` for the in-progress v2 pages.
 
 ## AI-Assisted Agents
 
-The `pycsamt.agents` package provides optional AI-assisted workflow components. Agents are lazy-loaded so the base package remains usable without LLM client libraries.
+The `pycsamt.agents` package provides AI-assisted workflow components. Agents are lazy-loaded so the base package remains usable without LLM client libraries.
 
 Examples of available agent groups:
 
@@ -239,37 +235,6 @@ sphinx-build -b html source _build/html
 ```
 
 The public documentation is planned at <https://pycsamt.readthedocs.io>.
-
----
-
-## Repository Layout
-
-```text
-pycsamt/
-  agents/        AI-assisted workflow agents
-  ai/            learned inversion models and training utilities
-  api/           runtime configuration and user-facing API helpers
-  app/           desktop and web application entry points
-  backends/      ML backend selection
-  cli/           pycsamt command-line interface
-  core/          core numerical and domain primitives
-  emtools/       electromagnetic processing tools
-  forward/       forward modelling utilities
-  gis/           geospatial helpers
-  interp/        geological interpretation and export
-  inversion/     inversion workflows and backend integrations
-  io/            legacy and compatibility I/O paths
-  jones/         Jones-format support
-  metadata/      package metadata models and catalogues
-  models/        Occam2D, ModEM, MARE2DEM model interfaces
-  pipeline/      reproducible workflow engine
-  seg/           SEG/EDI data structures and operations
-  site/          site and survey abstractions
-  tdem/          time-domain EM workflows
-  transformers/  data-format transformations
-  z/             impedance tensor tools
-  zonge/         Zonge-format support
-```
 
 ---
 

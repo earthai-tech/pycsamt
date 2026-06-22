@@ -282,10 +282,18 @@ def estimate_ss_ama(
                 rr = np.repeat(vals, np.maximum(1, (w * 100).astype(int)))
                 t[kf] = np.nanmedian(rr)
         d = lr - t  # ≈ log10(s_i) per freq
+        # A station with no overlapping finite data vs its neighbours
+        # yields an all-NaN d → NaN delta → NaN factors that would
+        # destroy the impedance when applied. Skip it (it stays
+        # uncorrected, factor 1.0) rather than emitting a NaN row.
+        if not np.any(np.isfinite(d)):
+            continue
         if robust_overall == "mean":
             delta = float(np.nanmean(d))
         else:
             delta = float(np.nanmedian(d))
+        if not np.isfinite(delta):
+            continue
         fac_rho = 10.0 ** (-delta)
         fac_z = 10.0 ** (-0.5 * delta)
         rows.append(
@@ -326,15 +334,26 @@ def _scale_site_Z(ed: Any, s: float) -> None:
     Z, z, fr = _get_z_block(ed)
     if Z is None:
         return
+    # Guard against non-finite / non-positive factors. A NaN factor
+    # (e.g. a station whose AMA delta was all-NaN) or a 0/negative one
+    # would otherwise turn the impedance into NaN/zeros, silently
+    # destroying the data — corrupted EDIs then fail to load with
+    # "No stations with valid impedance data found". Leave Z unchanged.
     try:
-        Z.z = z * float(s)
+        s = float(s)
+    except (TypeError, ValueError):
+        return
+    if not np.isfinite(s) or s <= 0:
+        return
+    try:
+        Z.z = z * s
     except Exception:
         pass
     # scale errors if present
     try:
         ze = getattr(Z, "z_err", None)
         if isinstance(ze, np.ndarray) and ze.shape == z.shape:
-            setattr(Z, "z_err", ze * float(s))
+            setattr(Z, "z_err", ze * s)
     except Exception:
         pass
 

@@ -9,6 +9,7 @@ import pytest
 
 from pycsamt.api import APIFrame, reset_api_view
 from pycsamt.emtools.ss import (
+    apply_ss_factors,
     detect_near_surface,
     estimate_ss_ama,
     estimate_ss_bilateral,
@@ -16,6 +17,7 @@ from pycsamt.emtools.ss import (
     estimate_ss_refmedian,
     plot_ns_detection,
 )
+from pycsamt.emtools._core import _iter_items, _get_z_block
 
 # ----------------------------- fixtures ----------------------------------- #
 
@@ -114,6 +116,41 @@ def test_detect_ns_api_flag_overrides_global():
     assert isinstance(viewed, APIFrame)
     assert viewed.kind == "emtools.ss.near_surface"
     assert viewed.df.equals(plain)
+
+
+def _finite_z_count(sites):
+    n = 0
+    for i, ed in enumerate(_iter_items(sites)):
+        _, z, _ = _get_z_block(ed)
+        if z is not None:
+            n += int(np.isfinite(z).sum())
+    return n
+
+
+@pytest.mark.parametrize("bad", [float("nan"), 0.0, -1.5, float("inf")])
+def test_apply_ss_factors_ignores_non_finite_or_nonpositive(bad):
+    """A NaN/0/negative factor must not destroy the impedance.
+
+    Regression: such factors turned Z into NaN/zeros, so corrected EDIs
+    exported via "apply in place" reloaded with no valid impedance
+    ("No stations with valid impedance data found").
+    """
+    site = _clean_site("S1")
+    before = _finite_z_count([site])
+    corr = apply_ss_factors(
+        [_clean_site("S1")], {"S1": bad},
+        key="fac_z", inplace=False, verbose=0,
+    )
+    assert _finite_z_count(corr) == before
+
+
+def test_apply_ss_factors_valid_factor_rescales():
+    corr = apply_ss_factors(
+        [_clean_site("S1")], {"S1": 2.0},
+        key="fac_z", inplace=False, verbose=0,
+    )
+    # still finite, just scaled
+    assert _finite_z_count(corr) > 0
 
 
 def test_static_shift_estimators_can_return_api_frames_for_empty_input():

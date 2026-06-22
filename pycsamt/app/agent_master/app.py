@@ -54,14 +54,29 @@ def create_app(
     import dash_bootstrap_components as dbc
 
     # Bootstrap + Bootstrap Icons
+    # + Highlight.js (atom-one-dark theme)
+    _HJS = "11.9.0"
+    _HJS_CDN = (
+        "https://cdnjs.cloudflare.com/"
+        f"ajax/libs/highlight.js/{_HJS}"
+    )
     _EXT = [
         dbc.themes.BOOTSTRAP,
         dbc.icons.BOOTSTRAP,
+        f"{_HJS_CDN}/styles/atom-one-dark.min.css",
+    ]
+    _EXT_JS = [
+        {
+            "src": (
+                f"{_HJS_CDN}/highlight.min.js"
+            ),
+        },
     ]
 
     app = dash.Dash(
         __name__,
         external_stylesheets=_EXT,
+        external_scripts=_EXT_JS,
         suppress_callback_exceptions=(
             suppress_exceptions
         ),

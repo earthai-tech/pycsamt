@@ -11,9 +11,9 @@ Every agent:
     PYCSAMT_STATION_RENDERING, PYCSAMT_CONTROL, PLOT_CONFIG) so all
     figures produced by agents are indistinguishable from hand-crafted
     pycsamt plots.
-  - Supports three LLM providers: Anthropic Claude (default), OpenAI,
-    Google Gemini.  When no API key is supplied every LLM-dependent
-    method degrades gracefully.
+  - Supports four LLM providers: Anthropic Claude (default), OpenAI,
+    Google Gemini, DeepSeek.  When no API key is supplied every
+    LLM-dependent method degrades gracefully.
 """
 
 from __future__ import annotations
@@ -36,13 +36,14 @@ from ..api.agents import AGENT_CONFIG
 logger = logging.getLogger(__name__)
 
 # ── constants ─────────────────────────────────────────────────────────────────
-_PROVIDERS = {"claude", "openai", "gemini"}
+_PROVIDERS = {"claude", "openai", "gemini", "deepseek"}
 _STATUS    = {"success", "failed", "needs_review"}
 
 _DEFAULT_MODELS = {
-    "claude": "claude-sonnet-4-6",
-    "openai": "gpt-4o",
-    "gemini": "gemini-2.0-flash",
+    "claude":   "claude-sonnet-4-6",
+    "openai":   "gpt-4o",
+    "gemini":   "gemini-2.0-flash",
+    "deepseek": "deepseek-chat",
 }
 
 _RETRY_DELAYS = (1.0, 2.0, 4.0)   # seconds between LLM retries
@@ -152,7 +153,7 @@ class BaseAgent(ABC):
         every ``llm_interpretation`` field will be ``None``.
     model : str or None
         LLM model identifier.  Defaults to the provider's recommended model.
-    llm_provider : {"claude", "openai", "gemini"}
+    llm_provider : {"claude", "openai", "gemini", "deepseek"}
         Which provider to use.  Default ``"claude"``.
     section_preset : str
         Which :data:`~pycsamt.api.section.PYCSAMT_SECTION` preset governs
@@ -275,9 +276,10 @@ class BaseAgent(ABC):
 
         sys_msg = system_message or self.SYSTEM_PROMPT
         dispatch = {
-            "claude": self._query_claude,
-            "openai": self._query_openai,
-            "gemini": self._query_gemini,
+            "claude":   self._query_claude,
+            "openai":   self._query_openai,
+            "gemini":   self._query_gemini,
+            "deepseek": self._query_deepseek,
         }
         fn = dispatch[self.llm_provider]
 
@@ -379,6 +381,46 @@ class BaseAgent(ABC):
         n_in  = len(prompt.split()) * 4 // 3
         n_out = len(text.split())   * 4 // 3
         cost  = AGENT_CONFIG.estimate_cost(self.llm_provider, self.model, n_in, n_out)
+        return text, cost
+
+    def _query_deepseek(
+        self,
+        prompt: str,
+        system_message: str,
+        temperature: float,
+        max_tokens: int,
+    ) -> tuple[str, float]:
+        r"""Call DeepSeek (OpenAI-compatible) and return (text, cost_usd).
+
+        DeepSeek exposes an OpenAI-compatible REST API at
+        ``https://api.deepseek.com``.  The ``openai`` Python package is
+        reused with a custom ``base_url``.
+        """
+        import openai  # lazy import
+
+        client = openai.OpenAI(
+            api_key=self.api_key,
+            base_url="https://api.deepseek.com",
+        )
+        resp = client.chat.completions.create(
+            model=self.model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_message,
+                },
+                {"role": "user", "content": prompt},
+            ],
+        )
+        text = resp.choices[0].message.content
+        cost = AGENT_CONFIG.estimate_cost(
+            self.llm_provider,
+            self.model,
+            resp.usage.prompt_tokens,
+            resp.usage.completion_tokens,
+        )
         return text, cost
 
     # ── JSON extraction helper ────────────────────────────────────────────────

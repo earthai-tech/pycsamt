@@ -85,7 +85,11 @@ Keys are resolved in this order:
    ``"openai"``    ``OPENAI_API_KEY``, ``PYCSAMT_OPENAI_API_KEY``
    ``"gemini"``    ``GOOGLE_API_KEY``, ``GOOGLE_GENERATIVEAI_API_KEY``,
                    ``PYCSAMT_GEMINI_API_KEY``
+   ``"deepseek"``  ``DEEPSEEK_API_KEY``, ``PYCSAMT_DEEPSEEK_API_KEY``
    =============== ===========================================================
+
+Keys are also loaded automatically from ``.env.local`` at the repo root
+(without overwriting variables already set in the OS environment).
 
 3. ``None`` — agent runs without LLM support (regex/rule-based fallback).
 """
@@ -93,8 +97,46 @@ Keys are resolved in this order:
 from __future__ import annotations
 
 import os
+import threading
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Generator
+
+# Thread-local flag: when True, _resolve_key()
+# skips env-var lookup so offline mode is
+# truly offline even when API keys exist in
+# os.environ (e.g. loaded from .env.local).
+_TLS = threading.local()
+
+# ── Auto-load .env.local from repo root ───────────────────────────────────────
+# Populates os.environ before any key resolution so that
+# ANTHROPIC_API_KEY / OPENAI_API_KEY / DEEPSEEK_API_KEY etc.
+# are available without requiring python-dotenv.
+def _load_env_local() -> None:
+    here = Path(__file__).resolve()
+    # Walk up to find repo root (contains .env.local)
+    for parent in here.parents:
+        env_file = parent / ".env.local"
+        if env_file.exists():
+            for raw in env_file.read_text().splitlines():
+                line = raw.strip()
+                if (
+                    not line
+                    or line.startswith("#")
+                    or "=" not in line
+                ):
+                    continue
+                k, _, v = line.partition("=")
+                k = k.strip()
+                v = v.strip()
+                # never overwrite a key already set
+                # in the real environment
+                if k and v and k not in os.environ:
+                    os.environ[k] = v
+            break
+
+
+_load_env_local()
 
 __all__ = [
     "AgentConfig",
@@ -108,12 +150,15 @@ __all__ = [
 # Module-level constants
 # ---------------------------------------------------------------------------
 
-_PROVIDERS: frozenset[str] = frozenset({"claude", "openai", "gemini"})
+_PROVIDERS: frozenset[str] = frozenset(
+    {"claude", "openai", "gemini", "deepseek"}
+)
 
 _DEFAULT_MODELS: dict[str, str] = {
-    "claude": "claude-sonnet-4-6",
-    "openai": "gpt-4o",
-    "gemini": "gemini-2.0-flash",
+    "claude":    "claude-sonnet-4-6",
+    "openai":    "gpt-4o",
+    "gemini":    "gemini-2.0-flash",
+    "deepseek":  "deepseek-chat",
 }
 
 _ENV_KEYS: dict[str, list[str]] = {
@@ -129,6 +174,10 @@ _ENV_KEYS: dict[str, list[str]] = {
         "GOOGLE_API_KEY",
         "GOOGLE_GENERATIVEAI_API_KEY",
         "PYCSAMT_GEMINI_API_KEY",
+    ],
+    "deepseek": [
+        "DEEPSEEK_API_KEY",
+        "PYCSAMT_DEEPSEEK_API_KEY",
     ],
 }
 
@@ -159,13 +208,20 @@ _BUILTIN_RATES: dict[str, dict[str, dict[str, float]]] = {
         "gemini-1.5-flash-8b":          {"input":  0.0375,"output": 0.15},
         "gemini-2.0-flash":             {"input":  0.10, "output":  0.40},
     },
+    "deepseek": {
+        # DeepSeek-V3 / deepseek-chat
+        "deepseek-chat":                {"input":  0.27, "output":  1.10},
+        # DeepSeek-R1 (reasoning model)
+        "deepseek-reasoner":            {"input":  0.55, "output":  2.19},
+    },
 }
 
 # Provider-level defaults when the exact model is not found anywhere
 _PROVIDER_DEFAULTS: dict[str, dict[str, float]] = {
-    "claude": {"input":  3.00, "output": 15.00},
-    "openai": {"input":  2.50, "output": 10.00},
-    "gemini": {"input":  3.50, "output": 10.50},
+    "claude":   {"input":  3.00, "output": 15.00},
+    "openai":   {"input":  2.50, "output": 10.00},
+    "gemini":   {"input":  3.50, "output": 10.50},
+    "deepseek": {"input":  0.27, "output":  1.10},
 }
 
 
@@ -846,17 +902,49 @@ class AgentConfig:
     # ------------------------------------------------------------------
 
     def _resolve_key(self, provider: str | None) -> str | None:
-        """Return the API key for *provider*: stored key → env var → None."""
+        """Return the API key for *provider*: stored key → env var → None.
+
+        When :meth:`offline` context is active for the current thread,
+        env-var lookup is skipped so that a key in the OS environment
+        (e.g. from ``.env.local``) does not cause unexpected LLM calls.
+        """
         if provider is None:
             return None
         explicit = self._keys.get(provider)
         if explicit:
             return explicit
+        # Skip env resolution in offline mode.
+        if getattr(_TLS, "force_offline", False):
+            return None
         for env_var in _ENV_KEYS.get(provider, []):
             val = os.environ.get(env_var)
             if val:
                 return val
         return None
+
+    @contextmanager
+    def offline(self) -> Generator["AgentConfig", None, None]:
+        """Context manager: force truly offline mode in the current thread.
+
+        While active, :meth:`_resolve_key` will not inspect environment
+        variables, so agents created inside the block receive ``api_key=None``
+        even when ``ANTHROPIC_API_KEY`` (or similar) is set in the OS
+        environment.  Uses :mod:`threading.local` so concurrent requests
+        in other threads are unaffected.
+
+        Examples
+        --------
+        ::
+
+            with AGENT_CONFIG.offline():
+                agent = DataQCAgent()  # api_key will be None
+        """
+        old = getattr(_TLS, "force_offline", False)
+        _TLS.force_offline = True
+        try:
+            yield self
+        finally:
+            _TLS.force_offline = old
 
     @staticmethod
     def _validate_provider(provider: str) -> None:

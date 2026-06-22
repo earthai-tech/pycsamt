@@ -73,7 +73,8 @@ class Mare2DEMAgent(BaseAgent):
     model : str or None
         LLM model identifier; defaults to the provider's recommended model.
     llm_provider : str
-        ``"claude"`` (default), ``"openai"``, or ``"gemini"``.
+        ``"claude"`` (default), ``"openai"``,
+        ``"gemini"``, or ``"deepseek"``.
     n_procs : int
         Number of MPI processes for MARE2DEM (default 4).
     use_mpi : bool

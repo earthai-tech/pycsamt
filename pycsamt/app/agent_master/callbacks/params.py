@@ -55,6 +55,9 @@ _FID_INV_CODE  = {
     "type": "am-pf",
     "key": "inversion_code",
 }
+_FID_CHECKPOINT = {
+    "type": "am-pf", "key": "checkpoint",
+}
 
 # ── Pipeline step field IDs (pattern-matching)
 # type="am-ps" for step-level fields.
@@ -73,7 +76,7 @@ _FID_SNR        = {
     "key": "snr_threshold",
 }
 _FID_SS_METHOD  = {
-    "type": "am-ps", "key": "ss_method",
+    "type": "am-ps", "key": "method",
 }
 _FID_DENOISE    = {
     "type": "am-ps",
@@ -169,24 +172,28 @@ _STEP_SECTIONS: dict[str, dict] = {
         "fields": [
             {
                 "id": _FID_SS_METHOD,
-                "key": "ss_method",
+                "key": "method",
                 "label": "Correction method",
                 "type": "radio",
                 "options": [
                     {
-                        "label": "SPI (default)",
-                        "value": "spi",
+                        "label": "AMA (default)",
+                        "value": "ama",
                     },
                     {
-                        "label": "Distortion",
-                        "value": "distortion",
+                        "label": "Loess",
+                        "value": "loess",
+                    },
+                    {
+                        "label": "Ref-median",
+                        "value": "refmedian",
                     },
                     {
                         "label": "Skip",
                         "value": "none",
                     },
                 ],
-                "default": "spi",
+                "default": "ama",
                 "inline": True,
             },
         ],
@@ -350,8 +357,25 @@ _SCHEMAS: dict[str, dict] = {
                 ],
                 "default": 0.01,
             },
+            {
+                "id": _FID_CHECKPOINT,
+                "key": "checkpoint",
+                "label": "Model / checkpoint path",
+                "type": "text",
+                "default": "",
+                "placeholder": (
+                    "Leave blank to train"
+                    " from scratch"
+                ),
+                "help": (
+                    "Optional: path to a "
+                    "pre-trained model file "
+                    "or checkpoint folder to "
+                    "skip full training."
+                ),
+            },
         ],
-        "steps": ["load", "qc", "denoise"],
+        "steps": [],
     },
     "inv1d": None,
     "pinn_inversion": {
@@ -425,8 +449,26 @@ _SCHEMAS: dict[str, dict] = {
                     "resistivity changes."
                 ),
             },
+            {
+                "id": _FID_CHECKPOINT,
+                "key": "checkpoint",
+                "label": (
+                    "Checkpoint path (optional)"
+                ),
+                "type": "text",
+                "default": "",
+                "placeholder": (
+                    "Leave blank to train"
+                    " from scratch"
+                ),
+                "help": (
+                    "Optional: resume PINN "
+                    "training from a saved "
+                    "checkpoint file or folder."
+                ),
+            },
         ],
-        "steps": ["load", "qc"],
+        "steps": [],
     },
     "hybrid_inversion": {
         "title": "Hybrid Inversion",
@@ -469,8 +511,27 @@ _SCHEMAS: dict[str, dict] = {
                 "min": 0.0, "max": 0.1,
                 "step": 0.005, "default": 0.01,
             },
+            {
+                "id": _FID_CHECKPOINT,
+                "key": "checkpoint",
+                "label": (
+                    "AI model / checkpoint path"
+                ),
+                "type": "text",
+                "default": "",
+                "placeholder": (
+                    "/path/to/model.pt or"
+                    " checkpoint/"
+                ),
+                "help": (
+                    "Required: path to a trained"
+                    " AI inverter or checkpoint"
+                    " folder. Run ai_inversion"
+                    " first if none is available."
+                ),
+            },
         ],
-        "steps": ["load", "qc"],
+        "steps": [],
     },
     "inv2d": {
         "title": "2-D AI Inversion (U-Net)",
@@ -517,8 +578,26 @@ _SCHEMAS: dict[str, dict] = {
                 "min": 100, "max": 3000,
                 "step": 100, "default": 500,
             },
+            {
+                "id": _FID_CHECKPOINT,
+                "key": "checkpoint",
+                "label": (
+                    "U-Net checkpoint (optional)"
+                ),
+                "type": "text",
+                "default": "",
+                "placeholder": (
+                    "Leave blank to train"
+                    " from scratch"
+                ),
+                "help": (
+                    "Optional: path to a "
+                    "pre-trained U-Net model "
+                    "file or checkpoint folder."
+                ),
+            },
         ],
-        "steps": ["load", "qc"],
+        "steps": [],
     },
     "inv3d": {
         "title": "3-D GCN Inversion",
@@ -567,8 +646,26 @@ _SCHEMAS: dict[str, dict] = {
                 "step": 0.001,
                 "default": 0.005,
             },
+            {
+                "id": _FID_CHECKPOINT,
+                "key": "checkpoint",
+                "label": (
+                    "GCN checkpoint (optional)"
+                ),
+                "type": "text",
+                "default": "",
+                "placeholder": (
+                    "Leave blank to train"
+                    " from scratch"
+                ),
+                "help": (
+                    "Optional: path to a "
+                    "pre-trained GCN model "
+                    "file or checkpoint folder."
+                ),
+            },
         ],
-        "steps": ["load", "qc"],
+        "steps": [],
     },
     "ensemble_inversion": {
         "title": "Ensemble Inversion",
@@ -604,7 +701,7 @@ _SCHEMAS: dict[str, dict] = {
                 "step": 100, "default": 500,
             },
         ],
-        "steps": ["load", "qc", "denoise"],
+        "steps": [],
     },
     "pre_inversion": {
         "title": "Pre-Inversion Setup",
@@ -646,7 +743,7 @@ _SCHEMAS: dict[str, dict] = {
                 "step": 500, "default": 10000.0,
             },
         ],
-        "steps": ["load", "qc", "static_shift"],
+        "steps": [],
     },
     "modem": {
         "title": "ModEM 3-D Setup",
@@ -674,7 +771,7 @@ _SCHEMAS: dict[str, dict] = {
                 "step": 1000, "default": 50000.0,
             },
         ],
-        "steps": ["load", "qc"],
+        "steps": [],
     },
     # ── Pipeline-only workflows ───────────────
     "qc": {
@@ -1197,6 +1294,18 @@ def _field_el(f: dict, val: Any) -> Any:
             inline=f.get("inline", False),
             className="am-pf-radio",
         )
+    if ft == "text":
+        return dbc.Input(
+            id=fid,
+            type="text",
+            value=val or "",
+            placeholder=f.get(
+                "placeholder", ""
+            ),
+            size="sm",
+            debounce=True,
+            className="am-pf-text",
+        )
     return html.Div(id=fid)
 
 
@@ -1539,13 +1648,29 @@ def register_params(app) -> None:
                 }])
                 break
 
+        # Apply line filter if user had pre-
+        # selected line(s) before the param modal.
+        # Fall back to edi_path snapshotted in
+        # pending if STORE_EDI is now empty.
         jid = _new_job()
+        _edi_use = dict(edi_store or {})
+        if not _edi_use.get("path"):
+            # STORE_EDI lost — recover from pending
+            _fb_path = pending.get("edi_path", "")
+            if _fb_path:
+                _edi_use["path"] = _fb_path
+            _fb_grp = pending.get("edi_groups", {})
+            if _fb_grp:
+                _edi_use["groups"] = _fb_grp
+        _sel = pending.get("selected_lines", [])
+        if _sel:
+            _edi_use["selected_lines"] = _sel
         threading.Thread(
             target=_run_agent,
             args=(
                 jid,
                 pending.get("text", ""),
-                edi_store or {},
+                _edi_use,
                 settings or {},
                 new_ic,
             ),

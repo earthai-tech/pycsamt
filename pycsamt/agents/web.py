@@ -616,8 +616,17 @@ def build_app():
         with gr.Row():
             api_key_box   = gr.Textbox(label="LLM API key", type="password",
                                        placeholder=_LLM_HINT, scale=3)
-            llm_prov_box  = gr.Dropdown(["claude","openai","gemini"],
-                                         value="claude", label="Provider", scale=1)
+            llm_prov_box = gr.Dropdown(
+                [
+                    "claude",
+                    "openai",
+                    "gemini",
+                    "deepseek",
+                ],
+                value="claude",
+                label="Provider",
+                scale=1,
+            )
 
         with gr.Tabs():
 

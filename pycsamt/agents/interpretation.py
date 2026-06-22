@@ -104,13 +104,22 @@ class InterpretationAgent(BaseAgent):
         t0 = time.time()
         warnings: list[str] = []
 
-        model_raw = input_data.get("model") or input_data.get("layered_model")
-        geo_context = input_data.get("context", self.context)
+        model_raw = input_data.get("model")
+        if model_raw is None:
+            model_raw = input_data.get(
+                "layered_model"
+            )
+        geo_context = input_data.get(
+            "context", self.context
+        )
         rms = input_data.get("rms")
 
         if model_raw is None:
             return AgentResult.failed(
-                "No 'model' or 'layered_model' key in input_data.",
+                "No model available for "
+                "interpretation. Run inversion "
+                "first and ensure EDI data is "
+                "loaded.",
                 elapsed=time.time() - t0,
             )
 
@@ -133,11 +142,17 @@ class InterpretationAgent(BaseAgent):
         depths: list[float] = [0.0]
         for h in ths:
             depths.append(depths[-1] + float(h))
+        # Pad depths if thicknesses shorter than layers
+        while len(depths) <= len(rhos):
+            depths.append(depths[-1] + 50.0)
 
         layer_interps: list[dict] = []
         for k, rho in enumerate(rhos):
             top = depths[k]
-            bot = depths[k + 1] if k < len(depths) - 1 else None
+            bot = (
+                depths[k + 1]
+                if k + 1 < len(depths) else None
+            )
             litho = resistivity_to_lithology(float(rho))
             layer_interps.append({
                 "layer":        k + 1,
@@ -154,20 +169,37 @@ class InterpretationAgent(BaseAgent):
         # ── LLM interpretation ────────────────────────────────────────────────
         interp_text = ""
         if self.api_key:
+            def _bot_str(d):
+                b = d.get("depth_bot_m")
+                return (
+                    "basement"
+                    if b is None
+                    else f"{b:.0f}"
+                )
             layer_str = "\n".join(
-                f"  Layer {d['layer']}: ρ={d['resistivity']:.0f} Ω·m, "
-                f"depth {d['depth_top_m']:.0f}–"
-                f"{d['depth_bot_m']:.0f if d['depth_bot_m'] else '∞'} m "
-                f"→ {d['lithology']}"
+                f"  Layer {d['layer']}: "
+                f"{d['resistivity']:.0f} Ohm.m, "
+                f"depth {d['depth_top_m']:.0f}"
+                f"-{_bot_str(d)} m"
+                f" -- {d['lithology']}"
                 for d in layer_interps
             )
+            rms_line = (
+                f"RMS misfit: {rms:.3f}\n"
+                if rms else ""
+            )
             prompt = (
-                f"Geological context: {geo_context or 'not specified'}\n"
-                f"RMS misfit: {rms:.3f}\n" if rms else ""
-                f"Resistivity model:\n{layer_str}\n\n"
+                f"Geological context: "
+                f"{geo_context or 'not specified'}\n"
+                f"{rms_line}"
+                f"Resistivity model:\n"
+                f"{layer_str}\n\n"
                 "Write a geological interpretation."
             )
-            interp_text = self.query_llm(prompt, max_tokens=350) or ""
+            interp_text = (
+                self.query_llm(prompt, max_tokens=350)
+                or ""
+            )
         else:
             # fallback: build a simple rule-based summary
             lines = [f"Layer {d['layer']}: {d['resistivity']:.0f} Ω·m "

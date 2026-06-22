@@ -6,16 +6,16 @@ DRCNNNet — Dense Residual CNN for joint / multi-modal EM inversion.
 
 Adapts the Dense-Residual Convolutional Neural Network architecture of
 Guo et al. (2021) to the general case of fusing two or more 1-D EM
-datasets (e.g., AMT + TEM, MT + gravity) into a single subsurface model
-prediction.
+datasets (e.g., AMT + TEM, MT + gravity) into a single subsurface
+model prediction.
 
 Architecture
 ------------
 Each modality is encoded by an independent 1-D dense block.  Dense
 blocks use DenseNet-style growth: every sub-layer receives the
-concatenation of all previous sub-layer outputs plus the original input.
-A residual shortcut connects the block input to its output so the
-decoder sees both a bottleneck and the original features.
+concatenation of all previous sub-layer outputs plus the original
+input.  A residual shortcut connects the block input to its output so
+the decoder sees both a bottleneck and the original features.
 
 After encoding, features from all modalities are concatenated and
 processed by a shared fusion dense block, followed by a linear output
@@ -24,7 +24,8 @@ head.
 .. math::
 
     \\mathbf{h}_k^{(l)} = \\sigma\\bigl(
-        W_k^{(l)} [\\mathbf{x}_k; \\mathbf{h}_k^{(1)}; \\ldots;
+        W_k^{(l)} [\\mathbf{x}_k; \\mathbf{h}_k^{(1)};
+                    \\ldots;
                     \\mathbf{h}_k^{(l-1)}]
     \\bigr)
 
@@ -33,40 +34,37 @@ dense-block sub-layer.
 
 References
 ----------
-Guo R. et al. (2021) *IEEE TGRS* — DRCNN for joint AMT+seismic inversion.
+Guo R. et al. (2021) *IEEE TGRS* — DRCNN for joint AMT+seismic.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, List, Sequence, Tuple
 
 __all__ = ["DRCNNNet"]
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Internal building blocks (lazy torch import)
-# ─────────────────────────────────────────────────────────────────────────────
+# ── Module-level class definitions ───────────────
+# At module scope so pickle can locate them when
+# coordinator.py checkpoints AgentResult dicts.
 
-def _dense_block_1d(
-    in_features: int,
-    out_features: int,
-    growth_rate: int,
-    n_layers: int,
-    dropout: float,
-) -> Any:
-    """Return a 1-D dense block as an ``nn.Module``."""
-    try:
-        import torch
-        import torch.nn as nn
-    except ImportError as exc:
-        raise ImportError("PyTorch is required for DRCNNNet") from exc
+try:
+    import torch
+    import torch.nn as nn
 
     class _DenseBlock(nn.Module):
-        def __init__(self) -> None:
+        def __init__(
+            self,
+            in_features: int,
+            out_features: int,
+            growth_rate: int,
+            n_layers: int,
+            dropout: float,
+        ) -> None:
             super().__init__()
             dims: List[int] = [in_features]
             self.sub_layers = nn.ModuleList()
-            for i in range(n_layers):
-                d_in = sum(dims)  # concatenation of all previous
+            for _ in range(n_layers):
+                d_in = sum(dims)
                 self.sub_layers.append(
                     nn.Sequential(
                         nn.Linear(d_in, growth_rate),
@@ -76,17 +74,17 @@ def _dense_block_1d(
                     )
                 )
                 dims.append(growth_rate)
-
-            total_dim = sum(dims)  # in_features + n_layers * growth_rate
-            # Projection to out_features (transition layer)
+            total_dim = sum(dims)
             self.transition = nn.Sequential(
                 nn.Linear(total_dim, out_features),
                 nn.BatchNorm1d(out_features),
                 nn.ReLU(),
             )
-            # Residual shortcut: project in_features → out_features
             if in_features != out_features:
-                self.shortcut = nn.Linear(in_features, out_features, bias=False)
+                self.shortcut = nn.Linear(
+                    in_features, out_features,
+                    bias=False,
+                )
             else:
                 self.shortcut = nn.Identity()
 
@@ -100,38 +98,31 @@ def _dense_block_1d(
             out = self.transition(all_cat)
             return out + self.shortcut(x)
 
-    return _DenseBlock()
-
-
-def _build_drcnn(
-    n_features_list: Tuple[int, ...],
-    n_out: int,
-    growth_rate: int,
-    n_layers: int,
-    hidden_dim: int,
-    dropout: float,
-) -> Any:
-    """Build the full multi-modal DRCNN."""
-    try:
-        import torch
-        import torch.nn as nn
-    except ImportError as exc:
-        raise ImportError("PyTorch is required for DRCNNNet") from exc
-
     class _DRCNN(nn.Module):
-        def __init__(self) -> None:
+        def __init__(
+            self,
+            n_features_list: Tuple[int, ...],
+            n_out: int,
+            growth_rate: int,
+            n_layers: int,
+            hidden_dim: int,
+            dropout: float,
+        ) -> None:
             super().__init__()
-            # One dense encoder per modality
             self.encoders = nn.ModuleList([
-                _dense_block_1d(nf, hidden_dim, growth_rate, n_layers, dropout)
+                _DenseBlock(
+                    nf, hidden_dim,
+                    growth_rate, n_layers, dropout,
+                )
                 for nf in n_features_list
             ])
-            # Fusion block over concatenated encoded features
-            fused_dim = hidden_dim * len(n_features_list)
-            self.fusion = _dense_block_1d(
-                fused_dim, hidden_dim, growth_rate, n_layers, dropout
+            fused_dim = (
+                hidden_dim * len(n_features_list)
             )
-            # Output head
+            self.fusion = _DenseBlock(
+                fused_dim, hidden_dim,
+                growth_rate, n_layers, dropout,
+            )
             self.head = nn.Sequential(
                 nn.Linear(hidden_dim, hidden_dim // 2),
                 nn.ReLU(),
@@ -142,45 +133,51 @@ def _build_drcnn(
         def forward(self, *inputs):
             if len(inputs) != len(self.encoders):
                 raise ValueError(
-                    f"Expected {len(self.encoders)} inputs, got {len(inputs)}"
+                    f"Expected {len(self.encoders)}"
+                    f" inputs, got {len(inputs)}"
                 )
-            encoded = [enc(x) for enc, x in zip(self.encoders, inputs)]
+            encoded = [
+                enc(x)
+                for enc, x in zip(self.encoders, inputs)
+            ]
             fused = torch.cat(encoded, dim=-1)
             out = self.fusion(fused)
             return self.head(out)
 
-    return _DRCNN()
+except ImportError:
+    pass  # torch not installed
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# DRCNNNet factory wrapper
-# ─────────────────────────────────────────────────────────────────────────────
+# ── Factory class ─────────────────────────────────
 
 class DRCNNNet:
-    """
+    r"""
     Factory wrapper for the Dense Residual CNN.
 
     Parameters
     ----------
     n_features_list : sequence of int
         Feature vector length for each input modality.
-        E.g. ``(120, 48)`` for 120 MT features and 48 seismic features.
+        E.g. ``(120, 48)`` for 120 MT features and
+        48 seismic features.
     n_out : int
-        Output dimension (number of subsurface parameters to predict).
+        Output dimension (number of subsurface
+        parameters to predict).
     growth_rate : int, default 32
-        Number of new channels added by each sub-layer in a dense block.
+        New channels added by each sub-layer in a
+        dense block.
     n_layers : int, default 6
         Number of sub-layers per dense block.
     hidden_dim : int, default 256
-        Dimension of the encoded representation from each modality and
-        the fusion block output.
+        Dimension of the encoded representation from
+        each modality and the fusion block output.
     dropout : float, default 0.2
 
     Examples
     --------
-    >>> # MT (120 features) + TEM (48 features) → 9 parameters
-    >>> drcnn = DRCNNNet(n_features_list=(120, 48), n_out=9)
-    >>> model = drcnn.build()        # returns nn.Module  # doctest: +SKIP
+    >>> # MT (120 features) + TEM (48 features)
+    >>> drcnn = DRCNNNet((120, 48), n_out=9)
+    >>> model = drcnn.build()   # doctest: +SKIP
     """
 
     def __init__(
@@ -193,7 +190,9 @@ class DRCNNNet:
         hidden_dim: int = 256,
         dropout: float = 0.2,
     ) -> None:
-        self.n_features_list = tuple(int(n) for n in n_features_list)
+        self.n_features_list = tuple(
+            int(n) for n in n_features_list
+        )
         self.n_out = int(n_out)
         self.growth_rate = int(growth_rate)
         self.n_layers = int(n_layers)
@@ -201,7 +200,7 @@ class DRCNNNet:
         self.dropout = float(dropout)
 
     def build(self) -> Any:
-        """Instantiate and return the ``torch.nn.Module``."""
+        """Instantiate and return the ``nn.Module``."""
         return _build_drcnn(
             self.n_features_list,
             self.n_out,
@@ -213,6 +212,53 @@ class DRCNNNet:
 
     def __repr__(self) -> str:
         return (
-            f"DRCNNNet(n_features_list={self.n_features_list}, "
-            f"n_out={self.n_out}, hidden_dim={self.hidden_dim})"
+            f"DRCNNNet("
+            f"n_features_list={self.n_features_list}, "
+            f"n_out={self.n_out}, "
+            f"hidden_dim={self.hidden_dim})"
         )
+
+
+# ── Internal build helpers ────────────────────────
+
+def _dense_block_1d(
+    in_features: int,
+    out_features: int,
+    growth_rate: int,
+    n_layers: int,
+    dropout: float,
+) -> Any:
+    """Return a 1-D dense block as an ``nn.Module``."""
+    if "_DenseBlock" not in globals():
+        raise ImportError(
+            "PyTorch is required for DRCNNNet. "
+            "Install with: pip install torch"
+        )
+    return _DenseBlock(
+        in_features, out_features,
+        growth_rate, n_layers, dropout,
+    )
+
+
+def _build_drcnn(
+    n_features_list: Tuple[int, ...],
+    n_out: int,
+    growth_rate: int,
+    n_layers: int,
+    hidden_dim: int,
+    dropout: float,
+) -> Any:
+    """Build the full multi-modal DRCNN."""
+    if "_DRCNN" not in globals():
+        raise ImportError(
+            "PyTorch is required for DRCNNNet. "
+            "Install with: pip install torch"
+        )
+    return _DRCNN(
+        tuple(n_features_list),
+        n_out,
+        growth_rate,
+        n_layers,
+        hidden_dim,
+        dropout,
+    )

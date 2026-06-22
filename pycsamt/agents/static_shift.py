@@ -19,10 +19,13 @@ Supported methods: ``"ama"`` (default), ``"loess"``, ``"refmedian"``,
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 from ._base import AgentResult, BaseAgent
 
@@ -118,7 +121,11 @@ class StaticShiftAgent(BaseAgent):
         except Exception as exc:
             return AgentResult.failed(str(exc), elapsed=time.time()-t0)
 
-        method     = str(input_data.get("method", self.method)).lower()
+        method = str(
+            input_data.get("method")
+            or input_data.get("ss_method")
+            or self.method
+        ).lower()
         output_dir = input_data.get("output_dir")
 
         # ── import ss functions ───────────────────────────────────────────────
@@ -141,7 +148,14 @@ class StaticShiftAgent(BaseAgent):
         shift_factors: dict[str, float] = {}
 
         try:
-            if method == "ama":
+            if method in ("none", "skip"):
+                # User explicitly chose no correction.
+                corrected_sites = sites
+                warnings.append(
+                    "Static-shift correction skipped"
+                    " (method='none')."
+                )
+            elif method == "ama":
                 corrected_sites = correct_ss_ama(
                     sites,
                     half_window=self.half_window,
@@ -165,11 +179,13 @@ class StaticShiftAgent(BaseAgent):
                 result_ss = estimate_ss_refmedian(
                     sites, pband=self.pband, verbose=0,
                 )
-                # result_ss is a DataFrame with station + factor columns
                 if hasattr(result_ss, "iterrows"):
                     for _, row in result_ss.iterrows():
                         st = str(row.get("station", ""))
-                        fac = float(row.get("fac_z", row.get("factor", 1.0)))
+                        fac = float(
+                            row.get("fac_z",
+                                    row.get("factor", 1.0))
+                        )
                         shift_factors[st] = fac
                     corrected_sites = apply_ss_factors(
                         sites, result_ss,
@@ -177,11 +193,20 @@ class StaticShiftAgent(BaseAgent):
                         verbose=0,
                     )
                 else:
-                    warnings.append("estimate_ss_refmedian returned unexpected type.")
-                    corrected_sites = sites
+                    warnings.append(
+                        "estimate_ss_refmedian returned"
+                        " unexpected type; using AMA."
+                    )
+                    corrected_sites = correct_ss_ama(
+                        sites,
+                        half_window=self.half_window,
+                        inplace=self.inplace,
+                        verbose=0,
+                    )
             else:
                 warnings.append(
-                    f"Unknown method {method!r}; using 'ama' as fallback."
+                    f"Unknown method {method!r};"
+                    " falling back to AMA."
                 )
                 corrected_sites = correct_ss_ama(
                     sites,
@@ -190,7 +215,16 @@ class StaticShiftAgent(BaseAgent):
                     verbose=0,
                 )
         except Exception as exc:
-            warnings.append(f"Static-shift correction ({method}) failed: {exc}")
+            logger.warning(
+                "Static-shift correction"
+                f" ({method}) failed: {exc}",
+                exc_info=True,
+            )
+            warnings.append(
+                f"Static-shift correction"
+                f" ({method}) failed: {exc}."
+                " Raw (uncorrected) data used."
+            )
             corrected_sites = sites
 
         # ── capture log₁₀ ρa after correction ────────────────────────────────
@@ -325,11 +359,13 @@ def _collect_rho(
         Z_obj, z, fr = _get_z_block(ed)
         if z is None or fr is None:
             continue
-        rho_raw = getattr(ed, "rho", None)
-        if rho_raw is None:
-            rho_xy = (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(z[:, 0, 1])**2
-        else:
-            rho_xy = rho_raw[:, 0, 1]
+        # Always compute from Z — ed.rho is a
+        # cached attribute that is stale after
+        # impedance-tensor correction modifies Z.
+        rho_xy = (
+            (0.2 / np.where(fr == 0, np.nan, fr))
+            * np.abs(z[:, 0, 1]) ** 2
+        )
 
         log_rho = np.log10(np.clip(rho_xy, 1e-6, None))
 

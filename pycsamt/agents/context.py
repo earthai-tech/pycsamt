@@ -186,26 +186,39 @@ class ContextInputAgent(BaseAgent):
                 elapsed=time.time() - t0,
             )
 
-        # ── attempt LLM extraction ────────────────────────────────────────────
+        # Regex runs first to anchor workflow type.
+        # LLM enriches params but must not override
+        # a regex-confident (non-qc) workflow.
+        regex_cfg = _regex_extract(request)
+        regex_wf = regex_cfg.get("workflow", "")
+
         config: dict[str, Any] | None = None
-        llm_raw: str | None           = None
+        llm_raw: str | None = None
 
         if self.api_key:
             llm_raw = self.query_llm(request)
             if llm_raw:
                 config = self.extract_json(llm_raw)
                 if config:
-                    self._log.debug("LLM extraction succeeded.")
+                    self._log.debug(
+                        "LLM extraction succeeded."
+                    )
+                    # Regex wins when it found a specific
+                    # workflow (not the qc default). LLM
+                    # over-generalises (e.g. maps
+                    # freq_decimation -> ai_inversion).
+                    if regex_wf and regex_wf != "qc":
+                        config["workflow"] = regex_wf
 
-        # ── regex fallback ────────────────────────────────────────────────────
         if config is None:
-            config = _regex_extract(request)
+            config = regex_cfg
             if not self.api_key:
-                self._log.debug("No API key — using regex extraction.")
+                self._log.debug(
+                    "No API key -- using regex."
+                )
             else:
                 self._log.warning(
-                    "LLM extraction failed or returned no JSON; "
-                    "falling back to regex."
+                    "LLM failed; falling back to regex."
                 )
 
         # ── normalise & validate ──────────────────────────────────────────────
@@ -336,6 +349,9 @@ def _regex_extract(text: str) -> dict[str, Any]:
             "ensemble method",
             "ensemble",
             "uncertainty quantification",
+            "calibrated inversion",
+            "confidence interval",
+            "bayesian",
         ],
         "inv3d": [
             "gcn",
@@ -343,12 +359,14 @@ def _regex_extract(text: str) -> dict[str, Any]:
             "3d ai", "3d gcn",
             "spatial inversion",
             "3d neural", "graph network",
+            "inv3d",
         ],
         "inv2d": [
             "unet", "u-net",
             "2d ai", "2d neural", "2d deep",
             "profile inversion",
             "lateral continuity ai",
+            "inv2d",
         ],
         "pinn_inversion": [
             "pinn inversion", "pinn",
@@ -396,20 +414,6 @@ def _regex_extract(text: str) -> dict[str, Any]:
             "inversion data",
             "data file for inversion",
         ],
-        # catch bare "inversion/invert" only
-        # after all specific variants matched
-        "ai_inversion": [
-            "ai inversion",
-            "neural", "cnn",
-            "deep learning",
-            "machine learning",
-            "inverter", "inv1d", "1d ai",
-            "1d neural", "1d inversion",
-            "inversion", "invert", "inverting",
-            "run inversion", "do inversion",
-            "perform inversion",
-            "start inversion",
-        ],
         "tipper": [
             "tipper", "induction arrow",
             "wiese", "parkinson",
@@ -424,9 +428,18 @@ def _regex_extract(text: str) -> dict[str, Any]:
             "strike rotation",
             "tensor rotation",
         ],
+        # freq_decimation before ai_inversion so
+        # "decimate/period range" never routes to
+        # the bare "inversion" catch-all below.
         "freq_decimation": [
-            "decimate", "period selection",
-            "frequency selection", "dead band",
+            "decimate", "decimation",
+            "period selection",
+            "frequency selection",
+            "select period",
+            "select frequency",
+            "period range",
+            "frequency range",
+            "dead band",
         ],
         "batch": [
             "batch process",
@@ -473,6 +486,7 @@ def _regex_extract(text: str) -> dict[str, Any]:
             "strike analysis",
             "dimensionality analysis",
             "bahr skew",
+            "dimensionality",
         ],
         "static_shift": [
             "static shift",
@@ -485,6 +499,20 @@ def _regex_extract(text: str) -> dict[str, Any]:
             "forward modeling",
             "synthetic data",
             "simulate",
+        ],
+        # Catch bare "inversion/invert" only after
+        # all specific variants have been checked.
+        "ai_inversion": [
+            "ai inversion",
+            "neural", "cnn",
+            "deep learning",
+            "machine learning",
+            "inverter", "inv1d", "1d ai",
+            "1d neural", "1d inversion",
+            "inversion", "invert", "inverting",
+            "run inversion", "do inversion",
+            "perform inversion",
+            "start inversion",
         ],
         # Removed bare "geology", "resistor",
         # "conductor" -- too broad for MT text.
@@ -586,7 +614,7 @@ _WORKFLOW_ALIASES: dict[str, str] = {
     "pre-inversion":           "pre_inversion",
     "pre_inversion_prep":      "pre_inversion",
     "post-inversion":          "inversion_eval",
-    "interpretation":          "interpret",
+    "interpretation":          "interpretation",
     "report":                  "report",
     "full_pipeline":           "full",
     "1d_inversion":            "ai_inversion",
@@ -619,6 +647,9 @@ _WORKFLOW_ALIASES: dict[str, str] = {
     "noise_removal":           "denoise",
     "doi":                     "sensitivity",
     "depth_of_investigation":  "sensitivity",
+    "frequency_decimation":    "freq_decimation",
+    "freq_dec":                "freq_decimation",
+    "period_decimation":       "freq_decimation",
 }
 
 

@@ -47,7 +47,8 @@ def get_rate(provider: str, model: str) -> dict[str, float]:
     Parameters
     ----------
     provider : str
-        One of ``"claude"``, ``"openai"``, ``"gemini"``.
+        One of ``"claude"``, ``"openai"``,
+        ``"gemini"``, ``"deepseek"``.
     model : str
         Model identifier, e.g. ``"claude-sonnet-4-6"``.
 

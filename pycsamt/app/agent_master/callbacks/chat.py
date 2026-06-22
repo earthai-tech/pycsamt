@@ -36,6 +36,8 @@ import matplotlib.pyplot as plt
 # must never open OS windows in a web app.
 plt.show = lambda *a, **kw: None
 
+from contextlib import nullcontext as _nullctx
+
 from dash import ALL, Input, Output, State
 from dash import ctx, html, no_update
 from dash.exceptions import PreventUpdate
@@ -46,6 +48,20 @@ from .._ids import IDs
 # ── shared job registry ────────────────────────────
 _JOBS: dict[str, dict] = {}
 _JOBS_LOCK = threading.Lock()
+
+# Corrected-sites cache keyed by job ID.
+# Populated after correction workflows so the
+# post-processing modal can export EDI files.
+_CORR_CACHE: dict[str, Any] = {}
+
+# Workflows that produce corrected_sites data.
+_CORRECTION_WFLOWS = frozenset({
+    "static_shift",
+    "denoise",
+    "qc",
+    "pre_inversion",
+    "full",
+})
 
 
 def _new_job() -> str:
@@ -92,53 +108,101 @@ def _fig_to_b64(fig: Any) -> str:
     ).decode()
 
 
-def _fig_card(
+def _fig_thumb_item(
     fig_key: str,
     title: str,
     b64: str,
 ) -> html.Div:
+    """Compact thumbnail tile inside the accordion."""
+    short = (
+        title if len(title) <= 28
+        else title[:26] + "..."
+    )
     return html.Div(
         [
-            html.Div(
-                [
-                    html.Span(
-                        title,
-                        className="am-fig-title",
-                    ),
-                    html.Button(
-                        [
-                            html.I(
-                                className=(
-                                    "bi bi-arrows-"
-                                    "fullscreen"
-                                )
-                            ),
-                            " View",
-                        ],
-                        className="am-fig-btn",
-                        id={
-                            "type": "am-fig-open",
-                            "key": fig_key,
-                        },
-                        n_clicks=0,
-                    ),
-                ],
-                className="am-fig-toolbar",
+            html.Img(
+                src=(
+                    f"data:image/png;base64,{b64}"
+                ),
+                className="am-fig-thumb",
+                id={
+                    "type": "am-fig-img",
+                    "key": fig_key,
+                },
+                title=title,
             ),
             html.Div(
-                html.Img(
-                    src=f"data:image/png;base64,"
-                    f"{b64}",
-                    style={"cursor": "zoom-in"},
-                    id={
-                        "type": "am-fig-img",
-                        "key": fig_key,
-                    },
+                short,
+                className="am-fig-thumb-label",
+                title=title,
+            ),
+            html.Button(
+                [
+                    html.I(
+                        className=(
+                            "bi bi-arrows-fullscreen"
+                            " me-1"
+                        )
+                    ),
+                    "View",
+                ],
+                className=(
+                    "am-fig-btn am-fig-thumb-btn"
                 ),
-                className="am-fig-preview",
+                id={
+                    "type": "am-fig-open",
+                    "key": fig_key,
+                },
+                n_clicks=0,
             ),
         ],
-        className="am-fig-card",
+        className="am-fig-thumb-item",
+    )
+
+
+def _fig_accordion(figs: dict) -> html.Div:
+    """
+    Collapsible accordion for all figures.
+
+    Shows a compact thumbnail grid when expanded.
+    Collapsed by default to save space.
+    """
+    n = len(figs)
+    thumbs = [
+        _fig_thumb_item(k, v["title"], v["b64"])
+        for k, v in figs.items()
+    ]
+    header = html.Span(
+        [
+            html.I(
+                className=(
+                    "bi bi-bar-chart-fill me-2"
+                ),
+                style={"color": "var(--blue)"},
+            ),
+            f"Figures ({n})",
+            html.Span(
+                f"{n}",
+                className="am-fig-badge",
+            ),
+        ],
+        className="am-fig-acc-title",
+    )
+    return html.Div(
+        dbc.Accordion(
+            dbc.AccordionItem(
+                html.Div(
+                    thumbs,
+                    className="am-fig-grid",
+                ),
+                title=header,
+                item_id="figs",
+            ),
+            start_collapsed=True,
+            flush=True,
+            className="am-fig-accordion",
+        ),
+        className="am-fig-accordion-wrap",
     )
 
 
@@ -289,10 +353,66 @@ def _thinking_bubble(steps: list[dict]) -> html.Div:
     )
 
 
+def _code_block(code: str) -> html.Div:
+    """Render a syntax-highlighted Python code block."""
+    import uuid as _uuid
+    copy_id = f"am-copy-{_uuid.uuid4().hex[:8]}"
+    return html.Div(
+        [
+            # header bar
+            html.Div(
+                [
+                    html.Span(
+                        [
+                            html.I(
+                                className=(
+                                    "bi bi-code-slash"
+                                    " me-1"
+                                ),
+                                style={
+                                    "color": "#61afef"
+                                },
+                            ),
+                            "python",
+                        ],
+                        className="am-code-lang",
+                    ),
+                    html.Button(
+                        [
+                            html.I(
+                                className=(
+                                    "bi bi-clipboard"
+                                    " me-1"
+                                )
+                            ),
+                            "Copy",
+                        ],
+                        id=copy_id,
+                        className="am-code-copy-btn",
+                        title="Copy to clipboard",
+                        **{"data-code": code},
+                        n_clicks=0,
+                    ),
+                ],
+                className="am-code-header",
+            ),
+            # code body — hljs highlights this
+            html.Pre(
+                html.Code(
+                    code,
+                    className="language-python",
+                ),
+            ),
+        ],
+        className="am-code-block",
+    )
+
+
 def _agent_bubble(
     text: str,
     steps: list[dict] | None = None,
     figs: dict | None = None,
+    code: str = "",
 ) -> html.Div:
     children: list = []
     # plain text / markdown (rendered as plain)
@@ -339,16 +459,41 @@ def _agent_bubble(
             )
         )
 
-    # figure cards
+    # generated code block
+    if code and code.strip():
+        children.append(_code_block(code))
+
+    # figures go to sidebar only; show a compact
+    # chip in the chat bubble so the user knows
+    # results are ready without a full preview.
     if figs:
-        for fig_key, fig_info in figs.items():
-            children.append(
-                _fig_card(
-                    fig_key,
-                    fig_info.get("title", "Figure"),
-                    fig_info["b64"],
-                )
+        n = len(figs)
+        children.append(
+            html.Div(
+                [
+                    html.I(
+                        className=(
+                            "bi bi-bar-chart-fill"
+                            " me-2"
+                        ),
+                        style={
+                            "color": "var(--blue)"
+                        },
+                    ),
+                    html.Span(
+                        f"{n} figure"
+                        f"{'s' if n != 1 else ''}"
+                        " generated — open the"
+                        " Figures panel to view.",
+                        style={
+                            "fontSize": "12px",
+                            "color": "var(--sub1)",
+                        },
+                    ),
+                ],
+                className="am-fig-notice",
             )
+        )
 
     return html.Div(
         [
@@ -370,26 +515,78 @@ def _agent_bubble(
     )
 
 
+# ── Workflow figure filter ────────────────────────
+# Maps workflow type → step names whose figures
+# should appear in the agent bubble response.
+# Steps NOT in this set are prerequisite steps
+# (load, qc, denoise) whose figures are suppressed
+# unless the user explicitly asked for them.
+# None means "show figures from all steps."
+_WORKFLOW_FIGURE_STEPS: dict[
+    str, set[str] | None
+] = {
+    "qc":               {"qc", "static_shift", "report"},
+    "static_shift":     {"static_shift"},
+    "phase_analysis":   {"phase_analysis", "report"},
+    "ai_inversion":     {"ai_inv", "interpret", "report"},
+    "inv1d":            {"ai_inv", "interpret", "report"},
+    "inv2d":            {"inv2d", "interpret", "report"},
+    "inv3d":            {"inv3d", "interpret", "report"},
+    "ensemble_inversion": {
+        "ensemble", "interpret", "report",
+    },
+    "pinn_inversion":   {
+        "pinn_inv", "interpret", "report",
+    },
+    "hybrid_inversion": {
+        "hybrid_inv", "interpret", "report",
+    },
+    "joint_inversion":  {
+        "joint", "interpret", "report",
+    },
+    "tipper":           {"tipper", "report"},
+    "modem":            {"modem", "report"},
+    "occam2d":          {"occam2d", "report"},
+    "pre_inversion":    {
+        "phase_analysis", "occam2d", "report",
+    },
+    "sensitivity":      {"sensitivity", "report"},
+    "rotation":         {"rotate"},
+    "freq_decimation":  {"decimate", "report"},
+    "batch":            {"batch", "report"},
+    "comparison":       {"compare", "report"},
+    "full":             None,  # show everything
+}
+# Default set for unlisted workflows: skip
+# only load and denoise steps.
+_SKIP_ALWAYS: frozenset[str] = frozenset(
+    {"load", "denoise"}
+)
+
+
 # ── Smart param detection ─────────────────────────
 
 # Workflows that require user parameters
 # before the job can start.
+# Workflows that REQUIRE user parameters before
+# starting.  Simple data-processing workflows
+# (qc, static_shift, phase_analysis, tipper,
+# rotation) run with sensible defaults and do
+# NOT need a param modal.  Only inversion and
+# a few analytical workflows need user input.
 _NEEDS_PARAMS: frozenset[str] = frozenset({
-    # Inversion workflows
+    # Inversion workflows (model params needed)
     "ai_inversion", "inv1d",
     "inv2d", "inv3d",
     "pinn_inversion", "hybrid_inversion",
     "ensemble_inversion",
     "pre_inversion", "modem",
-    # Pipeline-only workflows
-    "qc", "phase_analysis",
-    "static_shift", "tipper", "rotation",
-    # Agent-focused workflows
+    # Analysis workflows (optional params)
+    "denoise",
+    "sensitivity",
     "interpret", "interpretation",
     "report",
     "code_gen",
-    "denoise",
-    "sensitivity",
 })
 
 _WF_LABELS: dict[str, str] = {
@@ -488,6 +685,102 @@ def _waiting_bubble(wf: str) -> html.Div:
         className="am-msg-row",
         id="am-waiting-bubble",
     )
+
+
+def _line_waiting_bubble() -> html.Div:
+    """Bubble shown while the line picker is open."""
+    return html.Div(
+        [
+            html.Div(
+                html.I(className="bi bi-robot"),
+                className="am-avatar agent",
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.I(
+                                className=(
+                                    "bi bi-layers"
+                                    " me-2"
+                                ),
+                                style={
+                                    "color": (
+                                        "var(--blue)"
+                                    )
+                                },
+                            ),
+                            html.Span(
+                                "Multiple survey"
+                                " lines are loaded."
+                                " Please select"
+                                " which line(s) to"
+                                " process using"
+                                " the panel above.",
+                            ),
+                        ]
+                    ),
+                    html.Div(
+                        _ts(), className="am-ts"
+                    ),
+                ],
+                className="am-bubble agent",
+            ),
+        ],
+        className="am-msg-row",
+        id="am-line-waiting-bubble",
+    )
+
+
+def _extract_line_ref(
+    text: str, groups: dict
+) -> str | None:
+    """Detect a line/profile reference in text.
+
+    Checks known group names first (direct match),
+    then 'line N' / 'profile N' patterns, then
+    ordinal words ('first line', etc.).
+    Returns the matched token or None.
+    """
+    t = text.lower()
+    for key in groups:
+        if key.lower() in t:
+            return key
+    m = re.search(
+        r"\b(?:line|profile)\s+(\S+)", t
+    )
+    if m:
+        return m.group(1)
+    _ordinals = {
+        "first": "1", "second": "2",
+        "third": "3", "fourth": "4",
+        "fifth": "5", "sixth": "6",
+        "seventh": "7", "eighth": "8",
+        "ninth": "9", "tenth": "10",
+    }
+    for word, num in _ordinals.items():
+        if (
+            f"{word} line" in t
+            or f"{word} profile" in t
+        ):
+            return num
+    return None
+
+
+def _match_group(
+    ref: str, groups: dict
+) -> str | None:
+    """Return the group key matching ref exactly
+    or case-insensitively. No ordinal resolution —
+    numeric refs always trigger the line picker.
+    """
+    if ref in groups:
+        return ref
+    ref_l = ref.lower()
+    for key in groups:
+        if key.lower() == ref_l:
+            return key
+    return None
 
 
 # ── PINN / Hybrid keyword detection ───────────────
@@ -796,17 +1089,30 @@ def _run_agent(
         from pycsamt.agents.orchestrator import (
             WorkflowOrchestratorAgent,
         )
+        from pycsamt.api.agents import AGENT_CONFIG
+
+        # When truly offline, use AGENT_CONFIG.offline()
+        # around every agent creation + execution so
+        # that env-based keys (e.g. ANTHROPIC_API_KEY
+        # from .env.local) are never picked up.
+        # _nullctx is used for online providers so the
+        # same code path works for both cases.
+        _offline = provider == "offline"
 
         _step("Classifying workflow...", "done")
 
-        ctx_agent = ContextInputAgent(
-            llm_provider=llm_prov,
-            api_key=api_key,
-            model=sel_model,
-        )
-        ctx_result = ctx_agent.execute(
-            {"request": text}
-        )
+        with (
+            AGENT_CONFIG.offline()
+            if _offline else _nullctx()
+        ):
+            ctx_agent = ContextInputAgent(
+                llm_provider=llm_prov,
+                api_key=api_key,
+                model=sel_model,
+            )
+            ctx_result = ctx_agent.execute(
+                {"request": text}
+            )
 
         if ctx_result.status == "failed":
             _update_job(
@@ -897,6 +1203,9 @@ def _run_agent(
                     _ic.get("radius", 5000.0)
                 ),
             }
+            cfg["checkpoint"] = _ic.get(
+                "checkpoint", ""
+            )
 
         # Pass pipeline step params into cfg
         _step_p = _ic.get("step_params")
@@ -909,20 +1218,100 @@ def _run_agent(
             if edi_store
             else ""
         ) or cfg.get("data_path", "")
+
+        # Filter to selected lines if set
+        sel_lines = (edi_store or {}).get(
+            "selected_lines", []
+        )
+        if sel_lines:
+            grp = (edi_store or {}).get(
+                "groups", {}
+            )
+            file_list: list[str] = []
+            for ln in sel_lines:
+                file_list.extend(
+                    grp.get(ln, [])
+                )
+            if file_list:
+                edi_path = file_list
+
+        # Fall back to YAML line registry when no
+        # EDI is loaded but user names a survey line.
+        if not edi_path:
+            _reg_yaml = (settings or {}).get(
+                "line_registry", ""
+            )
+            if _reg_yaml:
+                try:
+                    import yaml as _yaml
+                    _reg = (
+                        _yaml.safe_load(_reg_yaml)
+                        or {}
+                    )
+                    _tl = text.lower()
+                    for _ln, _lp in _reg.items():
+                        if (
+                            str(_ln).lower() in _tl
+                        ):
+                            edi_path = str(_lp)
+                            break
+                except Exception:
+                    pass
+
+        output_dir = (
+            settings.get("output_dir") or ""
+        ).strip() or "pycsamt_workflow_output"
+
+        # Guard: workflows that need EDI data
+        # must have a valid path.
+        _EDI_REQUIRED = frozenset({
+            "qc", "static_shift",
+            "phase_analysis", "ai_inversion",
+            "inv1d", "inv2d", "inv3d",
+            "pinn_inversion", "hybrid_inversion",
+            "ensemble_inversion", "pre_inversion",
+            "modem", "tipper", "rotation",
+            "denoise", "sensitivity",
+            "freq_decimation",
+        })
+        if (
+            wtype in _EDI_REQUIRED
+            and not edi_path
+        ):
+            _update_job(
+                jid,
+                status="done",
+                result=(
+                    "No EDI data loaded. "
+                    "Please load an EDI dataset "
+                    "first using the Load EDI "
+                    "button, then retry."
+                ),
+                steps=_JOBS[jid]["steps"],
+            )
+            return
+
         orch_input = {
-            "config":    cfg,
-            "request":   text,
-            "data_path": edi_path,
+            "config":     cfg,
+            "request":    text,
+            "data_path":  edi_path,
+            "output_dir": output_dir,
         }
 
-        orch = WorkflowOrchestratorAgent(
-            llm_provider=llm_prov,
-            api_key=api_key,
-            model=sel_model,
-        )
-        _step(f"Executing {wtype}...", "running")
-
-        result = orch.execute(orch_input)
+        with (
+            AGENT_CONFIG.offline()
+            if _offline else _nullctx()
+        ):
+            orch = WorkflowOrchestratorAgent(
+                llm_provider=llm_prov,
+                api_key=api_key,
+                model=sel_model,
+            )
+            _step(
+                f"Executing {wtype}...",
+                "running",
+            )
+            result = orch.execute(orch_input)
 
         _step(
             f"Completed {wtype}",
@@ -931,11 +1320,13 @@ def _run_agent(
             else "error",
         )
 
-        # collect figures from all workflow steps
+        # collect figures and generated code
         # result.data["result"] = coordinator AgentResult
         # coordinator AgentResult.data = {step: AgentResult}
         # each step AgentResult.data may have "figures"
         figs: dict = {}
+        generated_code: str = ""
+        step_results: dict = {}
         if result.status != "failed":
             exec_res = (
                 result.data or {}
@@ -945,8 +1336,41 @@ def _run_agent(
                 if exec_res and exec_res.data
                 else {}
             )
+            _fig_steps = (
+                _WORKFLOW_FIGURE_STEPS.get(wtype)
+            )
+            # None means "show all steps";
+            # a set means only those steps.
+            # For unlisted workflows, skip
+            # load/denoise by default.
+            if (
+                _fig_steps is None
+                and wtype
+                not in _WORKFLOW_FIGURE_STEPS
+            ):
+                _fig_steps = None  # show all
             for sname, sres in step_results.items():
                 if not hasattr(sres, "data"):
+                    continue
+                # Skip prerequisite step figures
+                # unless the workflow explicitly
+                # keeps them (None = keep all).
+                if _fig_steps is not None:
+                    if sname not in _fig_steps:
+                        # close any open figs for
+                        # this suppressed step
+                        _sf = (
+                            sres.data or {}
+                        ).get("figures", {})
+                        for _f in (
+                            _sf or {}
+                        ).values():
+                            if isinstance(
+                                _f, plt.Figure
+                            ):
+                                plt.close(_f)
+                        continue
+                elif sname in _SKIP_ALWAYS:
                     continue
                 step_figs = (
                     sres.data or {}
@@ -964,6 +1388,44 @@ def _run_agent(
                             "b64": b64,
                         }
 
+            # extract generated code (code_gen step)
+            code_res = step_results.get("code_gen")
+            if code_res and hasattr(
+                code_res, "data"
+            ):
+                generated_code = (
+                    (code_res.data or {}).get(
+                        "code", ""
+                    ) or ""
+                )
+
+        # cache corrected sites for post-proc modal
+        if (
+            result.status != "failed"
+            and wtype in _CORRECTION_WFLOWS
+        ):
+            for _sn, _sr in (
+                step_results.items()
+            ):
+                _d = (
+                    getattr(_sr, "data", None)
+                    or {}
+                )
+                _corr = _d.get(
+                    "corrected_sites"
+                )
+                if _corr is not None:
+                    _CORR_CACHE[jid] = _corr
+                    _update_job(
+                        jid,
+                        postproc={
+                            "jid": jid,
+                            "workflow": wtype,
+                            "output_dir": output_dir,
+                        },
+                    )
+                    break
+
         # AgentResult.summary is the text field
         summary = (
             result.summary
@@ -977,6 +1439,7 @@ def _run_agent(
             result=summary,
             steps=_JOBS[jid]["steps"],
             figs=figs,
+            code=generated_code,
         )
 
     except Exception as exc:  # noqa: BLE001
@@ -1131,13 +1594,68 @@ def register_chat(app) -> None:
                 "", new_stored, {},
             )
 
+        # ── line disambiguation ───────────────
+        # Detect if the user named a specific line
+        # that can't be resolved to a group key.
+        # If ambiguous: show the line picker modal.
+        # If exact match: pre-filter edi_store.
+        _groups = (edi_store or {}).get(
+            "groups", {}
+        )
+        _sel_lines: list[str] = []
+        if _groups and len(_groups) > 1:
+            _ref = _extract_line_ref(
+                text, _groups
+            )
+            if _ref is not None:
+                _exact = _match_group(
+                    _ref, _groups
+                )
+                if _exact is None:
+                    # Ambiguous → show picker
+                    msgs.append(
+                        _line_waiting_bubble()
+                    )
+                    pending = {
+                        "disambiguation": "lines",
+                        "text": text,
+                        "groups": {
+                            k: list(v)
+                            for k, v in
+                            _groups.items()
+                        },
+                    }
+                    return (
+                        msgs, {}, True,
+                        "", new_stored, pending,
+                    )
+                else:
+                    _sel_lines = [_exact]
+
         # ── param detection ───────────────────
         wf = _quick_workflow(text)
         if wf:
             msgs.append(_waiting_bubble(wf))
             pending = {
-                "workflow": wf, "text": text,
+                "workflow": wf,
+                "text": text,
+                # snapshot edi_path so _submit_params
+                # can fall back if STORE_EDI is None
+                "edi_path": (
+                    (edi_store or {}).get(
+                        "path", ""
+                    ) or ""
+                ),
+                "edi_groups": (
+                    (edi_store or {}).get(
+                        "groups", {}
+                    )
+                ),
             }
+            if _sel_lines:
+                pending["selected_lines"] = (
+                    _sel_lines
+                )
             return (
                 msgs, {}, True,
                 "", new_stored, pending,
@@ -1150,12 +1668,17 @@ def register_chat(app) -> None:
                 "status": "running",
             }])
         )
+        _edi_use = dict(edi_store or {})
+        if _sel_lines:
+            _edi_use["selected_lines"] = (
+                _sel_lines
+            )
         jid = _new_job()
         t = threading.Thread(
             target=_run_agent,
             args=(
                 jid, text,
-                edi_store or {},
+                _edi_use,
                 settings or {},
                 inv_config or {},
             ),
@@ -1185,6 +1708,9 @@ def register_chat(app) -> None:
             IDs.STORE_MESSAGES,
             "data",
             allow_duplicate=True,
+        ),
+        Output(
+            IDs.STORE_POSTPROC, "data"
         ),
         Input(IDs.INTERVAL_POLL, "n_intervals"),
         State(IDs.STORE_JOB, "data"),
@@ -1233,7 +1759,8 @@ def register_chat(app) -> None:
             if thinking_idx is not None:
                 msgs[thinking_idx] = new_thinking
             return (
-                msgs, False, no_update, no_update
+                msgs, False, no_update,
+                no_update, no_update,
             )
 
         # job done / error
@@ -1243,13 +1770,15 @@ def register_chat(app) -> None:
             or "Done."
         )
         figs = job.get("figs", {})
+        code = job.get("code", "")
 
         # merge figs into store
         new_fig_store = dict(fig_store or {})
         new_fig_store.update(figs)
 
         agent_bub = _agent_bubble(
-            result_text, steps, figs
+            result_text, steps, figs,
+            code=code,
         )
 
         # replace thinking with agent bubble
@@ -1257,6 +1786,8 @@ def register_chat(app) -> None:
             msgs[thinking_idx] = agent_bub
         else:
             msgs.append(agent_bub)
+
+        postproc = job.get("postproc")
 
         # clean up registry
         with _JOBS_LOCK:
@@ -1273,6 +1804,7 @@ def register_chat(app) -> None:
         return (
             msgs, True, new_fig_store,
             new_stored,
+            postproc if postproc else no_update,
         )
 
     # 3. Auto-scroll chat to bottom on update

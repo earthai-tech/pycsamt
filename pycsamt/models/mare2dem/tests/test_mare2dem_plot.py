@@ -18,8 +18,8 @@ Data sources
       228 MT receivers · forward problem only
       PlotSurveyLayout ✓
 
-PlotModel and PlotResponse are not yet implemented in the MARE2DEM port
-(they raise NotImplementedError) and are therefore excluded from this suite.
+PlotModel renders the resistivity section or falls back to a histogram.
+PlotResponse overlays observed and predicted MT data per receiver.
 
 Run:
     pytest -v pycsamt/models/mare2dem/tests/test_mare2dem_plot.py
@@ -300,24 +300,88 @@ class TestPlotSurveyLayout:
 
 
 # ===========================================================================
-# GROUP 4 — PlotModel / PlotResponse  (not yet implemented)
+# GROUP 4 — PlotModel
 # ===========================================================================
 
-class TestNotYetImplemented:
+class TestPlotModel:
 
     @_SKIP_MT
-    def test_plot_model_raises_not_implemented(self, result_mt):
+    def test_returns_figure(self, result_mt):
         from pycsamt.models.mare2dem.plot import PlotModel
-        with pytest.raises(NotImplementedError):
-            fig, ax = plt.subplots()
-            PlotModel(result_mt).plot(ax=ax)
+        fig = PlotModel(result_mt).plot()
+        assert _is_figure(fig)
 
     @_SKIP_MT
-    def test_plot_response_raises_not_implemented(self, result_mt):
+    def test_figure_has_axes(self, result_mt):
+        from pycsamt.models.mare2dem.plot import PlotModel
+        fig = PlotModel(result_mt).plot()
+        assert len(fig.get_axes()) >= 1
+
+    @_SKIP_MT
+    def test_savefig(self, result_mt, tmp_path):
+        from pycsamt.models.mare2dem.plot import PlotModel
+        out = tmp_path / "model.png"
+        PlotModel(result_mt).plot(savefig=out)
+        assert out.exists()
+
+    def test_fallback_histogram(self):
+        """No path -> no mesh -> histogram fallback."""
+        from pycsamt.models.mare2dem.plot import PlotModel
+        from pycsamt.models.mare2dem.mesh import ResistivityModel
+        fig = PlotModel(ResistivityModel()).plot()
+        assert _is_figure(fig)
+
+    def test_invalid_input_raises(self):
+        from pycsamt.models.mare2dem.plot import PlotModel
+        with pytest.raises(TypeError):
+            PlotModel("not_a_model")
+
+
+# ===========================================================================
+# GROUP 4b — PlotResponse
+# ===========================================================================
+
+class TestPlotResponse:
+
+    @_SKIP_MT
+    def test_returns_figure(self, result_mt):
         from pycsamt.models.mare2dem.plot import PlotResponse
-        with pytest.raises(NotImplementedError):
-            fig, ax = plt.subplots()
-            PlotResponse(result_mt).plot(ax=ax)
+        if result_mt.response is None:
+            pytest.skip("No response file in MT fixture.")
+        fig = PlotResponse(result_mt).plot(max_rx=1)
+        assert _is_figure(fig)
+
+    @_SKIP_MT
+    def test_figure_has_axes(self, result_mt):
+        from pycsamt.models.mare2dem.plot import PlotResponse
+        if result_mt.response is None:
+            pytest.skip("No response file in MT fixture.")
+        fig = PlotResponse(result_mt).plot(max_rx=2)
+        assert len(fig.get_axes()) >= 4
+
+    @_SKIP_MT
+    def test_savefig(self, result_mt, tmp_path):
+        from pycsamt.models.mare2dem.plot import PlotResponse
+        if result_mt.response is None:
+            pytest.skip("No response file in MT fixture.")
+        out = tmp_path / "response.png"
+        PlotResponse(result_mt).plot(max_rx=1, savefig=out)
+        assert out.exists()
+
+    def test_requires_invresult(self):
+        from pycsamt.models.mare2dem.plot import PlotResponse
+        with pytest.raises(TypeError):
+            PlotResponse("not_a_result")
+
+    def test_no_mt_raises(self):
+        """Empty workdir -> no MT data -> ValueError."""
+        from pycsamt.models.mare2dem.plot import PlotResponse
+        from pycsamt.models.mare2dem.results import InversionResult
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            r = InversionResult(tmp)
+            with pytest.raises(ValueError):
+                PlotResponse(r).plot()
 
 
 # ===========================================================================

@@ -42,33 +42,60 @@ _DEFAULTS = {
 
 _MODEL_OPTIONS = {
     "claude": [
-        {"label": "claude-sonnet-4-6  (default)", "value": "claude-sonnet-4-6"},
-        {"label": "claude-opus-4-8",              "value": "claude-opus-4-8"},
-        {"label": "claude-haiku-4-5",             "value": "claude-haiku-4-5-20251001"},
+        {
+            "label": "claude-sonnet-4-6  (default)",
+            "value": "claude-sonnet-4-6",
+        },
+        {
+            "label": "claude-opus-4-8",
+            "value": "claude-opus-4-8",
+        },
+        {
+            "label": "claude-haiku-4-5",
+            "value": "claude-haiku-4-5-20251001",
+        },
     ],
     "openai": [
-        {"label": "gpt-4o  (default)",  "value": "gpt-4o"},
-        {"label": "gpt-4o-mini",        "value": "gpt-4o-mini"},
-        {"label": "gpt-4-turbo",        "value": "gpt-4-turbo"},
-        {"label": "gpt-3.5-turbo",      "value": "gpt-3.5-turbo"},
+        {
+            "label": "gpt-4o  (default)",
+            "value": "gpt-4o",
+        },
+        {"label": "gpt-4o-mini",    "value": "gpt-4o-mini"},
+        {"label": "gpt-4-turbo",    "value": "gpt-4-turbo"},
+        {"label": "gpt-3.5-turbo",  "value": "gpt-3.5-turbo"},
     ],
     "gemini": [
-        {"label": "gemini-2.0-flash  (default)", "value": "gemini-2.0-flash"},
-        {"label": "gemini-1.5-pro",              "value": "gemini-1.5-pro"},
-        {"label": "gemini-1.5-flash",            "value": "gemini-1.5-flash"},
+        {
+            "label": "gemini-2.0-flash  (default)",
+            "value": "gemini-2.0-flash",
+        },
+        {"label": "gemini-1.5-pro",   "value": "gemini-1.5-pro"},
+        {"label": "gemini-1.5-flash", "value": "gemini-1.5-flash"},
+    ],
+    "deepseek": [
+        {
+            "label": "deepseek-chat  (default)",
+            "value": "deepseek-chat",
+        },
+        {
+            "label": "deepseek-reasoner",
+            "value": "deepseek-reasoner",
+        },
     ],
 }
 
 _MODEL_DEFAULT = {
-    "claude": "claude-sonnet-4-6",
-    "openai": "gpt-4o",
-    "gemini": "gemini-2.0-flash",
+    "claude":   "claude-sonnet-4-6",
+    "openai":   "gpt-4o",
+    "gemini":   "gemini-2.0-flash",
+    "deepseek": "deepseek-chat",
 }
 
 _KEY_PREFIX = {
-    "claude": ("sk-ant-",),
-    "openai": ("sk-",),
-    "gemini": (),          # no fixed prefix
+    "claude":   ("sk-ant-",),
+    "openai":   ("sk-",),
+    "gemini":   (),
+    "deepseek": ("sk-",),
 }
 
 
@@ -144,31 +171,54 @@ def register_settings(app) -> None:
         if not triggered or not isinstance(triggered, dict):
             return no_update, no_update, no_update, no_update
         provider = triggered["index"]
-        providers = ["claude", "openai", "gemini"]
+        providers = [
+            "claude", "openai", "gemini", "deepseek"
+        ]
         classes = [
-            "settings-provider-btn active" if p == provider else "settings-provider-btn"
+            "settings-provider-btn active"
+            if p == provider
+            else "settings-provider-btn"
             for p in providers
         ]
-        opts  = _MODEL_OPTIONS.get(provider, _MODEL_OPTIONS["claude"])
-        model = _MODEL_DEFAULT.get(provider, opts[0]["value"])
+        opts  = _MODEL_OPTIONS.get(
+            provider, _MODEL_OPTIONS["claude"]
+        )
+        model = _MODEL_DEFAULT.get(
+            provider, opts[0]["value"]
+        )
         return provider, classes, opts, model
 
-    # ── 5. Restore provider button state when store populates ─────────────────
+    # ── 5. Restore provider button state on open ──────────────────────────────
     @app.callback(
-        Output({"type": "settings-provider-btn", "index": ALL}, "className",
-               allow_duplicate=True),
-        Output(IDs.SETTINGS_AI_MODEL, "options", allow_duplicate=True),
+        Output(
+            {"type": "settings-provider-btn", "index": ALL},
+            "className",
+            allow_duplicate=True,
+        ),
+        Output(
+            IDs.SETTINGS_AI_MODEL, "options",
+            allow_duplicate=True,
+        ),
         Input(IDs.SETTINGS_AI_PROVIDER, "data"),
         prevent_initial_call=True,
     )
     def _sync_provider_ui(provider):
         provider = provider or "claude"
-        providers = ["claude", "openai", "gemini"]
+        providers = [
+            "claude", "openai", "gemini", "deepseek"
+        ]
         classes = [
-            "settings-provider-btn active" if p == provider else "settings-provider-btn"
+            "settings-provider-btn active"
+            if p == provider
+            else "settings-provider-btn"
             for p in providers
         ]
-        return classes, _MODEL_OPTIONS.get(provider, _MODEL_OPTIONS["claude"])
+        return (
+            classes,
+            _MODEL_OPTIONS.get(
+                provider, _MODEL_OPTIONS["claude"]
+            ),
+        )
 
     # ── 6. Show / hide API key (clientside) ───────────────────────────────────
     app.clientside_callback(

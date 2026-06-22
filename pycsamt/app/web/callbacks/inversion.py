@@ -20,11 +20,23 @@ import matplotlib.pyplot as plt
 from dash import ctx, clientside_callback, Input, Output, State, html, no_update
 from dash.exceptions import PreventUpdate
 
-_INV_TRACK_IDS = ["trad", "ai"]
-_INV_OUT_IDS   = ["result", "conv", "stats", "log"]
+_INV_TRACK_IDS = ["trad", "ai", "pinn", "hybrid"]
+_INV_OUT_IDS   = [
+    "result", "conv", "stats", "log", "data-fit"
+]
 
-_INV_TRACK_ICON  = {"trad": "bi-cpu",   "ai": "bi-robot"}
-_INV_TRACK_LABEL = {"trad": "Traditional", "ai": "AI Neural"}
+_INV_TRACK_ICON = {
+    "trad":   "bi-cpu",
+    "ai":     "bi-robot",
+    "pinn":   "bi-bezier2",
+    "hybrid": "bi-node-plus",
+}
+_INV_TRACK_LABEL = {
+    "trad":   "Traditional",
+    "ai":     "AI Neural",
+    "pinn":   "PINN",
+    "hybrid": "Hybrid",
+}
 
 from pycsamt.app.web.cache import cache_get
 from pycsamt.app.web.layout import IDs
@@ -45,7 +57,7 @@ except ImportError:
     _TORCH_OK = False
 
 
-# ── PyTorch background installer ──────────────────────────────────────────────
+# ---
 
 _install_lock  = threading.Lock()
 _install_state: dict = {
@@ -143,7 +155,7 @@ def _run_pip_install() -> None:
             _install_state["status"] = "error"
 
 
-# ── Log colouring ─────────────────────────────────────────────────────────────
+# ---
 
 _LOG_RULES: list[tuple[re.Pattern, str]] = [
     (re.compile(r"^\s*(={3,}|-{3,}|\*{3,}|#{2,})"),               "log-head"),
@@ -169,7 +181,7 @@ def _coloured_log(lines: list[str]) -> list[html.Span]:
     ]
 
 
-# ── Inversion helpers (unchanged from previous version) ───────────────────────
+# ---
 
 def _build_true_model(table_data, halfspace_rho):
     from pycsamt.forward import LayeredModel
@@ -573,11 +585,235 @@ def _plot_ai_comparison(y_true, y_pred, n_layers, dark):
     fig.tight_layout(); return fig
 
 
-# ── Callbacks ─────────────────────────────────────────────────────────────────
+# ---
 
 def register_inversion(app) -> None:
 
-    # ── Tab system ─────────────────────────────────────────────────────────────
+    # ---
+
+    # G1. Guard Run button: disable for Hybrid
+    #     when no checkpoint is loaded
+    @app.callback(
+        Output(IDs.BTN_INV_RUN, "disabled"),
+        Output(IDs.BTN_INV_RUN, "title"),
+        Input(IDs.INV_ACTIVE_TRACK, "data"),
+        Input(IDs.INV_HYB_CHECKPOINT, "contents"),
+    )
+    def guard_run_btn(track, checkpoint):
+        if (
+            (track or "trad") == "hybrid"
+            and not checkpoint
+        ):
+            return (
+                True,
+                "Upload a .npz AI checkpoint"
+                " to enable Hybrid inversion",
+            )
+        return False, ""
+
+    # G2. Clientside: show running message
+    #     immediately on button click
+    app.clientside_callback(
+        """
+        function(n, track) {
+            if (!n) return "";
+            var m = {
+                "trad":
+                    "Running Traditional inversion...",
+                "ai":
+                    "Running AI Neural inversion...",
+                "pinn":
+                    "Running PINN inversion...",
+                "hybrid":
+                    "Running Hybrid inversion..."
+            };
+            return m[track || "trad"] || "Running...";
+        }
+        """,
+        Output(
+            IDs.INV_RUN_MSG,
+            "children",
+            allow_duplicate=True,
+        ),
+        Input(IDs.BTN_INV_RUN, "n_clicks"),
+        State(IDs.INV_ACTIVE_TRACK, "data"),
+        prevent_initial_call=True,
+    )
+
+    # LS. Line / station selector helpers
+    # ---
+    # Key-name helpers: station_records may use
+    # uppercase ("Line","ID") or lowercase ("line","station")
+
+    def _rec_line(r):
+        return r.get("Line") or r.get("line") or ""
+
+    def _rec_sta(r):
+        return r.get("ID") or r.get("station") or ""
+
+    def _line_opts(records):
+        seen, out = set(), []
+        for r in records:
+            ln = _rec_line(r)
+            if ln and ln not in seen:
+                seen.add(ln)
+                out.append(ln)
+        return [
+            {"label": ln, "value": ln}
+            for ln in sorted(out)
+        ]
+
+    def _sta_opts(records, sel_lines=None):
+        if sel_lines:
+            records = [
+                r for r in records
+                if _rec_line(r) in set(sel_lines)
+            ]
+        seen, out = set(), []
+        for r in records:
+            s = _rec_sta(r)
+            if s and s not in seen:
+                seen.add(s)
+                out.append(s)
+        return [
+            {"label": s, "value": s}
+            for s in sorted(out)
+        ]
+
+    # LS-1. PINN: populate line + station from STORE_DATA
+    @app.callback(
+        Output(IDs.INV_PINN_LINE_SEL, "options"),
+        Output(
+            IDs.INV_PINN_STATION_SEL, "options",
+            allow_duplicate=True,
+        ),
+        Input(IDs.STORE_DATA, "data"),
+        prevent_initial_call=True,
+    )
+    def populate_pinn_selectors(store_data):
+        recs = (store_data or {}).get(
+            "station_records", []
+        )
+        return _line_opts(recs), _sta_opts(recs)
+
+    # LS-2. PINN: filter stations by selected lines
+    @app.callback(
+        Output(
+            IDs.INV_PINN_STATION_SEL, "options",
+            allow_duplicate=True,
+        ),
+        Input(IDs.INV_PINN_LINE_SEL, "value"),
+        State(IDs.STORE_DATA, "data"),
+        prevent_initial_call=True,
+    )
+    def filter_pinn_stations(sel_lines, store_data):
+        recs = (store_data or {}).get(
+            "station_records", []
+        )
+        return _sta_opts(recs, sel_lines)
+
+    # LS-3. Hybrid: populate line + station from STORE_DATA
+    @app.callback(
+        Output(IDs.INV_HYB_LINE_SEL, "options"),
+        Output(
+            IDs.INV_HYB_STATION_SEL, "options",
+            allow_duplicate=True,
+        ),
+        Input(IDs.STORE_DATA, "data"),
+        prevent_initial_call=True,
+    )
+    def populate_hyb_selectors(store_data):
+        recs = (store_data or {}).get(
+            "station_records", []
+        )
+        return _line_opts(recs), _sta_opts(recs)
+
+    # LS-4. Hybrid: filter stations by selected lines
+    @app.callback(
+        Output(
+            IDs.INV_HYB_STATION_SEL, "options",
+            allow_duplicate=True,
+        ),
+        Input(IDs.INV_HYB_LINE_SEL, "value"),
+        State(IDs.STORE_DATA, "data"),
+        prevent_initial_call=True,
+    )
+    def filter_hyb_stations(sel_lines, store_data):
+        recs = (store_data or {}).get(
+            "station_records", []
+        )
+        return _sta_opts(recs, sel_lines)
+
+    # LS-5. Data-fit: populate line options from
+    #        stations that were actually inverted
+    @app.callback(
+        Output(IDs.INV_DATAFIT_LINE, "options"),
+        Output(
+            "inv-datafit-selectors", "style"
+        ),
+        Output("inv-datafit-hint", "style"),
+        Input(IDs.INV_DATAFIT_STA, "options"),
+        State(IDs.STORE_DATA, "data"),
+        prevent_initial_call=True,
+    )
+    def populate_datafit_lines(
+        sta_opts, store_data
+    ):
+        if not sta_opts:
+            return (
+                [],
+                {"display": "none"},
+                {},
+            )
+        sta_names = {
+            o["value"] for o in sta_opts
+        }
+        recs = (store_data or {}).get(
+            "station_records", []
+        )
+        active_recs = [
+            r for r in recs
+            if _rec_sta(r) in sta_names
+        ]
+        lines = _line_opts(active_recs)
+        sel_style = (
+            {} if lines
+            else {"display": "none"}
+        )
+        hint_style = (
+            {"display": "none"} if sta_opts
+            else {}
+        )
+        return lines, sel_style, hint_style
+
+    # LS-6. Data-fit: filter stations by selected line
+    @app.callback(
+        Output(
+            IDs.INV_DATAFIT_STA, "options",
+            allow_duplicate=True,
+        ),
+        Input(IDs.INV_DATAFIT_LINE, "value"),
+        State(IDs.INV_DATAFIT_STA, "options"),
+        State(IDs.STORE_DATA, "data"),
+        prevent_initial_call=True,
+    )
+    def filter_datafit_stations(
+        sel_line, current_opts, store_data
+    ):
+        if not sel_line or not current_opts:
+            return no_update
+        recs = (store_data or {}).get(
+            "station_records", []
+        )
+        line_stas = {
+            _rec_sta(r) for r in recs
+            if _rec_line(r) == sel_line
+        }
+        filtered = [
+            o for o in current_opts
+            if o["value"] in line_stas
+        ]
+        return filtered or no_update
 
     # T1. Track pill buttons → INV_ACTIVE_TRACK store
     @app.callback(
@@ -603,63 +839,85 @@ def register_inversion(app) -> None:
             return no_update
         return tid.replace("inv-out-tab-", "")
 
-    # T3. Store → sidebar ctrl panels + track btn classes (clientside)
+    # T3. Store → sidebar ctrl panels + track btn classes
     clientside_callback(
         """
         function(active_track) {
             if (!active_track)
-                return Array(4).fill(window.dash_clientside.no_update);
-            var tracks  = ["trad", "ai"];
-            var blk     = {display:"block"};
-            var none    = {display:"none"};
-            var styles  = tracks.map(function(t){
+                return Array(8).fill(
+                    window.dash_clientside.no_update
+                );
+            var tracks = ["trad","ai","pinn","hybrid"];
+            var blk  = {display:"block"};
+            var none = {display:"none"};
+            var styles = tracks.map(function(t){
                 return active_track === t ? blk : none;
             });
             var classes = tracks.map(function(t){
-                return "fwd-dim-btn" + (active_track === t ? " active" : "");
+                return "fwd-dim-btn"
+                    + (active_track === t
+                        ? " active" : "");
             });
             return styles.concat(classes);
         }
         """,
-        Output("inv-ctrl-trad",  "style"),
-        Output("inv-ctrl-ai",    "style"),
-        Output("inv-track-trad", "className"),
-        Output("inv-track-ai",   "className"),
+        Output("inv-ctrl-trad",   "style"),
+        Output("inv-ctrl-ai",     "style"),
+        Output("inv-ctrl-pinn",   "style"),
+        Output("inv-ctrl-hybrid", "style"),
+        Output("inv-track-trad",   "className"),
+        Output("inv-track-ai",     "className"),
+        Output("inv-track-pinn",   "className"),
+        Output("inv-track-hybrid", "className"),
         Input(IDs.INV_ACTIVE_TRACK, "data"),
         prevent_initial_call=False,
     )
 
-    # T4. Output-store → view panels + output tab classes (clientside)
+    # T4. Output-store → view panels + output tab classes
     clientside_callback(
         """
         function(active_out) {
             if (!active_out)
-                return Array(8).fill(window.dash_clientside.no_update);
-            var tabs  = ["result","conv","stats","log"];
-            var flex  = {display:"flex", flexDirection:"column",
-                         height:"100%", minHeight:"0", flex:"1"};
-            var blk   = {display:"block"};
-            var none  = {display:"none"};
+                return Array(10).fill(
+                    window.dash_clientside.no_update
+                );
+            var tabs = [
+                "result","conv","stats",
+                "log","data-fit"
+            ];
+            var flex = {
+                display:"flex",
+                flexDirection:"column",
+                height:"100%",
+                minHeight:"0",
+                flex:"1"
+            };
+            var blk  = {display:"block"};
+            var none = {display:"none"};
+            var noFlex = ["stats","log","data-fit"];
             var styles = tabs.map(function(t){
-                var isActive = active_out === t;
-                return isActive
-                    ? (t === "stats" || t === "log" ? blk : flex)
-                    : none;
+                if (active_out !== t) return none;
+                return noFlex.indexOf(t) >= 0
+                    ? blk : flex;
             });
             var classes = tabs.map(function(t){
-                return "prof-tab-btn" + (active_out === t ? " active" : "");
+                return "prof-tab-btn"
+                    + (active_out === t
+                        ? " active" : "");
             });
             return styles.concat(classes);
         }
         """,
-        Output("inv-panel-result",  "style"),
-        Output("inv-panel-conv",    "style"),
-        Output("inv-panel-stats",   "style"),
-        Output("inv-panel-log",     "style"),
-        Output("inv-out-tab-result","className"),
-        Output("inv-out-tab-conv",  "className"),
-        Output("inv-out-tab-stats", "className"),
-        Output("inv-out-tab-log",   "className"),
+        Output("inv-panel-result",   "style"),
+        Output("inv-panel-conv",     "style"),
+        Output("inv-panel-stats",    "style"),
+        Output("inv-panel-log",      "style"),
+        Output("inv-panel-data-fit", "style"),
+        Output("inv-out-tab-result",   "className"),
+        Output("inv-out-tab-conv",     "className"),
+        Output("inv-out-tab-stats",    "className"),
+        Output("inv-out-tab-log",      "className"),
+        Output("inv-out-tab-data-fit", "className"),
         Input(IDs.INV_ACTIVE_OUT, "data"),
         prevent_initial_call=False,
     )
@@ -667,41 +925,85 @@ def register_inversion(app) -> None:
     # T5. Context info bar
     @app.callback(
         Output(IDs.INV_CTX_BAR, "children"),
-        Input(IDs.INV_ACTIVE_TRACK, "data"),
-        Input(IDs.INV_METHOD,       "value"),
-        Input(IDs.INV_AI_DIM,       "value"),
+        Input(IDs.INV_ACTIVE_TRACK,  "data"),
+        Input(IDs.INV_METHOD,        "value"),
+        Input(IDs.INV_AI_DIM,        "value"),
+        Input(IDs.INV_PINN_DIM,      "value"),
+        Input(IDs.INV_HYB_DIM,       "value"),
     )
-    def update_inv_ctx_bar(active_track, method, ai_dim):
+    def update_inv_ctx_bar(
+        active_track, method, ai_dim,
+        pinn_dim, hyb_dim,
+    ):
         active_track = active_track or "trad"
-        icon  = _INV_TRACK_ICON.get(active_track, "bi-cpu")
-        label = _INV_TRACK_LABEL.get(active_track, "Traditional")
+        icon  = _INV_TRACK_ICON.get(
+            active_track, "bi-cpu"
+        )
+        label = _INV_TRACK_LABEL.get(
+            active_track, "Traditional"
+        )
         parts = [
             html.Span(
-                [html.I(className=f"bi {icon} me-1"), label],
+                [
+                    html.I(
+                        className=f"bi {icon} me-1"
+                    ),
+                    label,
+                ],
                 className="adv-info-group",
             ),
         ]
         if active_track == "trad" and method:
             parts += [
-                html.Span("·", className="adv-info-sep"),
-                html.Span(method.upper(), className="adv-info-plot"),
+                html.Span(".", className="adv-info-sep"),
+                html.Span(
+                    method.upper(),
+                    className="adv-info-plot",
+                ),
             ]
         elif active_track == "ai" and ai_dim:
-            dim_label = {"1d": "1-D ResNet", "2d": "2-D UNet", "3d": "3-D GCN"}.get(ai_dim, ai_dim)
+            dim_label = {
+                "1d": "1-D ResNet",
+                "2d": "2-D UNet",
+                "3d": "3-D GCN",
+            }.get(ai_dim, ai_dim)
             parts += [
-                html.Span("·", className="adv-info-sep"),
-                html.Span(dim_label, className="adv-info-plot"),
+                html.Span(".", className="adv-info-sep"),
+                html.Span(
+                    dim_label,
+                    className="adv-info-plot",
+                ),
+            ]
+        elif active_track == "pinn" and pinn_dim:
+            parts += [
+                html.Span(".", className="adv-info-sep"),
+                html.Span(
+                    f"PINN {pinn_dim.upper()}",
+                    className="adv-info-plot",
+                ),
+            ]
+        elif active_track == "hybrid" and hyb_dim:
+            parts += [
+                html.Span(".", className="adv-info-sep"),
+                html.Span(
+                    f"Hybrid {hyb_dim.upper()}",
+                    className="adv-info-plot",
+                ),
             ]
         parts += [
-            html.Span("·", className="adv-info-sep"),
+            html.Span(".", className="adv-info-sep"),
             html.Span(
-                "Configure parameters then click Run Inversion",
-                style={"color": "var(--sub0)", "fontSize": "10.5px"},
+                "Configure parameters then click"
+                " Run Inversion",
+                style={
+                    "color": "var(--sub0)",
+                    "fontSize": "10.5px",
+                },
             ),
         ]
         return parts
 
-    # ── Original callbacks (renumbered) ────────────────────────────────────────
+    # ---
 
     # 1. Show/hide data-source panels
     @app.callback(
@@ -873,18 +1175,19 @@ def register_inversion(app) -> None:
                     no_update, True,       # keep modal open, stop interval
                     no_update, False, "")
 
-    # 9. Main inversion runner
+    # 9. Main inversion runner (trad + AI tracks)
     @app.callback(
-        Output(IDs.IMG_INV,           "src"),
-        Output(IDs.IMG_INV_CONV,      "src"),
-        Output(IDs.INV_LOG,           "children"),
-        Output(IDs.INV_STATS,         "children"),
-        Output(IDs.INV_SPINNER,       "children"),
-        Output(IDs.INV_FEEDBACK,      "children"),
-        Output(IDs.INV_ACTIVE_OUT,    "data"),
-        Output(IDs.TOAST_ERROR,       "is_open",  allow_duplicate=True),
-        Output(IDs.TOAST_BODY,        "children", allow_duplicate=True),
-        Output(IDs.INV_INSTALL_MODAL, "is_open",  allow_duplicate=True),
+        Output(IDs.IMG_INV,      "src",      allow_duplicate=True),
+        Output(IDs.IMG_INV_CONV, "src",      allow_duplicate=True),
+        Output(IDs.INV_LOG,      "children", allow_duplicate=True),
+        Output(IDs.INV_STATS,    "children", allow_duplicate=True),
+        Output(IDs.INV_SPINNER,  "children", allow_duplicate=True),
+        Output(IDs.INV_FEEDBACK, "children", allow_duplicate=True),
+        Output(IDs.INV_ACTIVE_OUT, "data",   allow_duplicate=True),
+        Output(IDs.TOAST_ERROR,  "is_open",  allow_duplicate=True),
+        Output(IDs.TOAST_BODY,   "children", allow_duplicate=True),
+        Output(IDs.INV_INSTALL_MODAL, "is_open", allow_duplicate=True),
+        Output(IDs.INV_RUN_MSG,       "children", allow_duplicate=True),
         Input(IDs.BTN_INV_RUN,        "n_clicks"),
         State(IDs.INV_ACTIVE_TRACK,   "data"),
         State(IDs.INV_METHOD,         "value"),
@@ -937,25 +1240,40 @@ def register_inversion(app) -> None:
         if not n_clicks:
             raise PreventUpdate
 
+        track = track or "trad"
+        if track in ("pinn", "hybrid"):
+            raise PreventUpdate
+
         dark = (theme or "dark") == "dark"
         if dark: apply_web_dark_theme()
         else:    apply_web_light_theme()
 
-        track = track or "trad"
         _empty = empty_src(dark=dark)
 
         # Convenience: 10-tuple returns with modal=False (no install prompt)
-        def _ok(src, src_conv, spans, stats, msg, active_tab="result"):
-            return (src, src_conv, spans, stats, "", msg, active_tab, False, "", False)
+        def _ok(
+            src, src_conv, spans, stats, msg,
+            active_tab="result",
+        ):
+            return (
+                src, src_conv, spans, stats,
+                "", msg, active_tab,
+                False, "", False, "",
+            )
 
         def _err(spans, msg):
-            return (_empty, _empty, spans, no_update, "",
-                    f"Error: {msg}", "log", True, msg, False)
+            return (
+                _empty, _empty, spans, no_update,
+                "", f"Error: {msg}",
+                "log", True, msg, False, "",
+            )
 
         def _open_install(spans, msg):
-            """Return tuple that opens the PyTorch install modal."""
-            return (_empty, _empty, spans, no_update, "",
-                    msg, "log", False, "", True)
+            return (
+                _empty, _empty, spans, no_update,
+                "", msg, "log",
+                False, "", True, "",
+            )
 
         log_lines: list[str] = []
         def _log(m): log_lines.append(m)
@@ -1327,3 +1645,574 @@ def register_inversion(app) -> None:
             _log(f"ERROR  {exc}")
             _log(_tb.format_exc()[-800:])
             return _err(_coloured_log(log_lines), str(exc))
+
+    # ---
+
+    @app.callback(
+        Output("inv-pinn-solver-card", "style"),
+        Output(IDs.INV_PINN_2D_PANEL,  "style"),
+        Output(IDs.INV_PINN_3D_PANEL,  "style"),
+        Output("inv-pinn-lamx-row",    "style"),
+        Output("inv-pinn-lamg-row",    "style"),
+        Input(IDs.INV_PINN_DIM,        "value"),
+    )
+    def sync_pinn_dim(dim):
+        dim = dim or "1d"
+        solver = _SHOW if dim == "1d"  else _HIDE
+        p2d    = _SHOW if dim == "2d"  else _HIDE
+        p3d    = _SHOW if dim == "3d"  else _HIDE
+        lamx   = _SHOW if dim != "1d" else _HIDE
+        lamg   = _SHOW if dim == "3d"  else _HIDE
+        return solver, p2d, p3d, lamx, lamg
+
+    @app.callback(
+        Output(IDs.INV_HYB_2D_PANEL, "style"),
+        Output(IDs.INV_HYB_3D_PANEL, "style"),
+        Output("inv-hyb-lamx-row",   "style"),
+        Output("inv-hyb-lamg-row",   "style"),
+        Input(IDs.INV_HYB_DIM,       "value"),
+    )
+    def sync_hyb_dim(dim):
+        dim  = dim or "1d"
+        p2d  = _SHOW if dim == "2d"  else _HIDE
+        p3d  = _SHOW if dim == "3d"  else _HIDE
+        lamx = _SHOW if dim != "1d" else _HIDE
+        lamg = _SHOW if dim == "3d"  else _HIDE
+        return p2d, p3d, lamx, lamg
+
+    # ---
+
+    @app.callback(
+        Output(IDs.INV_HYB_MODEL_INFO, "children"),
+        Input(IDs.INV_HYB_CHECKPOINT,  "contents"),
+        State(IDs.INV_HYB_CHECKPOINT,  "filename"),
+        prevent_initial_call=True,
+    )
+    def hyb_checkpoint_info(contents, filename):
+        if not contents:
+            raise PreventUpdate
+        try:
+            from pycsamt.app.web.utils_pinn import (
+                decode_npz_checkpoint,
+            )
+            import numpy as _np
+            path = decode_npz_checkpoint(contents)
+            with _np.load(path) as npz:
+                keys = list(npz.keys())
+            import os; os.unlink(path)
+            return html.Span(
+                f"{filename}  —  keys: "
+                + ", ".join(keys[:6]),
+                style={
+                    "fontSize": "11px",
+                    "color": "#a6e3a1",
+                },
+            )
+        except Exception as exc:
+            return html.Span(
+                f"Could not read: {exc}",
+                style={
+                    "fontSize": "11px",
+                    "color": "#f38ba8",
+                },
+            )
+
+    # ---
+
+    @app.callback(
+        Output(IDs.IMG_INV,      "src",      allow_duplicate=True),
+        Output(IDs.IMG_INV_CONV, "src",      allow_duplicate=True),
+        Output(IDs.INV_LOG,      "children", allow_duplicate=True),
+        Output(IDs.INV_STATS,    "children", allow_duplicate=True),
+        Output(IDs.INV_SPINNER,  "children", allow_duplicate=True),
+        Output(IDs.INV_FEEDBACK, "children", allow_duplicate=True),
+        Output(IDs.INV_ACTIVE_OUT,    "data", allow_duplicate=True),
+        Output(IDs.TOAST_ERROR,  "is_open",  allow_duplicate=True),
+        Output(IDs.TOAST_BODY,   "children", allow_duplicate=True),
+        Output(IDs.INV_INSTALL_MODAL, "is_open", allow_duplicate=True),
+        Output(IDs.INV_PINN_RESULT_STORE, "data"),
+        Output(IDs.INV_HYB_RESULT_STORE,  "data"),
+        Output(IDs.INV_DATAFIT_STA,       "options"),
+        Output(IDs.INV_RUN_MSG, "children", allow_duplicate=True),
+        Input(IDs.BTN_INV_RUN,         "n_clicks"),
+        State(IDs.INV_ACTIVE_TRACK,    "data"),
+        # PINN params
+        State(IDs.INV_PINN_DIM,        "value"),
+        State(IDs.INV_PINN_DATA_SRC,   "value"),
+        State(IDs.INV_PINN_STATION_SEL,"value"),
+        State(IDs.INV_PINN_SOLVER,     "value"),
+        State(IDs.INV_PINN_MODE,       "value"),
+        State(IDs.INV_PINN_N_LAYERS,   "value"),
+        State(IDs.INV_PINN_DEPTH_MAX,  "value"),
+        State(IDs.INV_PINN_N_FREQS,    "value"),
+        State(IDs.INV_PINN_EPOCHS,     "value"),
+        State(IDs.INV_PINN_LR,         "value"),
+        State(IDs.INV_PINN_LOG_EVERY,  "value"),
+        State(IDs.INV_PINN_DEVICE,     "value"),
+        State(IDs.INV_PINN_LAM_Z,      "value"),
+        State(IDs.INV_PINN_LAM_X,      "value"),
+        State(IDs.INV_PINN_LAM_G,      "value"),
+        State(IDs.INV_PINN_RADIUS,     "value"),
+        State(IDs.INV_PINN_SPC,        "value"),
+        State(IDs.INV_PINN_COMP_TE,    "value"),
+        State(IDs.INV_PINN_COMP_TM,    "value"),
+        State(IDs.INV_BACKEND_SELECT,  "value"),
+        # Hybrid params
+        State(IDs.INV_HYB_DIM,         "value"),
+        State(IDs.INV_HYB_DATA_SRC,    "value"),
+        State(IDs.INV_HYB_STATION_SEL, "value"),
+        State(IDs.INV_HYB_CHECKPOINT,  "contents"),
+        State(IDs.INV_HYB_MODE,        "value"),
+        State(IDs.INV_HYB_N_LAYERS,    "value"),
+        State(IDs.INV_HYB_N_FREQS,     "value"),
+        State(IDs.INV_HYB_EPOCHS,      "value"),
+        State(IDs.INV_HYB_LR,          "value"),
+        State(IDs.INV_HYB_DEVICE,      "value"),
+        State(IDs.INV_HYB_LAM_Z,       "value"),
+        State(IDs.INV_HYB_COMP_TE,     "value"),
+        State(IDs.INV_HYB_COMP_TM,     "value"),
+        State(IDs.SESSION_ID,          "data"),
+        State(IDs.STORE_THEME,         "data"),
+        prevent_initial_call=True,
+    )
+    def run_pinn_hybrid_inversion(
+        n_clicks, track,
+        pinn_dim, pinn_src, pinn_stations,
+        pinn_solver, pinn_mode,
+        pinn_n_layers, pinn_depth_max,
+        pinn_n_freqs, pinn_epochs,
+        pinn_lr, pinn_log_every,
+        pinn_device,
+        pinn_lam_z, pinn_lam_x, pinn_lam_g,
+        pinn_radius, pinn_spc,
+        pinn_comp_te, pinn_comp_tm,
+        pinn_backend,
+        hyb_dim, hyb_src, hyb_stations,
+        hyb_ckpt, hyb_mode,
+        hyb_n_layers, hyb_n_freqs,
+        hyb_epochs, hyb_lr, hyb_device,
+        hyb_lam_z, hyb_comp_te, hyb_comp_tm,
+        session_id, theme,
+    ):
+        if not n_clicks:
+            raise PreventUpdate
+        track = track or "trad"
+        if track not in ("pinn", "hybrid"):
+            raise PreventUpdate
+
+        dark = (theme or "dark") == "dark"
+        if dark:
+            apply_web_dark_theme()
+        else:
+            apply_web_light_theme()
+
+        _empty = empty_src(dark=dark)
+
+        def _ok13(
+            src, src_conv, spans,
+            stats, msg, tab="result",
+            pinn_store=None, hyb_store=None,
+            sta_opts=None,
+        ):
+            return (
+                src, src_conv, spans, stats,
+                "", msg, tab,
+                False, "", False,
+                pinn_store, hyb_store,
+                sta_opts or [], "",
+            )
+
+        def _err13(spans, msg):
+            return (
+                _empty, _empty, spans,
+                no_update, "", f"Error: {msg}",
+                "log", True, msg, False,
+                no_update, no_update,
+                no_update, "",
+            )
+
+        log_lines: list = []
+        def _log(m):
+            log_lines.append(m)
+
+        from pycsamt.app.web.utils_pinn import (
+            session_to_obs_1d,
+            session_to_obs_2d,
+            decode_npz_checkpoint,
+            build_pinn_inv,
+            build_hybrid_inv,
+            plot_pinn_section,
+            plot_pinn_convergence,
+            pinn_stats_div,
+        )
+
+        # ── PINN track ────────────────────────────────
+
+        if track == "pinn":
+            _log("=" * 50)
+            _log("  pycsamt PINN Inversion")
+            _log("=" * 50)
+
+            dim       = (pinn_dim      or "1d").lower()
+            data_src  = (pinn_src      or "session").lower()
+            solver    = (pinn_solver   or "mt1d").lower()
+            mode      = (pinn_mode     or "te").lower()
+            n_layers  = int(pinn_n_layers  or 5)
+            depth_max = float(pinn_depth_max or 2000.0)
+            n_freqs   = int(pinn_n_freqs   or 32)
+            epochs    = int(pinn_epochs    or 300)
+            lr        = float(pinn_lr      or 0.01)
+            log_every = int(pinn_log_every or 50)
+            device    = pinn_device or None
+            lam_z     = float(pinn_lam_z   or 0.01)
+            lam_x     = float(pinn_lam_x   or 0.005)
+            lam_g     = float(pinn_lam_g   or 0.005)
+            radius    = float(pinn_radius  or 5000.0)
+            spc       = float(pinn_spc     or 500.0)
+            comp_te   = pinn_comp_te or "xy"
+            comp_tm   = pinn_comp_tm or "yx"
+
+            try:
+                if not _TORCH_OK:
+                    _log("PyTorch not found.")
+                    return (
+                        _empty, _empty,
+                        _coloured_log(log_lines),
+                        no_update, "",
+                        "PyTorch required for PINN.",
+                        "log", False, "", True,
+                        no_update, no_update,
+                        no_update,
+                    )
+
+                _log(f"dim={dim} src={data_src}"
+                     f" epochs={epochs} lr={lr}")
+
+                if data_src == "session":
+                    if not session_id:
+                        return _err13(
+                            _coloured_log(log_lines),
+                            "No session. Load EDI files"
+                            " first.",
+                        )
+                    _log("Loading session obs …")
+                    if dim == "1d":
+                        obs = session_to_obs_1d(
+                            session_id,
+                            pinn_stations or None,
+                            comp=comp_te,
+                        )
+                    else:
+                        obs = session_to_obs_2d(
+                            session_id,
+                            pinn_stations or None,
+                            comp_te=comp_te,
+                            comp_tm=comp_tm,
+                        )
+                    _log(f"Loaded {len(obs)} stations.")
+                else:
+                    if dim != "1d":
+                        return _err13(
+                            _coloured_log(log_lines),
+                            "Synthetic data is only"
+                            " supported for 1-D PINN."
+                            " Use session data for"
+                            " 2-D / 3-D.",
+                        )
+                    from pycsamt.ai.inversion._sites_bridge import (  # noqa: E501
+                        SiteObs1D as _SiteObs1D,
+                    )
+                    from pycsamt.forward.em1d import (
+                        MT1DForward,
+                    )
+                    from pycsamt.forward.synthetic import (
+                        LayeredModel,
+                    )
+                    freqs = np.logspace(-2, 4, n_freqs)
+                    rng   = np.random.default_rng(42)
+                    obs   = []
+                    for i in range(8):
+                        log_r = rng.uniform(
+                            0.5, 3.5, n_layers
+                        )
+                        thk = 10.0 ** rng.uniform(
+                            1.5, 3.2, n_layers - 1
+                        )
+                        m = LayeredModel(
+                            resistivity=10.0 ** log_r,
+                            thickness=thk,
+                        )
+                        resp = MT1DForward(freqs).run(m)
+                        obs.append(
+                            _SiteObs1D(
+                                name=f"SYN{i:02d}",
+                                freq=freqs,
+                                rho_obs=resp.rho_a,
+                                phase_obs=resp.phase,
+                            )
+                        )
+                    _log(f"Generated {len(obs)}"
+                         " synthetic 1-D obs.")
+
+                _log("Building PINN inverter …")
+                t0 = time.time()
+                inv = build_pinn_inv(
+                    obs, dim,
+                    solver=solver,
+                    mode=mode,
+                    n_layers=n_layers,
+                    depth_max=depth_max,
+                    n_freqs=n_freqs,
+                    epochs=epochs,
+                    lr=lr,
+                    comp=comp_te,
+                    comp_te=comp_te,
+                    comp_tm=comp_tm,
+                    smoothness_weight=lam_z,
+                    lateral_weight=lam_x,
+                    graph_weight=lam_g,
+                    radius=radius,
+                    station_spacing=spc,
+                    device=device,
+                )
+                _log("Fitting …")
+                if dim == "1d":
+                    inv.fit(
+                        epochs=epochs,
+                        verbose=False,
+                        log_every=log_every,
+                    )
+                else:
+                    inv.fit(
+                        verbose=False,
+                        log_every=log_every,
+                    )
+                elapsed = time.time() - t0
+                _log(f"Done in {elapsed:.1f}s.")
+
+                src_res  = plot_pinn_section(
+                    inv, dim, dark=dark
+                )
+                src_conv = plot_pinn_convergence(
+                    inv, dark=dark, label="PINN"
+                )
+                stats = pinn_stats_div(
+                    inv, dim,
+                    elapsed_s=elapsed,
+                    label="PINN",
+                )
+
+                try:
+                    resid_json = (
+                        inv.residuals()
+                        .to_dict("records")
+                    )
+                    sta_names  = list(
+                        inv.stations
+                    )
+                except Exception:
+                    resid_json = []
+                    sta_names  = []
+
+                pinn_store = {
+                    "residuals": resid_json,
+                    "stations":  sta_names,
+                    "dim":       dim,
+                }
+                sta_opts = [
+                    {"label": s, "value": s}
+                    for s in sta_names
+                ]
+
+                msg = (
+                    f"PINN {dim.upper()} complete"
+                    f" — {len(obs)} stations"
+                    f" in {elapsed:.1f}s"
+                )
+                return _ok13(
+                    src_res, src_conv,
+                    _coloured_log(log_lines),
+                    stats, msg,
+                    pinn_store=pinn_store,
+                    sta_opts=sta_opts,
+                )
+
+            except Exception as exc:
+                import traceback as _tb
+                _log(f"ERROR  {exc}")
+                _log(_tb.format_exc()[-1200:])
+                return _err13(
+                    _coloured_log(log_lines), str(exc)
+                )
+
+        # ── Hybrid track ──────────────────────────────
+
+        _log("=" * 50)
+        _log("  pycsamt Hybrid Inversion")
+        _log("=" * 50)
+
+        dim       = (hyb_dim   or "1d").lower()
+        data_src  = (hyb_src   or "session").lower()
+        mode      = (hyb_mode  or "te").lower()
+        n_layers  = int(hyb_n_layers or 5)
+        n_freqs   = int(hyb_n_freqs  or 32)
+        epochs    = int(hyb_epochs   or 150)
+        lr        = float(hyb_lr     or 0.005)
+        device    = hyb_device or None
+        lam_z     = float(hyb_lam_z  or 0.005)
+        comp_te   = hyb_comp_te or "xy"
+        comp_tm   = hyb_comp_tm or "yx"
+
+        try:
+            if not _TORCH_OK:
+                _log("PyTorch not found.")
+                return (
+                    _empty, _empty,
+                    _coloured_log(log_lines),
+                    no_update, "",
+                    "PyTorch required for Hybrid.",
+                    "log", False, "", True,
+                    no_update, no_update, no_update,
+                )
+
+            if not hyb_ckpt:
+                return _err13(
+                    _coloured_log(log_lines),
+                    "Upload a .npz AI checkpoint"
+                    " before running Hybrid.",
+                )
+
+            _log("Decoding AI checkpoint …")
+            ckpt_path = decode_npz_checkpoint(
+                hyb_ckpt
+            )
+
+            _log("Loading session obs …")
+            if dim == "1d":
+                obs = session_to_obs_1d(
+                    session_id,
+                    hyb_stations or None,
+                    comp=comp_te,
+                )
+            else:
+                obs = session_to_obs_2d(
+                    session_id,
+                    hyb_stations or None,
+                    comp_te=comp_te,
+                    comp_tm=comp_tm,
+                )
+            _log(f"Loaded {len(obs)} stations.")
+
+            _log("Building Hybrid inverter …")
+            t0 = time.time()
+            inv = build_hybrid_inv(
+                obs, dim, ckpt_path,
+                n_layers=n_layers if n_layers else None,
+                n_freqs=n_freqs,
+                mode=mode,
+                smoothness_weight=lam_z,
+                max_iter=epochs,
+                lr=lr,
+                comp=comp_te,
+                comp_te=comp_te,
+                comp_tm=comp_tm,
+                device=device,
+            )
+
+            import os as _os
+            _os.unlink(ckpt_path)
+
+            _log("Fitting (Stage 1 AI + Stage 2 PINN)…")
+            inv.fit(verbose=False, log_every=20)
+            elapsed = time.time() - t0
+            _log(f"Done in {elapsed:.1f}s.")
+
+            src_res  = plot_pinn_section(
+                inv, dim, dark=dark
+            )
+            src_conv = plot_pinn_convergence(
+                inv, dark=dark, label="Hybrid"
+            )
+            stats = pinn_stats_div(
+                inv, dim,
+                elapsed_s=elapsed,
+                label="Hybrid",
+            )
+
+            try:
+                resid_json = (
+                    inv.residuals()
+                    .to_dict("records")
+                )
+                sta_names = list(inv.stations)
+            except Exception:
+                resid_json = []
+                sta_names  = []
+
+            hyb_store = {
+                "residuals": resid_json,
+                "stations":  sta_names,
+                "dim":       dim,
+            }
+            sta_opts = [
+                {"label": s, "value": s}
+                for s in sta_names
+            ]
+            msg = (
+                f"Hybrid {dim.upper()} complete"
+                f" — {len(obs)} stations"
+                f" in {elapsed:.1f}s"
+            )
+            return _ok13(
+                src_res, src_conv,
+                _coloured_log(log_lines),
+                stats, msg,
+                hyb_store=hyb_store,
+                sta_opts=sta_opts,
+            )
+
+        except Exception as exc:
+            import traceback as _tb
+            _log(f"ERROR  {exc}")
+            _log(_tb.format_exc()[-1200:])
+            return _err13(
+                _coloured_log(log_lines), str(exc)
+            )
+
+    # ---
+
+    @app.callback(
+        Output(IDs.IMG_INV_DATA_FIT, "src"),
+        Input(IDs.INV_DATAFIT_STA,   "value"),
+        State(IDs.INV_PINN_RESULT_STORE, "data"),
+        State(IDs.INV_HYB_RESULT_STORE,  "data"),
+        State(IDs.STORE_THEME,           "data"),
+        prevent_initial_call=True,
+    )
+    def update_data_fit(
+        station, pinn_store, hyb_store, theme
+    ):
+        if not station:
+            raise PreventUpdate
+
+        dark = (theme or "dark") == "dark"
+
+        store = pinn_store or hyb_store
+        if not store:
+            raise PreventUpdate
+
+        resid_records = store.get("residuals", [])
+        if not resid_records:
+            raise PreventUpdate
+
+        import pandas as pd
+        from pycsamt.app.web.utils_pinn import (
+            plot_pinn_data_fit,
+        )
+        df = pd.DataFrame(resid_records)
+        return plot_pinn_data_fit(
+            None,
+            station,
+            dark=dark,
+            df=df,
+        )

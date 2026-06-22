@@ -374,6 +374,7 @@ class IDs:
     INV_DATA_DIR    = "inv-data-dir"     # kept for compat
     BTN_INV_RUN     = "btn-inv-run"
     INV_SPINNER     = "inv-spinner"
+    INV_RUN_MSG     = "inv-run-msg"
     INV_LOG         = "inv-log"
     IMG_INV         = "img-inv"
     # Extended inversion controls
@@ -426,6 +427,61 @@ class IDs:
     INV_ACTIVE_TRACK   = "inv-active-track"   # dcc.Store: "trad" | "ai"
     INV_ACTIVE_OUT     = "inv-active-out"     # dcc.Store: "result"|"conv"|"stats"|"log"
     INV_CTX_BAR        = "inv-ctx-bar"        # context info bar (right panel)
+
+    # ── PINN inversion controls ──────────────────────────────────────────
+    INV_PINN_DIM         = "inv-pinn-dim"
+    INV_PINN_DATA_SRC    = "inv-pinn-data-src"
+    INV_PINN_LINE_SEL    = "inv-pinn-line-sel"
+    INV_PINN_STATION_SEL = "inv-pinn-station-sel"
+    INV_PINN_SOLVER      = "inv-pinn-solver"
+    INV_PINN_MODE        = "inv-pinn-mode"
+    INV_PINN_N_LAYERS    = "inv-pinn-n-layers"
+    INV_PINN_DEPTH_MAX   = "inv-pinn-depth-max"
+    INV_PINN_N_FREQS     = "inv-pinn-n-freqs"
+    INV_PINN_EPOCHS      = "inv-pinn-epochs"
+    INV_PINN_LR          = "inv-pinn-lr"
+    INV_PINN_LOG_EVERY   = "inv-pinn-log-every"
+    INV_PINN_DEVICE      = "inv-pinn-device"
+    INV_PINN_LAM_Z       = "inv-pinn-lam-z"
+    INV_PINN_LAM_X       = "inv-pinn-lam-x"
+    INV_PINN_LAM_G       = "inv-pinn-lam-g"
+    INV_PINN_RADIUS      = "inv-pinn-radius"
+    INV_PINN_SPC         = "inv-pinn-spc"
+    INV_PINN_COMP_TE     = "inv-pinn-comp-te"
+    INV_PINN_COMP_TM     = "inv-pinn-comp-tm"
+    INV_PINN_2D_PANEL    = "inv-pinn-2d-panel"
+    INV_PINN_3D_PANEL    = "inv-pinn-3d-panel"
+
+    # ── Hybrid inversion controls ────────────────────────────────────────
+    INV_HYB_DIM         = "inv-hyb-dim"
+    INV_HYB_DATA_SRC    = "inv-hyb-data-src"
+    INV_HYB_LINE_SEL    = "inv-hyb-line-sel"
+    INV_HYB_STATION_SEL = "inv-hyb-station-sel"
+    INV_HYB_CHECKPOINT  = "inv-hyb-checkpoint"
+    INV_HYB_MODE        = "inv-hyb-mode"
+    INV_HYB_N_LAYERS    = "inv-hyb-n-layers"
+    INV_HYB_N_FREQS     = "inv-hyb-n-freqs"
+    INV_HYB_EPOCHS      = "inv-hyb-epochs"
+    INV_HYB_LR          = "inv-hyb-lr"
+    INV_HYB_DEVICE      = "inv-hyb-device"
+    INV_HYB_LAM_Z       = "inv-hyb-lam-z"
+    INV_HYB_LAM_X       = "inv-hyb-lam-x"
+    INV_HYB_LAM_G       = "inv-hyb-lam-g"
+    INV_HYB_RADIUS      = "inv-hyb-radius"
+    INV_HYB_COMP_TE     = "inv-hyb-comp-te"
+    INV_HYB_COMP_TM     = "inv-hyb-comp-tm"
+    INV_HYB_MODEL_INFO  = "inv-hyb-model-info"
+    INV_HYB_2D_PANEL    = "inv-hyb-2d-panel"
+    INV_HYB_3D_PANEL    = "inv-hyb-3d-panel"
+    BTN_HYB_STAGE1_PREV = "btn-hyb-stage1-prev"
+
+    # ── PINN / Hybrid shared ─────────────────────────────────────────────
+    INV_BACKEND_SELECT    = "inv-backend-select"
+    INV_DATAFIT_LINE      = "inv-datafit-line"
+    INV_DATAFIT_STA       = "inv-datafit-sta"
+    IMG_INV_DATA_FIT      = "img-inv-data-fit"
+    INV_PINN_RESULT_STORE = "inv-pinn-result-store"
+    INV_HYB_RESULT_STORE  = "inv-hyb-result-store"
 
     # ── Interpretation page ──────────────────────────────────────────────
     INTERP_CAT        = "interp-cat"
@@ -3177,8 +3233,33 @@ def _settings_offcanvas() -> dbc.Offcanvas:
                         n_clicks=0,
                     ),
                     html.Button(
-                        [html.I(className="bi bi-gem me-1"), "Gemini"],
-                        id={"type": "settings-provider-btn", "index": "gemini"},
+                        [
+                            html.I(
+                                className="bi bi-gem me-1"
+                            ),
+                            "Gemini",
+                        ],
+                        id={
+                            "type": "settings-provider-btn",
+                            "index": "gemini",
+                        },
+                        className="settings-provider-btn",
+                        n_clicks=0,
+                    ),
+                    html.Button(
+                        [
+                            html.I(
+                                className=(
+                                    "bi bi-lightning-charge"
+                                    " me-1"
+                                )
+                            ),
+                            "DeepSeek",
+                        ],
+                        id={
+                            "type": "settings-provider-btn",
+                            "index": "deepseek",
+                        },
                         className="settings-provider-btn",
                         n_clicks=0,
                     ),

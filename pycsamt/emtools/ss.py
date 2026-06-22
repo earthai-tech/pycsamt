@@ -100,6 +100,96 @@ def estimate_ss_ama(
     verbose: int = 0,
     api: bool | None = None,
 ) -> Any:
+    r"""Estimate AMA static-shift correction factors.
+
+    Computes the Adaptive Moving-Average (AMA)
+    spatial log10-resistivity trend across
+    *half_window* neighbours, then returns the
+    per-station deviation from that trend as
+    a correction-factor table.
+
+    Parameters
+    ----------
+    sites : Sites, str, Path, list, EDICollection
+        EDI data source accepted by
+        :func:`ensure_sites`.
+    sort_by : str, default ``'lon'``
+        Along-line order axis.
+        ``'lon'``, ``'lat'``, or ``'name'``.
+    half_window : int, default 3
+        Neighbours on each side of the target.
+    weights : str, default ``'tri'``
+        Spatial weight scheme:
+        ``'tri'`` (triangular), ``'gauss'``,
+        or ``'uniform'``.
+    pband : tuple of float or None
+        Period band ``(p_min_s, p_max_s)``
+        in seconds.  ``None`` uses all periods.
+    max_skew : float or None, default 6.0
+        Phase-tensor skew threshold.  Points
+        where ``|beta| > max_skew`` are excluded.
+    robust_freq : str, default ``'median'``
+        Neighbour aggregation per frequency.
+    robust_overall : str, default ``'median'``
+        Reduce per-frequency deltas to a scalar.
+    recursive : bool, default True
+        Recursive EDI directory search.
+    on_dup : str, default ``'replace'``
+        Duplicate-station resolution.
+    strict : bool, default False
+        Raise on EDI parse errors.
+    verbose : int, default 0
+        Verbosity level.
+    api : bool or None
+        Return an APIFrame when True.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per station with columns:
+
+        ``station``
+            Station identifier.
+        ``delta_log10_rho``
+            Estimated log10 shift.
+            Positive = rho above spatial trend.
+        ``fac_rho``
+            Resistivity correction factor
+            :math:`10^{-\delta}`.
+        ``fac_z``
+            Impedance correction factor
+            :math:`10^{-0.5\delta}`.
+        ``n_used``
+            Frequencies used in the estimate.
+
+    See Also
+    --------
+    correct_ss_ama : estimate + apply in one call.
+    apply_ss_factors : apply a pre-built table.
+
+    Examples
+    --------
+    ::
+
+        from pycsamt.api import read_edis
+        from pycsamt.emtools.ss import (
+            estimate_ss_ama,
+        )
+        survey = read_edis("L22PLT/")
+        sites  = survey.collection
+        tbl = estimate_ss_ama(
+            sites,
+            half_window=3,
+            sort_by="lon",
+        )
+        print(
+            tbl[[
+                "station",
+                "delta_log10_rho",
+                "fac_z",
+            ]]
+        )
+    """
     S = ensure_sites(
         sites,
         recursive=recursive, on_dup=on_dup,
@@ -249,6 +339,51 @@ def apply_ss_factors(
     strict: bool = False,
     verbose: int = 0,
 ):
+    r"""Apply pre-computed static-shift correction factors to sites.
+
+    Scales each site's impedance tensor Z by a per-station
+    correction factor from a table (e.g. from
+    :func:`estimate_ss_ama`, :func:`estimate_ss_loess`,
+    etc.) or dictionary.
+
+    Parameters
+    ----------
+    sites : any
+        EDI data source accepted by
+        :func:`ensure_sites`.
+    factors : dict or pandas.DataFrame
+        If DataFrame, must contain ``'station'`` and
+        *key* columns. If dict, maps station names to
+        correction factors.
+    key : str, default ``'fac_z'``
+        Column name or dict key holding the impedance
+        scaling factors. Common choices are
+        ``'fac_z'`` (impedance) or
+        ``'fac_rho'`` (resistivity).
+    inplace : bool, default False
+        Modify the input Sites object.  When False,
+        a corrected copy is returned.
+    recursive : bool, default True
+        Recursive EDI directory search.
+    on_dup : str, default ``'replace'``
+        Duplicate-station resolution.
+    strict : bool, default False
+        Raise on EDI parse errors.
+    verbose : int, default 0
+        Verbosity level.
+
+    Returns
+    -------
+    Sites
+        Corrected Sites object (same type as input).
+        When *inplace* is True the original is modified
+        and returned.
+
+    See Also
+    --------
+    estimate_ss_ama : Estimate factors via AMA.
+    estimate_ss_loess : Estimate factors via LOESS.
+    """
     S = ensure_sites(
         sites,
         recursive=recursive, on_dup=on_dup,
@@ -294,6 +429,73 @@ def correct_ss_ama(
     strict: bool = False,
     verbose: int = 0,
 ):
+    r"""Correct static shift by the AMA method.
+
+    Estimates per-station log10-resistivity
+    shift factors with :func:`estimate_ss_ama`,
+    then scales each site's impedance tensor Z
+    by the corresponding ``fac_z`` column.
+
+    Parameters
+    ----------
+    sites : Sites, str, Path, list, EDICollection
+        EDI data source.
+    sort_by : str, default ``'lon'``
+        Along-line order axis for AMA estimation.
+    half_window : int, default 3
+        Neighbours on each side of the target.
+    weights : str, default ``'tri'``
+        Spatial weight scheme (``'tri'``,
+        ``'gauss'``, or ``'uniform'``).
+    pband : tuple of float or None
+        Period band ``(p_min_s, p_max_s)``
+        in seconds.
+    max_skew : float or None, default 6.0
+        Phase-tensor skew exclusion threshold.
+    robust_freq : str, default ``'median'``
+        Neighbour aggregation per frequency.
+    robust_overall : str, default ``'median'``
+        Reduce per-frequency deltas to a scalar.
+    inplace : bool, default False
+        Modify the input Sites object in place.
+        When False, returns a corrected copy.
+    recursive : bool, default True
+        Recursive EDI directory search.
+    on_dup : str, default ``'replace'``
+        Duplicate-station resolution.
+    strict : bool, default False
+        Raise on EDI parse errors.
+    verbose : int, default 0
+        Verbosity level.
+
+    Returns
+    -------
+    Sites
+        Corrected Sites object (same type as
+        input).  When *inplace* is True the
+        original object is modified and returned.
+
+    See Also
+    --------
+    estimate_ss_ama : inspect factors before apply.
+    apply_ss_factors : apply a custom factor table.
+
+    Examples
+    --------
+    ::
+
+        from pycsamt.api import read_edis
+        from pycsamt.emtools.ss import (
+            correct_ss_ama,
+        )
+        survey     = read_edis("L22PLT/")
+        sites      = survey.collection
+        sites_corr = correct_ss_ama(
+            sites,
+            half_window=3,
+            sort_by="lon",
+        )
+    """
     S = ensure_sites(
         sites,
         recursive=recursive, on_dup=on_dup,
@@ -451,6 +653,55 @@ def estimate_ss_loess(
     verbose: int = 0,
     api: bool | None = None,
 ) -> Any:
+    r"""Estimate static-shift factors via locally-weighted regression (LOESS).
+
+    Fits a local polynomial trend across neighbouring
+    stations in the along-line direction, then returns
+    the per-station deviation from that trend as
+    correction factors.
+
+    Parameters
+    ----------
+    sites : Sites, str, Path, list, EDICollection
+        EDI data source accepted by
+        :func:`ensure_sites`.
+    half_window : int, default 3
+        Neighbours on each side of the target.
+    poly : int, default 1
+        Polynomial degree (0=constant, 1=linear).
+    it : int, default 2
+        Robust iteration count.
+    pband : tuple of float or None
+        Period band :math:`(p_{min}, p_{max})` in seconds.
+        ``None`` uses all periods.
+    max_skew : float or None, default 6.0
+        Phase-tensor skew threshold.  Points where
+        :math:`|\\beta| > ` *max_skew* are excluded.
+    summary : str, default ``'median'``
+        Per-station aggregation: ``'median'`` or ``'mean'``.
+    recursive : bool, default True
+        Recursive EDI directory search.
+    on_dup : str, default ``'replace'``
+        Duplicate-station resolution.
+    strict : bool, default False
+        Raise on EDI parse errors.
+    verbose : int, default 0
+        Verbosity level.
+    api : bool or None
+        Return an APIFrame when True.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per station with columns:
+        ``station``, ``delta_log10_rho``,
+        ``fac_rho``, ``fac_z``, ``n_used``.
+
+    See Also
+    --------
+    estimate_ss_ama : AMA (moving average) method.
+    estimate_ss_bilateral : Bilateral filtering method.
+    """
     ST, FR, LR = _prep_lr_curves(
         sites, pband=pband, max_skew=max_skew,
         recursive=recursive, on_dup=on_dup,
@@ -552,6 +803,50 @@ def estimate_ss_bilateral(
     verbose: int = 0,
     api: bool | None = None,
 ) -> Any:
+    r"""Estimate static-shift factors via bilateral filtering.
+
+    Applies a combined spatial and range-based Gaussian
+    filter (bilateral filter) to compute a local trend,
+    then returns per-station deviations as correction
+    factors.
+
+    Parameters
+    ----------
+    sites : Sites, str, Path, list, EDICollection
+        EDI data source accepted by
+        :func:`ensure_sites`.
+    half_window : int, default 4
+        Spatial window (neighbours each side).
+    sig_dist : float or None
+        Spatial Gaussian width (in index units).  When
+        ``None``, defaults to :math:`0.5 \\times
+        \\texttt{half\\_window}`.
+    sig_val : float or None
+        Range (value) Gaussian width.  When ``None``,
+        estimated from data.
+    pband : tuple of float or None
+        Period band :math:`(p_{min}, p_{max})` in seconds.
+    max_skew : float or None, default 6.0
+        Phase-tensor skew threshold.
+    summary : str, default ``'median'``
+        Aggregation: ``'median'`` or ``'mean'``.
+    recursive, on_dup, strict, verbose
+        Forwarded to :func:`ensure_sites`.
+    api : bool or None
+        Return an APIFrame when True.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per station with columns:
+        ``station``, ``delta_log10_rho``,
+        ``fac_rho``, ``fac_z``, ``n_used``.
+
+    See Also
+    --------
+    estimate_ss_ama : Moving-average method.
+    estimate_ss_loess : Local polynomial method.
+    """
     ST, FR, LR = _prep_lr_curves(
         sites, pband=pband, max_skew=max_skew,
         recursive=recursive, on_dup=on_dup,
@@ -612,6 +907,41 @@ def estimate_ss_refmedian(
     verbose: int = 0,
     api: bool | None = None,
 ) -> Any:
+    r"""Estimate static-shift factors via reference-median method.
+
+    Computes a global frequency-wise median resistivity
+    across all stations, then estimates per-station shifts
+    as deviations from this reference curve.
+
+    Parameters
+    ----------
+    sites : Sites, str, Path, list, EDICollection
+        EDI data source.
+    pband : tuple of float or None
+        Period band :math:`(p_{min}, p_{max})` in seconds.
+    max_skew : float or None, default 6.0
+        Phase-tensor skew threshold.
+    smooth_sites : int, default 0
+        Optional smoothing window (reserved for future use).
+    summary : str, default ``'median'``
+        Aggregation: ``'median'`` or ``'mean'``.
+    recursive, on_dup, strict, verbose
+        Forwarded to :func:`ensure_sites`.
+    api : bool or None
+        Return an APIFrame when True.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per station with columns:
+        ``station``, ``delta_log10_rho``,
+        ``fac_rho``, ``fac_z``, ``n_used``.
+
+    See Also
+    --------
+    estimate_ss_ama : Moving-average method.
+    estimate_ss_loess : Local polynomial method.
+    """
     ST, FR, LR = _prep_lr_curves(
         sites, pband=pband, max_skew=max_skew,
         recursive=recursive, on_dup=on_dup,
@@ -703,6 +1033,37 @@ def plot_ss_delta_psection(
     verbose: int = 0,
     ax: Optional[plt.Axes] = None,
 ) -> plt.Axes:
+    r"""Plot pseudosection of static-shift change (corrected minus original).
+
+    Displays a heatmap showing the pointwise difference
+    :math:`\Delta\log_{10}\rho = \rho_{after} - 
+    \rho_{before}` across all stations and frequencies
+    on a log-period y-axis.
+
+    Parameters
+    ----------
+    before : any
+        EDI data source (uncorrected sites).
+    after : any
+        EDI data source (corrected sites).
+    axis_y : str, default ``'logperiod'``
+        Y-axis scale: ``'logperiod'`` or ``'period'``.
+    vlim : float or None
+        Symmetric colour range :math:`\pm \texttt{vlim}`.
+        When ``None``, auto-scales from data.
+    pband : tuple of float or None
+        Period band :math:`(p_{min}, p_{max})` in seconds.
+    figsize : (float, float), default (9, 4.8)
+        Figure size.
+    verbose : int, default 0
+        Verbosity level.
+    ax : matplotlib.axes.Axes or None
+        Draw on existing axes.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+    """
     pairs = _pair_sites(before, after, verbose=verbose)
     rows = []
     yvals = []
@@ -788,6 +1149,35 @@ def plot_ss_station_curves(
     verbose: int = 0,
     ax: Optional[plt.Axes] = None,
 ) -> plt.Axes:
+    r"""Plot before-and-after apparent-resistivity curves for a single station.
+
+    Overlays two 1-D sounding curves (before correction
+    and after correction) on a period x-axis to visualize
+    the magnitude and frequency-dependence of the
+    correction at one location.
+
+    Parameters
+    ----------
+    before : any
+        Uncorrected EDI data.
+    after : any
+        Corrected EDI data.
+    station : str or None
+        Station identifier. When ``None``, the first
+        common station is used.
+    pband : tuple of float or None
+        Period band :math:`(p_{min}, p_{max})` in seconds.
+    figsize : (float, float), default (7.8, 4.2)
+        Figure size.
+    verbose : int, default 0
+        Verbosity level.
+    ax : matplotlib.axes.Axes or None
+        Draw on existing axes.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+    """
     pairs = _pair_sites(before, after, verbose=verbose)
     if not pairs:
         if ax is None:
@@ -846,6 +1236,34 @@ def plot_ss_delta_profile(
     verbose: int = 0,
     ax: Optional[plt.Axes] = None,
 ) -> plt.Axes:
+    r"""Plot per-station static-shift correction amplitudes as a bar chart.
+
+    Shows the median (or mean) of the frequency-dependent
+    correction :math:`\Delta\log_{10}\rho` at each station,
+    making it easy to identify spatial patterns in the
+    applied corrections.
+
+    Parameters
+    ----------
+    before : any
+        Uncorrected EDI data.
+    after : any
+        Corrected EDI data.
+    pband : tuple of float or None
+        Period band :math:`(p_{min}, p_{max})` in seconds.
+    robust : str, default ``'median'``
+        Aggregation method: ``'median'`` or ``'mean'``.
+    figsize : (float, float), default (8.6, 3.6)
+        Figure size.
+    verbose : int, default 0
+        Verbosity level.
+    ax : matplotlib.axes.Axes or None
+        Draw on existing axes.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+    """
     pairs = _pair_sites(before, after, verbose=verbose)
     labs = []
     deltas = []
@@ -1680,6 +2098,35 @@ def ss_qc_psection(
     # correction kwargs (forwarded)
     **corr: Any,
 ):
+    r"""Estimate static-shift correction and plot delta pseudosection.
+
+    Combines automatic static-shift estimation with
+    a heatmap visualization in one call.  A convenience
+    wrapper around a correction estimator and
+    :func:`plot_ss_delta_psection`.
+
+    Parameters
+    ----------
+    sites : any
+        EDI paths or :class:`~pycsamt.site.base.Sites`.
+    method : str, default ``'ama'``
+        Correction method: ``'ama'``, ``'loess'``,
+        ``'bilateral'``, or ``'refmedian'``.
+    return_sites : bool, default False
+        When ``True``, return ``(ax, corrected_sites)``.
+    axis_y, vlim, pband, figsize
+        Forwarded to :func:`plot_ss_delta_psection`.
+    verbose : int, default 0
+        Verbosity level.
+    ax : matplotlib.axes.Axes or None
+        Draw on existing axes.
+    **corr :
+        Forwarded to the correction estimator.
+
+    Returns
+    -------
+    matplotlib.axes.Axes or (Axes, Sites)
+    """
     S0 = ensure_sites(sites, recursive=False, strict=False)
     S1 = _correct_sites(S0, method, **corr)
     ax = plot_ss_delta_psection(
@@ -1709,6 +2156,30 @@ def ss_qc_station_curves(
     # correction kwargs
     **corr: Any,
 ):
+    r"""Estimate correction and plot before/after curves for one station.
+
+    A convenience wrapper combining automatic
+    static-shift estimation with 1-D curve visualization.
+
+    Parameters
+    ----------
+    sites : any
+        EDI paths or Sites object.
+    method : str, default ``'ama'``
+        Correction method.
+    station : str or None
+        Station identifier. When ``None``, uses the first.
+    return_sites : bool, default False
+        When ``True``, return ``(ax, corrected_sites)``.
+    pband, figsize, verbose, ax
+        Forwarded to :func:`plot_ss_station_curves`.
+    **corr :
+        Forwarded to the correction estimator.
+
+    Returns
+    -------
+    matplotlib.axes.Axes or (Axes, Sites)
+    """
     S0 = ensure_sites(sites, recursive=False, strict=False)
     S1 = _correct_sites(S0, method, **corr)
     ax = plot_ss_station_curves(
@@ -1737,6 +2208,29 @@ def ss_qc_profile(
     # correction kwargs
     **corr: Any,
 ):
+    r"""Estimate correction and plot per-station shift profile.
+
+    A convenience wrapper for automatic static-shift
+    estimation with bar-chart visualization of the
+    per-station amplitudes.
+
+    Parameters
+    ----------
+    sites : any
+        EDI paths or Sites object.
+    method : str, default ``'ama'``
+        Correction method.
+    return_sites : bool, default False
+        When ``True``, return ``(ax, corrected_sites)``.
+    pband, robust, figsize, verbose, ax
+        Forwarded to :func:`plot_ss_delta_profile`.
+    **corr :
+        Forwarded to the correction estimator.
+
+    Returns
+    -------
+    matplotlib.axes.Axes or (Axes, Sites)
+    """
     S0 = ensure_sites(sites, recursive=False, strict=False)
     S1 = _correct_sites(S0, method, **corr)
     ax = plot_ss_delta_profile(
@@ -1933,6 +2427,58 @@ def plot_ss_radar(
     eps: float = 1e-24, 
     ax: Optional[plt.Axes] = None,
 ) -> plt.Axes:
+    r"""Plot apparent resistivity against period on a polar grid.
+
+    Displays the off-diagonal impedance components (xy and
+    yx) as radial curves on a polar coordinate system,
+    where the azimuthal angle encodes frequency (or period)
+    and the radius encodes resistivity magnitude. Useful for
+    detecting anisotropy and strike angles across the full
+    frequency spectrum.
+
+    Parameters
+    ----------
+    sites : any
+        EDI data source.
+    station : str or None
+        Station identifier. When ``None``, uses the first.
+    pband : tuple of float or None
+        Period band :math:`(p_{min}, p_{max})` in seconds.
+    rotate : str, default ``'pt'``
+        Rotation mode: ``'pt'`` (phase-tensor strike),
+        ``'deg'`` (fixed angle), or ``'none'``
+        (no rotation).
+    rotate_stat : str, default ``'median'``
+        Per-frequency aggregation for phase-tensor rotation.
+    rotate_deg : float, default 0.0
+        Fixed rotation angle (degrees) when rotate='deg'.
+    radial : str, default ``'log10rho'``
+        Radial scale: ``'log10rho'`` (log base 10
+        of apparent resistivity) or ``'rho'``
+        (linear resistivity).
+    theta_axis : str, default ``'logperiod'``
+        Angular axis: ``'logperiod'``, ``'period'``, or
+        ``'freq'`` (Hz).
+    fill_between : bool, default False
+        Shade the region between xy and yx curves.
+    colors : tuple or _UNSET
+        (color_xy, color_yx).  Defaults from style.
+    marker, ms, lw, ls : _UNSET or values
+        Line and marker style. Defaults from style.
+    figsize : (float, float), default (4.8, 4.8)
+        Figure size.
+    recursive, on_dup, strict, verbose
+        Forwarded to :func:`ensure_sites`.
+    eps : float, default 1e-24
+        Numerical floor to avoid division by zero.
+    ax : matplotlib.axes.Axes or None
+        Draw on existing axes (auto-creates polar if needed).
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+        Polar axes object.
+    """
     # ── resolve visual style from PYCSAMT_STYLE.mt ───────────────────────
     _mt = PYCSAMT_STYLE.mt
     if colors is _UNSET: colors = (_mt.xy.color, _mt.yx.color)

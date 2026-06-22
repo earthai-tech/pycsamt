@@ -72,12 +72,15 @@ class TestWorkflowStepsRegistry(unittest.TestCase):
                    "ai_inversion", "modem", "full"):
             self.assertIn(wf, _WORKFLOW_STEPS)
 
-    def test_step_tuples_have_4_elements(self):
+    def test_step_tuples_have_4_or_5_elements(self):
         from pycsamt.agents.orchestrator import _WORKFLOW_STEPS
         for wf, steps in _WORKFLOW_STEPS.items():
             for step in steps:
-                self.assertEqual(len(step), 4,
-                                 f"{wf}: step {step[0]!r} has wrong length")
+                self.assertIn(
+                    len(step), (4, 5),
+                    f"{wf}: step {step[0]!r} has"
+                    f" wrong length {len(step)}"
+                )
 
 
 class TestOrchestratorDryRun(unittest.TestCase):

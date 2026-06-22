@@ -99,10 +99,34 @@ desktop = [
     "contextily>=1.6",
 ]
 
-# Dash web application
+# LLM provider clients used by the agent layer.
+# anthropic  → Claude (claude-sonnet-4-6, etc.)
+# openai     → OpenAI models AND DeepSeek
+#              (DeepSeek reuses the openai SDK
+#              with a custom base_url)
+# google-generativeai → Gemini models
+agents = [
+    "anthropic>=0.40",
+    "openai>=1.54",
+    "google-generativeai>=0.8",
+]
+
+# Dash web application (legacy pycsamt/app/web)
 web = [
     "dash>=2.18",
     "dash-bootstrap-components>=1.6",
+    "diskcache>=5.6",
+    "multiprocess>=0.70",
+    "plotly>=5.20",
+    "Pillow>=10.0",
+]
+
+# Agent Master web application
+# Requires Dash 4 + DBC 2 + all LLM providers.
+agent-master = [
+    "pycsamt[agents]",
+    "dash>=4.0",
+    "dash-bootstrap-components>=2.0",
     "diskcache>=5.6",
     "multiprocess>=0.70",
     "plotly>=5.20",
@@ -114,9 +138,9 @@ app = [
     "pycsamt[desktop,web]",
 ]
 
-# Everything # by default we prefer torch backend 
+# Everything (prefers torch backend)
 full = [
-    "pycsamt[torch,geo,dev,docs,app]",
+    "pycsamt[torch,geo,dev,docs,app,agents]",
 ]
 
 # ---------------------------------------------------------------------------
@@ -133,9 +157,10 @@ Changelog       = "https://pycsamt.readthedocs.io/en/latest/changelog.html"
 # Entry points
 # ---------------------------------------------------------------------------
 [project.scripts]
-pycsamt     = "pycsamt.cli:main"
-pycsamt-gui = "pycsamt.app.desktop.__main__:main"
-pycsamt-web = "pycsamt.app.web.__main__:main"
+pycsamt        = "pycsamt.cli:main"
+pycsamt-gui    = "pycsamt.app.desktop.__main__:main"
+pycsamt-web    = "pycsamt.app.web.__main__:main"
+pycsamt-agent  = "pycsamt.app.agent_master.__main__:main"
 
 # ---------------------------------------------------------------------------
 # Setuptools configuration
@@ -169,12 +194,15 @@ include = ["pycsamt*"]
 minversion = "7.2"
 addopts    = "-ra -q --tb=short"
 testpaths  = ["pycsamt"]
+markers    = [
+    "live: tests that require an LLM API key (deselect with -m 'not live')",
+]
 
 [tool.ruff]
-line-length = 100
+line-length = 62
 target-version = "py39"
 select = ["E", "F", "W", "I", "UP", "B"]
-ignore = ["E501", "B008"]
+ignore = ["B008"]
 exclude = [
     "__pycache__",
     ".git",

@@ -19,8 +19,14 @@ from matplotlib.patches import Ellipse
 import matplotlib.colors as mcolors
 import matplotlib.transforms as transforms 
 
-import seaborn as sns 
 import matplotlib.pyplot as plt
+
+try:
+    import seaborn as sns
+    _HAS_SNS = True
+except ImportError:
+    sns = None          # type: ignore[assignment]
+    _HAS_SNS = False
 
 from ..exceptions import  PlotError
 from .arrayops import ( 
@@ -1020,11 +1026,24 @@ def _get_xticks_formatage (
         ax.set_yticklabels(tlst, **xlkws) if ticks=='y' \
             else ax.set_xticklabels(tlst, **xlkws) 
   
-def _set_sns_style (s, /): 
-    """ Set sns style whether boolean or string is given""" 
+def _set_sns_style(s, /):
+    """Set plot style; seaborn preferred, matplotlib fallback."""
     s = str(s).lower()
     s = re.sub(r'true|none', 'darkgrid', s)
-    return sns.set_style(s) 
+    if _HAS_SNS:
+        return sns.set_style(s)
+    _MPL_STYLE = {
+        "darkgrid":   "seaborn-v0_8-darkgrid",
+        "whitegrid":  "seaborn-v0_8-whitegrid",
+        "dark":       "dark_background",
+        "white":      "seaborn-v0_8-white",
+        "ticks":      "seaborn-v0_8-ticks",
+    }
+    style = _MPL_STYLE.get(s, "seaborn-v0_8-darkgrid")
+    try:
+        plt.style.use(style)
+    except OSError:
+        plt.style.use("default")
 
 
     
@@ -1147,12 +1166,34 @@ def plot_confidence (
     """   
     #y = np.array (y) 
     #x= x or ( np.arange (len(y)) if 
-    ax=None 
-    if 'lin' in str(kind).lower(): 
-        ax = sns.lineplot(data= data, x=x, y=y, ci=ci, **sns_kws)
-    elif 'reg' in  str(kind).lower(): 
-        ax = sns.regplot(data = data, x=x, y=y, ci=ci, **sns_kws ) 
-    else: 
+    ax = None
+    if 'lin' in str(kind).lower():
+        if _HAS_SNS:
+            ax = sns.lineplot(
+                data=data, x=x, y=y, ci=ci, **sns_kws
+            )
+        else:
+            fig, ax = plt.subplots()
+            ax.plot(x, y, **sns_kws)
+    elif 'reg' in str(kind).lower():
+        if _HAS_SNS:
+            ax = sns.regplot(
+                data=data, x=x, y=y, ci=ci, **sns_kws
+            )
+        else:
+            import numpy as _np
+            fig, ax = plt.subplots()
+            ax.scatter(x, y, **sns_kws)
+            try:
+                _c = _np.polyfit(x, y, 1)
+                ax.plot(
+                    x,
+                    _np.polyval(_c, x),
+                    color="C1",
+                )
+            except Exception:
+                pass
+    else:
         if not y: 
             raise ValueError("y should not be None when using the boostrapping"
                              " for plotting the confidence interval.")

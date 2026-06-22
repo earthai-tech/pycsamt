@@ -55,6 +55,12 @@ Agent catalogue
     DRCNN multi-modal joint inversion (MT + TEM / CSAMT / gravity).
 :class:`ModelZooAgent`
     Browse, download, and deploy pre-trained EM inverter checkpoints.
+:class:`PINNInversionAgent`
+    Physics-informed 1-D/2-D/3-D MT inversion via Adam
+    (no labelled training data required).
+:class:`HybridInversionAgent`
+    Two-stage AI warm-start + physics refinement for
+    1-D, 2-D, and 3-D MT inversion.
 
 Supporting classes
 ------------------
@@ -96,10 +102,13 @@ LLM providers supported
 * **Anthropic Claude** (default) — ``llm_provider="claude"``
 * **OpenAI**                      — ``llm_provider="openai"``
 * **Google Gemini**               — ``llm_provider="gemini"``
+* **DeepSeek**                    — ``llm_provider="deepseek"``
 
 Install the relevant client library before use:
 ``pip install anthropic`` / ``pip install openai`` /
 ``pip install google-generativeai``
+DeepSeek reuses the ``openai`` package with a custom
+``base_url``; no extra install is needed.
 """
 
 from __future__ import annotations
@@ -109,7 +118,14 @@ from typing import TYPE_CHECKING
 
 # ── always-available, zero-cost exports ──────────────────────────────────────
 from ._base import AgentResult, BaseAgent
-from ._pricing import estimate_cost, format_cost, get_rate, PROVIDER_RATES
+from ._pricing import (
+    estimate_cost, format_cost, get_rate, PROVIDER_RATES,
+)
+from ._workflow_plan import (
+    WorkflowPlan,
+    validate_workflow_plan,
+    VALID_WORKFLOWS,
+)
 from .coordinator import AgentCoordinator, WorkflowStep
 from ..api.agents import (
     AGENT_CONFIG, AgentConfig, BudgetExceededError,
@@ -152,6 +168,8 @@ _LAZY: dict[str, str] = {
     "InversionBackendAgent":      ".inversion_backend",
     "PipelineAgent":              ".pipeline_agent",
     "Mare2DEMAgent":              ".mare2dem_agent",
+    "PINNInversionAgent":         ".pinn_agent",
+    "HybridInversionAgent":       ".hybrid_agent",
 }
 
 
@@ -198,6 +216,8 @@ if TYPE_CHECKING:
     from .inversion_backend     import InversionBackendAgent
     from .pipeline_agent        import PipelineAgent
     from .mare2dem_agent        import Mare2DEMAgent
+    from .pinn_agent            import PINNInversionAgent
+    from .hybrid_agent          import HybridInversionAgent
 
 
 __version__ = "2.0.0"
@@ -219,6 +239,10 @@ __all__ = [
     "format_cost",
     "get_rate",
     "PROVIDER_RATES",
+    # workflow plan
+    "WorkflowPlan",
+    "validate_workflow_plan",
+    "VALID_WORKFLOWS",
     # agents — alphabetical within logical groups
     "ContextInputAgent",
     "MTLoaderAgent",
@@ -253,4 +277,6 @@ __all__ = [
     "InversionBackendAgent",
     "PipelineAgent",
     "Mare2DEMAgent",
+    "PINNInversionAgent",
+    "HybridInversionAgent",
 ]

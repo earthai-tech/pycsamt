@@ -329,18 +329,25 @@ class Inv2DAgent(BaseAgent):
             )
             interp = self.query_llm(prompt, max_tokens=250)
 
+        # ── data-space RMS ────────────────────────────────────────
+        rms_global = _compute_rms_2d(
+            X_obs, pred_2d, ths, freqs
+        )
+
         elapsed = time.time() - t0
         return AgentResult(
             status="success",
             summary=(
-                f"2-D AI inversion (U-Net): {n_sta} stations × "
-                f"{self.n_depth} depth cells. {len(figures)} figures."
+                f"2-D AI inversion (U-Net): {n_sta} stations x "
+                f"{self.n_depth} depth cells. "
+                f"RMS={rms_global:.3f}. "
+                f"{len(figures)} figures."
             ),
             data={
                 "pred_section":  pred_2d,
                 "depths_km":     depths,
                 "station_names": station_names,
-                "rms_global":    np.nan,
+                "rms_global":    rms_global,
                 "inverter":      inv2d,
                 "figures":       figures,
                 "figure_paths":  fig_paths,
@@ -350,6 +357,78 @@ class Inv2DAgent(BaseAgent):
             elapsed_seconds=elapsed,
             cost_estimate_usd=self._last_cost,
         )
+
+
+def _compute_rms_2d(
+    X_obs: np.ndarray,
+    pred_2d: np.ndarray,
+    thicknesses: np.ndarray,
+    freqs: np.ndarray,
+) -> float:
+    r"""
+    Data-space RMS for the 2-D section.
+
+    Uses the Bostick approximation to convert the
+    predicted log10-resistivity section back to
+    apparent resistivity and phase, then compares to
+    the observed log10(rho_a) stored in X_obs.
+
+    Parameters
+    ----------
+    X_obs : ndarray, shape (n_components, n_freqs, n_sta)
+        Observed features; component 0 assumed to be
+        log10(rho_a).
+    pred_2d : ndarray, shape (n_depth, n_sta)
+        Predicted log10(rho) section.
+    thicknesses : ndarray, shape (n_depth - 1,) or (n_depth,)
+        Layer thicknesses in metres.
+    freqs : ndarray, shape (n_freqs,)
+        Frequency array in Hz.
+
+    Returns
+    -------
+    float
+        Global normalised RMS in log-resistivity space.
+    """
+    try:
+        n_comp, n_freqs, n_sta = X_obs.shape
+        n_depth = pred_2d.shape[0]
+
+        depths_m = np.concatenate(
+            [[0.0], np.cumsum(thicknesses[:n_depth])]
+        )
+        periods = 1.0 / np.maximum(freqs, 1e-9)
+
+        obs_log_rho = X_obs[0]  # (n_freqs, n_sta)
+
+        # Bostick: rho_Bostick(T) ~ rho_a(T) * (phi/45 - 1)
+        # Here we simply read off the predicted profile at the
+        # Bostick depth d_B = 503 * sqrt(rho_a / f)
+        rms_vals: list[float] = []
+        for s in range(n_sta):
+            profile = pred_2d[:, s]  # log10(rho), n_depth cells
+            pred_log_rho_a = np.zeros(n_freqs)
+            for fi, T in enumerate(periods):
+                rho_a_obs = 10.0 ** obs_log_rho[fi, s]
+                d_b = 503.0 * np.sqrt(
+                    max(rho_a_obs, 1.0) * T
+                )
+                idx = int(
+                    np.searchsorted(depths_m, d_b)
+                )
+                idx = min(idx, n_depth - 1)
+                pred_log_rho_a[fi] = profile[idx]
+            diff = pred_log_rho_a - obs_log_rho[:, s]
+            finite = np.isfinite(diff)
+            if finite.any():
+                rms_vals.append(
+                    float(np.sqrt(np.mean(diff[finite] ** 2)))
+                )
+
+        return float(np.mean(rms_vals)) if rms_vals else np.nan
+
+    except Exception:
+        return np.nan
 
 
 __all__ = ["Inv2DAgent"]

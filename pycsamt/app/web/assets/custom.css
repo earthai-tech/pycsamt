@@ -7132,14 +7132,52 @@ textarea:focus {
 
 /* ── Inversion page specific ─────────────────────────────────────────────── */
 
-/* Run bar danger-color accent */
-.inv-run-bar .btn-danger {
-  background: var(--red);
-  border-color: var(--red);
+/* Spinner row: spinner + running-message side by side */
+.inv-spinner-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  margin-bottom: 3px;
 }
-[data-theme="light"] .inv-run-bar .btn-danger {
-  background: #d20f39;
-  border-color: #d20f39;
+
+.inv-run-spinner {
+  width: 14px !important;
+  height: 14px !important;
+  border-width: 2px !important;
+}
+
+/* "Running XXX inversion..." status text */
+.inv-run-msg {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--blue);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="light"] .inv-run-msg {
+  color: #1e66f5;
+}
+
+/* Disabled run button — clear visual cue both modes */
+.inv-run-bar .btn:disabled,
+.inv-run-bar .btn.disabled {
+  cursor: not-allowed;
+  pointer-events: auto;
+  opacity: 1;
+  background: var(--srf1) !important;
+  border-color: var(--srf1) !important;
+  color: var(--sub0) !important;
+}
+
+[data-theme="light"] .inv-run-bar .btn:disabled,
+[data-theme="light"] .inv-run-bar .btn.disabled {
+  background: #dce0e8 !important;
+  border-color: #ccd0da !important;
+  color: #9ca0b0 !important;
 }
 
 /* Sub-hint text (replaces inline styles) */
@@ -8897,4 +8935,206 @@ textarea:focus {
 [data-theme="light"] .invr-browser-item:hover   {
   background: rgba(30,102,245,.09);
   color: #1e66f5;
+}
+
+/* ── § 60  Inversion panel — inv-pinn-accordion ─────────────── */
+
+.inv-pinn-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inv-pinn-accordion .accordion-item {
+  overflow: hidden;
+  border: 1px solid var(--srf0);
+  border-radius: 8px;
+  background: var(--mantle);
+}
+
+.inv-pinn-accordion .accordion-button {
+  min-height: 34px;
+  padding: 7px 10px;
+  background: var(--mantle);
+  color: var(--txt);
+  border: 0;
+  box-shadow: none;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.inv-pinn-accordion .accordion-button:not(.collapsed) {
+  color: var(--blue);
+  background: color-mix(
+    in srgb, var(--blue) 10%, var(--mantle)
+  );
+  box-shadow: inset 0 -1px 0 var(--srf0);
+}
+
+.inv-pinn-accordion .accordion-button::after {
+  width: 12px;
+  height: 12px;
+  background-size: 12px;
+  filter: invert(77%) sepia(10%)
+    saturate(456%) hue-rotate(194deg);
+}
+
+.inv-pinn-accordion .accordion-body {
+  padding: 10px;
+  background: var(--base);
+}
+
+/* Title span with icon */
+.inv-acc-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+}
+
+.inv-acc-title .bi {
+  color: var(--mauve);
+  font-size: 13px;
+}
+
+.inv-pinn-accordion
+  .accordion-button:not(.collapsed)
+  .inv-acc-title
+  .bi {
+  color: var(--blue);
+}
+
+/* Thin rule inside accordion body */
+.inv-acc-hr {
+  border-color: var(--srf0);
+  margin: 8px 0;
+  opacity: 1;
+}
+
+/* ── Light-mode overrides ──────────────────────────────────────── */
+
+[data-theme="light"] .inv-pinn-accordion .accordion-item {
+  background: #ffffff;
+  border-color: #c9ceda;
+  box-shadow: 0 1px 3px rgba(76, 79, 105, 0.07);
+}
+
+[data-theme="light"]
+  .inv-pinn-accordion
+  .accordion-button {
+  background: #eff1f5;
+  color: #4c4f69;
+}
+
+[data-theme="light"]
+  .inv-pinn-accordion
+  .accordion-button:not(.collapsed) {
+  background: #e8eefc;
+  color: #1e66f5;
+  box-shadow: inset 0 -1px 0 #c9ceda;
+}
+
+/* Reset dark-mode chevron filter for light mode */
+[data-theme="light"]
+  .inv-pinn-accordion
+  .accordion-button::after {
+  filter: none;
+}
+
+[data-theme="light"]
+  .inv-pinn-accordion
+  .accordion-body {
+  background: #ffffff;
+  color: #4c4f69;
+}
+
+[data-theme="light"]
+  .inv-pinn-accordion
+  .accordion-collapse {
+  background: #ffffff;
+}
+
+[data-theme="light"] .inv-acc-title      { color: inherit; }
+[data-theme="light"] .inv-acc-title .bi  { color: #8839ef; }
+
+[data-theme="light"]
+  .inv-pinn-accordion
+  .accordion-button:not(.collapsed)
+  .inv-acc-title
+  .bi {
+  color: #1e66f5;
+}
+
+[data-theme="light"] .inv-acc-hr {
+  border-color: #dce0e8;
+}
+
+/* Labels, form controls, radio labels inside accordion */
+[data-theme="light"] .inv-pinn-accordion .ctrl-label,
+[data-theme="light"] .inv-pinn-accordion .fwd-bound-label {
+  color: #4c4f69;
+}
+
+[data-theme="light"] .inv-pinn-accordion .inv-sub-hint {
+  color: #6c6f85;
+}
+
+[data-theme="light"] .inv-pinn-accordion .text-muted,
+[data-theme="light"]
+  .inv-pinn-accordion
+  .form-check-label {
+  color: #5c5f77 !important;
+}
+
+[data-theme="light"]
+  .inv-pinn-accordion
+  .form-control,
+[data-theme="light"]
+  .inv-pinn-accordion
+  .form-select {
+  background-color: #f8f9fc !important;
+  border-color: #bcc0cc !important;
+  color: #4c4f69 !important;
+}
+
+[data-theme="light"]
+  .inv-pinn-accordion
+  .form-control:focus,
+[data-theme="light"]
+  .inv-pinn-accordion
+  .form-select:focus {
+  background-color: #ffffff !important;
+  border-color: #1e66f5 !important;
+  box-shadow: 0 0 0 2px rgba(30,102,245,0.16) !important;
+}
+
+[data-theme="light"]
+  .inv-pinn-accordion
+  .form-check-input {
+  border-color: #bcc0cc;
+}
+
+[data-theme="light"]
+  .inv-pinn-accordion
+  .inv-torch-badge {
+  color: #4c4f69;
+}
+
+/* Group label above track-bar pairs */
+.inv-track-group-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sub0);
+  padding-left: 2px;
+  margin-bottom: 4px;
+}
+
+.inv-track-group-label + .fwd-dim-bar {
+  margin-bottom: 0;
+}
+
+[data-theme="light"] .inv-track-group-label {
+  color: #9ca0b0;
 }

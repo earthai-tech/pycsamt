@@ -72,26 +72,68 @@ _DEFAULT_TRUE_LAYERS = [
     {"layer": 3, "resistivity": 20,   "thickness": 1000},
 ]
 
+_COMP_OPTS = [
+    {"label": "xy", "value": "xy"},
+    {"label": "yx", "value": "yx"},
+    {"label": "xx", "value": "xx"},
+    {"label": "yy", "value": "yy"},
+]
+_DEVICE_OPTS = [
+    {"label": "Auto-detect", "value": "auto"},
+    {"label": "CPU",          "value": "cpu"},
+    {"label": "CUDA (GPU)",   "value": "cuda"},
+    {"label": "MPS (Apple)",  "value": "mps"},
+]
+_PINN_MODE_OPTS = [
+    {"label": "TE",         "value": "te"},
+    {"label": "TM",         "value": "tm"},
+    {"label": "Both (avg)", "value": "both"},
+]
+_BACKEND_DL_OPTS = [
+    {"label": "Auto-detect", "value": "auto"},
+    {"label": "PyTorch",     "value": "torch"},
+    {"label": "TensorFlow",  "value": "tensorflow"},
+]
+_UNET_D_OPTS = [
+    {"label": "Auto",     "value": "auto"},
+    {"label": "1 stage",  "value": "1"},
+    {"label": "2 stages", "value": "2"},
+    {"label": "3 stages", "value": "3"},
+    {"label": "4 stages", "value": "4"},
+]
+_AI_COMP_OPTS = [
+    {"label": "2  (TE mode)", "value": "2"},
+    {"label": "4  (TE + TM)", "value": "4"},
+]
 _INV_TRACKS = [
-    ("trad", "Traditional", "bi-cpu"),
-    ("ai",   "AI Neural",   "bi-robot"),
+    ("trad",   "Traditional", "bi-cpu"),
+    ("ai",     "AI Neural",   "bi-robot"),
+    ("pinn",   "PINN",        "bi-bezier2"),
+    ("hybrid", "Hybrid",      "bi-node-plus"),
 ]
 _INV_OUT_TABS = [
-    ("result", "Result",      "bi-image"),
-    ("conv",   "Convergence", "bi-graph-down-arrow"),
-    ("stats",  "Statistics",  "bi-table"),
-    ("log",    "Log",         "bi-terminal"),
+    ("result",   "Result",      "bi-image"),
+    ("conv",     "Convergence", "bi-graph-down-arrow"),
+    ("stats",    "Statistics",  "bi-table"),
+    ("log",      "Log",         "bi-terminal"),
+    ("data-fit", "Data Fit",    "bi-activity"),
 ]
 _DEFAULT_TRACK = "trad"
 _DEFAULT_OUT   = "result"
 
-_IMG_STYLE = {"width": "100%", "height": "100%", "objectFit": "contain"}
+_IMG_STYLE = {
+    "width": "100%", "height": "100%",
+    "objectFit": "contain",
+}
 
 
 # ── Small helpers ─────────────────────────────────────────────────────────────
 
 def _num(id_, val, **kw):
-    return dbc.Input(id=id_, type="number", value=val, size="sm", **kw)
+    return dbc.Input(
+        id=id_, type="number",
+        value=val, size="sm", **kw
+    )
 
 
 def _lbl(text):
@@ -100,6 +142,32 @@ def _lbl(text):
 
 def _clabel(text):
     return html.Div(text, className="ctrl-label")
+
+
+def _acc_item(
+    title: str,
+    icon: str,
+    children,
+    item_id: str,
+) -> dbc.AccordionItem:
+    return dbc.AccordionItem(
+        children,
+        title=html.Span([
+            html.I(className=f"bi {icon} me-2"),
+            title,
+        ], className="inv-acc-title"),
+        item_id=item_id,
+    )
+
+
+_GRP_LABEL_STYLE = {
+    "fontSize": "9.5px",
+    "color": "var(--sub0, #6c7086)",
+    "textTransform": "uppercase",
+    "letterSpacing": "0.07em",
+    "marginBottom": "4px",
+    "paddingLeft": "2px",
+}
 
 
 # ── True model DataTable (in sidebar) ────────────────────────────────────────
@@ -136,265 +204,1175 @@ def _true_model_table() -> html.Div:
 # ── Traditional inversion sidebar section ────────────────────────────────────
 
 def _trad_controls():
-    return html.Div([
-
-        # EM Method + Dimension
-        html.Div([
-            _clabel("EM Method"),
-            dbc.Select(id=IDs.INV_METHOD, options=_METHOD_OPTS,
-                       value="mt", size="sm"),
-            _clabel("Dimension"),
-            dbc.RadioItems(
-                id=IDs.INV_T_DIM,
-                options=[{"label": "1-D  (sounding)", "value": "1d"},
-                         {"label": "2-D  (profile)",  "value": "2d"}],
-                value="1d", inline=True,
-                className="text-muted small mt-1",
-            ),
-        ], className="ctrl-card"),
-
-        # Backend
-        html.Div([
-            _clabel("Backend"),
-            dbc.Select(id=IDs.INV_BACKEND, options=_BACKEND_OPTS,
-                       value="builtin", size="sm"),
-        ], className="ctrl-card"),
-
-        # Data Source
-        html.Div([
-            _clabel("Data Source"),
-            dbc.RadioItems(
-                id=IDs.INV_DATA_SRC,
-                options=[
-                    {"label": "Synthetic  (define true model below)", "value": "synthetic"},
-                    {"label": "Session    (EDIs / loaded sites)",     "value": "session"},
-                ],
-                value="synthetic", inline=False,
-                className="text-muted small",
-            ),
-        ], className="ctrl-card"),
-
-        # Synthetic true model (conditional)
-        html.Div([
-            _clabel("True Earth Model"),
-            html.Div(
-                "Used to generate synthetic forward data",
-                className="inv-sub-hint",
-            ),
-            _true_model_table(),
-            dbc.Button(
-                [html.I(className="bi bi-plus-lg me-1"), "Add Layer"],
-                id=IDs.BTN_INV_ADD_LAYER, color="secondary",
-                size="sm", className="mt-2",
-            ),
-            # Halfspace
-            html.Div([
-                html.Div([
-                    html.Span(
-                        [html.I(className="bi bi-infinity me-1"), "Halfspace"],
-                        className="fwd-hs-label",
+    acc = dbc.Accordion(
+        [
+            _acc_item(
+                "Method & Solver",
+                "bi-cpu",
+                [
+                    _lbl("EM method"),
+                    dbc.Select(
+                        id=IDs.INV_METHOD,
+                        options=_METHOD_OPTS,
+                        value="mt",
+                        size="sm",
+                        className="mb-2",
                     ),
-                    html.Span(" — infinite depth",
-                              style={"fontSize": "10px", "color": "var(--sub0)"}),
-                ], className="mb-1"),
-                dbc.InputGroup([
-                    dbc.InputGroupText("ρ", style={"fontSize": "11px"}),
-                    _num(IDs.INV_HALFSPACE_RHO, 1000, min=0.01, step=10),
-                    dbc.InputGroupText("Ω·m", style={"fontSize": "11px"}),
-                ], size="sm"),
-            ], className="fwd-halfspace-row"),
-            # Noise
-            dbc.Row([
-                dbc.Col([
-                    _lbl("Noise level (σ)"),
-                    _num(IDs.INV_NOISE_LEVEL, 0.05, min=0, max=0.5, step=0.01),
-                ]),
-            ], className="g-1 mt-2"),
-            # 2D profile params (conditional)
-            html.Div([
-                _clabel("2-D Profile"),
-                dbc.Row([
-                    dbc.Col([_lbl("N stations"),
-                             _num(IDs.INV_N_STATIONS, 8, min=3, max=30, step=1)]),
-                    dbc.Col([_lbl("Profile (m)"),
-                             _num(IDs.INV_PROFILE_LEN, 5000, min=500, step=500)]),
-                ], className="g-1"),
-            ], id=IDs.INV_2D_PARAMS, style={"display": "none"}),
-        ], className="ctrl-card", id=IDs.INV_SYN_PANEL),
-
-        # Session data info (conditional)
-        html.Div([
-            html.I(className="bi bi-info-circle me-1",
-                   style={"color": "var(--blue)"}),
-            html.Span("Using sites loaded in the QC or Correction pages.",
-                      className="inv-sub-hint"),
-            html.Div(
-                "Load EDI files first if no session data is available.",
-                className="inv-sub-hint mt-1",
-                style={"color": "var(--sub0)"},
+                    _lbl("Backend"),
+                    dbc.Select(
+                        id=IDs.INV_BACKEND,
+                        options=_BACKEND_OPTS,
+                        value="builtin",
+                        size="sm",
+                        className="mb-2",
+                    ),
+                    _lbl("Dimension"),
+                    dbc.RadioItems(
+                        id=IDs.INV_T_DIM,
+                        options=[
+                            {
+                                "label": "1-D sounding",
+                                "value": "1d",
+                            },
+                            {
+                                "label": "2-D profile",
+                                "value": "2d",
+                            },
+                        ],
+                        value="1d",
+                        inline=True,
+                        className=(
+                            "text-muted small mt-1"
+                        ),
+                    ),
+                ],
+                "trad-acc-method",
             ),
-        ], className="ctrl-card", id=IDs.INV_SESS_PANEL, style={"display": "none"}),
 
-        # Inversion configuration
-        html.Div([
-            _clabel("Inversion Configuration"),
-            dbc.Row([
-                dbc.Col([_lbl("N layers (recover)"),
-                         _num(IDs.INV_N_LAYERS, 4, min=2, max=20, step=1)]),
-                dbc.Col([_lbl("Max iterations"),
-                         _num(IDs.INV_MAX_ITER, 60, min=10, max=300, step=10)]),
-            ], className="g-1 mb-1"),
-            dbc.Row([
-                dbc.Col([_lbl("Error floor (%)"),
-                         _num(IDs.INV_ERROR_FLOOR, 0.05, min=0.001, max=0.5, step=0.005)]),
-            ], className="g-1 mb-1"),
-            _lbl("Regularization"),
-            dbc.Select(id=IDs.INV_REGULARIZE, options=_REGULARIZE_OPTS,
-                       value="smooth", size="sm", className="mt-1"),
-            dbc.Switch(id=IDs.INV_INCLUDE_PHASE, label="Include phase in objective",
-                       value=True, className="mt-2 small"),
-        ], className="ctrl-card"),
+            _acc_item(
+                "Data Source",
+                "bi-database",
+                [
+                    dbc.RadioItems(
+                        id=IDs.INV_DATA_SRC,
+                        options=[
+                            {
+                                "label": "Synthetic"
+                                " (define true model)",
+                                "value": "synthetic",
+                            },
+                            {
+                                "label": "Session"
+                                " (EDIs / loaded sites)",
+                                "value": "session",
+                            },
+                        ],
+                        value="synthetic",
+                        inline=False,
+                        className="text-muted small",
+                    ),
+                    html.Hr(className="inv-acc-hr"),
+                    # Synthetic panel (conditional)
+                    html.Div([
+                        _lbl("True Earth Model"),
+                        html.Div(
+                            "Synthetic forward data source",
+                            className="inv-sub-hint mb-1",
+                        ),
+                        _true_model_table(),
+                        dbc.Button(
+                            [
+                                html.I(
+                                    className=(
+                                        "bi bi-plus-lg"
+                                        " me-1"
+                                    )
+                                ),
+                                "Add Layer",
+                            ],
+                            id=IDs.BTN_INV_ADD_LAYER,
+                            color="secondary",
+                            size="sm",
+                            className="mt-2",
+                        ),
+                        html.Div([
+                            html.Div([
+                                html.Span(
+                                    [
+                                        html.I(
+                                            className=(
+                                                "bi "
+                                                "bi-infinity"
+                                                " me-1"
+                                            )
+                                        ),
+                                        "Halfspace",
+                                    ],
+                                    className="fwd-hs-label",
+                                ),
+                                html.Span(
+                                    " half-space",
+                                    style={
+                                        "fontSize": "10px",
+                                        "color": "var(--sub0)",
+                                    },  # noqa: E501
+                                ),
+                            ], className="mb-1"),
+                            dbc.InputGroup([
+                                dbc.InputGroupText(
+                                    "rho",
+                                    style={
+                                        "fontSize": "11px"
+                                    },
+                                ),
+                                _num(
+                                    IDs.INV_HALFSPACE_RHO,
+                                    1000, min=0.01, step=10,
+                                ),
+                                dbc.InputGroupText(
+                                    "Ohm*m",
+                                    style={
+                                        "fontSize": "11px"
+                                    },
+                                ),
+                            ], size="sm"),
+                        ], className="fwd-halfspace-row"),
+                        dbc.Row([
+                            dbc.Col([
+                                _lbl("Noise level (sigma)"),
+                                _num(
+                                    IDs.INV_NOISE_LEVEL,
+                                    0.05, min=0,
+                                    max=0.5, step=0.01,
+                                ),
+                            ]),
+                        ], className="g-1 mt-2"),
+                        html.Div([
+                            html.Hr(className="inv-acc-hr"),
+                            _lbl("2-D Profile"),
+                            dbc.Row([
+                                dbc.Col([
+                                    _lbl("N stations"),
+                                    _num(
+                                        IDs.INV_N_STATIONS,
+                                        8, min=3,
+                                        max=30, step=1,
+                                    ),
+                                ]),
+                                dbc.Col([
+                                    _lbl("Profile (m)"),
+                                    _num(
+                                        IDs.INV_PROFILE_LEN,
+                                        5000, min=500,
+                                        step=500,
+                                    ),
+                                ]),
+                            ], className="g-1"),
+                        ], id=IDs.INV_2D_PARAMS,
+                           style={"display": "none"}),
+                    ], id=IDs.INV_SYN_PANEL),
+                    # Session panel (conditional)
+                    html.Div([
+                        html.I(
+                            className=(
+                                "bi bi-info-circle me-1"
+                            ),
+                            style={"color": "var(--blue)"},
+                        ),
+                        html.Span(
+                            "Using sites from the"
+                            " QC / Correction page.",
+                            className="inv-sub-hint",
+                        ),
+                        html.Div(
+                            "Load EDI files first if"
+                            " no session data available.",
+                            className="inv-sub-hint mt-1",
+                            style={"color": "var(--sub0)"},
+                        ),
+                    ], id=IDs.INV_SESS_PANEL,
+                       style={"display": "none"}),
+                ],
+                "trad-acc-data",
+            ),
 
-    ], id="inv-ctrl-trad")
+            _acc_item(
+                "Configuration",
+                "bi-sliders",
+                [
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("N layers (recover)"),
+                            _num(
+                                IDs.INV_N_LAYERS,
+                                4, min=2, max=20, step=1,
+                            ),
+                        ]),
+                        dbc.Col([
+                            _lbl("Max iterations"),
+                            _num(
+                                IDs.INV_MAX_ITER,
+                                60, min=10,
+                                max=300, step=10,
+                            ),
+                        ]),
+                    ], className="g-1 mb-2"),
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("Error floor (%)"),
+                            _num(
+                                IDs.INV_ERROR_FLOOR,
+                                0.05, min=0.001,
+                                max=0.5, step=0.005,
+                            ),
+                        ]),
+                    ], className="g-1 mb-2"),
+                    _lbl("Regularization"),
+                    dbc.Select(
+                        id=IDs.INV_REGULARIZE,
+                        options=_REGULARIZE_OPTS,
+                        value="smooth",
+                        size="sm",
+                        className="mt-1 mb-2",
+                    ),
+                    dbc.Switch(
+                        id=IDs.INV_INCLUDE_PHASE,
+                        label="Include phase in objective",
+                        value=True,
+                        className="small",
+                    ),
+                ],
+                "trad-acc-config",
+            ),
+        ],
+        active_item=["trad-acc-method", "trad-acc-data"],
+        always_open=True,
+        className="inv-pinn-accordion",
+        flush=True,
+    )
+    return html.Div(acc, id="inv-ctrl-trad")
 
 
 # ── AI inversion sidebar section ──────────────────────────────────────────────
 
 def _ai_controls():
     torch_badge = (
-        dbc.Badge("Installed", color="success", className="ms-1 py-0")
+        dbc.Badge(
+            "Installed",
+            color="success",
+            className="ms-1 py-0",
+        )
         if _TORCH_AVAIL else
-        dbc.Badge("Not installed — click Run to install", color="warning",
-                  className="ms-1 py-0",
-                  style={"fontSize": "9px"})
+        dbc.Badge(
+            "Not installed — click Run to install",
+            color="warning",
+            className="ms-1 py-0",
+            style={"fontSize": "9px"},
+        )
     )
-    return html.Div([
+    acc = dbc.Accordion(
+        [
+            _acc_item(
+                "Setup",
+                "bi-robot",
+                [
+                    html.Div(
+                        [
+                            html.I(
+                                className=(
+                                    "bi bi-cpu me-1"
+                                ),
+                                style={
+                                    "color": "var(--green)"
+                                },
+                            ),
+                            html.Span("PyTorch"),
+                            torch_badge,
+                        ],
+                        className="inv-torch-badge mb-2",
+                    ),
+                    _lbl("Problem dimension"),
+                    dbc.Select(
+                        id=IDs.INV_AI_DIM,
+                        options=_AI_DIM_OPTS,
+                        value="1d",
+                        size="sm",
+                        className="mb-2",
+                    ),
+                    _lbl("Architecture"),
+                    dbc.Select(
+                        id=IDs.INV_AI_ARCH,
+                        options=_AI_ARCH_1D_OPTS,
+                        value="resnet",
+                        size="sm",
+                        className="mb-1",
+                    ),
+                    html.Div(
+                        id="inv-ai-arch-note",
+                        className="inv-sub-hint mb-2",
+                    ),
+                    _lbl("Forward solver (training data)"),
+                    dbc.Select(
+                        id=IDs.INV_AI_SOLVER,
+                        options=_AI_SOLVER_OPTS,
+                        value="mt1d",
+                        size="sm",
+                    ),
+                ],
+                "ai-acc-setup",
+            ),
 
-        # PyTorch status badge
-        html.Div([
-            html.I(className="bi bi-cpu me-1", style={"color": "var(--green)"}),
-            html.Span("PyTorch"), torch_badge,
-        ], className="ctrl-card inv-torch-badge"),
+            _acc_item(
+                "Network Config",
+                "bi-diagram-3",
+                [
+                    # 2-D UNet panel (conditional)
+                    html.Div([
+                        html.Div(
+                            [
+                                html.I(
+                                    className=(
+                                        "bi bi-grid-3x3"
+                                        "-gap me-1"
+                                    ),
+                                    style={
+                                        "color": "var(--blue)"
+                                    },
+                                ),
+                                html.Span(
+                                    "2-D UNet",
+                                    className=(
+                                        "ctrl-label d-inline"
+                                    ),
+                                ),
+                            ],
+                            className="mb-2",
+                        ),
+                        dbc.Row([
+                            dbc.Col([
+                                _lbl("Input channels"),
+                                dbc.Select(
+                                    id=IDs.INV_AI_N_COMPONENTS,
+                                    options=_AI_COMP_OPTS,
+                                    value="2",
+                                    size="sm",
+                                ),
+                            ]),
+                            dbc.Col([
+                                _lbl("Depth cells"),
+                                _num(
+                                    IDs.INV_AI_N_DEPTH,
+                                    4, min=2, max=80, step=1,
+                                ),
+                            ]),
+                        ], className="g-1 mb-1"),
+                        dbc.Row([
+                            dbc.Col([
+                                _lbl("Stations/profile"),
+                                _num(
+                                    IDs.INV_AI_N_STATIONS,
+                                    8, min=4,
+                                    max=100, step=1,
+                                ),
+                            ]),
+                            dbc.Col([
+                                _lbl("UNet depth"),
+                                dbc.Select(
+                                    id=IDs.INV_AI_UNET_DEPTH,
+                                    options=_UNET_D_OPTS,
+                                    value="auto",
+                                    size="sm",
+                                ),
+                            ]),
+                        ], className="g-1 mb-1"),
+                        dbc.Alert(
+                            "Auto depth: max safe"
+                            " pooling stages.",
+                            color="dark",
+                            className=(
+                                "mb-0 py-1 px-2 inv-alert"
+                            ),
+                        ),
+                    ], id=IDs.INV_AI_2D_PANEL,
+                       style={"display": "none"}),
 
-        # Dimension
-        html.Div([
-            _clabel("Problem Dimension"),
-            dbc.Select(id=IDs.INV_AI_DIM, options=_AI_DIM_OPTS,
-                       value="1d", size="sm"),
-        ], className="ctrl-card"),
+                    # 3-D GCN panel (conditional)
+                    html.Div([
+                        html.Div(
+                            [
+                                html.I(
+                                    className=(
+                                        "bi bi-diagram-3 me-1"
+                                    ),
+                                    style={
+                                        "color":
+                                        "var(--mauve)"
+                                    },
+                                ),
+                                html.Span(
+                                    "3-D GCN",
+                                    className=(
+                                        "ctrl-label"
+                                        " d-inline"
+                                    ),
+                                ),
+                            ],
+                            className="mb-2",
+                        ),
+                        dbc.Row([
+                            dbc.Col([
+                                _lbl("Stations/survey"),
+                                _num(
+                                    IDs.INV_AI_N_STATIONS_3D,
+                                    20, min=9,
+                                    max=200, step=1,
+                                ),
+                            ]),
+                            dbc.Col([
+                                _lbl("Corr. length (m)"),
+                                _num(
+                                    "inv-ai-corr-length",
+                                    2000, min=100,
+                                    max=20000, step=100,
+                                ),
+                            ]),
+                        ], className="g-1 mb-1"),
+                        dbc.Alert(
+                            "Adj. radius = 30th-pct"
+                            " inter-station dist.",
+                            color="dark",
+                            className=(
+                                "mb-0 py-1 px-2 inv-alert"
+                            ),
+                        ),
+                    ], id=IDs.INV_AI_3D_PANEL,
+                       style={"display": "none"}),
 
-        # Architecture
-        html.Div([
-            _clabel("Architecture"),
-            dbc.Select(id=IDs.INV_AI_ARCH, options=_AI_ARCH_1D_OPTS,
-                       value="resnet", size="sm"),
-            html.Div(id="inv-ai-arch-note", className="inv-sub-hint mt-1"),
-        ], className="ctrl-card"),
+                    # Placeholder shown for 1-D
+                    html.Div(
+                        "Select 2-D or 3-D above"
+                        " to see network settings.",
+                        id="inv-ai-net-hint",
+                        className="inv-sub-hint",
+                    ),
+                ],
+                "ai-acc-net",
+            ),
 
-        # Forward solver (for training data)
-        html.Div([
-            _clabel("Forward Solver  (training data)"),
-            dbc.Select(id=IDs.INV_AI_SOLVER, options=_AI_SOLVER_OPTS,
-                       value="mt1d", size="sm"),
-        ], className="ctrl-card"),
+            _acc_item(
+                "Training",
+                "bi-graph-up-arrow",
+                [
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("N samples"),
+                            _num(
+                                IDs.INV_AI_N_SAMPLES,
+                                1000, min=100,
+                                max=20000, step=100,
+                            ),
+                        ]),
+                        dbc.Col([
+                            _lbl("N layers"),
+                            _num(
+                                IDs.INV_AI_N_LAYERS,
+                                4, min=2, max=10, step=1,
+                            ),
+                        ]),
+                    ], className="g-1 mb-2"),
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("Epochs"),
+                            _num(
+                                IDs.INV_AI_EPOCHS,
+                                40, min=5,
+                                max=500, step=5,
+                            ),
+                        ]),
+                        dbc.Col([
+                            _lbl("Batch size"),
+                            _num(
+                                IDs.INV_AI_BATCH,
+                                64, min=8,
+                                max=1024, step=8,
+                            ),
+                        ]),
+                    ], className="g-1 mb-2"),
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("Learning rate"),
+                            _num(
+                                IDs.INV_AI_LR,
+                                0.001, min=1e-5,
+                                max=0.1, step=1e-4,
+                            ),
+                        ]),
+                        dbc.Col([
+                            _lbl("Noise level"),
+                            _num(
+                                IDs.INV_AI_NOISE,
+                                0.05, min=0.0,
+                                max=0.5, step=0.01,
+                            ),
+                        ]),
+                    ], className="g-1"),
+                ],
+                "ai-acc-train",
+            ),
+        ],
+        active_item=["ai-acc-setup"],
+        always_open=True,
+        className="inv-pinn-accordion",
+        flush=True,
+    )
+    return html.Div(
+        acc,
+        id="inv-ctrl-ai",
+        style={"display": "none"},
+    )
 
-        # 2-D UNet config (conditional)
+
+# ── PINN inversion sidebar section ───────────────────────────────────────────
+
+def _pinn_controls():
+    acc = dbc.Accordion(
+        [
+            _acc_item(
+                "Data & Setup",
+                "bi-database",
+                [
+                    _lbl("DL backend"),
+                    dbc.Select(
+                        id=IDs.INV_BACKEND_SELECT,
+                        options=_BACKEND_DL_OPTS,
+                        value="auto",
+                        size="sm",
+                        className="mb-3",
+                    ),
+                    _lbl("Data source"),
+                    dbc.RadioItems(
+                        id=IDs.INV_PINN_DATA_SRC,
+                        options=[
+                            {
+                                "label": "Session (EDIs)",
+                                "value": "session",
+                            },
+                            {
+                                "label": "Synthetic (fwd)",
+                                "value": "synthetic",
+                            },
+                        ],
+                        value="session",
+                        inline=False,
+                        className="text-muted small",
+                    ),
+                    html.Div([
+                        _lbl("Line"),
+                        dcc.Dropdown(
+                            id=IDs.INV_PINN_LINE_SEL,
+                            placeholder="All lines",
+                            multi=True,
+                            clearable=True,
+                            className=(
+                                "mt-1 inv-sta-dropdown"
+                            ),
+                        ),
+                        _lbl("Stations"),
+                        dcc.Dropdown(
+                            id=IDs.INV_PINN_STATION_SEL,
+                            placeholder=(
+                                "All stations"
+                            ),
+                            multi=True,
+                            className=(
+                                "mt-1 inv-sta-dropdown"
+                            ),
+                        ),
+                    ], className="mt-2"),
+                    html.Hr(className="inv-acc-hr"),
+                    _lbl("Problem dimension"),
+                    dbc.RadioItems(
+                        id=IDs.INV_PINN_DIM,
+                        options=[
+                            {
+                                "label": "1-D  sounding",
+                                "value": "1d",
+                            },
+                            {
+                                "label": "2-D  joint profile",
+                                "value": "2d",
+                            },
+                            {
+                                "label": "3-D  quasi survey",
+                                "value": "3d",
+                            },
+                        ],
+                        value="1d",
+                        inline=False,
+                        className="text-muted small mt-1",
+                    ),
+                    # 1-D solver (hidden for 2D/3D)
+                    html.Div([
+                        html.Hr(className="inv-acc-hr"),
+                        _lbl("Forward solver"),
+                        dbc.Select(
+                            id=IDs.INV_PINN_SOLVER,
+                            options=[
+                                {
+                                    "label": "MT 1-D",
+                                    "value": "mt1d",
+                                },
+                                {
+                                    "label": "CSAMT 1-D",
+                                    "value": "csamt1d",
+                                },
+                            ],
+                            value="mt1d",
+                            size="sm",
+                        ),
+                    ], id="inv-pinn-solver-card"),
+                    # 2-D / 3-D mode (hidden for 1D)
+                    html.Div([
+                        html.Hr(className="inv-acc-hr"),
+                        _lbl("EM polarisation"),
+                        dbc.RadioItems(
+                            id=IDs.INV_PINN_MODE,
+                            options=_PINN_MODE_OPTS,
+                            value="te",
+                            inline=True,
+                            className=(
+                                "text-muted small mt-1"
+                            ),
+                        ),
+                        dbc.Row([
+                            dbc.Col([
+                                _lbl("TE comp"),
+                                dbc.Select(
+                                    id=IDs.INV_PINN_COMP_TE,
+                                    options=_COMP_OPTS,
+                                    value="xy",
+                                    size="sm",
+                                ),
+                            ]),
+                            dbc.Col([
+                                _lbl("TM comp"),
+                                dbc.Select(
+                                    id=IDs.INV_PINN_COMP_TM,
+                                    options=_COMP_OPTS,
+                                    value="yx",
+                                    size="sm",
+                                ),
+                            ]),
+                        ], className="g-1 mt-1"),
+                    ], id=IDs.INV_PINN_2D_PANEL,
+                       style={"display": "none"}),
+                ],
+                "pinn-acc-data",
+            ),
+
+            _acc_item(
+                "Earth Model",
+                "bi-layers",
+                [
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("N layers"),
+                            _num(
+                                IDs.INV_PINN_N_LAYERS,
+                                5, min=2, max=30, step=1,
+                            ),
+                        ]),
+                        dbc.Col([
+                            _lbl("Depth max (m)"),
+                            _num(
+                                IDs.INV_PINN_DEPTH_MAX,
+                                2000, min=100, step=100,
+                            ),
+                        ]),
+                    ], className="g-1 mb-1"),
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("N freqs (grid)"),
+                            _num(
+                                IDs.INV_PINN_N_FREQS,
+                                32, min=8, max=128,
+                                step=8,
+                            ),
+                        ]),
+                    ], className="g-1"),
+                ],
+                "pinn-acc-model",
+            ),
+
+            _acc_item(
+                "Optimiser",
+                "bi-lightning-charge",
+                [
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("Epochs"),
+                            _num(
+                                IDs.INV_PINN_EPOCHS,
+                                300, min=10,
+                                max=2000, step=10,
+                            ),
+                        ]),
+                        dbc.Col([
+                            _lbl("Learning rate"),
+                            _num(
+                                IDs.INV_PINN_LR,
+                                0.01, min=1e-5,
+                                max=0.5, step=1e-4,
+                            ),
+                        ]),
+                    ], className="g-1 mb-2"),
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("Log every N"),
+                            _num(
+                                IDs.INV_PINN_LOG_EVERY,
+                                50, min=1,
+                                max=500, step=10,
+                            ),
+                        ]),
+                        dbc.Col([
+                            _lbl("Device"),
+                            dbc.Select(
+                                id=IDs.INV_PINN_DEVICE,
+                                options=_DEVICE_OPTS,
+                                value="auto",
+                                size="sm",
+                            ),
+                        ]),
+                    ], className="g-1"),
+                ],
+                "pinn-acc-optim",
+            ),
+
+            _acc_item(
+                "Regularisation",
+                "bi-sliders",
+                [
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("Smoothness lam_z"),
+                            _num(
+                                IDs.INV_PINN_LAM_Z,
+                                0.01, min=0,
+                                max=1, step=0.001,
+                            ),
+                        ]),
+                    ], className="g-1 mb-1"),
+                    html.Div([
+                        dbc.Row([
+                            dbc.Col([
+                                _lbl("Lateral lam_x  (2-D)"),
+                                _num(
+                                    IDs.INV_PINN_LAM_X,
+                                    0.005, min=0,
+                                    max=1, step=0.001,
+                                ),
+                            ]),
+                        ], className="g-1"),
+                    ], id="inv-pinn-lamx-row",
+                       style={"display": "none"}),
+                    html.Div([
+                        dbc.Row([
+                            dbc.Col([
+                                _lbl("Graph lam_g  (3-D)"),
+                                _num(
+                                    IDs.INV_PINN_LAM_G,
+                                    0.003, min=0,
+                                    max=1, step=0.001,
+                                ),
+                            ]),
+                        ], className="g-1"),
+                    ], id="inv-pinn-lamg-row",
+                       style={"display": "none"}),
+                ],
+                "pinn-acc-reg",
+            ),
+        ],
+        active_item=["pinn-acc-data"],
+        always_open=True,
+        className="inv-pinn-accordion",
+        flush=True,
+    )
+
+    # 3-D network card: outside accordion so the
+    # callback can hide the entire block cleanly.
+    net_3d = html.Div([
+        html.Div(
+            [
+                html.I(
+                    className="bi bi-diagram-3 me-1",
+                    style={"color": "var(--mauve)"},
+                ),
+                html.Span(
+                    "3-D Station Network",
+                    className="ctrl-label d-inline",
+                ),
+            ],
+            className="mb-2",
+        ),
+        dbc.Row([
+            dbc.Col([
+                _lbl("Adj. radius (m)"),
+                _num(
+                    IDs.INV_PINN_RADIUS, 5000,
+                    min=100, step=100,
+                ),
+            ]),
+            dbc.Col([
+                _lbl("Grid spacing (m)"),
+                _num(
+                    IDs.INV_PINN_SPC, 500,
+                    min=10, step=10,
+                ),
+            ]),
+        ], className="g-1 mb-1"),
+        _lbl("Coordinate source"),
+        dbc.RadioItems(
+            id="inv-pinn-coord-src",
+            options=[
+                {
+                    "label": "Auto (EDI lat/lon)",
+                    "value": "auto",
+                },
+                {
+                    "label": "Uniform grid",
+                    "value": "uniform",
+                },
+            ],
+            value="auto",
+            inline=True,
+            className="text-muted small mt-1",
+        ),
+    ], id=IDs.INV_PINN_3D_PANEL,
+       className="ctrl-card mt-1",
+       style={"display": "none"})
+
+    return html.Div(
+        [acc, net_3d],
+        id="inv-ctrl-pinn",
+        style={"display": "none"},
+    )
+
+
+# ── Hybrid inversion sidebar section ─────────────────────────────────────────
+
+def _hybrid_controls():
+    acc = dbc.Accordion(
+        [
+            _acc_item(
+                "Data & Dimension",
+                "bi-database",
+                [
+                    _lbl("Data source"),
+                    dbc.RadioItems(
+                        id=IDs.INV_HYB_DATA_SRC,
+                        options=[
+                            {
+                                "label": "Session (EDIs)",
+                                "value": "session",
+                            },
+                            {
+                                "label": "Synthetic (fwd)",
+                                "value": "synthetic",
+                            },
+                        ],
+                        value="session",
+                        inline=False,
+                        className="text-muted small",
+                    ),
+                    html.Div([
+                        _lbl("Line"),
+                        dcc.Dropdown(
+                            id=IDs.INV_HYB_LINE_SEL,
+                            placeholder="All lines",
+                            multi=True,
+                            clearable=True,
+                            className=(
+                                "mt-1 inv-sta-dropdown"
+                            ),
+                        ),
+                        _lbl("Stations"),
+                        dcc.Dropdown(
+                            id=IDs.INV_HYB_STATION_SEL,
+                            placeholder=(
+                                "All stations"
+                            ),
+                            multi=True,
+                            className=(
+                                "mt-1 inv-sta-dropdown"
+                            ),
+                        ),
+                    ], className="mt-2"),
+                    html.Hr(className="inv-acc-hr"),
+                    _lbl("Problem dimension"),
+                    dbc.RadioItems(
+                        id=IDs.INV_HYB_DIM,
+                        options=[
+                            {
+                                "label": "1-D  sounding",
+                                "value": "1d",
+                            },
+                            {
+                                "label": "2-D  profile",
+                                "value": "2d",
+                            },
+                            {
+                                "label": "3-D  survey",
+                                "value": "3d",
+                            },
+                        ],
+                        value="1d",
+                        inline=False,
+                        className=(
+                            "text-muted small mt-1"
+                        ),
+                    ),
+                ],
+                "hyb-acc-data",
+            ),
+
+            _acc_item(
+                "Stage 1 — AI Pre-model",
+                "bi-cpu",
+                [
+                    html.Div(
+                        "Upload a saved EMInverter"
+                        " checkpoint (.npz):",
+                        className="inv-sub-hint mb-2",
+                    ),
+                    dcc.Upload(
+                        id=IDs.INV_HYB_CHECKPOINT,
+                        children=html.Div([
+                            html.I(
+                                className=(
+                                    "bi bi-file-earmark"
+                                    "-zip me-1"
+                                ),
+                            ),
+                            "Drop .npz / click",
+                        ]),
+                        accept=".npz",
+                        className=(
+                            "hyb-checkpoint-upload"
+                        ),
+                    ),
+                    html.Div(
+                        id=IDs.INV_HYB_MODEL_INFO,
+                        className="inv-sub-hint mt-1",
+                        children="No checkpoint loaded.",
+                    ),
+                    dbc.Button(
+                        [
+                            html.I(
+                                className="bi bi-eye me-1"
+                            ),
+                            "Preview Stage-1",
+                        ],
+                        id=IDs.BTN_HYB_STAGE1_PREV,
+                        color="secondary",
+                        size="sm",
+                        outline=True,
+                        n_clicks=0,
+                        className="mt-2",
+                    ),
+                ],
+                "hyb-acc-stage1",
+            ),
+
+            _acc_item(
+                "Stage 2 — PINN Refinement",
+                "bi-bezier2",
+                [
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("Epochs"),
+                            _num(
+                                IDs.INV_HYB_EPOCHS,
+                                150, min=10,
+                                max=2000, step=10,
+                            ),
+                        ]),
+                        dbc.Col([
+                            _lbl("Learning rate"),
+                            _num(
+                                IDs.INV_HYB_LR,
+                                0.005, min=1e-5,
+                                max=0.5, step=1e-4,
+                            ),
+                        ]),
+                    ], className="g-1 mb-2"),
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("Device"),
+                            dbc.Select(
+                                id=IDs.INV_HYB_DEVICE,
+                                options=_DEVICE_OPTS,
+                                value="auto",
+                                size="sm",
+                            ),
+                        ]),
+                        dbc.Col([
+                            _lbl("Smoothness lam_z"),
+                            _num(
+                                IDs.INV_HYB_LAM_Z,
+                                0.005, min=0,
+                                max=1, step=0.001,
+                            ),
+                        ]),
+                    ], className="g-1 mb-1"),
+                    html.Div([
+                        dbc.Row([
+                            dbc.Col([
+                                _lbl(
+                                    "Lateral lam_x  (2-D)"
+                                ),
+                                _num(
+                                    IDs.INV_HYB_LAM_X,
+                                    0.003, min=0,
+                                    max=1, step=0.001,
+                                ),
+                            ]),
+                        ], className="g-1"),
+                    ], id="inv-hyb-lamx-row",
+                       style={"display": "none"}),
+                    html.Div([
+                        dbc.Row([
+                            dbc.Col([
+                                _lbl(
+                                    "Graph lam_g  (3-D)"
+                                ),
+                                _num(
+                                    IDs.INV_HYB_LAM_G,
+                                    0.003, min=0,
+                                    max=1, step=0.001,
+                                ),
+                            ]),
+                        ], className="g-1"),
+                    ], id="inv-hyb-lamg-row",
+                       style={"display": "none"}),
+                ],
+                "hyb-acc-stage2",
+            ),
+
+            _acc_item(
+                "Settings",
+                "bi-gear",
+                [
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("N layers"),
+                            _num(
+                                IDs.INV_HYB_N_LAYERS,
+                                5, min=2,
+                                max=30, step=1,
+                            ),
+                        ]),
+                        dbc.Col([
+                            _lbl("N freqs"),
+                            _num(
+                                IDs.INV_HYB_N_FREQS,
+                                32, min=8,
+                                max=128, step=8,
+                            ),
+                        ]),
+                    ], className="g-1 mb-2"),
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("EM mode"),
+                            dbc.Select(
+                                id=IDs.INV_HYB_MODE,
+                                options=_PINN_MODE_OPTS,
+                                value="te",
+                                size="sm",
+                            ),
+                        ]),
+                    ], className="g-1 mb-1"),
+                    dbc.Row([
+                        dbc.Col([
+                            _lbl("TE comp"),
+                            dbc.Select(
+                                id=IDs.INV_HYB_COMP_TE,
+                                options=_COMP_OPTS,
+                                value="xy",
+                                size="sm",
+                            ),
+                        ]),
+                        dbc.Col([
+                            _lbl("TM comp"),
+                            dbc.Select(
+                                id=IDs.INV_HYB_COMP_TM,
+                                options=_COMP_OPTS,
+                                value="yx",
+                                size="sm",
+                            ),
+                        ]),
+                    ], className="g-1"),
+                ],
+                "hyb-acc-settings",
+            ),
+        ],
+        active_item=["hyb-acc-data"],
+        always_open=True,
+        className="inv-pinn-accordion",
+        flush=True,
+    )
+
+    cond_panels = html.Div([
+        # 2-D hint card (shown for 2D dim)
+        html.Div(
+            html.Div(
+                "2-D: lateral smoothness is active.",
+                className="inv-sub-hint",
+            ),
+            id=IDs.INV_HYB_2D_PANEL,
+            className="ctrl-card",
+            style={"display": "none"},
+        ),
+        # 3-D network card (shown for 3D dim)
         html.Div([
-            html.Div([
-                html.I(className="bi bi-grid-3x3-gap me-1",
-                       style={"color": "var(--blue)"}),
-                html.Span("2-D UNet Configuration", className="ctrl-label d-inline"),
-            ], className="mb-2"),
+            html.Div(
+                [
+                    html.I(
+                        className=(
+                            "bi bi-diagram-3 me-1"
+                        ),
+                        style={
+                            "color": "var(--mauve)"
+                        },
+                    ),
+                    html.Span(
+                        "3-D Network",
+                        className=(
+                            "ctrl-label d-inline"
+                        ),
+                    ),
+                ],
+                className="mb-2",
+            ),
             dbc.Row([
                 dbc.Col([
-                    _lbl("Input channels"),
-                    dbc.Select(
-                        id=IDs.INV_AI_N_COMPONENTS,
-                        options=[
-                            {"label": "2  (TE: ρₐ + φ)",    "value": "2"},
-                            {"label": "4  (TE + TM modes)", "value": "4"},
-                        ],
-                        value="2", size="sm",
+                    _lbl("Adj. radius (m)"),
+                    _num(
+                        IDs.INV_HYB_RADIUS, 5000,
+                        min=100, step=100,
                     ),
                 ]),
-                dbc.Col([
-                    _lbl("Depth cells"),
-                    _num(IDs.INV_AI_N_DEPTH, 4, min=2, max=80, step=1),
-                ]),
-            ], className="g-1 mb-1"),
-            dbc.Row([
-                dbc.Col([
-                    _lbl("Stations/profile"),
-                    _num(IDs.INV_AI_N_STATIONS, 8, min=4, max=100, step=1),
-                ]),
-                dbc.Col([
-                    _lbl("UNet depth"),
-                    dbc.Select(
-                        id=IDs.INV_AI_UNET_DEPTH,
-                        options=[
-                            {"label": "Auto",     "value": "auto"},
-                            {"label": "1 stage",  "value": "1"},
-                            {"label": "2 stages", "value": "2"},
-                            {"label": "3 stages", "value": "3"},
-                            {"label": "4 stages", "value": "4"},
-                        ],
-                        value="auto", size="sm",
-                    ),
-                ]),
             ], className="g-1"),
-            dbc.Alert(
-                "Auto depth selects the maximum safe number of pooling stages.",
-                color="dark", className="mt-2 mb-0 py-1 px-2 inv-alert",
-            ),
-        ], id=IDs.INV_AI_2D_PANEL, className="ctrl-card", style={"display": "none"}),
+        ], id=IDs.INV_HYB_3D_PANEL,
+           className="ctrl-card mt-1",
+           style={"display": "none"}),
+    ])
 
-        # 3-D GCN config (conditional)
-        html.Div([
-            html.Div([
-                html.I(className="bi bi-diagram-3 me-1",
-                       style={"color": "var(--mauve)"}),
-                html.Span("3-D GCN Configuration", className="ctrl-label d-inline"),
-            ], className="mb-2"),
-            dbc.Row([
-                dbc.Col([
-                    _lbl("Stations/survey"),
-                    _num(IDs.INV_AI_N_STATIONS_3D, 20, min=9, max=200, step=1),
-                ]),
-                dbc.Col([
-                    _lbl("Corr. length (m)"),
-                    _num("inv-ai-corr-length", 2000, min=100, max=20000, step=100),
-                ]),
-            ], className="g-1"),
-            dbc.Alert(
-                "Adjacency radius = 30th-percentile inter-station distance.",
-                color="dark", className="mt-2 mb-0 py-1 px-2 inv-alert",
-            ),
-        ], id=IDs.INV_AI_3D_PANEL, className="ctrl-card", style={"display": "none"}),
-
-        # Training hyper-parameters
-        html.Div([
-            _clabel("Training Configuration"),
-            dbc.Row([
-                dbc.Col([_lbl("N samples"),
-                         _num(IDs.INV_AI_N_SAMPLES, 1000, min=100, max=20000, step=100)]),
-                dbc.Col([_lbl("N layers / depth cells"),
-                         _num(IDs.INV_AI_N_LAYERS, 4, min=2, max=10, step=1)]),
-            ], className="g-1 mb-1"),
-            dbc.Row([
-                dbc.Col([_lbl("Epochs"),
-                         _num(IDs.INV_AI_EPOCHS, 40, min=5, max=500, step=5)]),
-                dbc.Col([_lbl("Batch size"),
-                         _num(IDs.INV_AI_BATCH, 64, min=8, max=1024, step=8)]),
-            ], className="g-1 mb-1"),
-            dbc.Row([
-                dbc.Col([_lbl("Learning rate"),
-                         _num(IDs.INV_AI_LR, 0.001, min=1e-5, max=0.1, step=1e-4)]),
-                dbc.Col([_lbl("Noise level"),
-                         _num(IDs.INV_AI_NOISE, 0.05, min=0.0, max=0.5, step=0.01)]),
-            ], className="g-1"),
-        ], className="ctrl-card"),
-
-    ], id="inv-ctrl-ai", style={"display": "none"})
+    return html.Div(
+        [acc, cond_panels],
+        id="inv-ctrl-hybrid",
+        style={"display": "none"},
+    )
 
 
 # ── PyTorch install modal (overlay) ───────────────────────────────────────────
@@ -498,33 +1476,96 @@ def layout() -> html.Div:
     # ── Left sidebar ──────────────────────────────────────────────────────────
 
     stores = html.Div([
-        dcc.Store(id=IDs.INV_ACTIVE_TRACK, data=_DEFAULT_TRACK),
-        dcc.Store(id=IDs.INV_ACTIVE_OUT,   data=_DEFAULT_OUT),
+        dcc.Store(id=IDs.INV_ACTIVE_TRACK,
+                  data=_DEFAULT_TRACK),
+        dcc.Store(id=IDs.INV_ACTIVE_OUT,
+                  data=_DEFAULT_OUT),
+        dcc.Store(id=IDs.INV_PINN_RESULT_STORE),
+        dcc.Store(id=IDs.INV_HYB_RESULT_STORE),
     ])
 
     # Sticky run bar
     run_bar = html.Div([
         dbc.Button(
-            [html.I(className="bi bi-play-fill me-1"), "Run Inversion"],
+            [
+                html.I(
+                    className="bi bi-play-fill me-1"
+                ),
+                "Run Inversion",
+            ],
             id=IDs.BTN_INV_RUN,
-            color="danger", size="sm",
+            color="primary",
+            size="sm",
             className="w-100 mb-1",
             n_clicks=0,
         ),
-        dbc.Spinner(html.Div(id=IDs.INV_SPINNER), size="sm", color="danger"),
-        html.Div(id=IDs.INV_FEEDBACK, className="fwd-feedback-mini"),
+        html.Div(
+            [
+                dbc.Spinner(
+                    html.Div(id=IDs.INV_SPINNER),
+                    size="sm",
+                    color="primary",
+                    spinnerClassName=(
+                        "inv-run-spinner"
+                    ),
+                ),
+                html.Div(
+                    id=IDs.INV_RUN_MSG,
+                    className="inv-run-msg",
+                ),
+            ],
+            className="inv-spinner-row",
+        ),
+        html.Div(
+            id=IDs.INV_FEEDBACK,
+            className="fwd-feedback-mini",
+        ),
     ], className="fwd-run-bar inv-run-bar")
 
-    # Track selector pills (Traditional | AI Neural)
-    track_bar = html.Div([
-        html.Button(
-            [html.I(className=f"bi {icon} me-1"), label],
+    def _track_btn(tid, label, icon):
+        active = " active" if tid == _DEFAULT_TRACK else ""
+        return html.Button(
+            [
+                html.I(className=f"bi {icon} me-1"),
+                label,
+            ],
             id=f"inv-track-{tid}",
-            className=f"fwd-dim-btn{' active' if tid == _DEFAULT_TRACK else ''}",
+            className=f"fwd-dim-btn{active}",
             n_clicks=0,
         )
-        for tid, label, icon in _INV_TRACKS
-    ], className="fwd-dim-bar")
+
+    track_bar = html.Div([
+        html.Div(
+            "Classical",
+            className="inv-track-group-label",
+        ),
+        html.Div(
+            [
+                _track_btn(
+                    "trad", "Traditional", "bi-cpu"
+                ),
+                _track_btn(
+                    "ai", "AI Neural", "bi-robot"
+                ),
+            ],
+            className="fwd-dim-bar",
+        ),
+        html.Div(
+            "Physics-informed",
+            className="inv-track-group-label mt-2",
+        ),
+        html.Div(
+            [
+                _track_btn(
+                    "pinn", "PINN", "bi-bezier2"
+                ),
+                _track_btn(
+                    "hybrid", "Hybrid", "bi-node-plus"
+                ),
+            ],
+            className="fwd-dim-bar",
+        ),
+    ])
 
     # Shared: frequency range
     freq_card = html.Div([
@@ -540,6 +1581,8 @@ def layout() -> html.Div:
         track_bar,
         _trad_controls(),
         _ai_controls(),
+        _pinn_controls(),
+        _hybrid_controls(),
         freq_card,
     ], className="fwd-ctrl-scroll")
 
@@ -616,8 +1659,96 @@ def layout() -> html.Div:
         style={"display": "none"},
     )
 
+    panel_data_fit = html.Div(
+        html.Div(
+            [
+                html.Div(
+                    "Run PINN or Hybrid inversion,"
+                    " then select a station to view"
+                    " observed vs predicted curves.",
+                    className="inv-stats-placeholder",
+                    id="inv-datafit-hint",
+                ),
+                html.Div(
+                    dbc.Row([
+                        dbc.Col([
+                            html.Div([
+                                html.I(
+                                    className=(
+                                        "bi bi-reception-4"
+                                        " me-1"
+                                    ),
+                                    style={
+                                        "color":
+                                        "var(--mauve)"
+                                    },
+                                ),
+                                _lbl("Line"),
+                            ], className=(
+                                "d-flex"
+                                " align-items-center"
+                                " gap-1 mb-1"
+                            )),
+                            dcc.Dropdown(
+                                id=IDs.INV_DATAFIT_LINE,
+                                placeholder="All lines",
+                                clearable=True,
+                                className=(
+                                    "inv-sta-dropdown"
+                                ),
+                            ),
+                        ], width=5),
+                        dbc.Col([
+                            html.Div([
+                                html.I(
+                                    className=(
+                                        "bi bi-geo-alt"
+                                        " me-1"
+                                    ),
+                                    style={
+                                        "color":
+                                        "var(--blue)"
+                                    },
+                                ),
+                                _lbl("Station"),
+                            ], className=(
+                                "d-flex"
+                                " align-items-center"
+                                " gap-1 mb-1"
+                            )),
+                            dcc.Dropdown(
+                                id=IDs.INV_DATAFIT_STA,
+                                placeholder=(
+                                    "Pick station..."
+                                ),
+                                className=(
+                                    "inv-sta-dropdown"
+                                ),
+                            ),
+                        ], width=7),
+                    ], className="g-2 mt-2"),
+                    id="inv-datafit-selectors",
+                    style={"display": "none"},
+                ),
+                html.Img(
+                    id=IDs.IMG_INV_DATA_FIT,
+                    src=empty_src(),
+                    style=_IMG_STYLE,
+                    className="mt-2",
+                ),
+            ],
+        ),
+        id="inv-panel-data-fit",
+        className="prof-panel",
+        style={"display": "none"},
+    )
+
     panels = html.Div(
-        [panel_result, panel_conv, panel_stats, panel_log],
+        [
+            panel_result, panel_conv,
+            panel_stats, panel_log,
+            panel_data_fit,
+        ],
         className="prof-view-panel",
     )
 
@@ -631,7 +1762,8 @@ def layout() -> html.Div:
     return html.Div([
         _command_bar(
             "inversion", "MT Inversion",
-            "Traditional (builtin · Occam2D) · AI Neural (ResNet · U-Net · GCN) · 1D / 2D / 3D",
+            "Traditional · AI Neural · PINN · Hybrid"
+            "  |  1D / 2D / 3D",
         ),
         html.Div(
             [sidebar, view_area],

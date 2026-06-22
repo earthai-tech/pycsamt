@@ -19,22 +19,24 @@ try:
 except Exception:
     __version__ = "2.0.0"
 
-# ── Logging ───────────────────────────────────────────────────────────────────
-# Configures the root 'pycsamt' logger; no heavy deps loaded here.
-from .log._config import init_logging as _init_logging
-_init_logging()
-del _init_logging
-
+# ── Removed v1 names ──────────────────────────────────────────────────────────
+# Defined BEFORE logging (and before __getattr__) so this dict is always
+# present in the module dict, even if the logging import fails mid-reload.
+_REMOVED = {
+    "geodrill":    "Use 'pycsamt.interp' instead.",
+    "bases":       "Removed in v2 (was an internal v1 serialisation helper).",
+    "_csamtpylog": "Removed in v2; use 'pycsamt.log.logger.get_logger'.",
+    "_path":       "Removed in v2; use standard pathlib paths.",
+}
 
 # ── Lazy registry ─────────────────────────────────────────────────────────────
-# Subpackages — imported on first attribute access.
+# All pure-Python constants — no external imports needed.
 _SUBPACKAGES = frozenset({
     "ai", "agents", "backends", "emtools", "forward", "gis",
     "interp", "inversion", "io", "jones", "log", "models",
     "pipeline", "seg", "site", "tdem", "z", "zonge",
 })
 
-# Top-level convenience symbols — resolved from their home module on first use.
 _LAZY_SYMBOLS: dict[str, str] = {
     # pipeline
     "Pipeline":       ".pipeline",
@@ -68,6 +70,18 @@ def __getattr__(name: str):
             f"'pycsamt.{name}' was removed in pycsamt v2.  {_REMOVED[name]}"
         )
     raise AttributeError(f"module 'pycsamt' has no attribute {name!r}")
+
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+# Placed AFTER __getattr__ and _REMOVED so any import side-effect that
+# triggers __getattr__ (e.g. via Werkzeug hot-reload) is always safe.
+# Wrapped in try/except: yaml not yet installed won't break the import.
+try:
+    from .log._config import init_logging as _init_logging
+    _init_logging()
+    del _init_logging
+except Exception:
+    pass
 
 
 # ── Public API ────────────────────────────────────────────────────────────────

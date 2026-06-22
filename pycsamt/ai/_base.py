@@ -35,9 +35,13 @@ from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
+from ..api.property import PyCSAMTObject
+
 __all__ = [
     "BaseEMNet",
     "BaseEMProcessor",
+    "BasePINNInverter",
+    "BaseHybridInverter",
     "EMCheckpoint",
 ]
 
@@ -457,6 +461,185 @@ class BaseEMProcessor(ABC):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}()"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BasePINNInverter — physics-informed parameter optimisation
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class BasePINNInverter(PyCSAMTObject, ABC):
+    r"""
+    Abstract base for physics-informed EM inverters.
+
+    Unlike :class:`BaseEMNet`, which wraps a supervised
+    neural network, PINN inverters minimise a
+    physics-informed loss directly in model-parameter
+    space — no network weights are trained.
+
+    Both PyTorch and TensorFlow are supported via the
+    :mod:`pycsamt.backends` dispatch layer.  The active
+    backend is selected automatically; override with
+    ``PYCSAMT_AI_BACKEND`` or
+    :func:`pycsamt.backends.set_backend`.
+
+    Subclasses must implement :meth:`fit` and
+    :meth:`residuals`.
+
+    Parameters
+    ----------
+    n_layers : int
+        Number of earth layers.
+    depth_max : float
+        Maximum investigation depth in metres.
+    device : str or None
+        Compute device (``'cpu'``, ``'cuda'``,
+        ``'/GPU:0'``, …).  Auto-detected if ``None``.
+    """
+
+    def __init__(
+        self,
+        n_layers: int = 5,
+        depth_max: float = 1000.0,
+        device: Optional[str] = None,
+    ) -> None:
+        self.n_layers = int(n_layers)
+        self.depth_max = float(depth_max)
+        self.device = device
+        self._is_fitted: bool = False
+        self._history: list = []
+
+    # ── abstract interface ────────────────────────────
+
+    @abstractmethod
+    def fit(self, **kwargs) -> "BasePINNInverter":
+        """
+        Minimise the physics-informed loss.
+
+        Returns
+        -------
+        self
+        """
+
+    @abstractmethod
+    def residuals(self) -> Any:
+        """
+        Return observed vs predicted data.
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+
+    # ── common helpers ────────────────────────────────
+
+    def convergence_curve(self) -> list:
+        """
+        Return Adam loss history.
+
+        Returns
+        -------
+        list of float
+        """
+        self._check_fitted()
+        return list(self._history)
+
+    def _resolve_device(self) -> str:
+        """Pick compute device via active backend."""
+        from ._backend_utils import resolve_device
+        return resolve_device(self.device)
+
+    def _require_backend(self) -> str:
+        """
+        Return active backend name; raise if none.
+
+        Returns
+        -------
+        name : str
+            ``'torch'`` or ``'tensorflow'``.
+
+        Raises
+        ------
+        ImportError
+            When no DL framework is installed.
+        """
+        from ._backend_utils import active_backend
+        name = active_backend()
+        if name == "none":
+            raise ImportError(
+                "PINNInverter requires PyTorch or "
+                "TensorFlow.\n"
+                "Install one with:\n"
+                "    pip install torch\n"
+                "    pip install tensorflow"
+            )
+        return name
+
+    def _check_fitted(self) -> None:
+        """Raise RuntimeError if not fitted."""
+        if not self._is_fitted:
+            raise RuntimeError(
+                "Call fit() before accessing results."
+            )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BaseHybridInverter — AI warm-start + physics refinement
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class BaseHybridInverter(BasePINNInverter):
+    r"""
+    Abstract base for two-stage hybrid inverters.
+
+    Stage 1 applies a pre-trained AI inverter to
+    produce an initial Earth model.  Stage 2 refines
+    that model with the same physics-informed Adam
+    optimisation used by :class:`BasePINNInverter`.
+
+    Subclasses must implement :meth:`_load_ai_inverter`,
+    :meth:`_run_stage1`, :meth:`fit`, and
+    :meth:`residuals`.
+
+    Parameters
+    ----------
+    n_layers : int
+        Number of earth layers.
+    depth_max : float
+        Maximum investigation depth in metres.
+    device : str or None
+        Compute device.  Auto-detected if ``None``.
+    """
+
+    def __init__(
+        self,
+        n_layers: int = 5,
+        depth_max: float = 1000.0,
+        device: Optional[str] = None,
+    ) -> None:
+        super().__init__(
+            n_layers=n_layers,
+            depth_max=depth_max,
+            device=device,
+        )
+        self._ai_inv: Any = None
+        self._stage1_fitted: bool = False
+
+    @abstractmethod
+    def _load_ai_inverter(
+        self, ai_inverter: Any
+    ) -> Any:
+        """
+        Validate and load the AI inverter.
+
+        Returns
+        -------
+        ready-to-use inverter object
+        """
+
+    @abstractmethod
+    def _run_stage1(self, *, verbose: bool) -> Any:
+        """Apply the AI inverter to all stations."""
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -47,65 +47,294 @@ import matplotlib.pyplot as plt
 """
 
 _LOAD_BLOCK = """\
-# ── load MT data ──────────────────────────────────────────────────────────────
-from ..emtools._core import ensure_sites
+# ── load MT data ──────────────────────────────────────────────
+from pycsamt.emtools._core import ensure_sites
 sites = ensure_sites({path!r}, verbose=0)
 print(f"Loaded {{len(list(sites))}} stations")
 
 """
 
 _QC_BLOCK = """\
-# ── quality control ───────────────────────────────────────────────────────────
-from ..emtools.qc import (
-    build_qc_table, qc_flags, plot_frequency_confidence_psection,
+# ── quality control ───────────────────────────────────────────
+from pycsamt.emtools.qc import (
+    build_qc_table,
+    qc_flags,
+    plot_frequency_confidence_psection,
 )
 qc_table = build_qc_table(sites)
 flags    = qc_flags(sites, min_frac_ok=0.6, min_snr_med=2.0)
-fig_qc   = plot_frequency_confidence_psection(sites).get_figure()
-fig_qc.savefig({out!r} + "/qc_confidence.png", dpi=150, bbox_inches="tight")
+fig_qc   = (
+    plot_frequency_confidence_psection(sites).get_figure()
+)
+fig_qc.savefig(
+    {out!r} + "/qc_confidence.png",
+    dpi=150, bbox_inches="tight",
+)
 
 """
 
 _SS_BLOCK = """\
-# ── static-shift correction ───────────────────────────────────────────────────
-from ..emtools.ss import correct_ss_ama
-sites_corr = correct_ss_ama(sites, half_window={hw})
+# ── static-shift correction ───────────────────────────────────
+from pycsamt.emtools.ss import (
+    estimate_ss_ama,
+    correct_ss_ama,
+    plot_ss_summary,
+    plot_ss_1d_curves,
+)
+from pycsamt.emtools._core import (
+    _get_z_block, _name, _iter_items,
+)
+
+ss_table = estimate_ss_ama(
+    sites,
+    half_window={hw},
+    sort_by="lon",
+    weights="tri",
+    max_skew=6.0,
+)
+print(
+    ss_table[
+        ["station", "delta_log10_rho", "fac_z"]
+    ]
+)
+
+sites_corr = correct_ss_ama(
+    sites,
+    half_window={hw},
+    sort_by="lon",
+)
+
+
+def _collect_logRho(S):
+    rows, freqs = [], None
+    for i, ed in enumerate(_iter_items(S)):
+        Z, z, fr = _get_z_block(ed)
+        if Z is None:
+            continue
+        rxy = (
+            0.2 * np.abs(z[:, 0, 1]) ** 2
+            / (fr + 1e-24)
+        )
+        ryx = (
+            0.2 * np.abs(z[:, 1, 0]) ** 2
+            / (fr + 1e-24)
+        )
+        rows.append(
+            np.log10(np.sqrt(rxy * ryx) + 1e-24)
+        )
+        freqs = fr
+    return np.array(rows), freqs
+
+
+logRho_b, ss_freqs = _collect_logRho(sites)
+logRho_a, _ = _collect_logRho(sites_corr)
+ss_labels = [
+    _name(ed, i)
+    for i, ed in enumerate(_iter_items(sites))
+]
+
+fig_sum = plot_ss_summary(
+    logRho_b, logRho_a,
+    freqs=ss_freqs,
+    station_labels=ss_labels,
+)
+fig_sum.savefig(
+    {out!r} + "/ss_summary.png",
+    dpi=150, bbox_inches="tight",
+)
+
+fig_1d = plot_ss_1d_curves(
+    logRho_b, logRho_a,
+    freqs=ss_freqs,
+    station_labels=ss_labels,
+)
+fig_1d.savefig(
+    {out!r} + "/ss_1d_curves.png",
+    dpi=150, bbox_inches="tight",
+)
 
 """
 
 _PT_BLOCK = """\
-# ── phase tensor analysis ─────────────────────────────────────────────────────
-from ..emtools.tensor import (
-    build_phase_tensor_table, plot_phase_tensor_psection,
+# ── phase tensor analysis ─────────────────────────────────────
+from pycsamt.emtools.tensor import (
+    build_phase_tensor_table,
+    plot_phase_tensor_psection,
 )
-from ..emtools.strike import estimate_strike_consensus, plot_strike_analysis
-from ..emtools.dimensionality import classify_dimensionality
+from pycsamt.emtools.strike import (
+    estimate_strike_consensus,
+    plot_strike_analysis,
+)
+from pycsamt.emtools.dimensionality import classify_dimensionality
 
-pt_table   = build_phase_tensor_table(sites_corr)
-dim_table  = classify_dimensionality(sites_corr, skew_th={skew_th}, ellipt_th={ellipt_th})
-st_result  = estimate_strike_consensus(sites_corr)
-print(f"Consensus strike: {{st_result.get('angle_deg', 'n/a'):.1f}}°")
+pt_table  = build_phase_tensor_table(sites_corr)
+dim_table = classify_dimensionality(
+    sites_corr, skew_th={skew_th}, ellipt_th={ellipt_th},
+)
+st_result = estimate_strike_consensus(sites_corr)
+print(
+    f"Consensus strike: "
+    f"{{st_result.get('angle_deg', 'n/a'):.1f}} deg"
+)
 
 fig_pt = plot_phase_tensor_psection(sites_corr).get_figure()
-fig_pt.savefig({out!r} + "/pt_psection.png", dpi=150, bbox_inches="tight")
+fig_pt.savefig(
+    {out!r} + "/pt_psection.png",
+    dpi=150, bbox_inches="tight",
+)
 fig_strike = plot_strike_analysis(sites_corr)
-fig_strike.savefig({out!r} + "/strike_analysis.png", dpi=150, bbox_inches="tight")
+fig_strike.savefig(
+    {out!r} + "/strike_analysis.png",
+    dpi=150, bbox_inches="tight",
+)
 
 """
 
 _FWD_BLOCK = """\
-# ── 1-D MT forward model ──────────────────────────────────────────────────────
-from ..forward import MT1DForward, LayeredModel, plot_response_and_model_1d
-
-layered  = LayeredModel(
-    resistivities={rhos},
-    thicknesses  ={ths},
+# ── 1-D MT forward model ──────────────────────────────────────
+from pycsamt.forward import (
+    MT1DForward,
+    LayeredModel,
+    plot_response_and_model_1d,
 )
-freqs  = np.logspace(-4, 3, 60)
-fwd    = MT1DForward(freqs=freqs)
-resp   = fwd.run(layered)
+
+layered = LayeredModel(
+    resistivities={rhos},
+    thicknesses={ths},
+)
+freqs   = np.logspace(-4, 3, 60)
+fwd     = MT1DForward(freqs=freqs)
+resp    = fwd.run(layered)
 fig_fwd = plot_response_and_model_1d(resp, layered)
-fig_fwd.savefig({out!r} + "/forward_response.png", dpi=150, bbox_inches="tight")
+fig_fwd.savefig(
+    {out!r} + "/forward_response.png",
+    dpi=150, bbox_inches="tight",
+)
+
+"""
+
+_AI_INV_BLOCK = """\
+# ── AI 1-D inversion ──────────────────────────────────────────
+from pycsamt.ai.inversion import EMInverter1D
+from pycsamt.forward.batch import generate_dataset
+
+freqs_ai   = {freqs!r}
+n_layers   = {n_layers}
+n_samples  = {n_samples}
+epochs     = {epochs}
+
+ds = generate_dataset(
+    solver="mt1d",
+    n_samples=n_samples,
+    freqs=freqs_ai,
+    n_layers=n_layers,
+    noise_level=0.03,
+    seed=42,
+    n_jobs=1,
+    verbose=False,
+)
+inv1d = EMInverter1D(
+    arch={arch!r},
+    n_layers=n_layers,
+    solver="mt1d",
+)
+inv1d.fit(ds.X, ds.y, epochs=epochs, batch_size=32, verbose=False)
+
+import numpy as np
+predictions = {{}}
+for site_name, feat in obs_features.items():
+    pred = inv1d.predict(feat.reshape(1, -1))
+    predictions[site_name] = pred[0]
+
+print(f"AI 1-D inversion done: {{len(predictions)}} stations")
+
+"""
+
+_ENSEMBLE_BLOCK = """\
+# ── ensemble 1-D inversion with uncertainty ───────────────────
+from pycsamt.ai.inversion import EnsembleInverter
+
+ens = EnsembleInverter(
+    n_members={n_members},
+    arch={arch!r},
+    n_layers={n_layers},
+    solver="mt1d",
+)
+ens.fit(ds.X, ds.y, epochs={epochs}, verbose=False)
+
+ensemble_preds = {{}}
+ensemble_unc   = {{}}
+for site_name, feat in obs_features.items():
+    mean, std = ens.predict_with_uncertainty(
+        feat.reshape(1, -1)
+    )
+    ensemble_preds[site_name] = mean[0]
+    ensemble_unc[site_name]   = std[0]
+
+print(
+    f"Ensemble inversion done: "
+    f"{{len(ensemble_preds)}} stations"
+)
+
+"""
+
+_INV2D_BLOCK = """\
+# ── U-Net 2-D profile inversion ───────────────────────────────
+from pycsamt.ai.inversion import EMInverter2D
+from scipy.ndimage import zoom
+
+n_depth      = {n_depth}
+n_freqs_2d   = {n_freqs}
+n_components = {n_components}
+n_sta        = len(obs_features)
+
+X_obs_list = list(obs_features.values())
+X_obs = np.stack(X_obs_list, axis=2)   # (n_freqs, n_comp, n_sta)
+X_obs = X_obs.transpose(1, 0, 2)       # (n_comp, n_freqs, n_sta)
+X_obs_4d = X_obs[None, ...]
+
+inv2d = EMInverter2D(
+    n_components=n_components,
+    n_depth=n_depth,
+    n_stations=n_sta,
+    n_freqs=n_freqs_2d,
+    arch={arch!r},
+)
+inv2d.fit(
+    X_train_2d, y_train_2d,
+    epochs={epochs},
+    batch_size=8,
+    verbose=False,
+)
+pred_section = inv2d.predict(X_obs_4d)[0]  # (n_depth, n_sta)
+
+print(
+    f"2-D inversion section shape: "
+    f"{{pred_section.shape}}"
+)
+
+"""
+
+_FULL_AI_BLOCK = """\
+# ── full AI workflow summary ───────────────────────────────────
+import json, hashlib, platform, sys
+from importlib.metadata import version as _v
+
+provenance = {{
+    "workflow":    "full_ai_workflow",
+    "data_path":   {path!r},
+    "output_dir":  {out!r},
+    "python":      sys.version,
+    "platform":    platform.platform(),
+    "packages":    {{
+        "pycsamt": _v("pycsamt"),
+        "numpy":   _v("numpy"),
+    }},
+}}
+prov_path = {out!r} + "/provenance.json"
+with open(prov_path, "w") as fh:
+    json.dump(provenance, fh, indent=2)
+print(f"Provenance written to {{prov_path}}")
 
 """
 
@@ -199,7 +428,9 @@ class CodeGenerationAgent(BaseAgent):
         if workflow in ("static_shift", "full") or "static_shift" in results:
             hw = 3
             ss_r = results.get("static_shift")
-            code += _SS_BLOCK.format(hw=hw)
+            code += _SS_BLOCK.format(
+                hw=hw, out=out_dir
+            )
         else:
             code += "sites_corr = sites  # no static-shift correction\n\n"
 
@@ -218,11 +449,70 @@ class CodeGenerationAgent(BaseAgent):
             if fwd_r is not None:
                 lm = fwd_r.get("layered_model")
                 if lm is not None:
-                    rhos = list(getattr(lm, "resistivity",
-                                getattr(lm, "resistivities", rhos)))
-                    ths  = list(getattr(lm, "thickness",
-                                getattr(lm, "thicknesses",   ths)))
+                    rhos = list(getattr(
+                        lm, "resistivity",
+                        getattr(lm, "resistivities", rhos),
+                    ))
+                    ths = list(getattr(
+                        lm, "thickness",
+                        getattr(lm, "thicknesses", ths),
+                    ))
             code += _FWD_BLOCK.format(rhos=rhos, ths=ths, out=out_dir)
+
+        # ── AI inversion blocks ───────────────────────────────────
+        ai_wf = {
+            "ai_inversion", "inv1d",
+            "ensemble_inversion",
+            "inv2d",
+            "full_ai_workflow", "full",
+        }
+        if workflow in ai_wf or "ai_inv" in results:
+            inv_r     = results.get("ai_inv") or {}
+            n_layers  = int(
+                inv_r.get("n_layers",
+                cfg.get("n_layers", 5))
+            )
+            n_samples = int(cfg.get("n_train_samples", 2000))
+            epochs    = int(cfg.get("epochs", 50))
+            arch      = str(cfg.get("arch", "cnn1d"))
+            import numpy as np
+            freqs_ai  = list(
+                np.logspace(-4, 3, 32).round(6).tolist()
+            )
+            code += _AI_INV_BLOCK.format(
+                freqs=freqs_ai,
+                n_layers=n_layers,
+                n_samples=n_samples,
+                epochs=epochs,
+                arch=arch,
+            )
+
+        if (workflow in ("ensemble_inversion",)
+                or "ensemble" in results):
+            ens_r    = results.get("ensemble") or {}
+            n_layers = int(cfg.get("n_layers", 5))
+            arch     = str(cfg.get("arch", "cnn1d"))
+            code += _ENSEMBLE_BLOCK.format(
+                n_members=int(cfg.get("n_members", 5)),
+                arch=arch,
+                n_layers=n_layers,
+                epochs=int(cfg.get("epochs", 50)),
+            )
+
+        if workflow in ("inv2d", "full_ai_workflow"):
+            code += _INV2D_BLOCK.format(
+                n_depth=int(cfg.get("n_depth", 40)),
+                n_freqs=int(cfg.get("n_freqs", 32)),
+                n_components=4,
+                arch=str(cfg.get("arch", "unet")),
+                epochs=int(cfg.get("epochs", 30)),
+            )
+
+        if workflow in ("full_ai_workflow",):
+            code += _FULL_AI_BLOCK.format(
+                path=data_path,
+                out=out_dir,
+            )
 
         code += _FOOTER
 

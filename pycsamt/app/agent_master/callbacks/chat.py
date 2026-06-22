@@ -2005,6 +2005,17 @@ def _run_agent(
             or "Workflow completed."
         )
 
+        # Trace the run to the workflow history (observability +
+        # the sidebar "Recent runs" view). Best-effort.
+        _record_run(
+            workflow=wtype,
+            path=edi_path,
+            output_dir=output_dir,
+            status=result.status,
+            summary=summary,
+            n_figures=len(figs),
+        )
+
         _update_job(
             jid,
             status="done",
@@ -2112,6 +2123,79 @@ def _pin_item(pin: dict) -> html.Div:
             ),
         ],
         className="am-pin-item",
+    )
+
+
+# ── workflow trace (Recent runs) ───────────────────
+
+def _record_run(
+    *,
+    workflow: str,
+    path: str,
+    output_dir: str,
+    status: str,
+    summary: str,
+    n_figures: int,
+) -> None:
+    """Append a completed workflow to the persistent trace (best-effort)."""
+    try:
+        from pycsamt.assistant.memory.workflow_history import (
+            WorkflowHistory,
+            WorkflowRun,
+        )
+        WorkflowHistory.default().record(
+            WorkflowRun(
+                workflow=workflow,
+                status=status,
+                path=path or None,
+                output_dir=output_dir,
+                summary=summary,
+                n_figures=n_figures,
+            )
+        )
+    except Exception:  # noqa: BLE001 — tracing must never break a job
+        pass
+
+
+def _recent_runs(n: int = 8) -> list[dict]:
+    """Most-recent workflow runs (newest first), or []."""
+    try:
+        from pycsamt.assistant.memory.workflow_history import (
+            WorkflowHistory,
+        )
+        return list(reversed(WorkflowHistory.default().recent(n)))
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _run_item(run: dict) -> html.Div:
+    """Render one Recent-runs row in the sidebar."""
+    wf = run.get("workflow", "?")
+    status = run.get("status", "")
+    ok = status != "failed"
+    ts = (run.get("timestamp", "") or "").replace("T", " ")[5:16]
+    icon = (
+        "bi-check-circle-fill" if ok
+        else "bi-exclamation-triangle-fill"
+    )
+    color = "var(--green)" if ok else "var(--red)"
+    label = _WF_RUNNING_LABEL.get(wf, wf.replace("_", " "))
+    return html.Div(
+        [
+            html.I(
+                className=f"bi {icon} am-run-icon",
+                style={"color": color},
+            ),
+            html.Div(
+                [
+                    html.Div(label, className="am-run-wf"),
+                    html.Div(ts, className="am-run-ts"),
+                ],
+                className="am-run-meta",
+            ),
+        ],
+        className="am-run-item",
+        title=run.get("summary", ""),
     )
 
 
@@ -2729,3 +2813,18 @@ def register_chat(app) -> None:
         ),
         prevent_initial_call=True,
     )
+
+    # 9. Recent runs → render from the workflow trace, refreshed on
+    #    every chat update (a completed job updates the chat window).
+    @app.callback(
+        Output(IDs.SIDEBAR_RUNS, "children"),
+        Input(IDs.CHAT_WINDOW, "children"),
+    )
+    def render_recent_runs(_children):
+        runs = _recent_runs()
+        if not runs:
+            return html.Div(
+                "No workflows run yet.",
+                className="am-sidebar-empty",
+            )
+        return [_run_item(r) for r in runs]

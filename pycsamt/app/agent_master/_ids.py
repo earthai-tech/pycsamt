@@ -134,6 +134,7 @@ class IDs:
     SIDEBAR_HISTORY  = "am-sidebar-history"
     SIDEBAR_FIGS     = "am-sidebar-figs"
     SIDEBAR_PINS     = "am-sidebar-pins"
+    SIDEBAR_RUNS     = "am-sidebar-runs"
     STORE_HISTORY    = "am-store-history"
     STORE_PINS       = "am-store-pins"
     PIN_SCROLL_DUMMY = "am-pin-scroll-dummy"

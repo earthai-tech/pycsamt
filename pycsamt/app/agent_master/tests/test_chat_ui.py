@@ -303,6 +303,43 @@ class TestCodeBlockCollapsible(unittest.TestCase):
 
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
+class TestRecentRuns(unittest.TestCase):
+    """Workflow trace recording + sidebar render."""
+
+    def test_record_and_recent_and_render(self):
+        import pycsamt.app.agent_master.callbacks.chat as C
+        from pycsamt.assistant.memory.workflow_history import (
+            WorkflowHistory,
+        )
+        WorkflowHistory.default().clear()
+        C._record_run(
+            workflow="static_shift", path="/data/L22PLT",
+            output_dir="out", status="success",
+            summary="done", n_figures=2,
+        )
+        runs = C._recent_runs()
+        self.assertTrue(runs)
+        self.assertEqual(runs[0]["workflow"], "static_shift")
+        item = C._run_item(runs[0])
+        self.assertEqual(item.className, "am-run-item")
+
+    def test_record_run_never_raises(self):
+        # tracing is best-effort; bad inputs must not raise
+        import pycsamt.app.agent_master.callbacks.chat as C
+        C._record_run(
+            workflow="qc", path=None, output_dir="o",
+            status="failed", summary="x", n_figures=0,
+        )
+
+    def test_callback_registered(self):
+        from pycsamt.app.agent_master import create_app
+        app = create_app()
+        self.assertTrue(
+            any("am-sidebar-runs" in k for k in app.callback_map)
+        )
+
+
+@unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestPinCallbacksRegistered(unittest.TestCase):
 
     def test_pin_callbacks_present(self):

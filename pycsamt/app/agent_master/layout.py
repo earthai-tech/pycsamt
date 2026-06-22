@@ -317,6 +317,18 @@ def _sidebar() -> html.Div:
                 className="am-sidebar-pins",
             ),
             html.Div(
+                "Recent runs",
+                className="am-sidebar-section-lbl",
+            ),
+            html.Div(
+                html.Div(
+                    "No workflows run yet.",
+                    className="am-sidebar-empty",
+                ),
+                id=IDs.SIDEBAR_RUNS,
+                className="am-sidebar-runs",
+            ),
+            html.Div(
                 "Figures",
                 className="am-sidebar-section-lbl",
             ),

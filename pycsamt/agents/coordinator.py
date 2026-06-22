@@ -340,11 +340,41 @@ class AgentCoordinator:
 
     # ── checkpoint helpers ────────────────────────────────────────────────────
 
+    @staticmethod
+    def _checkpoint_safe(result: AgentResult) -> AgentResult:
+        """Return a copy of *result* whose data is safe to pickle.
+
+        Matplotlib figures (and containers of them) hold unpicklable
+        closures (e.g. ``SecondaryAxis.set_functions.<locals>.<lambda>``)
+        and are display-only — they are not needed to resume a workflow,
+        so they are dropped from the checkpoint.
+        """
+        from dataclasses import replace
+        try:
+            from matplotlib.figure import Figure
+        except Exception:  # pragma: no cover - matplotlib always present
+            return result
+
+        def _has_fig(v: Any) -> bool:
+            if isinstance(v, Figure):
+                return True
+            if isinstance(v, dict):
+                return any(isinstance(x, Figure) for x in v.values())
+            if isinstance(v, (list, tuple)):
+                return any(isinstance(x, Figure) for x in v)
+            return False
+
+        safe_data = {
+            k: v for k, v in (result.data or {}).items()
+            if not _has_fig(v)
+        }
+        return replace(result, data=safe_data)
+
     def _save_checkpoint(self, step_name: str, result: AgentResult) -> None:
         path = self._ckpt_dir / f"{step_name}.pkl"
         try:
             with open(path, "wb") as f:
-                pickle.dump(result, f)
+                pickle.dump(self._checkpoint_safe(result), f)
             # JSON sidecar for human inspection
             meta = {
                 "step": step_name,
@@ -358,7 +388,10 @@ class AgentCoordinator:
             with open(path.with_suffix(".json"), "w") as f:
                 json.dump(meta, f, indent=2)
         except Exception as exc:
-            self._log.warning("Could not save checkpoint for %r: %s", step_name, exc)
+            # Best-effort: checkpoints are an optimisation, never fatal.
+            self._log.debug(
+                "Could not save checkpoint for %r: %s", step_name, exc
+            )
 
     def _load_checkpoint(self, step_name: str) -> AgentResult:
         path = self._ckpt_dir / f"{step_name}.pkl"

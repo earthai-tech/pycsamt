@@ -315,13 +315,31 @@ class StaticShiftAgent(BaseAgent):
 
         elapsed = time.time() - t0
         n_sig = delta_stats.get("n_shifted", 0)
-        return AgentResult(
-            status="success",
-            summary=(
+        # When nothing was corrected, say so explicitly and explain why —
+        # otherwise the identical before/after curves and empty delta
+        # look like a bug rather than the expected "no shift detected".
+        if n_sig == 0 and method not in ("none", "skip"):
+            note = (
+                "No significant static shift was detected, so the data is"
+                " unchanged and the before/after curves are identical. If"
+                " you expected corrections, the dataset may be strongly"
+                " 3-D (high skew), too sparse in the chosen period band,"
+                " or have too few stations for spatial comparison."
+            )
+            warnings.append(note)
+            summary = (
+                f"Static-shift ({method}): no significant shift detected"
+                f" — data unchanged. {len(figures)} figure(s) produced."
+            )
+        else:
+            summary = (
                 f"Static-shift correction ({method}) applied. "
                 f"{n_sig} station(s) shifted >0.05 log₁₀. "
                 f"{len(figures)} figure(s) produced."
-            ),
+            )
+        return AgentResult(
+            status="success",
+            summary=summary,
             data={
                 "corrected_sites": corrected_sites,
                 "shift_factors":   shift_factors,

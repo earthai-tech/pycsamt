@@ -96,7 +96,12 @@ class TestPackageQAOffline(unittest.TestCase):
         )
 
     def test_source_is_docstring_lookup(self):
-        r = self.agent.execute({
+        # Offline QA now prefers the RAG-composed answer when the corpus
+        # is available; the docstring lookup remains the fallback and is
+        # tested explicitly with RAG disabled.
+        from pycsamt.agents.package_qa import PackageQAAgent
+        agent = PackageQAAgent(use_rag=False)
+        r = agent.execute({
             "question": "What is the Sites class?"
         })
         self.assertEqual(

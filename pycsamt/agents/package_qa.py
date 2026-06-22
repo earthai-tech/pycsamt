@@ -370,15 +370,38 @@ class PackageQAAgent(BaseAgent):
         api_key: str | None = None,
         model: str | None = None,
         llm_provider: str = "claude",
+        use_rag: bool = True,
     ) -> None:
         # capture before AGENT_CONFIG resolves key
         self._caller_key = api_key
+        self.use_rag = use_rag
         super().__init__(
             "PackageQAAgent",
             api_key=api_key,
             model=model,
             llm_provider=llm_provider,
         )
+
+    def _build_rag(self, question: str):
+        """Return an AssembledContext for *question*, or ``None``.
+
+        Lazily uses the RAG layer (:mod:`pycsamt.assistant.rag`); any
+        failure (assistant not installed, no source tree) degrades
+        silently so QA still works without retrieval.
+        """
+        if not self.use_rag:
+            return None
+        try:
+            from pycsamt.assistant.rag.context_builder import (
+                default_context_builder,
+            )
+            builder = default_context_builder()
+            if builder is None:
+                return None
+            ctx = builder.build(question)
+            return None if ctx.is_empty() else ctx
+        except Exception:  # noqa: BLE001 — RAG is best-effort
+            return None
 
     def execute(
         self, input_data: dict
@@ -400,9 +423,24 @@ class PackageQAAgent(BaseAgent):
             )
 
         extra_ctx = input_data.get("context", "")
+        rag = self._build_rag(question)
+        citations = rag.citations if rag else []
 
         # offline path
         if self._caller_key is None:
+            if rag is not None:
+                # RAG-composed answer beats the docstring keyword lookup
+                answer = rag.compose_offline_answer()
+                return AgentResult(
+                    status="success",
+                    summary=answer[:120],
+                    data={
+                        "answer": answer,
+                        "source": "rag_offline",
+                        "citations": citations,
+                        "excerpts": [],
+                    },
+                )
             data = _offline_answer(question)
             return AgentResult(
                 status="success",
@@ -416,12 +454,18 @@ class PackageQAAgent(BaseAgent):
             context=selected_ctx
         )
 
-        user_msg = question
-        if extra_ctx:
-            user_msg = (
-                f"Session context: {extra_ctx}\n\n"
-                f"Question: {question}"
+        # Ground the LLM in retrieved, citable package facts.
+        msg_parts: list[str] = []
+        if rag is not None and rag.context_text:
+            msg_parts.append(
+                "Retrieved pyCSAMT context (prefer these real symbols; "
+                "cite sources as [n] when used):\n"
+                f"{rag.context_text}"
             )
+        if extra_ctx:
+            msg_parts.append(f"Session context: {extra_ctx}")
+        msg_parts.append(f"Question: {question}")
+        user_msg = "\n\n".join(msg_parts)
 
         try:
             llm_answer = self.query_llm(
@@ -439,8 +483,9 @@ class PackageQAAgent(BaseAgent):
 
         data = {
             "answer": llm_answer or "(no answer)",
-            "source": "llm",
+            "source": "llm+rag" if rag is not None else "llm",
             "excerpts": [],
+            "citations": citations,
             "tiers_used": _tiers_used(question),
         }
         return AgentResult(

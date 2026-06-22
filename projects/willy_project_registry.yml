@@ -1,0 +1,84 @@
+# pyCSAMT assistant — project registry for the bundled WILLY_DATA survey.
+#
+# Maps survey-line names (e.g. "L22PLT") to their EDI directory and the
+# default processing parameters, so the assistant can resolve a line the
+# user mentions instead of guessing a path. See
+# PYCSAMT-V2-RAG-IMPLEMENTATION.md (section 6) and
+# pycsamt/assistant/tools/project_registry.py.
+#
+# Relative edi_dir paths are resolved against the repository root.
+
+project:
+  name: WILLY_DATA
+  type: AMT
+  default_output_root: results/willy
+
+lines:
+  L18PLT:
+    edi_dir: data/AMT/WILLY_DATA/L18PLT
+    station_pattern: "18-*"
+    sort_by: lon
+    default_workflows:
+      - load
+      - qc
+      - static_shift
+      - phase_analysis
+
+  L22PLT:
+    edi_dir: data/AMT/WILLY_DATA/L22PLT
+    station_pattern: "22-*"
+    sort_by: lon
+    default_workflows:
+      - load
+      - qc
+      - static_shift
+      - phase_analysis
+      - pre_inversion
+
+  L26PLT:
+    edi_dir: data/AMT/WILLY_DATA/L26PLT
+    station_pattern: "26-*"
+    sort_by: lon
+    default_workflows:
+      - load
+      - qc
+      - static_shift
+      - phase_analysis
+
+  L30PLT:
+    edi_dir: data/AMT/WILLY_DATA/L30PLT
+    station_pattern: "30-*"
+    sort_by: lon
+    default_workflows:
+      - load
+      - qc
+      - static_shift
+      - phase_analysis
+
+  L34PLT:
+    edi_dir: data/AMT/WILLY_DATA/L34PLT
+    station_pattern: "34-*"
+    sort_by: lon
+    default_workflows:
+      - load
+      - qc
+      - static_shift
+      - phase_analysis
+
+# Defaults inherited by every line unless overridden per line.
+static_shift_defaults:
+  method: ama
+  half_window: 3
+  weights: tri
+  max_skew: 6.0
+  pband: null
+
+plot_defaults:
+  dpi: 150
+  format: png
+
+# Optional aliases → canonical line names (case-insensitive matching is
+# automatic; add aliases only for non-obvious nicknames).
+aliases:
+  willy18: L18PLT
+  willy22: L22PLT

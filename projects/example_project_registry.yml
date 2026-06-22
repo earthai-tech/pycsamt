@@ -1,0 +1,52 @@
+# pyCSAMT assistant — project registry TEMPLATE.
+#
+# Copy this file, point each line at your own EDI directory, and load it
+# with pycsamt.assistant.tools.project_registry.ProjectRegistry. The
+# assistant uses it to resolve a survey-line name the user mentions
+# (e.g. "process line L22PLT") to a real path + default parameters.
+#
+# edi_dir may be absolute or relative to the repository root.
+
+project:
+  name: MY_SURVEY            # short project name
+  type: AMT                  # AMT | CSAMT | MT
+  default_output_root: results/my_survey
+
+lines:
+  LINE_A:
+    edi_dir: /absolute/path/to/EDIs/LINE_A
+    station_pattern: "A-*"   # glob used to recognise this line's stations
+    sort_by: lon             # lon | lat | name
+    default_workflows:
+      - load
+      - qc
+      - static_shift
+      - phase_analysis
+
+  LINE_B:
+    edi_dir: data/my_survey/LINE_B   # relative to repo root
+    station_pattern: "B-*"
+    sort_by: lon
+    output_root: results/my_survey/line_b   # optional per-line override
+    default_workflows:
+      - load
+      - qc
+      - static_shift
+      - phase_analysis
+      - pre_inversion
+
+# Defaults inherited by every line unless overridden per line.
+static_shift_defaults:
+  method: ama                # ama | loess | refmedian | bilateral
+  half_window: 3
+  weights: tri
+  max_skew: 6.0
+  pband: null                # [T_min, T_max] in seconds, or null
+
+plot_defaults:
+  dpi: 150
+  format: png                # png | svg | pdf
+
+# Optional nicknames → canonical line names.
+aliases:
+  a: LINE_A

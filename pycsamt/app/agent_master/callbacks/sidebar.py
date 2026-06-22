@@ -149,6 +149,12 @@ def register_sidebar(app) -> None:
     def _new_chat(n):
         if not n:
             raise PreventUpdate
+        # clear the assistant session so a new chat starts context-free
+        try:
+            from .chat import _reset_session
+            _reset_session()
+        except Exception:  # noqa: BLE001
+            pass
         return [], {}, {}, {}, [_chat_welcome()]
 
     # ── auto-save to history ──────────────────

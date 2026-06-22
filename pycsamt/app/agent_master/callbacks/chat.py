@@ -1849,6 +1849,23 @@ def _run_agent(
             except Exception:  # noqa: BLE001
                 pass
 
+        # Session fallback: a follow-up that names no line and loads no
+        # data inherits the last-used dataset ("now run phase analysis").
+        if not edi_path:
+            _sess = _session()
+            if _sess is not None and _sess.edi_path:
+                edi_path = _sess.edi_path
+                _resolved_line = _resolved_line or _sess.line
+
+        # Remember the active dataset / line for later turns.
+        _sess = _session()
+        if _sess is not None and edi_path:
+            _sess.set_data(
+                edi_path=edi_path,
+                line=_resolved_line or _sess.line,
+            )
+            _sess.record_workflow(wtype)
+
         output_dir = (
             settings.get("output_dir") or ""
         ).strip() or "pycsamt_workflow_output"
@@ -2177,6 +2194,41 @@ def _record_run(
         pass
 
 
+# Module-level assistant session (the Agent Master is a local,
+# single-user app — consistent with _JOBS / _CORR_CACHE singletons).
+# Tracks the active data path / line / last workflow so follow-ups like
+# "now run phase analysis" inherit context.
+_SESSION: Any = None
+
+
+def _session() -> Any:
+    """Lazily create the per-process SessionState (or None if unavailable)."""
+    global _SESSION
+    if _SESSION is None:
+        try:
+            from pycsamt.assistant.memory import SessionState
+            _SESSION = SessionState()
+        except Exception:  # noqa: BLE001
+            _SESSION = False  # mark as tried-and-unavailable
+    return _SESSION or None
+
+
+def _session_has_data() -> bool:
+    s = _session()
+    return bool(s and s.edi_path)
+
+
+def _reset_session() -> None:
+    """Clear the active session (e.g. on New Chat)."""
+    global _SESSION
+    s = _session()
+    if s is not None:
+        s.edi_path = None
+        s.line = None
+        s.last_workflow = None
+        s.facts = {}
+
+
 def _names_registry_line(text: str) -> bool:
     """True when *text* names a survey line that resolves to real data.
 
@@ -2421,7 +2473,11 @@ def register_chat(app) -> None:
         edi_path = (edi_store or {}).get(
             "path", ""
         )
-        if not edi_path and not _names_registry_line(text):
+        if (
+            not edi_path
+            and not _names_registry_line(text)
+            and not _session_has_data()
+        ):
             _no_edi = (
                 "No EDI dataset is loaded.\n"
                 "Please click Load EDI "

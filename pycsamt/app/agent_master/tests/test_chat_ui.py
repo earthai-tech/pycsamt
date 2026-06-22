@@ -377,6 +377,82 @@ class TestNamedLineWorkflow(unittest.TestCase):
 
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
+class TestSessionFollowup(unittest.TestCase):
+    """Follow-up turns inherit the active line/data from the session."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        import pycsamt.assistant.tools.project_registry as pr
+        import pycsamt.app.agent_master.callbacks.chat as C
+
+        self.tmp = Path(tempfile.mkdtemp())
+        edi = self.tmp / "L22PLT"
+        edi.mkdir()
+        (edi / "22-001.edi").write_text(">HEAD\n", encoding="utf-8")
+        self._edi_dir = str(edi)
+
+        class _Reg:
+            def find_line_in_text(self, t):
+                return "L22PLT" if "l22plt" in t.lower() else None
+
+            def resolve_line(self, name):
+                return {"line": "L22PLT", "edi_dir": str(edi),
+                        "exists": True, "n_edi_files": 1}
+
+        self._orig = pr.ProjectRegistry.from_default
+        pr.ProjectRegistry.from_default = classmethod(
+            lambda cls, root=None: _Reg()
+        )
+        C._reset_session()
+
+    def tearDown(self):
+        import pycsamt.assistant.tools.project_registry as pr
+        import pycsamt.app.agent_master.callbacks.chat as C
+        pr.ProjectRegistry.from_default = self._orig
+        C._reset_session()
+
+    def _run_capturing(self, text):
+        import pycsamt.app.agent_master.callbacks.chat as C
+        import pycsamt.agents.orchestrator as O
+        from pycsamt.agents._base import AgentResult
+        captured = {}
+
+        def fake_exec(self, input_data):
+            captured["data_path"] = input_data.get("data_path")
+            return AgentResult(
+                "success", "stub",
+                {"result": AgentResult("success", "i", {})},
+            )
+
+        orig = O.WorkflowOrchestratorAgent.execute
+        O.WorkflowOrchestratorAgent.execute = fake_exec
+        try:
+            jid = C._new_job()
+            C._run_agent(jid, text, {}, {"provider": "offline"}, {}, [])
+        finally:
+            O.WorkflowOrchestratorAgent.execute = orig
+        return captured.get("data_path")
+
+    def test_followup_inherits_line(self):
+        import pycsamt.app.agent_master.callbacks.chat as C
+        # 1) name the line
+        p1 = self._run_capturing("run static shift on line L22PLT")
+        self.assertEqual(p1, self._edi_dir)
+        self.assertTrue(C._session_has_data())
+        # 2) follow-up with no line / no data inherits it
+        p2 = self._run_capturing("now run phase tensor analysis")
+        self.assertEqual(p2, self._edi_dir)
+
+    def test_reset_clears_session(self):
+        import pycsamt.app.agent_master.callbacks.chat as C
+        self._run_capturing("run static shift on line L22PLT")
+        self.assertTrue(C._session_has_data())
+        C._reset_session()
+        self.assertFalse(C._session_has_data())
+
+
+@unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestRecentRuns(unittest.TestCase):
     """Workflow trace recording + sidebar render."""
 

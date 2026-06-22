@@ -9138,3 +9138,25 @@ textarea:focus {
 [data-theme="light"] .inv-track-group-label {
   color: #9ca0b0;
 }
+
+/* ── About modal: animated brand symbol ──────────── */
+.about-logo-anim {
+  transform-origin: center;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, .28));
+  will-change: transform, opacity;
+  animation:
+    about-logo-in 0.7s cubic-bezier(.34, 1.56, .64, 1) both,
+    about-logo-float 3.6s ease-in-out 0.7s infinite;
+}
+@keyframes about-logo-in {
+  0%   { opacity: 0; transform: scale(.55) rotate(-14deg); }
+  60%  { opacity: 1; transform: scale(1.10) rotate(5deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes about-logo-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-6px) scale(1.03); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .about-logo-anim { animation: none; }
+}

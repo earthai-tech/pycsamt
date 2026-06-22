@@ -3790,8 +3790,9 @@ def _about_modal() -> dbc.Modal:
             dbc.ModalBody([
                 html.Div([
                     html.Img(
-                        src="/icons/pycsamt_logo.svg",
-                        style={"height": "64px", "marginBottom": "12px"},
+                        src="/icons/pycsamt-v2-symbol.svg",
+                        className="about-logo-anim",
+                        style={"height": "72px", "marginBottom": "12px"},
                     ),
                     html.H4([
                         html.Span("py",    style={"color": "var(--peach)",

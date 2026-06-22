@@ -1072,6 +1072,11 @@ body {
 }
 #am-btn-send:hover  { filter: brightness(1.12); }
 #am-btn-send:active { transform: scale(.92); }
+/* Stop state — shown while the assistant is executing a task */
+#am-btn-send.am-send-stop {
+  background: var(--red);
+  color: var(--crust);
+}
 #am-btn-send:disabled {
   opacity: .35;
   cursor: not-allowed;

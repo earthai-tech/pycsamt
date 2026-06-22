@@ -375,6 +375,50 @@ def _thinking_bubble(steps: list[dict]) -> html.Div:
     )
 
 
+def _strip_thinking(msgs: list | None) -> list:
+    """Return *msgs* without the live thinking bubble.
+
+    Used when a running task is stopped: the in-progress bubble is
+    removed so a final notice can take its place.
+    """
+    out = []
+    for child in (msgs or []):
+        if (
+            isinstance(child, dict)
+            and child.get("props", {}).get("id")
+            == "am-thinking-bubble"
+        ):
+            continue
+        out.append(child)
+    return out
+
+
+def _stop_job_response(
+    current_msgs: list | None,
+    stored_messages: list | None,
+    job_store: dict | None,
+):
+    """Cancel the active job and build the send_message return tuple.
+
+    Marks the job cancelled, drops the live thinking bubble, appends a
+    "Task stopped" notice, clears the job store and disables polling so
+    a late background result is never displayed. The user's typed input
+    is preserved (``no_update``).
+    """
+    jid = (job_store or {}).get("jid")
+    if jid:
+        _update_job(jid, status="cancelled")
+    msgs = _strip_thinking(current_msgs)
+    msgs.append(_agent_bubble("Task stopped.", kind=KIND_ERROR))
+    new_stored = list(stored_messages or [])
+    new_stored.append({
+        "role": "assistant",
+        "content": "Task stopped by user.",
+        "ts": _ts(),
+    })
+    return msgs, {}, True, no_update, new_stored, {}
+
+
 # Pure markdown parsing lives in a dash-free module so it can be
 # unit-tested without importing Dash / the GUI package.
 from .._markdown import (
@@ -1811,6 +1855,8 @@ def register_chat(app) -> None:
             IDs.STORE_INV_CONFIG, "data"
         ),
         State(IDs.STORE_MESSAGES, "data"),
+        State(IDs.INTERVAL_POLL, "disabled"),
+        State(IDs.STORE_JOB, "data"),
         prevent_initial_call=True,
     )
     def send_message(
@@ -1822,7 +1868,20 @@ def register_chat(app) -> None:
         settings,
         inv_config,
         stored_messages,
+        poll_disabled,
+        job_store,
     ):
+        # ── STOP: button is in "stop" mode while a job runs ──
+        # The interval is enabled (disabled is False) only while a
+        # background job is active. A click on the send/stop button in
+        # that state cancels the job rather than sending a new message.
+        # Checked before ctx.triggered_id so the stop path is self
+        # contained (and unit-testable without a callback context).
+        if poll_disabled is False:
+            return _stop_job_response(
+                current_msgs, stored_messages, job_store
+            )
+
         triggered = ctx.triggered_id
         if (
             isinstance(triggered, dict)
@@ -2101,6 +2160,14 @@ def register_chat(app) -> None:
         steps = job.get("steps", [])
         status = job.get("status", "running")
 
+        # Job was stopped by the user — halt polling, render nothing.
+        # send_message already replaced the thinking bubble.
+        if status == "cancelled":
+            return (
+                no_update, True, no_update,
+                no_update, no_update,
+            )
+
         # replace last thinking bubble with
         # updated thinking bubble
         msgs = list(current_msgs or [])
@@ -2190,6 +2257,31 @@ def register_chat(app) -> None:
         Input(IDs.CHAT_WINDOW, "children"),
         prevent_initial_call=True,
     )
+
+    # 3b. Toggle Send ⇄ Stop while a task runs.
+    # The polling interval is enabled (disabled is False) only while a
+    # background job is active, so it is the single source of truth for
+    # "is the assistant busy".
+    @app.callback(
+        Output(IDs.BTN_SEND, "children"),
+        Output(IDs.BTN_SEND, "className"),
+        Output(IDs.BTN_SEND, "title"),
+        Input(IDs.INTERVAL_POLL, "disabled"),
+    )
+    def toggle_send_stop(poll_disabled):
+        if poll_disabled is False:
+            # task running → Stop button
+            return (
+                html.I(className="bi bi-stop-fill"),
+                "am-send-stop",
+                "Stop task",
+            )
+        # idle → Send button
+        return (
+            html.I(className="bi bi-arrow-up"),
+            "",
+            "Send",
+        )
 
     # 4. Figure open → modal
     @app.callback(

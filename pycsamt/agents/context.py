@@ -284,7 +284,10 @@ def _regex_extract(text: str) -> dict[str, Any]:
         if m:
             candidate = m.group(1).rstrip(".,;)")
             if len(candidate) > 4:
-                cfg["data_path"] = str(Path(candidate).expanduser())
+                # os.path.expanduser (not Path) so the user's original
+                # separators survive on Windows — Path() would rewrite
+                # a POSIX "/data/x" to "\data\x".
+                cfg["data_path"] = os.path.expanduser(candidate)
                 break
 
     # ── output directory ──────────────────────────────────────────────────────
@@ -293,7 +296,7 @@ def _regex_extract(text: str) -> dict[str, Any]:
         text, re.IGNORECASE,
     )
     if m:
-        cfg["output_dir"] = str(Path(m.group(1)).expanduser())
+        cfg["output_dir"] = os.path.expanduser(m.group(1))
 
     # ── workflow ──────────────────────────────────────────────────────────
     # Single source of truth for the keyword table lives in
@@ -384,12 +387,14 @@ def _normalise_config(cfg: dict[str, Any], original_text: str) -> dict[str, Any]
     if not cfg["workflow"]:
         cfg["workflow"] = "qc"
 
-    # path normalisation
+    # path normalisation — os.path.expanduser preserves the user's
+    # separators (Path() would rewrite POSIX paths to backslashes on
+    # Windows); only "~" is expanded.
     if "data_path" in cfg:
-        cfg["data_path"] = str(Path(str(cfg["data_path"])).expanduser())
+        cfg["data_path"] = os.path.expanduser(str(cfg["data_path"]))
 
     if "output_dir" in cfg:
-        cfg["output_dir"] = str(Path(str(cfg["output_dir"])).expanduser())
+        cfg["output_dir"] = os.path.expanduser(str(cfg["output_dir"]))
     else:
         cfg["output_dir"] = str(Path("pycsamt_agent_output").resolve())
 

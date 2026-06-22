@@ -391,8 +391,17 @@ class AgentCoordinator:
     # ── helpers ───────────────────────────────────────────────────────────────
 
     def _print(self, msg: str) -> None:
-        if self.verbose:
+        if not self.verbose:
+            return
+        try:
             print(msg)
+        except UnicodeEncodeError:
+            # Legacy Windows consoles (cp1252) cannot encode the
+            # progress glyphs (▶ ↩ ━). Re-encode with replacement so
+            # verbose output never crashes the workflow.
+            import sys
+            enc = getattr(sys.stdout, "encoding", None) or "ascii"
+            print(msg.encode(enc, errors="replace").decode(enc))
 
     def reset_checkpoints(self) -> None:
         """Delete all saved checkpoints for this workflow."""

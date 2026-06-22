@@ -2337,3 +2337,27 @@ body {
 @media (max-width: 640px) {
   .am-help-caps { grid-template-columns: 1fr; }
 }
+
+/* ── Help modal: theme the Bootstrap surface (fixes dark-mode
+      contrast — default .modal-content is white) ──────── */
+.am-help-modal .modal-content {
+  background: var(--base);
+  color: var(--txt);
+  border: 1px solid var(--srf1);
+  border-radius: var(--radius);
+}
+.am-help-modal .modal-header {
+  border-bottom: 1px solid var(--srf1);
+}
+.am-help-modal .modal-footer {
+  border-top: 1px solid var(--srf1);
+}
+.am-help-modal .modal-title { color: var(--txt); }
+/* default (dark) close button: invert the dark X so it shows */
+.am-help-modal .btn-close {
+  filter: invert(1) grayscale(1) brightness(1.7);
+}
+[data-theme="light"] .am-help-modal .btn-close,
+.am-root-light .am-help-modal .btn-close {
+  filter: none;
+}

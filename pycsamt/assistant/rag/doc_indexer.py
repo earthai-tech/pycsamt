@@ -72,8 +72,14 @@ def split_sections(text: str, suffix: str) -> list[tuple[str, str]]:
     return out
 
 
-def index_doc_file(path: Path, root: Path) -> list[RAGChunk]:
-    """Index one ``.rst`` / ``.md`` file into section chunks."""
+def index_doc_file(
+    path: Path, root: Path, *, kind: str = "doc_section"
+) -> list[RAGChunk]:
+    """Index one ``.rst`` / ``.md`` file into section chunks.
+
+    *kind* lets callers tag recipes (``"recipe"``) distinctly from
+    ordinary documentation so the retriever can boost them.
+    """
     rel_path = path.relative_to(root).as_posix()
     try:
         text = path.read_text(encoding="utf-8", errors="ignore")
@@ -96,7 +102,7 @@ def index_doc_file(path: Path, root: Path) -> list[RAGChunk]:
                 id=f"{rel_path}:sec{idx}",
                 text=chunk_text,
                 source_path=rel_path,
-                kind="doc_section",
+                kind=kind,
                 title=title or None,
                 workflow=infer_workflow(rel_path, title, body[:400]),
                 priority=prio,

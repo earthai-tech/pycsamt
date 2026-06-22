@@ -93,7 +93,15 @@ def build_chunks(
             if suffix == ".py":
                 chunks.extend(index_python_file(path, root))
             elif suffix in (".rst", ".md"):
-                chunks.extend(index_doc_file(path, root))
+                rel = path.relative_to(root).as_posix()
+                kind = (
+                    "recipe"
+                    if rel.startswith("assistant_recipes/")
+                    else "doc_section"
+                )
+                chunks.extend(
+                    index_doc_file(path, root, kind=kind)
+                )
         except Exception:  # noqa: BLE001 — ingestion is best-effort
             continue
     return chunks

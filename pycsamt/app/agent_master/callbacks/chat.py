@@ -1463,6 +1463,33 @@ def _dispatch_code(
         )
 
     code = res.get("code", "") if res else ""
+
+    # Validate the generated script (deterministic): catch syntax errors
+    # and any hallucinated pyCSAMT symbols before the user runs it.
+    _valid_note = ""
+    try:
+        from pycsamt.assistant.tools.validation_tools import (
+            validate_generated_code,
+        )
+        rep = validate_generated_code(code)
+        if rep["ok"]:
+            _valid_note = (
+                "\n\n✓ Validated: syntax OK and all pyCSAMT imports"
+                " resolve to real symbols."
+            )
+        elif not rep["syntax_ok"]:
+            _valid_note = (
+                "\n\n⚠ Validation: the script has a syntax error — "
+                + "; ".join(rep["errors"][:2])
+            )
+        else:
+            _valid_note = (
+                "\n\n⚠ Validation: some symbols could not be verified — "
+                + "; ".join(rep["errors"][:3])
+            )
+    except Exception:  # noqa: BLE001 — validation is best-effort
+        _valid_note = ""
+
     _line_note = (
         f" for line {resolved_line}" if resolved_line else ""
     )
@@ -1471,6 +1498,7 @@ def _dispatch_code(
         f" reproduces the {cfg.get('workflow', 'qc')}"
         f" workflow{_line_note}. Copy it from the code block"
         " below — edit the data path if needed."
+        + _valid_note
     )
     step("Code ready", "done")
     _update_job(

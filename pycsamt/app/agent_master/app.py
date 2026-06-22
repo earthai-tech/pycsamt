@@ -80,7 +80,7 @@ def create_app(
         suppress_callback_exceptions=(
             suppress_exceptions
         ),
-        title="pyCSAMT Agent Master",
+        title="pyCSAMT — Agent",
         update_title=None,
     )
 

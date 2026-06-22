@@ -7,8 +7,10 @@
     function (e) {
 
       /* ── copy button ─────────────────────── */
+      /* matches both the message copy (.am-copy-btn) and the
+         code-block copy (.am-code-copy-btn) */
       var copyBtn = e.target.closest(
-        ".am-copy-btn"
+        ".am-copy-btn, .am-code-copy-btn"
       );
       if (copyBtn) {
         /* code block copy: data-code attr */

@@ -1911,6 +1911,7 @@ body {
 
 /* ── Code block in agent bubbles ────────── */
 .am-code-block {
+  position: relative;
   margin-top: 10px;
   margin-bottom: 4px;
   border-radius: 8px;
@@ -1919,14 +1920,29 @@ body {
     rgba(255,255,255,.12));
   box-shadow: 0 2px 8px rgba(0,0,0,.18);
 }
-.am-code-header {
+/* collapsible header (click to toggle) */
+.am-code-summary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 5px 12px;
+  gap: 6px;
+  padding: 6px 12px;
+  padding-right: 78px;            /* room for the copy button */
   background: #21252b;
   border-bottom: 1px solid
     rgba(255,255,255,.08);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+.am-code-summary::-webkit-details-marker { display: none; }
+.am-code-summary::marker { content: ""; }
+.am-code-chevron {
+  font-size: 11px;
+  color: #abb2bf;
+  transition: transform var(--t-fast);
+}
+.am-code-details[open] .am-code-chevron {
+  transform: rotate(90deg);
 }
 .am-code-lang {
   font-size: 11px;
@@ -1935,13 +1951,22 @@ body {
   color: #abb2bf;
   letter-spacing: .04em;
 }
+.am-code-meta {
+  margin-left: 6px;
+  font-size: 10px;
+  color: #6b7280;
+}
 .am-code-copy-btn {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 11px;
   font-family: inherit;
-  background: none;
+  background: #21252b;
   border: 1px solid rgba(255,255,255,.15);
   border-radius: 4px;
   padding: 2px 8px;

@@ -138,6 +138,35 @@ def _fmt_elapsed(seconds: float) -> str:
     return f"{s // 60}:{s % 60:02d}"
 
 
+# Phrases that mark the *action* ("generate code") rather than the
+# *subject* ("static shift") of a code request. Stripping them lets the
+# workflow classifier see the real target.
+_CODE_ACTION_PHRASES = (
+    "generate code for", "write code for", "give me code for",
+    "show me code for", "code example for", "sample code for",
+    "produce code for", "python script for", "create a notebook for",
+    "notebook for", "write a script for", "script for", "code for",
+    "generate code", "write code", "give me code", "show me code",
+    "python script", "create notebook", "write a script",
+    "produce code", "a script to", "script to", "code to",
+)
+
+
+def _code_target_workflow(text: str) -> str | None:
+    """Classify the workflow a code request is *about*.
+
+    "generate code for static shift" classifies to ``code_gen`` (the
+    action) under the normal keyword table; strip the action phrases so
+    the remaining subject ("static shift") routes to ``static_shift``.
+    """
+    from pycsamt.agents._workflows import classify_workflow
+    t = " " + text.lower() + " "
+    for p in _CODE_ACTION_PHRASES:
+        t = t.replace(p, " ")
+    wf = classify_workflow(t)
+    return wf if wf and wf != "code_gen" else None
+
+
 def _drop_workflow(inv_config: dict | None) -> dict:
     """Return *inv_config* without a persisted ``workflow`` key.
 
@@ -522,54 +551,68 @@ from .._markdown import (
 
 
 def _code_block(code: str) -> html.Div:
-    """Render a syntax-highlighted Python code block."""
+    """Render a collapsible, syntax-highlighted Python code block.
+
+    Uses a native ``<details>`` element so the user can toggle the code
+    open/closed without a callback. The Copy button sits outside the
+    ``<summary>`` so clicking it copies (and flashes "Copied") instead of
+    toggling the accordion.
+    """
     import uuid as _uuid
     copy_id = f"am-copy-{_uuid.uuid4().hex[:8]}"
+    n_lines = code.count("\n") + 1
     return html.Div(
         [
-            # header bar
-            html.Div(
+            html.Details(
                 [
-                    html.Span(
+                    html.Summary(
                         [
                             html.I(
                                 className=(
-                                    "bi bi-code-slash"
-                                    " me-1"
-                                ),
-                                style={
-                                    "color": "#61afef"
-                                },
-                            ),
-                            "python",
-                        ],
-                        className="am-code-lang",
-                    ),
-                    html.Button(
-                        [
-                            html.I(
-                                className=(
-                                    "bi bi-clipboard"
-                                    " me-1"
+                                    "bi bi-chevron-right"
+                                    " am-code-chevron"
                                 )
                             ),
-                            "Copy",
+                            html.I(
+                                className=(
+                                    "bi bi-code-slash me-1"
+                                ),
+                                style={"color": "#61afef"},
+                            ),
+                            html.Span(
+                                "python",
+                                className="am-code-lang",
+                            ),
+                            html.Span(
+                                f"{n_lines} lines",
+                                className="am-code-meta",
+                            ),
                         ],
-                        id=copy_id,
-                        className="am-code-copy-btn",
-                        title="Copy to clipboard",
-                        **{"data-code": code},
-                        n_clicks=0,
+                        className="am-code-summary",
+                    ),
+                    # code body — hljs highlights this
+                    html.Pre(
+                        html.Code(
+                            code,
+                            className="language-python",
+                        ),
                     ),
                 ],
-                className="am-code-header",
+                open=True,
+                className="am-code-details",
             ),
-            # code body — hljs highlights this
-            html.Pre(
-                html.Code(
-                    code,
-                    className="language-python",
-                ),
+            html.Button(
+                [
+                    html.I(
+                        className="bi bi-clipboard me-1"
+                    ),
+                    "Copy",
+                ],
+                id=copy_id,
+                className="am-code-copy-btn",
+                title="Copy to clipboard",
+                **{"data-code": code},
+                n_clicks=0,
             ),
         ],
         className="am-code-block",
@@ -1353,8 +1396,19 @@ def _dispatch_code(
         if ctx_res and ctx_res.data
         else {}
     )
-    if workflow:
-        cfg["workflow"] = workflow
+    # Pick the workflow the code should be ABOUT (the subject), not the
+    # "code_gen" action. Priority: router slot (if specific) → subject
+    # extracted from the text → sensible default.
+    target = (
+        workflow
+        if (workflow and workflow != "code_gen")
+        else _code_target_workflow(text)
+    )
+    if target:
+        cfg["workflow"] = target
+    elif cfg.get("workflow", "") in ("", "code_gen"):
+        # plain "write me a script" with no subject → default to qc
+        cfg["workflow"] = "qc"
 
     # Use a loaded EDI path when present so the script is
     # immediately runnable; otherwise code_gen inserts a

@@ -162,6 +162,45 @@ class TestWorkflowNotForcedByStaleConfig(unittest.TestCase):
 
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
+class TestCodeTargetWorkflow(unittest.TestCase):
+    """Code requests must target the subject, not the 'code_gen' action."""
+
+    def test_targets(self):
+        import pycsamt.app.agent_master.callbacks.chat as C
+        cases = {
+            "generate code for static shift": "static_shift",
+            "generate code for dimensionality": "phase_analysis",
+            "write code for ai inversion": "ai_inversion",
+            "give me a python script for qc": "qc",
+        }
+        for text, expected in cases.items():
+            self.assertEqual(
+                C._code_target_workflow(text), expected,
+                msg=f"{text!r} -> {C._code_target_workflow(text)}",
+            )
+
+    def test_no_subject_returns_none(self):
+        import pycsamt.app.agent_master.callbacks.chat as C
+        self.assertIsNone(C._code_target_workflow("write me a script"))
+
+
+@unittest.skipUnless(_HAS_DASH, "Dash not installed")
+class TestCodeBlockCollapsible(unittest.TestCase):
+    """The code block is a collapsible <details> with a copy button."""
+
+    def test_structure(self):
+        import pycsamt.app.agent_master.callbacks.chat as C
+        from dash import html
+        blk = C._code_block("x = 1\ny = 2")
+        details = blk.children[0]
+        self.assertIsInstance(details, html.Details)
+        self.assertTrue(details.open)
+        self.assertIsInstance(details.children[0], html.Summary)
+        copy_btn = blk.children[1]
+        self.assertEqual(copy_btn.className, "am-code-copy-btn")
+
+
+@unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestPinCallbacksRegistered(unittest.TestCase):
 
     def test_pin_callbacks_present(self):

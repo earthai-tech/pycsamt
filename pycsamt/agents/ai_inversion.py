@@ -303,47 +303,70 @@ class AIInversionAgent(BaseAgent):
                 if X_obs is None:
                     warnings.append(f"{nm}: could not build feature vector.")
                     continue
-                log_rho_pred = inverter.predict(X_obs[None, :])[0]  # (n_layers,)
+                # predict_models() correctly splits the network output
+                # ([log10(rho)(n_layers), log10(h)(n_layers-1)]) into a
+                # LayeredModel. The raw predict() vector must NOT be
+                # treated as log-resistivities — it also carries the
+                # predicted thicknesses.
+                _models = inverter.predict_models(X_obs[None, :])
+                model = _models[0] if _models else None
+                if model is None:
+                    warnings.append(
+                        f"{nm}: prediction produced no model."
+                    )
+                    continue
+                rhos = np.asarray(model.resistivity, dtype=float)
+                ths  = np.asarray(model.thickness, dtype=float)
+                log_rho_pred = np.log10(np.clip(rhos, 1e-12, None))
                 predictions[nm] = log_rho_pred
 
-                # compute forward RMS for this prediction
-                from ..forward import MT1DForward, LayeredModel
-                rhos = 10 ** log_rho_pred
-                ths  = _default_thicknesses(self.n_layers, freqs)
+                # forward RMS: response of the predicted model vs observed
+                from ..forward import MT1DForward
                 try:
-                    lm   = LayeredModel(
-                        resistivity=rhos,
-                        thickness=ths[:self.n_layers - 1],
-                    )
-                    fwd  = MT1DForward(freqs=freqs)
-                    resp = fwd.run(lm)
+                    resp = MT1DForward(freqs=freqs).run(model)
                     rho_fwd = np.asarray(resp.rho_a)
-                    rho_fwd_xy = rho_fwd[:, 0, 1] if rho_fwd.ndim == 3 else rho_fwd
-
+                    rho_fwd_xy = (
+                        rho_fwd[:, 0, 1] if rho_fwd.ndim == 3
+                        else rho_fwd
+                    )
                     per_obs = 1.0 / np.where(fr == 0, np.nan, fr)
                     per_fwd = 1.0 / np.where(freqs == 0, np.nan, freqs)
-                    rho_obs_raw = getattr(ed, "rho", None)
-                    rho_obs = (
-                        rho_obs_raw[:, 0, 1] if rho_obs_raw is not None
-                        else (0.2 / np.where(fr==0,np.nan,fr)) * np.abs(z[:,0,1])**2
-                    )
-                    mask = np.isfinite(per_obs) & (rho_obs > 0)
-                    if mask.sum() >= 2:
-                        interp = np.interp(
-                            np.log10(per_obs[mask]),
-                            np.log10(per_fwd[np.isfinite(per_fwd)]),
-                            np.log10(np.clip(rho_fwd_xy[np.isfinite(per_fwd)], 1e-6, None)),
+                    rho_obs_xy = getattr(Zobj, "resistivity_xy", None)
+                    if rho_obs_xy is None:
+                        rho_obs_xy = (
+                            (0.2 / np.where(fr == 0, np.nan, fr))
+                            * np.abs(z[:, 0, 1]) ** 2
                         )
-                        obs_log = np.log10(np.clip(rho_obs[mask], 1e-6, None))
-                        rms_per[nm] = float(np.sqrt(np.mean((obs_log - interp)**2)))
-                except Exception:
-                    pass
+                    rho_obs_xy = np.asarray(rho_obs_xy, float).ravel()
+                    # forward curve sorted by ascending period (np.interp
+                    # requires an increasing x grid)
+                    fwd_ok = np.isfinite(per_fwd) & (rho_fwd_xy > 0)
+                    o = np.argsort(per_fwd[fwd_ok])
+                    xp = np.log10(per_fwd[fwd_ok][o])
+                    fp = np.log10(
+                        np.clip(rho_fwd_xy[fwd_ok][o], 1e-6, None)
+                    )
+                    mask = np.isfinite(per_obs) & (rho_obs_xy > 0)
+                    if mask.sum() >= 2 and xp.size >= 2:
+                        interp = np.interp(
+                            np.log10(per_obs[mask]), xp, fp
+                        )
+                        obs_log = np.log10(
+                            np.clip(rho_obs_xy[mask], 1e-6, None)
+                        )
+                        rms_per[nm] = float(
+                            np.sqrt(np.mean((obs_log - interp) ** 2))
+                        )
+                except Exception as _rms_exc:
+                    warnings.append(
+                        f"{nm}: RMS not computed ({_rms_exc})."
+                    )
 
                 if not best_model:
                     best_model = {
                         "station":     nm,
                         "resistivity": list(rhos),
-                        "thickness":   list(ths[:self.n_layers - 1]),
+                        "thickness":   list(ths),
                         "log_rho":     list(log_rho_pred),
                     }
             except Exception as exc:

@@ -85,5 +85,41 @@ class TestFeatureLayout(unittest.TestCase):
         self.assertEqual(feat.shape, (2 * len(self.freqs_target),))
 
 
+def _backend_and_data() -> bool:
+    if not os.path.isdir("data/3edis"):
+        return False
+    try:
+        from pycsamt.backends import get_backend_instance
+        return get_backend_instance() is not None
+    except Exception:
+        return False
+
+
+@unittest.skipUnless(_backend_and_data(), "needs DL backend + 3edis")
+class TestPredictionOutputParsing(unittest.TestCase):
+    """The network output must be split into rho/thickness correctly.
+
+    Regression: predict() returns [log10(rho)(n), log10(h)(n-1)] but the
+    agent treated the whole 2n-1 vector as log-resistivities — so the
+    section was wrong and the forward RMS crashed (→ "RMS N/A").
+    """
+
+    def test_predictions_have_n_layers_and_finite_rms(self):
+        from pycsamt.agents.ai_inversion import AIInversionAgent
+        n_layers = 5
+        r = AIInversionAgent(
+            arch="resnet", n_layers=n_layers,
+            epochs=3, n_train_samples=160,
+        ).execute({"path": "data/3edis"})
+
+        self.assertEqual(r.status, "success")
+        preds = r.data.get("predictions", {})
+        self.assertGreater(len(preds), 0)
+        for vec in preds.values():
+            self.assertEqual(len(vec), n_layers)  # not 2*n_layers-1
+        # RMS is now produced (no longer N/A)
+        self.assertTrue(np.isfinite(r.data.get("rms_global", np.nan)))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

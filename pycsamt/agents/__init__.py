@@ -135,6 +135,8 @@ from ..api.agents import (
 # ── lazy agent map ────────────────────────────────────────────────────────────
 _LAZY: dict[str, str] = {
     "ContextInputAgent":          ".context",
+    "IntentRouter":               ".router",
+    "PackageQAAgent":             ".package_qa",
     "MTLoaderAgent":              ".loader",
     "DataQCAgent":                ".qc",
     "StaticShiftAgent":           ".static_shift",
@@ -184,6 +186,8 @@ def __getattr__(name: str):
 
 if TYPE_CHECKING:
     from .context          import ContextInputAgent
+    from .router           import IntentRouter, RouterDecision
+    from .package_qa       import PackageQAAgent
     from .loader           import MTLoaderAgent
     from .qc               import DataQCAgent
     from .static_shift     import StaticShiftAgent
@@ -245,6 +249,8 @@ __all__ = [
     "VALID_WORKFLOWS",
     # agents — alphabetical within logical groups
     "ContextInputAgent",
+    "IntentRouter",
+    "PackageQAAgent",
     "MTLoaderAgent",
     "DataQCAgent",
     "StaticShiftAgent",

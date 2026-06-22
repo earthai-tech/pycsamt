@@ -1991,3 +1991,33 @@ body {
   width: fit-content;
   max-width: 100%;
 }
+
+/* ── typed responses (per-kind header chip + accent) ───────────── */
+.am-kind-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: var(--sub1);
+  margin: 0 0 7px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--srf1);
+}
+/* left accent bar keyed to the response kind */
+.am-bubble.agent.am-bubble-answer   { border-left: 3px solid var(--blue); }
+.am-bubble.agent.am-bubble-code     { border-left: 3px solid var(--green); }
+.am-bubble.agent.am-bubble-workflow { border-left: 3px solid var(--blue); }
+.am-bubble.agent.am-bubble-clarify  { border-left: 3px solid var(--yellow); }
+.am-bubble.agent.am-bubble-meta     { border-left: 3px solid var(--blue); }
+.am-bubble.agent.am-bubble-error    { border-left: 3px solid var(--red); }
+.am-bubble.agent.am-bubble-error    { background: rgba(243,139,168,.06); }
+.am-bubble.agent.am-bubble-clarify  { background: rgba(249,226,175,.06); }
+/* headings inside markdown answers */
+.am-bubble .am-md-h {
+  margin: 8px 0 4px;
+  font-size: 14px;
+}
+.am-bubble .am-md-h:first-child { margin-top: 0; }

@@ -133,161 +133,13 @@ Return ONLY the JSON.
 """
 
 # ── keyword-based fallback ────────────────────────────────────────────────────
-
-_WORKFLOW_KEYWORDS = {
-    "full":               [
-        "full", "complete", "everything",
-        "all steps", "all pipeline",
-    ],
-    "joint_inversion":    [
-        "joint", "joint inversion",
-        "multi-modal", "multi-physics",
-        "tem+mt", "mt+tem",
-        "combined modality",
-        "secondary modality",
-    ],
-    "ensemble_inversion": [
-        "ensemble",
-        "uncertainty quantification",
-        "confidence interval",
-        "calibrated inversion",
-        "bayesian", "ensemble inverter",
-    ],
-    "inv3d":              [
-        "gcn", "graph convolutional",
-        "3d ai", "3d gcn",
-        "spatial inversion",
-        "3d neural", "inv3d",
-        "graph network inversion",
-    ],
-    "inv2d":              [
-        "unet", "u-net",
-        "2d ai", "2d neural", "2d deep",
-        "profile inversion",
-        "lateral continuity ai", "inv2d",
-    ],
-    # PINN / Hybrid before ai_inversion
-    "pinn_inversion":     [
-        "pinn", "physics-informed",
-        "physics informed",
-        "no training data",
-        "gradient descent inversion",
-        "pinn inversion",
-    ],
-    "hybrid_inversion":   [
-        "hybrid inversion", "two-stage",
-        "two stage", "ai + physics",
-        "hybrid", "stage 1 stage 2",
-        "warm start", "ai warmstart",
-    ],
-    # bare "inversion" falls here after all
-    # specific flavours have been checked
-    "ai_inversion":       [
-        "neural", "cnn", "deep learning",
-        "ai inversion", "machine learning",
-        "inverter", "inv1d",
-        "inversion", "invert", "inverting",
-        "run inversion", "do inversion",
-        "perform inversion",
-    ],
-    "modem":              [
-        "modem", "3d inversion",
-        "3-d inversion", "3d model",
-    ],
-    "pre_inversion":      [
-        "occam", "occam2d", "2d inversion",
-        "mesh", "startup",
-        "pre-inversion", "pre inversion",
-        "inversion prep",
-    ],
-    "phase_analysis":     [
-        "phase tensor", "pt analysis",
-        "strike", "dimensionality",
-        "mohr", "argand",
-        "fingerprint", "skew analysis",
-    ],
-    "qc":                 [
-        "qc", "quality control",
-        "quality check", "data quality",
-        "clean data", "flag",
-        "snr",
-    ],
-    "tipper":             [
-        "tipper", "induction arrow",
-        "wiese", "parkinson", "tippers",
-    ],
-    "sensitivity":        [
-        "sensitivity",
-        "depth of investigation",
-        "doi", "resolution kernel",
-        "bostick", "vertical resolution",
-    ],
-    "freq_decimation":    [
-        "decimate", "decimation",
-        "period selection",
-        "frequency selection",
-        "select period",
-        "select frequency",
-        "period range",
-        "frequency range",
-        "dead band",
-    ],
-    "batch":              [
-        "batch", "multiple profiles",
-        "all profiles", "survey batch",
-        "parallel processing",
-    ],
-    "rotation":           [
-        "rotate", "rotation",
-        "strike rotation",
-        "tensor rotation",
-        "coordinate frame",
-        "principal axis",
-    ],
-    "comparison":     [
-        "compare", "comparison",
-        "versus", "before after",
-        "difference section",
-        "model comparison",
-    ],
-    # ── standalone single-agent keywords ────────
-    "denoise":        [
-        "denoise", "denoising",
-        "remove noise", "noise reduction",
-        "filter noise",
-    ],
-    "static_shift":   [
-        "static shift", "static-shift",
-        "galvanic distortion", "galvanic",
-    ],
-    "inversion_eval": [
-        "evaluate inversion",
-        "inversion result",
-        "inversion quality",
-        "check inversion",
-        "rms", "misfit", "residual pt",
-    ],
-    "code_gen":       [
-        "write code", "generate code",
-        "python script", "code for",
-        "write a script", "write function",
-        "create notebook",
-    ],
-    "report":         [
-        "generate report", "write report",
-        "survey report", "create report",
-    ],
-    "forward":        [
-        "forward model", "forward modeling",
-        "synthetic data", "simulate",
-    ],
-    "interpretation": [
-        "geological interpretation",
-        "lithological interpretation",
-        "interpret geology",
-        "lithology", "geological",
-    ],
-}
+# Workflow keyword table is the single source of truth in
+# pycsamt.agents._workflows (shared with ContextInputAgent).  Kept under the
+# old private name so any external references keep working.
+from ._workflows import (  # noqa: E402
+    WORKFLOW_KEYWORDS as _WORKFLOW_KEYWORDS,
+    classify_workflow as _classify_workflow,
+)
 
 # ── input-function builders (replaces unsafe eval) ────────────────────────────
 # Each function receives the running results dict and returns the
@@ -1143,23 +995,15 @@ def _write_provenance(
 
 
 def _keyword_classify(text: str) -> tuple[str, str]:
-    """Rule-based workflow classification from *text*."""
-    t = text.lower()
-    for wf in (
-        "full", "pinn_inversion", "hybrid_inversion",
-        "joint_inversion", "ensemble_inversion",
-        "inv3d", "inv2d",
-        "inversion_eval", "modem", "pre_inversion",
-        "tipper", "sensitivity", "rotation",
-        "freq_decimation", "batch",
-        "denoise", "static_shift",
-        "phase_analysis", "comparison",
-        "code_gen", "report", "forward",
-        "interpretation",
-        "ai_inversion", "qc",
-    ):
-        if any(kw in t for kw in _WORKFLOW_KEYWORDS.get(wf, [])):
-            return wf, f"Matched keywords for workflow {wf!r}."
+    """Rule-based workflow classification from *text*.
+
+    Delegates to the shared, ordered keyword table in
+    :mod:`pycsamt.agents._workflows` so the orchestrator and
+    :class:`ContextInputAgent` can never drift apart.
+    """
+    wf = _classify_workflow(text, default=None)
+    if wf:
+        return wf, f"Matched keywords for workflow {wf!r}."
     return "qc", "No specific keywords matched; defaulted to QC."
 
 

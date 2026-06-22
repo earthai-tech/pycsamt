@@ -63,6 +63,27 @@ _CORRECTION_WFLOWS = frozenset({
     "full",
 })
 
+# ── response kinds ─────────────────────────────────
+# Each agent response declares its KIND so the chat
+# bubble renders the right shape instead of guessing
+# from which fields happen to be populated.
+KIND_ANSWER   = "answer"     # Q&A about the package
+KIND_CODE     = "code"       # generated script
+KIND_WORKFLOW = "workflow"   # pipeline result (+figs)
+KIND_CLARIFY  = "clarify"    # needs more info
+KIND_META     = "meta"       # capabilities / chitchat
+KIND_ERROR    = "error"      # could not proceed
+
+# Per-kind header chip: (icon class, label, css colour var).
+_KIND_HEADER: dict[str, tuple[str, str, str]] = {
+    KIND_ANSWER:   ("bi-chat-left-text", "Answer", "var(--blue)"),
+    KIND_CODE:     ("bi-code-slash", "Generated code", "var(--green)"),
+    KIND_WORKFLOW: ("bi-diagram-3", "Workflow result", "var(--blue)"),
+    KIND_CLARIFY:  ("bi-question-circle", "Needs input", "var(--yellow)"),
+    KIND_META:     ("bi-stars", "pyCSAMT assistant", "var(--blue)"),
+    KIND_ERROR:    ("bi-exclamation-triangle", "Couldn't proceed", "var(--red)"),
+}
+
 
 def _new_job() -> str:
     jid = str(uuid.uuid4())
@@ -73,6 +94,7 @@ def _new_job() -> str:
             "result": None,
             "figs": {},
             "error": None,
+            "kind": None,
         }
     return jid
 
@@ -353,6 +375,14 @@ def _thinking_bubble(steps: list[dict]) -> html.Div:
     )
 
 
+# Pure markdown parsing lives in a dash-free module so it can be
+# unit-tested without importing Dash / the GUI package.
+from .._markdown import (
+    split_inline_bold as _split_inline_bold,
+    parse_markdown as _parse_markdown,
+)
+
+
 def _code_block(code: str) -> html.Div:
     """Render a syntax-highlighted Python code block."""
     import uuid as _uuid
@@ -408,32 +438,74 @@ def _code_block(code: str) -> html.Div:
     )
 
 
+def _render_inline(text: str) -> list:
+    """Render inline ``**bold**`` markup into html spans."""
+    return [
+        html.Strong(chunk) if is_bold else html.Span(chunk)
+        for is_bold, chunk in _split_inline_bold(text)
+    ]
+
+
+def _render_markdown(text: str) -> list:
+    """Render lightweight markdown (headings, bullets, code, bold)."""
+    children: list = []
+    for tok in _parse_markdown(text):
+        if tok[0] == "code":
+            children.append(_code_block(tok[2]))
+        elif tok[0] == "heading":
+            children.append(
+                html.P(
+                    html.Strong(tok[1]),
+                    className="am-md-h",
+                )
+            )
+        elif tok[0] == "bullet":
+            children.append(
+                html.Li(
+                    _render_inline(tok[1]),
+                    style={"marginLeft": "12px"},
+                )
+            )
+        elif tok[0] == "para":
+            children.append(html.P(_render_inline(tok[1])))
+        # "blank" tokens are skipped (paragraph spacing is via CSS)
+    return children
+
+
+def _kind_header(kind: str | None) -> html.Div | None:
+    """Build the small per-kind label chip, or None for plain replies."""
+    spec = _KIND_HEADER.get(kind or "")
+    if not spec:
+        return None
+    icon, label, colour = spec
+    return html.Div(
+        [
+            html.I(
+                className=f"bi {icon} me-2",
+                style={"color": colour},
+            ),
+            html.Span(label),
+        ],
+        className=f"am-kind-header am-kind-{kind}",
+    )
+
+
 def _agent_bubble(
     text: str,
     steps: list[dict] | None = None,
     figs: dict | None = None,
     code: str = "",
+    kind: str | None = None,
 ) -> html.Div:
     children: list = []
-    # plain text / markdown (rendered as plain)
-    for line in (text or "").split("\n"):
-        if line.startswith("**") and line.endswith(
-            "**"
-        ):
-            children.append(
-                html.Strong(line[2:-2])
-            )
-        elif line.startswith("- "):
-            children.append(
-                html.Li(
-                    line[2:],
-                    style={"marginLeft": "12px"},
-                )
-            )
-        elif line.startswith("```"):
-            pass
-        else:
-            children.append(html.P(line))
+
+    # per-kind label chip (answer / code / clarify / …)
+    header = _kind_header(kind)
+    if header is not None:
+        children.append(header)
+
+    # body text — full lightweight-markdown rendering
+    children.extend(_render_markdown(text))
 
     # step summary
     if steps:
@@ -508,7 +580,10 @@ def _agent_bubble(
                         _ts(), className="am-ts"
                     ),
                 ],
-                className="am-bubble agent",
+                className=(
+                    "am-bubble agent"
+                    + (f" am-bubble-{kind}" if kind else "")
+                ),
             ),
         ],
         className="am-msg-row",
@@ -1025,6 +1100,166 @@ def _web_app_bubble(
     )
 
 
+# ── intent dispatch helpers ────────────────────────
+
+def _capability_text() -> str:
+    """Static capability summary for META / greeting intents."""
+    return (
+        "I'm the pyCSAMT v2 assistant. I can help you in"
+        " four ways:\n"
+        "- Answer questions about the package — classes,"
+        " functions, the Sites data model, and which"
+        " method to use.\n"
+        "- Generate Python code / scripts that reproduce a"
+        " pyCSAMT workflow.\n"
+        "- Run processing workflows on your EDI data: QC,"
+        " static-shift, phase-tensor analysis, denoising,"
+        " tipper, sensitivity/DOI, rotation, decimation,"
+        " inversions (AI 1-D/2-D/3-D, PINN, hybrid,"
+        " ensemble, joint), ModEM/Occam2D prep, reports.\n"
+        "- Launch the full web app for interactive maps,"
+        " pseudosection viewers, and the pipeline editor.\n"
+        "To run a data workflow, load an EDI dataset first"
+        " with the Load EDI button. Questions and code"
+        " requests work without any data loaded."
+    )
+
+
+def _dispatch_question(
+    jid: str,
+    text: str,
+    *,
+    llm_prov: str,
+    api_key: str | None,
+    sel_model: str | None,
+    offline: bool,
+    history: list[dict] | None,
+    step,
+) -> None:
+    """Answer a package question via PackageQAAgent."""
+    from pycsamt.agents.package_qa import PackageQAAgent
+    from pycsamt.api.agents import AGENT_CONFIG
+
+    step("Answering question...", "running")
+    ctx_str = ""
+    if history:
+        recent = [
+            f"{m.get('role', 'user')}: {m.get('content', '')}"
+            for m in history[-4:]
+        ]
+        ctx_str = "\n".join(recent)
+
+    with (
+        AGENT_CONFIG.offline() if offline else _nullctx()
+    ):
+        qa = PackageQAAgent(
+            llm_provider=llm_prov,
+            api_key=api_key,
+            model=sel_model,
+        )
+        res = qa.execute(
+            {"question": text, "context": ctx_str}
+        )
+
+    answer = (
+        res.get("answer")
+        or res.summary
+        or "I couldn't find an answer in the pyCSAMT reference."
+    )
+    step("Answer ready", "done")
+    _update_job(
+        jid,
+        status="done",
+        result=answer,
+        steps=_JOBS[jid]["steps"],
+        kind=KIND_ANSWER,
+    )
+
+
+def _dispatch_code(
+    jid: str,
+    text: str,
+    edi_store: dict,
+    settings: dict,
+    *,
+    workflow: str | None,
+    llm_prov: str,
+    api_key: str | None,
+    sel_model: str | None,
+    offline: bool,
+    step,
+) -> None:
+    """Generate a standalone pyCSAMT script via CodeGenerationAgent."""
+    from pycsamt.agents.context import ContextInputAgent
+    from pycsamt.agents.code_gen import CodeGenerationAgent
+    from pycsamt.api.agents import AGENT_CONFIG
+
+    step("Extracting configuration...", "done")
+    with (
+        AGENT_CONFIG.offline() if offline else _nullctx()
+    ):
+        ctx_agent = ContextInputAgent(
+            llm_provider=llm_prov,
+            api_key=api_key,
+            model=sel_model,
+        )
+        ctx_res = ctx_agent.execute({"request": text})
+    cfg = (
+        ctx_res.data.get("config", {})
+        if ctx_res and ctx_res.data
+        else {}
+    )
+    if workflow:
+        cfg["workflow"] = workflow
+
+    # Use a loaded EDI path when present so the script is
+    # immediately runnable; otherwise code_gen inserts a
+    # /path/to/EDIs placeholder.
+    edi_path = (edi_store or {}).get("path", "") or cfg.get(
+        "data_path", ""
+    )
+    if edi_path:
+        cfg["data_path"] = edi_path
+
+    output_dir = (
+        settings.get("output_dir") or ""
+    ).strip() or "pycsamt_workflow_output"
+
+    step("Generating code...", "running")
+    with (
+        AGENT_CONFIG.offline() if offline else _nullctx()
+    ):
+        cg = CodeGenerationAgent(
+            llm_provider=llm_prov,
+            api_key=api_key,
+            model=sel_model,
+        )
+        res = cg.execute(
+            {
+                "workflow_config": cfg,
+                "results": {},
+                "output_dir": output_dir,
+            }
+        )
+
+    code = res.get("code", "") if res else ""
+    summary = (
+        "Here is a standalone pyCSAMT script that"
+        f" reproduces the {cfg.get('workflow', 'qc')}"
+        " workflow. Copy it from the code block below"
+        " — edit the data path if needed."
+    )
+    step("Code ready", "done")
+    _update_job(
+        jid,
+        status="done",
+        result=summary,
+        code=code,
+        steps=_JOBS[jid]["steps"],
+        kind=KIND_CODE,
+    )
+
+
 # ── agent runner ───────────────────────────────────
 
 def _run_agent(
@@ -1033,6 +1268,7 @@ def _run_agent(
     edi_store: dict,
     settings: dict,
     inv_config: dict | None = None,
+    history: list[dict] | None = None,
 ) -> None:
     """
     Execute in a background thread.
@@ -1099,6 +1335,80 @@ def _run_agent(
         # same code path works for both cases.
         _offline = provider == "offline"
 
+        # ── top-level intent routing ──────────────
+        # Decide WHAT KIND of request this is before
+        # assuming it is a workflow to execute. This
+        # is the master dispatch: questions, code, and
+        # capability requests never touch the workflow
+        # pipeline (and never need an EDI dataset).
+        from pycsamt.agents.router import (
+            IntentRouter,
+            QUESTION as _I_QUESTION,
+            CODE as _I_CODE,
+            META as _I_META,
+            CLARIFY as _I_CLARIFY,
+        )
+
+        with (
+            AGENT_CONFIG.offline()
+            if _offline else _nullctx()
+        ):
+            _router = IntentRouter(
+                llm_provider=llm_prov,
+                api_key=api_key,
+                model=sel_model,
+            )
+            decision = _router.route(text, history=history)
+
+        _step(f"Intent: {decision.intent}", "done")
+
+        if decision.intent == _I_META:
+            _update_job(
+                jid,
+                status="done",
+                result=_capability_text(),
+                steps=_JOBS[jid]["steps"],
+                kind=KIND_META,
+            )
+            return
+        if decision.intent == _I_CLARIFY:
+            _update_job(
+                jid,
+                status="done",
+                result=(
+                    decision.clarification
+                    or "Could you clarify what you'd"
+                    " like me to do — answer a question,"
+                    " generate code, or run a workflow?"
+                ),
+                steps=_JOBS[jid]["steps"],
+                kind=KIND_CLARIFY,
+            )
+            return
+        if decision.intent == _I_QUESTION:
+            _dispatch_question(
+                jid, text,
+                llm_prov=llm_prov,
+                api_key=api_key,
+                sel_model=sel_model,
+                offline=_offline,
+                history=history,
+                step=_step,
+            )
+            return
+        if decision.intent == _I_CODE:
+            _dispatch_code(
+                jid, text, edi_store, settings,
+                workflow=decision.workflow,
+                llm_prov=llm_prov,
+                api_key=api_key,
+                sel_model=sel_model,
+                offline=_offline,
+                step=_step,
+            )
+            return
+
+        # ── WORKFLOW / PLOT → run the pipeline ─────
         _step("Classifying workflow...", "done")
 
         with (
@@ -1124,6 +1434,7 @@ def _run_agent(
                     "or load an EDI dataset first."
                 ),
                 steps=_JOBS[jid]["steps"],
+                kind=KIND_ERROR,
             )
             return
 
@@ -1131,10 +1442,14 @@ def _run_agent(
 
         # inject workflow-specific params
         _ic = inv_config or {}
-        # param-modal workflow takes precedence
-        # over re-classification from text alone
+        # Precedence for the workflow type:
+        #   1. param-modal selection (explicit user form)
+        #   2. router's workflow slot (LLM/offline intent)
+        #   3. ContextInputAgent regex classification
         if _ic.get("workflow"):
             cfg["workflow"] = _ic["workflow"]
+        elif decision.workflow:
+            cfg["workflow"] = decision.workflow
         wtype = cfg.get("workflow", "qc")
         _step(f"Workflow: {wtype}", "done")
         if wtype in (
@@ -1288,6 +1603,7 @@ def _run_agent(
                     "button, then retry."
                 ),
                 steps=_JOBS[jid]["steps"],
+                kind=KIND_ERROR,
             )
             return
 
@@ -1440,6 +1756,11 @@ def _run_agent(
             steps=_JOBS[jid]["steps"],
             figs=figs,
             code=generated_code,
+            kind=(
+                KIND_ERROR
+                if result.status == "failed"
+                else KIND_WORKFLOW
+            ),
         )
 
     except Exception as exc:  # noqa: BLE001
@@ -1454,6 +1775,7 @@ def _run_agent(
                 "in Settings if needed."
             ),
             steps=_JOBS[jid]["steps"],
+            kind=KIND_ERROR,
         )
 
 
@@ -1572,6 +1894,41 @@ def register_chat(app) -> None:
                 "", new_stored, {},
             )
 
+        # ── quick intent gate ─────────────────
+        # Questions, code, and capability requests
+        # don't need data — skip the EDI guard,
+        # line picker, and param modal and let the
+        # router (inside _run_agent) dispatch them.
+        from pycsamt.agents.router import (
+            classify_intent_offline,
+            NO_DATA_INTENTS,
+        )
+        _qi, _ = classify_intent_offline(text)
+        if _qi in NO_DATA_INTENTS:
+            msgs.append(
+                _thinking_bubble([{
+                    "label": "Parsing request...",
+                    "status": "running",
+                }])
+            )
+            jid = _new_job()
+            t = threading.Thread(
+                target=_run_agent,
+                args=(
+                    jid, text,
+                    dict(edi_store or {}),
+                    settings or {},
+                    inv_config or {},
+                    new_stored,
+                ),
+                daemon=True,
+            )
+            t.start()
+            return (
+                msgs, {"jid": jid}, False,
+                "", new_stored, {},
+            )
+
         # ── guard: no EDI loaded ──────────────
         edi_path = (edi_store or {}).get(
             "path", ""
@@ -1681,6 +2038,7 @@ def register_chat(app) -> None:
                 _edi_use,
                 settings or {},
                 inv_config or {},
+                new_stored,
             ),
             daemon=True,
         )
@@ -1771,6 +2129,7 @@ def register_chat(app) -> None:
         )
         figs = job.get("figs", {})
         code = job.get("code", "")
+        kind = job.get("kind")
 
         # merge figs into store
         new_fig_store = dict(fig_store or {})
@@ -1778,7 +2137,7 @@ def register_chat(app) -> None:
 
         agent_bub = _agent_bubble(
             result_text, steps, figs,
-            code=code,
+            code=code, kind=kind,
         )
 
         # replace thinking with agent bubble

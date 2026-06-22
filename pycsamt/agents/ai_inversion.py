@@ -214,10 +214,10 @@ class AIInversionAgent(BaseAgent):
         # an empty, confusing result. Check first and fail immediately.
         n_usable = 0
         for _i, _ed in enumerate(_iter_items(sites)):
-            _, _z, _fr = _get_z_block(_ed)
+            _Z, _z, _fr = _get_z_block(_ed)
             if _z is None or _fr is None:
                 continue
-            if _z_to_features(_z, _fr, freqs) is not None:
+            if _z_to_features(_Z, _z, _fr, freqs) is not None:
                 n_usable += 1
         if n_usable == 0:
             return AgentResult.failed(
@@ -293,12 +293,13 @@ class AIInversionAgent(BaseAgent):
 
         for i, ed in enumerate(_iter_items(sites)):
             nm = _name(ed, i)
-            _, z, fr = _get_z_block(ed)
+            Zobj, z, fr = _get_z_block(ed)
             if z is None or fr is None:
                 continue
             try:
-                # interpolate Z onto training freqs
-                X_obs = _z_to_features(z, fr, freqs)
+                # interpolate onto training freqs in the inverter's own
+                # feature format ([log10(rho_a_xy), phase_xy])
+                X_obs = _z_to_features(Zobj, z, fr, freqs)
                 if X_obs is None:
                     warnings.append(f"{nm}: could not build feature vector.")
                     continue
@@ -449,37 +450,68 @@ class AIInversionAgent(BaseAgent):
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _z_to_features(
+    z_obj: Any,
     z: np.ndarray,
     fr: np.ndarray,
     freqs_target: np.ndarray,
+    *,
+    include_phase: bool = True,
 ) -> np.ndarray | None:
-    """Interpolate Z to target freqs and return a flat feature vector."""
+    r"""Build the observed feature vector for :meth:`EMInverter1D.predict`.
+
+    Must match the layout the inverter was trained on — see
+    :func:`pycsamt.ai._base._z_list_to_array`, which uses the **xy
+    apparent resistivity and phase**::
+
+        [ log10(rho_a_xy) ,  phase_xy ]        # flat, length 2 * n_freq
+
+    The observed station's frequency grid usually differs from the
+    training grid, so both curves are interpolated (in log-frequency)
+    onto *freqs_target*. The previous implementation returned ``|Z|``
+    over both off-diagonals as a ``(n, 4)`` array, which never matched
+    the trained 80-dim input and made every prediction fail.
+
+    Returns ``None`` when fewer than two finite samples are available.
+    """
     try:
-        per     = 1.0 / np.where(fr == 0, np.nan, fr)
-        per_t   = 1.0 / np.where(freqs_target == 0, np.nan, freqs_target)
-        n_t     = len(freqs_target)
-        feats   = []
-        for ri, ci in [(0,1), (1,0)]:
-            zxy = np.abs(z[:, ri, ci])
-            pha = np.degrees(np.angle(z[:, ri, ci]))
-            mask = np.isfinite(per) & np.isfinite(zxy)
-            if mask.sum() < 2:
-                return None
-            log_zxy = np.log10(np.clip(zxy[mask], 1e-30, None))
-            interp_z = np.interp(
-                np.log10(per_t[np.isfinite(per_t)]),
-                np.log10(per[mask]),
-                log_zxy,
-            )
-            interp_p = np.interp(
-                np.log10(per_t[np.isfinite(per_t)]),
-                np.log10(per[mask]),
-                pha[mask],
-            )
-            feats.append(interp_z[:n_t])
-            feats.append(interp_p[:n_t])
-        arr = np.column_stack(feats)   # (n_t, 4)
-        return arr.astype(np.float32)
+        fr = np.asarray(fr, dtype=float)
+        freqs_target = np.asarray(freqs_target, dtype=float)
+
+        # Prefer the same quantities the inverter trained on.
+        rho_xy = getattr(z_obj, "resistivity_xy", None)
+        pha_xy = getattr(z_obj, "phase_xy", None)
+        if rho_xy is None or pha_xy is None:
+            # Fall back to computing from the impedance tensor.
+            zxy = z[:, 0, 1]
+            rho_xy = (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(zxy) ** 2
+            pha_xy = np.degrees(np.angle(zxy))
+        rho_xy = np.asarray(rho_xy, dtype=float).ravel()
+        pha_xy = np.asarray(pha_xy, dtype=float).ravel()
+
+        lf = np.log10(np.where(fr <= 0, np.nan, fr))
+        mask = (
+            np.isfinite(lf)
+            & np.isfinite(rho_xy)
+            & (rho_xy > 0)
+            & np.isfinite(pha_xy)
+        )
+        if mask.sum() < 2:
+            return None
+
+        order = np.argsort(lf[mask])
+        lf_obs  = lf[mask][order]
+        rho_obs = np.log10(np.clip(rho_xy[mask], 1e-12, None))[order]
+        pha_obs = pha_xy[mask][order]
+
+        lf_t  = np.log10(freqs_target)
+        rho_i = np.interp(lf_t, lf_obs, rho_obs)
+        pha_i = np.interp(lf_t, lf_obs, pha_obs)
+
+        feat = (
+            np.concatenate([rho_i, pha_i])
+            if include_phase else rho_i
+        )
+        return feat.astype(np.float32)
     except Exception:
         return None
 

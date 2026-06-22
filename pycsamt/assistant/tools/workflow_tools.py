@@ -76,13 +76,16 @@ def run_workflow(
     *,
     output_dir: str | None = None,
     registry: Any | None = None,
+    history: Any | None = None,
     **agent_kwargs: Any,
 ) -> dict[str, Any]:
     """Resolve *line_or_path* and run *workflow* via its agent.
 
     Returns a compact result dict (status, summary, data keys, target).
-    Raises ``ValueError`` for an unknown workflow and ``FileNotFoundError``
-    when the resolved EDI directory does not exist.
+    When *history* (a ``WorkflowHistory``) is given, the run is appended
+    to it for observability. Raises ``ValueError`` for an unknown
+    workflow and ``FileNotFoundError`` when the resolved EDI directory
+    does not exist.
     """
     if workflow not in _WORKFLOW_AGENTS:
         raise ValueError(
@@ -107,7 +110,7 @@ def run_workflow(
     agent = agent_cls(**agent_kwargs)
     result = agent.execute({"path": edi_dir, "output_dir": out})
 
-    return {
+    out_result = {
         "workflow": workflow,
         "line": target.get("line"),
         "path": edi_dir,
@@ -117,6 +120,23 @@ def run_workflow(
         "data_keys": sorted((result.data or {}).keys()),
         "n_figures": len((result.data or {}).get("figures", {}) or {}),
     }
+    if history is not None:
+        try:
+            from ..memory.workflow_history import WorkflowRun
+            history.record(
+                WorkflowRun(
+                    workflow=workflow,
+                    status=result.status,
+                    line=target.get("line"),
+                    path=edi_dir,
+                    output_dir=out,
+                    summary=result.summary,
+                    n_figures=out_result["n_figures"],
+                )
+            )
+        except Exception:  # noqa: BLE001 — tracing must never break a run
+            pass
+    return out_result
 
 
 def run_static_shift(line_or_path: str, **kw: Any) -> dict[str, Any]:

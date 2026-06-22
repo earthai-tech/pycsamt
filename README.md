@@ -11,8 +11,7 @@
   <img alt="Semver" src="https://img.shields.io/badge/semver-2.0.0-informational"/>
   <br/>
   <img alt="Python" src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue?logo=python&logoColor=white"/>
-  <a href="https://pytorch.org"><img alt="PyTorch" src="https://img.shields.io/badge/backend-PyTorch-EE4C2C?logo=pytorch&logoColor=white"/></a>
-  <a href="https://www.tensorflow.org"><img alt="TensorFlow" src="https://img.shields.io/badge/backend-TensorFlow-FF6F00?logo=tensorflow&logoColor=white"/></a>
+  <img alt="Backends" src="https://img.shields.io/badge/backend-PyTorch%20%7C%20TensorFlow-EE4C2C?logo=pytorch&logoColor=white"/>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey"/>
   <br/>
   <a href="https://pypi.org/project/pycsamt/"><img alt="Downloads" src="https://img.shields.io/pypi/dm/pycsamt?label=downloads&color=brightgreen"/></a>

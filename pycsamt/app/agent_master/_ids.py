@@ -129,7 +129,10 @@ class IDs:
     BTN_NEW_CHAT     = "am-btn-new-chat"
     SIDEBAR_HISTORY  = "am-sidebar-history"
     SIDEBAR_FIGS     = "am-sidebar-figs"
+    SIDEBAR_PINS     = "am-sidebar-pins"
     STORE_HISTORY    = "am-store-history"
+    STORE_PINS       = "am-store-pins"
+    PIN_SCROLL_DUMMY = "am-pin-scroll-dummy"
 
     # ── smart param modal ─────────────────────
     MODAL_PARAMS       = "am-modal-params"

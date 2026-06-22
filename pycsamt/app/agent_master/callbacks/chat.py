@@ -95,8 +95,47 @@ def _new_job() -> str:
             "figs": {},
             "error": None,
             "kind": None,
+            "started": time.time(),
+            "workflow": None,
         }
     return jid
+
+
+# Friendly labels for the executing-message header.
+_WF_RUNNING_LABEL: dict[str, str] = {
+    "qc":                 "quality control",
+    "static_shift":       "static-shift correction",
+    "phase_analysis":     "phase tensor analysis",
+    "denoise":            "denoising",
+    "tipper":             "tipper analysis",
+    "sensitivity":        "sensitivity / DOI analysis",
+    "rotation":           "tensor rotation",
+    "freq_decimation":    "frequency decimation",
+    "ai_inversion":       "1-D AI inversion",
+    "inv1d":              "1-D AI inversion",
+    "inv2d":              "2-D U-Net inversion",
+    "inv3d":              "3-D GCN inversion",
+    "pinn_inversion":     "PINN inversion",
+    "hybrid_inversion":   "hybrid inversion",
+    "ensemble_inversion": "ensemble inversion",
+    "joint_inversion":    "joint inversion",
+    "pre_inversion":      "inversion preparation",
+    "modem":              "ModEM preparation",
+    "report":             "survey report",
+    "interpretation":     "geological interpretation",
+    "interpret":          "geological interpretation",
+    "forward":            "forward modelling",
+    "full":               "full pipeline",
+    "comparison":         "inversion comparison",
+    "batch":              "batch processing",
+    "code_gen":           "code generation",
+}
+
+
+def _fmt_elapsed(seconds: float) -> str:
+    """Format seconds as M:SS for the executing header."""
+    s = int(max(0, seconds))
+    return f"{s // 60}:{s % 60:02d}"
 
 
 def _update_job(
@@ -234,7 +273,41 @@ def _ts() -> str:
     return datetime.now().strftime("%H:%M")
 
 
-def _user_bubble(text: str) -> html.Div:
+def _mid() -> str:
+    """Stable per-message id used for pinning + scroll-to."""
+    return f"am-msg-{uuid.uuid4().hex[:8]}"
+
+
+def _pin_button(mid: str) -> html.Button:
+    """Pin/unpin toggle for a message toolbar."""
+    return html.Button(
+        html.I(className="bi bi-pin-angle"),
+        className="am-msg-action am-pin-btn",
+        id={"type": "am-pin-btn", "mid": mid},
+        title="Pin message",
+        n_clicks=0,
+    )
+
+
+def _user_bubble(text: str, mid: str | None = None) -> html.Div:
+    toolbar_btns = [
+        html.Button(
+            html.I(className="bi bi-clipboard"),
+            className="am-msg-action am-copy-btn",
+            title="Copy",
+            n_clicks=0,
+        ),
+        html.Button(
+            html.I(
+                className="bi bi-folder2-open"
+            ),
+            className="am-msg-action am-edi-msg-btn",
+            title="Load EDI",
+            n_clicks=0,
+        ),
+    ]
+    if mid:
+        toolbar_btns.append(_pin_button(mid))
     return html.Div(
         [
             html.Div(
@@ -251,39 +324,7 @@ def _user_bubble(text: str) -> html.Div:
                             className="am-ts",
                         ),
                         html.Div(
-                            [
-                                html.Button(
-                                    html.I(
-                                        className=(
-                                            "bi "
-                                            "bi-clipboard"
-                                        )
-                                    ),
-                                    className=(
-                                        "am-msg-action"
-                                        " am-copy-btn"
-                                    ),
-                                    title="Copy",
-                                    n_clicks=0,
-                                ),
-                                html.Button(
-                                    html.I(
-                                        className=(
-                                            "bi "
-                                            "bi-folder2"
-                                            "-open"
-                                        )
-                                    ),
-                                    className=(
-                                        "am-msg-action"
-                                        " am-edi-msg-btn"
-                                    ),
-                                    title=(
-                                        "Load EDI"
-                                    ),
-                                    n_clicks=0,
-                                ),
-                            ],
+                            toolbar_btns,
                             className=(
                                 "am-msg-toolbar"
                             ),
@@ -300,65 +341,101 @@ def _user_bubble(text: str) -> html.Div:
             ),
         ],
         className="am-msg-row user",
+        **({"id": mid} if mid else {}),
     )
 
 
-def _thinking_bubble(steps: list[dict]) -> html.Div:
-    step_els = [
-        html.Div(
-            [
-                html.I(
-                    className=(
-                        "bi bi-check-circle-fill"
-                        " am-step-icon"
-                        if s["status"] == "done"
-                        else (
-                            "bi bi-exclamation-triangle"
-                            "-fill am-step-icon"
-                            if s["status"] == "error"
-                            else
-                            "bi bi-arrow-repeat"
-                            " am-step-icon"
-                        )
-                    )
-                ),
-                html.Span(s["label"]),
-            ],
-            className=(
-                f"am-step {s['status']}"
-            ),
+def _exec_step_row(label: str, status: str) -> html.Div:
+    """One row of the executing timeline (rail dot + label)."""
+    if status == "done":
+        dot = html.Span(
+            html.I(className="bi bi-check-lg"),
+            className="am-tl-dot",
         )
-        for s in steps
-    ]
-    dots = html.Div(
-        [
-            html.Div(
-                [
-                    html.I(
-                        className=(
-                            "bi bi-robot me-2"
-                        )
-                    ),
-                    html.Span("Thinking"),
-                    html.Div(
-                        [
-                            html.Span(),
-                            html.Span(),
-                            html.Span(),
-                        ],
-                        className="am-dots",
-                    ),
-                ],
-                className="am-thinking",
+    elif status == "error":
+        dot = html.Span(
+            html.I(className="bi bi-exclamation-lg"),
+            className="am-tl-dot",
+        )
+    elif status == "running":
+        dot = html.Span(
+            html.I(
+                className="bi bi-arrow-repeat am-tl-spin"
             ),
-            html.Div(
-                step_els,
-                className="am-steps",
-            )
-            if step_els
-            else html.Div(),
-        ]
+            className="am-tl-dot",
+        )
+    else:  # waiting / pending
+        dot = html.Span(className="am-tl-dot")
+    return html.Div(
+        [dot, html.Span(label, className="am-tl-lbl")],
+        className=f"am-tl-step {status}",
     )
+
+
+def _thinking_bubble(
+    steps: list[dict],
+    workflow: str | None = None,
+    elapsed: float | None = None,
+) -> html.Div:
+    steps = steps or []
+    n_total = len(steps)
+    n_done = sum(
+        1 for s in steps if s.get("status") == "done"
+    )
+
+    # Header: "Running <workflow>" + live elapsed.
+    name = (
+        _WF_RUNNING_LABEL.get(workflow, workflow)
+        if workflow
+        else None
+    )
+    title = (
+        [html.Span("Running "), html.Span(
+            name, className="am-exec-name")]
+        if name
+        else [html.Span("Working")]
+    )
+    header_children = [
+        html.I(
+            className="bi bi-arrow-repeat am-tl-spin"
+            " am-exec-spin"
+        ),
+        html.Span(title, className="am-exec-title"),
+    ]
+    if elapsed is not None:
+        header_children.append(
+            html.Span(
+                _fmt_elapsed(elapsed),
+                className="am-exec-elapsed",
+            )
+        )
+    header = html.Div(
+        header_children, className="am-exec-header"
+    )
+
+    # Indeterminate progress sweep.
+    bar = html.Div(
+        html.I(), className="am-exec-bar"
+    )
+
+    # Step timeline.
+    timeline = html.Div(
+        [
+            _exec_step_row(s["label"], s["status"])
+            for s in steps
+        ],
+        className="am-tl",
+    ) if steps else html.Div()
+
+    footer = (
+        html.Div(
+            f"Step {min(n_done + 1, n_total)} of {n_total}",
+            className="am-exec-footer",
+        )
+        if n_total
+        else html.Div()
+    )
+
     return html.Div(
         [
             html.Div(
@@ -366,8 +443,10 @@ def _thinking_bubble(steps: list[dict]) -> html.Div:
                 className="am-avatar agent",
             ),
             html.Div(
-                dots,
-                className="am-bubble agent",
+                [header, bar, timeline, footer],
+                className=(
+                    "am-bubble agent am-exec-bubble"
+                ),
             ),
         ],
         className="am-msg-row",
@@ -540,6 +619,7 @@ def _agent_bubble(
     figs: dict | None = None,
     code: str = "",
     kind: str | None = None,
+    mid: str | None = None,
 ) -> html.Div:
     children: list = []
 
@@ -623,6 +703,10 @@ def _agent_bubble(
                     html.Div(
                         _ts(), className="am-ts"
                     ),
+                    html.Div(
+                        [_pin_button(mid)],
+                        className="am-msg-toolbar",
+                    ) if mid else html.Div(),
                 ],
                 className=(
                     "am-bubble agent"
@@ -631,6 +715,7 @@ def _agent_bubble(
             ),
         ],
         className="am-msg-row",
+        **({"id": mid} if mid else {}),
     )
 
 
@@ -1269,6 +1354,7 @@ def _dispatch_code(
         settings.get("output_dir") or ""
     ).strip() or "pycsamt_workflow_output"
 
+    _update_job(jid, workflow="code_gen")
     step("Generating code...", "running")
     with (
         AGENT_CONFIG.offline() if offline else _nullctx()
@@ -1499,6 +1585,7 @@ def _run_agent(
         if _ic.get("workflow"):
             cfg["workflow"] = _ic["workflow"]
         wtype = cfg.get("workflow", "qc")
+        _update_job(jid, workflow=wtype)
         _step(f"Workflow: {wtype}", "done")
         if wtype in (
             "pinn_inversion", "hybrid_inversion"
@@ -1827,6 +1914,86 @@ def _run_agent(
         )
 
 
+# ── pinned-messages helpers ────────────────────────
+
+def _pin_snippet(text: str, limit: int = 60) -> str:
+    """One-line snippet for the sidebar pin entry."""
+    line = " ".join((text or "").split())
+    return line if len(line) <= limit else line[:limit - 1] + "…"
+
+
+def _apply_pin_toggle(
+    pins: list | None,
+    mid: str,
+    messages: list | None,
+) -> list:
+    """Toggle *mid* in *pins*: remove if present, else add from *messages*.
+
+    Returns the new pins list. Raises KeyError if the message isn't found
+    when adding (caller treats this as "no change").
+    """
+    pins = list(pins or [])
+    if any(p.get("mid") == mid for p in pins):
+        return [p for p in pins if p.get("mid") != mid]
+    msg = next(
+        (m for m in (messages or []) if m.get("mid") == mid),
+        None,
+    )
+    if not msg:
+        raise KeyError(mid)
+    pins.append({
+        "mid": mid,
+        "role": msg.get("role", "assistant"),
+        "snippet": _pin_snippet(msg.get("content", "")),
+        "ts": msg.get("ts", _ts()),
+    })
+    return pins
+
+
+def _remove_pin(pins: list | None, mid: str) -> list:
+    """Return *pins* without the entry for *mid*."""
+    return [
+        p for p in (pins or []) if p.get("mid") != mid
+    ]
+
+
+def _pin_item(pin: dict) -> html.Div:
+    """Render one pinned-message row in the sidebar."""
+    mid = pin.get("mid", "")
+    role = pin.get("role", "assistant")
+    icon = (
+        "bi-person-fill" if role == "user"
+        else "bi-robot"
+    )
+    return html.Div(
+        [
+            html.Button(
+                [
+                    html.I(
+                        className=f"bi {icon} am-pin-role"
+                    ),
+                    html.Span(
+                        pin.get("snippet", ""),
+                        className="am-pin-text",
+                    ),
+                ],
+                id={"type": "am-pin-jump", "mid": mid},
+                className="am-pin-jump",
+                title="Jump to message",
+                n_clicks=0,
+            ),
+            html.Button(
+                html.I(className="bi bi-x"),
+                id={"type": "am-unpin", "mid": mid},
+                className="am-pin-remove",
+                title="Unpin",
+                n_clicks=0,
+            ),
+        ],
+        className="am-pin-item",
+    )
+
+
 # ── callbacks ──────────────────────────────────────
 
 def register_chat(app) -> None:
@@ -1897,6 +2064,7 @@ def register_chat(app) -> None:
 
         text = text.strip()
 
+        _user_mid = _mid()
         new_stored = list(
             stored_messages or []
         )
@@ -1904,6 +2072,7 @@ def register_chat(app) -> None:
             "role": "user",
             "content": text,
             "ts": _ts(),
+            "mid": _user_mid,
         })
 
         msgs = [
@@ -1914,7 +2083,7 @@ def register_chat(app) -> None:
                 == IDs.WELCOME
             )
         ]
-        msgs.append(_user_bubble(text))
+        msgs.append(_user_bubble(text, mid=_user_mid))
 
         # ── web app redirect ──────────────────
         # Explicit launch request, or a task
@@ -2182,8 +2351,15 @@ def register_chat(app) -> None:
                     break
 
         if status == "running":
+            _started = job.get("started")
+            _elapsed = (
+                time.time() - _started
+                if _started else None
+            )
             new_thinking = _thinking_bubble(
-                steps
+                steps,
+                workflow=job.get("workflow"),
+                elapsed=_elapsed,
             )
             if thinking_idx is not None:
                 msgs[thinking_idx] = new_thinking
@@ -2206,9 +2382,10 @@ def register_chat(app) -> None:
         new_fig_store = dict(fig_store or {})
         new_fig_store.update(figs)
 
+        _agent_mid = _mid()
         agent_bub = _agent_bubble(
             result_text, steps, figs,
-            code=code, kind=kind,
+            code=code, kind=kind, mid=_agent_mid,
         )
 
         # replace thinking with agent bubble
@@ -2230,6 +2407,7 @@ def register_chat(app) -> None:
             "role": "assistant",
             "content": result_text,
             "ts": _ts(),
+            "mid": _agent_mid,
         })
         return (
             msgs, True, new_fig_store,
@@ -2325,3 +2503,101 @@ def register_chat(app) -> None:
             info.get("title", "Figure"),
             fig_key,
         )
+
+    # 5. Pin / unpin a message → STORE_PINS
+    @app.callback(
+        Output(IDs.STORE_PINS, "data"),
+        Input(
+            {"type": "am-pin-btn", "mid": ALL},
+            "n_clicks",
+        ),
+        State(IDs.STORE_PINS, "data"),
+        State(IDs.STORE_MESSAGES, "data"),
+        prevent_initial_call=True,
+    )
+    def toggle_pin(_clicks, pins, messages):
+        if not ctx.triggered or not ctx.triggered[0].get(
+            "value"
+        ):
+            raise PreventUpdate
+        trig = ctx.triggered_id
+        if not isinstance(trig, dict):
+            raise PreventUpdate
+        mid = trig.get("mid")
+        try:
+            return _apply_pin_toggle(pins, mid, messages)
+        except KeyError:
+            raise PreventUpdate
+
+    # 6. Unpin from the sidebar → STORE_PINS
+    @app.callback(
+        Output(
+            IDs.STORE_PINS, "data",
+            allow_duplicate=True,
+        ),
+        Input(
+            {"type": "am-unpin", "mid": ALL},
+            "n_clicks",
+        ),
+        State(IDs.STORE_PINS, "data"),
+        prevent_initial_call=True,
+    )
+    def unpin(_clicks, pins):
+        if not ctx.triggered or not ctx.triggered[0].get(
+            "value"
+        ):
+            raise PreventUpdate
+        trig = ctx.triggered_id
+        if not isinstance(trig, dict):
+            raise PreventUpdate
+        return _remove_pin(pins, trig.get("mid"))
+
+    # 7. Render the sidebar Pinned section
+    @app.callback(
+        Output(IDs.SIDEBAR_PINS, "children"),
+        Input(IDs.STORE_PINS, "data"),
+    )
+    def render_pins(pins):
+        if not pins:
+            return html.Div(
+                "No pinned messages yet.",
+                className="am-sidebar-empty",
+            )
+        return [_pin_item(p) for p in pins]
+
+    # 8. Click a pinned item → scroll to the message
+    app.clientside_callback(
+        """
+        function(n_clicks) {
+            const t = window.dash_clientside.callback_context
+                .triggered;
+            if (!t || !t.length || !t[0].value) {
+                return window.dash_clientside.no_update;
+            }
+            let mid;
+            try {
+                mid = JSON.parse(t[0].prop_id.split('.')[0])
+                    .mid;
+            } catch (e) {
+                return window.dash_clientside.no_update;
+            }
+            const el = document.getElementById(mid);
+            if (el) {
+                el.scrollIntoView({
+                    behavior: 'smooth', block: 'center',
+                });
+                el.classList.add('am-msg-flash');
+                setTimeout(function () {
+                    el.classList.remove('am-msg-flash');
+                }, 1600);
+            }
+            return window.dash_clientside.no_update;
+        }
+        """,
+        Output(IDs.PIN_SCROLL_DUMMY, "data"),
+        Input(
+            {"type": "am-pin-jump", "mid": ALL},
+            "n_clicks",
+        ),
+        prevent_initial_call=True,
+    )

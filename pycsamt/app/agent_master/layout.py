@@ -305,6 +305,18 @@ def _sidebar() -> html.Div:
                 className="am-sidebar-history",
             ),
             html.Div(
+                "Pinned",
+                className="am-sidebar-section-lbl",
+            ),
+            html.Div(
+                html.Div(
+                    "No pinned messages yet.",
+                    className="am-sidebar-empty",
+                ),
+                id=IDs.SIDEBAR_PINS,
+                className="am-sidebar-pins",
+            ),
+            html.Div(
                 "Figures",
                 className="am-sidebar-section-lbl",
             ),
@@ -1894,6 +1906,13 @@ def create_layout() -> html.Div:
                 storage_type="local",
                 data=[],
             ),
+            # pinned messages (localStorage)
+            dcc.Store(
+                id=IDs.STORE_PINS,
+                storage_type="local",
+                data=[],
+            ),
+            dcc.Store(id=IDs.PIN_SCROLL_DUMMY),
             # PINN / Hybrid inversion config
             dcc.Store(
                 id=IDs.STORE_INV_CONFIG,

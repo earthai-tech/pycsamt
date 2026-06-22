@@ -299,7 +299,18 @@ def estimate_ss_ama(
         )
 
     tbl = pd.DataFrame.from_records(rows)
-    df = tbl.sort_values("station").reset_index(drop=True)
+    # ``rows`` is empty when no station had usable neighbours (e.g. a
+    # single-station survey: _neighbors returns []). from_records([])
+    # yields a column-less frame, so guard before sorting to avoid a
+    # KeyError on "station" — return an empty, correctly-typed table so
+    # correction degrades to a no-op instead of crashing.
+    if tbl.empty or "station" not in tbl.columns:
+        df = pd.DataFrame(
+            columns=["station", "delta_log10_rho", "fac_rho",
+                     "fac_z", "n_used"]
+        )
+    else:
+        df = tbl.sort_values("station").reset_index(drop=True)
 
     return maybe_wrap_frame(
         df,

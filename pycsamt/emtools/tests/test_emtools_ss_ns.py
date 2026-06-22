@@ -132,6 +132,21 @@ def test_static_shift_estimators_can_return_api_frames_for_empty_input():
         assert viewed.df.empty
 
 
+def test_estimate_ss_ama_single_station_returns_empty_table():
+    """A single-station survey yields no AMA neighbours.
+
+    Regression: ``rows`` ends up empty, so ``pd.DataFrame.from_records``
+    produced a column-less frame and ``sort_values("station")`` raised
+    ``KeyError: 'station'``.  It must instead return an empty,
+    correctly-typed table so correction degrades to a no-op.
+    """
+    tbl = estimate_ss_ama([_clean_site("S1")])
+    assert list(tbl.columns) == [
+        "station", "delta_log10_rho", "fac_rho", "fac_z", "n_used",
+    ]
+    assert len(tbl) == 0
+
+
 def test_detect_ns_row_count():
     n = 6
     sites = [_clean_site(f"S{i:02d}") for i in range(n)]

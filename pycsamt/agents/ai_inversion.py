@@ -207,6 +207,32 @@ class AIInversionAgent(BaseAgent):
         freqs            = np.asarray(input_data.get("freqs") or self._freqs_cfg
                                       or _DEFAULT_FREQS, dtype=float)
 
+        # ── fast-fail: require usable impedance BEFORE training ───────────────
+        # Training synthesises data and fits a network (can take minutes)
+        # without touching the real EDIs. If no station has usable
+        # impedance, we would train only to predict nothing, ending with
+        # an empty, confusing result. Check first and fail immediately.
+        n_usable = 0
+        for _i, _ed in enumerate(_iter_items(sites)):
+            _, _z, _fr = _get_z_block(_ed)
+            if _z is None or _fr is None:
+                continue
+            if _z_to_features(_z, _fr, freqs) is not None:
+                n_usable += 1
+        if n_usable == 0:
+            return AgentResult.failed(
+                "No station has usable impedance data for inversion — "
+                "every station's Z is missing or non-finite. The data "
+                "may be empty, or corrupted by a prior in-place "
+                "correction that produced invalid impedance.",
+                hint=(
+                    "Re-load the original EDI files (Load EDI), then run "
+                    "the inversion. Avoid applying an in-place correction "
+                    "that yields invalid impedance before inverting."
+                ),
+                elapsed=time.time() - t0,
+            )
+
         # ── build inverter ────────────────────────────────────────────────────
         inverter = EMInverter1D(
             arch=arch,
@@ -387,13 +413,21 @@ class AIInversionAgent(BaseAgent):
 
         elapsed = time.time() - t0
         rms_str = f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
-        return AgentResult(
-            status="success" if n_pred > 0 else "needs_review",
-            summary=(
+        if n_pred == 0:
+            summary = (
+                f"AI inversion ({arch}, {self.n_layers} layers) trained, "
+                "but produced 0 predictions — no station yielded a valid "
+                "model. Check the impedance data and try again."
+            )
+        else:
+            summary = (
                 f"AI inversion ({arch}, {self.n_layers} layers): "
                 f"{n_pred} stations predicted. {rms_str}. "
                 f"{len(figures)} figure(s)."
-            ),
+            )
+        return AgentResult(
+            status="success" if n_pred > 0 else "needs_review",
+            summary=summary,
             data={
                 "inverter":         inverter,
                 "predictions":      predictions,

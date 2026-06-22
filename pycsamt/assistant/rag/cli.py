@@ -54,6 +54,19 @@ def _cmd_query(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_eval(args: argparse.Namespace) -> int:
+    from ..evals.harness import evaluate, load_suite, suites_dir
+    suite = args.suite or (suites_dir() / "rag_questions.jsonl")
+    records = load_suite(suite)
+    report = evaluate(records, k=args.k)
+    print(report.summary())
+    if report.violations:
+        for v in report.violations:
+            print(f"  ! {v['query']}: {v['found']}")
+        return 1
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="pycsamt.assistant.rag",
@@ -69,11 +82,16 @@ def main(argv: list[str] | None = None) -> int:
     q.add_argument("text", help="query text")
     q.add_argument("-k", type=int, default=8, help="number of results")
 
+    e = sub.add_parser("eval", help="run an eval suite")
+    e.add_argument("--suite", default=None, help="path to a .jsonl suite")
+    e.add_argument("-k", type=int, default=10, help="retrieval depth")
+
     args = parser.parse_args(argv)
     return {
         "build": _cmd_build,
         "stats": _cmd_stats,
         "query": _cmd_query,
+        "eval": _cmd_eval,
     }[args.command](args)
 
 

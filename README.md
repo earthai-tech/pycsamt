@@ -13,15 +13,33 @@
   <a href="https://pypi.org/project/pycsamt/"><img alt="PyPI" src="https://img.shields.io/pypi/v/pycsamt?color=orange&label=PyPI"/></a>
   <a href="https://pycsamt.readthedocs.io"><img alt="Docs" src="https://img.shields.io/readthedocs/pycsamt?label=docs"/></a>
   <a href="https://github.com/earthai-tech/pycsamt/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/earthai-tech/pycsamt/ci.yml?label=CI"/></a>
+  <a href="https://codecov.io/gh/earthai-tech/pycsamt"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/earthai-tech/pycsamt?label=coverage"/></a>
   <a href="https://opensource.org/licenses/LGPL-3.0"><img alt="License" src="https://img.shields.io/badge/license-LGPL--3.0-blue"/></a>
-  <a href="https://www.python.org/downloads/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/pycsamt"/></a>
+  <img alt="Semantic Versioning" src="https://img.shields.io/badge/semver-2.0.0-informational"/>
+</p>
+
+<p align="center">
+  <!-- python versions -->
+  <img alt="Python 3.9" src="https://img.shields.io/badge/python-3.9-blue?logo=python&logoColor=white"/>
+  <img alt="Python 3.10" src="https://img.shields.io/badge/python-3.10-blue?logo=python&logoColor=white"/>
+  <img alt="Python 3.11" src="https://img.shields.io/badge/python-3.11-blue?logo=python&logoColor=white"/>
+  <img alt="Python 3.12" src="https://img.shields.io/badge/python-3.12-blue?logo=python&logoColor=white"/>
+  <img alt="Python 3.13" src="https://img.shields.io/badge/python-3.13-blue?logo=python&logoColor=white"/>
+</p>
+
+<p align="center">
+  <!-- backends / platform -->
+  <a href="https://pytorch.org"><img alt="PyTorch" src="https://img.shields.io/badge/backend-PyTorch-EE4C2C?logo=pytorch&logoColor=white"/></a>
+  <a href="https://www.tensorflow.org"><img alt="TensorFlow" src="https://img.shields.io/badge/backend-TensorFlow-FF6F00?logo=tensorflow&logoColor=white"/></a>
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey?logo=linux&logoColor=white"/>
 </p>
 
 <p align="center">
   <!-- activity / community -->
-  <a href="https://pypi.org/project/pycsamt/"><img alt="Downloads" src="https://img.shields.io/pypi/dm/pycsamt?label=PyPI%20downloads&color=brightgreen"/></a>
+  <a href="https://pypi.org/project/pycsamt/"><img alt="Downloads" src="https://img.shields.io/pypi/dm/pycsamt?label=downloads&color=brightgreen"/></a>
   <a href="https://github.com/earthai-tech/pycsamt/commits/v2"><img alt="Last commit" src="https://img.shields.io/github/last-commit/earthai-tech/pycsamt/v2"/></a>
   <a href="https://github.com/earthai-tech/pycsamt/issues"><img alt="Issues" src="https://img.shields.io/github/issues/earthai-tech/pycsamt"/></a>
+  <a href="https://github.com/earthai-tech/pycsamt/pulls"><img alt="PRs welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen"/></a>
   <a href="https://github.com/earthai-tech/pycsamt/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/earthai-tech/pycsamt?style=flat&color=yellow"/></a>
   <img alt="Code size" src="https://img.shields.io/github/languages/code-size/earthai-tech/pycsamt"/>
 </p>

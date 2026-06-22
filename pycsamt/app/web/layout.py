@@ -3781,7 +3781,7 @@ def _about_modal() -> dbc.Modal:
     return dbc.Modal(
         [
             dbc.ModalHeader(
-                dbc.ModalTitle([_icon("help", size=16), " About pycsamt"]),
+                dbc.ModalTitle([_icon("help", size=16), " About pyCSAMT"]),
                 close_button=True,
             ),
             dbc.ModalBody([

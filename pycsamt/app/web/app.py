@@ -159,8 +159,8 @@ def create_app(debug: bool = False):
             dbc.icons.BOOTSTRAP,
         ],
         suppress_callback_exceptions=True,
-        title="pycsamt",
-        update_title="pycsamt — loading…",
+        title="pyCSAMT",
+        update_title="pyCSAMT — loading…",
         meta_tags=[
             {"name": "viewport", "content": "width=device-width, initial-scale=1"},
         ],

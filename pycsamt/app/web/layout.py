@@ -2969,7 +2969,10 @@ def _welcome_overlay() -> html.Div:
     return html.Div([
         particles,
         html.Div([
-            html.Img(src="/icons/pycsamt_logo.svg", className="wlc-logo"),
+            html.Img(
+                src="/icons/pycsamt-v2-symbol.svg",
+                className="wlc-logo",
+            ),
             html.H1([
                 "Welcome to ",
                 html.Span("py",    className="wlc-py"),

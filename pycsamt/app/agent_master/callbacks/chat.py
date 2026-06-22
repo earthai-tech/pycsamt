@@ -1442,14 +1442,18 @@ def _run_agent(
 
         # inject workflow-specific params
         _ic = inv_config or {}
-        # Precedence for the workflow type:
-        #   1. param-modal selection (explicit user form)
-        #   2. router's workflow slot (LLM/offline intent)
-        #   3. ContextInputAgent regex classification
+        # Workflow-type authority (separation of concerns):
+        #   1. param-modal selection (explicit user form), else
+        #   2. ContextInputAgent classification — the shared, ordered
+        #      keyword registry (regex-anchored, LLM-enriched). This is
+        #      the authority on *which* workflow to run.
+        # The IntentRouter decides the *intent* (question / code /
+        # workflow / …) ONLY. It deliberately does not override the
+        # workflow type: a terse-prompt LLM router can mislabel e.g.
+        # "phase tensor and dimensionality analysis" as an inversion,
+        # whereas the regex registry classifies it correctly.
         if _ic.get("workflow"):
             cfg["workflow"] = _ic["workflow"]
-        elif decision.workflow:
-            cfg["workflow"] = decision.workflow
         wtype = cfg.get("workflow", "qc")
         _step(f"Workflow: {wtype}", "done")
         if wtype in (

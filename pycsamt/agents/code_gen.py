@@ -406,6 +406,9 @@ class CodeGenerationAgent(BaseAgent):
         results    = input_data.get("results") or {}
         output_dir = input_data.get("output_dir", ".")
         title      = input_data.get("title", self.script_title)
+        # Optional RAG context (real symbols / recipe) to ground the LLM
+        # refinement pass; ignored offline.
+        rag_context = input_data.get("rag_context") or ""
 
         os.makedirs(output_dir, exist_ok=True)
 
@@ -518,10 +521,18 @@ class CodeGenerationAgent(BaseAgent):
 
         # ── optional LLM refinement ───────────────────────────────────────────
         if self.api_key:
+            grounding = ""
+            if rag_context:
+                grounding = (
+                    "Use ONLY the real pyCSAMT symbols and patterns from "
+                    "this retrieved context (do not invent functions):\n"
+                    f"{rag_context}\n\n"
+                )
             prompt = (
                 f"Refine and annotate the following pycsamt Python script. "
                 f"Fix any issues, add helpful inline comments, ensure "
                 f"all imports are correct. Return only valid Python code.\n\n"
+                f"{grounding}"
                 f"```python\n{code}\n```"
             )
             llm_code = self.query_llm(prompt, max_tokens=2000)

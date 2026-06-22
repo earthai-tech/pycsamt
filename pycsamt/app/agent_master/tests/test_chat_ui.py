@@ -181,6 +181,89 @@ class TestWorkflowNotForcedByStaleConfig(unittest.TestCase):
 
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
+class TestCodeDispatchRAG(unittest.TestCase):
+    """_dispatch_code resolves a named line + grounds code via RAG."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        from pycsamt.assistant.rag import context_builder as cb
+        from pycsamt.assistant.rag.context_builder import ContextBuilder
+        from pycsamt.assistant.rag.retriever import Retriever
+        from pycsamt.assistant.rag.schemas import RAGChunk
+
+        # a real temp EDI dir so the resolved line "exists"
+        self.tmp = Path(tempfile.mkdtemp())
+        edi = self.tmp / "L22PLT"
+        edi.mkdir()
+        (edi / "22-001.edi").write_text(">HEAD\n", encoding="utf-8")
+
+        chunks = [
+            RAGChunk(
+                id="1", text="estimate_ss_ama / correct_ss_ama AMA "
+                "static shift correction recipe.",
+                source_path="assistant_recipes/static_shift.md",
+                kind="recipe", workflow="static_shift", priority=3,
+                title="static shift",
+            ),
+        ]
+
+        class _Reg:
+            def __init__(self, p):
+                self._p = p
+
+            def find_line_in_text(self, t):
+                return "L22PLT" if "l22plt" in t.lower() else None
+
+            def resolve_line(self, name):
+                return {
+                    "line": "L22PLT", "edi_dir": str(self._p),
+                    "exists": True, "n_edi_files": 1, "sort_by": "lon",
+                    "output_root": "results/willy/L22PLT",
+                    "default_workflows": ["static_shift"],
+                    "static_shift": {"method": "ama"}, "plot": {},
+                }
+
+        self._orig = cb.default_context_builder
+        builder = ContextBuilder(Retriever(chunks), _Reg(edi))
+        cb.default_context_builder = lambda root=None: builder
+        self._edi_dir = str(edi)
+
+    def tearDown(self):
+        from pycsamt.assistant.rag import context_builder as cb
+        cb.default_context_builder = self._orig
+
+    def test_line_resolved_into_generated_code(self):
+        import pycsamt.app.agent_master.callbacks.chat as C
+        jid = C._new_job()
+
+        def step(label, status="done"):
+            C._update_job(
+                jid,
+                steps=C._JOBS[jid]["steps"]
+                + [{"label": label, "status": status}],
+            )
+
+        C._dispatch_code(
+            jid,
+            "generate code for static shift for line L22PLT",
+            {}, {"provider": "offline"},
+            workflow=None, llm_prov="claude", api_key=None,
+            sel_model=None, offline=True, step=step,
+        )
+        job = C._get_job(jid)
+        code = job.get("code", "")
+        self.assertIn("L22PLT", job.get("result", ""))
+        # real resolved path is embedded (check separator-agnostically:
+        # the unique temp dir name + the line dir, not the placeholder)
+        from pathlib import Path
+        self.assertIn(Path(self._edi_dir).parent.name, code)
+        self.assertIn("L22PLT", code)
+        self.assertNotIn("/path/to/EDIs", code)   # placeholder replaced
+        self.assertIn("estimate_ss_ama", code)    # correct API
+
+
+@unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestCodeTargetWorkflow(unittest.TestCase):
     """Code requests must target the subject, not the 'code_gen' action."""
 

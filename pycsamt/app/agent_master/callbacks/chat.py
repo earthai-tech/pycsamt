@@ -1410,14 +1410,34 @@ def _dispatch_code(
         # plain "write me a script" with no subject → default to qc
         cfg["workflow"] = "qc"
 
-    # Use a loaded EDI path when present so the script is
-    # immediately runnable; otherwise code_gen inserts a
+    # ── RAG grounding: resolve a named survey line to its real path and
+    # retrieve real symbols/recipe so the generated code is accurate. ──
+    rag_text = ""
+    resolved_line = None
+    try:
+        from pycsamt.assistant.rag.context_builder import (
+            default_context_builder,
+        )
+        builder = default_context_builder()
+        if builder is not None:
+            ac = builder.build(text)
+            rag_text = ac.context_text
+            pc = ac.project_context
+            if pc.get("exists") and pc.get("edi_dir"):
+                resolved_line = pc.get("line")
+                cfg["data_path"] = pc["edi_dir"]
+    except Exception:  # noqa: BLE001 — RAG is best-effort
+        rag_text = ""
+
+    # Use a loaded EDI path when present (and no line was resolved) so the
+    # script is immediately runnable; otherwise code_gen inserts a
     # /path/to/EDIs placeholder.
-    edi_path = (edi_store or {}).get("path", "") or cfg.get(
-        "data_path", ""
-    )
-    if edi_path:
-        cfg["data_path"] = edi_path
+    if not resolved_line:
+        edi_path = (edi_store or {}).get("path", "") or cfg.get(
+            "data_path", ""
+        )
+        if edi_path:
+            cfg["data_path"] = edi_path
 
     output_dir = (
         settings.get("output_dir") or ""
@@ -1438,15 +1458,19 @@ def _dispatch_code(
                 "workflow_config": cfg,
                 "results": {},
                 "output_dir": output_dir,
+                "rag_context": rag_text,
             }
         )
 
     code = res.get("code", "") if res else ""
+    _line_note = (
+        f" for line {resolved_line}" if resolved_line else ""
+    )
     summary = (
         "Here is a standalone pyCSAMT script that"
         f" reproduces the {cfg.get('workflow', 'qc')}"
-        " workflow. Copy it from the code block below"
-        " — edit the data path if needed."
+        f" workflow{_line_note}. Copy it from the code block"
+        " below — edit the data path if needed."
     )
     step("Code ready", "done")
     _update_job(

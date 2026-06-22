@@ -12,6 +12,7 @@ data / static-shift / QC / plot / inversion / validation tools.
 
 from __future__ import annotations
 
+from .plot_tools import list_plots, make_plot
 from .project_registry import ProjectRegistry, resolve_line
 from .validation_tools import validate_generated_code
 from .workflow_tools import (
@@ -31,4 +32,6 @@ __all__ = [
     "run_static_shift",
     "run_qc",
     "run_phase_analysis",
+    "list_plots",
+    "make_plot",
 ]

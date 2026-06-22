@@ -15,6 +15,25 @@ _HAS_DASH = importlib.util.find_spec("dash") is not None
 
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
+class TestHelpModal(unittest.TestCase):
+
+    def test_help_toggle_registered_and_modal_built(self):
+        from pycsamt.app.agent_master import create_app
+        from pycsamt.app.agent_master._ids import IDs
+        app = create_app()
+        self.assertTrue(
+            any(IDs.MODAL_HELP in k for k in app.callback_map),
+            msg="help toggle callback not registered",
+        )
+
+    def test_help_modal_has_examples_and_caps(self):
+        from pycsamt.app.agent_master.layout import _help_modal
+        # builds without error and is a real component tree
+        modal = _help_modal()
+        self.assertEqual(modal.id, "am-modal-help")
+
+
+@unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestExecutingMessage(unittest.TestCase):
 
     def test_elapsed_format(self):

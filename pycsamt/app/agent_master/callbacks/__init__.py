@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from .chat import register_chat
 from .edi import register_edi
+from .help import register_help
 from .inv_params import register_inv_params
 from .params import register_params
 from .line_sel import register_line_sel
@@ -34,3 +35,4 @@ def register_all(app) -> None:
     register_splash(app)
     register_plus(app)
     register_sidebar(app)
+    register_help(app)

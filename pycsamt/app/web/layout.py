@@ -3780,6 +3780,20 @@ def _recompute_offcanvas() -> dbc.Offcanvas:
 # About modal
 # ──────────────────────────────────────────────────────────────────────────────
 
+def _about_feature(icon: str, color: str, label: str) -> html.Div:
+    """One feature chip in the About modal highlights grid."""
+    return html.Div(
+        [
+            html.I(
+                className=f"bi {icon}",
+                style={"color": f"var(--{color})"},
+            ),
+            html.Span(label),
+        ],
+        className="about-feature",
+    )
+
+
 def _about_modal() -> dbc.Modal:
     return dbc.Modal(
         [
@@ -3805,6 +3819,34 @@ def _about_modal() -> dbc.Modal:
                            "Python Processing Suite",
                            className="text-muted small mb-3"),
                 ], className="text-center"),
+
+                html.P(
+                    "An end-to-end toolkit for CSAMT / AMT / MT data — "
+                    "from raw EDI files to quality control, distortion "
+                    "correction, AI-assisted inversion, and publication "
+                    "figures, with an interactive web studio and a "
+                    "conversational agent.",
+                    className="about-lead",
+                ),
+
+                html.Div("Highlights", className="about-sec-label"),
+                html.Div(
+                    [
+                        _about_feature("bi-clipboard-check", "blue",
+                                       "Quality control"),
+                        _about_feature("bi-sliders", "teal",
+                                       "Static-shift correction"),
+                        _about_feature("bi-compass", "mauve",
+                                       "Phase-tensor & strike"),
+                        _about_feature("bi-funnel", "green",
+                                       "Denoising"),
+                        _about_feature("bi-cpu", "peach",
+                                       "AI inversion (1D/2D/3D)"),
+                        _about_feature("bi-map", "yellow",
+                                       "Interactive maps & sections"),
+                    ],
+                    className="about-features",
+                ),
 
                 html.Div([
                     html.Div([

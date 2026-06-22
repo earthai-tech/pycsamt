@@ -446,6 +446,16 @@ def _topbar() -> html.Div:
                 title="Toggle light / dark",
                 n_clicks=0,
             ),
+            # Help / About
+            html.Button(
+                html.I(
+                    className="bi bi-question-circle"
+                ),
+                id=IDs.BTN_HELP,
+                className="am-icon-btn",
+                title="Help & About",
+                n_clicks=0,
+            ),
             # Settings
             html.Button(
                 html.I(
@@ -1856,6 +1866,239 @@ def _inv_params_canvas() -> dbc.Offcanvas:
     )
 
 
+# ── Help / About modal ─────────────────────────────
+
+def _help_capability(icon, color, title, desc) -> html.Div:
+    return html.Div(
+        [
+            html.Div(
+                html.I(className=f"bi {icon}"),
+                className="am-help-cap-icon",
+                style={"color": f"var(--{color})"},
+            ),
+            html.Div(
+                [
+                    html.Div(title, className="am-help-cap-title"),
+                    html.Div(desc, className="am-help-cap-desc"),
+                ]
+            ),
+        ],
+        className="am-help-cap",
+    )
+
+
+def _help_tip(icon, text) -> html.Li:
+    return html.Li(
+        [
+            html.I(
+                className=f"bi {icon} am-help-tip-icon"
+            ),
+            html.Span(text),
+        ],
+        className="am-help-tip",
+    )
+
+
+def _help_modal() -> dbc.Modal:
+    try:
+        from importlib.metadata import version as _v
+        _ver = _v("pycsamt")
+    except Exception:
+        _ver = "2.0"
+
+    examples = [
+        "What does StaticShiftAgent do?",
+        "How do I access impedance Z values?",
+        "Run phase tensor and dimensionality analysis",
+        "Correct static shift on the loaded data",
+        "Run a 1-D AI inversion",
+        "Generate code for static shift",
+    ]
+
+    return dbc.Modal(
+        [
+            dbc.ModalHeader(
+                dbc.ModalTitle(
+                    [
+                        html.Img(
+                            src=(
+                                "/am-icons/"
+                                "pycsamt-v2-symbol.svg"
+                            ),
+                            className="am-help-logo",
+                        ),
+                        html.Span(
+                            [
+                                html.Span(
+                                    "py",
+                                    className="am-brand-py",
+                                ),
+                                html.Span(
+                                    "CSAMT",
+                                    className="am-brand-csamt",
+                                ),
+                                html.Span(
+                                    " Agent",
+                                    className="am-brand-agent",
+                                ),
+                            ],
+                            className="am-help-title",
+                        ),
+                    ],
+                    className="am-help-titlewrap",
+                ),
+                close_button=True,
+            ),
+            dbc.ModalBody(
+                [
+                    html.P(
+                        "Your conversational assistant for"
+                        " CSAMT / AMT / MT processing — ask"
+                        " questions, generate code, and run"
+                        " full workflows in plain language.",
+                        className="am-help-lead",
+                    ),
+
+                    html.Div(
+                        "What I can do",
+                        className="am-help-section",
+                    ),
+                    html.Div(
+                        [
+                            _help_capability(
+                                "bi-chat-left-text", "blue",
+                                "Answer questions",
+                                "Explain pyCSAMT classes,"
+                                " functions and the data model.",
+                            ),
+                            _help_capability(
+                                "bi-code-slash", "green",
+                                "Generate code",
+                                "Produce ready-to-run pyCSAMT"
+                                " scripts for any workflow.",
+                            ),
+                            _help_capability(
+                                "bi-diagram-3", "mauve",
+                                "Run workflows",
+                                "QC, static shift, phase tensor,"
+                                " denoising, inversions, reports.",
+                            ),
+                            _help_capability(
+                                "bi-window-fullscreen", "teal",
+                                "Launch the web app",
+                                "Open interactive maps and"
+                                " pseudosections when needed.",
+                            ),
+                        ],
+                        className="am-help-caps",
+                    ),
+
+                    html.Div(
+                        "Try asking",
+                        className="am-help-section",
+                    ),
+                    html.Div(
+                        [
+                            html.Span(
+                                ex, className="am-help-ex"
+                            )
+                            for ex in examples
+                        ],
+                        className="am-help-examples",
+                    ),
+
+                    html.Div(
+                        "Tips",
+                        className="am-help-section",
+                    ),
+                    html.Ul(
+                        [
+                            _help_tip(
+                                "bi-folder2-open",
+                                "Load an EDI dataset first for"
+                                " data workflows — questions and"
+                                " code work without it.",
+                            ),
+                            _help_tip(
+                                "bi-pin-angle",
+                                "Pin any message to keep it in"
+                                " the sidebar for quick recall.",
+                            ),
+                            _help_tip(
+                                "bi-stop-fill",
+                                "While a task runs, the send"
+                                " button becomes a Stop button.",
+                            ),
+                            _help_tip(
+                                "bi-gear",
+                                "Add an API key in Settings for"
+                                " richer answers — offline mode"
+                                " still works without one.",
+                            ),
+                        ],
+                        className="am-help-tips",
+                    ),
+                ]
+            ),
+            dbc.ModalFooter(
+                [
+                    html.Div(
+                        [
+                            html.Span(
+                                f"pyCSAMT v{_ver}",
+                                className="am-help-ver",
+                            ),
+                            html.Span(
+                                "  ·  LGPL-3.0  ·  L. Kouadio",
+                                className="am-help-meta",
+                            ),
+                        ],
+                        className="am-help-foot-meta",
+                    ),
+                    html.Div(className="am-topbar-spacer"),
+                    html.A(
+                        [
+                            html.I(
+                                className="bi bi-book me-1"
+                            ),
+                            "Docs",
+                        ],
+                        href="https://pycsamt.readthedocs.io",
+                        target="_blank",
+                        className="am-help-link",
+                    ),
+                    html.A(
+                        [
+                            html.I(
+                                className="bi bi-github me-1"
+                            ),
+                            "GitHub",
+                        ],
+                        href=(
+                            "https://github.com/"
+                            "earthai-tech/pycsamt"
+                        ),
+                        target="_blank",
+                        className="am-help-link",
+                    ),
+                    html.Button(
+                        "Close",
+                        id=IDs.BTN_HELP_CLOSE,
+                        className="am-tbtn",
+                        n_clicks=0,
+                    ),
+                ]
+            ),
+        ],
+        id=IDs.MODAL_HELP,
+        is_open=False,
+        size="lg",
+        centered=True,
+        scrollable=True,
+        className="am-help-modal",
+    )
+
+
 # ── Full layout ────────────────────────────────────
 
 def create_layout() -> html.Div:
@@ -1964,6 +2207,7 @@ def create_layout() -> html.Div:
             _line_sel_modal(),
             _postproc_modal(),
             _output_browse_modal(),
+            _help_modal(),
             # ── main chrome ────────────────────────
             _topbar(),
             html.Div(

@@ -228,8 +228,11 @@ WORKFLOW_KEYWORDS: dict[str, list[str]] = {
         "noise reduction",
         "filter noise",
     ],
-    # Use multi-word phrases to avoid false positives on bare "strike", "skew",
-    # "mohr", "argand".
+    # Mostly multi-word phrases to avoid false positives on bare "mohr"
+    # / "argand". Bare "strike" and "skew" are included: in MT they
+    # almost always mean geoelectric strike / phase-tensor skew, and
+    # rotation (checked earlier) already owns "strike rotation" /
+    # "rotate", so rotation requests are not mis-routed here.
     "phase_analysis": [
         "phase tensor",
         "phase analysis",
@@ -238,9 +241,14 @@ WORKFLOW_KEYWORDS: dict[str, list[str]] = {
         "mohr circle",
         "argand diagram",
         "strike analysis",
+        "geoelectric strike",
+        "strike direction",
+        "strike angle",
+        "strike",
         "dimensionality analysis",
-        "bahr skew",
         "dimensionality",
+        "bahr skew",
+        "skew",
     ],
     "static_shift": [
         "static shift",

@@ -71,6 +71,28 @@ class TestSharedRegistry(unittest.TestCase):
         self.assertEqual(normalise_workflow("1d-inversion"), "ai_inversion")
         self.assertEqual(normalise_workflow("codegen"), "code_gen")
 
+    def test_strike_and_skew_route_to_phase_analysis(self):
+        for t in (
+            "get the strike of the line",
+            "get the strike",
+            "geoelectric strike",
+            "skew analysis",
+        ):
+            self.assertEqual(
+                classify_workflow(t), "phase_analysis", msg=t
+            )
+
+    def test_rotation_still_wins_over_strike(self):
+        # rotation is checked first and owns "rotate"/"strike rotation"
+        for t in (
+            "rotate tensors to principal strike axis",
+            "tensor rotation",
+            "strike rotation",
+        ):
+            self.assertEqual(
+                classify_workflow(t), "rotation", msg=t
+            )
+
     def test_classify_default_none(self):
         self.assertIsNone(classify_workflow("xyzzy no keywords here"))
 

@@ -11,7 +11,7 @@ import re
 import tempfile
 from pathlib import Path
 
-from dash import Input, Output, State
+from dash import ALL, Input, Output, State
 from dash import ctx, html, no_update
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
@@ -83,6 +83,25 @@ def _folder_to_lines(
         groups["Default"] = [
             str(e) for e in edis
         ]
+    return groups
+
+
+def _detect_lines_to_files(
+    edi_dir: str,
+) -> dict[str, list[str]]:
+    """Return ``{detected_line: [edi_file_paths]}`` grouped by the station-ID
+    prefix (same rule as :func:`_detect_from_ids`, e.g. ``22-001`` -> ``L22``),
+    but mapping to real file paths so the groups can be loaded/filtered."""
+    p = Path(edi_dir)
+    edis = sorted(p.rglob("*.edi")) or sorted(p.rglob("*.EDI"))
+    groups: dict[str, list[str]] = {}
+    for edi in edis:
+        sid = edi.stem
+        m = re.match(r"^([A-Za-z]*\d+)", sid)
+        prefix = m.group(1) if m else sid[:4]
+        if prefix.isdigit():
+            prefix = f"L{prefix}"
+        groups.setdefault(prefix, []).append(str(edi))
     return groups
 
 
@@ -347,17 +366,30 @@ def register_edi(app) -> None:
         Input(IDs.BTN_LOAD_CONFIRM, "n_clicks"),
         State(IDs.EDI_PATH_INPUT, "value"),
         State(IDs.LINES_MODE, "value"),
+        State({"type": "am-line-rename", "index": ALL}, "value"),
         prevent_initial_call=True,
     )
-    def confirm_load(n, path, mode):
+    def confirm_load(n, path, mode, rename_vals):
         if not n or not path:
             raise PreventUpdate
         p = Path(path.strip())
         if not p.exists():
             raise PreventUpdate
+        # Persist groups for the *mode the user picked* — not always the
+        # folder layout. "auto" stores the station-ID line names (L18…),
+        # "edit" applies the renamed labels, "folder" uses subfolder names.
         if p.is_file():
             groups = {"Default": [str(p)]}
-        else:
+        elif mode == "auto":
+            groups = _detect_lines_to_files(str(p)) or _folder_to_lines(str(p))
+        elif mode == "edit":
+            base = _folder_to_lines(str(p))
+            names = rename_vals or []
+            groups = {}
+            for i, (orig, files) in enumerate(base.items()):
+                nm = names[i] if (i < len(names) and names[i]) else orig
+                groups[str(nm)] = list(files)
+        else:  # folder (default)
             groups = _folder_to_lines(str(p))
         n_edi = sum(
             len(v) for v in groups.values()

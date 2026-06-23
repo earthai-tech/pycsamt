@@ -1745,6 +1745,18 @@ def _resolve_metric_targets(
     import os
     groups = (edi_store or {}).get("groups", {}) or {}
     edi_path = (edi_store or {}).get("path", "") or ""
+    sel_lines = (edi_store or {}).get("selected_lines", []) or []
+
+    # An explicit line selection (from the line picker, or a pre-filter) wins
+    # for a specific-line question: compute on exactly those line(s) and label
+    # them by line name, never the whole upload folder. An explicit "all lines"
+    # request is handled below instead.
+    if sel_lines and groups and not all_lines:
+        picked = [
+            (ln, list(groups[ln])) for ln in sel_lines if groups.get(ln)
+        ]
+        if picked:
+            return picked
 
     if all_lines:
         if groups:

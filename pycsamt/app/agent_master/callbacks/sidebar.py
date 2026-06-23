@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from dash import ALL, Input, Output, State
-from dash import ctx, html, no_update
+from dash import ctx, dcc, html, no_update
 from dash.exceptions import PreventUpdate
 
 from .._ids import IDs
@@ -52,11 +52,11 @@ def _restore_bubble(msg: dict) -> html.Div:
             ],
             className="am-msg-row user",
         )
-    lines = [
-        html.P(ln)
-        for ln in (text or "").split("\n")
-        if ln.strip()
-    ]
+    body = (
+        dcc.Markdown(text, className="am-md", link_target="_blank")
+        if (text or "").strip()
+        else html.P("(no content)")
+    )
     return html.Div(
         [
             html.Div(
@@ -67,15 +67,13 @@ def _restore_bubble(msg: dict) -> html.Div:
             ),
             html.Div(
                 [
-                    html.Div(lines or [
-                        html.P("(no content)")
-                    ]),
+                    html.Div(body),
                     html.Div(
                         ts,
                         className="am-ts",
                     ),
                 ],
-                className="am-bubble agent",
+                className="am-bubble agent am-bubble-flat",
             ),
         ],
         className="am-msg-row",

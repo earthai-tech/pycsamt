@@ -39,7 +39,7 @@ plt.show = lambda *a, **kw: None
 from contextlib import nullcontext as _nullctx
 
 from dash import ALL, Input, Output, State
-from dash import ctx, html, no_update
+from dash import ctx, dcc, html, no_update
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 
@@ -659,29 +659,21 @@ def _render_inline(text: str) -> list:
 
 
 def _render_markdown(text: str) -> list:
-    """Render lightweight markdown (headings, bullets, code, bold)."""
-    children: list = []
-    for tok in _parse_markdown(text):
-        if tok[0] == "code":
-            children.append(_code_block(tok[2]))
-        elif tok[0] == "heading":
-            children.append(
-                html.P(
-                    html.Strong(tok[1]),
-                    className="am-md-h",
-                )
-            )
-        elif tok[0] == "bullet":
-            children.append(
-                html.Li(
-                    _render_inline(tok[1]),
-                    style={"marginLeft": "12px"},
-                )
-            )
-        elif tok[0] == "para":
-            children.append(html.P(_render_inline(tok[1])))
-        # "blank" tokens are skipped (paragraph spacing is via CSS)
-    return children
+    """Render the reply as full GitHub-flavoured markdown.
+
+    Uses :class:`dash.dcc.Markdown` so bold, italic, headings, nested lists,
+    inline & fenced code, blockquotes, tables and links all format themselves
+    — exposed like ChatGPT/Claude rather than a custom token subset. Colours
+    come from the themed ``.am-md`` CSS, so light and dark both work."""
+    if not (text or "").strip():
+        return []
+    return [
+        dcc.Markdown(
+            text,
+            className="am-md",
+            link_target="_blank",
+        )
+    ]
 
 
 def _kind_header(kind: str | None) -> html.Div | None:
@@ -863,7 +855,7 @@ def _agent_bubble(
                     ) if mid else html.Div(),
                 ],
                 className=(
-                    "am-bubble agent"
+                    "am-bubble agent am-bubble-flat"
                     + (f" am-bubble-{kind}" if kind else "")
                 ),
             ),

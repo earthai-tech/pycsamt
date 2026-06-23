@@ -818,6 +818,98 @@ body {
 .am-bubble strong { color: var(--lavender); }
 .am-bubble.user strong { color: var(--crust); }
 
+/* ── Exposed agent reply (no box) — ChatGPT/Claude style ───────────
+   The main reply is rendered flat: the markdown speaks for itself,
+   only user messages stay in a bubble. */
+.am-bubble.agent.am-bubble-flat {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 2px 0 0;
+  border-radius: 0;
+  max-width: min(94%, 900px);
+}
+
+/* ── Full markdown reply (dcc.Markdown → .am-md) ───────────────────
+   Themed via CSS variables so light & dark both render correctly. */
+.am-md {
+  color: var(--fg-agent);
+  font-size: 15px;
+  line-height: 1.65;
+}
+.am-md > :first-child { margin-top: 0; }
+.am-md > :last-child  { margin-bottom: 0; }
+.am-md p { margin: 0 0 10px; }
+.am-md h1, .am-md h2, .am-md h3,
+.am-md h4, .am-md h5, .am-md h6 {
+  margin: 16px 0 8px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: var(--fg-agent);
+}
+.am-md h1 { font-size: 1.4em; }
+.am-md h2 { font-size: 1.25em; }
+.am-md h3 { font-size: 1.12em; }
+.am-md h4 { font-size: 1em; }
+.am-md ul, .am-md ol { margin: 0 0 10px; padding-left: 22px; }
+.am-md li { margin: 3px 0; }
+.am-md li > p { margin: 0; }
+.am-md li::marker { color: var(--sub1); }
+.am-md strong { font-weight: 700; color: inherit; }
+.am-md em { font-style: italic; }
+.am-md del { opacity: .7; }
+.am-md a {
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.am-md a:hover { opacity: .85; }
+.am-md code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: .85em;
+  background: rgba(127, 127, 127, .16);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.am-md pre {
+  background: var(--mantle);
+  border: 1px solid var(--srf0);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  overflow-x: auto;
+  margin: 9px 0;
+}
+.am-md pre code {
+  background: none;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.am-md blockquote {
+  margin: 9px 0;
+  padding: 2px 0 2px 12px;
+  border-left: 3px solid var(--srf1);
+  color: var(--sub1);
+}
+.am-md table {
+  border-collapse: collapse;
+  margin: 9px 0;
+  font-size: 13px;
+  display: block;
+  overflow-x: auto;
+}
+.am-md th, .am-md td {
+  border: 1px solid var(--srf1);
+  padding: 5px 9px;
+  text-align: left;
+}
+.am-md th { background: var(--step-bg); font-weight: 600; }
+.am-md hr {
+  border: none;
+  border-top: 1px solid var(--srf1);
+  margin: 13px 0;
+}
+
 /* timestamp */
 .am-ts {
   font-size: 10px;

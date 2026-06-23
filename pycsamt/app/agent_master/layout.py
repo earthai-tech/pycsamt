@@ -2259,6 +2259,10 @@ def create_layout() -> html.Div:
             dcc.Store(
                 id=IDs.STORE_PENDING, data={}
             ),
+            # line → stations map for the param-modal dependent dropdown
+            dcc.Store(
+                id=IDs.STORE_LINE_STATIONS, data={}
+            ),
             # post-correction action store
             dcc.Store(
                 id=IDs.STORE_POSTPROC, data={}

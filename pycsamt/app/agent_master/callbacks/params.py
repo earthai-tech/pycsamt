@@ -1287,16 +1287,35 @@ _SCHEMAS["interpretation"] = _SCHEMAS["interpret"]
 
 
 # ── Plotting tasks (shared field fragments) ───────────────────────────────
+_FID_PLOT_LINES = {"type": "am-pf", "key": "lines"}
+
+# Line selector — auto-injected by the modal when >1 line is loaded (see
+# _prepare_dynamic_fields). Lets the user pick the profile(s) for a
+# pseudo-section, and drives the dependent station list.
+_PLOT_FIELD_LINES = {
+    "id": _FID_PLOT_LINES,
+    "key": "lines",
+    "label": "Line(s)",
+    "type": "multiselect",
+    "options": [],
+    "default": [],
+    "placeholder": "all lines",
+    "help": (
+        "Survey line(s) / profile(s) to use. Leave empty for all lines; "
+        "picking lines also narrows the station list below."
+    ),
+}
 _PLOT_FIELD_STATIONS = {
     "id": _FID_PLOT_STATIONS,
     "key": "stations",
     "label": "Stations",
-    "type": "text",
-    "default": "",
-    "placeholder": "blank = all; e.g. 22-10U, 22-11A",
+    "type": "multiselect",
+    "options": [],
+    "default": [],
+    "placeholder": "all stations",
     "help": (
-        "Comma-separated station names to include. Leave blank to plot "
-        "every station in the dataset."
+        "Stations to include. Leave empty for every station (in the "
+        "selected line(s))."
     ),
 }
 _PLOT_FIELD_PMIN = {
@@ -1967,6 +1986,17 @@ def _field_el(f: dict, val: Any) -> Any:
             clearable=False,
             className="am-pf-select",
         )
+    if ft == "multiselect":
+        # tolerate a stale scalar value from older localStorage
+        mv = val if isinstance(val, list) else ([val] if val else [])
+        return dcc.Dropdown(
+            id=fid,
+            options=f.get("options", []),
+            value=mv,
+            multi=True,
+            placeholder=f.get("placeholder", ""),
+            className="am-pf-select am-pf-multi",
+        )
     if ft == "radio":
         return dbc.RadioItems(
             id=fid,
@@ -2159,6 +2189,76 @@ def _cancel_bubble() -> html.Div:
     )
 
 
+# ── Dynamic line / station options ────────────
+
+def _line_station_options(groups, edi_path):
+    """Return ``(line_options, station_options, {line: [stations]})`` for the
+    param modal's dependent dropdowns.
+
+    Derived from the loaded line groups (or by scanning the EDI path when
+    ungrouped). Station names are the EDI file stems, so no EDI parsing is
+    needed."""
+    from pathlib import Path
+    line_to_st: dict[str, list[str]] = {}
+    if groups:
+        for ln, files in groups.items():
+            line_to_st[str(ln)] = sorted(
+                {Path(str(f)).stem for f in (files or [])}
+            )
+    elif edi_path:
+        try:
+            p = Path(str(edi_path))
+            if p.is_dir():
+                stems = (sorted({f.stem for f in p.rglob("*.edi")})
+                         or sorted({f.stem for f in p.rglob("*.EDI")}))
+                if stems:
+                    line_to_st["(all)"] = stems
+            elif p.is_file():
+                line_to_st["(all)"] = [p.stem]
+        except Exception:  # noqa: BLE001
+            pass
+    line_opts = [
+        {"label": f"{ln}  ({len(sts)})", "value": ln}
+        for ln, sts in line_to_st.items()
+    ]
+    all_st = sorted({s for sts in line_to_st.values() for s in sts})
+    station_opts = [{"label": s, "value": s} for s in all_st]
+    return line_opts, station_opts, line_to_st
+
+
+def _station_options_for_lines(lines, line_to_st):
+    """Station dropdown options for the selected *lines* (all when empty)."""
+    line_to_st = line_to_st or {}
+    if lines:
+        sts = sorted({s for ln in lines for s in line_to_st.get(ln, [])})
+    else:
+        sts = sorted({s for vals in line_to_st.values() for s in vals})
+    return [{"label": s, "value": s} for s in sts]
+
+
+def _prepare_dynamic_fields(fields, groups, edi_path, preselect):
+    """Inject runtime options into the station field and auto-prepend a line
+    selector when the form filters stations and more than one line is loaded.
+
+    Returns ``(fields, {line: [stations]})``."""
+    line_opts, station_opts, line_to_st = _line_station_options(
+        groups, edi_path
+    )
+    has_stations = any(f.get("key") == "stations" for f in fields)
+    out: list = []
+    if has_stations and len(line_opts) >= 2:
+        out.append(dict(
+            _PLOT_FIELD_LINES,
+            options=line_opts,
+            default=[ln for ln in (preselect or []) if ln in line_to_st],
+        ))
+    for f in fields:
+        if f.get("key") == "stations" and f.get("type") == "multiselect":
+            f = dict(f, options=station_opts)
+        out.append(f)
+    return out, line_to_st
+
+
 # ── Callbacks ─────────────────────────────────
 
 def register_params(app) -> None:
@@ -2175,11 +2275,13 @@ def register_params(app) -> None:
         Output(
             IDs.PARAM_FORM_BODY, "children"
         ),
+        Output(IDs.STORE_LINE_STATIONS, "data"),
         Input(IDs.STORE_PENDING, "data"),
         State(IDs.STORE_INV_CONFIG, "data"),
+        State(IDs.STORE_EDI, "data"),
         prevent_initial_call=True,
     )
-    def _open_param_modal(pending, inv_config):
+    def _open_param_modal(pending, inv_config, edi_store):
         if not pending:
             raise PreventUpdate
         wf = pending.get("workflow")
@@ -2196,12 +2298,24 @@ def register_params(app) -> None:
             ),
             schema["title"],
         ]
+        # Loaded line groups + station names drive the line/station selectors.
+        _groups = (
+            (edi_store or {}).get("groups", {})
+            or pending.get("edi_groups", {}) or {}
+        )
+        _edi_path = (
+            (edi_store or {}).get("path", "")
+            or pending.get("edi_path", "")
+        )
+        _presel = pending.get("selected_lines", []) or []
         form: list = []
+        line_to_st: dict = {}
         wf_fields = schema.get("fields", [])
         if wf_fields:
-            form.extend(
-                _render_form(wf_fields, ic)
+            prepared, line_to_st = _prepare_dynamic_fields(
+                wf_fields, _groups, _edi_path, _presel
             )
+            form.extend(_render_form(prepared, ic))
         step_names = schema.get("steps", [])
         if step_names:
             if wf_fields:
@@ -2216,8 +2330,18 @@ def register_params(app) -> None:
             if acc:
                 form.append(acc)
         return (
-            True, title, schema["desc"], form
+            True, title, schema["desc"], form, line_to_st
         )
+
+    # Dependent dropdown: selected line(s) → station options.
+    @app.callback(
+        Output({"type": "am-pf", "key": "stations"}, "options"),
+        Input({"type": "am-pf", "key": "lines"}, "value"),
+        State(IDs.STORE_LINE_STATIONS, "data"),
+        prevent_initial_call=True,
+    )
+    def _stations_for_lines(lines, line_to_st):
+        return _station_options_for_lines(lines, line_to_st)
 
     # Submit: collect form → start job
     @app.callback(
@@ -2343,7 +2467,10 @@ def register_params(app) -> None:
             _fb_grp = pending.get("edi_groups", {})
             if _fb_grp:
                 _edi_use["groups"] = _fb_grp
-        _sel = pending.get("selected_lines", [])
+        # Line selection made *in the modal* wins, else any pre-selection
+        # carried over from the line picker.
+        _modal_lines = pf_vals.get("lines") or []
+        _sel = _modal_lines or pending.get("selected_lines", [])
         if _sel:
             _edi_use["selected_lines"] = _sel
         threading.Thread(
@@ -2365,7 +2492,8 @@ def register_params(app) -> None:
         # current run still gets its workflow via new_ic passed to the
         # thread above.
         persist_ic = {
-            k: v for k, v in new_ic.items() if k != "workflow"
+            k: v for k, v in new_ic.items()
+            if k not in ("workflow", "lines", "stations")
         }
         return (
             msgs,

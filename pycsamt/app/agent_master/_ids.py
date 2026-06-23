@@ -154,6 +154,7 @@ class IDs:
     PARAM_MODAL_DESC   = "am-param-modal-desc"
     BTN_PARAM_RUN      = "am-btn-param-run"
     BTN_PARAM_CANCEL   = "am-btn-param-cancel"
+    STORE_LINE_STATIONS = "am-store-line-stations"
 
     # ── line selector modal ───────────────
     MODAL_LINE_SEL      = "am-modal-line-sel"

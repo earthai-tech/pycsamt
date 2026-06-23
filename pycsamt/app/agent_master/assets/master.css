@@ -1572,6 +1572,25 @@ body {
   border-color: var(--srf1) !important;
   color: var(--fg) !important;
 }
+/* multi-select pills (line / station selectors) — legible in dark mode.
+   Covers both react-select class conventions so it stays safe across
+   dash-core-components versions. */
+.am-pf-multi .Select-value,
+.am-pf-multi .Select__multi-value {
+  background: var(--srf0) !important;
+  color: var(--fg) !important;
+  border: 1px solid var(--srf1) !important;
+  border-radius: 6px !important;
+}
+.am-pf-multi .Select-value-label,
+.am-pf-multi .Select__multi-value__label {
+  color: var(--fg) !important;
+}
+.am-pf-multi .Select-value-icon:hover,
+.am-pf-multi .Select__multi-value__remove:hover {
+  background: var(--red) !important;
+  color: #fff !important;
+}
 .am-pf-radio .form-check-label {
   font-size: 13px;
   color: var(--fg);

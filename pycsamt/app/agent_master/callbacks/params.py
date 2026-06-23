@@ -90,6 +90,33 @@ _FID_RPT_FMT    = {
     "key": "report_format",
 }
 
+# ── Plotting-task fields (workflow-level → config → PlotAgent) ──
+_FID_PLOT_STATIONS  = {"type": "am-pf", "key": "stations"}
+_FID_PLOT_COMPONENT = {"type": "am-pf", "key": "components"}
+_FID_PLOT_PMIN      = {"type": "am-pf", "key": "period_min"}
+_FID_PLOT_PMAX      = {"type": "am-pf", "key": "period_max"}
+_FID_PLOT_PUB       = {"type": "am-pf", "key": "publication"}
+_FID_PLOT_ERRBAR    = {"type": "am-pf", "key": "errorbar"}
+_FID_PLOT_COLORBY   = {"type": "am-pf", "key": "color_by"}
+_FID_PLOT_SCALE     = {"type": "am-pf", "key": "scale"}
+_FID_PLOT_VIEW      = {"type": "am-pf", "key": "view"}
+_FID_PLOT_PARTS     = {"type": "am-pf", "key": "parts"}
+_FID_PLOT_CONV      = {"type": "am-pf", "key": "convention"}
+_FID_PLOT_PERIOD    = {"type": "am-pf", "key": "period"}
+_FID_PLOT_METHOD    = {"type": "am-pf", "key": "method"}
+_FID_PLOT_SORTBY    = {"type": "am-pf", "key": "sort_by"}
+_FID_SKEW_TH        = {"type": "am-pf", "key": "skew_th"}
+_FID_ELLIPT_TH      = {"type": "am-pf", "key": "ellipt_th"}
+# ── Data / IO tool fields (Wave C) ──────────────────────────────
+_FID_DATUM          = {"type": "am-pf", "key": "datum"}
+_FID_ZONE           = {"type": "am-pf", "key": "zone"}
+_FID_HEMISPHERE     = {"type": "am-pf", "key": "hemisphere"}
+_FID_API            = {"type": "am-pf", "key": "api"}
+_FID_FORMAT         = {"type": "am-pf", "key": "format"}
+_FID_OUTDIR         = {"type": "am-pf", "key": "output_dir"}
+_FID_PLOTS          = {"type": "am-pf", "key": "plots"}
+_FID_DPI            = {"type": "am-pf", "key": "dpi"}
+
 # ── Reusable step section definitions ────────
 
 _STEP_SECTIONS: dict[str, dict] = {
@@ -1247,6 +1274,519 @@ _SCHEMAS: dict[str, dict] = {
 # aliases
 _SCHEMAS["inv1d"] = _SCHEMAS["ai_inversion"]
 _SCHEMAS["interpretation"] = _SCHEMAS["interpret"]
+
+
+# ── Plotting tasks (shared field fragments) ───────────────────────────────
+_PLOT_FIELD_STATIONS = {
+    "id": _FID_PLOT_STATIONS,
+    "key": "stations",
+    "label": "Stations",
+    "type": "text",
+    "default": "",
+    "placeholder": "blank = all; e.g. 22-10U, 22-11A",
+    "help": (
+        "Comma-separated station names to include. Leave blank to plot "
+        "every station in the dataset."
+    ),
+}
+_PLOT_FIELD_PMIN = {
+    "id": _FID_PLOT_PMIN, "key": "period_min",
+    "label": "Min period (s)", "type": "number",
+    "min": 1e-6, "max": 1e5, "step": None, "default": None,
+    "help": "Optional lower period bound. Blank = no limit.",
+}
+_PLOT_FIELD_PMAX = {
+    "id": _FID_PLOT_PMAX, "key": "period_max",
+    "label": "Max period (s)", "type": "number",
+    "min": 1e-6, "max": 1e5, "step": None, "default": None,
+    "help": "Optional upper period bound. Blank = no limit.",
+}
+_PLOT_FIELD_PUB = {
+    "id": _FID_PLOT_PUB, "key": "publication",
+    "label": "Publication style", "type": "radio",
+    "options": [
+        {"label": "Standard", "value": "off"},
+        {"label": "Publication", "value": "on"},
+    ],
+    "inline": True, "default": "off",
+    "help": "Larger fonts, tighter layout and 300-dpi-ready styling.",
+}
+_PLOT_FIELD_COMPONENTS = {
+    "id": _FID_PLOT_COMPONENT, "key": "components",
+    "label": "Components", "type": "select",
+    "options": [
+        {"label": "xy + yx", "value": "xy,yx"},
+        {"label": "xy", "value": "xy"},
+        {"label": "yx", "value": "yx"},
+    ],
+    "default": "xy,yx",
+    "help": "Off-diagonal impedance components to display.",
+}
+
+_SCHEMAS["rhophi"] = {
+    "title": "Rho/Phi Sounding Curves",
+    "icon": "bi-graph-up",
+    "color": "var(--blue)",
+    "desc": (
+        "Apparent-resistivity and phase versus period, per station. "
+        "Pick the stations and components to view."
+    ),
+    "fields": [
+        _PLOT_FIELD_STATIONS,
+        dict(_PLOT_FIELD_COMPONENTS,
+             options=[
+                 {"label": "xy + yx", "value": "xy,yx"},
+                 {"label": "xy", "value": "xy"},
+                 {"label": "yx", "value": "yx"},
+                 {"label": "determinant", "value": "det"},
+             ]),
+        {
+            "id": _FID_PLOT_ERRBAR, "key": "errorbar",
+            "label": "Error bars", "type": "radio",
+            "options": [
+                {"label": "On", "value": "on"},
+                {"label": "Off", "value": "off"},
+            ],
+            "inline": True, "default": "on",
+            "help": "Show measurement error bars when available.",
+        },
+        _PLOT_FIELD_PMIN,
+        _PLOT_FIELD_PMAX,
+        _PLOT_FIELD_PUB,
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["phase_psection"] = {
+    "title": "Phase Pseudo-section",
+    "icon": "bi-grid-3x3",
+    "color": "var(--mauve)",
+    "desc": (
+        "Scalar phase (deg) as a station-versus-period pseudo-section. "
+        "One panel per component."
+    ),
+    "fields": [
+        _PLOT_FIELD_COMPONENTS,
+        _PLOT_FIELD_STATIONS,
+        _PLOT_FIELD_PMIN,
+        _PLOT_FIELD_PMAX,
+        _PLOT_FIELD_PUB,
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["pt_psection"] = {
+    "title": "Phase-tensor (Φ) Pseudo-section",
+    "icon": "bi-circle-half",
+    "color": "var(--green)",
+    "desc": (
+        "Phase-tensor ellipses per station and period, coloured by an "
+        "invariant. Choose the colour mapping and ellipse scale."
+    ),
+    "fields": [
+        _PLOT_FIELD_STATIONS,
+        {
+            "id": _FID_PLOT_COLORBY, "key": "color_by",
+            "label": "Colour by", "type": "select",
+            "options": [
+                {"label": "Skew (β)", "value": "skew"},
+                {"label": "φ max", "value": "phimax"},
+                {"label": "φ min", "value": "phimin"},
+                {"label": "Ellipticity", "value": "ellipticity"},
+            ],
+            "default": "skew",
+            "help": "Phase-tensor invariant used for the fill colour.",
+        },
+        {
+            "id": _FID_PLOT_SCALE, "key": "scale",
+            "label": "Ellipse scale", "type": "number",
+            "min": 0.1, "max": 100.0, "step": None, "default": None,
+            "help": "Optional ellipse size factor. Blank = auto.",
+        },
+        _PLOT_FIELD_PMIN,
+        _PLOT_FIELD_PMAX,
+        _PLOT_FIELD_PUB,
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["strike"] = {
+    "title": "Strike Analyzer",
+    "icon": "bi-compass",
+    "color": "var(--peach)",
+    "desc": (
+        "Estimate geoelectric strike per station (with a rose/analysis "
+        "figure). Note the inherent 90° ambiguity."
+    ),
+    "fields": [
+        {
+            "id": _FID_PLOT_METHOD, "key": "method",
+            "label": "Method", "type": "select",
+            "options": [
+                {"label": "Consensus", "value": "consensus"},
+                {"label": "Impedance sweep", "value": "sweep"},
+                {"label": "Phase tensor", "value": "pt"},
+            ],
+            "default": "consensus",
+            "help": "Strike estimator.",
+        },
+        _PLOT_FIELD_STATIONS,
+        _PLOT_FIELD_PMIN,
+        _PLOT_FIELD_PMAX,
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["dimensionality"] = {
+    "title": "Dimensionality Classifier",
+    "icon": "bi-diagram-2",
+    "color": "var(--mauve)",
+    "desc": (
+        "Classify each station × period as 1-D / 2-D / 3-D from phase-tensor "
+        "skew and ellipticity, with a pseudo-section figure."
+    ),
+    "fields": [
+        {
+            "id": _FID_SKEW_TH, "key": "skew_th",
+            "label": "Skew threshold (°)", "type": "number",
+            "min": 0.1, "max": 30.0, "step": None, "default": 3.0,
+            "help": "|β| above this flags 3-D.",
+        },
+        {
+            "id": _FID_ELLIPT_TH, "key": "ellipt_th",
+            "label": "Ellipticity threshold", "type": "number",
+            "min": 0.01, "max": 1.0, "step": None, "default": 0.2,
+            "help": "Below this is treated as 1-D.",
+        },
+        _PLOT_FIELD_STATIONS,
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["validator"] = {
+    "title": "EDI Validator",
+    "icon": "bi-check2-square",
+    "color": "var(--green)",
+    "desc": (
+        "Per-station quality checklist — flags missing impedance, missing "
+        "coordinates and low QC scores."
+    ),
+    "fields": [
+        _PLOT_FIELD_STATIONS,
+    ],
+    "steps": [],
+}
+
+# ── Data / IO tools (Wave C) ───────────────────────────────────────────────
+_SCHEMAS["coords"] = {
+    "title": "Coordinate Transformer",
+    "icon": "bi-pin-map",
+    "color": "var(--sapphire)",
+    "desc": (
+        "Transform each station's geographic latitude/longitude to UTM "
+        "easting/northing. The zone is auto-detected unless overridden."
+    ),
+    "fields": [
+        {
+            "id": _FID_DATUM, "key": "datum",
+            "label": "Datum", "type": "select",
+            "options": [
+                {"label": "WGS84", "value": "WGS84"},
+                {"label": "NAD83", "value": "NAD83"},
+                {"label": "GRS80", "value": "GRS80"},
+            ],
+            "default": "WGS84",
+            "help": "Geodetic datum for the UTM projection.",
+        },
+        {
+            "id": _FID_ZONE, "key": "zone",
+            "label": "UTM zone (0 = auto)", "type": "number",
+            "min": 0, "max": 60, "step": 1, "default": 0,
+            "help": "Force a UTM zone, or leave 0 to detect from longitude.",
+        },
+        {
+            "id": _FID_HEMISPHERE, "key": "hemisphere",
+            "label": "Hemisphere", "type": "radio",
+            "options": [
+                {"label": "North", "value": "N"},
+                {"label": "South", "value": "S"},
+            ],
+            "inline": True, "default": "N",
+            "help": "Northern or southern hemisphere.",
+        },
+        _PLOT_FIELD_STATIONS,
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["elevation"] = {
+    "title": "Elevation Enrichment",
+    "icon": "bi-graph-up",
+    "color": "var(--teal)",
+    "desc": (
+        "Fetch ground elevation for every station with coordinates from an "
+        "open web service. Requires an internet connection."
+    ),
+    "fields": [
+        {
+            "id": _FID_API, "key": "api",
+            "label": "Elevation service", "type": "radio",
+            "options": [
+                {"label": "Open-Meteo", "value": "open_meteo"},
+                {"label": "Open-Topo-Data", "value": "open_topo_data"},
+            ],
+            "inline": True, "default": "open_meteo",
+            "help": "Public elevation API queried over the network.",
+        },
+        _PLOT_FIELD_STATIONS,
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["converter"] = {
+    "title": "Format Converter",
+    "icon": "bi-arrow-left-right",
+    "color": "var(--yellow)",
+    "desc": (
+        "Re-export the loaded survey. CSV/JSON write per-station metadata; "
+        "EDI re-writes one .edi per station. Files are saved to the folder "
+        "you choose below."
+    ),
+    "fields": [
+        {
+            "id": _FID_FORMAT, "key": "format",
+            "label": "Output format", "type": "select",
+            "options": [
+                {"label": "CSV  (station metadata)", "value": "csv"},
+                {"label": "JSON (station metadata)", "value": "json"},
+                {"label": "EDI  (re-export)", "value": "edi"},
+            ],
+            "default": "csv",
+            "help": "What to write for each station.",
+        },
+        {
+            "id": _FID_OUTDIR, "key": "output_dir",
+            "label": "Output folder", "type": "text",
+            "default": "",
+            "placeholder": "blank = ~/pycsamt_export",
+            "help": "Destination folder (created if missing).",
+        },
+        _PLOT_FIELD_STATIONS,
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["batch_export"] = {
+    "title": "Batch Plot Export",
+    "icon": "bi-images",
+    "color": "var(--mauve)",
+    "desc": (
+        "Render a bundle of standard plots from the loaded data and save "
+        "them to a folder at the chosen format and resolution."
+    ),
+    "fields": [
+        {
+            "id": _FID_PLOTS, "key": "plots",
+            "label": "Plot bundle", "type": "select",
+            "options": [
+                {"label": "Overview (ρ/φ + phase + Φ section)",
+                 "value": "overview"},
+                {"label": "Phase tensor (Φ section + map)",
+                 "value": "phase_tensor"},
+                {"label": "All of the above", "value": "all"},
+                {"label": "ρ/φ sounding curves", "value": "rhophi"},
+                {"label": "Phase pseudo-section", "value": "phase_psection"},
+                {"label": "Phase-tensor (Φ) pseudo-section",
+                 "value": "pt_psection"},
+                {"label": "Phase-tensor map", "value": "pt_map"},
+            ],
+            "default": "overview",
+            "help": "Which standard plots to render and save.",
+        },
+        {
+            "id": _FID_FORMAT, "key": "format",
+            "label": "Image format", "type": "select",
+            "options": [
+                {"label": "PNG", "value": "png"},
+                {"label": "PDF", "value": "pdf"},
+                {"label": "SVG", "value": "svg"},
+                {"label": "TIFF", "value": "tiff"},
+            ],
+            "default": "png",
+            "help": "Saved figure format.",
+        },
+        {
+            "id": _FID_DPI, "key": "dpi",
+            "label": "Resolution (dpi)", "type": "number",
+            "min": 72, "max": 600, "step": 1, "default": 150,
+            "help": "Raster resolution (72–600).",
+        },
+        {
+            "id": _FID_OUTDIR, "key": "output_dir",
+            "label": "Output folder", "type": "text",
+            "default": "",
+            "placeholder": "blank = ~/pycsamt_figures",
+            "help": "Destination folder (created if missing).",
+        },
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["station_response"] = {
+    "title": "Station Response Inspector",
+    "icon": "bi-activity",
+    "color": "var(--blue)",
+    "desc": (
+        "Per-station impedance response (apparent resistivity & phase with "
+        "the Bode-predicted phase) for distortion checks."
+    ),
+    "fields": [
+        dict(_PLOT_FIELD_STATIONS,
+             label="Station",
+             help="Station to inspect. Blank = first station."),
+        dict(_PLOT_FIELD_COMPONENTS,
+             options=[
+                 {"label": "xy + yx", "value": "xy,yx"},
+                 {"label": "xy", "value": "xy"},
+                 {"label": "yx", "value": "yx"},
+             ]),
+        _PLOT_FIELD_PMIN,
+        _PLOT_FIELD_PMAX,
+        _PLOT_FIELD_PUB,
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["strike_profile"] = {
+    "title": "Strike Profile Viewer",
+    "icon": "bi-bar-chart-steps",
+    "color": "var(--peach)",
+    "desc": (
+        "Geoelectric strike angle versus station position along the line, "
+        "with an inter-quartile ribbon."
+    ),
+    "fields": [
+        {
+            "id": _FID_PLOT_METHOD, "key": "method",
+            "label": "Strike method", "type": "select",
+            "options": [
+                {"label": "Consensus", "value": "consensus"},
+                {"label": "Impedance sweep", "value": "sweep"},
+                {"label": "Phase tensor", "value": "pt"},
+            ],
+            "default": "consensus",
+            "help": "Strike estimator to drive the profile.",
+        },
+        {
+            "id": _FID_PLOT_SORTBY, "key": "sort_by",
+            "label": "Order stations by", "type": "select",
+            "options": [
+                {"label": "Auto", "value": "auto"},
+                {"label": "Longitude", "value": "lon"},
+                {"label": "Latitude", "value": "lat"},
+                {"label": "Name", "value": "name"},
+            ],
+            "default": "auto",
+            "help": "Horizontal ordering of stations along the profile.",
+        },
+        _PLOT_FIELD_STATIONS,
+        _PLOT_FIELD_PMIN,
+        _PLOT_FIELD_PMAX,
+        _PLOT_FIELD_PUB,
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["phase_tensor_map"] = {
+    "title": "Phase-tensor Map",
+    "icon": "bi-geo-alt",
+    "color": "var(--green)",
+    "desc": (
+        "Geographic map of phase-tensor ellipses at one period, coloured "
+        "by an invariant (tipper arrows overlaid when available)."
+    ),
+    "fields": [
+        {
+            "id": _FID_PLOT_PERIOD, "key": "period",
+            "label": "Period (s)", "type": "number",
+            "min": 1e-6, "max": 1e5, "step": None, "default": 1.0,
+            "help": "Period at which to draw the ellipse map.",
+        },
+        {
+            "id": _FID_PLOT_COLORBY, "key": "color_by",
+            "label": "Colour by", "type": "select",
+            "options": [
+                {"label": "Skew (β)", "value": "skew"},
+                {"label": "φ max", "value": "phimax"},
+                {"label": "φ min", "value": "phimin"},
+                {"label": "Ellipticity", "value": "ellipticity"},
+            ],
+            "default": "skew",
+            "help": "Phase-tensor invariant used for the fill colour.",
+        },
+        {
+            "id": _FID_PLOT_SCALE, "key": "scale",
+            "label": "Ellipse scale", "type": "number",
+            "min": 0.1, "max": 100.0, "step": None, "default": None,
+            "help": "Optional ellipse size factor. Blank = auto.",
+        },
+        _PLOT_FIELD_STATIONS,
+        _PLOT_FIELD_PUB,
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["tipper_plot"] = {
+    "title": "Tipper Plot",
+    "icon": "bi-arrow-up-right",
+    "color": "var(--peach)",
+    "desc": (
+        "Vertical-field tipper: component curves (Tx/Ty) or induction "
+        "arrows. Only available when the data contains a tipper."
+    ),
+    "fields": [
+        {
+            "id": _FID_PLOT_VIEW, "key": "view",
+            "label": "View", "type": "radio",
+            "options": [
+                {"label": "Components (Tx/Ty)", "value": "components"},
+                {"label": "Induction arrows", "value": "arrows"},
+            ],
+            "inline": True, "default": "components",
+            "help": "Component curves vs period, or a map of induction arrows.",
+        },
+        _PLOT_FIELD_STATIONS,
+        {
+            "id": _FID_PLOT_PARTS, "key": "parts",
+            "label": "Parts (components view)", "type": "select",
+            "options": [
+                {"label": "real + imaginary", "value": "real,imag"},
+                {"label": "real", "value": "real"},
+                {"label": "imaginary", "value": "imag"},
+            ],
+            "default": "real,imag",
+            "help": "Real / imaginary tipper parts to draw.",
+        },
+        {
+            "id": _FID_PLOT_CONV, "key": "convention",
+            "label": "Arrow convention (arrows view)", "type": "select",
+            "options": [
+                {"label": "Parkinson", "value": "park"},
+                {"label": "Wiese", "value": "wiese"},
+            ],
+            "default": "park",
+            "help": "Sign convention for induction arrows.",
+        },
+        {
+            "id": _FID_PLOT_PERIOD, "key": "period",
+            "label": "Period for arrows (s)", "type": "number",
+            "min": 1e-6, "max": 1e5, "step": None, "default": 1.0,
+            "help": "Period at which to draw induction arrows.",
+        },
+        _PLOT_FIELD_PUB,
+    ],
+    "steps": [],
+}
 
 
 # ── Field & section renderers ─────────────────

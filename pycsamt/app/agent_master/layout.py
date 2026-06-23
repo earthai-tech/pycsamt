@@ -279,51 +279,28 @@ def _sidebar() -> html.Div:
                 ],
                 className="am-sidebar-header",
             ),
-            html.Button(
-                [
-                    html.I(
-                        className=(
-                            "bi bi-plus-circle me-2"
-                        ),
-                    ),
-                    "New Chat",
-                ],
-                id=IDs.BTN_NEW_CHAT,
-                className="am-sidebar-new-chat",
-                n_clicks=0,
-            ),
-            # ── segmented switcher (Claude-style) ──────────
+            # ── segmented switcher at the top (Chat / Session) ──
             html.Div(
                 [
                     html.Button(
                         [
                             html.I(className="bi bi-chat-square-text"),
-                            html.Span("Sessions"),
+                            html.Span("Chat"),
                         ],
-                        id=IDs.SEG_SESSIONS,
+                        id=IDs.SEG_CHAT,
                         className="am-seg-btn am-seg-active",
                         n_clicks=0,
-                        title="Saved chat sessions",
+                        title="Current chat & pinned messages",
                     ),
                     html.Button(
                         [
-                            html.I(className="bi bi-activity"),
-                            html.Span("Runs"),
+                            html.I(className="bi bi-clock-history"),
+                            html.Span("Session"),
                         ],
-                        id=IDs.SEG_RUNS,
+                        id=IDs.SEG_SESSION,
                         className="am-seg-btn",
                         n_clicks=0,
-                        title="Workflow run history",
-                    ),
-                    html.Button(
-                        [
-                            html.I(className="bi bi-images"),
-                            html.Span("Figures"),
-                        ],
-                        id=IDs.SEG_FIGS,
-                        className="am-seg-btn",
-                        n_clicks=0,
-                        title="Generated figures",
+                        title="Saved sessions & recent runs",
                     ),
                 ],
                 className="am-sidebar-segmented",
@@ -331,9 +308,18 @@ def _sidebar() -> html.Div:
             # ── tab panels (only the active one is shown) ──
             html.Div(
                 [
-                    # Sessions panel: Pinned (compact) + history
+                    # Chat panel: + New Chat, then pinned messages
                     html.Div(
                         [
+                            html.Button(
+                                [
+                                    html.I(className="bi bi-plus-lg"),
+                                    html.Span("New Chat"),
+                                ],
+                                id=IDs.BTN_NEW_CHAT,
+                                className="am-sb-add-btn",
+                                n_clicks=0,
+                            ),
                             html.Div(
                                 "Pinned",
                                 className="am-sidebar-section-lbl",
@@ -345,6 +331,22 @@ def _sidebar() -> html.Div:
                                 ),
                                 id=IDs.SIDEBAR_PINS,
                                 className="am-sidebar-pins",
+                            ),
+                        ],
+                        id=IDs.PANEL_CHAT,
+                        className="am-tab-panel am-tab-active",
+                    ),
+                    # Session panel: + New Session, sessions, recent runs
+                    html.Div(
+                        [
+                            html.Button(
+                                [
+                                    html.I(className="bi bi-plus-lg"),
+                                    html.Span("New Session"),
+                                ],
+                                id=IDs.BTN_NEW_SESSION,
+                                className="am-sb-add-btn",
+                                n_clicks=0,
                             ),
                             html.Div(
                                 "Sessions",
@@ -358,40 +360,39 @@ def _sidebar() -> html.Div:
                                 id=IDs.SIDEBAR_HISTORY,
                                 className="am-sidebar-history",
                             ),
+                            html.Div(
+                                "Recent runs",
+                                className="am-sidebar-section-lbl",
+                            ),
+                            html.Div(
+                                html.Div(
+                                    "No workflows run yet.",
+                                    className="am-sidebar-empty",
+                                ),
+                                id=IDs.SIDEBAR_RUNS,
+                                className="am-sidebar-runs",
+                            ),
                         ],
-                        id=IDs.PANEL_SESSIONS,
-                        className="am-tab-panel am-tab-active",
-                    ),
-                    # Runs panel
-                    html.Div(
-                        html.Div(
-                            html.Div(
-                                "No workflows run yet.",
-                                className="am-sidebar-empty",
-                            ),
-                            id=IDs.SIDEBAR_RUNS,
-                            className="am-sidebar-runs",
-                        ),
-                        id=IDs.PANEL_RUNS,
-                        className="am-tab-panel",
-                    ),
-                    # Figures panel
-                    html.Div(
-                        html.Div(
-                            html.Div(
-                                "No figures yet.",
-                                className="am-sidebar-empty",
-                            ),
-                            id=IDs.SIDEBAR_FIGS,
-                            className="am-sidebar-figs",
-                        ),
-                        id=IDs.PANEL_FIGS,
+                        id=IDs.PANEL_SESSION,
                         className="am-tab-panel",
                     ),
                 ],
                 className="am-sidebar-panels",
             ),
-            dcc.Store(id=IDs.STORE_SB_TAB, data="sessions"),
+            # ── Figures — fixed below, visible on every tab ──
+            html.Div(
+                "Figures",
+                className="am-sidebar-section-lbl am-figs-title",
+            ),
+            html.Div(
+                html.Div(
+                    "No figures yet.",
+                    className="am-sidebar-empty",
+                ),
+                id=IDs.SIDEBAR_FIGS,
+                className="am-sidebar-figs",
+            ),
+            dcc.Store(id=IDs.STORE_SB_TAB, data="chat"),
         ],
     )
 

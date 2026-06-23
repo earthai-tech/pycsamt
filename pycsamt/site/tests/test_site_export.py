@@ -181,3 +181,40 @@ def test_template_without_extension_appends_dot_edi(tmp_path: Path) -> None:
     paths = xp.write_sites(eds, outdir, template="X_{station}")
     assert len(paths) == 1
     assert paths[0].name == "X_N01.edi"
+
+
+def test_write_sites_disambiguates_duplicate_station_names(
+    tmp_path: Path,
+) -> None:
+    """Sites sharing a station name must not overwrite each other.
+
+    Regression: a collision used to silently write a single file while
+    returning one path per input, destroying all but the last station —
+    the re-loaded export then failed with "no valid impedance".
+    """
+    eds = [EdiToFile("S"), EdiToFile("S"), EdiToFile("S")]
+    outdir = tmp_path / "dups"
+    paths = xp.write_sites(eds, outdir, exist_ok=True)
+    assert len(paths) == 3
+    # every input must produce a distinct file actually on disk
+    on_disk = sorted(p.name for p in outdir.glob("*.edi"))
+    assert len(on_disk) == 3
+    assert len(set(paths)) == 3
+
+
+def test_write_sites_empty_station_name_is_not_stem_less(
+    tmp_path: Path,
+) -> None:
+    """An empty station name must not render to a stem-less ".edi".
+
+    Regression: such files are hidden/ignored by ``ensure_sites``, so the
+    export loaded back as zero stations and corrupted the session.
+    """
+    eds = [EdiToFile(""), EdiToFile("")]
+    outdir = tmp_path / "empties"
+    paths = xp.write_sites(eds, outdir, exist_ok=True)
+    assert len(paths) == 2
+    names = sorted(p.name for p in paths)
+    assert ".edi" not in names          # no stem-less file
+    assert all(len(n) > len(".edi") for n in names)
+    assert len(sorted(outdir.glob("*.edi"))) == 2

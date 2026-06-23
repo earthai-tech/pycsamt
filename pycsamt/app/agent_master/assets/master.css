@@ -1660,13 +1660,15 @@ body {
   border-color: var(--blue);
 }
 
-/* ── segmented switcher (Sessions / Runs / Figures) ───── */
+/* ── segmented switcher (Chat / Session) ───── */
 .am-sidebar-segmented {
   display: flex;
-  gap: 2px;
-  margin: 8px 8px 4px;
+  gap: 3px;
+  margin: 10px 8px 6px;
   padding: 3px;
-  background: var(--srf0);
+  /* subtle track that blends into the sidebar instead of a grey box */
+  background: var(--mantle);
+  border: 1px solid var(--srf0);
   border-radius: 9px;
   flex-shrink: 0;
 }
@@ -1675,9 +1677,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 6px;
   padding: 6px 4px;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--sub0);
   background: transparent;
@@ -1699,11 +1701,42 @@ body {
 .am-seg-btn:hover { color: var(--txt); }
 .am-seg-btn.am-seg-active {
   color: var(--txt);
-  background: var(--surface);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  background: var(--base);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+}
+.am-seg-btn.am-seg-active i { color: var(--blue); }
+
+/* "+ New Chat / New Session" add buttons under each tab */
+.am-sb-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: calc(100% - 16px);
+  margin: 4px 8px 8px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--txt);
+  background: transparent;
+  border: 1px solid var(--srf1);
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast),
+    color var(--t-fast);
+}
+.am-sb-add-btn i { font-size: 13px; }
+.am-sb-add-btn:hover {
+  background: var(--srf0);
+  border-color: var(--blue);
+  color: var(--blue);
 }
 
-/* panels area — only the active panel is shown */
+/* panels area — only the active panel is shown; it scrolls internally */
 .am-sidebar-panels {
   flex: 1 1 auto;
   display: flex;
@@ -1716,7 +1749,8 @@ body {
   flex: 1 1 auto;
   flex-direction: column;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .am-tab-panel.am-tab-active {
   display: flex;
@@ -1742,12 +1776,10 @@ body {
   white-space: nowrap;
 }
 
-/* history scroll area — the primary, flexible list */
+/* history list — natural height; the tab panel scrolls */
 .am-sidebar-history {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-height: 60px;
+  flex: 0 0 auto;
+  overflow: visible;
 }
 
 /* history item button */
@@ -1783,17 +1815,21 @@ body {
 }
 
 /* figures thumbnail grid */
+/* Figures — fixed section below the panels, always visible */
+.am-figs-title {
+  border-top: 1px solid var(--srf0);
+  margin-top: 2px;
+}
 .am-sidebar-figs {
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
   gap: 6px;
-  padding: 6px 8px 12px;
+  padding: 4px 8px 12px;
   overflow-y: auto;
   overflow-x: hidden;
-  /* fills its tab panel and scrolls internally */
-  flex: 1 1 auto;
-  min-height: 0;
+  flex-shrink: 0;
+  max-height: 168px;
 }
 .am-sb-fig-item {
   width: 68px;
@@ -1965,6 +2001,22 @@ body {
 .am-root-light .am-sidebar-new-chat {
   color: var(--txt);
   border-color: var(--srf1);
+}
+/* lighter segmented switcher in light mode (no heavy grey box) */
+.am-root-light .am-sidebar-segmented {
+  background: var(--base);
+  border-color: var(--srf0);
+}
+.am-root-light .am-seg-btn.am-seg-active {
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.10);
+}
+.am-root-light .am-sb-add-btn {
+  color: var(--txt);
+  border-color: var(--srf1);
+}
+.am-root-light .am-figs-title {
+  border-top-color: var(--srf0);
 }
 .am-root-light .am-history-item:hover {
   background: var(--srf0);
@@ -2233,12 +2285,8 @@ body {
   gap: 4px;
   margin-bottom: 6px;
   padding: 0 8px;
-  /* bounded with internal scroll so a long pin list can't push the
-     sections below (Recent runs, Figures) off the clipped sidebar */
-  flex-shrink: 0;
-  max-height: 112px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  /* natural height — the Chat tab panel provides the scroll */
+  flex: 0 0 auto;
 }
 .am-pin-item {
   display: flex;
@@ -2438,12 +2486,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 6px 8px 12px;
-  /* fills its tab panel and scrolls internally */
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  padding: 0 8px 12px;
+  /* natural height — the Session tab panel provides the scroll */
+  flex: 0 0 auto;
 }
 .am-run-item {
   display: flex;

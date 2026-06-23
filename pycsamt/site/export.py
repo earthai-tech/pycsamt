@@ -194,11 +194,26 @@ def write_sites(
     out_root.mkdir(parents=True, exist_ok=True)
 
     written: list[tuple[int, Any, Path]] = []
+    used: set[str] = set()
     for i, ed in enumerate(_iter_any_sites(sites)):
         ctx = _context_for(ed, i)
-        name = _render_name(template, ctx) or "site.edi"
-        if not name.lower().endswith(".edi"):
-            name = f"{name}.edi"
+        name = _render_name(template, ctx) or ""
+        # Derive a non-empty stem. An empty station name would render to
+        # ".edi" (a stem-less, often hidden file) — ``ensure_sites`` then
+        # ignores it, so the export silently loads back as zero stations
+        # ("No stations with valid impedance data found"). Fall back to a
+        # positional name so every site lands in a real file.
+        stem = name[:-4] if name.lower().endswith(".edi") else name
+        stem = stem.strip()
+        if not stem:
+            stem = f"site_{i:03d}"
+        name = f"{stem}.edi"
+        # Disambiguate collisions. Two sites sharing a station name would
+        # otherwise overwrite each other on disk (silent data loss while
+        # still returning one path per input), corrupting the dataset.
+        if name in used:
+            name = f"{stem}_{i:03d}.edi"
+        used.add(name)
         dest = out_root / name
         if dest.exists() and not exist_ok:
             raise FileExistsError(dest)
@@ -401,21 +416,21 @@ def _write_via_backend(ed: Any, path: Path) -> None:
     try:
         ed.write(str(path))
         return
-    except:
+    except Exception:
         pass
 
     # or `to_file(path)`
     try:
         ed.to_file(str(path))
         return
-    except:
+    except Exception:
         pass
 
     # or `save(path)`
     try:
         ed.save(str(path))
         return
-    except:
+    except Exception:
         pass
 
     raise RuntimeError("Cannot write EDI file for site")

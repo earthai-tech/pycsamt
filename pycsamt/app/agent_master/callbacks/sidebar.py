@@ -116,41 +116,35 @@ def register_sidebar(app) -> None:
         prevent_initial_call=True,
     )
 
-    # ── segmented switcher (Sessions / Runs / Figures) ──
+    # ── segmented switcher (Chat / Session) ──
     app.clientside_callback(
         """
-        function(nS, nR, nF) {
+        function(nC, nS) {
             var ctx = window.dash_clientside.callback_context;
             var trig = (ctx && ctx.triggered && ctx.triggered.length)
                 ? ctx.triggered[0].prop_id : "";
-            var tab = "sessions";
-            if (trig.indexOf("am-seg-runs") === 0) tab = "runs";
-            else if (trig.indexOf("am-seg-figs") === 0) tab = "figs";
+            var tab = (trig.indexOf("am-seg-session") === 0)
+                ? "session" : "chat";
             var off = "am-tab-panel";
             var on = "am-tab-panel am-tab-active";
             var seg = "am-seg-btn";
             var segA = "am-seg-btn am-seg-active";
             return [
-                tab === "sessions" ? on : off,
-                tab === "runs" ? on : off,
-                tab === "figs" ? on : off,
-                tab === "sessions" ? segA : seg,
-                tab === "runs" ? segA : seg,
-                tab === "figs" ? segA : seg,
+                tab === "chat" ? on : off,
+                tab === "session" ? on : off,
+                tab === "chat" ? segA : seg,
+                tab === "session" ? segA : seg,
                 tab
             ];
         }
         """,
-        Output(IDs.PANEL_SESSIONS, "className"),
-        Output(IDs.PANEL_RUNS, "className"),
-        Output(IDs.PANEL_FIGS, "className"),
-        Output(IDs.SEG_SESSIONS, "className"),
-        Output(IDs.SEG_RUNS, "className"),
-        Output(IDs.SEG_FIGS, "className"),
+        Output(IDs.PANEL_CHAT, "className"),
+        Output(IDs.PANEL_SESSION, "className"),
+        Output(IDs.SEG_CHAT, "className"),
+        Output(IDs.SEG_SESSION, "className"),
         Output(IDs.STORE_SB_TAB, "data"),
-        Input(IDs.SEG_SESSIONS, "n_clicks"),
-        Input(IDs.SEG_RUNS, "n_clicks"),
-        Input(IDs.SEG_FIGS, "n_clicks"),
+        Input(IDs.SEG_CHAT, "n_clicks"),
+        Input(IDs.SEG_SESSION, "n_clicks"),
         prevent_initial_call=True,
     )
 
@@ -182,10 +176,11 @@ def register_sidebar(app) -> None:
             allow_duplicate=True,
         ),
         Input(IDs.BTN_NEW_CHAT, "n_clicks"),
+        Input(IDs.BTN_NEW_SESSION, "n_clicks"),
         prevent_initial_call=True,
     )
-    def _new_chat(n):
-        if not n:
+    def _new_chat(n_chat, n_session):
+        if not n_chat and not n_session:
             raise PreventUpdate
         # clear the assistant session so a new chat starts context-free
         try:

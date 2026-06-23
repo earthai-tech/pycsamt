@@ -76,6 +76,22 @@ WORKFLOW_DESCRIPTIONS: dict[str, str] = {
     # --- agent-focused ---
     "code_gen":           "Generate a reproducible Python script",
     "denoise":            "Data denoising",
+    # --- plotting ---
+    "rhophi":             "Apparent-resistivity / phase sounding curves",
+    "phase_psection":     "Scalar phase pseudo-section",
+    "pt_psection":        "Phase-tensor (Phi) ellipse pseudo-section",
+    "tipper_plot":        "Tipper components / induction-arrow plot",
+    "phase_tensor_map":   "Geographic map of phase-tensor ellipses",
+    "station_response":   "Per-station impedance response (Bode) curves",
+    "strike_profile":     "Geoelectric strike vs station position",
+    "strike":             "Geoelectric strike analyzer (per-station table)",
+    "dimensionality":     "1-D / 2-D / 3-D dimensionality classifier",
+    "validator":          "Per-station EDI quality checklist",
+    # --- data / IO tools ---
+    "coords":             "Transform station lat/lon to UTM coordinates",
+    "elevation":          "Enrich stations with elevation from a web API",
+    "converter":          "Re-export the survey to CSV / JSON / EDI",
+    "batch_export":       "Render and save a bundle of standard plots",
 }
 
 
@@ -84,6 +100,131 @@ WORKFLOW_DESCRIPTIONS: dict[str, str] = {
 # "gcn" does not get swallowed by "inversion".
 
 WORKFLOW_KEYWORDS: dict[str, list[str]] = {
+    # ── plotting tasks (highest priority: the phase-tensor pseudo-section
+    # must win over the bare "phase tensor" → phase_analysis match) ──────────
+    "pt_psection": [
+        "phase tensor pseudosection",
+        "phase tensor pseudo-section",
+        "phase tensor psection",
+        "phase tensor section",
+        "phase tensor ellipse",
+        "pt pseudosection",
+        "pt pseudo-section",
+        "pt psection",
+        "pt section",
+        "phi pseudosection",
+        "phi tensor",
+        "ellipse pseudosection",
+        "ellipse section",
+    ],
+    "phase_tensor_map": [
+        "phase tensor map",
+        "phase-tensor map",
+        "pt map",
+        "phase tensor ellipse map",
+        "map of phase tensor",
+        "phase tensor on a map",
+        "phase tensor geographic",
+        "ellipse map",
+    ],
+    "phase_psection": [
+        "phase pseudosection",
+        "phase pseudo-section",
+        "phase psection",
+        "phase section",
+        "pseudosection phase",
+        "pseudosection of phase",
+        "phase pseudo section",
+        "pseudosection",
+        "pseudo-section",
+        "psection",
+    ],
+    "rhophi": [
+        "rho phi", "rho/phi", "rhophi", "rho-phi",
+        "rho and phi",
+        "resistivity and phase",
+        "apparent resistivity and phase",
+        "res phase", "resphase", "res/phase",
+        "sounding curve", "sounding curves",
+        "rho phase", "rho/phase",
+        "rho phi plot", "rho phi block",
+        "rho phi curve",
+    ],
+    "strike_profile": [
+        "strike profile", "strike vs", "strike along",
+        "strike line chart", "strike viewer",
+        "strike versus position", "strike per station",
+    ],
+    "station_response": [
+        "station response", "response inspector",
+        "impedance response", "response curve",
+        "inspect station", "station inspector",
+        "bode plot", "bode diagram",
+    ],
+    # ── analysis tools (specific triggers; bare "strike"/"dimensionality"
+    # stay with the full phase_analysis workflow) ────────────────────────────
+    "strike": [
+        "strike analyzer", "strike analyser",
+        "analyze strike", "analyse strike",
+        "estimate strike", "regional strike",
+        "strike rose", "strike estimation",
+        "strike table",
+    ],
+    "dimensionality": [
+        "dimensionality classifier",
+        "classify dimensionality",
+        "classify dimension",
+        "dimensionality classification",
+        "1d 2d 3d", "1d/2d/3d",
+        "dimensionality table",
+    ],
+    "validator": [
+        "edi validator", "validator",
+        "validate edi", "validate the data",
+        "validate data", "validate stations",
+        "data quality checklist", "quality checklist",
+        "qc checklist",
+    ],
+    # ── data / IO tools (specific multi-word triggers so bare verbs like
+    # "convert" / "export" / "batch" don't steal them) ───────────────────────
+    "coords": [
+        "coordinate transform", "coordinate transformer",
+        "coordinate conversion", "transform coordinates",
+        "transform the coordinates", "convert coordinates",
+        "lat lon to utm", "latlon to utm", "lat/lon to utm",
+        "ll to utm", "utm conversion", "to utm",
+        "reproject coordinates", "reproject stations",
+    ],
+    "elevation": [
+        "elevation enrichment", "elevation enrich",
+        "enrich elevation", "enrich with elevation",
+        "fetch elevation", "get elevation", "add elevation",
+        "station elevation", "elevation from api",
+        "elevation lookup", "dem lookup", "lookup elevation",
+    ],
+    "batch_export": [
+        "batch export", "batch plot export", "batch-export",
+        "export plots", "export all plots", "export figures",
+        "export all figures", "save all plots", "save all figures",
+        "save the plots", "save figures to",
+    ],
+    "converter": [
+        "format converter", "format conversion",
+        "convert format", "convert the format",
+        "convert to csv", "convert to json", "convert to edi",
+        "export to csv", "export to json", "export survey",
+        "export the survey", "re-export edi", "reexport edi",
+        "export station metadata", "convert survey",
+    ],
+    "tipper_plot": [
+        "tipper plot", "plot tipper", "plot the tipper",
+        "tipper component", "tipper components",
+        "tipper curve", "tipper curves",
+        "induction arrow", "induction arrows",
+        "tipper arrow", "tipper arrows",
+        "tipper map", "show tipper", "view tipper",
+        "plot induction",
+    ],
     "full_ai_workflow": [
         "full ai workflow",
         "full ai pipeline",

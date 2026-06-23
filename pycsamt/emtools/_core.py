@@ -65,20 +65,28 @@ def _apply_each(
     verbose: int = 0,
 ) -> Sites:
     # Collect EDI-level items so that _sites_from_items can rebuild a Sites.
-    # For Sites-wrapped Site objects (site.edi = original EDI), we unwrap to
-    # the EDI so that EDICollection.add can find site.station / site.path.
-    def _raw(ed):
-        edi = getattr(ed, "edi", None)
-        return edi if (edi is not None and getattr(edi, "Z", None) is not None) else ed
-
+    # For Sites-wrapped Site objects (site.edi = original EDI), _unwrap gets
+    # the raw EDI so that EDICollection.add can find site.station / site.path.
     items_in = list(_iter_items(sites))
+
+    if not inplace:
+        # ``fn`` scales Z.z *in place* on the underlying EDI item. To honour
+        # inplace=False we correct independent copies of the raw EDI objects
+        # and leave the caller's sites pristine — otherwise the mutation
+        # aliases back onto the input, so a "before" view re-read from it
+        # shows the corrected data and before/after look identical. Copy at
+        # the unwrapped-EDI level (deep-copying the Site wrapper breaks the
+        # EDICollection rebuild, dropping every station).
+        import copy
+        raw = [copy.deepcopy(_unwrap(ed)) for ed in items_in]
+        for r in raw:
+            fn(_wrap_one(r))
+        return _sites_from_items(raw, verbose=verbose)
+
     for ed in items_in:
         Si = _wrap_one(ed)
         fn(Si)  # fn modifies Z.z in-place on the underlying EDI item
-    if inplace:
-        return sites
-    raw = [_raw(ed) for ed in items_in]
-    return _sites_from_items(raw, verbose=verbose)
+    return sites
 
 
 

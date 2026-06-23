@@ -104,6 +104,30 @@ _META_PHRASES = (
     "what are you", "your capabilities", "what do you do",
     "how do you work", "what is pycsamt agent", "help me get started",
     "getting started", "what can you help",
+    "what you can do", "things you can do", "what you can perform",
+)
+
+# Capability / catalogue listing → META ("list the agents/tasks/workflows you
+# can run", "which workflows are available", "show me what you can do"). These
+# must NOT fall through to WORKFLOW (which would blindly default to QC). The
+# pattern deliberately needs a *listing* verb next to a *catalogue noun* so a
+# genuine question like "what does the static-shift agent do" stays a QUESTION.
+# Plural-only catalogue nouns: a question about ONE named thing ("what does
+# the static-shift agent do") stays a QUESTION; only a plural list ("agents",
+# "tasks", "workflows") trips the capability route.
+_CAP_NOUN = (
+    r"(agents|tasks|workflows|pipelines|capabilities|"
+    r"commands|features|functions)\b"
+)
+_CAPABILITY_RE = re.compile(
+    r"\b(list|show|give|get|enumerate|provide|display|see)\b.{0,30}" + _CAP_NOUN
+    + r"|\b(available|supported|all the|all your)\b.{0,20}" + _CAP_NOUN
+    + r"|\bwhich\b.{0,20}" + _CAP_NOUN
+    + r"|\bwhat\b.{0,20}" + _CAP_NOUN
+    + r".{0,20}\b(can|do|are|available|support|perform|run|have|there)\b"
+    + r"|\b" + _CAP_NOUN + r" (you|i) can\b"
+    + r"|\bwhat (can|do) you (do|perform|run|offer|help)\b",
+    re.IGNORECASE,
 )
 _GREETINGS = frozenset({
     "hi", "hello", "hey", "yo", "hiya", "thanks", "thank you",
@@ -170,6 +194,9 @@ def classify_intent_offline(text: str) -> tuple[str, float]:
     # ── META: greetings & capability probes ────────────────────────────────
     if t in _GREETINGS or any(p in t for p in _META_PHRASES):
         return META, 0.9
+    # capability / catalogue listing ("list the agents", "which workflows…")
+    if _CAPABILITY_RE.search(t):
+        return META, 0.88
 
     # ── CODE: explicit script requests ─────────────────────────────────────
     if any(p in t for p in _CODE_PHRASES):
@@ -211,7 +238,10 @@ _KNOWN_WF = (
     "inv2d, inv3d, ensemble_inversion, joint_inversion, "
     "pinn_inversion, hybrid_inversion, modem, occam2d, tipper, "
     "sensitivity, rotation, freq_decimation, batch, comparison, "
-    "code_gen, denoise"
+    "code_gen, denoise, rhophi, phase_psection, pt_psection, tipper_plot, "
+    "phase_tensor_map, station_response, strike_profile, "
+    "strike, dimensionality, validator, "
+    "coords, elevation, converter, batch_export"
 )
 
 _ROUTER_SYSTEM = f"""\
@@ -227,7 +257,10 @@ INTENTS:
 - "workflow": the user wants to RUN a processing pipeline on their data
   (QC, static-shift, phase analysis, an inversion, report, etc.).
 - "meta": greetings, "what can you do", capability questions about the
-  assistant itself.
+  assistant itself, and requests to LIST/ENUMERATE the agents, tasks or
+  workflows the assistant can run ("list the agents", "which workflows are
+  available", "what tasks can you perform"). A question about what ONE named
+  agent/function does is a "question", not "meta".
 
 Return ONLY a JSON object:
 {{

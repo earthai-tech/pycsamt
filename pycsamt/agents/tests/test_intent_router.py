@@ -34,8 +34,8 @@ from pycsamt.agents.router import (
 _CASES: list[tuple[str, str]] = [
     # ── questions (want an explanation, not execution) ──────────────────────
     ("what does StaticShiftAgent do?", QUESTION),
+    ("what does the static shift agent do?", QUESTION),
     ("How do I access impedance Z values?", QUESTION),
-    ("what workflows are supported?", QUESTION),
     ("explain the difference between qc and denoise", QUESTION),
     ("which method should I use for static shift?", QUESTION),
     ("tell me about the Sites data model", QUESTION),
@@ -52,6 +52,16 @@ _CASES: list[tuple[str, str]] = [
     ("what can you do?", META),
     ("who are you", META),
     ("how do you work", META),
+    # capability / catalogue listing must be META, not a QC workflow
+    ("get the list of agents", META),
+    ("list agents", META),
+    ("list the tasks you can perform", META),
+    ("which workflows are available", META),
+    ("what workflows are supported?", META),
+    ("what tasks can you do", META),
+    ("show me what you can do", META),
+    ("available workflows", META),
+    ("what agents do you have", META),
     # ── workflow execution (imperative on data) ─────────────────────────────
     ("run AI inversion on /data/willy", WORKFLOW),
     ("run QC on /data/L22PLT", WORKFLOW),

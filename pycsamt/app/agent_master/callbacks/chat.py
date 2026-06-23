@@ -63,6 +63,32 @@ _CORRECTION_WFLOWS = frozenset({
     "full",
 })
 
+# Plotting tasks handled by the lightweight PlotAgent (not the orchestrator):
+# rho/phi sounding curves, scalar phase pseudo-section, and phase-tensor (Φ)
+# ellipse pseudo-section. Each maps to a PlotAgent "kind".
+_PLOT_KIND = {
+    "rhophi":         "rhophi",
+    "phase_psection": "phase_psection",
+    "pt_psection":    "pt_psection",
+    "tipper_plot":    "tipper",
+    "phase_tensor_map": "pt_map",
+    "station_response": "station_response",
+    "strike_profile":  "strike_profile",
+}
+_PLOT_WORKFLOWS = frozenset(_PLOT_KIND)
+
+# Analysis tools handled by the lightweight ToolAgent (table + figure).
+_TOOL_KIND = {
+    "strike":         "strike",
+    "dimensionality": "dimensionality",
+    "validator":      "validator",
+    "coords":         "coords",
+    "elevation":      "elevation",
+    "converter":      "converter",
+    "batch_export":   "batch_export",
+}
+_TOOL_WORKFLOWS = frozenset(_TOOL_KIND)
+
 # ── response kinds ─────────────────────────────────
 # Each agent response declares its KIND so the chat
 # bubble renders the right shape instead of guessing
@@ -862,6 +888,12 @@ _NEEDS_PARAMS: frozenset[str] = frozenset({
     "interpret", "interpretation",
     "report",
     "code_gen",
+    # Plotting tasks (station / component / period / publication)
+    "rhophi", "phase_psection", "pt_psection", "tipper_plot",
+    "phase_tensor_map", "station_response", "strike_profile",
+    "strike", "dimensionality", "validator",
+    # Data / IO tools
+    "coords", "elevation", "converter", "batch_export",
 })
 
 _WF_LABELS: dict[str, str] = {
@@ -885,6 +917,20 @@ _WF_LABELS: dict[str, str] = {
     "code_gen":           "code generation",
     "denoise":            "data denoising",
     "sensitivity":    "sensitivity / DOI analysis",
+    "rhophi":             "rho/phi sounding curves",
+    "phase_psection":     "phase pseudo-section",
+    "pt_psection":        "phase-tensor pseudo-section",
+    "tipper_plot":        "tipper plot",
+    "phase_tensor_map":   "phase-tensor map",
+    "station_response":   "station response",
+    "strike_profile":     "strike profile",
+    "strike":             "strike analyzer",
+    "dimensionality":     "dimensionality classifier",
+    "validator":          "EDI validator",
+    "coords":             "coordinate transformer",
+    "elevation":          "elevation enrichment",
+    "converter":          "format converter",
+    "batch_export":       "batch plot export",
 }
 
 
@@ -1302,26 +1348,92 @@ def _web_app_bubble(
 
 # ── intent dispatch helpers ────────────────────────
 
-def _capability_text() -> str:
-    """Static capability summary for META / greeting intents."""
+def _api_key_hint() -> str:
+    """Reusable note nudging the user to set an API key for online mode."""
     return (
-        "I'm the pyCSAMT v2 assistant. I can help you in"
-        " four ways:\n"
-        "- Answer questions about the package — classes,"
-        " functions, the Sites data model, and which"
-        " method to use.\n"
-        "- Generate Python code / scripts that reproduce a"
-        " pyCSAMT workflow.\n"
-        "- Run processing workflows on your EDI data: QC,"
-        " static-shift, phase-tensor analysis, denoising,"
-        " tipper, sensitivity/DOI, rotation, decimation,"
-        " inversions (AI 1-D/2-D/3-D, PINN, hybrid,"
-        " ensemble, joint), ModEM/Occam2D prep, reports.\n"
-        "- Launch the full web app for interactive maps,"
-        " pseudosection viewers, and the pipeline editor.\n"
-        "To run a data workflow, load an EDI dataset first"
-        " with the Load EDI button. Questions and code"
-        " requests work without any data loaded."
+        "**Want richer, more natural answers?** Open **Settings** (top-right)"
+        " and add an API key for any one provider — **Anthropic (Claude)**,"
+        " **OpenAI**, **Google Gemini**, or **DeepSeek**. With a key I switch"
+        " to online mode, which most improves:\n"
+        "- **Questions** about pyCSAMT — fluent, synthesised answers"
+        " (grounded in the package via RAG) instead of the offline summary;\n"
+        "- **Code generation** — complete, tailored scripts;\n"
+        "- **Request understanding** — better routing of free-form requests.\n"
+        "Running workflows works offline too — no key required."
+    )
+
+
+def _capability_text() -> str:
+    """Static capability summary for META / greeting / 'list tasks' intents."""
+    return (
+        "I'm the **pyCSAMT v2 assistant**. Here's what I can do for you:\n\n"
+        "**Run processing workflows** on your loaded EDI data:\n"
+        "- `qc` — quality control & per-station scan\n"
+        "- `static_shift` — static-shift detection & AMA/LOESS correction\n"
+        "- `denoise` — RPCA / Hampel / AI denoising\n"
+        "- `phase_analysis` — phase-tensor, strike & dimensionality\n"
+        "- `tipper` — tipper / induction arrows\n"
+        "- `rotation` — tensor rotation to a strike frame\n"
+        "- `freq_decimation` — period selection / decimation\n"
+        "- `sensitivity` — sensitivity kernels / depth of investigation\n"
+        "- `pre_inversion` — full pre-inversion preparation\n"
+        "- `ai_inversion`, `inv2d`, `inv3d`, `pinn_inversion`,"
+        " `hybrid_inversion`, `ensemble_inversion`, `joint_inversion` —"
+        " inversions\n"
+        "- `occam2d`, `modem` — inversion input preparation\n"
+        "- `report` — generate a survey report\n\n"
+        "**Make plots** from your data (I'll ask for stations, components,"
+        " period range and publication styling):\n"
+        "- rho/φ sounding curves\n"
+        "- phase pseudo-section\n"
+        "- phase-tensor (Φ) ellipse pseudo-section\n"
+        "- phase-tensor map (ellipses at a chosen period)\n"
+        "- station response inspector (Bode ρa/φ curves)\n"
+        "- strike profile (strike vs station position)\n"
+        "- tipper components / induction arrows (when tipper data exists)\n\n"
+        "**Analyze** your data (results as a table + figure):\n"
+        "- strike analyzer (geoelectric strike per station)\n"
+        "- dimensionality classifier (1-D / 2-D / 3-D)\n"
+        "- EDI validator (per-station quality checklist)\n\n"
+        "**Data & I/O tools** (I'll ask for the options first):\n"
+        "- coordinate transformer (station lat/lon → UTM)\n"
+        "- elevation enrichment (fetch elevation from an open web API)\n"
+        "- format converter (re-export the survey to CSV / JSON / EDI)\n"
+        "- batch plot export (render & save a bundle of figures)\n\n"
+        "**Answer questions** about pyCSAMT — classes, functions, the Sites"
+        " data model, and which method to use.\n\n"
+        "**Generate Python code** that reproduces a pyCSAMT workflow.\n\n"
+        "To run a workflow, load an EDI dataset first with **Load EDI**"
+        " (top-left). Questions and code requests need no data.\n\n"
+        "For interactive maps, pseudosection viewers and the visual pipeline"
+        " editor, use the full **pyCSAMT web application**.\n\n"
+        + _api_key_hint()
+    )
+
+
+def _unknown_task_text(text: str) -> str:
+    """Friendly 'I don't recognise that task' reply — used instead of
+    silently defaulting an unrecognised request to the QC workflow."""
+    snippet = (text or "").strip().replace("\n", " ")
+    if len(snippet) > 80:
+        snippet = snippet[:77] + "…"
+    quoted = f' — "{snippet}"' if snippet else ""
+    return (
+        f"I'm not sure how to handle that as a task{quoted}.\n\n"
+        "I didn't recognise a workflow I can run for that request, so I"
+        " won't guess. Here's what I can actually do:\n"
+        "- **Run workflows** on loaded EDI data: QC, static-shift,"
+        " phase-tensor analysis, denoising, tipper, rotation, frequency"
+        " decimation, sensitivity/DOI, inversions (AI 1-D/2-D/3-D, PINN,"
+        " hybrid, ensemble, joint), ModEM/Occam2D prep, and reports.\n"
+        "- **Answer questions** about pyCSAMT (classes, functions, methods).\n"
+        "- **Generate Python code** for a pyCSAMT workflow.\n"
+        "- **List my capabilities** — just ask \"what can you do?\".\n\n"
+        "If you need maps, interactive pseudosection viewers, or a feature"
+        " that isn't here, try the full **pyCSAMT web application**.\n\n"
+        "Tip: phrase it as an action + target, e.g. \"run static shift\","
+        " \"denoise the data\", or \"run AI inversion\".\n\n"
+        + _api_key_hint()
     )
 
 
@@ -1366,6 +1478,15 @@ def _dispatch_question(
         or res.summary
         or "I couldn't find an answer in the pyCSAMT reference."
     )
+    # When running without a key, the answer is the deterministic offline
+    # composition — nudge the user that an API key unlocks a fluent reply.
+    if offline or (res.get("source") == "rag_offline"):
+        answer = (
+            answer
+            + "\n\n---\n*Offline answer composed from the pyCSAMT reference."
+            " For a fuller, synthesised response, add an API key (Claude,"
+            " OpenAI, Gemini or DeepSeek) in **Settings**.*"
+        )
     step("Answer ready", "done")
     _update_job(
         jid,
@@ -1373,6 +1494,158 @@ def _dispatch_question(
         result=answer,
         steps=_JOBS[jid]["steps"],
         kind=KIND_ANSWER,
+    )
+
+
+def _dispatch_plot(
+    jid: str,
+    edi_path: Any,
+    *,
+    kind: str,
+    params: dict,
+    step,
+    label: str = "",
+) -> None:
+    """Render a plotting task (rho/phi, phase / phase-tensor pseudo-section,
+    or tipper) via the PlotAgent and publish the figure(s) to the chat +
+    Figures panel. ``label`` names the dataset/line for user-facing messages."""
+    import matplotlib.pyplot as plt
+    from pycsamt.agents.plotting import PlotAgent
+
+    _labels = {
+        "rhophi": "rho/phi sounding curves",
+        "phase_psection": "phase pseudo-section",
+        "pt_psection": "phase-tensor pseudo-section",
+        "tipper": "tipper plot",
+    }
+    where = f" for {label}" if label else ""
+    step(f"Rendering {_labels.get(kind, kind)}...", "running")
+
+    agent_input = {"path": edi_path, "kind": kind, **(params or {})}
+    res = PlotAgent().execute(agent_input)
+
+    if res.status == "failed":
+        step("Plot unavailable", "done")
+        # Tipper is frequently absent in CSAMT/AMT data — answer plainly.
+        if res.get("reason") == "no_tipper":
+            msg = (
+                f"Tipper data is not available{where}. This dataset has no "
+                "vertical magnetic transfer function (Tx/Ty), so induction "
+                "arrows and tipper components can't be plotted. The other "
+                "plots (rho/φ curves, phase and phase-tensor pseudo-sections) "
+                "work fine — want one of those instead?"
+            )
+        else:
+            msg = res.summary + (
+                "\n\nHint: " + (res.get("hint") or "")
+                if res.get("hint") else ""
+            )
+        _update_job(
+            jid,
+            status="done",
+            result=msg,
+            steps=_JOBS[jid]["steps"],
+            kind=KIND_META if res.get("reason") == "no_tipper" else KIND_ERROR,
+        )
+        return
+
+    figs: dict = {}
+    for fname, fig in (res.data.get("figures") or {}).items():
+        if isinstance(fig, plt.Figure):
+            figs[str(uuid.uuid4())] = {
+                "title": fname,
+                "b64": _fig_to_b64(fig),
+            }
+            plt.close(fig)
+
+    summary = res.summary
+    if res.warnings:
+        summary += "\n\n" + "\n".join(f"⚠ {w}" for w in res.warnings[:3])
+    if not figs:
+        summary += "\n\n(No figure was produced — check the parameters.)"
+
+    _record_run(
+        workflow=kind,
+        path=str(edi_path),
+        output_dir="",
+        status=res.status,
+        summary=res.summary,
+        n_figures=len(figs),
+    )
+    step("Figure ready", "done")
+    _update_job(
+        jid,
+        status="done",
+        result=summary,
+        steps=_JOBS[jid]["steps"],
+        figs=figs,
+        kind=KIND_WORKFLOW,
+    )
+
+
+def _dispatch_tool(
+    jid: str,
+    edi_path: Any,
+    *,
+    kind: str,
+    params: dict,
+    step,
+    label: str = "",
+) -> None:
+    """Run an analysis tool (strike / dimensionality / validator) via the
+    ToolAgent and publish its table + optional figure to the chat."""
+    import matplotlib.pyplot as plt
+    from pycsamt.agents.tooling import ToolAgent
+
+    _labels = {
+        "strike": "strike analysis",
+        "dimensionality": "dimensionality classification",
+        "validator": "EDI validation",
+        "coords": "coordinate transform",
+        "elevation": "elevation enrichment",
+        "converter": "format conversion",
+        "batch_export": "batch plot export",
+    }
+    where = f" for {label}" if label else ""
+    step(f"Running {_labels.get(kind, kind)}...", "running")
+
+    res = ToolAgent().execute(
+        {"path": edi_path, "kind": kind, **(params or {})}
+    )
+    if res.status == "failed":
+        step("Analysis failed", "done")
+        _update_job(
+            jid, status="done",
+            result=res.summary + ("." if not res.summary.endswith(".") else "")
+            + f" (dataset{where or ''})",
+            steps=_JOBS[jid]["steps"], kind=KIND_ERROR,
+        )
+        return
+
+    figs: dict = {}
+    for fname, fig in (res.data.get("figures") or {}).items():
+        if isinstance(fig, plt.Figure):
+            figs[str(uuid.uuid4())] = {
+                "title": fname, "b64": _fig_to_b64(fig),
+            }
+            plt.close(fig)
+
+    table = (res.data or {}).get("table_text", "")
+    result = res.summary
+    if table:
+        # a fenced block renders monospaced (the chat markdown has no tables)
+        result += "\n\n```\n" + table + "\n```"
+    if res.warnings:
+        result += "\n\n" + "\n".join(f"⚠ {w}" for w in res.warnings[:3])
+
+    _record_run(
+        workflow=kind, path=str(edi_path), output_dir="",
+        status=res.status, summary=res.summary, n_figures=len(figs),
+    )
+    step("Done", "done")
+    _update_job(
+        jid, status="done", result=result, steps=_JOBS[jid]["steps"],
+        figs=figs, kind=KIND_WORKFLOW if figs else KIND_ANSWER,
     )
 
 
@@ -1716,9 +1989,50 @@ def _run_agent(
         # workflow type: a terse-prompt LLM router can mislabel e.g.
         # "phase tensor and dimensionality analysis" as an inversion,
         # whereas the regex registry classifies it correctly.
-        if _ic.get("workflow"):
-            cfg["workflow"] = _ic["workflow"]
-        wtype = cfg.get("workflow", "qc")
+        # Resolve the concrete workflow with an explicit "unknown" path so an
+        # unrecognised request is NOT silently run as QC (unprofessional and
+        # confusing). Authority order: param-modal form → registry keyword
+        # match → LLM router slot → LLM ContextInputAgent (only when it gave a
+        # genuine, non-default classification).
+        from pycsamt.agents._workflows import classify_workflow as _cwf
+        from pycsamt.agents.orchestrator import (
+            _WORKFLOW_STEPS as _WF_STEPS,
+        )
+        _explicit_wf = _ic.get("workflow")
+        _kw_wf = _cwf(text, default=None)
+        _router_wf = (
+            decision.workflow
+            if (decision.workflow in _WF_STEPS
+                or decision.workflow in _PLOT_WORKFLOWS)
+            else None
+        )
+        _ctx_wf = cfg.get("workflow")
+        _resolved_wf = (
+            _explicit_wf
+            or _kw_wf
+            or _router_wf
+            or (_ctx_wf if (_ctx_wf and _ctx_wf != "qc") else None)
+        )
+        # The user genuinely wants QC only when QC keywords actually matched.
+        if _resolved_wf is None and _kw_wf == "qc":
+            _resolved_wf = "qc"
+        _known_wf = (
+            _resolved_wf in _WF_STEPS
+            or _resolved_wf in _PLOT_WORKFLOWS
+            or _resolved_wf in _TOOL_WORKFLOWS
+        )
+        if not _resolved_wf or not _known_wf:
+            _update_job(
+                jid,
+                status="done",
+                result=_unknown_task_text(text),
+                steps=_JOBS[jid]["steps"],
+                kind=KIND_META,
+            )
+            return
+
+        cfg["workflow"] = _resolved_wf
+        wtype = _resolved_wf
         _update_job(jid, workflow=wtype)
         _step(f"Workflow: {wtype}", "done")
         if wtype in (
@@ -1894,6 +2208,10 @@ def _run_agent(
             "modem", "tipper", "rotation",
             "denoise", "sensitivity",
             "freq_decimation",
+            "rhophi", "phase_psection", "pt_psection", "tipper_plot",
+            "phase_tensor_map", "station_response", "strike_profile",
+            "strike", "dimensionality", "validator",
+            "coords", "elevation", "converter", "batch_export",
         })
         if (
             wtype in _EDI_REQUIRED
@@ -1910,6 +2228,38 @@ def _run_agent(
                 ),
                 steps=_JOBS[jid]["steps"],
                 kind=KIND_ERROR,
+            )
+            return
+
+        # Friendly label for plot / tool messages (line, selected lines, dir).
+        import os as _os
+        _task_label = _resolved_line or (
+            ", ".join(sel_lines) if sel_lines else ""
+        )
+        if not _task_label and isinstance(edi_path, str) and edi_path:
+            _task_label = _os.path.basename(edi_path.rstrip("/\\"))
+
+        # ── plotting tasks → lightweight PlotAgent (no orchestrator) ──
+        if wtype in _PLOT_WORKFLOWS:
+            _dispatch_plot(
+                jid,
+                edi_path,
+                kind=_PLOT_KIND[wtype],
+                params=(inv_config or {}),
+                step=_step,
+                label=_task_label,
+            )
+            return
+
+        # ── analysis tools → lightweight ToolAgent (table + figure) ──
+        if wtype in _TOOL_WORKFLOWS:
+            _dispatch_tool(
+                jid,
+                edi_path,
+                kind=_TOOL_KIND[wtype],
+                params=(inv_config or {}),
+                step=_step,
+                label=_task_label,
             )
             return
 

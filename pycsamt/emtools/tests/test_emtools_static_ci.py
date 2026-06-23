@@ -1096,3 +1096,63 @@ class TestManualFrequencyDrop:
         assert Z.z.shape == (5, 2, 2)
         assert not np.any(np.isclose(Z.freq, drop))
         assert np.isfinite(Z.z).all()
+
+
+class TestApplyEachInplaceSemantics:
+    """Regression: ``inplace=False`` must not mutate the caller's sites.
+
+    The underlying ``Z.z`` was previously scaled in place regardless of
+    the ``inplace`` flag (``_apply_each`` rebuilt a new container around
+    the *same* mutated items). That corrupted the "before" data, so
+    before/after comparison plots showed identical images.
+    """
+
+    def _shifted_line(self, n=5, shift_idx=2, ss=4.0):
+        sites = []
+        for i in range(n):
+            if i == shift_idx:
+                sites.append(_shifted_site(f"S{i:02d}", rho=100.0, ss=ss,
+                                           east=i * 300.0, north=0.0))
+            else:
+                sites.append(_site(f"S{i:02d}", rho=100.0,
+                                   east=i * 300.0, north=0.0))
+        return sites
+
+    def test_inplace_false_preserves_original_and_changes_copy(self):
+        from pycsamt.emtools.ss import correct_ss_ama
+
+        sites = ensure_sites_local(self._shifted_line())
+        items_before = list(sites)
+        z_orig = [_z_freq(ed)[0].copy() for ed in items_before]
+
+        corrected = correct_ss_ama(sites, half_window=3, inplace=False)
+
+        # original is untouched
+        z_after_orig = [_z_freq(ed)[0] for ed in list(sites)]
+        for a, b in zip(z_orig, z_after_orig):
+            assert np.allclose(a, b, equal_nan=True), (
+                "inplace=False mutated the caller's sites"
+            )
+
+        # the returned copy actually differs from the original
+        z_corr = [_z_freq(ed)[0] for ed in list(corrected)]
+        changed = any(
+            not np.allclose(o, c, equal_nan=True)
+            for o, c in zip(z_orig, z_corr)
+        )
+        assert changed, "correction produced no change in the copy"
+
+    def test_inplace_true_mutates_original(self):
+        from pycsamt.emtools.ss import correct_ss_ama
+
+        sites = ensure_sites_local(self._shifted_line())
+        z_orig = [_z_freq(ed)[0].copy() for ed in list(sites)]
+
+        correct_ss_ama(sites, half_window=3, inplace=True)
+
+        z_now = [_z_freq(ed)[0] for ed in list(sites)]
+        changed = any(
+            not np.allclose(o, c, equal_nan=True)
+            for o, c in zip(z_orig, z_now)
+        )
+        assert changed, "inplace=True did not mutate the original"

@@ -11,6 +11,7 @@ active session or export to a custom folder.
 
 from __future__ import annotations
 
+import logging
 import time
 from pathlib import Path
 
@@ -20,6 +21,8 @@ from dash.exceptions import PreventUpdate
 
 from .._ids import IDs
 
+logger = logging.getLogger(__name__)
+
 
 def _export(sites, dest: Path) -> list:
     """Write corrected sites as EDI files."""
@@ -27,6 +30,41 @@ def _export(sites, dest: Path) -> list:
     return write_sites(
         sites, dest, exist_ok=True
     )
+
+
+def _count_valid_impedance(sites) -> int:
+    """Count stations in a Sites object that carry parseable Z."""
+    from pycsamt.agents.loader import _quality_scan
+    rows, _ = _quality_scan(sites)
+    return sum(1 for r in rows if r.get("has_z"))
+
+
+def _validate_export(dest: Path) -> tuple[int, int, str]:
+    """Re-load an exported folder and count stations with valid Z.
+
+    Returns ``(n_valid_impedance, n_total, detail)``. ``detail`` carries a
+    short diagnostic when something went wrong (an exception, or files that
+    loaded but lacked Z) so the failure isn't silently reported as "0 valid"
+    — which previously made a validation crash look identical to genuinely
+    corrupt data. Used to refuse repointing the session at a folder that
+    would later fail every workflow with "No stations with valid impedance".
+    """
+    try:
+        from pycsamt.emtools._core import ensure_sites
+        n_files = len(list(Path(dest).rglob("*.edi")))
+        s = ensure_sites(str(dest), recursive=True, verbose=0)
+        from pycsamt.agents.loader import _quality_scan
+        rows, _ = _quality_scan(s)
+        n_valid = sum(1 for r in rows if r.get("has_z"))
+        detail = (
+            "" if n_valid
+            else f"{n_files} .edi file(s) on disk, {len(rows)} loaded, "
+                 f"0 with a parseable Z block"
+        )
+        return n_valid, len(rows), detail
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Export validation failed for %s", dest)
+        return -1, 0, f"validation error: {type(exc).__name__}: {exc}"
 
 
 def register_postproc(app) -> None:
@@ -103,7 +141,9 @@ def register_postproc(app) -> None:
             )
             or "pycsamt_workflow_output"
         ).strip()
-        sites = _CORR_CACHE.pop(jid, None)
+        # Peek (don't pop): if the export turns out invalid we keep the
+        # corrected data in memory so the user can retry / export instead.
+        sites = _CORR_CACHE.get(jid)
         if sites is None:
             return (
                 no_update,
@@ -115,22 +155,19 @@ def register_postproc(app) -> None:
                 ),
                 True,
             )
+        # Absolute path so the re-load validation and the later workflow
+        # loader never depend on the process CWD.
         dest = (
-            Path(base)
+            Path(base).expanduser().resolve()
             / f"{wtype}_{int(time.time())}"
         )
+        # Sanity-check the in-memory corrected data first (source of truth).
+        try:
+            n_mem = _count_valid_impedance(sites)
+        except Exception:  # noqa: BLE001
+            n_mem = -1
         try:
             paths = _export(sites, dest)
-            new_edi = dict(edi_store or {})
-            new_edi["path"] = str(dest)
-            msg = html.Span(
-                f"{len(paths)} EDI(s) saved"
-                f" to {dest}",
-                style={
-                    "color": "var(--tag-ok)"
-                },
-            )
-            return new_edi, msg, False
         except Exception as exc:
             return (
                 no_update,
@@ -140,6 +177,39 @@ def register_postproc(app) -> None:
                 ),
                 True,
             )
+
+        # Validate before repointing the session. Repointing at a folder
+        # whose EDIs carry no impedance silently corrupts every later
+        # workflow ("No stations with valid impedance data found"). If the
+        # export is bad, leave STORE_EDI untouched and tell the user *why*.
+        n_valid, n_total, detail = _validate_export(dest)
+        if n_valid <= 0:
+            return (
+                no_update,
+                html.Span(
+                    f"Could not apply corrected data — session left "
+                    f"unchanged (kept in memory). {len(paths)} file(s) "
+                    f"written to {dest}; in-memory stations with valid "
+                    f"Z: {n_mem}. Reason: {detail or 'unknown'}.",
+                    style={"color": "red"},
+                ),
+                True,
+            )
+
+        _CORR_CACHE.pop(jid, None)
+        new_edi = dict(edi_store or {})
+        new_edi["path"] = str(dest)
+        # Drop any stale in-memory sites / groups so the loader re-reads
+        # the corrected directory rather than the original upload.
+        new_edi.pop("sites", None)
+        new_edi.pop("groups", None)
+        new_edi.pop("selected_lines", None)
+        msg = html.Span(
+            f"{n_valid}/{n_total} corrected EDI(s) applied "
+            f"to session → {dest}",
+            style={"color": "var(--tag-ok)"},
+        )
+        return new_edi, msg, False
 
     # 3. "Export to folder" — toggle collapse
     @app.callback(
@@ -195,7 +265,7 @@ def register_postproc(app) -> None:
             )
         from .chat import _CORR_CACHE
         jid = (postproc or {}).get("jid")
-        sites = _CORR_CACHE.pop(jid, None)
+        sites = _CORR_CACHE.get(jid)
         if sites is None:
             return (
                 html.Span(
@@ -206,20 +276,13 @@ def register_postproc(app) -> None:
                 True,
                 True,
             )
-        dest = Path(path_val.strip())
+        dest = Path(path_val.strip()).expanduser().resolve()
+        try:
+            n_mem = _count_valid_impedance(sites)
+        except Exception:  # noqa: BLE001
+            n_mem = -1
         try:
             paths = _export(sites, dest)
-            return (
-                html.Span(
-                    f"Exported {len(paths)}"
-                    f" EDI(s) to {dest}",
-                    style={
-                        "color": "var(--tag-ok)"
-                    },
-                ),
-                False,
-                False,
-            )
         except Exception as exc:
             return (
                 html.Span(
@@ -229,3 +292,27 @@ def register_postproc(app) -> None:
                 True,
                 True,
             )
+        n_valid, n_total, detail = _validate_export(dest)
+        if n_valid <= 0:
+            return (
+                html.Span(
+                    f"Wrote {len(paths)} file(s) to {dest}, but the "
+                    f"re-load check did not confirm valid impedance "
+                    f"(in-memory valid stations: {n_mem}). "
+                    f"Reason: {detail or 'unknown'}. Corrected data "
+                    f"kept in memory.",
+                    style={"color": "red"},
+                ),
+                True,
+                True,
+            )
+        _CORR_CACHE.pop(jid, None)
+        return (
+            html.Span(
+                f"Exported {n_valid}/{n_total} corrected "
+                f"EDI(s) to {dest}",
+                style={"color": "var(--tag-ok)"},
+            ),
+            False,
+            False,
+        )

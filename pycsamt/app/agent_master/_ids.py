@@ -138,6 +138,14 @@ class IDs:
     STORE_HISTORY    = "am-store-history"
     STORE_PINS       = "am-store-pins"
     PIN_SCROLL_DUMMY = "am-pin-scroll-dummy"
+    # segmented sidebar switcher (Sessions / Runs / Figures)
+    SEG_SESSIONS     = "am-seg-sessions"
+    SEG_RUNS         = "am-seg-runs"
+    SEG_FIGS         = "am-seg-figs"
+    PANEL_SESSIONS   = "am-panel-sessions"
+    PANEL_RUNS       = "am-panel-runs"
+    PANEL_FIGS       = "am-panel-figs"
+    STORE_SB_TAB     = "am-store-sb-tab"
 
     # ── smart param modal ─────────────────────
     MODAL_PARAMS       = "am-modal-params"

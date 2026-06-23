@@ -116,6 +116,44 @@ def register_sidebar(app) -> None:
         prevent_initial_call=True,
     )
 
+    # ── segmented switcher (Sessions / Runs / Figures) ──
+    app.clientside_callback(
+        """
+        function(nS, nR, nF) {
+            var ctx = window.dash_clientside.callback_context;
+            var trig = (ctx && ctx.triggered && ctx.triggered.length)
+                ? ctx.triggered[0].prop_id : "";
+            var tab = "sessions";
+            if (trig.indexOf("am-seg-runs") === 0) tab = "runs";
+            else if (trig.indexOf("am-seg-figs") === 0) tab = "figs";
+            var off = "am-tab-panel";
+            var on = "am-tab-panel am-tab-active";
+            var seg = "am-seg-btn";
+            var segA = "am-seg-btn am-seg-active";
+            return [
+                tab === "sessions" ? on : off,
+                tab === "runs" ? on : off,
+                tab === "figs" ? on : off,
+                tab === "sessions" ? segA : seg,
+                tab === "runs" ? segA : seg,
+                tab === "figs" ? segA : seg,
+                tab
+            ];
+        }
+        """,
+        Output(IDs.PANEL_SESSIONS, "className"),
+        Output(IDs.PANEL_RUNS, "className"),
+        Output(IDs.PANEL_FIGS, "className"),
+        Output(IDs.SEG_SESSIONS, "className"),
+        Output(IDs.SEG_RUNS, "className"),
+        Output(IDs.SEG_FIGS, "className"),
+        Output(IDs.STORE_SB_TAB, "data"),
+        Input(IDs.SEG_SESSIONS, "n_clicks"),
+        Input(IDs.SEG_RUNS, "n_clicks"),
+        Input(IDs.SEG_FIGS, "n_clicks"),
+        prevent_initial_call=True,
+    )
+
     # ── new chat ──────────────────────────────
     @app.callback(
         Output(

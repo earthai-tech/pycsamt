@@ -1660,6 +1660,68 @@ body {
   border-color: var(--blue);
 }
 
+/* ── segmented switcher (Sessions / Runs / Figures) ───── */
+.am-sidebar-segmented {
+  display: flex;
+  gap: 2px;
+  margin: 8px 8px 4px;
+  padding: 3px;
+  background: var(--srf0);
+  border-radius: 9px;
+  flex-shrink: 0;
+}
+.am-seg-btn {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--sub0);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  transition:
+    background var(--t-fast),
+    color var(--t-fast),
+    box-shadow var(--t-fast);
+}
+.am-seg-btn i { font-size: 12px; flex: 0 0 auto; }
+.am-seg-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.am-seg-btn:hover { color: var(--txt); }
+.am-seg-btn.am-seg-active {
+  color: var(--txt);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+/* panels area — only the active panel is shown */
+.am-sidebar-panels {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.am-tab-panel {
+  display: none;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.am-tab-panel.am-tab-active {
+  display: flex;
+}
+
 /* section labels */
 .am-sidebar-section-lbl {
   font-size: 9.5px;
@@ -1680,12 +1742,12 @@ body {
   white-space: nowrap;
 }
 
-/* history scroll area */
+/* history scroll area — the primary, flexible list */
 .am-sidebar-history {
-  flex: 1;
+  flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
-  min-height: 80px;
+  min-height: 60px;
 }
 
 /* history item button */
@@ -1724,12 +1786,14 @@ body {
 .am-sidebar-figs {
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
   gap: 6px;
-  padding: 4px 8px 12px;
+  padding: 6px 8px 12px;
   overflow-y: auto;
   overflow-x: hidden;
-  flex-shrink: 0;
-  max-height: 180px;
+  /* fills its tab panel and scrolls internally */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .am-sb-fig-item {
   width: 68px;
@@ -2168,6 +2232,13 @@ body {
   flex-direction: column;
   gap: 4px;
   margin-bottom: 6px;
+  padding: 0 8px;
+  /* bounded with internal scroll so a long pin list can't push the
+     sections below (Recent runs, Figures) off the clipped sidebar */
+  flex-shrink: 0;
+  max-height: 112px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .am-pin-item {
   display: flex;
@@ -2367,7 +2438,12 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-bottom: 6px;
+  padding: 6px 8px 12px;
+  /* fills its tab panel and scrolls internally */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .am-run-item {
   display: flex;

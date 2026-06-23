@@ -292,54 +292,106 @@ def _sidebar() -> html.Div:
                 className="am-sidebar-new-chat",
                 n_clicks=0,
             ),
+            # ── segmented switcher (Claude-style) ──────────
             html.Div(
-                "Sessions",
-                className="am-sidebar-section-lbl",
+                [
+                    html.Button(
+                        [
+                            html.I(className="bi bi-chat-square-text"),
+                            html.Span("Sessions"),
+                        ],
+                        id=IDs.SEG_SESSIONS,
+                        className="am-seg-btn am-seg-active",
+                        n_clicks=0,
+                        title="Saved chat sessions",
+                    ),
+                    html.Button(
+                        [
+                            html.I(className="bi bi-activity"),
+                            html.Span("Runs"),
+                        ],
+                        id=IDs.SEG_RUNS,
+                        className="am-seg-btn",
+                        n_clicks=0,
+                        title="Workflow run history",
+                    ),
+                    html.Button(
+                        [
+                            html.I(className="bi bi-images"),
+                            html.Span("Figures"),
+                        ],
+                        id=IDs.SEG_FIGS,
+                        className="am-seg-btn",
+                        n_clicks=0,
+                        title="Generated figures",
+                    ),
+                ],
+                className="am-sidebar-segmented",
             ),
+            # ── tab panels (only the active one is shown) ──
             html.Div(
-                html.Div(
-                    "No saved sessions yet.",
-                    className="am-sidebar-empty",
-                ),
-                id=IDs.SIDEBAR_HISTORY,
-                className="am-sidebar-history",
+                [
+                    # Sessions panel: Pinned (compact) + history
+                    html.Div(
+                        [
+                            html.Div(
+                                "Pinned",
+                                className="am-sidebar-section-lbl",
+                            ),
+                            html.Div(
+                                html.Div(
+                                    "No pinned messages yet.",
+                                    className="am-sidebar-empty",
+                                ),
+                                id=IDs.SIDEBAR_PINS,
+                                className="am-sidebar-pins",
+                            ),
+                            html.Div(
+                                "Sessions",
+                                className="am-sidebar-section-lbl",
+                            ),
+                            html.Div(
+                                html.Div(
+                                    "No saved sessions yet.",
+                                    className="am-sidebar-empty",
+                                ),
+                                id=IDs.SIDEBAR_HISTORY,
+                                className="am-sidebar-history",
+                            ),
+                        ],
+                        id=IDs.PANEL_SESSIONS,
+                        className="am-tab-panel am-tab-active",
+                    ),
+                    # Runs panel
+                    html.Div(
+                        html.Div(
+                            html.Div(
+                                "No workflows run yet.",
+                                className="am-sidebar-empty",
+                            ),
+                            id=IDs.SIDEBAR_RUNS,
+                            className="am-sidebar-runs",
+                        ),
+                        id=IDs.PANEL_RUNS,
+                        className="am-tab-panel",
+                    ),
+                    # Figures panel
+                    html.Div(
+                        html.Div(
+                            html.Div(
+                                "No figures yet.",
+                                className="am-sidebar-empty",
+                            ),
+                            id=IDs.SIDEBAR_FIGS,
+                            className="am-sidebar-figs",
+                        ),
+                        id=IDs.PANEL_FIGS,
+                        className="am-tab-panel",
+                    ),
+                ],
+                className="am-sidebar-panels",
             ),
-            html.Div(
-                "Pinned",
-                className="am-sidebar-section-lbl",
-            ),
-            html.Div(
-                html.Div(
-                    "No pinned messages yet.",
-                    className="am-sidebar-empty",
-                ),
-                id=IDs.SIDEBAR_PINS,
-                className="am-sidebar-pins",
-            ),
-            html.Div(
-                "Recent runs",
-                className="am-sidebar-section-lbl",
-            ),
-            html.Div(
-                html.Div(
-                    "No workflows run yet.",
-                    className="am-sidebar-empty",
-                ),
-                id=IDs.SIDEBAR_RUNS,
-                className="am-sidebar-runs",
-            ),
-            html.Div(
-                "Figures",
-                className="am-sidebar-section-lbl",
-            ),
-            html.Div(
-                html.Div(
-                    "No figures yet.",
-                    className="am-sidebar-empty",
-                ),
-                id=IDs.SIDEBAR_FIGS,
-                className="am-sidebar-figs",
-            ),
+            dcc.Store(id=IDs.STORE_SB_TAB, data="sessions"),
         ],
     )
 

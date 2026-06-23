@@ -50,10 +50,12 @@ PLOT     = "plot"       # produce a figure     → workflow / web app
 WORKFLOW = "workflow"   # run a pipeline       → Context → Orchestrator
 META     = "meta"       # capabilities / chitchat (no agent, static reply)
 CLARIFY  = "clarify"    # too ambiguous → ask the user one question
+METRICS  = "metrics"    # computed VALUE of a line → MetricsAgent (inline)
 
-INTENTS = frozenset({QUESTION, CODE, PLOT, WORKFLOW, META, CLARIFY})
+INTENTS = frozenset({QUESTION, CODE, PLOT, WORKFLOW, META, CLARIFY, METRICS})
 
 # Intents that do NOT require an EDI dataset to be loaded.
+# METRICS needs data (a line) — deliberately excluded.
 NO_DATA_INTENTS = frozenset({QUESTION, CODE, META, CLARIFY})
 
 # Confidence below which the LLM path downgrades to CLARIFY.
@@ -105,6 +107,8 @@ _META_PHRASES = (
     "how do you work", "what is pycsamt agent", "help me get started",
     "getting started", "what can you help",
     "what you can do", "things you can do", "what you can perform",
+    "introduce yourself", "introduce yourself.", "tell me about yourself",
+    "about yourself", "who is this", "what is this assistant",
 )
 
 # Capability / catalogue listing → META ("list the agents/tasks/workflows you
@@ -202,6 +206,14 @@ def classify_intent_offline(text: str) -> tuple[str, float]:
     if any(p in t for p in _CODE_PHRASES):
         return CODE, 0.85
 
+    # ── METRICS: a question about a computed VALUE of a line ────────────────
+    # ("what's the strike of L22PLT?", "azimuth of all lines"). Checked before
+    # QUESTION so value questions compute the number rather than fall through
+    # to the package-concept Q&A path.
+    from .metrics import looks_like_metric_query
+    if looks_like_metric_query(text):
+        return METRICS, 0.82
+
     has_path = bool(_PATH_RE.search(text))
     has_wf_verb = any(v in t for v in _WORKFLOW_VERBS)
 
@@ -257,15 +269,21 @@ INTENTS:
 - "plot": the user wants a figure/plot/visualisation produced from data.
 - "workflow": the user wants to RUN a processing pipeline on their data
   (QC, static-shift, phase analysis, an inversion, report, etc.).
-- "meta": greetings, "what can you do", capability questions about the
-  assistant itself, and requests to LIST/ENUMERATE the agents, tasks or
-  workflows the assistant can run ("list the agents", "which workflows are
-  available", "what tasks can you perform"). A question about what ONE named
-  agent/function does is a "question", not "meta".
+- "meta": greetings, "what can you do", "introduce yourself", capability
+  questions about the assistant itself, and requests to LIST/ENUMERATE the
+  agents, tasks or workflows the assistant can run ("list the agents", "which
+  workflows are available", "what tasks can you perform"). A question about
+  what ONE named agent/function does is a "question", not "meta".
+- "metrics": the user asks for a COMPUTED VALUE of their survey line(s) and
+  wants the number back inline — strike, azimuth/bearing, dimensionality,
+  skew, station count, period/frequency range, coordinates/length, quality
+  score, or a one-line summary ("what's the strike of L22PLT?", "azimuth of
+  all lines", "how many stations", "tell me about this line"). This is NOT a
+  plot/figure request and NOT "run an analysis".
 
 Return ONLY a JSON object:
 {{
-  "intent": one of question|code|plot|workflow|meta,
+  "intent": one of question|code|plot|workflow|meta|metrics,
   "workflow": one of [{_KNOWN_WF}] or null (only for workflow/plot/code),
   "confidence": float 0..1,
   "clarification": a single question to ask IF the request is too ambiguous
@@ -442,6 +460,6 @@ __all__ = [
     "IntentRouter",
     "RouterDecision",
     "classify_intent_offline",
-    "QUESTION", "CODE", "PLOT", "WORKFLOW", "META", "CLARIFY",
+    "QUESTION", "CODE", "PLOT", "WORKFLOW", "META", "CLARIFY", "METRICS",
     "INTENTS", "NO_DATA_INTENTS",
 ]

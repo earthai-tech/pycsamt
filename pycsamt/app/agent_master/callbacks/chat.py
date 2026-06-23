@@ -1414,6 +1414,12 @@ def _capability_text() -> str:
         " then apply or export the edited survey)\n"
         "- layered model builder (preview a synthetic 1-D resistivity model;"
         " no data needed)\n\n"
+        "**Tell you values** about a line — just ask and I'll compute and"
+        " answer inline (for one line or all lines):\n"
+        "- strike, azimuth/bearing, dimensionality (1-D/2-D/3-D), skew\n"
+        "- station count, period & frequency range, coordinates & length\n"
+        "- data-quality score, and a one-line summary"
+        " (\"tell me about L22PLT\")\n\n"
         "**Answer questions** about pyCSAMT — classes, functions, the Sites"
         " data model, and which method to use.\n\n"
         "**Generate Python code** that reproduces a pyCSAMT workflow.\n\n"
@@ -1676,6 +1682,132 @@ def _dispatch_tool(
     )
 
 
+def _resolve_metric_targets(
+    text: str, edi_store: dict, settings: dict, all_lines: bool,
+) -> list[tuple[str, Any]]:
+    """Resolve which line(s) a metric question is about.
+
+    Returns ``[(label, src), …]`` where ``src`` is an EDI path, a list of EDI
+    files, or a directory the MetricsAgent can load. Empty when no data is
+    available."""
+    import os
+    groups = (edi_store or {}).get("groups", {}) or {}
+    edi_path = (edi_store or {}).get("path", "") or ""
+
+    if all_lines:
+        if groups:
+            return [(ln, list(fs)) for ln, fs in groups.items() if fs]
+        if edi_path:
+            return [("the survey", edi_path)]
+        return []
+
+    # A specific line named among the loaded groups.
+    if groups:
+        ref = _extract_line_ref(text, groups)
+        if ref:
+            m = _match_group(ref, groups)
+            if m and groups.get(m):
+                return [(m, list(groups[m]))]
+
+    # A known survey line from the project registry ("strike of L22PLT").
+    try:
+        from pycsamt.assistant.tools.project_registry import ProjectRegistry
+        reg = ProjectRegistry.from_default()
+        if reg is not None:
+            ln = reg.find_line_in_text(text)
+            if ln:
+                info = reg.resolve_line(ln)
+                if info.get("exists"):
+                    return [(ln, info["edi_dir"])]
+    except Exception:  # noqa: BLE001
+        pass
+
+    # The whole loaded dataset.
+    if edi_path:
+        label = os.path.basename(str(edi_path).rstrip("/\\")) or "the survey"
+        return [(label, edi_path)]
+
+    # Session fallback (a follow-up that inherits the last dataset).
+    _sess = _session()
+    if _sess is not None and getattr(_sess, "edi_path", None):
+        return [(getattr(_sess, "line", "") or "the survey", _sess.edi_path)]
+    return []
+
+
+def _dispatch_metrics(
+    jid: str,
+    text: str,
+    edi_store: dict,
+    settings: dict,
+    *,
+    step,
+) -> None:
+    """Answer a question about computed line value(s) inline via MetricsAgent."""
+    from pycsamt.agents.metrics import MetricsAgent, parse_metric_request
+
+    kinds, all_lines = parse_metric_request(text)
+    if not kinds:
+        kinds = ["summary"]
+
+    step("Resolving line(s)...", "done")
+    targets = _resolve_metric_targets(text, edi_store, settings, all_lines)
+    if not targets:
+        _update_job(
+            jid, status="done",
+            result=(
+                "I don't have any survey data to read values from yet. "
+                "Load an EDI dataset with **Load EDI** (top-left), or name a "
+                "known survey line, then ask again."
+            ),
+            steps=_JOBS[jid]["steps"], kind=KIND_META,
+        )
+        return
+
+    step("Computing values...", "running")
+    warnings: list[str] = []
+    if len(targets) == 1:
+        label, src = targets[0]
+        res = MetricsAgent().execute(
+            {"sites": src, "kinds": kinds, "label": label}
+        )
+        result_text = res.summary
+        warnings = list(res.warnings or [])
+    else:
+        # All lines: one compact line per survey line.
+        out_lines = []
+        for label, src in targets:
+            res = MetricsAgent().execute(
+                {"sites": src, "kinds": kinds, "label": label}
+            )
+            if res.status != "success":
+                out_lines.append(f"- **{label}**: {res.summary}")
+                continue
+            vals = (res.data or {}).get("values", {})
+            if len(kinds) == 1:
+                out_lines.append(f"- **{label}**: {vals.get(kinds[0], 'n/a')}")
+            else:
+                sub = "; ".join(f"{k}: {vals.get(k, 'n/a')}" for k in kinds)
+                out_lines.append(f"- **{label}**: {sub}")
+        header = (
+            f"Here's the {kinds[0]} for each line:"
+            if len(kinds) == 1 else "Here's what I found per line:"
+        )
+        result_text = header + "\n" + "\n".join(out_lines)
+
+    if warnings:
+        result_text += "\n\n" + "\n".join(f"⚠ {w}" for w in warnings[:3])
+
+    _record_run(
+        workflow="metrics", path="", output_dir="",
+        status="success", summary=result_text[:200], n_figures=0,
+    )
+    step("Done", "done")
+    _update_job(
+        jid, status="done", result=result_text,
+        steps=_JOBS[jid]["steps"], kind=KIND_ANSWER,
+    )
+
+
 def _dispatch_code(
     jid: str,
     text: str,
@@ -1911,6 +2043,7 @@ def _run_agent(
             CODE as _I_CODE,
             META as _I_META,
             CLARIFY as _I_CLARIFY,
+            METRICS as _I_METRICS,
         )
 
         with (
@@ -1947,6 +2080,11 @@ def _run_agent(
                 ),
                 steps=_JOBS[jid]["steps"],
                 kind=KIND_CLARIFY,
+            )
+            return
+        if decision.intent == _I_METRICS:
+            _dispatch_metrics(
+                jid, text, edi_store, settings, step=_step,
             )
             return
         if decision.intent == _I_QUESTION:

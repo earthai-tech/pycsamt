@@ -676,8 +676,16 @@ def _render_markdown(text: str) -> list:
     ]
 
 
+# Only these kinds still show the little label chip — normal replies
+# (answer / meta / workflow / code) read cleaner without it, ChatGPT-style;
+# errors and clarifications keep a visual cue.
+_HEADER_KINDS = frozenset({KIND_ERROR, KIND_CLARIFY})
+
+
 def _kind_header(kind: str | None) -> html.Div | None:
     """Build the small per-kind label chip, or None for plain replies."""
+    if kind not in _HEADER_KINDS:
+        return None
     spec = _KIND_HEADER.get(kind or "")
     if not spec:
         return None

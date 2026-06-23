@@ -2429,6 +2429,21 @@ body {
 .am-bubble.agent.am-bubble-error    { border-left: 3px solid var(--red); }
 .am-bubble.agent.am-bubble-error    { background: rgba(243,139,168,.06); }
 .am-bubble.agent.am-bubble-clarify  { background: rgba(249,226,175,.06); }
+/* Exposed (flat) replies drop the per-kind left accent bar so normal
+   answers read as open content; errors & clarifications keep a subtle
+   callout (bar + tint + a little padding) as a visual cue. */
+.am-bubble.agent.am-bubble-flat.am-bubble-answer,
+.am-bubble.agent.am-bubble-flat.am-bubble-code,
+.am-bubble.agent.am-bubble-flat.am-bubble-workflow,
+.am-bubble.agent.am-bubble-flat.am-bubble-meta {
+  border-left: none;
+  padding-left: 0;
+}
+.am-bubble.agent.am-bubble-flat.am-bubble-error,
+.am-bubble.agent.am-bubble-flat.am-bubble-clarify {
+  padding: 9px 13px;
+  border-radius: var(--radius-sm);
+}
 /* headings inside markdown answers */
 .am-bubble .am-md-h {
   margin: 8px 0 4px;

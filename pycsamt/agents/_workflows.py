@@ -92,6 +92,9 @@ WORKFLOW_DESCRIPTIONS: dict[str, str] = {
     "elevation":          "Enrich stations with elevation from a web API",
     "converter":          "Re-export the survey to CSV / JSON / EDI",
     "batch_export":       "Render and save a bundle of standard plots",
+    # --- stateful tools ---
+    "freq_editor":        "Confidence-based frequency QC (drop/mask/recover)",
+    "layered_model":      "Build & preview a synthetic 1-D resistivity model",
 }
 
 
@@ -215,6 +218,22 @@ WORKFLOW_KEYWORDS: dict[str, list[str]] = {
         "export to csv", "export to json", "export survey",
         "export the survey", "re-export edi", "reexport edi",
         "export station metadata", "convert survey",
+    ],
+    # ── stateful tools ───────────────────────────────────────────────────────
+    # freq_editor before freq_decimation so "edit frequencies by confidence"
+    # is not swallowed by the decimation route.
+    "freq_editor": [
+        "frequency editor", "frequency edit", "edit frequencies",
+        "edit the frequencies", "edit frequency",
+        "confidence qc", "confidence-based qc", "confidence based qc",
+        "recover frequencies", "drop frequencies", "mask frequencies",
+        "recover periods", "frequency confidence",
+    ],
+    "layered_model": [
+        "layered model", "layer model", "layered earth",
+        "model builder", "build a model", "build model",
+        "resistivity model", "1d model", "1-d model",
+        "synthetic model", "earth model", "preview model",
     ],
     "tipper_plot": [
         "tipper plot", "plot tipper", "plot the tipper",

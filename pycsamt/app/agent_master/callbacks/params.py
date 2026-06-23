@@ -116,6 +116,16 @@ _FID_FORMAT         = {"type": "am-pf", "key": "format"}
 _FID_OUTDIR         = {"type": "am-pf", "key": "output_dir"}
 _FID_PLOTS          = {"type": "am-pf", "key": "plots"}
 _FID_DPI            = {"type": "am-pf", "key": "dpi"}
+# ── Stateful tool fields (Wave D) ───────────────────────────────
+_FID_MODE           = {"type": "am-pf", "key": "mode"}
+_FID_THRESHOLD      = {"type": "am-pf", "key": "threshold"}
+_FID_CI_HI          = {"type": "am-pf", "key": "ci_hi"}
+_FID_CI_LO          = {"type": "am-pf", "key": "ci_lo"}
+_FID_ALSO           = {"type": "am-pf", "key": "also"}
+_FID_REJECT         = {"type": "am-pf", "key": "reject"}
+_FID_PRESET         = {"type": "am-pf", "key": "preset"}
+_FID_RESISTIVITIES  = {"type": "am-pf", "key": "resistivities"}
+_FID_THICKNESSES    = {"type": "am-pf", "key": "thicknesses"}
 
 # ── Reusable step section definitions ────────
 
@@ -1627,6 +1637,137 @@ _SCHEMAS["batch_export"] = {
             "default": "",
             "placeholder": "blank = ~/pycsamt_figures",
             "help": "Destination folder (created if missing).",
+        },
+    ],
+    "steps": [],
+}
+
+# ── Stateful tools (Wave D) ────────────────────────────────────────────────
+_SCHEMAS["freq_editor"] = {
+    "title": "Frequency Editor",
+    "icon": "bi-sliders",
+    "color": "var(--red)",
+    "desc": (
+        "Confidence-based frequency QC. Edits run out-of-place; afterwards "
+        "you can apply the edited survey to the session or export it."
+    ),
+    "fields": [
+        {
+            "id": _FID_MODE, "key": "mode",
+            "label": "Mode", "type": "radio",
+            "options": [
+                {"label": "Recover", "value": "recover"},
+                {"label": "Drop", "value": "drop"},
+                {"label": "Mask", "value": "mask"},
+            ],
+            "inline": True, "default": "recover",
+            "help": "Recover interpolates weak periods; drop/mask remove them.",
+        },
+        {
+            "id": _FID_PLOT_METHOD, "key": "method",
+            "label": "Confidence method", "type": "select",
+            "options": [
+                {"label": "Composite", "value": "composite"},
+                {"label": "SNR", "value": "snr"},
+                {"label": "Phase slope", "value": "phase_slope"},
+                {"label": "Coherence", "value": "coherence"},
+            ],
+            "default": "composite",
+            "help": "How per-period confidence is scored.",
+        },
+        {
+            "id": _FID_THRESHOLD, "key": "threshold",
+            "label": "Threshold", "type": "number",
+            "min": 0.0, "max": 1.0, "step": None, "default": 0.5,
+            "help": "Periods below this confidence are acted on.",
+        },
+        {
+            "id": _FID_CI_HI, "key": "ci_hi",
+            "label": "CI high", "type": "number",
+            "min": 0.0, "max": 1.0, "step": None, "default": 0.9,
+            "help": "Upper confidence band.",
+        },
+        {
+            "id": _FID_CI_LO, "key": "ci_lo",
+            "label": "CI low", "type": "number",
+            "min": 0.0, "max": 1.0, "step": None, "default": 0.5,
+            "help": "Lower confidence band.",
+        },
+        {
+            "id": _FID_ALSO, "key": "also",
+            "label": "Apply to", "type": "select",
+            "options": [
+                {"label": "Z + tipper", "value": "both"},
+                {"label": "Impedance (Z)", "value": "z"},
+                {"label": "Tipper", "value": "tipper"},
+            ],
+            "default": "both",
+            "help": "Which transfer functions to edit.",
+        },
+        {
+            "id": _FID_REJECT, "key": "reject",
+            "label": "Reject rows", "type": "radio",
+            "options": [
+                {"label": "Drop", "value": "drop"},
+                {"label": "Mask", "value": "mask"},
+                {"label": "Keep", "value": "keep"},
+            ],
+            "inline": True, "default": "drop",
+            "help": "What to do with rejected periods.",
+        },
+        _PLOT_FIELD_STATIONS,
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["layered_model"] = {
+    "title": "Layered Model Builder",
+    "icon": "bi-stack",
+    "color": "var(--mauve)",
+    "desc": (
+        "Build and preview a synthetic 1-D layered-earth resistivity model. "
+        "Use a preset, or enter resistivities and thicknesses directly. "
+        "No loaded data required."
+    ),
+    "fields": [
+        {
+            "id": _FID_PRESET, "key": "preset",
+            "label": "Source", "type": "select",
+            "options": [
+                {"label": "Custom (enter values below)", "value": "custom"},
+                {"label": "Random preset", "value": "random"},
+                {"label": "Blocky preset", "value": "blocky"},
+                {"label": "Smooth preset", "value": "smooth"},
+            ],
+            "default": "custom",
+            "help": "Custom uses the fields below; presets are auto-generated.",
+        },
+        {
+            "id": _FID_N_LAYERS, "key": "n_layers",
+            "label": "Number of layers (presets)", "type": "slider",
+            "min": 2, "max": 20, "step": 1, "default": 3,
+            "help": "Layer count for the random/blocky/smooth presets.",
+        },
+        {
+            "id": _FID_RESISTIVITIES, "key": "resistivities",
+            "label": "Resistivities (Ω·m)", "type": "text",
+            "default": "",
+            "placeholder": "e.g. 100, 10, 500  (top → halfspace)",
+            "help": "Comma-separated, one per layer. Blank = 100, 10, 500.",
+        },
+        {
+            "id": _FID_THICKNESSES, "key": "thicknesses",
+            "label": "Thicknesses (m)", "type": "text",
+            "default": "",
+            "placeholder": "e.g. 300, 800  (one fewer than layers)",
+            "help": "Comma-separated; one fewer than resistivities (no "
+                    "halfspace thickness). Blank = 300, 800.",
+        },
+        {
+            "id": _FID_DEPTH_MAX, "key": "depth_max",
+            "label": "Max depth (m, random preset)", "type": "number",
+            "min": 100, "max": 50000, "step": 100, "default": 2000.0,
+            "help": "Total depth spanned by the random preset.",
         },
     ],
     "steps": [],

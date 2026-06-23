@@ -241,7 +241,8 @@ _KNOWN_WF = (
     "code_gen, denoise, rhophi, phase_psection, pt_psection, tipper_plot, "
     "phase_tensor_map, station_response, strike_profile, "
     "strike, dimensionality, validator, "
-    "coords, elevation, converter, batch_export"
+    "coords, elevation, converter, batch_export, "
+    "freq_editor, layered_model"
 )
 
 _ROUTER_SYSTEM = f"""\

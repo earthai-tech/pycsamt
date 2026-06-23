@@ -15,7 +15,15 @@ as a monospaced block in chat) plus optional **figures**:
 * ``coords``          — transform station lat/lon to UTM easting/northing,
 * ``elevation``       — enrich stations with elevation from an open web API,
 * ``converter``       — re-export the survey to CSV / JSON / EDI on disk,
-* ``batch_export``    — render a bundle of standard plots and save them.
+* ``batch_export``    — render a bundle of standard plots and save them,
+* ``freq_editor``     — confidence-based frequency QC (drop / mask / recover),
+* ``layered_model``   — build & preview a synthetic 1-D resistivity model.
+
+``freq_editor`` mutates the survey: it runs out-of-place and hands the edited
+``Sites`` back through ``AgentResult.data["corrected_sites"]`` so the chat's
+post-processing modal can apply it to the session or export it — the same
+pathway used by the static-shift / denoise correction workflows.
+``layered_model`` is synthetic and needs no loaded data.
 
 The ``coords`` tool is read-only. The ``elevation`` tool reaches an external
 network service, and ``converter`` / ``batch_export`` write files to a
@@ -41,7 +49,11 @@ __all__ = ["ToolAgent", "TOOL_KINDS"]
 TOOL_KINDS = (
     "strike", "dimensionality", "validator",
     "coords", "elevation", "converter", "batch_export",
+    "freq_editor", "layered_model",
 )
+
+# Tools that do not need a loaded EDI dataset.
+_DATALESS_KINDS = ("layered_model",)
 
 # Plot bundles offered by the batch_export tool. Values are PlotAgent kinds.
 _EXPORT_BUNDLES: dict[str, tuple[str, ...]] = {
@@ -180,6 +192,7 @@ class ToolAgent:
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         t0 = time.time()
         self._last_cost = 0.0
+        self._corrected = None  # edited Sites stashed by mutating tools
 
         kind = str(input_data.get("kind", "")).strip()
         if kind not in TOOL_KINDS:
@@ -187,6 +200,27 @@ class ToolAgent:
                 f"Unknown tool {kind!r}. Expected one of {TOOL_KINDS}.",
                 elapsed=time.time() - t0,
             )
+
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt  # noqa: F401
+
+        # Synthetic tools need no data — handle before the EDI guard.
+        if kind in _DATALESS_KINDS:
+            warnings: list[str] = []
+            try:
+                summary, table, figs = self._layered_model(input_data, warnings)
+            except Exception as exc:  # noqa: BLE001
+                return AgentResult.failed(
+                    f"{kind} failed: {exc}", elapsed=time.time() - t0,
+                )
+            return AgentResult(
+                status="success", summary=summary,
+                data={"table_text": table, "figures": figs, "tool_kind": kind},
+                warnings=warnings, elapsed_seconds=time.time() - t0,
+                cost_estimate_usd=0.0,
+            )
+
         src = (
             input_data.get("sites")
             or input_data.get("path")
@@ -197,10 +231,6 @@ class ToolAgent:
                 "No data supplied. Load an EDI dataset first.",
                 elapsed=time.time() - t0,
             )
-
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt  # noqa: F401
 
         from ..emtools._core import ensure_sites
         try:
@@ -238,6 +268,10 @@ class ToolAgent:
                 summary, table, figs = self._batch_export(
                     sub, input_data, warnings
                 )
+            elif kind == "freq_editor":
+                summary, table, figs = self._freq_editor(
+                    sub, input_data, warnings
+                )
             else:  # validator
                 summary, table, figs = self._validator(
                     sub, input_data, warnings
@@ -248,10 +282,15 @@ class ToolAgent:
                 elapsed=time.time() - t0,
             )
 
+        data: dict[str, Any] = {
+            "table_text": table, "figures": figs, "tool_kind": kind,
+        }
+        if self._corrected is not None:
+            data["corrected_sites"] = self._corrected
         return AgentResult(
             status="success",
             summary=summary,
-            data={"table_text": table, "figures": figs, "tool_kind": kind},
+            data=data,
             warnings=warnings,
             elapsed_seconds=time.time() - t0,
             cost_estimate_usd=0.0,
@@ -644,3 +683,148 @@ class ToolAgent:
         )
         table = _df_to_text(df, columns=["plot", "file", "saved"], max_rows=40)
         return summary, table, figs_out
+
+    # ── stateful tools (Wave D) ───────────────────────────────────────────────
+    def _freq_editor(self, sites, d, warnings):
+        """Confidence-based frequency QC. Edits out-of-place and stashes the
+        edited Sites in ``self._corrected`` for the post-processing modal."""
+        import matplotlib.pyplot as plt
+        from ..emtools.frequency import (
+            edit_frequencies_by_confidence,
+            plot_frequency_edit_summary,
+        )
+
+        mode = str(d.get("mode", "recover") or "recover").lower()
+        if mode not in ("recover", "drop", "mask"):
+            mode = "recover"
+        method = str(d.get("method", "composite") or "composite").lower()
+        also = str(d.get("also", "both") or "both").lower()
+        reject = str(d.get("reject", "drop") or "drop").lower()
+
+        def _f(key, default):
+            try:
+                return float(d.get(key, default) or default)
+            except (TypeError, ValueError):
+                return default
+        threshold = _f("threshold", 0.50)
+        ci_hi = _f("ci_hi", 0.90)
+        ci_lo = _f("ci_lo", 0.50)
+
+        result = edit_frequencies_by_confidence(
+            sites, mode=mode, method=method, threshold=threshold,
+            ci_hi=ci_hi, ci_lo=ci_lo, interpolation="linear",
+            reject=reject, also=also, inplace=False, verbose=0,
+        )
+        edited = getattr(result, "sites", None)
+        self._corrected = edited
+
+        decisions = getattr(result, "decisions", None)
+        if hasattr(decisions, "frame"):
+            decisions = decisions.frame
+        elif hasattr(decisions, "_frame"):
+            decisions = decisions._frame
+
+        n_drop = int(getattr(result, "n_dropped", 0) or 0)
+        n_mask = int(getattr(result, "n_masked", 0) or 0)
+        n_recv = int(getattr(result, "n_recovered", 0) or 0)
+        summary = (
+            f"**Frequency editor** ({mode}, method {method}, "
+            f"threshold {threshold:g}) — dropped {n_drop}, masked {n_mask}, "
+            f"recovered {n_recv}. "
+            + ("Edited data is ready — choose **apply / export** below."
+               if edited is not None else
+               "No edited survey was returned.")
+        )
+
+        table = "(no per-row decisions returned)"
+        if decisions is not None and getattr(decisions, "empty", True) is False:
+            cols = [c for c in ("station", "period", "confidence", "action")
+                    if c in decisions.columns]
+            table = _df_to_text(decisions, columns=cols or None,
+                                max_rows=40, ndigits=4)
+
+        figs = {}
+        try:
+            ax = plot_frequency_edit_summary(
+                sites, edited if edited is not None else sites,
+                method=method, ci_hi=ci_hi, ci_lo=ci_lo,
+            )
+            fig = _as_fig(ax)
+            if fig is not None:
+                figs["Frequency edit summary"] = fig
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"summary figure skipped: {exc}")
+        return summary, table, figs
+
+    def _layered_model(self, d, warnings):
+        """Build and preview a synthetic 1-D layered resistivity model."""
+        import numpy as np
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        from ..forward.synthetic import LayeredModel
+
+        preset = str(d.get("preset", "custom") or "custom").lower()
+        try:
+            n_layers = int(float(d.get("n_layers", 3) or 3))
+        except (TypeError, ValueError):
+            n_layers = 3
+        n_layers = max(2, min(20, n_layers))
+
+        if preset in ("random", "blocky", "smooth"):
+            try:
+                depth_max = float(d.get("depth_max", 2000.0) or 2000.0)
+            except (TypeError, ValueError):
+                depth_max = 2000.0
+            if preset == "random":
+                model = LayeredModel.random(
+                    n_layers, depth_max=depth_max, seed=0)
+            elif preset == "blocky":
+                model = LayeredModel.blocky(n_layers)
+            else:
+                model = LayeredModel.smooth(n_layers)
+        else:
+            rhos = [float(x) for x in _as_list(d.get("resistivities"))]
+            thicks = [float(x) for x in _as_list(d.get("thicknesses"))]
+            if not rhos:
+                rhos, thicks = [100.0, 10.0, 500.0], [300.0, 800.0]
+            if len(thicks) != len(rhos) - 1:
+                # coerce: keep n-1 thicknesses, pad with the last/ a default
+                thicks = thicks[: len(rhos) - 1]
+                while len(thicks) < len(rhos) - 1:
+                    thicks.append(thicks[-1] if thicks else 500.0)
+                warnings.append(
+                    f"adjusted to {len(thicks)} thickness(es) for "
+                    f"{len(rhos)} layers."
+                )
+            model = LayeredModel(resistivity=rhos, thickness=thicks)
+
+        fig, ax = plt.subplots(figsize=(4, 5))
+        try:
+            model.plot(ax=ax)
+            fig.tight_layout()
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"plot failed: {exc}")
+            plt.close(fig)
+            fig = None
+
+        rows = []
+        thick = list(model.thickness)
+        for i, rho in enumerate(model.resistivity):
+            rows.append({
+                "layer": "halfspace" if i >= len(thick) else f"L{i + 1}",
+                "rho_ohm_m": round(float(rho), 2),
+                "thickness_m": (round(float(thick[i]), 1)
+                                if i < len(thick) else None),
+                "top_depth_m": round(float(model.depth[i]), 1),
+            })
+        df = pd.DataFrame(rows)
+        summary = (
+            f"**Layered model** ({preset}) — {model.n_layers} layers, "
+            f"ρ {model.resistivity.min():.1f}–{model.resistivity.max():.1f} "
+            f"Ω·m, total depth {float(model.depth[-1]):.0f} m."
+        )
+        table = _df_to_text(
+            df, columns=["layer", "rho_ohm_m", "thickness_m", "top_depth_m"],
+            max_rows=22,
+        )
+        return summary, table, ({"1-D resistivity model": fig} if fig else {})

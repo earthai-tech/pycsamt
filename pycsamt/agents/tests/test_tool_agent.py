@@ -31,8 +31,32 @@ class TestToolHelpers(unittest.TestCase):
         self.assertEqual(
             set(TOOL_KINDS),
             {"strike", "dimensionality", "validator",
-             "coords", "elevation", "converter", "batch_export"},
+             "coords", "elevation", "converter", "batch_export",
+             "freq_editor", "layered_model"},
         )
+
+    def test_layered_model_dataless(self):
+        # layered_model needs no EDI dataset.
+        import matplotlib.pyplot as plt
+        r = ToolAgent().execute({
+            "kind": "layered_model", "preset": "custom",
+            "resistivities": "100, 10, 500", "thicknesses": "300, 800",
+        })
+        self.assertEqual(r.status, "success", msg=r.summary)
+        figs = r.data.get("figures") or {}
+        self.assertTrue(figs)
+        for f in figs.values():
+            self.assertIsInstance(f, plt.Figure)
+        plt.close("all")
+
+    def test_layered_model_preset(self):
+        import matplotlib.pyplot as plt
+        r = ToolAgent().execute({
+            "kind": "layered_model", "preset": "random", "n_layers": 5,
+        })
+        self.assertEqual(r.status, "success", msg=r.summary)
+        self.assertIn("5 layers", r.data["table_text"] + r.summary)
+        plt.close("all")
 
     def test_circular_strike_mean(self):
         import numpy as np
@@ -165,6 +189,19 @@ class TestToolAgent(unittest.TestCase):
         self.assertEqual(r.status, "success", msg=r.summary)
         self.assertIn("100", r.data["table_text"])
         self.assertIn("200", r.data["table_text"])
+
+    def test_freq_editor(self):
+        # Mutating tool: succeeds and hands back an edited survey for the
+        # post-processing modal.
+        r = ToolAgent().execute({
+            "path": _DATA, "kind": "freq_editor",
+            "mode": "recover", "method": "composite", "threshold": 0.5,
+        })
+        self.assertEqual(r.status, "success", msg=r.summary)
+        self.assertIn("corrected_sites", r.data)
+        self.assertIsNotNone(r.data["corrected_sites"])
+        for fig in (r.data.get("figures") or {}).values():
+            self.assertIsInstance(fig, plt.Figure)
 
 
 if __name__ == "__main__":

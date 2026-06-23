@@ -86,8 +86,13 @@ _TOOL_KIND = {
     "elevation":      "elevation",
     "converter":      "converter",
     "batch_export":   "batch_export",
+    "freq_editor":    "freq_editor",
+    "layered_model":  "layered_model",
 }
 _TOOL_WORKFLOWS = frozenset(_TOOL_KIND)
+
+# Tool tasks that need no loaded EDI dataset (synthetic).
+_NO_DATA_WORKFLOWS = frozenset({"layered_model"})
 
 # ── response kinds ─────────────────────────────────
 # Each agent response declares its KIND so the chat
@@ -894,6 +899,8 @@ _NEEDS_PARAMS: frozenset[str] = frozenset({
     "strike", "dimensionality", "validator",
     # Data / IO tools
     "coords", "elevation", "converter", "batch_export",
+    # Stateful tools
+    "freq_editor", "layered_model",
 })
 
 _WF_LABELS: dict[str, str] = {
@@ -931,6 +938,8 @@ _WF_LABELS: dict[str, str] = {
     "elevation":          "elevation enrichment",
     "converter":          "format converter",
     "batch_export":       "batch plot export",
+    "freq_editor":        "frequency editor",
+    "layered_model":      "layered model builder",
 }
 
 
@@ -1400,6 +1409,11 @@ def _capability_text() -> str:
         "- elevation enrichment (fetch elevation from an open web API)\n"
         "- format converter (re-export the survey to CSV / JSON / EDI)\n"
         "- batch plot export (render & save a bundle of figures)\n\n"
+        "**Edit & model**:\n"
+        "- frequency editor (confidence QC: drop / mask / recover periods,"
+        " then apply or export the edited survey)\n"
+        "- layered model builder (preview a synthetic 1-D resistivity model;"
+        " no data needed)\n\n"
         "**Answer questions** about pyCSAMT — classes, functions, the Sites"
         " data model, and which method to use.\n\n"
         "**Generate Python code** that reproduces a pyCSAMT workflow.\n\n"
@@ -1605,6 +1619,8 @@ def _dispatch_tool(
         "elevation": "elevation enrichment",
         "converter": "format conversion",
         "batch_export": "batch plot export",
+        "freq_editor": "frequency editing",
+        "layered_model": "layered-model build",
     }
     where = f" for {label}" if label else ""
     step(f"Running {_labels.get(kind, kind)}...", "running")
@@ -1643,9 +1659,20 @@ def _dispatch_tool(
         status=res.status, summary=res.summary, n_figures=len(figs),
     )
     step("Done", "done")
+
+    # Mutating tools (freq_editor) hand back an edited survey: cache it and
+    # raise the post-processing modal so the user can apply it to the session
+    # or export it — the same pathway used by correction workflows.
+    _corr = (res.data or {}).get("corrected_sites")
+    _postproc = None
+    if _corr is not None:
+        _CORR_CACHE[jid] = _corr
+        _postproc = {"jid": jid, "workflow": kind, "output_dir": ""}
+
     _update_job(
         jid, status="done", result=result, steps=_JOBS[jid]["steps"],
         figs=figs, kind=KIND_WORKFLOW if figs else KIND_ANSWER,
+        **({"postproc": _postproc} if _postproc else {}),
     )
 
 
@@ -2212,6 +2239,7 @@ def _run_agent(
             "phase_tensor_map", "station_response", "strike_profile",
             "strike", "dimensionality", "validator",
             "coords", "elevation", "converter", "batch_export",
+            "freq_editor",  # layered_model is synthetic → no data needed
         })
         if (
             wtype in _EDI_REQUIRED
@@ -2836,8 +2864,15 @@ def register_chat(app) -> None:
         edi_path = (edi_store or {}).get(
             "path", ""
         )
+        # Synthetic tools (e.g. layered model) need no dataset — let them
+        # through the no-EDI guard straight to the param modal.
+        from pycsamt.agents._workflows import (
+            classify_workflow as _cwf_guard,
+        )
+        _dataless = _cwf_guard(text) in _NO_DATA_WORKFLOWS
         if (
             not edi_path
+            and not _dataless
             and not _names_registry_line(text)
             and not _session_has_data()
         ):

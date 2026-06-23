@@ -2686,3 +2686,59 @@ body {
   color: var(--ov0);
   font-variant-numeric: tabular-nums;
 }
+
+/* ═══════════════════════════════════════════════════
+   MOBILE / NARROW VIEWPORTS  (≤ 640px)
+   Sidebar becomes an overlay drawer, topbar condenses to
+   icons, chat + input + bubbles go full-width.
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  /* ── Top bar: condense, icon-only action buttons ── */
+  #am-topbar { padding: 0 8px; gap: 3px; height: 46px; }
+  .am-brand-text { display: none; }
+  .am-brand { margin-right: 2px; }
+  .am-tbtn { font-size: 0; padding: 0 10px; gap: 0; }
+  .am-tbtn i { font-size: 15px; margin: 0 !important; }
+  .am-edi-badge,
+  .am-save-status { display: none; }
+
+  /* ── Sidebar: slide-in overlay instead of in-flow column ── */
+  .am-sidebar {
+    position: fixed;
+    top: 46px;
+    left: 0;
+    bottom: 0;
+    width: 84vw;
+    max-width: 320px;
+    z-index: 1045;
+    box-shadow: 6px 0 26px rgba(0, 0, 0, .42);
+    transform: translateX(-101%);
+    transition: transform var(--t-med);
+  }
+  .am-sidebar.am-sidebar-open {
+    width: 84vw;
+    max-width: 320px;
+    transform: translateX(0);
+  }
+  .am-sidebar.am-sidebar-collapsed {
+    width: 84vw;
+    max-width: 320px;
+    transform: translateX(-101%);
+  }
+
+  /* ── Chat area: full width, tighter padding ── */
+  #am-chat-window { padding: 14px 12px 6px; gap: 12px; }
+  .am-bubble { max-width: 90%; font-size: 14.5px; padding: 9px 13px; }
+  .am-bubble.user { min-width: 0; max-width: 88%; }
+  .am-bubble.agent.am-bubble-flat { max-width: 100%; }
+  .am-md { font-size: 14.5px; }
+  .am-avatar { width: 28px; height: 28px; font-size: 13px; }
+  .am-chat-welcome { padding: 30px 16px; }
+
+  /* ── Input bar: tighter, slightly smaller pill ── */
+  #am-input-bar { padding: 8px 10px 11px; }
+  .am-input-wrap { border-radius: 20px; padding: 7px 7px 7px 10px; }
+
+  /* ── Keep the collapsed trace + open button from wrapping awkwardly ── */
+  .am-trace-row { gap: 5px; }
+}

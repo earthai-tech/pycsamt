@@ -177,6 +177,24 @@ def register_sidebar(app) -> None:
         prevent_initial_call=True,
     )
 
+    # ── On load, start the sidebar collapsed on phones so the chat gets
+    # the full width (on desktop it stays open). The CSS turns it into a
+    # slide-in overlay at ≤640px. Runs once on initial render.
+    app.clientside_callback(
+        """
+        function(_id){
+            if (window.matchMedia &&
+                window.matchMedia('(max-width: 640px)').matches) {
+                return 'am-sidebar am-sidebar-collapsed';
+            }
+            return window.dash_clientside.no_update;
+        }
+        """,
+        Output(IDs.SIDEBAR, "className", allow_duplicate=True),
+        Input(IDs.AM_BODY, "id"),
+        prevent_initial_call="initial_duplicate",
+    )
+
     # ── new chat ──────────────────────────────
     @app.callback(
         Output(

@@ -148,6 +148,37 @@ def register_sidebar(app) -> None:
         prevent_initial_call=True,
     )
 
+    # ── "open trace" (↗ on a message) → open the sidebar on the Session
+    # tab, where Recent runs lives. Reuses the segmented-switch outputs
+    # (allow_duplicate) so it stays a pure clientside toggle. The guard
+    # ignores the all-zero firing that happens when a new bubble adds a
+    # button to the pattern-matching group.
+    app.clientside_callback(
+        """
+        function(clicks){
+            var nu = window.dash_clientside.no_update;
+            var any = (clicks || []).some(function(c){ return c; });
+            if(!any){ return [nu, nu, nu, nu, nu, nu]; }
+            return [
+                "am-sidebar am-sidebar-open",
+                "am-tab-panel",
+                "am-tab-panel am-tab-active",
+                "am-seg-btn",
+                "am-seg-btn am-seg-active",
+                "session"
+            ];
+        }
+        """,
+        Output(IDs.SIDEBAR, "className", allow_duplicate=True),
+        Output(IDs.PANEL_CHAT, "className", allow_duplicate=True),
+        Output(IDs.PANEL_SESSION, "className", allow_duplicate=True),
+        Output(IDs.SEG_CHAT, "className", allow_duplicate=True),
+        Output(IDs.SEG_SESSION, "className", allow_duplicate=True),
+        Output(IDs.STORE_SB_TAB, "data", allow_duplicate=True),
+        Input({"type": "am-trace-open", "index": ALL}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+
     # ── new chat ──────────────────────────────
     @app.callback(
         Output(

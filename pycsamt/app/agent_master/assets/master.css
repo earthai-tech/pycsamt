@@ -881,6 +881,72 @@ body {
 .am-step.done    { border-left-color: var(--green); }
 .am-step.warn    { border-left-color: var(--yellow); }
 .am-step.error   { border-left-color: var(--red); }
+
+/* ── Collapsed trace (done state) ─────────────────── */
+.am-trace-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 8px 0 2px;
+}
+.am-trace { flex: 1 1 auto; min-width: 0; }
+.am-trace > summary.am-trace-summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--step-bg);
+  border: 1px solid transparent;
+  font-size: 12px;
+  color: var(--sub1);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  transition: background .15s ease, color .15s ease;
+}
+.am-trace > summary.am-trace-summary::-webkit-details-marker { display: none; }
+.am-trace > summary.am-trace-summary::marker { content: ""; }
+.am-trace > summary.am-trace-summary:hover {
+  background: var(--surface2, var(--step-bg));
+  color: var(--text, var(--sub1));
+  border-color: var(--green);
+}
+.am-trace-tick { color: var(--green); font-size: 13px; }
+.am-trace-count { font-weight: 600; }
+.am-trace-label { opacity: .7; }
+.am-trace-chev {
+  margin-left: auto;
+  font-size: 11px;
+  transition: transform .18s ease;
+}
+.am-trace[open] .am-trace-chev { transform: rotate(90deg); }
+.am-trace[open] > summary.am-trace-summary {
+  border-color: var(--green);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.am-trace .am-steps { margin: 4px 0 0; }
+.am-trace-open-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--step-bg);
+  color: var(--sub1);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.am-trace-open-btn:hover {
+  color: var(--blue);
+  border-color: var(--blue);
+}
 .am-step.running {
   border-left-color: var(--blue);
   animation: pulse-left .9s ease-in-out infinite;

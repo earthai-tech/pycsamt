@@ -720,8 +720,12 @@ def _agent_bubble(
     # body text — full lightweight-markdown rendering
     children.extend(_render_markdown(text))
 
-    # step summary
+    # step summary — collapsed by default once the request is done. The live
+    # "thinking" bubble shows the full timeline; here we mask it behind a
+    # compact, clickable <details> ("✓ N steps · trace") so the chat stays
+    # clean, with a side button to surface the run in the sidebar.
     if steps:
+        n_steps = len(steps)
         step_divs = [
             html.Div(
                 [
@@ -737,10 +741,58 @@ def _agent_bubble(
             )
             for s in steps
         ]
+        _trace_idx = mid or uuid.uuid4().hex
         children.append(
             html.Div(
-                step_divs,
-                className="am-steps",
+                [
+                    html.Details(
+                        [
+                            html.Summary(
+                                [
+                                    html.I(
+                                        className=(
+                                            "bi bi-check2-circle"
+                                            " am-trace-tick"
+                                        )
+                                    ),
+                                    html.Span(
+                                        f"{n_steps} step"
+                                        f"{'s' if n_steps != 1 else ''}",
+                                        className="am-trace-count",
+                                    ),
+                                    html.Span(
+                                        "trace",
+                                        className="am-trace-label",
+                                    ),
+                                    html.I(
+                                        className=(
+                                            "bi bi-chevron-right"
+                                            " am-trace-chev"
+                                        )
+                                    ),
+                                ],
+                                className="am-trace-summary",
+                            ),
+                            html.Div(
+                                step_divs, className="am-steps"
+                            ),
+                        ],
+                        className="am-trace",
+                    ),
+                    html.Button(
+                        html.I(
+                            className="bi bi-box-arrow-up-right"
+                        ),
+                        id={
+                            "type": "am-trace-open",
+                            "index": _trace_idx,
+                        },
+                        className="am-trace-open-btn",
+                        title="Open trace in the sidebar",
+                        n_clicks=0,
+                    ),
+                ],
+                className="am-trace-row",
             )
         )
 

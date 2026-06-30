@@ -25,6 +25,10 @@ from pycsamt.agents.tooling import (  # noqa: E402
 _DATA = os.path.join("data", "3edis")
 _HAS_DATA = os.path.isdir(_DATA)
 
+# A larger line, used for the Stratagem EDI-native pipeline (Wave E).
+_WILLY = os.path.join("data", "AMT", "WILLY_DATA", "L18PLT")
+_HAS_WILLY = os.path.isdir(_WILLY)
+
 
 class TestToolHelpers(unittest.TestCase):
     def test_kinds(self):
@@ -32,8 +36,123 @@ class TestToolHelpers(unittest.TestCase):
             set(TOOL_KINDS),
             {"strike", "dimensionality", "validator",
              "coords", "elevation", "converter", "batch_export",
-             "freq_editor", "layered_model"},
+             "freq_editor", "layered_model", "correction"},
         )
+
+    def test_correction_registry_coercion(self):
+        # registry metadata + parameter coercion (no EDI data needed).
+        from pycsamt.agents._corrections import (
+            CORRECTION_METHODS, param_specs, coerce_kwargs, fn_for,
+        )
+        self.assertIn("corr_ss_ama", CORRECTION_METHODS)
+        self.assertEqual(fn_for("corr_ss_ama"), "correct_ss_ama")
+        names = {p.name for p in param_specs("corr_ss_ama")}
+        self.assertTrue({"half_window", "max_skew"}.issubset(names))
+        # str inputs from the modal are coerced to the right types; bad/blank
+        # values fall back to the ParamSpec default.
+        kw = coerce_kwargs("corr_ss_ama",
+                           {"half_window": "5", "max_skew": "", "weights": "box"})
+        self.assertEqual(kw["half_window"], 5)
+        self.assertIsInstance(kw["half_window"], int)
+        self.assertEqual(kw["weights"], "box")
+        self.assertEqual(kw["max_skew"], 6.0)  # default for blank
+
+    def test_correction_missing_selection(self):
+        # correction with no method selected → failed, not a crash.
+        r = ToolAgent().execute({"path": _DATA, "kind": "correction"})
+        self.assertEqual(r.status, "failed")
+
+    def test_static_shift_method_routing(self):
+        # Specific static-shift phrases route to their correction workflow,
+        # while the bare phrase still routes to the legacy static_shift wf.
+        from pycsamt.agents._workflows import classify_workflow
+        cases = {
+            "apply ama static shift":          "corr_ss_ama",
+            "loess static shift correction":   "corr_ss_loess",
+            "bilateral static shift":          "corr_ss_bilateral",
+            "reference median static shift":   "corr_ss_refmedian",
+            "hanning emap static shift":       "corr_ss_emap",
+            "remove static shift":             "static_shift",
+            "apply a notch filter":            "corr_notch",
+            "log frequency smoothing":         "corr_smooth_logfreq",
+            "smooth rho phase trend":          "corr_smooth_rho_phase",
+            "rotate by 30 degrees":            "corr_rotate_angle",
+            "rotate to geoelectric strike":    "corr_rotate_strike",
+            "rotate to phase tensor strike":   "corr_rotate_pt_strike",
+            "rotate to profile azimuth":       "corr_rotate_profile",
+            "antisymmetrize the tensor":       "corr_antisymmetrize",
+            "project stations onto the line":  "corr_coord_projection",
+            "regularize station spacing":      "corr_coord_spacing",
+            "snap outlier stations":           "corr_coord_snap",
+            "smooth elevation along profile":  "corr_coord_elevation",
+            "shift coordinates":               "corr_coord_shift",
+            "interpolate missing coordinates": "corr_coord_interpolate",
+            "near field correction":           "corr_near_field",
+            "stratagem qc report":             "corr_strat_qc",
+            "stratagem static shift":          "corr_strat_static_shift",
+            "stratagem noise removal":         "corr_strat_noise",
+            "stratagem frequency filter":      "corr_strat_freq_filter",
+            "stratagem full pipeline":         "corr_strat_full",
+        }
+        for text, expected in cases.items():
+            self.assertEqual(classify_workflow(text), expected, msg=text)
+
+    def test_correction_schemas_generated(self):
+        # Every registered correction method gets a param-modal schema whose
+        # field keys match its catalogue ParamSpec names.
+        from pycsamt.agents._corrections import CORRECTION_METHODS, param_specs
+        from pycsamt.app.agent_master.callbacks.params import _SCHEMAS
+        for wf in CORRECTION_METHODS:
+            self.assertIn(wf, _SCHEMAS, msg=wf)
+            keys = {f["key"] for f in _SCHEMAS[wf]["fields"]}
+            for ps in param_specs(wf):
+                self.assertIn(ps.name, keys, msg=f"{wf}:{ps.name}")
+
+    def test_all_catalogue_methods_registered(self):
+        # Every catalogue method (every category) is exposed as a workflow id.
+        from pycsamt.agents._corrections import CORRECTION_METHODS
+        from pycsamt.app.desktop.controllers.correction_controller import (
+            CATALOGUE,
+        )
+        catalogue_fns = {
+            entry["fn"]
+            for methods in CATALOGUE.values()
+            for entry in methods.values()
+        }
+        registered_fns = {m["fn"] for m in CORRECTION_METHODS.values()}
+        self.assertEqual(catalogue_fns, registered_fns)
+
+    # ── Wave F: conversational Q&A vs commands ───────────────────────────────
+    def test_correction_questions_route_to_question(self):
+        # Conceptual questions answer (QUESTION) rather than triggering a run.
+        from pycsamt.agents.router import classify_intent_offline
+        for q in ["what is static shift?",
+                  "when should I rotate to strike?",
+                  "what does the notch filter remove?",
+                  "explain near-field correction"]:
+            self.assertEqual(classify_intent_offline(q)[0], "question", msg=q)
+
+    def test_correction_commands_route_to_workflow(self):
+        from pycsamt.agents.router import classify_intent_offline
+        from pycsamt.agents._workflows import classify_workflow
+        cases = {
+            "apply ama static shift":     "corr_ss_ama",
+            "rotate to geoelectric strike": "corr_rotate_strike",
+            "run stratagem full pipeline": "corr_strat_full",
+            "correct near field":         "corr_near_field",
+        }
+        for text, wf in cases.items():
+            self.assertEqual(classify_intent_offline(text)[0], "workflow",
+                             msg=text)
+            self.assertEqual(classify_workflow(text), wf, msg=text)
+
+    def test_capability_text_lists_corrections(self):
+        from pycsamt.app.agent_master.callbacks.chat import _capability_text
+        txt = _capability_text()
+        self.assertIn("Correct & condition", txt)
+        for cat in ("Static Shift", "Noise Removal", "Tensor Rotation",
+                    "Coordinates", "Source Effects", "Stratagem"):
+            self.assertIn(cat, txt, msg=cat)
 
     def test_layered_model_dataless(self):
         # layered_model needs no EDI dataset.
@@ -133,6 +252,109 @@ class TestToolAgent(unittest.TestCase):
         r = self._run("validator")
         # validator returns a table, no figure
         self.assertEqual((r.data.get("figures") or {}), {})
+
+    # ── Wave 0/A: static-shift correction methods ────────────────────────────
+    def _run_correction(self, wf_id, path=None, expect_corrected=True,
+                        **params):
+        from pycsamt.agents._corrections import fn_for
+        r = ToolAgent().execute({
+            "path": path or _DATA, "kind": "correction",
+            "corr_wf": wf_id, "fn_name": fn_for(wf_id), **params,
+        })
+        self.assertEqual(r.status, "success", msg=r.summary)
+        if expect_corrected:
+            self.assertIsNotNone((r.data or {}).get("corrected_sites"))
+        else:  # diagnostic step (e.g. Stratagem QC)
+            self.assertIsNone((r.data or {}).get("corrected_sites"))
+        self.assertTrue((r.data or {}).get("table_text"))
+        for fig in (r.data.get("figures") or {}).values():
+            self.assertIsInstance(fig, plt.Figure)
+        return r
+
+    def test_correction_ama(self):
+        # The generic correction kind applies a catalogue method and hands the
+        # corrected Sites back through corrected_sites for the postproc modal.
+        self._run_correction("corr_ss_ama", half_window=3, max_skew=6.0)
+
+    def test_correction_ss_bilateral(self):
+        # Bilateral SS is NOT covered by the legacy StaticShiftAgent.
+        self._run_correction("corr_ss_bilateral", half_window=4, max_skew=6.0)
+
+    def test_correction_ss_emap(self):
+        # Hanning EMAP (Torres-Verdín) — also not in the legacy agent.
+        self._run_correction("corr_ss_emap", window_m=1500.0,
+                             spacing_m=200.0, comp="det")
+
+    # ── Wave B: noise-removal corrections ────────────────────────────────────
+    def test_correction_notch(self):
+        self._run_correction("corr_notch", mains_hz=50.0, n_harm=10,
+                             tol_hz=0.08, mode="interp", also="both")
+
+    def test_correction_smooth_rho_phase(self):
+        # boolean (check) params arrive as real bools after coercion.
+        self._run_correction("corr_smooth_rho_phase", components="offdiag",
+                             degree=3, smooth_rho=True, smooth_phase=True,
+                             blend=1.0, robust=True)
+
+    # ── Wave C: tensor-rotation corrections ──────────────────────────────────
+    def test_correction_rotate_angle(self):
+        self._run_correction("corr_rotate_angle", angle=30.0)
+
+    def test_correction_rotate_strike(self):
+        self._run_correction("corr_rotate_strike", method="swift")
+
+    def test_correction_antisymmetrize(self):
+        self._run_correction("corr_antisymmetrize", how="rms")
+
+    # ── Wave D: coordinate corrections (corrected Sites, position figure) ─────
+    def test_correction_coord_projection(self):
+        self._run_correction("corr_coord_projection", azimuth=-1.0,
+                             keep_elevation=True)
+
+    def test_correction_coord_shift(self):
+        # A pure offset must change the stored coordinates.
+        from pycsamt.gis.coord_correction import _get_coords_df
+        from pycsamt.emtools._core import ensure_sites
+        r = self._run_correction("corr_coord_shift", delta_lat=0.001,
+                                 delta_lon=0.002, delta_elev=5.0)
+        before = _get_coords_df(ensure_sites(_DATA, recursive=True, verbose=0))
+        after = _get_coords_df(r.data["corrected_sites"])
+        self.assertAlmostEqual(
+            float(after["lat"].iloc[0]) - float(before["lat"].iloc[0]),
+            0.001, places=4,
+        )
+
+    def test_correction_coord_interpolate(self):
+        self._run_correction("corr_coord_interpolate", fill_nan_only=True)
+
+    # ── Wave E: Source Effects + Stratagem ───────────────────────────────────
+    def test_correction_near_field(self):
+        self._run_correction("corr_near_field", source_offset=500.0)
+
+    @unittest.skipUnless(_HAS_WILLY, "Stratagem EDI directory not available")
+    def test_correction_strat_qc(self):
+        # QC is diagnostic: a report table, no corrected_sites to apply.
+        r = self._run_correction("corr_strat_qc", path=_WILLY,
+                                 expect_corrected=False)
+        self.assertIn("Stratagem", r.summary)
+
+    @unittest.skipUnless(_HAS_WILLY, "Stratagem EDI directory not available")
+    def test_correction_strat_static_shift(self):
+        self._run_correction("corr_strat_static_shift", path=_WILLY,
+                             half_window=3, max_skew=6.0)
+
+    @unittest.skipUnless(_HAS_WILLY, "Stratagem EDI directory not available")
+    def test_correction_strat_full(self):
+        self._run_correction("corr_strat_full", path=_WILLY, mains_hz=50.0)
+
+    def test_correction_strat_requires_directory(self):
+        # Stratagem without a directory path → graceful failure, not a crash.
+        from pycsamt.agents._corrections import fn_for
+        r = ToolAgent().execute({
+            "path": "definitely/not/a/dir", "kind": "correction",
+            "corr_wf": "corr_strat_qc", "fn_name": fn_for("corr_strat_qc"),
+        })
+        self.assertEqual(r.status, "failed")
 
     # ── Wave C: data / IO tools ──────────────────────────────────────────────
     def test_coords(self):

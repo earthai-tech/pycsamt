@@ -257,6 +257,15 @@ _KNOWN_WF = (
     "freq_editor, layered_model"
 )
 
+# Append correction-method workflow ids from the central registry so the LLM
+# router can name them directly (e.g. "corr_ss_ama").
+try:  # pragma: no cover - registry is the single source of truth
+    from ._corrections import CORRECTION_METHODS as _CORR_METHODS
+    if _CORR_METHODS:
+        _KNOWN_WF = _KNOWN_WF + ", " + ", ".join(_CORR_METHODS)
+except Exception:  # noqa: BLE001
+    pass
+
 _ROUTER_SYSTEM = f"""\
 You are the top-level intent router for the pycsamt v2 magnetotelluric (MT)
 assistant. Classify the user's message into exactly one INTENT.

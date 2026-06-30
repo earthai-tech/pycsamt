@@ -89,6 +89,11 @@ _TOOL_KIND = {
     "freq_editor":    "freq_editor",
     "layered_model":  "layered_model",
 }
+# Correction methods (Static Shift, Noise Removal, Tensor Rotation, …) all run
+# through the single parameterised ``correction`` ToolAgent kind; the registry
+# is the single source of truth (see pycsamt.agents._corrections).
+from pycsamt.agents._corrections import CORRECTION_METHODS as _CORR_METHODS
+_TOOL_KIND.update({_wf: "correction" for _wf in _CORR_METHODS})
 _TOOL_WORKFLOWS = frozenset(_TOOL_KIND)
 
 # Tool tasks that need no loaded EDI dataset (synthetic).
@@ -161,6 +166,12 @@ _WF_RUNNING_LABEL: dict[str, str] = {
     "batch":              "batch processing",
     "code_gen":           "code generation",
 }
+
+# Correction-method running labels, merged from the central registry.
+_WF_RUNNING_LABEL.update({
+    _wf: _meta.get("running_label", "data correction")
+    for _wf, _meta in _CORR_METHODS.items()
+})
 
 
 def _fmt_elapsed(seconds: float) -> str:
@@ -955,6 +966,10 @@ _NEEDS_PARAMS: frozenset[str] = frozenset({
     "freq_editor", "layered_model",
 })
 
+# Correction methods always open the parameter modal (the parameter set IS the
+# "different correction with different control").
+_NEEDS_PARAMS = _NEEDS_PARAMS | frozenset(_CORR_METHODS)
+
 _WF_LABELS: dict[str, str] = {
     "ai_inversion":       "1-D AI inversion",
     "inv1d":              "1-D AI inversion",
@@ -1424,6 +1439,30 @@ def _api_key_hint() -> str:
     )
 
 
+def _correction_capability_block() -> str:
+    """Markdown bullet list of correction categories, built from the registry.
+
+    Keeps the capability summary in sync with whatever correction methods are
+    registered (one bullet per catalogue category, with a few example methods).
+    """
+    from collections import OrderedDict
+    by_cat: "OrderedDict[str, list[str]]" = OrderedDict()
+    for meta in _CORR_METHODS.values():
+        by_cat.setdefault(meta.get("category", "Correction"), []).append(
+            meta.get("label", "")
+        )
+    if not by_cat:
+        return ""
+    lines = ["**Correct & condition** your data with full parameter control"
+             " (I'll open a parameter form, then you can apply the result to"
+             " the session or export it):"]
+    for cat, labels in by_cat.items():
+        shown = ", ".join(labels[:4])
+        more = f", +{len(labels) - 4} more" if len(labels) > 4 else ""
+        lines.append(f"- **{cat}** — {shown}{more}")
+    return "\n".join(lines) + "\n\n"
+
+
 def _capability_text() -> str:
     """Static capability summary for META / greeting / 'list tasks' intents."""
     return (
@@ -1456,6 +1495,7 @@ def _capability_text() -> str:
         "- strike analyzer (geoelectric strike per station)\n"
         "- dimensionality classifier (1-D / 2-D / 3-D)\n"
         "- EDI validator (per-station quality checklist)\n\n"
+        + _correction_capability_block() +
         "**Data & I/O tools** (I'll ask for the options first):\n"
         "- coordinate transformer (station lat/lon → UTM)\n"
         "- elevation enrichment (fetch elevation from an open web API)\n"
@@ -1679,6 +1719,7 @@ def _dispatch_tool(
         "batch_export": "batch plot export",
         "freq_editor": "frequency editing",
         "layered_model": "layered-model build",
+        "correction": "data correction",
     }
     where = f" for {label}" if label else ""
     step(f"Running {_labels.get(kind, kind)}...", "running")
@@ -2442,7 +2483,7 @@ def _run_agent(
             "strike", "dimensionality", "validator",
             "coords", "elevation", "converter", "batch_export",
             "freq_editor",  # layered_model is synthetic → no data needed
-        })
+        }) | frozenset(_CORR_METHODS)  # all correction methods need data
         if (
             wtype in _EDI_REQUIRED
             and not edi_path
@@ -2483,11 +2524,17 @@ def _run_agent(
 
         # ── analysis tools → lightweight ToolAgent (table + figure) ──
         if wtype in _TOOL_WORKFLOWS:
+            _tool_params = dict(inv_config or {})
+            # Correction workflows share one ToolAgent kind; tell the agent
+            # which catalogue method to apply (and let it coerce the params).
+            if wtype in _CORR_METHODS:
+                _tool_params["corr_wf"] = wtype
+                _tool_params["fn_name"] = _CORR_METHODS[wtype]["fn"]
             _dispatch_tool(
                 jid,
                 edi_path,
                 kind=_TOOL_KIND[wtype],
-                params=(inv_config or {}),
+                params=_tool_params,
                 step=_step,
                 label=_task_label,
             )

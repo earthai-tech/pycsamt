@@ -49,7 +49,7 @@ __all__ = ["ToolAgent", "TOOL_KINDS"]
 TOOL_KINDS = (
     "strike", "dimensionality", "validator",
     "coords", "elevation", "converter", "batch_export",
-    "freq_editor", "layered_model",
+    "freq_editor", "layered_model", "correction",
 )
 
 # Tools that do not need a loaded EDI dataset.
@@ -172,6 +172,42 @@ def _ll_to_utm(lat: float, lon: float, zone, hem: str, datum: str):
                 res.get("zone_number", zone or 0))
 
 
+def _corr_coord_figure(raw_sites, corrected_sites, label: str):
+    """Scatter of station positions before vs after a coordinate correction.
+
+    ρ_a curves are unchanged by coordinate corrections, so a position map is
+    the informative before/after view. Returns a Figure or ``None``.
+    """
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from ..gis.coord_correction import _get_coords_df
+
+    try:
+        df0 = _get_coords_df(raw_sites)
+        df1 = _get_coords_df(corrected_sites)
+    except Exception:  # noqa: BLE001
+        return None
+    if df0 is None or df1 is None or df0.empty:
+        return None
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.scatter(df0["lon"], df0["lat"], s=28, facecolors="none",
+               edgecolors="#3498db", label="Before", zorder=3)
+    ax.scatter(df1["lon"], df1["lat"], s=14, color="#e74c3c",
+               label="After", zorder=4)
+    # connect each station's old → new position
+    for (_, r0), (_, r1) in zip(df0.iterrows(), df1.iterrows()):
+        ax.plot([r0["lon"], r1["lon"]], [r0["lat"], r1["lat"]],
+                color="#999", lw=0.6, zorder=2)
+    ax.set_xlabel("Longitude", fontsize=8)
+    ax.set_ylabel("Latitude", fontsize=8)
+    ax.set_title(f"{label} — station positions", fontsize=9, fontweight="bold")
+    ax.legend(fontsize=8)
+    ax.tick_params(labelsize=7)
+    fig.tight_layout()
+    return fig
+
+
 def _default_out_dir(name: str) -> str:
     """Default output folder under the user's home directory."""
     return os.path.join(os.path.expanduser("~"), name)
@@ -270,6 +306,10 @@ class ToolAgent:
                 )
             elif kind == "freq_editor":
                 summary, table, figs = self._freq_editor(
+                    sub, input_data, warnings
+                )
+            elif kind == "correction":
+                summary, table, figs = self._correction(
                     sub, input_data, warnings
                 )
             else:  # validator
@@ -754,6 +794,133 @@ class ToolAgent:
                 figs["Frequency edit summary"] = fig
         except Exception as exc:  # noqa: BLE001
             warnings.append(f"summary figure skipped: {exc}")
+        return summary, table, figs
+
+    def _correction(self, sites, d, warnings):
+        """Apply any catalogue correction with full parameter control.
+
+        Drives :class:`CorrectionController` (the same non-destructive chain
+        the desktop / web *correction section* uses) so the algorithm is never
+        re-implemented here. The corrected ``Sites`` is stashed in
+        ``self._corrected`` for the post-processing modal (apply / export),
+        exactly like :meth:`_freq_editor`.
+        """
+        import matplotlib.pyplot as plt
+        import pandas as pd
+        from ._corrections import (
+            CORRECTION_METHODS, coerce_kwargs, fn_for,
+        )
+        from ..app.desktop.controllers.correction_controller import (
+            CorrectionController, _COORD_FN_NAMES, _STRAT_FN_NAMES,
+        )
+        from ..emtools._core import _iter_items
+
+        wf_id = str(d.get("corr_wf") or "").strip()
+        fn_name = str(d.get("fn_name") or "").strip()
+        if wf_id and wf_id in CORRECTION_METHODS:
+            fn_name = fn_name or fn_for(wf_id)
+            meta = CORRECTION_METHODS[wf_id]
+            kwargs = coerce_kwargs(wf_id, d)
+            label = meta.get("label", fn_name)
+            category = meta.get("category", "Correction")
+        elif fn_name:
+            meta, kwargs, label = {}, {}, fn_name
+            category = "Correction"
+        else:
+            raise ValueError(
+                "no correction selected (missing 'corr_wf' / 'fn_name')."
+            )
+
+        ctrl = CorrectionController()
+        ctrl.dark = False
+        is_coord = fn_name in _COORD_FN_NAMES
+        is_strat = fn_name in _STRAT_FN_NAMES
+        # QC is diagnostic (no corrected data to apply); other strat steps and
+        # all impedance/rotation/coord steps return corrected Sites.
+        diagnostic = fn_name == "_strat_qc"
+
+        if is_strat:
+            # Stratagem operates natively on an EDI directory (edi_objects_),
+            # not the filtered Sites — load the directory first.
+            edi_dir = str(d.get("path") or d.get("data_path") or "").strip()
+            if not edi_dir or not os.path.isdir(edi_dir):
+                raise RuntimeError(
+                    "Stratagem corrections require an EDI directory path "
+                    "(load an EDI folder first)."
+                )
+            ctrl.load_edi_dir(edi_dir)
+            corrected = getattr(ctrl, fn_name)(**kwargs)
+        else:
+            ctrl.set_raw_sites(sites)
+            # _call_fn is the controller's universal dispatcher: impedance
+            # (emtools), static-shift / rotation / coordinate wrappers — all
+            # return corrected Sites directly (coord wrappers write the new
+            # coordinates back, unlike apply()'s DataFrame preview path).
+            corrected = ctrl._call_fn(fn_name, sites, **kwargs)
+
+        if corrected is None:
+            raise RuntimeError(
+                f"correction '{label}' produced no result "
+                "(check the dataset has valid impedance / coordinates)."
+            )
+        # Diagnostic steps must not be offered for apply/export.
+        self._corrected = None if diagnostic else corrected
+
+        n_sta = len(list(_iter_items(corrected)))
+        param_txt = ", ".join(f"{k}={v}" for k, v in kwargs.items()) or "defaults"
+        if diagnostic:
+            summary = (
+                f"**{category} — {label}** over {n_sta} station(s) "
+                f"({param_txt}). Diagnostic report below — no data changed."
+            )
+        else:
+            summary = (
+                f"**{category} — {label}** applied to {n_sta} station(s) "
+                f"({param_txt}). Corrected data is ready — choose "
+                "**apply / export** below."
+            )
+
+        # ── table ──────────────────────────────────────────────────────────
+        if fn_name == "_strat_qc" and ctrl._strat_qc_report is not None \
+                and not ctrl._strat_qc_report.empty:
+            table = _df_to_text(ctrl._strat_qc_report, max_rows=40, ndigits=3)
+        elif kwargs:
+            tbl_df = pd.DataFrame(
+                [{"parameter": k, "value": v} for k, v in kwargs.items()]
+            )
+            table = _df_to_text(
+                tbl_df, columns=["parameter", "value"], max_rows=30,
+            )
+        else:
+            table = "(no parameters)"
+
+        # ── figure ─────────────────────────────────────────────────────────
+        figs = {}
+        try:
+            if fn_name == "_strat_qc":
+                fig = plt.figure(figsize=(7, 5))
+                ctrl.plot_strat_qc(fig)
+                figs["Stratagem QC report"] = fig
+            elif fn_name == "_strat_static_shift":
+                fig, ax = plt.subplots(figsize=(7, 4))
+                ctrl.plot_strat_ss_factors(ax)
+                fig.tight_layout()
+                figs["Static-shift factors"] = fig
+            elif is_coord:
+                fig = _corr_coord_figure(sites, corrected, label)
+                if fig is not None:
+                    figs["Station positions before / after"] = fig
+            else:
+                base = ctrl.raw_sites if ctrl.raw_sites is not None else sites
+                fig, axes = plt.subplots(1, 2, figsize=(9, 4), sharey=True)
+                ctrl.plot_rho_curves(base, axes[0], title="Before")
+                ctrl.plot_rho_curves(corrected, axes[1], title="After")
+                fig.suptitle(f"{label} — ρₐ before / after", fontsize=10)
+                fig.tight_layout()
+                figs["Correction before / after"] = fig
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"figure skipped: {exc}")
+
         return summary, table, figs
 
     def _layered_model(self, d, warnings):

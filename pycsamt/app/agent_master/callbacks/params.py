@@ -1949,6 +1949,70 @@ _SCHEMAS["tipper_plot"] = {
 }
 
 
+# ── correction-method schemas (generated from the catalogue) ──────────────────
+# Each correction workflow's parameter modal is built directly from its
+# CorrectionController ParamSpec list, so "different correction with different
+# parameter control" needs no hand-written schema per method.
+
+def _corr_field_from_spec(ps) -> dict:
+    """Map a CorrectionController ``ParamSpec`` to a param-modal field dict."""
+    fid = {"type": "am-pf", "key": ps.name}
+    field = {
+        "id": fid, "key": ps.name, "label": ps.label,
+        "help": getattr(ps, "tip", "") or "",
+    }
+    kind = ps.kind
+    if kind == "combo":
+        field.update(
+            type="select",
+            options=[{"label": str(o), "value": o} for o in (ps.opts or [])],
+            default=ps.default,
+        )
+    elif kind == "check":
+        field.update(
+            type="radio", inline=True,
+            options=[{"label": "Yes", "value": True},
+                     {"label": "No", "value": False}],
+            default=bool(ps.default),
+        )
+    else:  # "spin" (int) / "dspin" (float)
+        lo, hi, st = (tuple(ps.opts) + (None, None, None))[:3] if ps.opts \
+            else (None, None, None)
+        field.update(
+            type="number", min=lo, max=hi,
+            step=(int(st) if (kind == "spin" and st) else st),
+            default=ps.default,
+        )
+    return field
+
+
+def _build_correction_schemas() -> None:
+    try:
+        from pycsamt.agents._corrections import (
+            CORRECTION_METHODS, param_specs, method_desc,
+        )
+    except Exception:  # noqa: BLE001 — corrections optional
+        return
+    for wf, meta in CORRECTION_METHODS.items():
+        try:
+            specs = param_specs(wf)
+        except Exception:  # noqa: BLE001
+            continue
+        fields = [_corr_field_from_spec(ps) for ps in specs]
+        fields.append(_PLOT_FIELD_STATIONS)  # optional station targeting
+        _SCHEMAS[wf] = {
+            "title": meta.get("title", wf),
+            "icon":  meta.get("icon", "bi-sliders"),
+            "color": meta.get("color", "var(--blue)"),
+            "desc":  method_desc(wf) or meta.get("title", wf),
+            "fields": fields,
+            "steps": [],
+        }
+
+
+_build_correction_schemas()
+
+
 # ── Field & section renderers ─────────────────
 
 def _field_el(f: dict, val: Any) -> Any:

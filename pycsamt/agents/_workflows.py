@@ -507,6 +507,33 @@ WORKFLOW_ALIASES: dict[str, str] = {
 }
 
 
+# ── correction methods (from the central registry) ──────────────────────────────
+# The desktop *correction section* methods become first-class workflow ids.
+# Their keyword entries are PREPENDED so a specific correction phrase
+# ("ama static shift") wins over the generic "static shift" → static_shift
+# match (classification is first-match-wins). Keep keywords specific.
+def _register_correction_workflows() -> None:
+    global WORKFLOW_KEYWORDS
+    try:
+        from ._corrections import CORRECTION_METHODS
+    except Exception:  # noqa: BLE001 — corrections are optional
+        return
+    corr_kw = {
+        wf: list(meta.get("keywords", []))
+        for wf, meta in CORRECTION_METHODS.items()
+        if meta.get("keywords")
+    }
+    for wf, meta in CORRECTION_METHODS.items():
+        WORKFLOW_DESCRIPTIONS.setdefault(
+            wf, meta.get("description", meta.get("title", wf))
+        )
+    # corrections first, then the existing (more generic) table
+    WORKFLOW_KEYWORDS = {**corr_kw, **WORKFLOW_KEYWORDS}
+
+
+_register_correction_workflows()
+
+
 # ── public API ──────────────────────────────────────────────────────────────────
 
 def classify_workflow(

@@ -33,7 +33,8 @@ _REMOVED = {
 # All pure-Python constants — no external imports needed.
 _SUBPACKAGES = frozenset({
     "ai", "agents", "backends", "emtools", "forward", "gis",
-    "interp", "inversion", "io", "jones", "log", "models",
+    "interp", "inversion", "io", "jones", "log", "map",
+    "models",
     "pipeline", "seg", "site", "tdem", "z", "zonge",
 })
 
@@ -89,7 +90,7 @@ __all__ = [
     "__version__",
     # subpackages
     "ai", "agents", "backends", "emtools", "forward", "gis",
-    "interp", "inversion", "io", "jones", "models",
+    "interp", "inversion", "io", "jones", "map", "models",
     "pipeline", "seg", "site", "tdem", "z", "zonge",
     # pipeline shortcuts
     "Pipeline", "Step", "configure_pipe", "reset_pipe", "PYCSAMT_PIPE",

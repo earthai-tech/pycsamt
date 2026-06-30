@@ -94,6 +94,13 @@
       Station containers, coordinate handling, selection, editing, export,
       and site reports.
 
+   .. grid-item-card:: Map tools
+      :link: map/index
+      :link-type: doc
+
+      Code-first station maps, pseudosections, 3-D quick-look views,
+      overlays, multi-line loading, and export.
+
    .. grid-item-card:: Applications
       :link: applications/index
       :link-type: doc
@@ -145,6 +152,7 @@
    forward/index
    models/index
    site/index
+   map/index
    applications/index
 
 .. toctree::

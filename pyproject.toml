@@ -161,6 +161,7 @@ pycsamt        = "pycsamt.cli:main"
 pycsamt-gui    = "pycsamt.app.desktop.__main__:main"
 pycsamt-web    = "pycsamt.app.web.__main__:main"
 pycsamt-agent  = "pycsamt.app.agent_master.__main__:main"
+pycsamt-mapview = "pycsamt.app.mapview.__main__:main"
 
 # ---------------------------------------------------------------------------
 # Setuptools configuration
@@ -180,6 +181,7 @@ include = ["pycsamt*"]
     "app/desktop/resources/*.qss",
     "app/desktop/resources/icons/*",
     "app/web/assets/*",
+    "app/mapview/assets/*",
     "models/occam2d/_source/*",
     "models/modem/_source/**/*",
     "data/occam2d/*",

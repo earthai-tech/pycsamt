@@ -21,7 +21,10 @@ import sys
 
 # Keep package imports side-effect-light during documentation builds.
 os.environ.setdefault("PYCSAMT_DOCS_BUILD", "1")
-os.environ.setdefault("MPLCONFIGDIR", "/tmp/pycsamt-matplotlib")
+os.environ.setdefault(
+    "MPLCONFIGDIR",
+    os.path.abspath("../_build/matplotlib"),
+)
 
 # -- Path setup ----------------------------------------------------------------
 # Make the package importable from the source tree without installation.
@@ -50,7 +53,6 @@ extensions = [
     "sphinx.ext.inheritance_diagram",
     "sphinx.ext.todo",
     # Third-party
-    "numpydoc",
     "myst_parser",          # parse .md files (e.g. CHANGELOG, README)
     "sphinx_copybutton",    # copy-button on code blocks
     "sphinx_design",        # grid / tab / card directives

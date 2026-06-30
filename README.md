@@ -4,9 +4,9 @@
   <em>Scientific Python for electromagnetic geophysics &mdash; processing, inversion, AI agents, and apps.</em>
   <br/><br/>
   <a href="https://pypi.org/project/pycsamt/"><img alt="PyPI" src="https://img.shields.io/pypi/v/pycsamt?color=orange&label=PyPI"/></a>
-  <a href="https://pycsamt.readthedocs.io"><img alt="Docs" src="https://img.shields.io/readthedocs/pycsamt?label=docs"/></a>
-  <a href="https://github.com/earthai-tech/pycsamt/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/earthai-tech/pycsamt/ci.yml?label=CI"/></a>
-  <a href="https://codecov.io/gh/earthai-tech/pycsamt"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/earthai-tech/pycsamt?label=coverage"/></a>
+  <a href="https://pycsamt.readthedocs.io/en/latest/?badge=latest"><img alt="Docs" src="https://readthedocs.org/projects/pycsamt/badge/?version=latest"/></a>
+  <a href="https://github.com/earthai-tech/pycsamt/actions/workflows/ci.yml?query=branch%3Av2"><img alt="CI" src="https://github.com/earthai-tech/pycsamt/actions/workflows/ci.yml/badge.svg?branch=v2"/></a>
+  <a href="https://codecov.io/gh/earthai-tech/pycsamt"><img alt="Coverage" src="https://codecov.io/gh/earthai-tech/pycsamt/branch/v2/graph/badge.svg"/></a>
   <a href="https://opensource.org/licenses/LGPL-3.0"><img alt="License" src="https://img.shields.io/badge/license-LGPL--3.0-blue"/></a>
   <img alt="Semver" src="https://img.shields.io/badge/semver-2.0.0-informational"/>
   <br/>

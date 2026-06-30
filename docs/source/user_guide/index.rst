@@ -13,6 +13,7 @@ User guide
 
    data_loading
    processing
+   mapping
    inversion
    ai_inversion
    interpretation

@@ -1,0 +1,12 @@
+name: pycsamt-v2
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip>=23
+  - pip:
+      # Core package dependencies come from pyproject.toml.
+      - -e .[dev,docs,geo,web,agents]
+      # Packaging tools used by release and local distribution checks.
+      - build>=1.2
+      - twine>=5.0

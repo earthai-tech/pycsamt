@@ -17,6 +17,7 @@ API reference
    core
    io
    emtools
+   map
    z
    jones
    zonge

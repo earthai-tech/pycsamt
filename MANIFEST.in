@@ -18,6 +18,8 @@ recursive-include pycsamt/models/occam2d/_source *
 recursive-include pycsamt/models/modem/_source *
 recursive-include pycsamt/data/occam2d *
 include pycsamt/data/3edis/*.edi
+recursive-include pycsamt/app/web/assets *
+recursive-include pycsamt/app/mapview/assets *
 recursive-include pycsamt/data/inversionFiles *
 
 # Exclude build artefacts and caches

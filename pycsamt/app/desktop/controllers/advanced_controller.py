@@ -1153,7 +1153,6 @@ class ConversionController:
 
         try:
             from pycsamt.emtools._core import _iter_items, _get_z_block
-            _MU0 = 4.0 * np.pi * 1e-7
             items = list(_iter_items(self._result))
             n = len(items)
             if n == 0:
@@ -1171,8 +1170,9 @@ class ConversionController:
                 if z is None or freqs is None or freqs.size == 0:
                     continue
                 Z_xy  = z[:, 0, 1]
-                omega = 2.0 * np.pi * np.maximum(freqs, 1e-30)
-                rho   = np.abs(Z_xy) ** 2 / (omega * _MU0)
+                # ρ_a = 0.2·|Z|²/f — field-unit form (Z is mV/km/nT); the SI
+                # form |Z|²/(ω·μ₀) over-estimates ρ_a by ~6.3·10⁵ here.
+                rho   = 0.2 * np.abs(Z_xy) ** 2 / np.maximum(freqs, 1e-30)
                 T     = 1.0 / np.maximum(freqs, 1e-30)
                 ok    = np.isfinite(rho) & (rho > 0) & np.isfinite(T)
                 if ok.sum() < 2:

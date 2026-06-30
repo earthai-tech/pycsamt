@@ -1171,7 +1171,6 @@ class CorrectionController:
 
         try:
             from pycsamt.emtools._core import _iter_items, _get_z_block
-            _MU0 = 4.0 * np.pi * 1e-7
             items = list(_iter_items(sites))
             n = len(items)
             if n == 0:
@@ -1185,8 +1184,9 @@ class CorrectionController:
                 if z is None or freqs is None or freqs.size == 0:
                     continue
                 Z_xy = z[:, 0, 1]
-                omega = 2.0 * np.pi * np.maximum(freqs, 1e-30)
-                rho = np.abs(Z_xy) ** 2 / (omega * _MU0)
+                # ρ_a = 0.2·|Z|²/f — field-unit form (Z is mV/km/nT). The SI
+                # form |Z|²/(ω·μ₀) over-estimates ρ_a by ~6.3·10⁵ here.
+                rho = 0.2 * np.abs(Z_xy) ** 2 / np.maximum(freqs, 1e-30)
                 T   = 1.0 / np.maximum(freqs, 1e-30)
                 ok  = np.isfinite(rho) & (rho > 0) & np.isfinite(T)
                 if ok.sum() < 2:
@@ -1236,7 +1236,6 @@ class CorrectionController:
 
         try:
             from pycsamt.emtools._core import _iter_items, _get_z_block, _name
-            _MU0 = 4.0 * np.pi * 1e-7
             items = list(_iter_items(sites))
             n_st = len(items)
             if n_st == 0:
@@ -1255,8 +1254,8 @@ class CorrectionController:
                     station_data.append(None)
                     continue
                 Z_xy  = z[:, 0, 1]
-                omega = 2.0 * np.pi * np.maximum(freqs, 1e-30)
-                rho   = np.abs(Z_xy) ** 2 / (omega * _MU0)
+                # field-unit ρ_a = 0.2·|Z|²/f (see plot_rho_curves note)
+                rho   = 0.2 * np.abs(Z_xy) ** 2 / np.maximum(freqs, 1e-30)
                 T     = 1.0 / np.maximum(freqs, 1e-30)
                 ok    = np.isfinite(rho) & (rho > 0) & np.isfinite(T)
                 if ok.sum() < 2:
@@ -1421,7 +1420,6 @@ class CorrectionController:
 
         try:
             from pycsamt.emtools._core import _iter_items, _get_z_block
-            _MU0 = 4.0 * np.pi * 1e-7
 
             def _draw(sites, ls, alpha, lw):
                 items = list(_iter_items(sites))
@@ -1433,8 +1431,8 @@ class CorrectionController:
                     if z is None or freqs is None or freqs.size == 0:
                         continue
                     Z_xy = z[:, 0, 1]
-                    omega = 2.0 * np.pi * np.maximum(freqs, 1e-30)
-                    rho = np.abs(Z_xy) ** 2 / (omega * _MU0)
+                    # field-unit ρ_a = 0.2·|Z|²/f (see plot_rho_curves note)
+                    rho = 0.2 * np.abs(Z_xy) ** 2 / np.maximum(freqs, 1e-30)
                     T   = 1.0 / np.maximum(freqs, 1e-30)
                     ok  = np.isfinite(rho) & (rho > 0)
                     if ok.sum() < 2:
@@ -1482,7 +1480,6 @@ class CorrectionController:
 
         try:
             from pycsamt.emtools._core import _iter_items, _get_z_block
-            _MU0 = 4.0 * np.pi * 1e-7
             b_items = list(_iter_items(before))
             a_items = list(_iter_items(after))
             n = min(len(b_items), len(a_items))
@@ -1496,10 +1493,9 @@ class CorrectionController:
                 _, za, fa = _get_z_block(a_items[i])
                 if zb is None or za is None or fb is None or fa is None:
                     continue
-                omega_b = 2.0 * np.pi * np.maximum(fb, 1e-30)
-                rho_b = np.abs(zb[:, 0, 1]) ** 2 / (omega_b * _MU0)
-                omega_a = 2.0 * np.pi * np.maximum(fa, 1e-30)
-                rho_a_arr = np.abs(za[:, 0, 1]) ** 2 / (omega_a * _MU0)
+                # field-unit ρ_a = 0.2·|Z|²/f (see plot_rho_curves note)
+                rho_b = 0.2 * np.abs(zb[:, 0, 1]) ** 2 / np.maximum(fb, 1e-30)
+                rho_a_arr = 0.2 * np.abs(za[:, 0, 1]) ** 2 / np.maximum(fa, 1e-30)
                 T = 1.0 / np.maximum(fb, 1e-30)
                 ok = np.isfinite(rho_b) & (rho_b > 0) & np.isfinite(rho_a_arr)
                 if ok.sum() < 2:
@@ -1869,7 +1865,6 @@ class CorrectionController:
     def _draw_strike_rose(self, sites, ax, s) -> None:
         """Compute per-station |Zxy| amplitude weighted by azimuth and plot rose."""
         from pycsamt.emtools._core import _iter_items, _get_z_block
-        _MU0 = 4.0 * np.pi * 1e-7
 
         angles, weights = [], []
         for ed in _iter_items(sites):
@@ -1877,9 +1872,9 @@ class CorrectionController:
             if z is None or freqs is None or freqs.size == 0:
                 continue
             # Apparent resistivity for xy and yx — ratio tells us strike proximity
-            omega = 2.0 * np.pi * np.maximum(freqs, 1e-30)
-            rho_xy = np.abs(z[:, 0, 1]) ** 2 / (omega * _MU0)
-            rho_yx = np.abs(z[:, 1, 0]) ** 2 / (omega * _MU0)
+            # field-unit ρ_a = 0.2·|Z|²/f (used here only as a relative weight)
+            rho_xy = 0.2 * np.abs(z[:, 0, 1]) ** 2 / np.maximum(freqs, 1e-30)
+            rho_yx = 0.2 * np.abs(z[:, 1, 0]) ** 2 / np.maximum(freqs, 1e-30)
             # Angle: direction of maximum off-diagonal element
             # Sweep through 0–180° and find angle that maximises |Zxy|
             from pycsamt.emtools.strike import _rotate_tensor

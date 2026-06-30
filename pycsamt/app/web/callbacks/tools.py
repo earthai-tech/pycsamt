@@ -6434,8 +6434,11 @@ def register_tools(app) -> None:
             from plotly.subplots import make_subplots
             from pycsamt.app.web.cache import cache_get
 
-            _MU0 = 4e-7 * np.pi
-
+            # Apparent resistivity from the STORED impedance, which pycsamt
+            # keeps in field units (mV/km / nT). The field-unit formula is
+            # ρ_a = 0.2 · |Z|² / f  (the 0.2 already folds in μ₀ and the unit
+            # conversion). Do NOT use the SI form |Z|²/(ω·μ₀) here — applied to
+            # field-unit Z it over-estimates ρ_a by 1/(0.2·2π·μ₀) ≈ 6.3·10⁵.
             sites = cache_get(session_id)
             if sites is None:
                 return _warn("Session expired — reload data."), no_update
@@ -6485,7 +6488,7 @@ def register_tools(app) -> None:
 
                 if (rho is None or phi is None) and z is not None:
                     with np.errstate(divide="ignore", invalid="ignore"):
-                        rho = np.abs(z)**2 / (5 * _MU0 * freqs[:, None, None])
+                        rho = 0.2 * np.abs(z)**2 / freqs[:, None, None]
                         phi = np.degrees(np.angle(z))
 
                 try:
@@ -6516,8 +6519,10 @@ def register_tools(app) -> None:
                 if ze_c is None:
                     return None
                 with np.errstate(divide="ignore", invalid="ignore"):
+                    # d(ρ_a)/d|Z| · σ_Z = 2·ρ_a·σ_Z/|Z| with ρ_a = 0.2|Z|²/f
+                    #                    = 0.4·|Z|·σ_Z / f
                     return np.where(np.abs(z_c) > 0,
-                                    2 * np.abs(z_c) * ze_c / (5 * _MU0 * freqs_m),
+                                    0.4 * np.abs(z_c) * ze_c / freqs_m,
                                     np.nan)
 
             def _phi_err_arr(z_c, ze_c):
@@ -6578,7 +6583,7 @@ def register_tools(app) -> None:
                         if z is None:
                             continue
                         z_c  = np.sqrt(z[mask, 0, 1] * z[mask, 1, 0])
-                        r_c  = np.abs(z_c)**2 / (5 * _MU0 * freqs[mask])
+                        r_c  = 0.2 * np.abs(z_c)**2 / freqs[mask]
                         p_c  = np.degrees(np.angle(z_c))
                         ze_c = None
                     else:
@@ -6586,7 +6591,7 @@ def register_tools(app) -> None:
                         z_c  = z[mask, i, j]   if z   is not None else None
                         ze_c = ze[mask, i, j]  if ze  is not None else None
                         r_c  = rho[mask, i, j] if rho is not None else (
-                               np.abs(z_c)**2 / (5 * _MU0 * freqs[mask])
+                               0.2 * np.abs(z_c)**2 / freqs[mask]
                                if z_c is not None else None)
                         p_c  = phi[mask, i, j] if phi is not None else (
                                np.degrees(np.angle(z_c)) if z_c is not None else None)

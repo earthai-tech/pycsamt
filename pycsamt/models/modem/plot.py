@@ -1105,9 +1105,6 @@ _RESP_LATEX = {
     "ZXX": r"$Z_{xx}$", "ZXY": r"$Z_{xy}$",
     "ZYX": r"$Z_{yx}$", "ZYY": r"$Z_{yy}$",
 }
-_MU0 = 4.0 * np.pi * 1e-7
-
-
 _ERR_MASK = 1e10   # ModEM uses 2e15 to flag dead/masked data rows
 
 
@@ -1151,11 +1148,14 @@ def _rho_phase_from_rows(rows: list):
     re  = np.array([r[1] for r in rows])
     im  = np.array([r[2] for r in rows])
     err = np.array([r[3] for r in rows])
-    omega = 2.0 * np.pi / p
     z2    = re**2 + im**2
-    rho_a = z2 / (_MU0 * omega)
+    # ModEM impedance is in field units ([mV/km]/[nT], per the data-file
+    # header), so ρ_a = 0.2·|Z|²·T (the 0.2 folds in μ₀ + the unit conversion).
+    # Using the SI form |Z|²/(μ₀·ω) on this field-unit Z over-estimates ρ_a —
+    # and the error bars — by ~6.3·10⁵ (ρ_a shooting to ~10⁹ Ω·m).
+    rho_a = 0.2 * z2 * p
     valid = (z2 > 0) & np.isfinite(z2)
-    drho  = np.where(valid, 2.0 * np.sqrt(z2) * np.abs(err) / (_MU0 * omega), np.nan)
+    drho  = np.where(valid, 0.4 * np.sqrt(z2) * np.abs(err) * p, np.nan)
     phi   = np.degrees(np.arctan2(im, re))
     dphi  = np.where(valid, np.degrees(np.abs(err) / np.sqrt(z2)), np.nan)
     return p, rho_a, drho, phi, dphi
@@ -1461,7 +1461,6 @@ class PlotPseudo(_ModEmPlotBase):
         n_site = len(site_names)
         rho_mat = np.full((n_per, n_site), np.nan)
         phs_mat = np.full((n_per, n_site), np.nan)
-        mu0 = 4 * np.pi * 1e-7
 
         for blk in data.blocks:
             for row in blk["rows"]:
@@ -1473,7 +1472,8 @@ class PlotPseudo(_ModEmPlotBase):
                 real, imag = row[6], row[7]
                 pi_idx = np.argmin(np.abs(periods - period))
                 z2 = real ** 2 + imag ** 2
-                rho_mat[pi_idx, si] = z2 / (mu0 * 2 * np.pi / period)
+                # field-unit ρ_a = 0.2·|Z|²·T (see _rho_phase_from_rows note)
+                rho_mat[pi_idx, si] = 0.2 * z2 * period
                 phs_mat[pi_idx, si] = np.degrees(np.arctan2(imag, real))
 
         log_p = np.log10(periods)

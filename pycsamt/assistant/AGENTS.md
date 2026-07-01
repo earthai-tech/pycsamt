@@ -1,4 +1,4 @@
-# AGENTS.md — working with pyCSAMT v2
+# AGENTS.md - working with pyCSAMT v2
 
 Guidance for code assistants (and humans) working in this repository.
 This file is also indexed by the RAG assistant, so keep it accurate.
@@ -7,7 +7,7 @@ This file is also indexed by the RAG assistant, so keep it accurate.
 
 **pyCSAMT v2** is a Python suite for **CSAMT / AMT / MT** electromagnetic
 data: from raw EDI files to quality control, distortion correction,
-phase-tensor analysis, AI-assisted inversion, and figures — with an
+phase-tensor analysis, AI-assisted inversion, and figures, with an
 interactive web app, a desktop app, and a conversational *Agent Master*.
 
 - Package: `pycsamt` (import name, **lowercase**). Brand/display name:
@@ -27,7 +27,7 @@ interactive web app, a desktop app, and a conversational *Agent Master*.
 | Docs | `docs/source/` | reStructuredText |
 | Example data | `data/AMT/WILLY_DATA/` | survey lines L18/L22/L26/L30/L34 PLT |
 
-Do **not** treat `pycsamt/app/` internals as the science API — the
+Do **not** treat `pycsamt/app/` internals as the science API; the
 workflows live in `pycsamt/emtools` and `pycsamt/agents`.
 
 ## Core data model
@@ -47,22 +47,22 @@ station needs valid impedance (Z); files without Z are skipped.
 | Load EDI | `MTLoaderAgent` | `ensure_sites` |
 | Quality control | `DataQCAgent` | `pycsamt.emtools.qc.build_qc_table`, `qc_flags` |
 | Static shift | `StaticShiftAgent` | `pycsamt.emtools.ss.estimate_ss_ama`, `correct_ss_ama`, `apply_ss_factors`, `plot_ss_summary`, `plot_ss_1d_curves` |
-| Phase tensor / strike | `PhaseAnalysisAgent` | — |
+| Phase tensor / strike | `PhaseAnalysisAgent` | - |
 | AI 1-D inversion | `AIInversionAgent` | `pycsamt.ai.inversion.inv1d.EMInverter1D` |
-| Code generation | `CodeGenerationAgent` | — |
+| Code generation | `CodeGenerationAgent` | - |
 
-Agents return an `AgentResult` (`status`, `summary`, `data`, …) and are
+Agents return an `AgentResult` (`status`, `summary`, `data`, ...) and are
 called as `Agent(...).execute({"path": edi_dir, "output_dir": out})`.
 
 ## Agent / assistant architecture
 
-```
+```text
 user request
-  → IntentRouter        (question | code | plot | workflow | meta | clarify)
-  → ContextInputAgent   (workflow classification; shared keyword registry
+  -> IntentRouter        (question | code | plot | workflow | meta | clarify)
+  -> ContextInputAgent   (workflow classification; shared keyword registry
                          pycsamt.agents._workflows)
-  → WorkflowOrchestratorAgent  (load → qc → … → report chain)
-  → AgentResult
+  -> WorkflowOrchestratorAgent  (load -> qc -> ... -> report chain)
+  -> AgentResult
 ```
 
 The **RAG assistant** (`pycsamt/assistant`) grounds answers/code in real
@@ -74,12 +74,12 @@ python -m pycsamt.assistant.rag query "static shift"
 python -m pycsamt.assistant.rag eval      # score the assistant
 ```
 
-- `assistant/rag/` — ingest, retriever, context builder
-- `assistant/tools/` — `resolve_line`, `validate_generated_code`,
+- `assistant/rag/` - ingest, retriever, context builder
+- `assistant/tools/` - `resolve_line`, `validate_generated_code`,
   `run_static_shift` / `run_qc` / `run_phase_analysis`
-- `assistant/memory/` — session / project state, workflow trace
-- `projects/willy_project_registry.yml` — survey-line → path + defaults
-- `assistant_recipes/*.md` — per-workflow recipes
+- `assistant/memory/` - session / project state, workflow trace
+- `projects/willy_project_registry.yml` - survey-line -> path + defaults
+- `assistant_recipes/*.md` - per-workflow recipes
 
 ## Conventions
 
@@ -95,10 +95,10 @@ python -m pycsamt.assistant.rag eval      # score the assistant
 - DO call real functions: `estimate_ss_ama`, `correct_ss_ama`,
   `ensure_sites`, `StaticShiftAgent`.
 - DON'T invent APIs such as `from pycsamt import static_shift` or
-  `pycsamt.run_workflow(...)` — verify a symbol exists first
+  `pycsamt.run_workflow(...)`; verify a symbol exists first
   (`pycsamt.assistant.tools.validate_generated_code` does this).
 - Static-shift factors must be finite and positive; never apply a NaN/0
   factor to impedance.
 - AMA static shift assumes ~1-D/2-D structure; on strongly 3-D data it
-  may decline (empty factor table) — that is expected, not a bug.
+  may decline (empty factor table), which is expected.
 - Resolve survey lines via the project registry, not hard-coded paths.

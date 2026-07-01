@@ -202,25 +202,22 @@ If pyCSAMT contributes to published research, please cite the relevant works:
 
 ```bibtex
 @article{Kouadio2022,
-  author  = {Kouadio, K. Laurent and Liu, Rong and Liu, Chum-ning and
-             Mi, Binbin and Malory, Albert O.},
-  title   = {pyCSAMT: An open-source Python library for controlled source
-             audio-frequency magnetotelluric data processing and
-             pseudostratigraphic log generation},
+  author  = {Kouadio, K. L. and Liu, R. and Mi, B. and Liu, C.},
+  title   = {pyCSAMT: An alternative Python toolbox for groundwater exploration
+             using controlled-source audio-frequency magnetotelluric},
   journal = {Journal of Applied Geophysics},
   year    = {2022},
-  volume  = {201},
-  pages   = {104647},
   doi     = {10.1016/j.jappgeo.2022.104647}
 }
 
 @article{Kouadio2023,
-  author  = {Kouadio, K. Laurent and others},
-  title   = {Recovering the electrical resistivity from MT data using a
-             deep resistivity convolutional neural network},
-  journal = {Journal of Geophysical Research: Solid Earth},
+  author  = {Kouadio, K. L. and Liu, R. and Malory, A. O. and Liu, W. and Liu, C.},
+  title   = {A novel approach for water reservoir mapping using
+             controlled-source audio-frequency magnetotelluric in Xingning area,
+             Hunan Province, China},
+  journal = {Geophysical Prospecting},
   year    = {2023},
-  doi     = {10.1029/2023JB027538}
+  doi     = {10.1111/1365-2478.13385}
 }
 ```
 

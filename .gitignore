@@ -189,7 +189,12 @@ data/AMT/TIPPER/
 data/ModEM_inversion_files/
 
 # Local EDI export directory — generated files, not tracked
-edi_out/
+/edi_out/
+/pycsamt-v2-rag implementations.md
+/issue template .md
+/project description.md
+/sample.stn
+/AGENTS.md
 
 # All field / survey data — may contain confidential site information
 data/
@@ -198,7 +203,7 @@ data/
 examples/
 
 # C&G paper submission files — not for public distribution
-cag-paper/
+/cag-paper/
 
 # Agent workflow checkpoints — generated at runtime, not source
 pycsamt_agent_checkpoints/

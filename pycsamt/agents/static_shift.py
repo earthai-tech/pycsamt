@@ -252,8 +252,9 @@ class StaticShiftAgent(BaseAgent):
         if rho_before is not None and rho_after is not None and freqs_all is not None:
             # summary dashboard: before / after / delta
             try:
+                # _collect_rho is (n_freq, n_sta); plotters want (n_st, n_f)
                 fig_sum = plot_ss_summary(
-                    rho_before, rho_after,
+                    rho_before.T, rho_after.T,
                     freqs=freqs_all,
                     station_labels=sta_labels,
                 )
@@ -268,7 +269,7 @@ class StaticShiftAgent(BaseAgent):
             # per-station 1-D ρa curves
             try:
                 fig_1d = plot_ss_1d_curves(
-                    rho_before, rho_after,
+                    rho_before.T, rho_after.T,
                     freqs=freqs_all,
                     station_labels=sta_labels,
                 )

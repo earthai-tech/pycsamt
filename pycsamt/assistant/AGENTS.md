@@ -49,6 +49,7 @@ station needs valid impedance (Z); files without Z are skipped.
 | Static shift | `StaticShiftAgent` | `pycsamt.emtools.ss.estimate_ss_ama`, `correct_ss_ama`, `apply_ss_factors`, `plot_ss_summary`, `plot_ss_1d_curves` |
 | Phase tensor / strike | `PhaseAnalysisAgent` | - |
 | AI 1-D inversion | `AIInversionAgent` | `pycsamt.ai.inversion.inv1d.EMInverter1D` |
+| Inversion prep (Occam2D / ModEM / MARE2DEM) | `Occam2DAgent`, `ModEmAgent`, `Mare2DEMAgent` | `pycsamt.models.occam2d.InputBuilder`, `pycsamt.models.modem.InputBuilder`, `pycsamt.models.mare2dem.edi.make_mt_data_from_edi` |
 | Code generation | `CodeGenerationAgent` | - |
 
 Agents return an `AgentResult` (`status`, `summary`, `data`, ...) and are

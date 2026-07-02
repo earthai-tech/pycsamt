@@ -63,6 +63,7 @@ WORKFLOW_DESCRIPTIONS: dict[str, str] = {
     "hybrid_inversion":   "Two-stage AI warm-start + physics inversion",
     # --- external codes ---
     "modem":              "ModEM 3-D inversion file preparation",
+    "mare2dem":           "MARE2DEM 2.5-D inversion file preparation",
     "occam2d":            "Occam2D 2-D inversion file preparation",
     # --- geophysical analysis ---
     "tipper":             "Tipper / induction arrow analysis",
@@ -321,6 +322,14 @@ WORKFLOW_KEYWORDS: dict[str, list[str]] = {
         "assess the inversion",
         "assess the result",
     ],
+    # mare2dem before modem / pre_inversion: "prepare the inversion for
+    # mare2dem" must not be swallowed by the generic "prepare the
+    # inversion" → pre_inversion phrases.
+    "mare2dem": [
+        "mare2dem", "mare 2dem", "mare2d",
+        "2.5d inversion", "2.5-d inversion",
+        "2.5d", "2.5-d",
+    ],
     "modem": [
         "modem",
         "3d inversion",
@@ -503,6 +512,8 @@ WORKFLOW_ALIASES: dict[str, str] = {
     "joint":                   "joint_inversion",
     "occam":                   "pre_inversion",
     "occam2d":                 "pre_inversion",
+    "mare_2dem":               "mare2dem",
+    "mare2d":                  "mare2dem",
     "full_ai":                 "full_ai_workflow",
     # PINN / Hybrid aliases
     "pinn":                    "pinn_inversion",
@@ -574,6 +585,7 @@ _STAGE_FAMILY: dict[str, str] = {
     "dimensionality": "analysis",
     "pre_inversion": "prep",
     "modem": "prep",
+    "mare2dem": "prep",
     "ai_inversion": "inversion",
     "inv2d": "inversion",
     "inv3d": "inversion",

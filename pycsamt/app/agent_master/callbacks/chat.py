@@ -986,6 +986,7 @@ _WORKFLOW_FIGURE_STEPS: dict[
     },
     "tipper":           {"tipper", "report"},
     "modem":            {"modem", "report"},
+    "mare2dem":         {"mare2dem", "report"},
     "occam2d":          {"occam2d", "report"},
     "pre_inversion":    {
         "phase_analysis", "occam2d", "report",
@@ -1020,7 +1021,7 @@ _NEEDS_PARAMS: frozenset[str] = frozenset({
     "inv2d", "inv3d",
     "pinn_inversion", "hybrid_inversion",
     "ensemble_inversion",
-    "pre_inversion", "modem",
+    "pre_inversion", "modem", "mare2dem",
     # Analysis workflows (optional params)
     "denoise",
     "sensitivity",
@@ -1041,6 +1042,14 @@ _NEEDS_PARAMS: frozenset[str] = frozenset({
 # "different correction with different control").
 _NEEDS_PARAMS = _NEEDS_PARAMS | frozenset(_CORR_METHODS)
 
+# Inversion-preparation workflows: their deliverable is a per-line input
+# file set on disk (Occam2D / ModEM / MARE2DEM).  With several survey
+# lines loaded they run once per selected line, and with no line named
+# the line picker asks the user first ("Run all" builds every line).
+_PREP_WORKFLOWS: frozenset[str] = frozenset({
+    "pre_inversion", "modem", "mare2dem",
+})
+
 _WF_LABELS: dict[str, str] = {
     "ai_inversion":       "1-D AI inversion",
     "inv1d":              "1-D AI inversion",
@@ -1051,6 +1060,7 @@ _WF_LABELS: dict[str, str] = {
     "ensemble_inversion": "ensemble inversion",
     "pre_inversion":      "pre-inversion setup",
     "modem":              "ModEM preparation",
+    "mare2dem":           "MARE2DEM preparation",
     "qc":                 "QC pipeline",
     "phase_analysis":     "phase tensor analysis",
     "static_shift":    "static shift correction",
@@ -1704,7 +1714,8 @@ def _capability_text() -> str:
         "- `ai_inversion`, `inv2d`, `inv3d`, `pinn_inversion`,"
         " `hybrid_inversion`, `ensemble_inversion`, `joint_inversion` —"
         " inversions\n"
-        "- `occam2d`, `modem` — inversion input preparation\n"
+        "- `occam2d`, `modem`, `mare2dem` — inversion input preparation"
+        " (per survey line; I'll ask which line(s) to build)\n"
         "- `report` — generate a survey report\n\n"
         "**Make plots** from your data (I'll ask for stations, components,"
         " period range and publication styling):\n"
@@ -1766,7 +1777,8 @@ def _unknown_task_text(text: str) -> str:
         "- **Run workflows** on loaded EDI data: QC, static-shift,"
         " phase-tensor analysis, denoising, tipper, rotation, frequency"
         " decimation, sensitivity/DOI, inversions (AI 1-D/2-D/3-D, PINN,"
-        " hybrid, ensemble, joint), ModEM/Occam2D prep, and reports.\n"
+        " hybrid, ensemble, joint), ModEM/Occam2D/MARE2DEM prep, and"
+        " reports.\n"
         "- **Answer questions** about pyCSAMT (classes, functions, methods).\n"
         "- **Generate Python code** for a pyCSAMT workflow.\n"
         "- **List my capabilities** — just ask \"what can you do?\".\n\n"
@@ -2227,6 +2239,326 @@ def _dispatch_metrics(
         steps=_JOBS[jid]["steps"], kind=KIND_ANSWER,
     )
 
+
+
+# ── inversion preparation: per-line file-set builds ──────────────────────
+# The deliverable of pre_inversion / modem / mare2dem is a solver input
+# file set on disk.  Unlike the generic pipeline path (which merges all
+# selected lines into one dataset), each survey line is built separately —
+# a 2-D/2.5-D profile inversion is defined per line — and the reply lists
+# the written artefacts per line, grounded in the package reference (RAG).
+
+_PREP_STEP_NAME: dict[str, str] = {
+    "pre_inversion": "occam2d",
+    "modem":         "modem",
+    "mare2dem":      "mare2dem",
+}
+
+_PREP_CODE_LABEL: dict[str, str] = {
+    "pre_inversion": "Occam2D",
+    "modem":         "ModEM",
+    "mare2dem":      "MARE2DEM",
+}
+
+# inv-config (param modal) keys each prep agent reads from its input.
+_PREP_PARAM_KEYS: dict[str, tuple] = {
+    "pre_inversion": ("modes", "period_range", "title"),
+    "modem":         ("error_floor", "period_range", "component_types"),
+    "mare2dem":      ("error_floor", "output_modes", "initial_rho",
+                      "target_rms", "max_iterations", "topo"),
+}
+
+# Output data keys that hold written file paths in the prep AgentResult.
+_PREP_FILE_KEYS = (
+    "data_path", "mesh_path", "model_path", "startup_path",
+    "cov_path", "ctrl_path", "resistivity_path", "settings_path",
+)
+
+_PREP_NEXT_STEPS: dict[str, str] = {
+    "pre_inversion": (
+        "`OccamDataFile.dat` holds the observed responses, `Occam2DMesh` "
+        "the finite-element mesh, `Occam2DModel` the mesh→parameter "
+        "mapping, and `OccamStartup` the iteration-zero controls. Run the "
+        "folder with `pycsamt.models.occam2d.OccamRunner` (or the "
+        "Occam2DMT binary directly)."
+    ),
+    "modem": (
+        "`ModEM_Data.dat` holds the impedances, `m0.ws` the half-space "
+        "starting model, `ModEM.cov` the model covariance, and `ModEM.inv` "
+        "the NLCG inversion controls. Launch the run with "
+        "`pycsamt.models.modem.ModEmRunner` or the ModEM binary."
+    ),
+    "mare2dem": (
+        "`mare2dem.emdata` holds the TE/TM responses projected onto the "
+        "profile, `mare2dem.resistivity` the starting half-space model, "
+        "and `mare2dem.settings` the parallel decomposition. Run them "
+        "with `pycsamt.models.mare2dem.Mare2DEMRunner` — the MARE2DEM "
+        "binary must be compiled once per machine via `SourceManager`."
+    ),
+}
+
+
+def _prep_all_lines_requested(text: str) -> bool:
+    """True when the request names all survey lines explicitly."""
+    return bool(re.search(
+        r"\b(?:all|every|each)\s+(?:the\s+)?(?:survey\s+)?"
+        r"(?:lines?|profiles?)\b",
+        (text or "").lower(),
+    ))
+
+
+def _safe_dirname(label: str) -> str:
+    """Filesystem-safe per-line folder name."""
+    safe = "".join(
+        c if c.isalnum() or c in "-_ " else "_" for c in str(label)
+    )
+    return safe.strip().replace(" ", "_") or "line"
+
+
+def _fmt_file_size(path) -> str:
+    import os
+    try:
+        kb = os.path.getsize(str(path)) / 1024.0
+    except OSError:
+        return ""
+    return f"{kb / 1024.0:.1f} MB" if kb >= 1024 else f"{max(kb, 1):.0f} KB"
+
+
+def _collect_prep_files(result, prep_step: str):
+    """Extract written files + stats from one orchestrator run.
+
+    Returns ``(files, stats, warns, step_results)`` where *files* is a
+    list of existing paths written by the prep step."""
+    import os
+    exec_res = (result.data or {}).get("result")
+    step_results = (
+        exec_res.data if exec_res is not None and exec_res.data else {}
+    )
+    sres = step_results.get(prep_step)
+    d = getattr(sres, "data", None) or {}
+    files = []
+    for key in _PREP_FILE_KEYS:
+        p = d.get(key)
+        if p is None:
+            continue
+        try:
+            if os.path.exists(str(p)):
+                files.append(str(p))
+        except (OSError, ValueError):
+            continue
+    stats = {
+        k: d.get(k)
+        for k in ("n_stations", "n_periods", "n_data")
+        if d.get(k)
+    }
+    warns = list(getattr(sres, "warnings", None) or [])
+    return files, stats, warns, step_results
+
+
+def _prep_rag_note(query: str) -> str:
+    """Best-effort RAG grounding line for the prep reply.
+
+    Retrieves the package symbols behind the build so the closing
+    guidance cites real, verifiable APIs. Degrades silently to an empty
+    string when the RAG index is unavailable."""
+    try:
+        from pycsamt.assistant.rag.context_builder import (
+            default_context_builder,
+        )
+        builder = default_context_builder()
+        if builder is None:
+            return ""
+        ctx_r = builder.build(query)
+        if ctx_r.is_empty() or not ctx_r.citations:
+            return ""
+        seen: set[str] = set()
+        syms: list[str] = []
+        for c in ctx_r.citations:
+            s = c.get("symbol") or c.get("source_path")
+            if s and s not in seen:
+                seen.add(s)
+                syms.append(str(s))
+        if not syms:
+            return ""
+        return (
+            "*Grounded in the pyCSAMT reference: "
+            + " · ".join(f"`{s}`" for s in syms[:4])
+            + "*"
+        )
+    except Exception:  # noqa: BLE001 — RAG is best-effort
+        return ""
+
+
+def _dispatch_inversion_prep(
+    jid: str,
+    wtype: str,
+    text: str,
+    edi_store: dict,
+    settings: dict,
+    cfg: dict,
+    *,
+    inv_config: dict,
+    llm_prov: str,
+    api_key: str | None,
+    sel_model: str | None,
+    offline: bool,
+    step,
+) -> None:
+    """Build the inversion input file set, one orchestrator run per line."""
+    import os
+    from pycsamt.agents.orchestrator import WorkflowOrchestratorAgent
+    from pycsamt.api.agents import AGENT_CONFIG
+
+    code = _PREP_CODE_LABEL.get(wtype, wtype)
+    prep_step = _PREP_STEP_NAME[wtype]
+
+    step("Resolving survey line(s)...", "done")
+    targets = _resolve_metric_targets(
+        text, edi_store, settings, _prep_all_lines_requested(text)
+    )
+    if not targets:
+        _update_job(
+            jid, status="done",
+            result=(
+                "I don't have survey data to prepare inversion files "
+                "from yet. Load an EDI dataset with **Load EDI** "
+                "(top-left), or name a known survey line, then ask again."
+            ),
+            steps=_JOBS[jid]["steps"], kind=KIND_META,
+        )
+        return
+
+    root = (
+        (settings or {}).get("output_dir") or ""
+    ).strip() or "pycsamt_inversion_prep"
+
+    # Forward the parameters the prep agent understands (from the param
+    # modal) via the orchestrator's per-step injection.
+    _ic = inv_config or {}
+    prep_params = {
+        k: _ic[k] for k in _PREP_PARAM_KEYS.get(wtype, ())
+        if _ic.get(k) not in (None, "", [])
+    }
+    if prep_params:
+        cfg.setdefault("step_params", {}).setdefault(
+            prep_step, {}
+        ).update(prep_params)
+
+    multi = len(targets) > 1
+    figs: dict = {}
+    sections: list[str] = []
+    n_ok = 0
+
+    for label, src in targets:
+        step(f"Building {code} files for {label}...", "running")
+        out_dir = (
+            os.path.join(root, _safe_dirname(label)) if multi else root
+        )
+        try:
+            with (
+                AGENT_CONFIG.offline() if offline else _nullctx()
+            ):
+                orch = WorkflowOrchestratorAgent(
+                    llm_provider=llm_prov,
+                    api_key=api_key,
+                    model=sel_model,
+                )
+                result = orch.execute({
+                    "config":     dict(cfg),
+                    "request":    text,
+                    "data_path":  src,
+                    "output_dir": out_dir,
+                })
+        except Exception as exc:  # noqa: BLE001
+            sections.append(f"**{label}** — ⚠ {exc}")
+            step(f"{label} failed", "error")
+            continue
+
+        ok = result.status != "failed"
+        files, stats, warns, step_results = _collect_prep_files(
+            result, prep_step
+        )
+
+        # keep only the prep/report step figures, labelled per line
+        _fig_steps = _WORKFLOW_FIGURE_STEPS.get(wtype) or set()
+        for sname, sres in step_results.items():
+            sfigs = (getattr(sres, "data", None) or {}).get(
+                "figures", {}
+            ) or {}
+            for fname, fig in sfigs.items():
+                if not isinstance(fig, plt.Figure):
+                    continue
+                if ok and sname in _fig_steps:
+                    figs[str(uuid.uuid4())] = {
+                        "title": f"[{label} · {sname}] {fname}",
+                        "b64": _fig_to_b64(fig),
+                    }
+                plt.close(fig)
+
+        if ok and files:
+            n_ok += 1
+            head = f"**{label}**"
+            if stats.get("n_stations"):
+                head += f" — {stats['n_stations']} station(s)"
+            if stats.get("n_periods"):
+                head += f" × {stats['n_periods']} period(s)"
+            rows = [
+                f"- `{os.path.basename(p)}`"
+                + (f" ({_fmt_file_size(p)})" if _fmt_file_size(p) else "")
+                + f" — `{p}`"
+                for p in files
+            ]
+            sec = head + "\n" + "\n".join(rows)
+        else:
+            err = (
+                result.error
+                or "; ".join(warns[:1])
+                or result.summary
+                or "no files were written"
+            )
+            sec = f"**{label}** — ⚠ {err}"
+        for w in warns[:2]:
+            sec += f"\n  - ⚠ {w}"
+        sections.append(sec)
+        step(
+            f"{label} done", "done" if ok and files else "error"
+        )
+
+    if multi:
+        header = (
+            f"{code} inversion preparation — {n_ok}/{len(targets)} "
+            f"line(s) built under `{root}`."
+        )
+    elif n_ok:
+        header = f"{code} inversion preparation complete."
+    else:
+        header = f"{code} inversion preparation failed."
+    parts = [header, "\n\n".join(sections)]
+    guide = _PREP_NEXT_STEPS.get(wtype, "")
+    if n_ok and guide:
+        parts.append(f"**Next steps.** {guide}")
+    rag_note = _prep_rag_note(
+        f"{code} inversion input files runner prepare"
+    )
+    if n_ok and rag_note:
+        parts.append(rag_note)
+
+    _record_run(
+        workflow=wtype,
+        path=", ".join(str(lbl) for lbl, _ in targets),
+        output_dir=root,
+        status="success" if n_ok else "failed",
+        summary=header,
+        n_figures=len(figs),
+    )
+    _update_job(
+        jid,
+        status="done",
+        result="\n\n".join(parts),
+        steps=_JOBS[jid]["steps"],
+        figs=figs,
+        kind=KIND_WORKFLOW if n_ok else KIND_ERROR,
+    )
 
 
 # ── data overview: "read the EDI data / stations / sites" ───────────────
@@ -3094,6 +3426,18 @@ def _run_agent(
 
         cfg["workflow"] = _resolved_wf
         wtype = _resolved_wf
+        # The Pre-Inversion form lets the user pick the target code
+        # (Occam2D / ModEM / MARE2DEM); honour it by switching to that
+        # code's dedicated chain.
+        if wtype == "pre_inversion":
+            _code = str(
+                _ic.get("inversion_code")
+                or cfg.get("inversion_code")
+                or ""
+            ).lower()
+            if _code in ("modem", "mare2dem"):
+                wtype = _code
+                cfg["workflow"] = _code
         _update_job(jid, workflow=wtype)
         _step(f"Workflow: {wtype}", "done")
         if wtype in (
@@ -3266,7 +3610,7 @@ def _run_agent(
             "inv1d", "inv2d", "inv3d",
             "pinn_inversion", "hybrid_inversion",
             "ensemble_inversion", "pre_inversion",
-            "modem", "tipper", "rotation",
+            "modem", "mare2dem", "tipper", "rotation",
             "denoise", "sensitivity",
             "freq_decimation",
             "rhophi", "phase_psection", "pt_psection", "tipper_plot",
@@ -3300,6 +3644,20 @@ def _run_agent(
         )
         if not _task_label and isinstance(edi_path, str) and edi_path:
             _task_label = _os.path.basename(edi_path.rstrip("/\\"))
+
+        # ── inversion preparation → per-line file-set builds ──────────
+        if wtype in _PREP_WORKFLOWS:
+            _dispatch_inversion_prep(
+                jid, wtype, text,
+                edi_store, settings, cfg,
+                inv_config=(inv_config or {}),
+                llm_prov=llm_prov,
+                api_key=api_key,
+                sel_model=sel_model,
+                offline=_offline,
+                step=_step,
+            )
+            return
 
         # ── plotting tasks → lightweight PlotAgent (no orchestrator) ──
         if wtype in _PLOT_WORKFLOWS:
@@ -3974,6 +4332,36 @@ def register_chat(app) -> None:
                     )
                 else:
                     _sel_lines = [_exact]
+            elif not _prep_all_lines_requested(text):
+                # Inversion-prep builds are per
+                # line: with several lines loaded
+                # and none named, ask which line(s)
+                # to build — "Run all" builds every
+                # line. ("all lines" in the text
+                # skips the picker.)
+                from pycsamt.agents._workflows import (
+                    classify_workflow as _cwf_prep,
+                )
+                if (
+                    _cwf_prep(text, default=None)
+                    in _PREP_WORKFLOWS
+                ):
+                    msgs.append(
+                        _line_waiting_bubble()
+                    )
+                    pending = {
+                        "disambiguation": "lines",
+                        "text": text,
+                        "groups": {
+                            k: list(v)
+                            for k, v in
+                            _groups.items()
+                        },
+                    }
+                    return (
+                        msgs, {}, True,
+                        "", new_stored, pending,
+                    )
 
         # ── param detection ───────────────────
         wf = _quick_workflow(text)

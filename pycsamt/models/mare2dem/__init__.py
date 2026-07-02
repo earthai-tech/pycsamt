@@ -180,7 +180,15 @@ from .geom import (
 from .survey import MTSurveyConfig, CSEMSurveyConfig, make_data_file
 
 # ---- ZMM reader + MT data builder ----
-from .zmm import ZMMStation, read_zmm, make_mt_data_from_zmm
+from .zmm import (
+    ZMMStation,
+    read_zmm,
+    make_mt_data_from_zmm,
+    make_mt_data_from_stations,
+)
+
+# ---- EDI → MT data builder ----
+from .edi import stations_from_edi, make_mt_data_from_edi
 
 # ---- synthetic noise ----
 from .noise import NoiseConfig, add_synthetic_noise, make_synthetic_data
@@ -295,6 +303,10 @@ __all__ = [
     "ZMMStation",
     "read_zmm",
     "make_mt_data_from_zmm",
+    "make_mt_data_from_stations",
+    # EDI → emdata
+    "stations_from_edi",
+    "make_mt_data_from_edi",
     # noise
     "NoiseConfig",
     "add_synthetic_noise",

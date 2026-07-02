@@ -89,7 +89,7 @@ return a JSON object with:
     "qc", "phase_analysis", "pre_inversion",
     "ai_inversion", "inv2d", "inv3d",
     "ensemble_inversion", "joint_inversion",
-    "modem", "full", "full_ai_workflow",
+    "modem", "mare2dem", "full", "full_ai_workflow",
     "pinn_inversion", "hybrid_inversion",
     "tipper", "sensitivity", "rotation",
     "freq_decimation", "batch", "comparison",
@@ -115,6 +115,7 @@ Rules:
 - "ensemble_inversion" if ensemble or uncertainty.
 - "joint_inversion" if multi-modal or TEM+MT.
 - "modem" if ModEM or 3-D conventional inversion.
+- "mare2dem" if MARE2DEM or 2.5-D FEM inversion.
 - "pinn_inversion" if PINN or physics-informed.
 - "hybrid_inversion" if two-stage or AI warm-start.
 - "tipper" if tipper or induction arrows.
@@ -333,7 +334,19 @@ _WORKFLOW_STEPS = {
         ("static_shift", "StaticShiftAgent", _ifn_qc_sites,
          "Static-shift correction"),
         ("modem",        "ModEmAgent",       _ifn_ss_corrected,
-         "Write ModEM3D data file"),
+         "Write ModEM data + model + covariance + control files"),
+        ("report",       "ReportAgent",      _ifn_results,
+         "Generate report"),
+    ],
+    "mare2dem": [
+        ("load",         "MTLoaderAgent",    None,
+         "Load EDI files"),
+        ("qc",           "DataQCAgent",      _ifn_load_sites,
+         "Data quality control"),
+        ("static_shift", "StaticShiftAgent", _ifn_qc_sites,
+         "Static-shift correction"),
+        ("mare2dem",     "Mare2DEMAgent",    _ifn_ss_corrected,
+         "Write MARE2DEM emdata + resistivity + settings files"),
         ("report",       "ReportAgent",      _ifn_results,
          "Generate report"),
     ],
@@ -597,6 +610,11 @@ _WORKFLOW_STEPS = {
     ],
 }
 
+# Steps whose deliverable is an inversion input file set on disk.  These
+# receive the run's ``output_dir`` (in a per-code subfolder) even though
+# their ``input_fn`` chain only carries the upstream ``sites``.
+_PREP_FILE_STEPS = frozenset({"occam2d", "modem", "mare2dem"})
+
 
 class WorkflowOrchestratorAgent(BaseAgent):
     """Intelligently route an NL request to the correct agent chain.
@@ -846,6 +864,32 @@ class WorkflowOrchestratorAgent(BaseAgent):
                     step_fn, _s_extra
                 )
 
+            # Inversion-prep steps write a file set
+            # to disk — give them the run's
+            # output_dir (input_fn chains carry only
+            # the upstream sites), in a per-code
+            # subfolder so provenance JSONs and
+            # solver inputs don't mix.
+            if (
+                step_name in _PREP_FILE_STEPS
+                and step_fn is not None
+            ):
+                def _make_outdir_injector(fn, od):
+                    def _injected(r):
+                        base = fn(r)
+                        base.setdefault(
+                            "output_dir", od
+                        )
+                        return base
+                    return _injected
+                step_fn = _make_outdir_injector(
+                    step_fn,
+                    os.path.join(
+                        output_dir,
+                        f"pycsamt_{step_name}",
+                    ),
+                )
+
             coord.add_step(
                 step_name, agent_obj,
                 input_fn=step_fn,
@@ -1074,6 +1118,7 @@ def _build_registry(
          ))
     _try("Occam2DAgent",              lambda: _import("occam2d_agent",     "Occam2DAgent")())
     _try("ModEmAgent",                lambda: _import("modem_agent",       "ModEmAgent")())
+    _try("Mare2DEMAgent",             lambda: _import("mare2dem_agent",    "Mare2DEMAgent")())
     _try("AnomalyDetectionAgent",     lambda: _import("anomaly_agent",     "AnomalyDetectionAgent")())
     _try("Inv3DAgent",                lambda: _import("inv3d_agent",       "Inv3DAgent")())
     _try("Inv2DAgent",                lambda: _import("inv2d_agent",       "Inv2DAgent")())

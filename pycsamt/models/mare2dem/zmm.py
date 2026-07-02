@@ -46,6 +46,7 @@ __all__ = [
     "ZMMStation",
     "read_zmm",
     "make_mt_data_from_zmm",
+    "make_mt_data_from_stations",
 ]
 
 # ---------------------------------------------------------------------------
@@ -373,7 +374,47 @@ def make_mt_data_from_zmm(
     """
     # ---- read ----
     stations = [read_zmm(f) for f in zmm_files]
+    return make_mt_data_from_stations(
+        stations, out_file,
+        output_modes=output_modes,
+        error_floor_te=error_floor_te,
+        error_floor_tm=error_floor_tm,
+        error_floor_tipper=error_floor_tipper,
+        omit_periods=omit_periods,
+        line_orientation=line_orientation,
+        declination=declination,
+        utm0=utm0,
+        utm_zone=utm_zone,
+        topo=topo,
+        rx_z_offset=rx_z_offset,
+    )
 
+
+def make_mt_data_from_stations(
+    stations: list[ZMMStation],
+    out_file: str | Path,
+    *,
+    output_modes: str = "all",
+    error_floor_te: float = 0.0,
+    error_floor_tm: float = 0.0,
+    error_floor_tipper: float = 0.0,
+    omit_periods: np.ndarray | None = None,
+    line_orientation: float | None = None,
+    declination: float = 0.0,
+    utm0: tuple[float, float] | None = None,
+    utm_zone: str = "",
+    topo: Any = 0.0,
+    rx_z_offset: float = -0.1,
+) -> EMDataFile:
+    """Create a MARE2DEM MT data file from prepared :class:`ZMMStation` objects.
+
+    Backend shared by :func:`make_mt_data_from_zmm` (stations parsed from
+    ``.zmm`` files) and
+    :func:`pycsamt.models.mare2dem.edi.make_mt_data_from_edi` (stations
+    converted from EDI impedances).  See :func:`make_mt_data_from_zmm` for
+    the parameter documentation; the only difference is that *stations*
+    are supplied directly.
+    """
     # ---- UTM zone ----
     if not utm_zone:
         lons = [s.longitude for s in stations]
@@ -534,7 +575,7 @@ def make_mt_data_from_zmm(
 
     em = EMDataFile(
         format="EMData_2.3",
-        comment=f"Created with pycsamt zmm.make_mt_data_from_zmm on {datetime.now().strftime('%Y-%m-%d')}",
+        comment=f"Created with pycsamt make_mt_data_from_stations on {datetime.now().strftime('%Y-%m-%d')}",
         utm=utm,
         mt=mt_cfg,
         data=data,

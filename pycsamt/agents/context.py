@@ -42,7 +42,9 @@ from ._workflows import (  # noqa: E402
     normalise_workflow as _normalise_workflow,
 )
 
-_KNOWN_INVERSION_CODES = {"occam2d", "modem", "nlcg", "zonal", "smooth2d"}
+_KNOWN_INVERSION_CODES = {
+    "occam2d", "modem", "mare2dem", "nlcg", "zonal", "smooth2d",
+}
 
 _COMPONENTS = {"xy", "yx", "xx", "yy", "all", "off_diagonal"}
 
@@ -62,7 +64,7 @@ that are clearly mentioned or can be reasonably inferred):
                     interpretation, report, full,
                     ai_inversion, inv1d, inv2d, inv3d,
                     ensemble_inversion, joint_inversion,
-                    modem, occam2d,
+                    modem, mare2dem, occam2d,
                     tipper, sensitivity, rotation,
                     freq_decimation, batch, comparison,
                     full_ai_workflow,
@@ -72,7 +74,7 @@ that are clearly mentioned or can be reasonably inferred):
   "period_range":   [T_min_seconds, T_max_seconds],
   "component":      string — "xy"|"yx"|"all"|"off_diagonal",
   "station":        string or null,
-  "inversion_code": string — "occam2d"|"modem"|null,
+  "inversion_code": string — "occam2d"|"modem"|"mare2dem"|null,
   "depth_max_km":   float or null,
   "n_periods":      int or null,
   "verbose":        bool

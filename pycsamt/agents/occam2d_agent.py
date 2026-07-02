@@ -4,7 +4,7 @@ pycsamt.agents.occam2d_agent
 
 :class:`Occam2DAgent` — Write a complete Occam2D inversion input file set.
 
-Produces three files in the output directory:
+Produces four files in the output directory:
 
 ``OccamDataFile.dat``
     MT response data in Occam2D format.
@@ -13,6 +13,10 @@ Produces three files in the output directory:
 ``Occam2DMesh``
     2-D FD mesh derived from the data geometry.
     Written by :meth:`~pycsamt.models.occam2d.mesh.OccamMesh.write`.
+
+``Occam2DModel``
+    Mesh-cell → inversion-parameter mapping.
+    Written by :meth:`~pycsamt.models.occam2d.model.OccamModel.write`.
 
 ``OccamStartup``
     Starting-model and inversion parameters file.
@@ -70,6 +74,7 @@ class Occam2DAgent(BaseAgent):
     ----------------
     ``data_path``     Path — OccamDataFile.dat
     ``mesh_path``     Path — Occam2DMesh
+    ``model_path``    Path — Occam2DModel
     ``startup_path``  Path — OccamStartup
     ``n_stations``    int
     ``n_periods``     int
@@ -190,11 +195,27 @@ class Occam2DAgent(BaseAgent):
         except Exception as exc:
             warnings.append(f"OccamMesh.from_data failed: {exc}")
 
+        # ── build OccamModel (parameterisation) ───────────────────────────────
+        model_path: Path | None = None
+        occ_model: Any = None
+        try:
+            if occ_mesh is not None:
+                occ_model  = OccamModel.from_mesh(occ_mesh, config=cfg)
+                model_path = Path(output_dir) / "Occam2DModel"
+                occ_model.write(model_path)
+                self._log.info("Occam2DModel written: %d params",
+                               getattr(occ_model, "n_params", 0))
+        except Exception as exc:
+            warnings.append(f"OccamModel.from_mesh failed: {exc}")
+            occ_model  = None
+            model_path = None
+
         # ── build OccamStartup ────────────────────────────────────────────────
         startup_path: Path | None = None
         try:
-            occ_model   = OccamModel(description="SMOOTH INVERSION")
-            occ_startup = OccamStartup.from_model(occ_model)
+            if occ_model is None:
+                occ_model = OccamModel(description="SMOOTH INVERSION")
+            occ_startup = OccamStartup.from_model(occ_model, config=cfg)
             startup_path = Path(output_dir) / "OccamStartup"
             occ_startup.write(startup_path)
             self._log.info("OccamStartup written")
@@ -202,7 +223,8 @@ class Occam2DAgent(BaseAgent):
             warnings.append(f"OccamStartup.from_model failed: {exc}")
 
         # ── validate file sizes ───────────────────────────────────────────────
-        for label, p in [("data", data_path), ("mesh", mesh_path), ("startup", startup_path)]:
+        for label, p in [("data", data_path), ("mesh", mesh_path),
+                         ("model", model_path), ("startup", startup_path)]:
             if p and p.exists():
                 size_kb = p.stat().st_size // 1024
                 self._log.info("%s file: %s (%d KB)", label, p.name, size_kb)
@@ -226,17 +248,19 @@ class Occam2DAgent(BaseAgent):
             interp = self.query_llm(prompt, max_tokens=200)
 
         elapsed = time.time() - t0
-        files_written = sum(1 for p in [data_path, mesh_path, startup_path]
+        files_written = sum(1 for p in [data_path, mesh_path, model_path,
+                                        startup_path]
                             if p and p.exists())
         return AgentResult(
             status="success" if data_path and data_path.exists() else "needs_review",
             summary=(
                 f"Occam2D prep: {n_sites} stations × {n_periods} periods. "
-                f"{files_written}/3 files written to {output_dir}."
+                f"{files_written}/4 files written to {output_dir}."
             ),
             data={
                 "data_path":    data_path,
                 "mesh_path":    mesh_path,
+                "model_path":   model_path,
                 "startup_path": startup_path,
                 "n_stations":   n_sites,
                 "n_periods":    n_periods,

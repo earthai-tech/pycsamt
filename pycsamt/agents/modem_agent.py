@@ -59,6 +59,9 @@ class ModEmAgent(BaseAgent):
     Output data keys
     ----------------
     ``data_path``    Path — ModEM data file
+    ``model_path``   Path or None — starting model (``m0.ws`` / ``m0.rho``)
+    ``cov_path``     Path or None — covariance file (3-D runs)
+    ``ctrl_path``    Path or None — inversion-control file
     ``n_stations``   int
     ``n_periods``    int
     ``output_dir``   str
@@ -173,6 +176,26 @@ class ModEmAgent(BaseAgent):
                 elapsed=time.time() - t0,
             )
 
+        # ── starting model + covariance + control (full input set) ───────────
+        model_path = cov_path = ctrl_path = None
+        try:
+            from ..models.modem.builder import InputBuilder
+            extra = InputBuilder(config=cfg).build_from_data(
+                modem_d, output_dir,
+                cov_filename="ModEM.cov",
+                ctrl_filename="ModEM.inv",
+            )
+            model_path = extra.get("model")
+            cov_path   = extra.get("covariance")
+            ctrl_path  = extra.get("control")
+            self._log.info(
+                "ModEM model/covariance/control written to %s", output_dir,
+            )
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(
+                f"Starting model / covariance / control not written: {exc}"
+            )
+
         # ── validate ──────────────────────────────────────────────────────────
         if data_path.exists():
             size_kb = data_path.stat().st_size // 1024
@@ -194,14 +217,21 @@ class ModEmAgent(BaseAgent):
             interp = self.query_llm(prompt, max_tokens=200)
 
         elapsed = time.time() - t0
+        n_files = sum(
+            1 for p in (data_path, model_path, cov_path, ctrl_path)
+            if p is not None and Path(p).exists()
+        )
         return AgentResult(
             status="success" if data_path and data_path.exists() else "needs_review",
             summary=(
                 f"ModEM3D prep: {n_stations} stations × {n_periods} periods. "
-                f"Data file: {data_path}."
+                f"{n_files} file(s) written to {output_dir}."
             ),
             data={
                 "data_path":  data_path,
+                "model_path": model_path,
+                "cov_path":   cov_path,
+                "ctrl_path":  ctrl_path,
                 "n_stations": n_stations,
                 "n_periods":  n_periods,
                 "output_dir": output_dir,

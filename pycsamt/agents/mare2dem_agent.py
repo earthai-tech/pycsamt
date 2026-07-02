@@ -90,6 +90,19 @@ class Mare2DEMAgent(BaseAgent):
 
     Input keys
     ----------
+    ``sites`` / ``path`` : Sites or str, optional
+        EDI source (directory, files, or a loaded ``Sites``).  The agent
+        converts the impedances to a MARE2DEM ``.emdata`` file via
+        :func:`~pycsamt.models.mare2dem.edi.make_mt_data_from_edi`
+        (TE = Zxy, TM = Zyx).  Used when ``emdata``/``mt``/``csem`` are
+        not supplied — this is the pathway the workflow orchestrator
+        uses.
+    ``error_floor`` : float, optional
+        Relative error floor applied to the TE/TM apparent
+        resistivities built from EDI data (default 0.05 = 5 %).
+    ``output_modes`` : str, optional
+        Data types written from EDI data: ``"all"`` (default), ``"TE"``,
+        ``"TM"``, ``"TE+tipper"``, or ``"all impedance"``.
     ``emdata`` : str or path-like, optional
         Path to an existing ``.emdata`` data file.  When supplied the
         agent copies it to the output directory and uses it directly.
@@ -251,6 +264,9 @@ class Mare2DEMAgent(BaseAgent):
         resist_src     = input_data.get("resistivity")
         mt_kwargs      = input_data.get("mt")
         csem_kwargs    = input_data.get("csem")
+        sites_src      = input_data.get("sites")
+        if sites_src is None:
+            sites_src = input_data.get("path")
 
         os.makedirs(output_dir, exist_ok=True)
 
@@ -361,10 +377,32 @@ class Mare2DEMAgent(BaseAgent):
                     model_filename=cfg.resistivity_file,
                     settings_filename=cfg.settings_file,
                 )
+            elif sites_src is not None:
+                # EDI pathway (workflow orchestrator): impedances → .emdata
+                from ..models.mare2dem.edi import make_mt_data_from_edi
+                err_floor = float(input_data.get("error_floor", 0.05))
+                out_modes = str(input_data.get("output_modes", "all"))
+                data_file = Path(output_dir) / cfg.data_file
+                make_mt_data_from_edi(
+                    sites_src, data_file,
+                    output_modes=out_modes,
+                    error_floor_te=err_floor,
+                    error_floor_tm=err_floor,
+                    topo=topo,
+                )
+                files = {
+                    "data": data_file,
+                    "model": builder.write_resistivity(
+                        output_dir, filename=cfg.resistivity_file
+                    ),
+                    "settings": builder.write_settings(
+                        output_dir, filename=cfg.settings_file
+                    ),
+                }
             else:
                 return AgentResult.failed(
-                    "No data source supplied. "
-                    "Provide 'emdata' (path) or 'mt'/'csem' (survey dicts).",
+                    "No data source supplied. Provide 'sites'/'path' (EDI), "
+                    "'emdata' (path), or 'mt'/'csem' (survey dicts).",
                     elapsed=time.time() - t0,
                 )
 

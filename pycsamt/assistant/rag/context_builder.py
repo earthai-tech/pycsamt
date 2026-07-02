@@ -171,7 +171,7 @@ class AssembledContext:
         # normal paragraph.
         lead = self._lead_chunk()
         if lead is not None:
-            label = lead.symbol or lead.title or lead.source_path
+            label = _chunk_label(lead)
             seen.add(label)
             first, rest = _first_sentence(_snippet(lead, 460))
             opening = f"**`{label}`**"
@@ -187,7 +187,7 @@ class AssembledContext:
         for c in self.chunks:
             if len(bullets) >= max(0, top - 1):
                 break
-            label = c.symbol or c.title or c.source_path
+            label = _chunk_label(c)
             if label in seen:
                 continue
             first, _ = _first_sentence(_snippet(c, 220))
@@ -218,10 +218,12 @@ class AssembledContext:
             )
 
         if self.citations:
-            cites = " · ".join(
-                f"`{c['source_path']}`"
-                for c in self.citations[:top]
-            )
+            paths: list[str] = []
+            for c in self.citations:
+                p = c["source_path"]
+                if p not in paths:
+                    paths.append(p)
+            cites = " · ".join(f"`{p}`" for p in paths[:top])
             parts.append(f"*Sources: {cites}*")
         return "\n\n".join(parts)
 

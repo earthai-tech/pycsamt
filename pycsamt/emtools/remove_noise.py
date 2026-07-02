@@ -949,7 +949,13 @@ def rpca_offdiag_denoise(
                 t = 0.0 if a == b else (j - a) / (b - a)
                 r[j] = (1 - t) * r[a] + t * r[b]
             M[i] = r
-    L = _svd_rank_k(M, rank=rank)
+    # Rows with fewer than two finite samples keep NaNs after the gap
+    # fill above — patch them with the global median so the SVD is
+    # well-posed (an all-NaN matrix means nothing usable: return as-is).
+    if not np.isfinite(M).any():
+        return S
+    M = np.where(np.isfinite(M), M, np.nanmedian(M))
+    L = _svd_rank_k(M, rank)
     # push back magnitudes; keep phase if requested
     def _one(Si):
         ed = next(_iter_items(Si))

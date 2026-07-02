@@ -171,6 +171,8 @@ untitled2.py
 untitled3.py
 pme.en.csv.csv
 mt/
+!pycsamt/inversion/mt/
+!pycsamt/inversion/mt/*.py
 data/
 data/edis
 

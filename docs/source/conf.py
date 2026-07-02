@@ -31,15 +31,19 @@ os.environ.setdefault(
 sys.path.insert(0, os.path.abspath("../../"))
 
 # -- Project information -------------------------------------------------------
-project   = "pyCSAMT"
-author    = "Kouadio K. Laurent"
-copyright = "2022–2026, earthai-tech"
+project = "pyCSAMT"
+author = "Kouadio K. Laurent"
+copyright = "2022-2026, earthai-tech"
 
 try:
     from pycsamt import __version__ as release
     version = ".".join(release.split(".")[:2])   # e.g. "2.0"
 except Exception:
     version = release = "2.0"
+
+switcher_version_match = os.environ.get("READTHEDOCS_VERSION", f"v{version.split('.')[0]}")
+if switcher_version_match in {"latest", "stable"}:
+    switcher_version_match = "v2"
 
 # -- General configuration -----------------------------------------------------
 extensions = [
@@ -124,14 +128,16 @@ html_theme = "pydata_sphinx_theme"
 html_theme_options = {
     # Logo
     "logo": {
-        "image_light": "_static/pycsamt_logo.svg",
-        "image_dark":  "_static/pycsamt_logo.svg",
+        "image_light": "_static/pycsamt-v2-symbol-logo.svg",
+        "image_dark":  "_static/pycsamt-v2-symbol-logo.svg",
         "alt_text":    "pyCSAMT",
     },
     # Navbar
-    "navbar_start":   ["navbar-logo"],
-    "navbar_center":  ["navbar-nav"],
-    "navbar_end":     ["navbar-icon-links", "theme-switcher"],
+    "navbar_start": ["navbar-logo"],
+    "navbar_center": ["navbar-nav"],
+    "navbar_end": ["version-switcher", "navbar-icon-links", "theme-switcher"],
+    "navbar_persistent": ["search-button"],
+    "header_links_before_dropdown": 6,
     # Icon links (fill in real URLs when repo is public)
     "icon_links": [
         {
@@ -147,6 +153,7 @@ html_theme_options = {
     ],
     # Sidebar
     "show_toc_level": 2,
+    "secondary_sidebar_items": ["page-toc", "edit-this-page"],
     "primary_sidebar_end": [],
     # Code highlighting
     "pygments_light_style": "tango",
@@ -156,21 +163,20 @@ html_theme_options = {
     "footer_end":   ["sphinx-version", "theme-version"],
     # Announcement banner (remove before release)
     "announcement": (
-        "&#128679; pyCSAMT v2 docs are under active construction. "
+        "pyCSAMT v2 docs are under active construction. "
         "APIs may change before the stable release."
     ),
     # Search
-    "search_bar_text": "Search pyCSAMT docs…",
-    # Version switcher placeholder (uncomment and populate before release)
-    # "switcher": {
-    #     "json_url": "https://pycsamt.readthedocs.io/_static/version_switcher.json",
-    #     "version_match": version,
-    # },
+    "search_bar_text": "Search pyCSAMT docs...",
+    "switcher": {
+        "json_url": "_static/version_switcher.json",
+        "version_match": switcher_version_match,
+    },
 }
 
 html_title            = f"pyCSAMT {version}"
 html_short_title      = "pyCSAMT"
-html_favicon          = "_static/pycsamt_logo-transparent.ico"
+html_favicon          = "_static/pycsamt-v2-symbol.ico"
 html_static_path      = ["_static"]
 html_css_files        = ["custom.css"]
 html_show_sourcelink  = True

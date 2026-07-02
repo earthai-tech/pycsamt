@@ -1,0 +1,17 @@
+[
+  {
+    "name": "v2",
+    "version": "v2",
+    "url": "https://pycsamt.readthedocs.io/en/v2/"
+  },
+  {
+    "name": "latest",
+    "version": "latest",
+    "url": "https://pycsamt.readthedocs.io/en/latest/"
+  },
+  {
+    "name": "stable",
+    "version": "stable",
+    "url": "https://pycsamt.readthedocs.io/en/stable/"
+  }
+]

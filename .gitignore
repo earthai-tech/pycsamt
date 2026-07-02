@@ -201,6 +201,8 @@ data/
 
 # Demo scripts and generated figures — committed separately when stable
 examples/
+!docs/source/examples/
+!docs/source/examples/index.rst
 
 # C&G paper submission files — not for public distribution
 /cag-paper/

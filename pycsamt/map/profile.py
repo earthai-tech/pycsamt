@@ -168,12 +168,12 @@ def _single_pseudosection(
     )
     if quantity == "rho":
         if options.log_rho:
-            colorbar = "log10 rho (Ohm.m)"
+            colorbar = "log₁₀ ρ (Ω·m)"
         else:
-            colorbar = "rho (Ohm.m)"
+            colorbar = "ρ (Ω·m)"
         cmap = options.cmap or "Jet"
     else:
-        colorbar = "Phase (deg)"
+        colorbar = "φ (°)"
         cmap = options.cmap or "RdBu_r"
     y_values = np.log10(piv.index.to_numpy(dtype=float))
     fig = go.Figure(
@@ -184,7 +184,7 @@ def _single_pseudosection(
             colorscale=to_plotly_cmap(cmap),
             zmin=_zmin(options),
             zmax=_zmax(options),
-            colorbar=dict(title=colorbar),
+            colorbar=dict(title=dict(text=colorbar, side="right")),
             hovertemplate=(
                 "<b>%{x}</b><br>"
                 "log10(T): %{y:.2f}<br>"

@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from dash import html, no_update, Input, Output, State
+from dash import dcc, html, no_update, Input, Output, State
 
 from .._ids import IDs
 from ..cache import get_view, set_view
@@ -16,6 +16,7 @@ def register_topo(app) -> None:
     _register_source_visibility(app)
     _register_parse_upload(app)
     _register_apply(app)
+    _register_export(app)
 
 
 def _register_source_visibility(app) -> None:
@@ -104,6 +105,44 @@ def _register_apply(app) -> None:
             return store, _msg(f"Applied {n} elevations. Draping on."), True
         except Exception as exc:  # noqa: BLE001 - surface to the UI
             return no_update, _msg(f"Error: {exc}", ok=False), no_update
+
+
+def _register_export(app) -> None:
+    @app.callback(
+        Output(IDs.TOPO_EXPORT_DL, "data"),
+        Output(IDs.TOPO_STATUS, "children", allow_duplicate=True),
+        Input(IDs.BTN_TOPO_EXPORT, "n_clicks"),
+        State(IDs.TOPO_EXPORT_FMT, "value"),
+        State(IDs.SESSION_ID, "data"),
+        prevent_initial_call=True,
+    )
+    def export(_n, fmt, session_id):
+        import os
+        import shutil
+        import tempfile
+
+        view = get_view(session_id)
+        if view is None:
+            return no_update, _msg("Load lines first.", ok=False)
+
+        fmt = fmt or "csv"
+        tmpdir = tempfile.mkdtemp(prefix="pycsamt_topo_export_")
+        try:
+            path = os.path.join(tmpdir, f"topography.{fmt}")
+            view.export_topography(path, fmt=fmt)
+            filename = f"topography.{fmt}"
+            if fmt == "csv":
+                with open(path, "r", encoding="utf-8") as fh:
+                    payload = dcc.send_string(fh.read(), filename)
+            else:
+                with open(path, "rb") as fh:
+                    payload = dcc.send_bytes(fh.read(), filename)
+            n = sum(1 for s in view.data.stations if s.elevation is not None)
+            return payload, _msg(f"Exported {n} station elevation(s).")
+        except Exception as exc:  # noqa: BLE001 - surface to the UI
+            return no_update, _msg(f"Error: {exc}", ok=False)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def _msg(text: str, *, ok: bool = True):

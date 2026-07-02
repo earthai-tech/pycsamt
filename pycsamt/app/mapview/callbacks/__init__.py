@@ -10,18 +10,22 @@ def register_all(app) -> None:
     """Register every callback module on *app*."""
     from .chrome import register_chrome
     from .load import register_load
+    from .inversion_import import register_inversion_import
     from .view import register_view
     from .controls import register_controls
     from .lines import register_lines
     from .export import register_export
     from .topo import register_topo
     from .toolbar import register_toolbar
+    from .settings import register_settings
 
     register_chrome(app)
     register_load(app)
+    register_inversion_import(app)
     register_view(app)
     register_controls(app)
     register_lines(app)
     register_export(app)
     register_topo(app)
     register_toolbar(app)
+    register_settings(app)

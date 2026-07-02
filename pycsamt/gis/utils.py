@@ -2582,6 +2582,26 @@ def get_elevation_from_api(
     response_key = api_config['response_key']
 
     is_scalar = np.isscalar(latitude)
+
+    # Elevation APIs cap how many locations one request can carry
+    # (Open-Meteo rejects overly long point lists with a 400). Batch
+    # array input into chunks and concatenate, so a normal-sized
+    # survey (dozens to a couple hundred stations) doesn't fail
+    # outright just because it exceeds one request's limit.
+    _MAX_BATCH = 90
+    if not is_scalar and len(latitude) > _MAX_BATCH:
+        lat_arr = np.asarray(latitude, dtype=float)
+        lon_arr = np.asarray(longitude, dtype=float)
+        chunks = [
+            get_elevation_from_api(
+                lat_arr[i:i + _MAX_BATCH],
+                lon_arr[i:i + _MAX_BATCH],
+                api_name,
+            )
+            for i in range(0, len(lat_arr), _MAX_BATCH)
+        ]
+        return np.concatenate(chunks)
+
     params = {}
 
     # Prepare parameters based on the API's required format.

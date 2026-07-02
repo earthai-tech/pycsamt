@@ -155,10 +155,12 @@ def _register_commands() -> None:
     from pycsamt.cli.commands.edi        import edi        # noqa: PLC0415
     from pycsamt.cli.commands.jones      import jones      # noqa: PLC0415
     from pycsamt.cli.commands.avg        import avg        # noqa: PLC0415
+    from pycsamt.cli.commands.map        import map        # noqa: PLC0415,A001
 
     main.add_command(survey)
     main.add_command(site)
     main.add_command(pipe)
+    main.add_command(map)
     main.add_command(info)
     main.add_command(convert)
     main.add_command(invert)

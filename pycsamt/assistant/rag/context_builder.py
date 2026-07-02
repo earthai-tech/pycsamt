@@ -33,16 +33,26 @@ __all__ = [
 _SNIPPET_CHARS = 700
 
 
+# NumPy-doc section headers: everything from the first one on is API
+# reference detail, not answer prose.
+_NUMPYDOC_SECTION_RE = re.compile(
+    r"\n\s*(Parameters|Returns|Yields|Raises|See Also|Notes|Examples"
+    r"|Attributes|References|Warnings)\s*\n\s*-{3,}",
+)
+
+
 def _snippet(chunk: RAGChunk, max_len: int = _SNIPPET_CHARS) -> str:
     """Most informative prose slice of a chunk.
 
-    For code chunks: the docstring. For doc/recipe chunks: the body with
-    the (separately-shown) heading and embedded code fences stripped, so
-    the offline answer reads cleanly instead of dumping raw markdown.
+    For code chunks: the docstring prose (cut before the first numpydoc
+    section). For doc/recipe chunks: the body with the (separately-shown)
+    heading and embedded code fences stripped, so the offline answer
+    reads cleanly instead of dumping raw markdown.
     """
     text = chunk.text or ""
     if "Docstring:" in text:
         body = text.split("Docstring:", 1)[1].split("\nCode:", 1)[0]
+        body = _NUMPYDOC_SECTION_RE.split(body, 1)[0]
         if body.strip():
             text = body
     elif text.startswith("Document:"):
@@ -55,8 +65,47 @@ def _snippet(chunk: RAGChunk, max_len: int = _SNIPPET_CHARS) -> str:
             lines = lines[1:]
         text = "\n".join(lines)
         text = re.sub(r"```.*?```", "", text, flags=re.S)
+    # Drop indexer metadata lines ("Module: …", "File: …", "Class: …",
+    # "Signature: …") — they are chunk headers, not prose, and make the
+    # offline answer read like a raw index dump.
+    text = "\n".join(
+        ln for ln in text.splitlines()
+        if not re.match(
+            r"\s*(Module|File|Class|Function|Method|Signature)\s*:\s",
+            ln,
+        )
+    )
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text if len(text) <= max_len else text[:max_len].rstrip() + " …"
+
+
+def _first_sentence(text: str, max_len: int = 180) -> tuple[str, str]:
+    """Split *text* into (first sentence, remainder) for lead-in style."""
+    text = (text or "").strip()
+    if not text:
+        return "", ""
+    first_para = text.split("\n\n", 1)[0].replace("\n", " ").strip()
+    m = re.search(r"(?<=[.!?])\s", first_para)
+    first = first_para[: m.start()] if m else first_para
+    if len(first) > max_len:
+        first = first[: max_len - 1].rstrip() + "…"
+    rest = text[len(first):].lstrip(" .\n") if text.startswith(first) else (
+        text.split("\n\n", 1)[1].strip() if "\n\n" in text else ""
+    )
+    return first, rest
+
+
+def _chunk_label(chunk: RAGChunk) -> str:
+    """Readable label: the symbol path, or ``docname: Section`` for
+    doc/recipe chunks (a bare section heading lacks context)."""
+    if chunk.symbol:
+        return chunk.symbol
+    title = (chunk.title or "").strip()
+    src = (chunk.source_path or "").replace("\\", "/")
+    stem = src.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+    if title and stem and title.lower() != stem.lower():
+        return f"{stem}: {title}"
+    return title or src
 
 
 @dataclass
@@ -76,9 +125,10 @@ class AssembledContext:
     def _lead_chunk(self) -> RAGChunk | None:
         """Pick the best 'definition' chunk to open the answer.
 
-        Prefer a code symbol whose leaf name is mentioned in the query
-        (e.g. "StaticShiftAgent"), else the first code symbol, else the
-        first chunk.
+        A code symbol leads only when the query actually names it
+        (e.g. "StaticShiftAgent"); otherwise the retriever's top-ranked
+        chunk leads — for how-to questions that is typically a recipe
+        or documentation section, not an internal helper.
         """
         ql = self.query.lower()
         code_kinds = ("python_symbol", "python_method", "module_doc")
@@ -87,9 +137,6 @@ class AssembledContext:
                 leaf = c.symbol.rsplit(".", 1)[-1].lower()
                 if len(leaf) >= 3 and leaf in ql:
                     return c
-        for c in self.chunks:
-            if c.symbol and c.kind in code_kinds:
-                return c
         return self.chunks[0] if self.chunks else None
 
     def compose_offline_answer(self, top: int = 3) -> str:
@@ -117,24 +164,46 @@ class AssembledContext:
                 + ("" if pc.get("exists") else "  (path not found)")
             )
 
-        lead = self._lead_chunk()
         seen: set[str] = set()
-        shown = 0
-        for c in ([lead] + self.chunks) if lead else self.chunks:
-            if shown >= top:
+
+        # Definition-style opening: the best symbol, dash, its first
+        # docstring sentence — then the rest of that docstring as a
+        # normal paragraph.
+        lead = self._lead_chunk()
+        if lead is not None:
+            label = lead.symbol or lead.title or lead.source_path
+            seen.add(label)
+            first, rest = _first_sentence(_snippet(lead, 460))
+            opening = f"**`{label}`**"
+            if first:
+                opening += f" — {first}"
+            if rest:
+                opening += f"\n\n{rest}"
+            parts.append(opening)
+
+        # Supporting chunks become one-line bullets instead of
+        # further docstring dumps.
+        bullets: list[str] = []
+        for c in self.chunks:
+            if len(bullets) >= max(0, top - 1):
                 break
             label = c.symbol or c.title or c.source_path
             if label in seen:
                 continue
-            body = _snippet(c, 420)
-            if not body:
+            first, _ = _first_sentence(_snippet(c, 220))
+            if not first:
                 continue
+            # A lead-in to a list ("Emit a tidy header section:")
+            # squashes badly on one line — keep only the lead-in.
+            if ":" in first:
+                first = first.split(":", 1)[0].rstrip() + "."
             seen.add(label)
-            parts.append(f"**{label}**\n{body}")
-            shown += 1
+            bullets.append(f"- **`{label}`** — {first}")
+        if bullets:
+            parts.append("Also relevant:\n" + "\n".join(bullets))
 
-        # related API symbols (dedup, skip the lead + test fixtures)
-        rel = []
+        # Related API symbols (dedup, skip shown + test fixtures).
+        rel: list[str] = []
         for s in self.symbols:
             sym = s.get("symbol")
             if not sym or sym in rel or sym in seen:
@@ -144,16 +213,16 @@ class AssembledContext:
             rel.append(sym)
         if rel:
             parts.append(
-                "Related symbols: "
-                + ", ".join(f"`{s}`" for s in rel[:6])
+                "See also: "
+                + ", ".join(f"`{s}`" for s in rel[:4])
             )
 
         if self.citations:
-            cites = "  ".join(
-                f"[{c['n']}] {c['source_path']}"
+            cites = " · ".join(
+                f"`{c['source_path']}`"
                 for c in self.citations[:top]
             )
-            parts.append(f"Sources: {cites}")
+            parts.append(f"*Sources: {cites}*")
         return "\n\n".join(parts)
 
 

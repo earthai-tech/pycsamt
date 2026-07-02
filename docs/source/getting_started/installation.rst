@@ -316,7 +316,7 @@ Verify the desktop entry point:
 .. code-block:: console
    :linenos:
 
-   pycsamt-gui --help
+   pycsamt-desktop --help
 
 Verify the web launcher:
 
@@ -452,7 +452,7 @@ If you installed the app extra, check the GUI entry point:
 .. code-block:: console
    :linenos:
 
-   pycsamt-gui --help
+   pycsamt-desktop --help
 
 Install For Common Roles
 ------------------------

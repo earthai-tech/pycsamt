@@ -14,14 +14,16 @@ from __future__ import annotations
 import base64
 import io
 from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-from ._core import MapData
+from ._core import MapData, normalize_station_id
 
 __all__ = [
     "apply_elevations",
+    "export_elevations",
     "fetch_elevations",
     "parse_elevation_file",
 ]
@@ -47,9 +49,24 @@ def apply_elevations(
     if not elev_map:
         return data
     lookup = {str(k): v for k, v in elev_map.items()}
+    # Normalized fallback so minor id-formatting differences between
+    # the elevation source and the survey's own station ids don't
+    # block an otherwise-obvious match.
+    norm_lookup = {
+        normalize_station_id(k): v for k, v in elev_map.items()
+    }
+
+    def _resolve(station_id: str) -> float | None:
+        if station_id in lookup and _finite(lookup[station_id]):
+            return float(lookup[station_id])
+        key = normalize_station_id(station_id)
+        if key in norm_lookup and _finite(norm_lookup[key]):
+            return float(norm_lookup[key])
+        return None
+
     stations = tuple(
-        replace(s, elevation=float(lookup[s.id]))
-        if s.id in lookup and _finite(lookup[s.id])
+        replace(s, elevation=resolved)
+        if (resolved := _resolve(s.id)) is not None
         else s
         for s in data.stations
     )
@@ -100,6 +117,111 @@ def fetch_elevations(
         for sid, e in zip(ids, elevs)
         if np.isfinite(e)
     }
+
+
+def export_elevations(
+    data: MapData,
+    path: str | Path,
+    *,
+    fmt: str | None = None,
+) -> Path:
+    """Export station id/elevation/coordinates to CSV or HDF5.
+
+    EDI files carry real, field-surveyed elevation; a ModEM (or
+    Occam2D/MARE2DEM) inversion result does not. Exporting a survey's
+    EDI-derived topography here produces a small, portable lookup
+    table — ``station`` + ``elevation`` (plus ``latitude``/
+    ``longitude``/``line`` for provenance) — that :func:`parse_elevation_file`
+    already knows how to read back in. That means it can be applied
+    to an inversion-sourced view later via the "Upload file"
+    elevation source, in a *different* session that never reloads
+    the original EDIs, matching stations by id (with the same
+    normalized fallback used by :func:`apply_elevations`).
+
+    Parameters
+    ----------
+    data : MapData
+        Survey to export (typically EDI-sourced, where ``elevation``
+        is already populated).
+    path : path-like
+        Destination file. ``fmt`` defaults to the file's own suffix
+        (``.csv`` / ``.h5`` / ``.hdf5``); pass it explicitly to
+        override.
+    fmt : {"csv", "h5", "hdf5"}, optional
+
+    Returns
+    -------
+    pathlib.Path
+        The path written to.
+
+    Raises
+    ------
+    ValueError
+        If no station in *data* has a known elevation, or *fmt* is
+        unsupported.
+    """
+    path = Path(path)
+    resolved_fmt = (fmt or path.suffix.lstrip(".") or "csv").lower()
+
+    rows = [
+        (s.id, float(s.elevation), s.latitude, s.longitude, s.line or "")
+        for s in data.stations
+        if s.elevation is not None
+    ]
+    if not rows:
+        msg = (
+            "No stations with a known elevation to export — drape "
+            "topography (station EDIs, upload, or fetch online) first."
+        )
+        raise ValueError(msg)
+
+    ids, elevs, lats, lons, lines = (list(col) for col in zip(*rows))
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    if resolved_fmt == "csv":
+        import pandas as pd
+
+        pd.DataFrame(
+            {
+                "station": ids,
+                "elevation": elevs,
+                "latitude": lats,
+                "longitude": lons,
+                "line": lines,
+            }
+        ).to_csv(path, index=False)
+    elif resolved_fmt in ("h5", "hdf5"):
+        import h5py
+
+        str_dtype = h5py.string_dtype()
+        with h5py.File(path, "w") as fh:
+            fh.create_dataset(
+                "station", data=np.asarray(ids, dtype=object), dtype=str_dtype
+            )
+            fh.create_dataset(
+                "elevation", data=np.asarray(elevs, dtype=float)
+            )
+            fh.create_dataset(
+                "latitude",
+                data=np.asarray(
+                    [v if v is not None else np.nan for v in lats],
+                    dtype=float,
+                ),
+            )
+            fh.create_dataset(
+                "longitude",
+                data=np.asarray(
+                    [v if v is not None else np.nan for v in lons],
+                    dtype=float,
+                ),
+            )
+            fh.create_dataset(
+                "line", data=np.asarray(lines, dtype=object), dtype=str_dtype
+            )
+    else:
+        msg = f"Unsupported export format: {resolved_fmt!r} (use 'csv' or 'h5')"
+        raise ValueError(msg)
+    return path
 
 
 def parse_elevation_file(

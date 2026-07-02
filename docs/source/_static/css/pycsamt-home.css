@@ -1,0 +1,841 @@
+/* ==========================================================================
+   pyCSAMT v2 — landing page stylesheet (scikit-learn inspired)
+   Loaded after custom.css; scoped to the home page via .pycsamt-home /
+   body.pycsamt-home-page (JS) and :has() (pure-CSS fallback).
+   ========================================================================== */
+
+:root {
+  --pyc-blue:        #3e65b0;
+  --pyc-blue-dark:   #1f4490;
+  --pyc-blue-deep:   #16305f;
+  --pyc-orange:      #f15a29;
+  --pyc-orange-soft: #ff7a4d;
+  --pyc-gold:        #fbb040;
+  --pyc-ink:         #1c2941;
+  --pyc-muted:       #5c677d;
+  --pyc-surface:     #ffffff;
+  --pyc-surface-2:   #f6f8fc;
+  --pyc-border:      color-mix(in srgb, var(--pyc-blue) 16%, transparent);
+  --pyc-shadow:      0 10px 34px rgba(31, 68, 144, 0.10);
+  --pyc-shadow-sm:   0 4px 14px rgba(31, 68, 144, 0.08);
+  --pyc-radius:      14px;
+  --pyc-hero-grad:
+    radial-gradient(52rem 30rem at 88% -12%, color-mix(in srgb, var(--pyc-gold) 26%, transparent), transparent 60%),
+    radial-gradient(44rem 30rem at -8% 8%,  color-mix(in srgb, var(--pyc-blue) 18%, transparent), transparent 62%),
+    linear-gradient(180deg, var(--pyc-surface-2), var(--pyc-surface));
+}
+
+html[data-theme="dark"] {
+  --pyc-ink:       #f2f6fc;
+  --pyc-muted:     #aab7cc;
+  --pyc-surface:   #12161f;
+  --pyc-surface-2: #171d2a;
+  --pyc-border:    color-mix(in srgb, var(--pyc-blue) 38%, transparent);
+  --pyc-shadow:    0 10px 34px rgba(0, 0, 0, 0.45);
+  --pyc-shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.35);
+  --pyc-hero-grad:
+    radial-gradient(52rem 30rem at 88% -12%, color-mix(in srgb, var(--pyc-gold) 14%, transparent), transparent 60%),
+    radial-gradient(44rem 30rem at -8% 8%,  color-mix(in srgb, var(--pyc-blue) 26%, transparent), transparent 62%),
+    linear-gradient(180deg, #101623, var(--pyc-surface));
+}
+
+/* --------------------------------------------------------------------------
+   Layout unlock: full-width article on the landing page only
+   -------------------------------------------------------------------------- */
+body.pycsamt-home-page .bd-article-container,
+.bd-article-container:has(.pycsamt-home) {
+  max-width: 100% !important;
+  padding: 0 !important;
+}
+
+body.pycsamt-home-page .bd-article,
+.bd-article:has(.pycsamt-home) {
+  padding: 0 !important;
+}
+
+body.pycsamt-home-page .bd-content,
+.bd-content:has(.pycsamt-home) {
+  overflow-x: clip;
+}
+
+.pycsamt-home {
+  color: var(--pyc-ink);
+  font-size: 1rem;
+}
+
+/* Inner column shared by every section */
+.pyc-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 clamp(1.1rem, 4vw, 2.4rem);
+}
+
+.pyc-section {
+  padding: clamp(2.6rem, 6vw, 4.4rem) 0;
+}
+
+.pyc-section--alt {
+  background: var(--pyc-surface-2);
+  border-block: 1px solid var(--pyc-border);
+}
+
+.pyc-kicker {
+  margin: 0 0 0.5rem;
+  color: var(--pyc-orange);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.pyc-h2 {
+  margin: 0 0 0.55rem;
+  color: var(--pyc-ink);
+  font-size: clamp(1.55rem, 3vw, 2.15rem);
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.pyc-lead {
+  max-width: 46rem;
+  margin: 0 0 2rem;
+  color: var(--pyc-muted);
+  font-size: 1.04rem;
+  line-height: 1.7;
+}
+
+.pyc-center { text-align: center; }
+.pyc-center .pyc-lead { margin-inline: auto; }
+
+/* --------------------------------------------------------------------------
+   Hero
+   -------------------------------------------------------------------------- */
+.pyc-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(3rem, 7vw, 5.2rem) 0 0;
+  background: var(--pyc-hero-grad);
+  border-bottom: 1px solid var(--pyc-border);
+}
+
+.pyc-hero .pyc-wrap {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: clamp(1.6rem, 4vw, 3.4rem);
+  align-items: center;
+  padding-bottom: clamp(2.6rem, 6vw, 4rem);
+}
+
+.pyc-hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.1rem;
+}
+
+.pyc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.75rem;
+  border: 1px solid var(--pyc-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--pyc-surface) 72%, transparent);
+  color: var(--pyc-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.pyc-chip--accent {
+  border-color: color-mix(in srgb, var(--pyc-orange) 45%, transparent);
+  color: var(--pyc-orange);
+}
+
+.pyc-hero-title {
+  margin: 0 0 0.35rem;
+  font-size: clamp(2.9rem, 7vw, 4.6rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.0;
+  background: linear-gradient(92deg, var(--pyc-blue-dark) 8%, var(--pyc-blue) 46%, var(--pyc-orange) 96%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+html[data-theme="dark"] .pyc-hero-title {
+  background: linear-gradient(92deg, #9db8ea 4%, #6f92d8 44%, var(--pyc-orange-soft) 96%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.pyc-hero-sub {
+  margin: 0 0 1rem;
+  color: var(--pyc-ink);
+  font-size: clamp(1.2rem, 2.4vw, 1.55rem);
+  font-weight: 700;
+}
+
+.pyc-hero-sub .pyc-rotator {
+  display: inline-block;
+  min-width: 7ch;
+  color: var(--pyc-orange);
+  transition: opacity 260ms ease, transform 260ms ease;
+}
+
+.pyc-hero-sub .pyc-rotator.is-swapping {
+  opacity: 0;
+  transform: translateY(0.35rem);
+}
+
+.pyc-hero-text {
+  max-width: 36rem;
+  margin: 0 0 1.6rem;
+  color: var(--pyc-muted);
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+
+.pyc-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 1.4rem;
+}
+
+.pyc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.66rem 1.35rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 0.98rem;
+  font-weight: 750;
+  text-decoration: none !important;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.pyc-btn:hover { transform: translateY(-1px); }
+
+.pyc-btn--primary {
+  background: linear-gradient(120deg, var(--pyc-orange), var(--pyc-orange-soft));
+  box-shadow: 0 8px 20px rgba(241, 90, 41, 0.32);
+  color: #fff !important;
+}
+
+.pyc-btn--primary:hover {
+  box-shadow: 0 10px 26px rgba(241, 90, 41, 0.42);
+  color: #fff !important;
+}
+
+.pyc-btn--ghost {
+  border-color: color-mix(in srgb, var(--pyc-blue) 42%, transparent);
+  background: color-mix(in srgb, var(--pyc-surface) 70%, transparent);
+  color: var(--pyc-blue-dark) !important;
+}
+
+html[data-theme="dark"] .pyc-btn--ghost { color: #b9cdf3 !important; }
+
+.pyc-btn--ghost:hover {
+  background: color-mix(in srgb, var(--pyc-blue) 10%, var(--pyc-surface));
+}
+
+/* pip install pill */
+.pyc-install {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 100%;
+  padding: 0.55rem 0.6rem 0.55rem 1rem;
+  border: 1px solid var(--pyc-border);
+  border-radius: 12px;
+  background: var(--pyc-surface);
+  box-shadow: var(--pyc-shadow-sm);
+  font-family: var(--pst-font-family-monospace, "SFMono-Regular", Consolas, monospace);
+  font-size: 0.95rem;
+}
+
+.pyc-install code {
+  border: 0;
+  background: transparent;
+  color: var(--pyc-ink);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.pyc-install .pyc-dollar { color: var(--pyc-orange); font-weight: 800; }
+
+.pyc-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 1px solid var(--pyc-border);
+  border-radius: 8px;
+  background: var(--pyc-surface-2);
+  color: var(--pyc-blue);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.pyc-copy-btn:hover { background: color-mix(in srgb, var(--pyc-blue) 12%, var(--pyc-surface)); }
+
+.pyc-copy-btn.is-copied {
+  border-color: color-mix(in srgb, #2e9e5b 60%, transparent);
+  color: #2e9e5b;
+}
+
+/* Terminal mock card (hero, right column) */
+.pyc-terminal {
+  position: relative;
+  border: 1px solid var(--pyc-border);
+  border-radius: var(--pyc-radius);
+  background: #101623;
+  box-shadow: var(--pyc-shadow);
+  overflow: hidden;
+  transform: rotate(0.6deg);
+}
+
+.pyc-terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 0.95rem;
+  background: #1a2233;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.pyc-terminal-bar span {
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 50%;
+}
+
+.pyc-terminal-bar span:nth-child(1) { background: #ff5f57; }
+.pyc-terminal-bar span:nth-child(2) { background: #febc2e; }
+.pyc-terminal-bar span:nth-child(3) { background: #28c840; }
+
+.pyc-terminal-bar em {
+  margin-left: 0.55rem;
+  color: #8fa3c4;
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+
+.pyc-terminal pre {
+  margin: 0;
+  padding: 1.05rem 1.15rem 1.25rem;
+  background: transparent;
+  border: 0;
+  color: #dbe6f7;
+  font-size: 0.86rem;
+  line-height: 1.75;
+  overflow-x: auto;
+}
+
+.pyc-terminal .t-prompt { color: var(--pyc-gold); }
+.pyc-terminal .t-cmd    { color: #e8eefc; font-weight: 600; }
+.pyc-terminal .t-kw     { color: #7aa2f7; }
+.pyc-terminal .t-str    { color: #9ece6a; }
+.pyc-terminal .t-num    { color: #ff9e64; }
+.pyc-terminal .t-fn     { color: #7dcfff; }
+.pyc-terminal .t-com    { color: #5f7096; }
+.pyc-terminal .t-ok     { color: #28c840; font-weight: 700; }
+
+/* animated EM waves along the hero bottom edge */
+.pyc-hero-waves {
+  position: absolute;
+  inset: auto 0 -2px 0;
+  z-index: 1;
+  width: 100%;
+  height: 90px;
+  pointer-events: none;
+}
+
+.pyc-hero-waves svg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+}
+
+.pyc-hero-waves .wave-a { animation: pyc-drift 26s linear infinite; opacity: 0.5; }
+.pyc-hero-waves .wave-b { animation: pyc-drift 17s linear infinite reverse; opacity: 0.35; }
+
+@keyframes pyc-drift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Stats strip */
+.pyc-stats {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  border-top: 1px solid var(--pyc-border);
+  background: var(--pyc-border);
+}
+
+.pyc-stat {
+  padding: 1.15rem 1rem;
+  background: color-mix(in srgb, var(--pyc-surface) 88%, transparent);
+  text-align: center;
+}
+
+.pyc-stat b {
+  display: block;
+  color: var(--pyc-blue-dark);
+  font-size: clamp(1.45rem, 3vw, 1.9rem);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-theme="dark"] .pyc-stat b { color: #9db8ea; }
+
+.pyc-stat span {
+  color: var(--pyc-muted);
+  font-size: 0.83rem;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------------------
+   Feature boxes (scikit-learn style)
+   -------------------------------------------------------------------------- */
+.pyc-features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.35rem;
+}
+
+.pyc-feature {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1.45rem 1.15rem;
+  border: 1px solid var(--pyc-border);
+  border-top: 4px solid var(--pyc-accent, var(--pyc-blue));
+  border-radius: var(--pyc-radius);
+  background: var(--pyc-surface);
+  box-shadow: var(--pyc-shadow-sm);
+  transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease;
+}
+
+.pyc-feature:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--pyc-shadow);
+  border-color: color-mix(in srgb, var(--pyc-accent, var(--pyc-blue)) 55%, var(--pyc-border));
+}
+
+.pyc-feature--blue   { --pyc-accent: var(--pyc-blue); }
+.pyc-feature--orange { --pyc-accent: var(--pyc-orange); }
+.pyc-feature--gold   { --pyc-accent: var(--pyc-gold); }
+
+.pyc-feature-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+
+.pyc-feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--pyc-accent, var(--pyc-blue)) 14%, transparent);
+  color: var(--pyc-accent, var(--pyc-blue));
+  font-size: 1.15rem;
+}
+
+.pyc-feature--gold .pyc-feature-icon { color: #b57a12; }
+
+.pyc-feature h3 {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.pyc-feature h3 a {
+  color: var(--pyc-ink);
+  text-decoration: none;
+}
+
+.pyc-feature h3 a:hover { color: var(--pyc-accent, var(--pyc-blue)); }
+
+.pyc-feature p {
+  flex: 1 1 auto;
+  margin: 0 0 0.9rem;
+  color: var(--pyc-muted);
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+
+.pyc-feature-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.95rem;
+}
+
+.pyc-feature-tags a,
+.pyc-feature-tags span {
+  padding: 0.16rem 0.6rem;
+  border: 1px solid var(--pyc-border);
+  border-radius: 999px;
+  background: var(--pyc-surface-2);
+  color: var(--pyc-muted);
+  font-size: 0.76rem;
+  font-weight: 650;
+  text-decoration: none;
+  transition: color 130ms ease, border-color 130ms ease;
+}
+
+.pyc-feature-tags a:hover {
+  border-color: var(--pyc-accent, var(--pyc-blue));
+  color: var(--pyc-accent, var(--pyc-blue));
+}
+
+.pyc-feature-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--pyc-border);
+  color: var(--pyc-accent, var(--pyc-blue));
+  font-size: 0.9rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.pyc-feature--gold .pyc-feature-more { color: #b57a12; }
+
+.pyc-feature-more i { transition: transform 150ms ease; }
+.pyc-feature:hover .pyc-feature-more i { transform: translateX(4px); }
+
+/* --------------------------------------------------------------------------
+   Code-in-action section (styles sphinx-design tabs)
+   -------------------------------------------------------------------------- */
+.pyc-code-panel {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.pyc-code-panel .sd-tab-set {
+  margin: 0;
+  border: 1px solid var(--pyc-border);
+  border-radius: var(--pyc-radius);
+  background: var(--pyc-surface);
+  box-shadow: var(--pyc-shadow-sm);
+  padding: 0.45rem 1.1rem 1.1rem;
+}
+
+.pyc-code-panel .sd-tab-set > label {
+  border-radius: 8px 8px 0 0;
+  color: var(--pyc-muted);
+  font-weight: 750;
+  font-size: 0.92rem;
+}
+
+.pyc-code-panel .sd-tab-set > input:checked + label {
+  color: var(--pyc-orange);
+  border-color: var(--pyc-orange);
+}
+
+.pyc-code-panel .sd-tab-set > label:hover {
+  color: var(--pyc-orange);
+}
+
+.pyc-code-panel .sd-tab-content {
+  padding-top: 0.9rem;
+  border-top: 2px solid var(--pyc-border);
+}
+
+.pyc-code-panel div.highlight pre {
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+/* Typewriter caret used by the code-in-action animation (JS section 6). */
+.pyc-type-cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.1em;
+  margin-left: 1px;
+  border-radius: 2px;
+  background: var(--pyc-orange);
+  vertical-align: text-bottom;
+  animation: pyc-blink 0.8s steps(2, start) infinite;
+}
+
+@keyframes pyc-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Interfaces strip
+   -------------------------------------------------------------------------- */
+.pyc-interfaces {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.15rem;
+}
+
+.pyc-interface {
+  padding: 1.3rem 1.2rem;
+  border: 1px solid var(--pyc-border);
+  border-radius: var(--pyc-radius);
+  background: var(--pyc-surface);
+  text-align: center;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.pyc-interface:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--pyc-shadow-sm);
+}
+
+.pyc-interface i {
+  display: block;
+  margin-bottom: 0.6rem;
+  color: var(--pyc-blue);
+  font-size: 1.55rem;
+}
+
+.pyc-interface h3 {
+  margin: 0 0 0.3rem;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.pyc-interface h3 a { color: var(--pyc-ink); text-decoration: none; }
+.pyc-interface h3 a:hover { color: var(--pyc-orange); }
+
+.pyc-interface p {
+  margin: 0 0 0.7rem;
+  color: var(--pyc-muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.pyc-interface code {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  border: 1px solid var(--pyc-border);
+  border-radius: 6px;
+  background: var(--pyc-surface-2);
+  color: var(--pyc-blue-dark);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+html[data-theme="dark"] .pyc-interface code { color: #9db8ea; }
+
+/* --------------------------------------------------------------------------
+   News + community
+   -------------------------------------------------------------------------- */
+.pyc-duo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 1.35rem;
+  align-items: stretch;
+}
+
+.pyc-panel {
+  padding: 1.5rem 1.5rem 1.3rem;
+  border: 1px solid var(--pyc-border);
+  border-radius: var(--pyc-radius);
+  background: var(--pyc-surface);
+  box-shadow: var(--pyc-shadow-sm);
+}
+
+.pyc-panel h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 1rem;
+  color: var(--pyc-ink);
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.pyc-panel h3 i { color: var(--pyc-orange); }
+
+.pyc-news-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pyc-news-list li {
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px dashed var(--pyc-border);
+}
+
+.pyc-news-list li:last-child { border-bottom: 0; }
+
+.pyc-news-date {
+  flex: 0 0 auto;
+  padding: 0.14rem 0.55rem;
+  align-self: flex-start;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--pyc-blue) 12%, transparent);
+  color: var(--pyc-blue-dark);
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+html[data-theme="dark"] .pyc-news-date { color: #9db8ea; }
+
+.pyc-news-list a { font-weight: 700; }
+
+.pyc-news-list p {
+  margin: 0.1rem 0 0;
+  color: var(--pyc-muted);
+  font-size: 0.88rem;
+}
+
+.pyc-cite-box {
+  margin-top: 0.4rem;
+  padding: 0.9rem 1rem;
+  border-left: 4px solid var(--pyc-gold);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--pyc-gold) 10%, var(--pyc-surface));
+  color: var(--pyc-muted);
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.pyc-community-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pyc-community-links a {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--pyc-border);
+  border-radius: 10px;
+  color: var(--pyc-ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.pyc-community-links a:hover {
+  border-color: var(--pyc-orange);
+  background: color-mix(in srgb, var(--pyc-orange) 6%, var(--pyc-surface));
+}
+
+.pyc-community-links i { color: var(--pyc-blue); width: 1.1rem; text-align: center; }
+
+/* --------------------------------------------------------------------------
+   Explore-the-docs link columns
+   -------------------------------------------------------------------------- */
+.pyc-explore {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.pyc-explore h3 {
+  margin: 0 0 0.7rem;
+  color: var(--pyc-blue-dark);
+  font-size: 0.85rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+html[data-theme="dark"] .pyc-explore h3 { color: #9db8ea; }
+
+.pyc-explore ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pyc-explore li { margin: 0.32rem 0; }
+
+.pyc-explore a {
+  color: var(--pyc-muted);
+  font-size: 0.93rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.pyc-explore a:hover { color: var(--pyc-orange); }
+
+/* The landing page has no place in the linear reading order: hide the
+   prev/next pager the theme appends after the article. */
+body.pycsamt-home-page .prev-next-area,
+.bd-content:has(.pycsamt-home) .prev-next-area {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Scroll-reveal animation (JS adds .is-visible; no-JS stays visible)
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  body.pycsamt-home-page .pyc-reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 520ms ease, transform 520ms ease;
+  }
+
+  body.pycsamt-home-page .pyc-reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+@media (max-width: 1050px) {
+  .pyc-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pyc-interfaces { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pyc-explore { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 880px) {
+  .pyc-hero .pyc-wrap { grid-template-columns: 1fr; }
+  .pyc-terminal { transform: none; }
+  .pyc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pyc-duo { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .pyc-features { grid-template-columns: 1fr; }
+  .pyc-interfaces { grid-template-columns: 1fr; }
+  .pyc-explore { grid-template-columns: 1fr; }
+  .pyc-install { width: 100%; justify-content: space-between; }
+}

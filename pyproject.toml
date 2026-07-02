@@ -86,6 +86,7 @@ docs = [
     "numpydoc>=1.7",
     "myst-parser>=2.0",
     "sphinx-copybutton>=0.5",
+    "sphinx-toggleprompt>=0.6",
     "sphinx-design>=0.5",
     "sphinx-gallery>=0.16",
     "sphinx-autodoc-typehints>=2.0",
@@ -159,6 +160,7 @@ Changelog       = "https://pycsamt.readthedocs.io/en/latest/changelog.html"
 [project.scripts]
 pycsamt        = "pycsamt.cli:main"
 pycsamt-gui    = "pycsamt.app.desktop.__main__:main"
+pycsamt-desktop = "pycsamt.app.desktop.__main__:main"
 pycsamt-web    = "pycsamt.app.web.__main__:main"
 pycsamt-agent  = "pycsamt.app.agent_master.__main__:main"
 pycsamt-mapview = "pycsamt.app.mapview.__main__:main"

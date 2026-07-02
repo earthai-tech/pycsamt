@@ -165,6 +165,7 @@ _WF_RUNNING_LABEL: dict[str, str] = {
     "comparison":         "inversion comparison",
     "batch":              "batch processing",
     "code_gen":           "code generation",
+    "data_overview":      "survey data reading",
 }
 
 # Correction-method running labels, merged from the central registry.
@@ -463,79 +464,144 @@ def _thinking_bubble(
     workflow: str | None = None,
     elapsed: float | None = None,
 ) -> html.Div:
+    """Claude-style thinking line.
+
+    Instead of a boxed timeline of every step, a single quiet line shows
+    the *current* step with a text shimmer; when the agent advances, the
+    old label fades away above ("ghost") and the new one slides in.  A
+    2 px hairline tracks n_done/n_total, and hovering the line reveals
+    the full step timeline as a floating panel (CSS :hover survives the
+    600 ms poll re-renders, unlike a <details> open state).
+    """
     steps = steps or []
     n_total = len(steps)
     n_done = sum(
         1 for s in steps if s.get("status") == "done"
     )
-
-    # Header: "Running <workflow>" + live elapsed.
     name = (
         _WF_RUNNING_LABEL.get(workflow, workflow)
         if workflow
         else None
     )
-    title = (
-        [html.Span("Running "), html.Span(
-            name, className="am-exec-name")]
-        if name
-        else [html.Span("Working")]
-    )
-    header_children = [
-        html.I(
-            className="bi bi-arrow-repeat am-tl-spin"
-            " am-exec-spin"
-        ),
-        html.Span(title, className="am-exec-title"),
-    ]
+
+    # Current step = last non-done step, else last step, else a
+    # workflow-level fallback while the first step is being created.
+    cur_idx = None
+    for i in range(n_total - 1, -1, -1):
+        if steps[i].get("status") != "done":
+            cur_idx = i
+            break
+    if cur_idx is None and n_total:
+        cur_idx = n_total - 1
+    if cur_idx is not None:
+        cur_label = steps[cur_idx].get("label", "...")
+        cur_status = steps[cur_idx].get(
+            "status", "running"
+        )
+    else:
+        cur_label = (
+            f"Running {name}..." if name else "Thinking..."
+        )
+        cur_status = "running"
+
+    # Ghost: the most recent completed step other than the current one.
+    ghost = None
+    for i in range(n_total - 1, -1, -1):
+        if i != cur_idx and steps[i].get("status") == "done":
+            ghost = (i, steps[i].get("label", ""))
+            break
+
+    # The ids embed the step index: across 600 ms polls React keeps the
+    # same DOM node (animations keep running); when the step changes the
+    # id changes, the node is re-mounted, and the enter/fade animations
+    # replay exactly once per transition.
+    meta_bits = []
+    if n_total:
+        meta_bits.append(f"{n_done}/{n_total}")
     if elapsed is not None:
-        header_children.append(
-            html.Span(
-                _fmt_elapsed(elapsed),
-                className="am-exec-elapsed",
-            )
-        )
-    header = html.Div(
-        header_children, className="am-exec-header"
-    )
-
-    # Indeterminate progress sweep.
-    bar = html.Div(
-        html.I(), className="am-exec-bar"
-    )
-
-    # Step timeline.
-    timeline = html.Div(
+        meta_bits.append(_fmt_elapsed(elapsed))
+    line = html.Div(
         [
-            _exec_step_row(s["label"], s["status"])
-            for s in steps
-        ],
-        className="am-tl",
-    ) if steps else html.Div()
-
-    footer = (
-        html.Div(
-            f"Step {min(n_done + 1, n_total)} of {n_total}",
-            className="am-exec-footer",
-        )
-        if n_total
-        else html.Div()
-    )
-
-    return html.Div(
-        [
-            html.Div(
-                html.I(className="bi bi-robot"),
-                className="am-avatar agent",
-            ),
-            html.Div(
-                [header, bar, timeline, footer],
+            html.I(
                 className=(
-                    "am-bubble agent am-exec-bubble"
+                    "bi bi-stars am-think-glyph"
+                    + (" error" if cur_status == "error" else "")
+                )
+            ),
+            html.Span(
+                cur_label,
+                className="am-think-lbl",
+                id=(
+                    "am-think-lbl-"
+                    f"{cur_idx if cur_idx is not None else 'x'}"
                 ),
             ),
+            html.Span(
+                " · ".join(meta_bits),
+                className="am-think-meta",
+            ),
         ],
-        className="am-msg-row",
+        className="am-think-line",
+    )
+
+    ghost_el = (
+        html.Div(
+            ghost[1],
+            className="am-think-ghost",
+            id=f"am-think-ghost-{ghost[0]}",
+        )
+        if ghost
+        else None
+    )
+
+    # Hairline progress: determinate once steps exist, sweep before.
+    if n_total:
+        pct = int(round(100.0 * n_done / n_total))
+        track = html.Div(
+            html.I(style={"width": f"{max(pct, 4)}%"}),
+            className="am-think-track",
+        )
+    else:
+        track = html.Div(
+            html.I(), className="am-think-track indet"
+        )
+
+    # Full timeline, revealed on hover (reuses the rail/dot rows).
+    panel_children = []
+    if name:
+        panel_children.append(
+            html.Div(
+                f"Running {name}",
+                className="am-think-panel-title",
+            )
+        )
+    panel_children.append(
+        html.Div(
+            [
+                _exec_step_row(
+                    s.get("label", ""),
+                    s.get("status", ""),
+                )
+                for s in steps
+            ],
+            className="am-tl",
+        )
+        if steps
+        else html.Div(
+            "Warming up...",
+            className="am-think-panel-empty",
+        )
+    )
+    panel = html.Div(
+        panel_children, className="am-think-panel"
+    )
+
+    body = [ghost_el] if ghost_el is not None else []
+    body += [line, track, panel]
+
+    return html.Div(
+        html.Div(body, className="am-think"),
+        className="am-msg-row am-msg-row--think",
         id="am-thinking-bubble",
     )
 
@@ -720,6 +786,7 @@ def _agent_bubble(
     code: str = "",
     kind: str | None = None,
     mid: str | None = None,
+    card: dict | None = None,
 ) -> html.Div:
     children: list = []
 
@@ -730,6 +797,10 @@ def _agent_bubble(
 
     # body text — full lightweight-markdown rendering
     children.extend(_render_markdown(text))
+
+    # structured payloads (e.g. the survey data overview)
+    if card:
+        children.append(_data_overview_card(card))
 
     # step summary — collapsed by default once the request is done. The live
     # "thinking" bubble shows the full timeline; here we mask it behind a
@@ -1201,7 +1272,7 @@ def _is_pinn_or_hybrid(text: str) -> bool:
     )
 
 
-# ── Web App launcher ──────────────────────────────
+# ── Application launchers (web / mapview / desktop) ──────────────
 
 _WEB_APP_KWS: frozenset[str] = frozenset({
     "open web app",
@@ -1220,22 +1291,57 @@ _WEB_APP_KWS: frozenset[str] = frozenset({
     "open full app",
 })
 
-# Tasks too complex for chat → redirect
+# Tasks too complex for chat → redirect to the web app.
+# (Map-flavoured phrases route to MapView below; "phase tensor map"
+# is deliberately absent — it is a chat plot workflow.)
 _COMPLEX_VIZ_KWS: frozenset[str] = frozenset({
-    "3d map",
-    "station map",
     "explore results",
     "browse data",
     "browse edis",
-    "pseudosection viewer",
-    "phase tensor map",
     "full visualization",
-    "map view",
-    "3d visualization",
     "interactive plot",
-    "interactive map",
-    "interactive pseudosection",
     "full pipeline editor",
+})
+
+# Explicit MapView requests.
+_MAPVIEW_KWS: frozenset[str] = frozenset({
+    "mapview",
+    "map view",
+    "map workbench",
+    "open the map",
+    "launch the map",
+    "open map",
+    "launch map",
+    "start mapview",
+    "map platform",
+    "station map viewer",
+})
+
+# Map-flavoured visualisation → MapView is its home turf.
+_MAPVIEW_VIZ_KWS: frozenset[str] = frozenset({
+    "3d map",
+    "station map",
+    "interactive map",
+    "3d visualization",
+    "pseudosection viewer",
+    "interactive pseudosection",
+})
+
+# Native desktop application.
+_DESKTOP_KWS: frozenset[str] = frozenset({
+    "desktop app",
+    "desktop application",
+    "desktop gui",
+    "open the gui",
+    "launch the gui",
+    "start the gui",
+    "gui app",
+    "launch desktop",
+    "open desktop",
+    "start the desktop",
+    "native app",
+    "pycsamt gui",
+    "pycsamt desktop",
 })
 
 _webapp_state: dict = {
@@ -1243,6 +1349,15 @@ _webapp_state: dict = {
     "running": False,
 }
 _webapp_lock = threading.Lock()
+
+# Subprocess-backed apps (MapView Dash server, Qt desktop app).
+_EXT_APPS: dict[str, dict] = {
+    "mapview": {"proc": None, "url": None},
+    "desktop": {"proc": None},
+}
+_ext_lock = threading.Lock()
+
+_MAPVIEW_PORT = 8770
 
 
 def _is_web_app_request(text: str) -> bool:
@@ -1255,6 +1370,104 @@ def _is_complex_viz(text: str) -> bool:
     return any(
         kw in t for kw in _COMPLEX_VIZ_KWS
     )
+
+
+_VIZ_REDIRECT_REASON = (
+    "This task needs interactive visualization tools that go "
+    "beyond the agent chat — launching the right app for it."
+)
+
+
+def _detect_app_request(text: str) -> tuple[str, str] | None:
+    """Return ``(app_kind, reason)`` when *text* asks to open an
+    application (or needs one): ``desktop`` / ``mapview`` / ``web``."""
+    t = (text or "").lower()
+    if any(kw in t for kw in _DESKTOP_KWS):
+        return "desktop", ""
+    if any(kw in t for kw in _MAPVIEW_KWS):
+        return "mapview", ""
+    if any(kw in t for kw in _MAPVIEW_VIZ_KWS):
+        return "mapview", _VIZ_REDIRECT_REASON
+    if _is_web_app_request(text):
+        return "web", ""
+    if _is_complex_viz(text):
+        return "web", _VIZ_REDIRECT_REASON
+    return None
+
+
+def _port_in_use(port: int) -> bool:
+    import socket as _socket
+    with _socket.socket(
+        _socket.AF_INET, _socket.SOCK_STREAM
+    ) as s:
+        s.settimeout(0.4)
+        return s.connect_ex(("127.0.0.1", port)) == 0
+
+
+def _ensure_mapview() -> str:
+    """Start the MapView workbench as a subprocess (reusing a live
+    one) and return its URL."""
+    import subprocess
+    import sys as _sys
+
+    with _ext_lock:
+        st = _EXT_APPS["mapview"]
+        if (
+            st["proc"] is not None
+            and st["proc"].poll() is None
+            and st["url"]
+        ):
+            return st["url"]
+        if _port_in_use(_MAPVIEW_PORT):
+            # A MapView (or a previous launch) already owns the
+            # default port — just point at it.
+            st["url"] = f"http://127.0.0.1:{_MAPVIEW_PORT}"
+            return st["url"]
+        port = _free_port(_MAPVIEW_PORT)
+        st["proc"] = subprocess.Popen(
+            [
+                _sys.executable, "-m", "pycsamt.app.mapview",
+                "--port", str(port), "--no-browser",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        st["url"] = f"http://127.0.0.1:{port}"
+        return st["url"]
+
+
+def _ensure_desktop() -> tuple[bool, str]:
+    """Launch the native desktop app as a subprocess.
+
+    Returns ``(ok, note)`` — the note explains what to expect or
+    what went wrong."""
+    import subprocess
+    import sys as _sys
+
+    with _ext_lock:
+        st = _EXT_APPS["desktop"]
+        if st["proc"] is not None and st["proc"].poll() is None:
+            return True, (
+                "It's already running — check your open windows."
+            )
+        try:
+            st["proc"] = subprocess.Popen(
+                [_sys.executable, "-m", "pycsamt.app.desktop"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception as exc:  # noqa: BLE001
+            return False, f"It could not be started ({exc})."
+        proc = st["proc"]
+    # Catch immediate exits (typically PySide6 not installed).
+    time.sleep(1.2)
+    if proc.poll() is not None:
+        return False, (
+            "It exited immediately — PySide6 is probably not "
+            "installed. Install the desktop extra with "
+            "`pip install \"pycsamt[desktop]\"` and try again."
+        )
+    return True, "A native pyCSAMT window should appear shortly."
 
 
 def _free_port(preferred: int = 8051) -> int:
@@ -1319,18 +1532,102 @@ def _ensure_web_app() -> str:
         return url
 
 
-def _web_app_bubble(
-    url: str,
+# Per-app launch card copy: title, icon, description.
+_APP_CARD: dict[str, tuple[str, str, str]] = {
+    "web": (
+        "Launching pyCSAMT Web App",
+        "bi bi-window-fullscreen",
+        "The full pyCSAMT web application provides interactive"
+        " station maps, pseudosection viewers, phase-tensor tools,"
+        " pipeline editor, inversion pages, and more — beyond what"
+        " the agent chat can display.",
+    ),
+    "mapview": (
+        "Launching MapView",
+        "bi bi-map",
+        "The MapView workbench renders interactive station maps,"
+        " pseudosections, overlays, and 3-D quick-look views of"
+        " your survey lines.",
+    ),
+    "desktop": (
+        "Launching pyCSAMT Desktop",
+        "bi bi-display",
+        "The native desktop application gives point-and-click"
+        " access to loading, processing, corrections, maps, and"
+        " inversion workflows.",
+    ),
+}
+
+
+def _launch_bubble(
+    app_kind: str,
+    url: str | None = None,
     reason: str = "",
+    note: str = "",
+    ok: bool = True,
 ) -> html.Div:
-    desc = reason or (
-        "The full pyCSAMT web application"
-        " provides interactive station maps,"
-        " pseudosection viewers, phase-tensor"
-        " tools, pipeline editor, inversion"
-        " pages, and more — beyond what the"
-        " agent chat can display."
+    """Chat card announcing an application launch (link when the
+    app is a local web server, plain note for the desktop app)."""
+    title, icon, default_desc = _APP_CARD[app_kind]
+    desc = reason or default_desc
+
+    card: list = [
+        html.Div(
+            [
+                html.I(
+                    className=f"{icon} me-2",
+                    style={
+                        "color": (
+                            "var(--green)" if ok else "var(--red)"
+                        )
+                    },
+                ),
+                html.Strong(
+                    title if ok else title.replace(
+                        "Launching", "Could not launch"
+                    )
+                ),
+            ],
+            className="am-webapp-hdr",
+        ),
+        html.P(desc, className="am-webapp-desc"),
+    ]
+    if url:
+        card.append(
+            html.A(
+                [
+                    html.I(
+                        className=(
+                            "bi bi-box-arrow-up-right me-2"
+                        )
+                    ),
+                    url,
+                ],
+                href=url,
+                target="_blank",
+                rel="noopener",
+                className="am-webapp-link",
+            )
+        )
+    default_note = (
+        "Server is starting — the link will be ready in a few"
+        " seconds."
+        if url else ""
     )
+    note = note or default_note
+    if note:
+        card.append(
+            html.Div(
+                [
+                    html.I(
+                        className="bi bi-info-circle me-1"
+                    ),
+                    note,
+                ],
+                className="am-webapp-note",
+            )
+        )
+
     return html.Div(
         [
             html.Div(
@@ -1339,81 +1636,8 @@ def _web_app_bubble(
             ),
             html.Div(
                 [
-                    html.Div(
-                        [
-                            html.Div(
-                                [
-                                    html.I(
-                                        className=(
-                                            "bi bi-window"
-                                            "-fullscreen"
-                                            " me-2"
-                                        ),
-                                        style={
-                                            "color": (
-                                                "var(--green)"
-                                            )
-                                        },
-                                    ),
-                                    html.Strong(
-                                        "Launching"
-                                        " pyCSAMT"
-                                        " Web App"
-                                    ),
-                                ],
-                                className=(
-                                    "am-webapp-hdr"
-                                ),
-                            ),
-                            html.P(
-                                desc,
-                                className=(
-                                    "am-webapp-desc"
-                                ),
-                            ),
-                            html.A(
-                                [
-                                    html.I(
-                                        className=(
-                                            "bi bi-box"
-                                            "-arrow-up"
-                                            "-right me-2"
-                                        )
-                                    ),
-                                    url,
-                                ],
-                                href=url,
-                                target="_blank",
-                                rel="noopener",
-                                className=(
-                                    "am-webapp-link"
-                                ),
-                            ),
-                            html.Div(
-                                [
-                                    html.I(
-                                        className=(
-                                            "bi bi-info"
-                                            "-circle me-1"
-                                        )
-                                    ),
-                                    "Server is"
-                                    " starting —"
-                                    " the link"
-                                    " will be ready"
-                                    " in a few"
-                                    " seconds.",
-                                ],
-                                className=(
-                                    "am-webapp-note"
-                                ),
-                            ),
-                        ],
-                        className="am-webapp-card",
-                    ),
-                    html.Div(
-                        _ts(), className="am-ts"
-                    ),
+                    html.Div(card, className="am-webapp-card"),
+                    html.Div(_ts(), className="am-ts"),
                 ],
                 className="am-bubble agent",
             ),
@@ -1517,8 +1741,13 @@ def _capability_text() -> str:
         "**Generate Python code** that reproduces a pyCSAMT workflow.\n\n"
         "To run a workflow, load an EDI dataset first with **Load EDI**"
         " (top-left). Questions and code requests need no data.\n\n"
-        "For interactive maps, pseudosection viewers and the visual pipeline"
-        " editor, use the full **pyCSAMT web application**.\n\n"
+        "**Launch the other pyCSAMT apps** — just say the word and I'll"
+        " start them for you:\n"
+        "- *“open the map view”* — MapView workbench (station maps,"
+        " pseudosections, 3-D quick looks);\n"
+        "- *“open the web app”* — the full web application (visual pipeline"
+        " editor, inversion pages);\n"
+        "- *“open the desktop app”* — the native desktop GUI.\n\n"
         + _api_key_hint()
     )
 
@@ -1542,10 +1771,96 @@ def _unknown_task_text(text: str) -> str:
         "- **Generate Python code** for a pyCSAMT workflow.\n"
         "- **List my capabilities** — just ask \"what can you do?\".\n\n"
         "If you need maps, interactive pseudosection viewers, or a feature"
-        " that isn't here, try the full **pyCSAMT web application**.\n\n"
+        " that isn't here, say *“open the map view”*, *“open the web"
+        " app”*, or *“open the desktop app”* and I'll launch it.\n\n"
         "Tip: phrase it as an action + target, e.g. \"run static shift\","
         " \"denoise the data\", or \"run AI inversion\".\n\n"
         + _api_key_hint()
+    )
+
+
+_PLOT_VERB_RE = re.compile(
+    r"\b(plot|draw|display|render|graph|visuali[sz]e|show|view)\b"
+)
+
+# (label, example) — the examples use the workflow-registry trigger
+# phrases, so the suggested wording routes straight to the right plot.
+_PLOT_MENU: tuple[tuple[str, str], ...] = (
+    ("ρa/φ sounding curves", "plot the sounding curves"),
+    ("phase pseudo-section", "plot the phase pseudosection"),
+    ("phase-tensor ellipse section", "plot the phase tensor section"),
+    ("phase-tensor map", "plot the phase tensor map"),
+    ("station response (Bode)", "plot the station response"),
+    ("strike profile", "plot the strike profile"),
+    ("tipper / induction arrows", "plot the tipper"),
+)
+
+
+def _lines_bullets(groups: dict) -> str:
+    return "\n".join(
+        f"- **{ln}** — {len(groups[ln])} EDI file"
+        f"{'s' if len(groups[ln]) != 1 else ''}"
+        for ln in sorted(groups)
+    )
+
+
+def _smart_unknown_reply(
+    text: str, edi_store: dict
+) -> str | None:
+    """Context-aware reply for an unrecognised request.
+
+    Handles the two frequent cases professionally instead of the
+    generic capability dump: a request naming a line that isn't
+    loaded (propose the loaded lines) and a plot request without a
+    recognisable plot kind (propose the plot menu for the resolved
+    line). Returns ``None`` when neither case applies.
+    """
+    t = (text or "").lower()
+    plotish = bool(_PLOT_VERB_RE.search(t))
+    groups = (edi_store or {}).get("groups", {}) or {}
+
+    line_lbl: str | None = None
+    ordinal_note = ""
+    if groups:
+        ref = _extract_line_ref(text, groups)
+        if ref is not None:
+            hit = _match_group(ref, groups)
+            if hit is not None:
+                line_lbl = hit
+            else:
+                keys = sorted(groups)
+                if ref.isdigit() and 1 <= int(ref) <= len(keys):
+                    # "line 2" → the 2nd loaded line
+                    line_lbl = keys[int(ref) - 1]
+                    ordinal_note = f" (your “line {ref}”)"
+                else:
+                    return (
+                        f"I couldn't find a line called "
+                        f"**“{ref}”**. Here's what's loaded:\n\n"
+                        f"{_lines_bullets(groups)}\n\n"
+                        "Name one of these — e.g. "
+                        f"*“plot the phase pseudosection of "
+                        f"{sorted(groups)[0]}”*."
+                    )
+
+    if not plotish:
+        return None
+
+    where = (
+        f" for **{line_lbl}**{ordinal_note}" if line_lbl else ""
+    )
+    suffix = f" of {line_lbl}" if line_lbl else ""
+    menu = "\n".join(
+        f"- **{lbl}** — *“{ex}{suffix}”*"
+        for lbl, ex in _PLOT_MENU
+    )
+    return (
+        f"Happy to plot something{where} — which figure would "
+        "you like?\n\n"
+        f"{menu}\n\n"
+        "I can also run analyses that end in a figure: the "
+        "*strike analyzer*, the *dimensionality classifier*, or a "
+        "full *phase-tensor analysis*."
     )
 
 
@@ -1913,6 +2228,468 @@ def _dispatch_metrics(
     )
 
 
+
+# ── data overview: "read the EDI data / stations / sites" ───────────────
+# Deterministic, offline-first task: read the survey already stored in the
+# session, compute statistics, and answer with a rich overview card — no
+# LLM call and no pipeline run.
+_DATA_READ_VERBS = (
+    "read", "show", "list", "describe", "summar", "inspect",
+    "check", "overview", "stat",
+)
+_DATA_READ_NOUNS = (
+    "edi", "data", "dataset", "station", "site", "survey", "line",
+)
+# Phrasing that belongs to another intent (plots, workflows, code, docs).
+_DATA_READ_BLOCK = (
+    "plot", "map", "pseudosection", "pseudo-section", "section",
+    "figure", "chart", "rose", "diagram", "code", "script",
+    "run ", "invert", "inversion", "correct", "filter", "denoise",
+    "export", "save", "write", "how do i", "how to", "what is",
+    "what does", "why",
+)
+
+
+_LINES_QUERY_PATTERNS = (
+    "what are the lines", "what lines", "which lines",
+    "list lines", "list the lines", "available lines",
+    "loaded lines", "how many lines", "the lines?",
+    "what are the profiles", "which profiles",
+    "list profiles", "loaded profiles", "how many profiles",
+)
+
+
+def _looks_like_lines_query(text: str) -> bool:
+    """True when *text* asks which survey lines are loaded."""
+    t = (text or "").lower()
+    return any(p in t for p in _LINES_QUERY_PATTERNS)
+
+
+_NO_DATA_GUIDANCE = (
+    "**No survey data is stored yet.**\n\n"
+    "Load a dataset first and I'll read it and report the "
+    "statistics:\n\n"
+    "- **Load EDI** — use the ⊕ menu (top-left) and "
+    "pick your EDI folder;\n"
+    "- or name a known survey line, e.g. "
+    "*“read line L22PLT”*.\n\n"
+    "Once loaded, ask me to *“read the data”* again."
+)
+
+
+def _looks_like_data_read(text: str) -> bool:
+    """True when *text* asks to read/summarise the loaded survey data."""
+    t = (text or "").lower()
+    if _looks_like_lines_query(text):
+        return True
+    if any(b in t for b in _DATA_READ_BLOCK):
+        return False
+    if not any(n in t for n in _DATA_READ_NOUNS):
+        return False
+    if any(v in t for v in _DATA_READ_VERBS):
+        return True
+    return any(
+        p in t
+        for p in (
+            "what data", "which data",
+            "what's loaded", "whats loaded",
+        )
+    )
+
+
+def _line_stats(
+    label: str, sites, warnings: list[str]
+) -> dict:
+    """Per-line statistics shown on the overview card."""
+    import numpy as np
+    from pycsamt.agents.metrics import (
+        MetricsAgent,
+        _has_tipper,
+        _ll_to_utm,
+        _station_coords,
+    )
+
+    rows = MetricsAgent._scan(sites)
+    names = [str(r.get("station", "?")) for r in rows]
+    tmins = [r["t_min_s"] for r in rows if r.get("t_min_s")]
+    tmaxs = [r["t_max_s"] for r in rows if r.get("t_max_s")]
+    nfr = [r["n_freq"] for r in rows if r.get("n_freq")]
+
+    freq = None
+    if tmins and tmaxs:
+        freq = (1.0 / max(tmaxs), 1.0 / min(tmins))
+
+    scores = [
+        float(r["qc_score"]) for r in rows
+        if r.get("qc_score") is not None
+    ]
+    qc = float(np.nanmean(scores)) if scores else None
+    flagged = sum(
+        1 for r in rows
+        if not r.get("has_z") or not r.get("has_coords")
+        or (r.get("qc_score") or 0) < 50
+    )
+    if flagged:
+        warnings.append(
+            f"{label}: {flagged} of {len(rows)} station(s) flagged "
+            "(low QC, missing Z, or no coordinates)"
+        )
+
+    length_km = None
+    try:
+        coords = [
+            (la, lo)
+            for _, la, lo in _station_coords(sites)
+            if la is not None and lo is not None
+        ]
+        if len(coords) >= 2:
+            es, ns = [], []
+            for la, lo in coords:
+                e, n, _ = _ll_to_utm(la, lo, None, "N", "WGS84")
+                es.append(e)
+                ns.append(n)
+            es, ns = np.asarray(es), np.asarray(ns)
+            length_km = float(
+                np.hypot(es.max() - es.min(), ns.max() - ns.min())
+            ) / 1000.0
+    except Exception:  # noqa: BLE001
+        pass
+
+    tipper = False
+    try:
+        tipper = bool(_has_tipper(sites))
+    except Exception:  # noqa: BLE001
+        pass
+
+    return {
+        "label": label,
+        "n_stations": len(rows),
+        "stations": names,
+        "freq": freq,
+        "max_nfreq": max(nfr) if nfr else None,
+        "qc": qc,
+        "flagged": flagged,
+        "length_km": length_km,
+        "tipper": tipper,
+    }
+
+
+def _fmt_hz(v: float) -> str:
+    """Human frequency: 0.125 Hz, 384 Hz, 8.19 kHz — never 8.19e+03."""
+    if v >= 1000.0:
+        return f"{v / 1000.0:.3g} kHz"
+    return f"{v:.3g} Hz"
+
+
+def _fmt_freq(freq) -> str:
+    if not freq:
+        return "n/a"
+    return f"{_fmt_hz(freq[0])} – {_fmt_hz(freq[1])}"
+
+
+def _overview_payload(
+    lines: list[dict], warnings: list[str]
+) -> dict:
+    """JSON-safe payload for the survey overview card."""
+    import numpy as np
+
+    n_st = sum(ln["n_stations"] for ln in lines)
+    flo = [ln["freq"][0] for ln in lines if ln.get("freq")]
+    fhi = [ln["freq"][1] for ln in lines if ln.get("freq")]
+    qcs = [ln["qc"] for ln in lines if ln.get("qc") is not None]
+    lens = [
+        ln["length_km"] for ln in lines if ln.get("length_km")
+    ]
+    tiles = [
+        {"value": f"{n_st}", "label": "stations"},
+        {
+            "value": (
+                _fmt_freq((min(flo), max(fhi)))
+                if flo else "n/a"
+            ),
+            "label": "frequency range",
+        },
+        {
+            "value": (
+                f"≈ {sum(lens):.1f} km" if lens else "n/a"
+            ),
+            "label": (
+                "profile length"
+                if len(lines) == 1 else "total length"
+            ),
+        },
+        {
+            "value": (
+                f"{float(np.mean(qcs)):.0f}/100" if qcs else "n/a"
+            ),
+            "label": "mean QC score",
+        },
+    ]
+    scope_bits = [
+        f"{len(lines)} line{'s' if len(lines) != 1 else ''}"
+    ]
+    if any(ln.get("tipper") for ln in lines):
+        scope_bits.append("tipper present")
+    return {
+        "tiles": tiles,
+        "scope": " · ".join(scope_bits),
+        "lines": [
+            {
+                "label": ln["label"],
+                "n_stations": ln["n_stations"],
+                "freq": _fmt_freq(ln.get("freq")),
+                "qc": (
+                    f"{ln['qc']:.0f}/100"
+                    if ln.get("qc") is not None else "n/a"
+                ),
+                "flagged": ln.get("flagged", 0),
+            }
+            for ln in lines
+        ],
+        "stations": (
+            lines[0]["stations"] if len(lines) == 1 else []
+        ),
+        "warnings": warnings,
+    }
+
+
+def _data_overview_card(card: dict) -> html.Div:
+    """Rich 'survey at a glance' card rendered under the reply text."""
+    children: list = [
+        html.Div(
+            [
+                html.I(className="bi bi-database-check"),
+                html.Span("Survey at a glance"),
+                html.Span(
+                    card.get("scope", ""),
+                    className="am-ov-scope",
+                ),
+            ],
+            className="am-ov-head",
+        ),
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.B(t.get("value", "")),
+                        html.Span(t.get("label", "")),
+                    ],
+                    className="am-ov-tile",
+                )
+                for t in card.get("tiles", [])
+            ],
+            className="am-ov-tiles",
+        ),
+    ]
+
+    rows = card.get("lines", [])
+    if len(rows) > 1:
+        children.append(
+            html.Table(
+                [
+                    html.Thead(html.Tr([
+                        html.Th("Line"),
+                        html.Th("Stations"),
+                        html.Th("Frequency range"),
+                        html.Th("QC"),
+                    ])),
+                    html.Tbody([
+                        html.Tr([
+                            html.Td(r["label"]),
+                            html.Td(str(r["n_stations"])),
+                            html.Td(r["freq"]),
+                            html.Td(
+                                r["qc"]
+                                + (
+                                    f" · {r['flagged']} flagged"
+                                    if r.get("flagged") else ""
+                                )
+                            ),
+                        ])
+                        for r in rows
+                    ]),
+                ],
+                className="am-ov-table",
+            )
+        )
+
+    chips = card.get("stations", [])
+    if chips:
+        shown = chips[:12]
+        extra = len(chips) - len(shown)
+        children.append(
+            html.Div(
+                [
+                    html.Span(c, className="am-ov-chip")
+                    for c in shown
+                ]
+                + (
+                    [html.Span(
+                        f"+{extra} more",
+                        className="am-ov-chip more",
+                    )]
+                    if extra > 0 else []
+                ),
+                className="am-ov-chips",
+            )
+        )
+
+    for w in card.get("warnings", [])[:3]:
+        children.append(
+            html.Div(
+                [
+                    html.I(
+                        className="bi bi-exclamation-triangle"
+                    ),
+                    html.Span(w),
+                ],
+                className="am-ov-warn",
+            )
+        )
+
+    children.append(
+        html.Div(
+            [
+                html.I(className="bi bi-lightbulb"),
+                html.Span(
+                    "Next: try “run qc”, “plot a "
+                    "station map”, or “prepare an "
+                    "Occam2D inversion”.",
+                ),
+            ],
+            className="am-ov-hint",
+        )
+    )
+    return html.Div(children, className="am-ov-card")
+
+
+def _dispatch_data_overview(
+    jid: str,
+    text: str,
+    edi_store: dict,
+    settings: dict,
+    *,
+    step,
+) -> None:
+    """Read the stored survey inline and reply with statistics."""
+    _update_job(jid, workflow="data_overview")
+    step("Checking stored survey data...", "done")
+
+    groups = (edi_store or {}).get("groups", {}) or {}
+
+    # "what are the lines?" — answer instantly from the store, no
+    # file reading needed.
+    if _looks_like_lines_query(text):
+        step("Listing survey lines...", "done")
+        if groups:
+            n = len(groups)
+            keys = sorted(groups)
+            rows = "\n".join(
+                f"- **{ln}** — {len(groups[ln])} EDI file"
+                f"{'s' if len(groups[ln]) != 1 else ''}"
+                for ln in keys
+            )
+            result = (
+                f"**{n} survey line"
+                f"{'s are' if n != 1 else ' is'} loaded:**\n\n"
+                f"{rows}\n\n"
+                f"Say *“read line {keys[0]}”* for statistics, or "
+                f"*“plot the phase pseudosection of {keys[0]}”* "
+                "for a figure."
+            )
+            kind = KIND_ANSWER
+        elif (edi_store or {}).get("path"):
+            import os as _os
+            label = _os.path.basename(
+                str(edi_store["path"]).rstrip("/\\")
+            ) or "the survey"
+            result = (
+                f"One dataset is loaded (**{label}**) with no "
+                "separate line grouping. Say *“read the data”* "
+                "for statistics, or *“plot the sounding "
+                "curves”* for a figure."
+            )
+            kind = KIND_ANSWER
+        else:
+            result = _NO_DATA_GUIDANCE
+            kind = KIND_META
+        _update_job(
+            jid, status="done", result=result,
+            steps=_JOBS[jid]["steps"], kind=kind,
+        )
+        return
+
+    # A named line reads that line only; otherwise read every line.
+    named = bool(groups) and bool(
+        _extract_line_ref(text, groups)
+    )
+    targets = _resolve_metric_targets(
+        text, edi_store, settings, all_lines=not named,
+    )
+    if not targets:
+        _update_job(
+            jid, status="done",
+            result=_NO_DATA_GUIDANCE,
+            steps=_JOBS[jid]["steps"], kind=KIND_META,
+        )
+        return
+
+    from pycsamt.emtools._core import ensure_sites
+
+    lines: list[dict] = []
+    warnings: list[str] = []
+    for label, src in targets:
+        step(f"Reading {label}...", "running")
+        try:
+            sites = ensure_sites(
+                src, recursive=True, strict=False, verbose=0,
+            )
+            lines.append(_line_stats(label, sites, warnings))
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(
+                f"{label}: could not be read ({exc})"
+            )
+
+    if not lines:
+        _update_job(
+            jid, status="done",
+            result=(
+                "I found stored survey entries but could not read "
+                "any of them.\n\n"
+                + "\n".join(f"- {w}" for w in warnings[:4])
+            ),
+            steps=_JOBS[jid]["steps"], kind=KIND_ERROR,
+        )
+        return
+
+    step("Computing statistics...", "running")
+    card = _overview_payload(lines, warnings)
+    n_st = sum(ln["n_stations"] for ln in lines)
+    if len(lines) == 1:
+        lead = (
+            f"Read **{lines[0]['label']}** — "
+            f"{n_st} station{'s' if n_st != 1 else ''}. "
+            "Here's the survey at a glance."
+        )
+    else:
+        lead = (
+            f"Read **{n_st} station"
+            f"{'s' if n_st != 1 else ''}** across "
+            f"**{len(lines)} lines** from the stored survey. "
+            "Here's the data at a glance."
+        )
+
+    _record_run(
+        workflow="data_overview", path="", output_dir="",
+        status="success", summary=lead[:200], n_figures=0,
+    )
+    step("Overview ready", "done")
+    _update_job(
+        jid, status="done", result=lead, card=card,
+        steps=_JOBS[jid]["steps"], kind=KIND_ANSWER,
+    )
+
+
 def _dispatch_code(
     jid: str,
     text: str,
@@ -2151,6 +2928,16 @@ def _run_agent(
             METRICS as _I_METRICS,
         )
 
+        # Deterministic data-overview gate: "read the EDI data /
+        # stations / sites" is answered inline from the stored
+        # survey — no LLM router call, no pipeline.
+        if _looks_like_data_read(text):
+            _step("Intent: data overview", "done")
+            _dispatch_data_overview(
+                jid, text, edi_store, settings, step=_step,
+            )
+            return
+
         with (
             AGENT_CONFIG.offline()
             if _offline else _nullctx()
@@ -2292,12 +3079,16 @@ def _run_agent(
             or _resolved_wf in _TOOL_WORKFLOWS
         )
         if not _resolved_wf or not _known_wf:
+            # Try a context-aware reply first (unknown line →
+            # propose the loaded lines; plot request without a
+            # plot kind → propose the plot menu).
+            _smart = _smart_unknown_reply(text, edi_store)
             _update_job(
                 jid,
                 status="done",
-                result=_unknown_task_text(text),
+                result=_smart or _unknown_task_text(text),
                 steps=_JOBS[jid]["steps"],
-                kind=KIND_META,
+                kind=KIND_CLARIFY if _smart else KIND_META,
             )
             return
 
@@ -3023,40 +3814,41 @@ def register_chat(app) -> None:
         ]
         msgs.append(_user_bubble(text, mid=_user_mid))
 
-        # ── web app redirect ──────────────────
-        # Explicit launch request, or a task
-        # too complex for the chat interface
-        # (interactive viz, 3-D maps, etc.).
-        # Both bypass the EDI guard because
-        # the web app loads its own data.
-        _is_web = _is_web_app_request(text)
-        _is_viz = (
-            not _is_web
-            and _is_complex_viz(text)
-        )
-        if _is_web or _is_viz:
-            reason = (
-                ""
-                if _is_web
-                else (
-                    "This task requires"
-                    " interactive visualization"
-                    " tools that go beyond the"
-                    " agent chat. Launching the"
-                    " full pyCSAMT web app"
-                    " instead."
+        # ── application launch ────────────────
+        # "open the map view / web app / desktop app", or a task
+        # too complex for the chat (interactive viz → MapView or
+        # the web app). All bypass the EDI guard: the apps load
+        # their own data.
+        _app_req = _detect_app_request(text)
+        if _app_req is not None:
+            _app_kind, _reason = _app_req
+            if _app_kind == "desktop":
+                _ok, _note = _ensure_desktop()
+                wb = _launch_bubble(
+                    "desktop", reason=_reason,
+                    note=_note, ok=_ok,
                 )
-            )
-            wa_url = _ensure_web_app()
-            wb = _web_app_bubble(wa_url, reason)
+                _log = (
+                    "Launched the pyCSAMT desktop app."
+                    if _ok
+                    else f"Desktop app launch failed: {_note}"
+                )
+            elif _app_kind == "mapview":
+                _mv_url = _ensure_mapview()
+                wb = _launch_bubble(
+                    "mapview", url=_mv_url, reason=_reason,
+                )
+                _log = f"Launched MapView: {_mv_url}"
+            else:
+                _wa_url = _ensure_web_app()
+                wb = _launch_bubble(
+                    "web", url=_wa_url, reason=_reason,
+                )
+                _log = f"Redirecting to web app: {_wa_url}"
             msgs.append(wb)
-            _wa_msg = (
-                f"Redirecting to web app:"
-                f" {wa_url}"
-            )
             new_stored.append({
                 "role": "assistant",
-                "content": _wa_msg,
+                "content": _log,
                 "ts": _ts(),
             })
             return (
@@ -3081,7 +3873,10 @@ def register_chat(app) -> None:
             NO_DATA_INTENTS,
         )
         _qi, _ = classify_intent_offline(text)
-        if _qi in NO_DATA_INTENTS:
+        # Data-overview requests skip the EDI guard too: with no data
+        # stored, the dispatcher replies with load instructions instead
+        # of the terse guard message.
+        if _qi in NO_DATA_INTENTS or _looks_like_data_read(text):
             msgs.append(
                 _thinking_bubble([{
                     "label": "Parsing request...",
@@ -3336,6 +4131,7 @@ def register_chat(app) -> None:
         figs = job.get("figs", {})
         code = job.get("code", "")
         kind = job.get("kind")
+        card = job.get("card")
 
         # merge figs into store
         new_fig_store = dict(fig_store or {})
@@ -3345,6 +4141,7 @@ def register_chat(app) -> None:
         agent_bub = _agent_bubble(
             result_text, steps, figs,
             code=code, kind=kind, mid=_agent_mid,
+            card=card,
         )
 
         # replace thinking with agent bubble

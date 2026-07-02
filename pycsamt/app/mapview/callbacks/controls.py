@@ -5,15 +5,62 @@
 
 from __future__ import annotations
 
-from dash import Input, Output, State
+from dash import ctx, Input, Output, State
 
 from .._ids import IDs
+
+
+_DEPTH_PRESETS = {
+    IDs.BTN_DEPTH_FULL: (None, None),
+    IDs.BTN_DEPTH_500: (0, 500),
+    IDs.BTN_DEPTH_1K: (0, 1000),
+    IDs.BTN_DEPTH_2K: (0, 2000),
+}
+
+_RHO_PRESETS = {
+    IDs.BTN_RHO_ALL:  (1,     100_000),
+    IDs.BTN_RHO_COND: (1,     100),
+    IDs.BTN_RHO_MID:  (100,   1_000),
+    IDs.BTN_RHO_RES:  (1_000, 100_000),
+}
 
 
 def register_controls(app) -> None:
     _register_freq_slider(app)
     _register_gather(app)
     _register_group_visibility(app)
+    _register_depth_presets(app)
+    _register_rho_presets(app)
+
+
+def _register_depth_presets(app) -> None:
+    @app.callback(
+        Output(IDs.CTL_DEPTH_LO, "value"),
+        Output(IDs.CTL_DEPTH_HI, "value"),
+        Input(IDs.BTN_DEPTH_FULL, "n_clicks"),
+        Input(IDs.BTN_DEPTH_500, "n_clicks"),
+        Input(IDs.BTN_DEPTH_1K, "n_clicks"),
+        Input(IDs.BTN_DEPTH_2K, "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def apply_preset(*_clicks):
+        lo, hi = _DEPTH_PRESETS.get(ctx.triggered_id, (None, None))
+        return lo, hi
+
+
+def _register_rho_presets(app) -> None:
+    @app.callback(
+        Output(IDs.CTL_RHO_LO, "value"),
+        Output(IDs.CTL_RHO_HI, "value"),
+        Input(IDs.BTN_RHO_ALL, "n_clicks"),
+        Input(IDs.BTN_RHO_COND, "n_clicks"),
+        Input(IDs.BTN_RHO_MID, "n_clicks"),
+        Input(IDs.BTN_RHO_RES, "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def apply_rho_preset(*_clicks):
+        lo, hi = _RHO_PRESETS.get(ctx.triggered_id, (None, None))
+        return lo, hi
 
 
 def _register_group_visibility(app) -> None:
@@ -101,6 +148,7 @@ def _register_gather(app) -> None:
         Input(IDs.CTL_CONTOUR_LEVELS, "value"),
         Input(IDs.CTL_CONTOUR_MODE, "value"),
         Input(IDs.CTL_SHOW_STA, "value"),
+        Input(IDs.CTL_STA_LABELS, "value"),
         Input(IDs.CTL_STA_SYMBOL, "value"),
         Input(IDs.CTL_STA_SIZE, "value"),
         Input(IDs.CTL_STA_COLOR, "value"),
@@ -115,6 +163,11 @@ def _register_gather(app) -> None:
         Input(IDs.CTL_CONTOUR_INTERP, "value"),
         Input(IDs.CTL_CONTOUR_SMOOTH, "value"),
         Input(IDs.CTL_CONTOUR_RES, "value"),
+        Input(IDs.CTL_ASPECT, "value"),
+        Input(IDs.CTL_X_UNIT, "value"),
+        Input(IDs.CTL_DEPTH_UNIT, "value"),
+        Input(IDs.CTL_SMOOTH, "value"),
+        Input(IDs.CTL_SECTION_RES, "value"),
         State(IDs.STORE_DATA, "data"),
         prevent_initial_call=True,
     )
@@ -122,10 +175,11 @@ def _register_gather(app) -> None:
                labels, opacity, azimuth, spacing, depth_lo, depth_hi,
                n_slices, surfaces, contours, scale, vmin, vmax,
                rho_lo, rho_hi, topo, terrain, basemap, contour_levels,
-               contour_mode, show_sta, sta_symbol, sta_size, sta_color,
+               contour_mode, show_sta, sta_labels, sta_symbol, sta_size, sta_color,
                contour_enable, marker_size, map_opacity, profiles,
                crs_mode, utm_zone, utm_hem, epsg, contour_interp,
-               contour_smooth, contour_res, store):
+               contour_smooth, contour_res, aspect, x_unit, depth_unit,
+               smooth_sections, section_res, store):
         freqs = (store or {}).get("frequencies", [])
         freq = None
         if freqs:
@@ -160,6 +214,7 @@ def _register_gather(app) -> None:
             "contour_levels": contour_levels if contour_levels else 12,
             "contour_mode": contour_mode or "filled+lines",
             "show_stations": bool(show_sta),
+            "station_labels": bool(sta_labels),
             "station_symbol": sta_symbol or "diamond",
             "station_size": sta_size if sta_size else 4,
             "station_color": sta_color or "#1f2937",
@@ -174,5 +229,10 @@ def _register_gather(app) -> None:
             "contour_interp": contour_interp or "cubic",
             "contour_smooth": contour_smooth if contour_smooth is not None else 1.0,
             "contour_res": int(contour_res) if contour_res else 150,
+            "aspect": aspect or "data",
+            "x_unit": x_unit or "m",
+            "depth_unit": depth_unit or "m",
+            "smooth_sections": bool(smooth_sections),
+            "section_res": int(section_res) if section_res else 100,
         }
         return controls, _fmt_freq(freq)

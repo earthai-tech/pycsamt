@@ -17,6 +17,7 @@ from dash.exceptions import PreventUpdate
 from pycsamt.app.web.layout import IDs
 from pycsamt.app.web.cache import cache_get, cache_get_inversion_result
 from pycsamt.app.web.pages.map3d import _empty_3d_fig, _MAP3D_MODES, _DEFAULT_MODE
+from pycsamt.map.geometry import normalize_offsets, resolve_offset, survey_uv
 
 
 # ── Mode metadata ─────────────────────────────────────────────────────────────
@@ -159,6 +160,46 @@ def _interp_finite_1d(x_new: np.ndarray, x: np.ndarray, values: np.ndarray) -> n
     return np.full_like(x_new, np.nan, dtype=float)
 
 
+def _line_real_offsets(profiles: dict) -> dict | None:
+    """Cross-strike offset (m) for each line, from real station
+    lat/lon — see :mod:`pycsamt.map.geometry` (shared with the
+    mapview 3-D builder). Requires every line to carry ``sta_lat``/
+    ``sta_lon`` (only populated for the "pseudo" data source, not
+    "inversion" — see ``_profiles_from_inversion_result``); returns
+    ``None`` otherwise so callers fall back to the synthetic
+    index-based line stack.
+    """
+    ids: list = []
+    lats: list = []
+    lons: list = []
+    lines: list = []
+    per_line_ids: dict[str, list] = {}
+    for name, p in profiles.items():
+        lat = p.get("sta_lat") or []
+        lon = p.get("sta_lon") or []
+        names = p.get("sta_names") or []
+        if not lat or not lon or len(lat) != len(lon) or len(lat) != len(names):
+            return None
+        line_ids = [f"{name}::{n}" for n in names]
+        per_line_ids[name] = line_ids
+        ids.extend(line_ids)
+        lats.extend(lat)
+        lons.extend(lon)
+        lines.extend([name] * len(line_ids))
+    if len(ids) < 2:
+        return None
+    uv = survey_uv(ids, lats, lons, lines)
+    if not uv:
+        return None
+    raw = {}
+    for name, line_ids in per_line_ids.items():
+        vs = [uv[i][1] for i in line_ids if i in uv]
+        if not vs:
+            return None
+        raw[name] = float(np.median(vs))
+    return normalize_offsets(raw)
+
+
 # ── Figure builders ───────────────────────────────────────────────────────────
 
 def _build_fence_fig(
@@ -182,7 +223,7 @@ def _build_fence_fig(
     annotations = []
     line_names = list(profiles.keys())
     n_lines = len(line_names)
-    y_offsets = np.arange(n_lines) * line_spacing * 1000.0
+    real_offsets = _line_real_offsets(profiles)
     az_rad = np.deg2rad(azimuth_deg)
     colors = _scene_colors(dark)
     use_topo = topo_src != "none"
@@ -209,7 +250,8 @@ def _build_fence_fig(
         if rho.ndim == 2 and rho.shape[0] == len(x_arr):
             rho = rho.T   # ensure (n_z, n_x)
 
-        y_center = float(y_offsets[i] * np.cos(az_rad))
+        offset_m = resolve_offset(name, i, real_offsets, 1000.0, line_spacing)
+        y_center = float(offset_m * np.cos(az_rad))
 
         # Phase 2: shift z by terrain elevation so depth is from surface
         if use_topo and apply_topo and elev_at_x is not None:
@@ -1627,7 +1669,9 @@ def _register_display(app) -> None:
                 )
 
             elif mode == "block":
-                x_arr, y_arr, z_arr, rho_3d = _assemble_3d_grid(profiles)
+                x_arr, y_arr, z_arr, rho_3d = _assemble_3d_grid(
+                    profiles, line_spacing=float(line_spacing or 1.0)
+                )
                 iso_lo_f = float(iso_lo if iso_lo is not None else
                                  grid_store.get("log_lo", 0.5))
                 iso_hi_f = float(iso_hi if iso_hi is not None else
@@ -1656,7 +1700,9 @@ def _register_display(app) -> None:
                 )
 
             elif mode == "depth":
-                x_arr, y_arr, z_arr, rho_3d = _assemble_3d_grid(profiles)
+                x_arr, y_arr, z_arr, rho_3d = _assemble_3d_grid(
+                    profiles, line_spacing=float(line_spacing or 1.0)
+                )
 
                 def rho_at_depth(d):
                     idx = int(np.argmin(np.abs(z_arr - d)))
@@ -1717,9 +1763,10 @@ def _register_export_html(app) -> None:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _assemble_3d_grid(profiles: dict):
+def _assemble_3d_grid(profiles: dict, line_spacing: float = 1.0):
     line_names = list(profiles.keys())
     n_lines    = len(line_names)
+    real_offsets = _line_real_offsets(profiles)
     ref        = profiles[line_names[0]]
     x_arr      = np.asarray(ref["x"])
     z_arr      = np.asarray(ref["z"])
@@ -1746,7 +1793,13 @@ def _assemble_3d_grid(profiles: dict):
                 rho_i = np.full((n_x, n_z), np.nanmean(rho_i))
         rho_3d[i] = rho_i
 
-    y_arr = np.arange(n_lines, dtype=float) * 1000.0
+    y_arr = np.array(
+        [
+            resolve_offset(name, i, real_offsets, 1000.0, line_spacing)
+            for i, name in enumerate(line_names)
+        ],
+        dtype=float,
+    )
     return x_arr, y_arr, z_arr, rho_3d
 
 

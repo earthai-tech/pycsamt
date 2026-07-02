@@ -51,6 +51,11 @@ _LAZY_SYMBOLS: dict[str, str] = {
     "get_backend_instance": ".backends",
     "list_backends":        ".backends",
     "set_backend":          ".backends",
+    # workflow sessions
+    "Session":              ".session",
+    "work_session":         ".session",
+    "Normalize":            ".session",
+    "normalize_session":    ".session",
 }
 
 
@@ -97,4 +102,6 @@ __all__ = [
     # backend helpers
     "auto_detect", "get_backend", "get_backend_instance",
     "list_backends", "set_backend",
+    # workflow sessions
+    "Session", "work_session", "Normalize", "normalize_session",
 ]

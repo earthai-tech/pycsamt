@@ -5,7 +5,7 @@
     "url": "https://pycsamt.readthedocs.io/en/v2/"
   },
   {
-    "name": "latest",
+    "name": "dev",
     "version": "latest",
     "url": "https://pycsamt.readthedocs.io/en/latest/"
   },

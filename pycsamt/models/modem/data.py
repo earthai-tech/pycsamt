@@ -61,6 +61,7 @@ def _parse_data(path: Path) -> dict:
     blocks: list[dict] = []
     site_names: list[str] = []
     site_coords: dict = {}  # name -> (x, y, z)
+    site_lonlat: dict = {}  # name -> (lon, lat), when present in the file
     site_idx_map: dict = {}  # name -> 0-based int
 
     i = 0
@@ -132,7 +133,9 @@ def _parse_data(path: Path) -> dict:
                     continue
                 period = float(parts[0])
                 code = parts[1]
-                # lat, lon are parts[2,3] but we use X,Y in metres
+                # X,Y (m) are the model-grid coordinates used for
+                # forward/inversion; lat,lon (parts[2,3]) are the real
+                # geographic position, kept separately in site_lonlat.
                 x_m = float(parts[4])
                 y_m = float(parts[5])
                 z_m = float(parts[6])
@@ -145,6 +148,14 @@ def _parse_data(path: Path) -> dict:
                     site_idx_map[code] = len(site_names)
                     site_names.append(code)
                     site_coords[code] = (x_m, y_m, z_m)
+                    try:
+                        lat = float(parts[2])
+                        lon = float(parts[3])
+                    except ValueError:
+                        pass
+                    else:
+                        if lat != 0.0 or lon != 0.0:
+                            site_lonlat[code] = (lon, lat)
 
                 data_rows.append(
                     (
@@ -186,6 +197,7 @@ def _parse_data(path: Path) -> dict:
         "blocks": blocks,
         "site_names": site_names,
         "site_coords": site_coords,
+        "site_lonlat": site_lonlat,
         "periods": periods,
     }
 
@@ -207,6 +219,7 @@ class ModEmData(ModEmBase):
         self.blocks: list[dict] = []
         self.site_names: list[str] = []
         self.site_coords: dict[str, tuple] = {}
+        self.site_lonlat: dict[str, tuple] = {}
         self.periods: np.ndarray = np.array([])
 
     # ------------------------------------------------------------------
@@ -253,6 +266,15 @@ class ModEmData(ModEmBase):
     def component_types(self) -> list[str]:
         """Return component-type names present in the data blocks."""
         return [b["component_type"] for b in self.blocks]
+
+    @property
+    def has_lonlat(self) -> bool:
+        """Whether real geographic coordinates were found in the file."""
+        return bool(self.site_lonlat)
+
+    def lonlat_for(self, name: str) -> tuple[float, float] | None:
+        """Return ``(lon, lat)`` for *name*, or ``None`` if unavailable."""
+        return self.site_lonlat.get(name)
 
     # ------------------------------------------------------------------
     # I/O
@@ -301,6 +323,7 @@ class ModEmData(ModEmBase):
         obj.blocks = parsed["blocks"]
         obj.site_names = parsed["site_names"]
         obj.site_coords = parsed["site_coords"]
+        obj.site_lonlat = parsed["site_lonlat"]
         obj.periods = parsed["periods"]
         if obj.verbose:
             obj.logger.info(
@@ -331,11 +354,11 @@ class ModEmData(ModEmBase):
 
         Notes
         -----
-        Latitude and longitude columns are currently written as
-        zeros because the object stores and uses local metre
-        coordinates for ModEM modelling. The local ``X(m)``,
-        ``Y(m)``, and ``Z(m)`` columns carry the station
-        positions used by model builders and runners.
+        Latitude/longitude columns are written from ``site_lonlat``
+        when available (e.g. parsed from a real ModEM file, or built
+        via :meth:`from_edi`), else as zeros. Model builders and
+        runners use the local ``X(m)``, ``Y(m)``, and ``Z(m)``
+        columns exclusively; lat/lon is metadata only.
 
         Examples
         --------
@@ -383,9 +406,12 @@ class ModEmData(ModEmBase):
                     self.site_names[sidx]
                     if sidx < len(self.site_names) else f"S{sidx:04d}"
                 )
+                lonlat = self.site_lonlat.get(code)
+                lat = lonlat[1] if lonlat is not None else 0.0
+                lon = lonlat[0] if lonlat is not None else 0.0
                 lines.append(
                     f"{period:>15.6E} {code:>8}  "
-                    f"{0.000:>8.3f}  {0.000:>8.3f}  "
+                    f"{lat:>8.3f}  {lon:>8.3f}  "
                     f"{x:>14.3f}  {y:>14.3f}  {z:>10.3f}  "
                     f"{comp_str:<6}"
                     f"  {real:>15.6E}  {imag:>15.6E}  {err:>15.6E}\n"
@@ -479,6 +505,7 @@ class ModEmData(ModEmBase):
         # ---- site coordinates ----
         names: list[str] = []
         coords: dict = {}
+        lonlat: dict = {}
         for it in items:
             fallback = f"S{len(names):04d}"
             name = str(getattr(it, "name", None) or fallback)
@@ -494,6 +521,8 @@ class ModEmData(ModEmBase):
             # Convert lat/lon to X(northing)/Y(easting) in metres
             x_m, y_m = _latlon_to_xy(lat, lon, lat_ref=lat, lon_ref=lon)
             coords[name] = (x_m, y_m, elev)
+            if lat != 0.0 or lon != 0.0:
+                lonlat[name] = (lon, lat)
 
         # Recompute offsets relative to centroid
         if len(names) > 1:
@@ -530,6 +559,7 @@ class ModEmData(ModEmBase):
 
         obj.site_names = names
         obj.site_coords = coords
+        obj.site_lonlat = lonlat
         obj.periods = global_periods
 
         # ---- determine which component blocks to write ----

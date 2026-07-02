@@ -11,5 +11,6 @@ public API policy, and release practices.
 
    documentation_build
    docstring_style
+   ci
    api_policy
 

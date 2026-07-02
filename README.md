@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/source/_static/pycsamt-v2-symbol-logo.svg" alt="pyCSAMT v2" width="380"/>
+  <img src="docs/source/_static/logo/pycsamt-v2-symbol-logo.svg" alt="pyCSAMT v2" width="380"/>
   <br/>
   <em>Scientific Python for electromagnetic geophysics &mdash; processing, inversion, AI agents, and apps.</em>
   <br/><br/>
@@ -24,86 +24,76 @@
 
 ---
 
-## Overview
+**pyCSAMT v2** is a full-lifecycle toolkit for controlled-source and
+natural-source electromagnetic (EM) geophysics — CSAMT, AMT, MT, and TDEM.
+One coherent, scikit-learn-inspired API takes a survey from raw field files
+through quality control, corrections, and inversion to interpreted,
+publication-ready results.
 
-pyCSAMT v2 is a ground-up rewrite of the original pyCSAMT library, designed as a
-full-lifecycle scientific toolkit for controlled-source and natural-source
-electromagnetic (EM) geophysics. It covers every stage of an EM survey project:
-reading multi-format field data, applying industry-standard processing corrections,
-driving 1-D through 3-D inversions, and producing publication-ready outputs — all
-from a coherent, scikit-learn-inspired Python API.
+<div align="center">
 
-What sets v2 apart is its integration of **physics-informed neural networks (PINNs)**
-and **hybrid deep-learning inverters** alongside classical inversion backends
-(Occam2D, ModEM, MARE2DEM), a declarative **pipeline system** for reproducible
-workflows, and a suite of **AI-assisted agents** that can orchestrate entire survey
-projects through natural-language instructions. An interactive **web dashboard**
-(Dash) and a **desktop GUI** bring these capabilities to users who prefer a
-point-and-click experience.
+**[Documentation](https://pycsamt.readthedocs.io)** ·
+[Getting started](https://pycsamt.readthedocs.io/en/latest/getting_started/index.html) ·
+[User guide](https://pycsamt.readthedocs.io/en/latest/user_guide/index.html) ·
+[Examples](https://pycsamt.readthedocs.io/en/latest/examples/index.html) ·
+[API reference](https://pycsamt.readthedocs.io/en/latest/api/index.html)
 
----
+</div>
 
-## What pyCSAMT v2 Does
+## ✨ Highlights
 
-| Layer | Capabilities |
-|---|---|
-| **Data I/O** | EDI, AVG, Jones J, Zonge, TDEM/TEMAVG, MARE2DEM `.emdata`, `.resistivity`, `.poly` |
-| **Processing** | Notch filtering, static-shift correction, tensor rotation, phase-tensor analysis, quality control |
-| **Forward modelling** | 1-D and 2-D EM forward utilities for MT, CSAMT, and TDEM survey design |
-| **Classical inversion** | Occam2D, ModEM, MARE2DEM wrappers — input builders, runners, result loaders, section plots |
-| **AI inversion** | PINN 1-D / 2-D / 3-D, hybrid deep-learning inverters, model-zoo access |
-| **Interpretation** | Resistivity classification, pseudostratigraphic logs, profile and map outputs |
-| **Pipeline system** | YAML / JSON / Python workflow definitions, step registry, presets, reproducible manifests |
-| **AI agents** | LLM-driven orchestration for QC, inversion prep, report and code generation (Anthropic, OpenAI, Gemini) |
-| **Applications** | CLI (`pycsamt`), interactive web dashboard (Dash), desktop GUI |
+- 📥 **Data I/O & QC** — EDI, Zonge AVG, Jones J, TDEM, and MARE2DEM files in
+  one site model; frequency audits and noisy-station flagging.
+- 🎚️ **Processing & corrections** — a catalogue of 25 methods in six
+  categories: notch filtering, static-shift removal, tensor rotation,
+  phase-tensor analysis, and more.
+- 🧱 **Forward modelling** — synthetic layered-earth and 2-D models, forward
+  responses, realistic noise, and datasets for survey design or training.
+- 🧠 **Inversion, classical & AI** — Occam2D, ModEM, and MARE2DEM end to end,
+  plus physics-informed neural networks (PINN 1-D/2-D/3-D) and hybrid
+  deep-learning inverters.
+- 🗺️ **Interpretation & mapping** — resistivity classification,
+  pseudostratigraphic logs, station maps, pseudosections, and 3-D quick looks.
+- 🤖 **Pipelines, agents & apps** — reproducible YAML/JSON/Python workflows,
+  LLM-driven agents (Anthropic, OpenAI, Gemini), a web dashboard, and a
+  desktop GUI.
 
----
-
-## Installation
-
-The base package installs with a single command and has minimal dependencies:
+## 🚀 Installation
 
 ```bash
-pip install pycsamt
+pip install pycsamt           # core, minimal dependencies
+pip install "pycsamt[full]"   # + ML backends, apps, geospatial, docs
 ```
 
-For the complete v2 environment — ML backends, apps, geospatial tools, and docs:
+Requires **Python 3.9+**.
 
-```bash
-pip install "pycsamt[full]"
-```
-
-Install from source to track the active development branch:
-
-```bash
-git clone https://github.com/earthai-tech/pycsamt.git
-cd pycsamt
-git checkout v2
-pip install -e ".[full]"
-```
-
-Individual extras let you pull in only what your workflow needs:
+<details>
+<summary><b>Optional extras &amp; source install</b></summary>
 
 | Extra | Installs |
 |---|---|
 | `torch` | PyTorch backend for PINN / hybrid inverters |
 | `tensorflow` | TensorFlow / Keras backend |
-| `geo` | GeoPandas, Fiona, pyproj for spatial workflows |
-| `app` | Dash, Flask, and desktop GUI dependencies |
+| `geo` | pyproj, xarray, contextily for maps and reprojection |
+| `agents` | Anthropic, OpenAI/DeepSeek, and Gemini SDKs for AI agents |
+| `app` | Desktop GUI (PySide6) + Dash web dashboard |
 | `docs` | Sphinx, PyData theme, numpydoc |
-| `full` | All of the above |
+| `full` | All of the above (prefers the PyTorch backend) |
 
-Requires **Python 3.9 or newer**.
+Track the active development branch:
 
----
+```bash
+git clone https://github.com/earthai-tech/pycsamt.git
+cd pycsamt && git checkout v2
+pip install -e ".[full]"
+```
 
-## Quick Start
+</details>
 
-### Processing pipeline
+## ⚡ Quick start
 
-Build a repeatable processing chain from named steps and run it against a site
-collection in a single call. The result object carries per-step outputs, a
-processing log, and an exportable manifest.
+Chain named processing steps into a repeatable pipeline — the result carries
+per-step outputs, a log, and an exportable manifest:
 
 ```python
 from pycsamt.pipeline import Pipeline, Step
@@ -118,30 +108,7 @@ result = pipe.run(sites, outdir="outputs/run01/")
 print(result.summary())
 ```
 
-Pipelines can also be defined in YAML and executed from the CLI:
-
-```bash
-pycsamt pipe run --config pipeline.yaml --survey data/edi/ --out outputs/run01/
-```
-
-### MARE2DEM inversion results
-
-Load an inversion run directory and plot observed versus predicted MT responses
-or the resistivity section — the scanner finds all output files automatically:
-
-```python
-from pycsamt.models.mare2dem import InversionResult, PlotResponse, PlotModel
-
-result  = InversionResult("runs/demo_mt/")
-PlotResponse(result).plot(max_rx=6, savefig="response.pdf")
-PlotModel(result).plot(cmap="turbo_r", savefig="section.pdf")
-```
-
-### AI-assisted agent
-
-Give a plain-language task to the agent master and receive a structured result —
-the orchestrator routes subtasks to specialist agents for loading, QC, inversion
-setup, and reporting:
+Or hand the whole job to an AI agent in plain language:
 
 ```python
 from pycsamt.agents import AgentMaster
@@ -153,9 +120,20 @@ report = master.run(
 )
 ```
 
-### PINN / hybrid inverter
+<details>
+<summary><b>More examples — inversion results, PINN, CLI</b></summary>
 
-Physics-informed inversion requires only the site data and a forward operator:
+Load a MARE2DEM run directory and plot responses or the resistivity section:
+
+```python
+from pycsamt.models.mare2dem import InversionResult, PlotResponse, PlotModel
+
+result = InversionResult("runs/demo_mt/")
+PlotResponse(result).plot(max_rx=6, savefig="response.pdf")
+PlotModel(result).plot(cmap="turbo_r", savefig="section.pdf")
+```
+
+Physics-informed inversion from site data and a forward operator:
 
 ```python
 from pycsamt.ai.inversion import PINN2D
@@ -165,40 +143,31 @@ model = inv.fit(sites, frequencies=freqs)
 model.plot_section()
 ```
 
----
-
-## Applications
-
-pyCSAMT v2 ships with three ready-to-use application entry points.
-
-**Command-line interface** — covers the full workflow from the terminal:
+The full workflow is also scriptable from the terminal:
 
 ```bash
 pycsamt survey set data/edi/
-pycsamt edi info data/edi/
 pycsamt invert build data/edi/ --solver occam2d --workdir runs/occam2d/
-pycsamt pipe presets
+pycsamt pipe run --config pipeline.yaml --survey data/edi/ --out outputs/run01/
 ```
 
-**Web dashboard** — an interactive Dash application for data exploration,
-pipeline configuration, agent chat, and inversion monitoring:
+</details>
 
-```bash
-pycsamt-web
-```
+## 🖥️ Interfaces
 
-**Desktop GUI** — a native desktop application for point-and-click access
-to the same processing and inversion capabilities:
+| Python API | CLI | Web dashboard | Desktop GUI |
+|:---:|:---:|:---:|:---:|
+| `import pycsamt` | `pycsamt --help` | `pycsamt-web` | `pycsamt-desktop` |
 
-```bash
-pycsamt-gui
-```
+The same engine drives all four — script it, automate it, or point and click.
 
----
+## 📖 Citation
 
-## Citation
+If pyCSAMT contributes to published research, please cite
+[Kouadio et al. (2022), *J. Applied Geophysics*](https://doi.org/10.1016/j.jappgeo.2022.104647).
 
-If pyCSAMT contributes to published research, please cite the relevant works:
+<details>
+<summary><b>BibTeX</b></summary>
 
 ```bibtex
 @article{Kouadio2022,
@@ -221,22 +190,16 @@ If pyCSAMT contributes to published research, please cite the relevant works:
 }
 ```
 
----
+</details>
 
-## Contributing
+## 🤝 Contributing & license
 
-Bug reports and feature requests are welcome at the
-[issue tracker](https://github.com/earthai-tech/pycsamt/issues).
-For code contributions, please read the developer guide in
-`docs/source/development/` before opening a pull request.
-
----
-
-## License
-
-pyCSAMT is distributed under the
-[GNU Lesser General Public License v3.0](https://opensource.org/licenses/LGPL-3.0)
-or later. See [`LICENSE.md`](LICENSE.md) for the full text.
+Bug reports and feature requests are welcome on the
+[issue tracker](https://github.com/earthai-tech/pycsamt/issues); see the
+[developer guide](https://pycsamt.readthedocs.io/en/latest/development/index.html)
+before opening a pull request. Distributed under the
+[LGPL-3.0](https://opensource.org/licenses/LGPL-3.0) or later — see
+[`LICENSE.md`](LICENSE.md).
 
 ---
 

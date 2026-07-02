@@ -4,7 +4,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -12,6 +13,21 @@ import numpy as np
 import pandas as pd
 
 from pycsamt.emtools._core import ensure_sites
+
+_NON_ALNUM_RE = re.compile(r"[^a-z0-9]")
+
+
+def normalize_station_id(name: Any) -> str:
+    """Loosely-normalized station id for fuzzy matching.
+
+    Lowercases and strips everything but letters/digits, so minor
+    formatting differences between sources — ``23-18-001A`` vs
+    ``23_18_001a`` vs ``23 18 001A`` — still match. Used as a
+    fallback tier (never the only lookup) wherever a station from
+    one source (EDI, ModEM, an uploaded elevation file, ...) needs
+    to be matched against another.
+    """
+    return _NON_ALNUM_RE.sub("", str(name).strip().lower())
 
 
 @dataclass
@@ -119,6 +135,51 @@ COMPONENT_ALIASES: dict[str, str] = {
     "average": "avg",
     "mean": "avg",
 }
+
+_LAT_NAMES = (
+    "latitude",
+    "lat",
+    "Latitude",
+    "LAT",
+    "LATITUDE",
+)
+_LON_NAMES = (
+    "longitude",
+    "lon",
+    "long",
+    "Longitude",
+    "LON",
+    "LONG",
+    "LONGITUDE",
+)
+_ELEV_NAMES = (
+    "elevation",
+    "elev",
+    "altitude",
+    "alt",
+    "Elevation",
+    "ELEV",
+    "ELEVATION",
+)
+_ID_NAMES = ("station", "id", "name", "Station", "ID", "Name")
+_LINE_NAMES = (
+    "line",
+    "profile",
+    "survey_line",
+    "Line",
+    "Profile",
+)
+_META_NAMES = (
+    "Head",
+    "Header",
+    "HEAD",
+    "head",
+    "header",
+    "metadata",
+    "meta",
+    "info",
+    "station_info",
+)
 
 
 @dataclass(frozen=True)
@@ -554,38 +615,112 @@ def _station_record(
     station_id = _station_id_from_edi(edi) or f"S{index:03d}"
     return StationRecord(
         id=station_id,
-        latitude=_first_float(
-            edi, "latitude", "lat", "Latitude", "LAT"
-        ),
-        longitude=_first_float(
-            edi,
-            "longitude",
-            "lon",
-            "long",
-            "Longitude",
-            "LON",
-        ),
-        elevation=_first_float(
-            edi, "elevation", "elev", "Elevation", "ELEV"
-        ),
+        latitude=_metadata_float(edi, _LAT_NAMES),
+        longitude=_metadata_float(edi, _LON_NAMES),
+        elevation=_metadata_float(edi, _ELEV_NAMES),
         line=_resolve_line(edi, station_id, line_map),
         index=index,
         source=edi,
     )
 
 
+def _metadata_float(
+    obj: Any,
+    names: tuple[str, ...],
+) -> float | None:
+    value = _first_float(obj, *names)
+    if value is not None:
+        return value
+    coords = _coords_float(obj, names)
+    if coords is not None:
+        return coords
+    for meta in _metadata_sources(obj):
+        value = _first_float(meta, *names)
+        if value is not None:
+            return value
+        coords = _coords_float(meta, names)
+        if coords is not None:
+            return coords
+    return None
+
+
+def _coords_float(
+    obj: Any,
+    names: tuple[str, ...],
+) -> float | None:
+    if obj is None:
+        return None
+    try:
+        coords = _get_field(obj, "coords")
+        if coords is None or len(coords) < 2:
+            return None
+        raw = (
+            coords[0]
+            if _is_latitude_names(names)
+            else coords[1]
+        )
+    except (TypeError, ValueError, IndexError):
+        return None
+    return _finite_or_none(raw)
+
+
+def _is_latitude_names(names: tuple[str, ...]) -> bool:
+    return any(
+        str(name).lower().startswith("lat")
+        for name in names
+    )
+
+
 def _first_float(obj: Any, *names: str) -> float | None:
     for name in names:
-        if not hasattr(obj, name):
-            continue
-        value = getattr(obj, name)
-        try:
-            value_f = float(value)
-        except (TypeError, ValueError):
-            continue
-        if np.isfinite(value_f):
+        value = _get_field(obj, name)
+        value_f = _finite_or_none(value)
+        if value_f is not None:
             return value_f
     return None
+
+
+def _get_field(obj: Any, name: str) -> Any:
+    if obj is None:
+        return None
+    if isinstance(obj, Mapping):
+        for key in (name, name.lower(), name.upper()):
+            if key in obj:
+                return obj[key]
+        return None
+    return getattr(obj, name, None)
+
+
+def _metadata_sources(obj: Any) -> tuple[Any, ...]:
+    sources: list[Any] = []
+    for name in _META_NAMES:
+        value = _get_field(obj, name)
+        if value is not None:
+            sources.append(value)
+    # pyCSAMT EDIFile exposes its header via ``get_section("head")``
+    # (a method), whose ``.Location`` carries lat/lon/elev. Pull those
+    # section objects — and their Location — into the metadata search.
+    getter = getattr(obj, "get_section", None)
+    if callable(getter):
+        for section in ("head", "Head", "definemeas", "emeassect"):
+            try:
+                sec = getter(section)
+            except Exception:  # noqa: BLE001 - optional section
+                sec = None
+            if sec is None:
+                continue
+            sources.append(sec)
+            loc = getattr(sec, "Location", None) or getattr(
+                sec, "location", None
+            )
+            if loc is not None:
+                sources.append(loc)
+    direct_loc = getattr(obj, "Location", None) or getattr(
+        obj, "location", None
+    )
+    if direct_loc is not None:
+        sources.append(direct_loc)
+    return tuple(sources)
 
 
 def _finite_or_none(value: Any) -> float | None:
@@ -601,8 +736,19 @@ def _finite_or_none(value: Any) -> float | None:
 
 
 def _station_id_from_edi(edi: Any) -> str:
-    for name in ("station", "id", "name"):
-        value = getattr(edi, name, None)
+    value = _first_text(edi, _ID_NAMES)
+    if value:
+        return value
+    for meta in _metadata_sources(edi):
+        value = _first_text(meta, _ID_NAMES)
+        if value:
+            return value
+    return ""
+
+
+def _first_text(obj: Any, names: tuple[str, ...]) -> str:
+    for name in names:
+        value = _get_field(obj, name)
         if value not in (None, ""):
             return str(value)
     return ""
@@ -626,18 +772,13 @@ def _resolve_line(
     station_id: str,
     line_map: dict[str, Iterable[str]] | None,
 ) -> str | None:
-    names = (
-        "line",
-        "profile",
-        "survey_line",
-        "Line",
-        "Profile",
-    )
-    for name in names:
-        if hasattr(edi, name):
-            value = getattr(edi, name)
-            if value not in (None, ""):
-                return str(value)
+    value = _first_text(edi, _LINE_NAMES)
+    if value:
+        return value
+    for meta in _metadata_sources(edi):
+        value = _first_text(meta, _LINE_NAMES)
+        if value:
+            return value
     if line_map:
         for line, stations in line_map.items():
             if station_id in {str(s) for s in stations}:

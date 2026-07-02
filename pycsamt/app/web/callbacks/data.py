@@ -34,6 +34,7 @@ def register_data(app) -> None:
     _register_modal_toggle(app)
     _register_load_mode(app)
     _register_upload_file_manager(app)
+    _register_folder_filter(app)
     _register_load_btn_state(app)
     _register_drop_zone_swap(app)
     _register_preflight_preview(app)
@@ -186,15 +187,31 @@ def _infer_line_counts(names: list[str]) -> dict[str, int]:
     """Infer line names from relative paths produced by folder upload."""
     line_counts: dict[str, int] = {}
     for name in names:
-        parts = [p for p in str(name).replace("\\", "/").split("/") if p]
-        if len(parts) >= 3:
-            line = parts[1]
-        elif len(parts) == 2:
-            line = parts[0]
-        else:
-            line = "flat files"
+        line = _line_from_path(name)
         line_counts[line] = line_counts.get(line, 0) + 1
     return line_counts
+
+
+def _line_from_path(name: str) -> str:
+    parts = [p for p in str(name).replace("\\", "/").split("/") if p]
+    if len(parts) >= 3:
+        return parts[1]
+    if len(parts) == 2:
+        return parts[0]
+    return "flat files"
+
+
+def _entry_line(entry: dict) -> str:
+    name = entry.get("filename") or entry.get("original") or ""
+    return _line_from_path(name)
+
+
+def _filtered_upload_entries(entries, selected_lines):
+    entries = list(entries or [])
+    selected = {str(v) for v in (selected_lines or []) if str(v).strip()}
+    if not selected:
+        return entries
+    return [entry for entry in entries if _entry_line(entry) in selected]
 
 
 def _preflight_children(names: list[str], *, mode: str, source: str):
@@ -408,17 +425,57 @@ def _register_upload_file_manager(app) -> None:
         return manager, f"✓ {len(entries)} file(s) ready. Rename or remove before loading."
 
 
+def _register_folder_filter(app) -> None:
+    @app.callback(
+        Output(IDs.LOAD_FOLDER_FILTER, "options"),
+        Output(IDs.LOAD_FOLDER_FILTER, "value"),
+        Output(IDs.LOAD_FOLDER_FILTER_WRAP, "style"),
+        Input("load-upload-selection", "data"),
+        prevent_initial_call=True,
+    )
+    def populate(entries):
+        entries = list(entries or [])
+        if not entries:
+            return [], [], {"display": "none"}
+        names = _entry_names(entries)
+        counts = _infer_line_counts(names)
+        if len(counts) <= 1:
+            return [], [], {"display": "none"}
+        options = [
+            {
+                "label": f"{line} ({count} file{'s' if count != 1 else ''})",
+                "value": line,
+            }
+            for line, count in sorted(counts.items())
+        ]
+        return options, [opt["value"] for opt in options], {"display": "block"}
+
+
 def _register_load_btn_state(app) -> None:
     """Disable/enable the Load Survey button based on whether usable files are selected."""
     clientside_callback(
         """
-        function(entries) {
+        function(entries, selected) {
             var has = entries && entries.some(function(e){ return e && e.content; });
+            if (has && selected && selected.length) {
+                function lineOf(name) {
+                    var parts = String(name || '').replace(/\\\\/g, '/')
+                        .split('/').filter(Boolean);
+                    if (parts.length >= 3) return parts[1];
+                    if (parts.length === 2) return parts[0];
+                    return 'flat files';
+                }
+                has = entries.some(function(e) {
+                    var name = (e && (e.filename || e.original)) || '';
+                    return e && e.content && selected.indexOf(lineOf(name)) >= 0;
+                });
+            }
             return !has;  // disabled=true when no files
         }
         """,
         Output(IDs.BTN_LOAD_CONFIRM, "disabled"),
         Input("load-upload-selection", "data"),
+        Input(IDs.LOAD_FOLDER_FILTER, "value"),
     )
 
 
@@ -457,14 +514,16 @@ def _register_preflight_preview(app) -> None:
         Output("load-detected-summary", "children"),
         Output("load-source-selection", "data"),
         Input("load-upload-selection", "data"),
+        Input(IDs.LOAD_FOLDER_FILTER, "value"),
         Input("load-mode-store", "data"),
         State("load-source-selection", "data"),
     )
-    def update_preflight(upload_entries, mode, current_source):
+    def update_preflight(upload_entries, selected_lines, mode, current_source):
         source = current_source or "none"
         if upload_entries:
+            filtered = _filtered_upload_entries(upload_entries, selected_lines)
             source = str(upload_entries[0].get("source") or "upload")
-            names = _entry_names(upload_entries)
+            names = _entry_names(filtered)
             source_label = "folder" if source == "folder" else "file"
             return (
                 _preflight_children(
@@ -492,12 +551,26 @@ def _register_load_progress(app) -> None:
     # Show the progress bar as soon as Load Survey is clicked.
     clientside_callback(
         """
-        function(n_clicks, entries) {
+        function(n_clicks, entries, selected) {
             if (!n_clicks) return [window.dash_clientside.no_update,
                                    window.dash_clientside.no_update,
                                    window.dash_clientside.no_update];
 
-            var n = entries ? entries.filter(function(e){ return e && e.content; }).length : 0;
+            function lineOf(name) {
+                var parts = String(name || '').replace(/\\\\/g, '/')
+                    .split('/').filter(Boolean);
+                if (parts.length >= 3) return parts[1];
+                if (parts.length === 2) return parts[0];
+                return 'flat files';
+            }
+            var filtered = entries || [];
+            if (selected && selected.length) {
+                filtered = filtered.filter(function(e) {
+                    var name = (e && (e.filename || e.original)) || '';
+                    return selected.indexOf(lineOf(name)) >= 0;
+                });
+            }
+            var n = filtered.filter(function(e){ return e && e.content; }).length;
             var label = n > 0 ? ('Parsing ' + n + ' file' + (n !== 1 ? 's' : '') + '…') : 'Processing stations…';
 
             // Restart the CSS fill animation by cloning the fill node
@@ -518,6 +591,7 @@ def _register_load_progress(app) -> None:
         Output("load-prog-sublabel",   "children"),
         Input(IDs.BTN_LOAD_CONFIRM,    "n_clicks"),
         State("load-upload-selection", "data"),
+        State(IDs.LOAD_FOLDER_FILTER,  "value"),
         prevent_initial_call=True,
     )
 
@@ -551,12 +625,13 @@ def _register_load_data(app) -> None:
         Output("load-upload-selection",  "data",     allow_duplicate=True),
         Input(IDs.BTN_LOAD_CONFIRM,      "n_clicks"),
         State("load-upload-selection",   "data"),
+        State(IDs.LOAD_FOLDER_FILTER,    "value"),
         State(IDs.SESSION_ID,            "data"),
         State("load-mode-store",         "data"),
         State(IDs.STORE_DATA,            "data"),
         prevent_initial_call=True,
     )
-    def load_data(_n_clicks, upload_entries,
+    def load_data(_n_clicks, upload_entries, selected_lines,
                   session_id, load_mode,
                   existing_store):
         _SKIP = (no_update, no_update, no_update, no_update, no_update)
@@ -568,6 +643,7 @@ def _register_load_data(app) -> None:
         # ── Derive source directly from entries — avoids race with the
         #    load-source-selection store (whose value may lag behind the
         #    upload-selection store when the user clicks quickly).
+        upload_entries = _filtered_upload_entries(upload_entries, selected_lines)
         usable = [e for e in (upload_entries or []) if e.get("content")]
         if usable:
             selected_source = str(usable[0].get("source") or "upload")

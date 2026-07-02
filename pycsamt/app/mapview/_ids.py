@@ -17,10 +17,12 @@ class IDs:
     STORE_LINES      = "mv-store-lines"       # {all, active, colors}
     STORE_LINE_FILTER = "mv-store-line-filter"
     STORE_SELECTION  = "mv-store-selection"   # clicked station
+    STORE_MASKED     = "mv-store-masked"      # excluded station ids
     LOAD_MODE_STORE  = "mv-load-mode-store"   # replace | append
     FOLDER_STORE     = "mv-folder-store"      # JS folder upload payload
     UPLOAD_SELECTION = "mv-upload-selection"  # staged file entries
     SOURCE_SELECTION = "mv-source-selection"
+    INV_FOLDER_STORE = "mv-inv-folder-store"  # JS ModEM folder upload payload
 
     # ── top bar ───────────────────────────────
     BTN_SIDEBAR      = "mv-btn-sidebar"
@@ -47,6 +49,8 @@ class IDs:
     CANVAS_GRAPH     = "mv-canvas-graph"
     CANVAS_TITLE     = "mv-canvas-title"
     CANVAS_EMPTY     = "mv-canvas-empty"
+    WELCOME          = "mv-welcome"
+    WELCOME_CTA      = "mv-welcome-cta"
 
     # ── canvas toolbar ────────────────────────
     TB_INFO          = "mv-tb-info"
@@ -104,13 +108,27 @@ class IDs:
     CTL_SURFACES     = "mv-ctl-surfaces"
     CTL_CONTOURS     = "mv-ctl-contours"
     CTL_SCALE        = "mv-ctl-scale"
+    CTL_ASPECT       = "mv-ctl-aspect"
+    CTL_X_UNIT       = "mv-ctl-x-unit"
+    CTL_DEPTH_UNIT   = "mv-ctl-depth-unit"
+    CTL_SMOOTH       = "mv-ctl-smooth"
+    CTL_SECTION_RES  = "mv-ctl-section-res"
+    BTN_DEPTH_FULL   = "mv-btn-depth-full"
+    BTN_DEPTH_500    = "mv-btn-depth-500"
+    BTN_DEPTH_1K     = "mv-btn-depth-1k"
+    BTN_DEPTH_2K     = "mv-btn-depth-2k"
     CTL_RHO_LO       = "mv-ctl-rho-lo"
     CTL_RHO_HI       = "mv-ctl-rho-hi"
+    BTN_RHO_ALL      = "mv-btn-rho-all"
+    BTN_RHO_COND     = "mv-btn-rho-cond"
+    BTN_RHO_MID      = "mv-btn-rho-mid"
+    BTN_RHO_RES      = "mv-btn-rho-res"
     CTL_VMIN         = "mv-ctl-vmin"
     CTL_VMAX         = "mv-ctl-vmax"
     CTL_TOPO         = "mv-ctl-topo"
     CTL_TERRAIN      = "mv-ctl-terrain"
     CTL_SHOW_STA     = "mv-ctl-show-sta"
+    CTL_STA_LABELS   = "mv-ctl-sta-labels"
     CTL_STA_SYMBOL   = "mv-ctl-sta-symbol"
     CTL_STA_SIZE     = "mv-ctl-sta-size"
     CTL_STA_COLOR    = "mv-ctl-sta-color"
@@ -122,6 +140,9 @@ class IDs:
     TOPO_API         = "mv-topo-api"
     BTN_TOPO_APPLY   = "mv-btn-topo-apply"
     TOPO_STATUS      = "mv-topo-status"
+    TOPO_EXPORT_FMT  = "mv-topo-export-fmt"
+    BTN_TOPO_EXPORT  = "mv-btn-topo-export"
+    TOPO_EXPORT_DL   = "mv-topo-export-dl"
     GRP_STATION      = "mv-grp-station"
     GRP_3D           = "mv-grp-3d"
     STATION_INSPECT  = "mv-station-inspect"
@@ -129,6 +150,7 @@ class IDs:
     # ── bottom dock ───────────────────────────
     DOCK_TABLE       = "mv-dock-table"
     DOCK_TOGGLE      = "mv-dock-toggle"
+    DOCK_CLOSE       = "mv-dock-close"
     DOCK_BODY        = "mv-dock-body"
 
     # ── load modal ────────────────────────────
@@ -145,6 +167,8 @@ class IDs:
     FILE_MANAGER     = "mv-file-manager"
     PREFLIGHT        = "mv-preflight"
     DETECTED_SUMMARY = "mv-detected-summary"
+    LOAD_LINE_FILTER_WRAP = "mv-load-line-filter-wrap"
+    LOAD_LINE_FILTER = "mv-load-line-filter"
     LOADER_OVERLAY   = "mv-loader-overlay"
     LOADER_MSG       = "mv-loader-msg"
     FILE_COUNT       = "mv-file-count"
@@ -156,8 +180,28 @@ class IDs:
     BTN_LOAD_CONFIRM = "mv-btn-load-confirm"
     LOAD_FEEDBACK    = "mv-load-feedback"
 
+    # ── load modal: inversion-results tab ─────
+    LOAD_TABS        = "mv-load-tabs"
+    BTN_INV_BROWSE   = "mv-btn-inv-browse"
+    INV_FILE_COUNT   = "mv-inv-file-count"
+    INV_BROWSE_STATUS = "mv-inv-browse-status"
+    INV_LOADER_OVERLAY = "mv-inv-loader-overlay"
+    INV_LOADER_MSG   = "mv-inv-loader-msg"
+    CK_INV_KNOWN_STA = "mv-ck-inv-known-sta"
+    INV_STATUS       = "mv-inv-status"
+    BTN_INV_CONFIRM  = "mv-btn-inv-confirm"
+
     # ── export modal / download ───────────────
     EXPORT_DL        = "mv-export-dl"
+
+    # ── sites / station settings ──────────────
+    BTN_SETTINGS     = "mv-btn-settings"
+    CANVAS_SETTINGS  = "mv-canvas-settings"
+    SET_LINES        = "mv-set-lines"
+    SET_SUMMARY      = "mv-set-summary"
+    BTN_CLEAR_MASKS  = "mv-btn-clear-masks"
+    BTN_MASK_HIDDEN  = "mv-btn-mask-hidden"
+    SET_MASKED_LIST  = "mv-set-masked-list"
 
     # ── help modal ────────────────────────────
     MODAL_HELP       = "mv-modal-help"

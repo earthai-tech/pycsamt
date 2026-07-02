@@ -18,6 +18,7 @@ from typing import List
 
 import numpy as np
 
+from .api.property import PyCSAMTObject
 from .log.logger import get_logger
 from .exceptions import FileHandlingError
 
@@ -51,7 +52,7 @@ UTM_ZONE_DESIGNATOR = {
 }
  
 
-class TermDefinitions:
+class TermDefinitions(PyCSAMTObject):
     """
     Definitions of technical terms used in AMT/CSAMT
     processing. Access attributes to retrieve a description
@@ -98,7 +99,7 @@ class TermDefinitions:
     )
 
 
-class FieldAliases:
+class FieldAliases(PyCSAMTObject):
     """
     Common field/column name variants for ease of lookup.
     """
@@ -113,7 +114,7 @@ class FieldAliases:
     azimuth:   List[str] = ['azim', 'azimuth']
 
 
-class FileRecognizer:
+class FileRecognizer(PyCSAMTObject):
     """
     Infer file type from file path or content.
 

@@ -59,6 +59,30 @@ def store_from_view(view: MapView, *, data_dir: str = "[browsed]") -> dict:
 # ── view algebra ───────────────────────────────────────
 
 
+def _carried_metadata(*sources: dict | None) -> dict:
+    """Metadata to carry onto a derived MapData, later sources winning.
+
+    Drops ``n_stations``/``n_profiles`` so :class:`MapData.__post_init__`
+    recomputes them for the new station set, but preserves everything
+    else — notably ``sections`` (precomputed inversion curtains, see
+    :mod:`pycsamt.map.inversion`), which would otherwise silently
+    disappear whenever a view is filtered, masked, or merged.
+    """
+    merged: dict[str, Any] = {}
+    sections: dict[str, Any] = {}
+    for meta in sources:
+        for key, value in (meta or {}).items():
+            if key in ("n_stations", "n_profiles"):
+                continue
+            if key == "sections" and isinstance(value, dict):
+                sections.update(value)
+                continue
+            merged[key] = value
+    if sections:
+        merged["sections"] = sections
+    return merged
+
+
 def merge_views(old: MapView, new: MapView) -> MapView:
     """Append *new* into *old*; new stations win on ID collision."""
     by_id: dict[str, Any] = {}
@@ -76,8 +100,35 @@ def merge_views(old: MapView, new: MapView) -> MapView:
     edis = tuple(
         edi_by_id[sid] for sid in order if sid in edi_by_id
     )
-    data = MapData(sites=edis, stations=stations, profiles=())
+    metadata = _carried_metadata(old.data.metadata, new.data.metadata)
+    data = MapData(sites=edis, stations=stations, profiles=(), metadata=metadata)
     return MapView(data, theme=old.theme, backend=old.backend)
+
+
+def apply_settings(view, active_lines, masked):
+    """Restrict a view to active lines and drop masked station ids."""
+    view = restrict_to_lines(view, active_lines)
+    if masked:
+        view = exclude_stations(view, masked)
+    return view
+
+
+def exclude_stations(view: MapView, masked) -> MapView:
+    """Return a view with the given station ids removed."""
+    mset = {str(m) for m in (masked or [])}
+    if not mset:
+        return view
+    keep = [s for s in view.data.stations if s.id not in mset]
+    if len(keep) == len(view.data.stations):
+        return view
+    ids = {s.id for s in keep}
+    edis = tuple(
+        e for e in view.data.iter_edis()
+        if _station_id_from_edi(e) in ids
+    )
+    metadata = _carried_metadata(view.data.metadata)
+    data = MapData(sites=edis, stations=tuple(keep), profiles=(), metadata=metadata)
+    return MapView(data, theme=view.theme, backend=view.backend)
 
 
 def restrict_to_lines(
@@ -104,6 +155,7 @@ def restrict_to_lines(
         sites=edis,
         stations=tuple(keep),
         profiles=(),
+        metadata=_carried_metadata(view.data.metadata),
     )
     return MapView(data, theme=view.theme, backend=view.backend)
 
@@ -161,6 +213,28 @@ def reproject_view(view, mode, zone, hem, epsg):
     return MapView(data, theme=view.theme, backend=view.backend)
 
 
+def project_to_crs(lons, lats, mode, zone, hem, epsg):
+    """Convert geographic lon/lat → the display CRS (easting, northing).
+
+    Returns ``(east, north, epsg_code)`` as arrays, or ``(None, None,
+    code)`` for geographic mode / on failure.
+    """
+    code = _source_epsg(mode, zone, epsg, hem)
+    if not mode or mode == "geo" or code in (4326, None):
+        return None, None, code
+    try:
+        from pycsamt.map.overlays import CRSConfig, transform_xy
+
+        east, north = transform_xy(
+            np.asarray(lons, dtype=float),
+            np.asarray(lats, dtype=float),
+            crs=CRSConfig(source=4326, target=code),
+        )
+        return east, north, code
+    except Exception:
+        return None, None, code
+
+
 def _source_epsg(mode, zone, epsg, hem):
     if mode == "utm":
         try:
@@ -181,17 +255,19 @@ def figure_for(
     *,
     theme: str = "light",
     active_lines: list[str] | None = None,
+    masked: list[str] | None = None,
     fit: int = 0,
 ) -> Any:
     """Build the figure for *view_name* from GUI *controls*."""
     if view is None or view.n_stations == 0:
         return empty_figure(theme)
     c = controls or {}
-    view = reproject_view(
-        view, c.get("crs_mode"), c.get("utm_zone"),
-        c.get("utm_hem"), c.get("epsg"),
-    )
-    view = restrict_to_lines(view, active_lines)
+    # The basemap always uses the survey's geographic lon/lat. The CRS
+    # panel is a *display* conversion (station inspector + table), not a
+    # map reprojection — so we don't reproject the view here.
+    view = apply_settings(view, active_lines, masked)
+    if view.n_stations == 0:
+        return empty_figure(theme, "All stations are hidden or masked.")
     name = (view_name or "map").lower()
 
     if name == "map":
@@ -242,9 +318,15 @@ def figure_for(
             value_range=_pair(c.get("vmin"), c.get("vmax")),
             rho_range=_pair(c.get("rho_lo"), c.get("rho_hi")),
             log_color=c.get("scale", "log") == "log",
-            topography=bool(c.get("topography", False)),
-            show_terrain=bool(c.get("terrain", False)),
+            topography=bool(c.get("topography", True)),
+            show_terrain=bool(c.get("terrain", True)),
+            aspectmode=c.get("aspect", "data"),
+            x_unit=c.get("x_unit", "m"),
+            depth_unit=c.get("depth_unit", "m"),
+            smooth_sections=bool(c.get("smooth_sections", True)),
+            section_res=int(c.get("section_res", 100)),
             show_stations=bool(c.get("show_stations", False)),
+            station_labels=bool(c.get("station_labels", False)),
             station_symbol=c.get("station_symbol", "diamond"),
             station_size=int(c.get("station_size", 4)),
             station_color=c.get("station_color", "#1f2937"),

@@ -55,9 +55,10 @@ def _register_render_panel(app) -> None:
         Input(IDs.STORE_DATA, "data"),
         Input(IDs.STORE_LINES, "data"),
         Input(IDs.STORE_SELECTION, "data"),
+        Input(IDs.STORE_MASKED, "data"),
         prevent_initial_call=False,
     )
-    def render(store, lines, selection):
+    def render(store, lines, selection, masked):
         if not store or not store.get("station_records"):
             return [], [html.Div("No lines loaded.", className="mv-empty")]
 
@@ -65,6 +66,7 @@ def _register_render_panel(app) -> None:
         active = set((lines or {}).get("active", all_lines))
         colors = (lines or {}).get("colors") or _colors_for(all_lines)
         selected = (selection or {}).get("station_id")
+        masked_set = {str(m) for m in (masked or [])}
 
         pills = [
             html.Span(
@@ -93,7 +95,13 @@ def _register_render_panel(app) -> None:
             sid = str(rec.get("ID", ""))
             col = colors.get(line, "#6c7086")
             is_sel = sid == selected
+            is_masked = sid in masked_set
             meta = _row_meta(rec)
+            cls = "mv-sta-row"
+            if is_sel:
+                cls += " mv-sta-sel"
+            if is_masked:
+                cls += " mv-sta-masked"
             rows.append(html.Div(
                 [
                     html.Div(
@@ -101,13 +109,24 @@ def _register_render_panel(app) -> None:
                             html.Span(line, className="mv-sta-badge",
                                       style={"color": col}),
                             html.Span(sid, className="mv-sta-id"),
+                            html.Button(
+                                html.I(className=(
+                                    "bi bi-eye-slash" if is_masked
+                                    else "bi bi-eye"
+                                )),
+                                id={"type": "mv-mask", "index": sid},
+                                className="mv-mask-btn",
+                                n_clicks=0,
+                                title=("Unmask station" if is_masked
+                                       else "Mask (exclude) station"),
+                            ),
                         ],
                         className="mv-sta-top",
                     ),
                     html.Div(meta, className="mv-sta-meta"),
                 ],
                 id={"type": "mv-sta-row", "index": sid},
-                className="mv-sta-row" + (" mv-sta-sel" if is_sel else ""),
+                className=cls,
                 n_clicks=0,
                 style={"borderLeftColor": col},
             ))
@@ -221,32 +240,31 @@ def _register_inspector(app) -> None:
 
 
 def _coordinate_fields(rec, controls, field) -> list:
-    """Lat/Lon, plus easting/northing in the selected CRS when not geo."""
+    """Lat/Lon always, plus easting/northing in the selected display CRS."""
     lat, lon = rec.get("Latitude"), rec.get("Longitude")
-    mode = (controls or {}).get("crs_mode", "geo")
     base = [
         field("Latitude", _fmt_coord(lat, "°")),
         field("Longitude", _fmt_coord(lon, "°")),
     ]
-    if mode in (None, "geo"):
+    mode = (controls or {}).get("crs_mode", "geo")
+    if mode in (None, "geo") or lat is None or lon is None:
         return base
     try:
-        from pycsamt.app.mapview._render import _source_epsg
-        from pycsamt.map.overlays import CRSConfig, transform_xy
+        from pycsamt.app.mapview._render import project_to_crs
 
-        code = _source_epsg(mode, controls.get("utm_zone"),
-                            controls.get("epsg"), controls.get("utm_hem"))
-        lon_geo, lat_geo = transform_xy(
-            [float(lon)], [float(lat)],
-            crs=CRSConfig(source=code, target=4326),
+        east, north, code = project_to_crs(
+            [float(lon)], [float(lat)], mode,
+            (controls or {}).get("utm_zone"),
+            (controls or {}).get("utm_hem"),
+            (controls or {}).get("epsg"),
         )
-        return [
-            field(f"Easting (EPSG:{code})", _fmt_coord(lon, " m")),
-            field("Northing", _fmt_coord(lat, " m")),
-            field("Lon (geo)", _fmt_coord(float(lon_geo[0]), "°")),
-            field("Lat (geo)", _fmt_coord(float(lat_geo[0]), "°")),
+        if east is None:
+            return base
+        return base + [
+            field(f"Easting (EPSG:{code})", _fmt_coord(float(east[0]), " m")),
+            field("Northing", _fmt_coord(float(north[0]), " m")),
         ]
-    except (TypeError, ValueError, Exception):  # noqa: BLE001
+    except (TypeError, ValueError):
         return base
 
 
@@ -260,21 +278,59 @@ def _fmt_coord(value, suffix) -> str:
     return f"{v:,.1f}{suffix}"
 
 
+_BASE_COLS = ["ID", "Line", "Latitude", "Longitude", "Elevation", "Index"]
+
+
 def _register_table(app) -> None:
     @app.callback(
         Output("mv-station-table", "data"),
+        Output("mv-station-table", "columns"),
         Input(IDs.STORE_DATA, "data"),
         Input(IDs.STORE_LINES, "data"),
+        Input(IDs.STORE_CONTROLS, "data"),
+        Input(IDs.STORE_MASKED, "data"),
         prevent_initial_call=True,
     )
-    def fill_table(store, lines):
+    def fill_table(store, lines, controls, masked):
+        cols = [{"name": c, "id": c} for c in _BASE_COLS]
         if not store:
-            return []
+            return [], cols
         active = set((lines or {}).get("active", []))
-        records = store.get("station_records", [])
-        if active:
-            records = [
-                r for r in records
-                if (r.get("Line") or "line") in active
-            ]
-        return records
+        masked_set = {str(m) for m in (masked or [])}
+        records = [
+            dict(r) for r in store.get("station_records", [])
+            if (not active or (r.get("Line") or "line") in active)
+            and str(r.get("ID")) not in masked_set
+        ]
+        mode = (controls or {}).get("crs_mode", "geo")
+        if mode not in (None, "geo") and records:
+            records, cols = _add_projected_columns(records, controls, cols)
+        return records, cols
+
+
+def _add_projected_columns(records, controls, cols):
+    """Append Easting/Northing (display CRS) columns to the table."""
+    from pycsamt.app.mapview._render import project_to_crs
+
+    lons = [r.get("Longitude") for r in records]
+    lats = [r.get("Latitude") for r in records]
+    try:
+        safe_lon = [float(v) if v is not None else float("nan") for v in lons]
+        safe_lat = [float(v) if v is not None else float("nan") for v in lats]
+        east, north, code = project_to_crs(
+            safe_lon, safe_lat,
+            controls.get("crs_mode"), controls.get("utm_zone"),
+            controls.get("utm_hem"), controls.get("epsg"),
+        )
+    except (TypeError, ValueError):
+        return records, cols
+    if east is None:
+        return records, cols
+    for i, rec in enumerate(records):
+        rec[f"E ({code})"] = round(float(east[i]), 1)
+        rec["N"] = round(float(north[i]), 1)
+    cols = cols + [
+        {"name": f"E ({code})", "id": f"E ({code})"},
+        {"name": "N", "id": "N"},
+    ]
+    return records, cols

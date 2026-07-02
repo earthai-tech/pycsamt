@@ -54,30 +54,37 @@ def _register_rail(app) -> None:
 def _register_render(app) -> None:
     @app.callback(
         Output(IDs.CANVAS_GRAPH, "figure"),
+        Output(IDs.WELCOME, "style"),
         Input(IDs.STORE_DATA, "data"),
         Input(IDs.STORE_VIEW, "data"),
         Input(IDs.STORE_CONTROLS, "data"),
         Input(IDs.STORE_THEME, "data"),
         Input(IDs.STORE_LINES, "data"),
         Input(IDs.STORE_FIT, "data"),
+        Input(IDs.STORE_MASKED, "data"),
         State(IDs.SESSION_ID, "data"),
         prevent_initial_call=False,
     )
-    def render(store, view_name, controls, theme, lines, fit, session_id):
+    def render(store, view_name, controls, theme, lines, fit, masked,
+               session_id):
         theme = theme or "light"
         if not store or not store.get("n_stations"):
-            return empty_figure(theme)
+            return empty_figure(theme), {"display": "flex"}
         view = get_view(session_id)
         if view is None:
             return empty_figure(
                 theme, "Session data unavailable — reload lines."
-            )
+            ), {"display": "flex"}
         active = (lines or {}).get("active")
-        return figure_for(
-            view_name or "map",
-            view,
-            controls,
-            theme=theme,
-            active_lines=active,
-            fit=int(fit or 0),
+        return (
+            figure_for(
+                view_name or "map",
+                view,
+                controls,
+                theme=theme,
+                active_lines=active,
+                masked=masked,
+                fit=int(fit or 0),
+            ),
+            {"display": "none"},
         )

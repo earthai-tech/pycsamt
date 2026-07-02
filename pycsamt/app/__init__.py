@@ -8,6 +8,8 @@ Desktop (PySide6)::
 
     python -m pycsamt.app.desktop
     # or
+    pycsamt-desktop
+    # legacy alias
     pycsamt-gui
 
 Web (Dash)::

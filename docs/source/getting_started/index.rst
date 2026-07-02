@@ -47,6 +47,10 @@ If that works, pyCSAMT is installed, the EDI reader can see your data, the
 public API is available, and the processing pipeline can produce a first
 quality-control run.
 
+For a condensed end-to-end demonstration — processing, Occam2D inversion,
+geological interpretation, and AI-based inversion in a few code blocks —
+see :doc:`quickstart`.
+
 Recommended Reading Order
 -------------------------
 
@@ -103,6 +107,11 @@ What Each Page Covers
     :func:`pycsamt.api.read_edis`, station summaries, parser-error review,
     quality tables, confidence plots, the ``basic_qc`` pipeline preset, and
     CLI equivalents.
+
+:doc:`quickstart`
+    A condensed tour of the core v2 workflow: EDI processing, 2-D inversion
+    with Occam2D, geological interpretation and export, and AI-based 1-D
+    inversion — each in a short, copy-paste-ready code block.
 
 Choose Your Entry Point
 -----------------------
@@ -173,3 +182,4 @@ Once the getting-started workflow is working, continue with:
    data_formats
    configuration
    first_survey
+   quickstart

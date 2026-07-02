@@ -24,6 +24,7 @@ API reference
    seg
    tdem
    transformers
+   session
    site
    forward
    inversion

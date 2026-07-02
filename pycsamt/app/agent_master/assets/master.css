@@ -1190,6 +1190,277 @@ body {
   margin-top: 9px;
 }
 
+/* ── Claude-style thinking line ───────────────────────
+   No box: a quiet shimmering line showing the current
+   step, swapping in place as the agent advances.  The
+   full timeline (.am-tl above) appears on hover. */
+.am-msg-row--think {
+  padding-left: 42px;   /* avatar 32px + gap 10px: align with agent bubbles */
+}
+.am-think {
+  position: relative;
+  width: min(82%, 560px);
+  padding: 16px 0 4px;  /* headroom for the ghost label */
+}
+.am-think-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.am-think-glyph {
+  color: var(--blue);
+  font-size: 13px;
+  animation: am-think-pulse 1.6s var(--ease) infinite;
+}
+.am-think-glyph.error {
+  color: var(--red);
+  animation: none;
+}
+@keyframes am-think-pulse {
+  0%, 100% { opacity: .55; transform: scale(.92); }
+  50%      { opacity: 1;   transform: scale(1.08); }
+}
+.am-think-lbl {
+  font-size: 13.5px;
+  font-weight: 500;
+  background: linear-gradient(
+    90deg,
+    var(--sub1) 20%, var(--txt) 40%,
+    var(--txt) 60%, var(--sub1) 80%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation:
+    am-think-in .3s var(--ease),
+    am-think-shimmer 2.2s linear infinite;
+}
+@keyframes am-think-in {
+  from { opacity: 0; transform: translateY(5px); }
+}
+@keyframes am-think-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+.am-think-meta {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--ov0);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.am-think-ghost {
+  position: absolute;
+  top: 0;
+  left: 21px;
+  max-width: 80%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--sub1);
+  opacity: 0;
+  animation: am-think-ghost .9s var(--ease) forwards;
+  pointer-events: none;
+}
+@keyframes am-think-ghost {
+  0%   { opacity: .6; transform: translateY(7px); }
+  70%  { opacity: .3; }
+  100% { opacity: 0; transform: translateY(-3px); }
+}
+.am-think-track {
+  height: 2px;
+  margin-top: 8px;
+  border-radius: 2px;
+  background: var(--srf1);
+  overflow: hidden;
+}
+.am-think-track > i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--blue);
+  transition: width .45s var(--ease);
+}
+.am-think-track.indet > i {
+  width: 40%;
+  animation: am-bar-slide 1.4s var(--ease) infinite;
+}
+/* Floating full-timeline panel — opens upward (the
+   thinking line sits at the bottom of the chat). */
+.am-think-panel {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  min-width: 280px;
+  max-width: 420px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--bg-agent);
+  border: 1px solid var(--srf1);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .18);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition:
+    opacity .18s var(--ease),
+    transform .18s var(--ease),
+    visibility .18s;
+}
+.am-think:hover .am-think-panel {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+.am-think-panel-title {
+  margin-bottom: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ov0);
+}
+.am-think-panel-empty {
+  font-size: 12px;
+  color: var(--ov0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .am-think-glyph,
+  .am-think-ghost,
+  .am-think-track.indet > i { animation: none; }
+  .am-think-ghost { display: none; }
+  .am-think-lbl {
+    animation: none;
+    background: none;
+    color: var(--txt);
+  }
+}
+
+/* ── Survey data overview card ────────────────────── */
+.am-ov-card {
+  margin-top: 10px;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--srf1);
+  border-radius: 12px;
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--blue) 7%, transparent),
+      transparent 45%
+    ),
+    var(--bg-agent);
+}
+.am-ov-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--txt);
+}
+.am-ov-head > i { color: var(--blue); }
+.am-ov-scope {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ov0);
+}
+.am-ov-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.am-ov-tile {
+  padding: 10px 8px;
+  border: 1px solid var(--srf1);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--srf1) 34%, transparent);
+  text-align: center;
+}
+.am-ov-tile b {
+  display: block;
+  font-size: 15px;
+  color: var(--blue);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.am-ov-tile span {
+  font-size: 10px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--ov0);
+}
+.am-ov-table {
+  width: 100%;
+  margin-top: 12px;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.am-ov-table th {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--srf1);
+  text-align: left;
+  font-size: 10.5px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--ov0);
+  font-weight: 600;
+}
+.am-ov-table td {
+  padding: 6px 8px;
+  border-bottom: 1px dashed
+    color-mix(in srgb, var(--srf1) 60%, transparent);
+  color: var(--txt);
+}
+.am-ov-table tr:last-child td { border-bottom: 0; }
+.am-ov-table td:first-child { font-weight: 600; }
+.am-ov-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.am-ov-chip {
+  padding: 2px 9px;
+  border: 1px solid var(--srf1);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--sub1);
+  font-variant-numeric: tabular-nums;
+}
+.am-ov-chip.more {
+  color: var(--ov0);
+  border-style: dashed;
+}
+.am-ov-warn {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--yellow);
+}
+.am-ov-hint {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 12px;
+  padding-top: 9px;
+  border-top: 1px solid
+    color-mix(in srgb, var(--srf1) 60%, transparent);
+  font-size: 11.5px;
+  color: var(--ov0);
+}
+.am-ov-hint > i { color: var(--yellow); }
+@media (max-width: 640px) {
+  .am-ov-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* ── Figure card ──────────────────────────────────── */
 .am-fig-card {
   margin-top: 10px;

@@ -22,6 +22,7 @@ from ._core import (
     component_spec,
     ensure_map_data,
     normalize_component,
+    normalize_station_id,
     select_frequency,
     value_at_frequency_details,
 )
@@ -41,6 +42,7 @@ from .export import (
     write_image,
     write_json,
 )
+from .inversion import group_modem_stations, load_modem_lines
 from .loader import load_lines, resolve_line_groups
 from .overlays import (
     BASEMAP_STYLES,
@@ -73,10 +75,16 @@ from .station import (
 )
 from .topo import (
     apply_elevations,
+    export_elevations,
     fetch_elevations,
     parse_elevation_file,
 )
-from .view import MapView, open_app
+from .view import (
+    MapView,
+    launch_app,
+    launch_mapview,
+    open_app,
+)
 from .volume import (
     Map3D,
     VolumeMap,
@@ -119,13 +127,19 @@ __all__ = [
     "build_topography_overlay",
     "component_spec",
     "ensure_map_data",
+    "export_elevations",
     "export_figure",
     "fetch_elevations",
     "figure_to_dict",
+    "group_modem_stations",
     "interpolate_overlay_grid",
     "load_lines",
+    "load_modem_lines",
+    "launch_app",
+    "launch_mapview",
     "normalize_component",
     "normalize_epsg",
+    "normalize_station_id",
     "open_app",
     "parse_elevation_file",
     "plot_3d_map",

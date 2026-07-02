@@ -60,7 +60,17 @@ extensions = [
     "myst_parser",          # parse .md files (e.g. CHANGELOG, README)
     "sphinx_copybutton",    # copy-button on code blocks
     "sphinx_design",        # grid / tab / card directives
+    "sphinx_toggleprompt",  # show/hide >>> prompts on doctest blocks
 ]
+
+# -- sphinx-copybutton -----------------------------------------------------
+# Strip interpreter prompts when copying code (>>> , ... , $ ).
+copybutton_prompt_text = r">>> |\.\.\. |\$ "
+copybutton_prompt_is_regexp = True
+
+# -- sphinx-toggleprompt ---------------------------------------------------
+# Shift the toggle left so it does not overlap the copy button.
+toggleprompt_offset_right = 40
 
 templates_path    = ["_templates"]
 exclude_patterns  = ["_build", "Thumbs.db", ".DS_Store"]
@@ -127,15 +137,20 @@ html_theme = "pydata_sphinx_theme"
 
 html_theme_options = {
     # Logo
+    # Square symbol + HTML text: crisper than the wordmark lockup at navbar
+    # size, adapts to dark mode, and stays selectable/accessible.
     "logo": {
-        "image_light": "_static/pycsamt-v2-symbol-logo.svg",
-        "image_dark":  "_static/pycsamt-v2-symbol-logo.svg",
+        "image_light": "_static/logo/pycsamt-v2-symbol.svg",
+        "image_dark":  "_static/logo/pycsamt-v2-symbol.svg",
+        "text":        "pyCSAMT",
         "alt_text":    "pyCSAMT",
     },
-    # Navbar
-    "navbar_start": ["navbar-logo"],
+    # Navbar: version switcher sits next to the brand (numpy/pandas style);
+    # search + icon links + theme toggle stay inline at the far right so
+    # nothing wraps into a second header row.
+    "navbar_start": ["navbar-logo", "version-switcher"],
     "navbar_center": ["navbar-nav"],
-    "navbar_end": ["version-switcher", "navbar-icon-links", "theme-switcher"],
+    "navbar_end": ["navbar-icon-links", "theme-switcher"],
     "navbar_persistent": ["search-button"],
     "header_links_before_dropdown": 6,
     # Icon links (fill in real URLs when repo is public)
@@ -176,9 +191,15 @@ html_theme_options = {
 
 html_title            = f"pyCSAMT {version}"
 html_short_title      = "pyCSAMT"
-html_favicon          = "_static/pycsamt-v2-symbol.ico"
+html_favicon          = "_static/logo/pycsamt-v2-symbol.ico"
 html_static_path      = ["_static"]
-html_css_files        = ["custom.css"]
+# Static assets are organised by kind: _static/css/, _static/js/, _static/logo/
+# (paths below are relative to the _static output root).
+html_css_files        = ["css/custom.css", "css/pycsamt-home.css"]
+html_js_files         = [("js/pycsamt-home.js", {"defer": "defer"})]
+# The landing page is a full-width, hand-designed layout: no primary sidebar
+# (the secondary one is removed via file metadata in index.rst).
+html_sidebars         = {"index": []}
 html_show_sourcelink  = True
 html_show_sphinx      = False
 html_copy_source      = False

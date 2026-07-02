@@ -8,6 +8,7 @@ from typing import Optional, Union, Tuple, Any, Iterable
 import math
 import numpy as np
 
+from .api.property import PyCSAMTObject
 from .api.typing import ArrayLike
 from .log.logger import get_logger
 from .exceptions import LocationError
@@ -30,7 +31,7 @@ _Number = Union[float, int, str]
 
 __all__= ["BaseLoc", "Location", "UTMZone", "Bounds", "GeoPath"]
 
-class BaseLoc:
+class BaseLoc(PyCSAMTObject):
     """
     Base mixin for point-like location objects with lat/lon and
     UTM representations.
@@ -1306,7 +1307,7 @@ class Location(BaseLoc):
             ")"
         )
 
-class UTMZone:
+class UTMZone(PyCSAMTObject):
     r"""
     Lightweight UTM zone parser and formatter.
     
@@ -1413,7 +1414,7 @@ class UTMZone:
         return f"UTMZone({self.as_str()!r})"
 
 
-class Bounds:
+class Bounds(PyCSAMTObject):
     r"""
     Axis-aligned geographic bounding box.
     
@@ -1763,7 +1764,7 @@ class Bounds:
         a, b, c, d = self.to_tuple()
         return f"Bounds({a:.6f},{b:.6f},{c:.6f},{d:.6f})"
 
-class GeoPath:
+class GeoPath(PyCSAMTObject):
     r"""
     Lightweight polyline over geographic points.
     

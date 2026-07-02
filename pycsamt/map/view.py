@@ -37,7 +37,12 @@ from .profile import build_profile_map, build_pseudosection
 from .station import build_station_map
 from .volume import build_3d_map
 
-__all__ = ["MapView", "open_app"]
+__all__ = [
+    "MapView",
+    "launch_app",
+    "launch_mapview",
+    "open_app",
+]
 
 _VIEW_BUILDERS = {
     "station": "station",
@@ -96,6 +101,36 @@ class MapView:
         data = load_lines(lines, **load_kwargs)
         return cls(data, theme=theme, backend=backend)
 
+    @classmethod
+    def from_inversion_results(
+        cls,
+        folder: str | Path,
+        *,
+        known_stations: Any = None,
+        fetch_elevation: bool = True,
+        theme: str = "light",
+        backend: str = "plotly",
+        verbose: int = 0,
+    ) -> MapView:
+        """Build a view from a ModEM 3-D inversion result folder.
+
+        See :func:`pycsamt.map.inversion.load_modem_lines`. Pass
+        ``known_stations=existing_view.data.stations`` to geo-reference
+        and group ModEM stations using a previously-loaded EDI survey.
+        Pass ``fetch_elevation=False`` to skip the best-effort online
+        elevation lookup (e.g. offline use, or large surveys where the
+        extra round-trip isn't wanted).
+        """
+        from .inversion import load_modem_lines
+
+        data = load_modem_lines(
+            folder,
+            known_stations=known_stations,
+            fetch_elevation=fetch_elevation,
+            verbose=verbose,
+        )
+        return cls(data, theme=theme, backend=backend)
+
     # ── survey introspection ───────────────────────────
 
     @property
@@ -143,6 +178,25 @@ class MapView:
         from .topo import fetch_elevations
 
         return fetch_elevations(self.data, api_name=api_name)
+
+    def export_topography(
+        self,
+        path: str | Path,
+        *,
+        fmt: str | None = None,
+    ):
+        """Export this survey's station id/elevation/coordinates.
+
+        Useful for an EDI-sourced view: a ModEM (or Occam2D/MARE2DEM)
+        inversion result carries no real elevation of its own, so
+        exporting it here produces a small, portable file that can
+        be re-applied later — even in a session that never reloads
+        these EDIs — via the "Upload file" elevation source (see
+        :func:`pycsamt.map.topo.export_elevations`).
+        """
+        from .topo import export_elevations
+
+        return export_elevations(self.data, path, fmt=fmt)
 
     # ── view renderers ─────────────────────────────────
 
@@ -323,32 +377,4 @@ class MapView:
             f"geo={self.has_geo})"
         )
 
-
-def open_app(source: Any = None, **kwargs: Any) -> None:
-    """Launch the map-view platform, optionally seeded with *source*.
-
-    Parameters
-    ----------
-    source :
-        Any input accepted by :meth:`MapView.from_folder` /
-        :func:`pycsamt.map.load_lines`.  When ``None`` the platform
-        starts empty and the user loads data in the GUI.
-    **kwargs :
-        Forwarded to the platform ``launch`` (e.g. ``host``, ``port``,
-        ``open_browser``).
-    """
-    if source is None:
-        try:
-            from pycsamt.app.mapview import launch as _launch
-        except ImportError as exc:  # pragma: no cover - GUI extra
-            raise ImportError(
-                "The map-view platform requires the GUI "
-                "dependencies (dash, dash-bootstrap-components)."
-            ) from exc
-        _launch(**kwargs)
-        return
-    if isinstance(source, (str, Path)):
-        view = MapView.from_folder(source)
-    else:
-        view = MapView(load_lines(source))
-    view.launch(**kwargs)
+from ._app import launch_app, launch_mapview, open_app

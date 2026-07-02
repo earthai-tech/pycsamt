@@ -315,6 +315,11 @@ WORKFLOW_KEYWORDS: dict[str, list[str]] = {
         "check inversion",
         "rms", "misfit",
         "residual pt",
+        "evaluate the inversion",
+        "evaluate the result",
+        "evaluate the results",
+        "assess the inversion",
+        "assess the result",
     ],
     "modem": [
         "modem",
@@ -327,6 +332,11 @@ WORKFLOW_KEYWORDS: dict[str, list[str]] = {
         "startup", "pre-inversion",
         "pre inversion", "inversion prep",
         "prepare inversion",
+        "prepare the inversion",
+        "prepare an inversion",
+        "inversion preparation",
+        "set up the inversion",
+        "setup the inversion",
         "inversion data file",
         "inversion data",
         "data file for inversion",
@@ -381,6 +391,16 @@ WORKFLOW_KEYWORDS: dict[str, list[str]] = {
         "survey report",
         "create report",
         "make report",
+        # natural articled / adjectived phrasings
+        "generate a report",
+        "write a report",
+        "create a report",
+        "make a report",
+        "produce a report",
+        "reproducible report",
+        "pdf report",
+        "final report",
+        "full report",
     ],
     "denoise": [
         "denoise", "denoising",
@@ -536,6 +556,41 @@ _register_correction_workflows()
 
 # ── public API ──────────────────────────────────────────────────────────────────
 
+# Pipeline-stage families for compound-request detection. A request that
+# names stages from three or more distinct families ("run QC, prepare the
+# inversion, invert with AI and write a report") describes the *full*
+# pipeline — returning the first keyword that happens to match would
+# silently execute only one stage of it. Plot / tool / correction ids are
+# deliberately absent: they never make a request "compound".
+_STAGE_FAMILY: dict[str, str] = {
+    "qc": "qc",
+    "static_shift": "preprocess",
+    "denoise": "preprocess",
+    "rotation": "preprocess",
+    "freq_decimation": "preprocess",
+    "phase_analysis": "analysis",
+    "tipper": "analysis",
+    "sensitivity": "analysis",
+    "dimensionality": "analysis",
+    "pre_inversion": "prep",
+    "modem": "prep",
+    "ai_inversion": "inversion",
+    "inv2d": "inversion",
+    "inv3d": "inversion",
+    "pinn_inversion": "inversion",
+    "hybrid_inversion": "inversion",
+    "ensemble_inversion": "inversion",
+    "joint_inversion": "inversion",
+    "full_ai_workflow": "inversion",
+    "inversion_eval": "evaluate",
+    "comparison": "evaluate",
+    "report": "report",
+    "interpretation": "report",
+}
+
+_COMPOUND_MIN_FAMILIES = 3
+
+
 def classify_workflow(
     text: str,
     *,
@@ -543,7 +598,12 @@ def classify_workflow(
 ) -> str | None:
     """Classify free *text* into a workflow id via :data:`WORKFLOW_KEYWORDS`.
 
-    First-match-wins over the ordered keyword table (case-insensitive).
+    First-match-wins over the ordered keyword table (case-insensitive),
+    with one exception: a *compound* request that names pipeline stages
+    from :data:`_COMPOUND_MIN_FAMILIES` or more distinct families (QC,
+    preprocessing, inversion prep, inversion, evaluation, report, …)
+    classifies as ``"full"`` — the end-to-end pipeline — instead of the
+    first stage that happens to match.
 
     Parameters
     ----------
@@ -563,16 +623,31 @@ def classify_workflow(
     --------
     >>> classify_workflow("run a GCN 3D inversion")
     'inv3d'
+    >>> classify_workflow(
+    ...     "run quality control, prepare the inversion, run the AI "
+    ...     "inversion and generate a report")
+    'full'
     >>> classify_workflow("xyzzy", default="qc")
     'qc'
     >>> classify_workflow("xyzzy") is None
     True
     """
     t = (text or "").lower()
-    for wf, kws in WORKFLOW_KEYWORDS.items():
-        if any(kw in t for kw in kws):
-            return wf
-    return default
+    matched = [
+        wf for wf, kws in WORKFLOW_KEYWORDS.items()
+        if any(kw in t for kw in kws)
+    ]
+    if not matched:
+        return default
+    families = {
+        _STAGE_FAMILY[wf] for wf in matched if wf in _STAGE_FAMILY
+    }
+    if (
+        "full" not in matched
+        and len(families) >= _COMPOUND_MIN_FAMILIES
+    ):
+        return "full"
+    return matched[0]
 
 
 def normalise_workflow(workflow: str) -> str:

@@ -86,13 +86,19 @@ class VolumeMapOptions:
     surface_count: int = 12
     line_spacing: float = 1.0
     azimuth: float = 0.0
-    topography: bool = False
-    show_terrain: bool = False
+    topography: bool = True
+    show_terrain: bool = True
     terrain_opacity: float = 0.7
     show_stations: bool = False
     station_symbol: str = "diamond"
     station_size: int = 4
     station_color: str = "#1f2937"
+    station_labels: bool = False
+    aspectmode: str = "data"
+    x_unit: str = "m"
+    depth_unit: str = "m"
+    smooth_sections: bool = True
+    section_res: int = 100
     title: str = ""
 
 

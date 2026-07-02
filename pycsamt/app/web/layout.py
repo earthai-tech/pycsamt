@@ -70,6 +70,8 @@ class IDs:
     # Folder-browse (JS-driven) — separate from dcc.Upload
     FOLDER_UPLOAD_STORE = "folder-upload-store"
     BTN_BROWSE_FOLDER   = "btn-browse-folder"
+    LOAD_FOLDER_FILTER_WRAP = "load-folder-filter-wrap"
+    LOAD_FOLDER_FILTER = "load-folder-filter"
 
     # Station panel
     STATION_TABLE       = "station-table"
@@ -1180,6 +1182,34 @@ def _load_modal() -> dbc.Modal:
         ),
         dcc.Store(id="load-upload-selection", data=[]),
         html.Div(id="load-upload-file-manager", className="load-file-manager"),
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.Span(
+                            "Survey folders",
+                            className="load-folder-filter-title",
+                        ),
+                        html.Span(
+                            "Select one or many; empty loads all.",
+                            className="load-folder-filter-hint",
+                        ),
+                    ],
+                    className="load-folder-filter-head",
+                ),
+                dcc.Checklist(
+                    id=IDs.LOAD_FOLDER_FILTER,
+                    options=[],
+                    value=[],
+                    className="load-folder-filter-list",
+                    labelClassName="load-folder-filter-option",
+                    inputClassName="load-folder-filter-input",
+                ),
+            ],
+            id=IDs.LOAD_FOLDER_FILTER_WRAP,
+            className="load-folder-filter",
+            style={"display": "none"},
+        ),
         html.Div(id=IDs.UPLOAD_FILELIST, className="mt-1 text-muted small"),
     ], className="load-section load-choice-card")
 

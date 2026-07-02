@@ -54,6 +54,7 @@ from PySide6.QtWidgets import (
 )
 
 from pycsamt.app.desktop.controllers.app_controller import AppController
+from pycsamt.app.desktop.agent_master_bridge     import launch_agent_master
 from pycsamt.app.desktop.models.session            import SessionState
 from pycsamt.app.desktop.panels.log_panel          import LogPanel
 from pycsamt.app.desktop.panels.station_panel      import StationPanel
@@ -65,7 +66,6 @@ from pycsamt.app.desktop.widgets.station_detail    import StationDetailCard
 from pycsamt.app.desktop.widgets.survey_overview   import SurveyOverviewWidget
 from pycsamt.app.desktop.windows                   import (
     AdvancedToolsWindow,
-    AgentRunnerWindow,
     CorrectionWindow,
     ForwardModelWindow,
     InterpretationWindow,
@@ -233,7 +233,6 @@ class MainWindow(QMainWindow):
         self._map_win        = MapViewerWindow(parent=self)
         self._qc_win         = QCDashboardWindow(parent=self)
         self._correction_win = CorrectionWindow(parent=self)
-        self._agent_win      = AgentRunnerWindow(parent=self)
         self._advanced_win   = AdvancedToolsWindow(parent=self)
         self._tdem_win       = TDEMWindow(parent=self)
         self._pipeline_win   = PipelineWindow(parent=self)
@@ -408,9 +407,9 @@ class MainWindow(QMainWindow):
         act_tdem.triggered.connect(lambda: self._show_window(self._tdem_win))
         view_menu.addAction(act_tdem)
 
-        act_agents = QAction(_icon("agents"), "&Agent Runner", self)
+        act_agents = QAction(_icon("agents"), "&Agent Master", self)
         act_agents.setShortcut("Ctrl+Shift+A")
-        act_agents.triggered.connect(lambda: self._show_window(self._agent_win))
+        act_agents.triggered.connect(self._open_agent_master)
         view_menu.addAction(act_agents)
 
         act_adv = QAction(_icon("advanced-tools"), "&Advanced Tools", self)
@@ -666,8 +665,8 @@ class MainWindow(QMainWindow):
         _tb("pipeline",         "Pipeline",    "Open Processing Pipeline",
             lambda: self._show_window(self._pipeline_win))
         tb.addSeparator()
-        _tb("agents",           "Agents",      "Open Agent Runner",
-            lambda: self._show_window(self._agent_win))
+        _tb("agents",           "Agents",      "Open Agent Master",
+            self._open_agent_master)
 
         # ── Secondary-tools dropdown — sits directly next to Agents ──────────
         # One click opens the menu; items are grouped into three sections so
@@ -776,9 +775,6 @@ class MainWindow(QMainWindow):
 
         # Map window station pick → controller
         self._map_win.station_selected.connect(ctrl.select_station)
-
-        # Agent window needs controller reference
-        self._agent_win.set_app_controller(ctrl)
 
     # ── Data loading ──────────────────────────────────────────────────
 
@@ -890,11 +886,26 @@ class MainWindow(QMainWindow):
         win.raise_()
         win.activateWindow()
 
+    def _open_agent_master(self) -> None:
+        """Launch Agent Master in the user's default browser."""
+        try:
+            result = launch_agent_master(open_browser=True)
+        except Exception as exc:  # noqa: BLE001 - surface GUI errors
+            msg = f"Could not launch Agent Master: {exc}"
+            self._log(msg)
+            self.statusBar().showMessage(msg, 7000)
+            return
+
+        state = "Starting" if result.started else "Opening"
+        msg = f"{state} Agent Master at {result.url}"
+        self._log(msg)
+        self.statusBar().showMessage(msg, 6000)
+
     def _panel_windows(self) -> list:
         wins = []
         for attr in ("_profile_win", "_map_win", "_qc_win",
                      "_correction_win",
-                     "_agent_win", "_advanced_win", "_tdem_win",
+                     "_advanced_win", "_tdem_win",
                      "_pipeline_win", "_forward_win", "_inversion_win",
                      "_interp_win"):
             w = getattr(self, attr, None)
@@ -1026,7 +1037,6 @@ class MainWindow(QMainWindow):
             self._act_theme.setText(
                 "☀  Light" if self._session.theme == "dark" else "☾  Dark"
             )
-            self._agent_win.set_app_controller(self._controller)
             self._session.save()
             self._log("Preferences saved.")
 
@@ -1171,7 +1181,6 @@ class MainWindow(QMainWindow):
             "_map_win":        "Map",
             "_qc_win":         "QC",
             "_correction_win": "Correction",
-            "_agent_win":      "Agent",
             "_advanced_win":   "Advanced",
             "_tdem_win":       "TDEM",
             "_pipeline_win":   "Pipeline",

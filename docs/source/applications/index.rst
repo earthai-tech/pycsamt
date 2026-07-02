@@ -3,101 +3,70 @@
 Applications
 ============
 
-pyCSAMT v2 includes application interfaces for users who prefer an
-interactive environment over direct Python or command-line workflows.
-These applications sit on top of the same scientific packages documented
-elsewhere in the project: data loading, site management, quality control,
-forward modelling, inversion, interpretation, pipelines, and AI-assisted
-agents.
-
-.. note::
-
-   This section is a documentation stub. The desktop and web applications
-   are already present in :mod:`pycsamt.app`, but their user manuals will be
-   expanded after the core workflow documentation is stabilized.
+pyCSAMT includes three user-facing applications. They share the same
+scientific package, loaders, processing tools, and plotting conventions, but
+serve different working styles.
 
 Application Surfaces
 --------------------
 
 .. list-table::
    :header-rows: 1
-   :widths: 22 32 46
+   :widths: 24 34 42
 
-   * - Interface
-     - Entry point
-     - Purpose
-   * - Desktop application
-     - ``pycsamt-gui`` or ``python -m pycsamt.app.desktop``
-     - A PySide6 desktop workspace for survey loading, QC, maps, profiles,
-       corrections, forward modelling, inversion, interpretation, pipelines,
-       and agent-assisted tasks.
+   * - Application
+     - Best for
+     - Documentation area
+   * - Desktop GUI
+     - Local interactive survey review, processing, and plotting.
+     - :doc:`desktop/index`
    * - Web application
-     - ``python -m pycsamt.app.web``
-     - A Dash/Plotly browser interface that mirrors the main desktop
-       workflow areas for local or network-accessible interactive use.
+     - Browser-based workflows, dashboards, maps, and team demonstrations.
+     - :doc:`web/index`
+   * - Agent Master
+     - Conversational workflow delegation, guided automation, and report help.
+     - :doc:`agent_master/index`
 
-Install Application Dependencies
---------------------------------
+Install The App Extra
+---------------------
 
-The base pyCSAMT installation does not force GUI and web dependencies on
-all users. Install the application extra when you want to run either
-interface:
+The application surfaces use optional GUI and web dependencies:
 
 .. code-block:: bash
-   :linenos:
 
    pip install "pycsamt[app]"
 
-For local development from the source tree:
+For development from a source checkout:
 
 .. code-block:: bash
-   :linenos:
 
    pip install -e ".[app,dev]"
 
-Relationship To Other Documentation
------------------------------------
+Page Plan
+---------
 
-The applications should be read as interface layers, not separate
-scientific implementations. When documenting an application feature, link
-back to the underlying workflow documentation:
+Each application folder starts with the same documentation rhythm:
 
-.. list-table::
-   :header-rows: 1
-   :widths: 26 74
-
-   * - Application area
-     - Canonical documentation to reference
-   * - Data loading and survey context
-     - :doc:`../getting_started/data_formats`,
-       :doc:`../getting_started/first_survey`, :doc:`../cli/survey`
-   * - Quality control and processing
-     - :doc:`../user_guide/processing`, :doc:`../pipeline/steps`
-   * - Forward modelling
-     - :doc:`../cli/forward`, :doc:`../api/forward`
-   * - Inversion
-     - :doc:`../user_guide/inversion`, :doc:`../cli/invert`,
-       :doc:`../api/inversion`
-   * - Pipelines
-     - :doc:`../pipeline/index`, :doc:`../pipeline/cli_pipe`
-   * - AI-assisted workflows
-     - :doc:`../agents/index`, :doc:`../agents/agent_catalogue`
-
-Planned Pages
--------------
-
-The application documentation will eventually include:
-
-* installation and platform notes for GUI dependencies;
-* opening surveys and managing sessions;
-* map, profile, station, and QC panels;
-* correction, forward, inversion, interpretation, and pipeline windows;
-* agent panel usage and background-worker behavior;
+* installation and launch;
+* data loading and session behavior;
+* workspace or navigation guide;
+* core workflows;
 * export workflows and reproducibility notes;
-* deployment notes for the web application.
+* screenshots gallery placeholders;
+* troubleshooting.
+
+The screenshots will be added later under
+``docs/source/_static/applications/``.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
+
+   desktop/index
+   web/index
+   agent_master/index
+
+.. toctree::
+   :hidden:
 
    desktop
    web

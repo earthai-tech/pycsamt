@@ -136,7 +136,7 @@ def _station_values(
             tolerance=opts.frequency_tolerance,
         )
         df["_value"] = df["ID"].map(vals)
-        df["_label"] = "App. resistivity (Ohm.m)"
+        df["_label"] = "ρ (Ω·m)"
     elif overlay == "phase":
         freq = getattr(opts, "frequency", None) or 1.0
         vals = value_at_frequency(
@@ -147,7 +147,7 @@ def _station_values(
             tolerance=opts.frequency_tolerance,
         )
         df["_value"] = df["ID"].map(vals)
-        df["_label"] = "Phase (deg)"
+        df["_label"] = "φ (°)"
     elif overlay in {"depth", "skin_depth"}:
         freq = getattr(opts, "frequency", None) or 1.0
         vals = skin_depth_at_frequency(
@@ -157,7 +157,7 @@ def _station_values(
             tolerance=opts.frequency_tolerance,
         )
         df["_value"] = df["ID"].map(vals)
-        df["_label"] = "Skin depth (m)"
+        df["_label"] = "δ skin depth (m)"
     else:
         if opts.overlay in df:
             df["_value"] = df[opts.overlay]
@@ -211,7 +211,10 @@ def _geo_station_map(df, opts, colors, dark: bool):
                     cmin=_cmin(opts),
                     cmax=_cmax(opts),
                     colorbar=dict(
-                        title=_color_title(group, opts),
+                        title=dict(
+                            text=_color_title(group, opts),
+                            side="right",
+                        ),
                     ),
                 ),
                 textposition="top right",
@@ -394,7 +397,8 @@ def _profile_station_map(df, opts, colors):
                 showscale=True,
                 cmin=_cmin(opts),
                 cmax=_cmax(opts),
-                colorbar=dict(title=_color_title(df, opts)),
+                colorbar=dict(title=dict(text=_color_title(df, opts),
+                                         side="right")),
             ),
         )
     )
@@ -418,7 +422,7 @@ def _plot_values(values, opts):
 
 def _color_title(df, opts) -> str:
     label = str(df["_label"].iloc[0])
-    return f"log10 {label}" if opts.log_color else label
+    return f"log₁₀ {label}" if opts.log_color else label
 
 
 def _cmin(opts) -> float | None:

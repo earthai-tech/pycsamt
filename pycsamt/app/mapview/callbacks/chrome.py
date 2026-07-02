@@ -109,8 +109,12 @@ def _register_inspector(app) -> None:
 def _register_dock(app) -> None:
     app.clientside_callback(
         """
-        function(n) {
-            var open = (n || 0) % 2 === 1;
+        function(toggleClicks, closeClicks, currentStyle) {
+            var trig = window.dash_clientside.callback_context.triggered;
+            if (!trig.length) return window.dash_clientside.no_update;
+            var id = trig[0].prop_id.split('.')[0];
+            var isOpen = currentStyle && currentStyle.display === 'block';
+            var open = id === 'mv-dock-close' ? false : !isOpen;
             """ + _RESIZE + """
             return [
                 open ? {display:'block'} : {display:'none'},
@@ -121,5 +125,7 @@ def _register_dock(app) -> None:
         Output(IDs.DOCK_BODY, "style"),
         Output("mv-dock-chevron", "className"),
         Input(IDs.DOCK_TOGGLE, "n_clicks"),
+        Input(IDs.DOCK_CLOSE, "n_clicks"),
+        State(IDs.DOCK_BODY, "style"),
         prevent_initial_call=True,
     )

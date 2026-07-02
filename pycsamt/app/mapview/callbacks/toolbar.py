@@ -169,7 +169,8 @@ def _register_crs(app) -> None:
         except Exception:
             text = "Invalid CRS settings"
         note = (
-            " — coordinates are reprojected to lon/lat for the basemap."
+            " — station coordinates are shown in this system "
+            "in the inspector and table (the basemap stays lon/lat)."
             if mode != "geo" else ""
         )
         return html.Span([html.I(className="bi bi-info-circle me-1"),

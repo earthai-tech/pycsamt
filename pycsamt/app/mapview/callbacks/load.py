@@ -15,7 +15,7 @@ import shutil
 from pathlib import Path
 
 from dash import (
-    ALL, ctx, dcc, html, no_update,
+    ctx, html, no_update,
     clientside_callback, Input, Output, State,
 )
 
@@ -32,9 +32,7 @@ def register_load(app) -> None:
     _register_modal_toggle(app)
     _register_mode_buttons(app)
     _register_capture_selection(app)
-    _register_edit_selection(app)
-    _register_file_manager(app)
-    _register_drop_swap(app)
+    _register_line_filter(app)
     _register_preflight(app)
     _register_btn_state(app)
     _register_progress(app)
@@ -53,10 +51,11 @@ def _register_modal_toggle(app) -> None:
         Output(IDs.MODAL_TITLE, "children"),
         Output(IDs.MODE_HINT, "children"),
         Input(IDs.BTN_LOAD, "n_clicks"),
+        Input(IDs.WELCOME_CTA, "n_clicks"),
         Input(IDs.BTN_ADD_LINE, "n_clicks"),
         prevent_initial_call=True,
     )
-    def open_modal(_n_load, _n_add):
+    def open_modal(_n_load, _n_welcome, _n_add):
         append = ctx.triggered_id == IDs.BTN_ADD_LINE
         mode = _MODE_APPEND if append else _MODE_REPLACE
         return (
@@ -171,155 +170,114 @@ def _register_capture_selection(app) -> None:
         return []
 
 
-def _register_edit_selection(app) -> None:
-    @app.callback(
-        Output(IDs.UPLOAD_SELECTION, "data", allow_duplicate=True),
-        Input({"type": "mv-file-remove", "index": ALL}, "n_clicks"),
-        Input({"type": "mv-file-clear", "index": ALL}, "n_clicks"),
-        State(IDs.UPLOAD_SELECTION, "data"),
-        prevent_initial_call=True,
-    )
-    def edit(_rm, _clr, entries):
-        trig = ctx.triggered_id
-        value = ctx.triggered[0].get("value") if ctx.triggered else None
-        entries = list(entries or [])
-        if isinstance(trig, dict) and trig.get("type") == "mv-file-clear":
-            return [] if value else no_update
-        if isinstance(trig, dict) and trig.get("type") == "mv-file-remove":
-            if not value:
-                return no_update
-            return [e for e in entries if e.get("id") != trig.get("index")]
-        return no_update
-
-
-# ── file manager + preflight + summary ─────────────────
-
-
-def _register_file_manager(app) -> None:
-    @app.callback(
-        Output(IDs.FILE_MANAGER, "children"),
-        Input(IDs.UPLOAD_SELECTION, "data"),
-        prevent_initial_call=True,
-    )
-    def render_manager(entries):
-        entries = list(entries or [])
-        if not entries:
-            return ""
-        rows = []
-        for e in entries:
-            fname = e.get("filename") or e.get("original") or "file.edi"
-            ext = fname.rsplit(".", 1)[-1].upper() if "." in fname else "FILE"
-            rows.append(html.Div([
-                html.Span(ext, className="mv-file-ext"),
-                html.Span(fname, className="mv-file-name"),
-                html.Button(
-                    html.I(className="bi bi-trash"),
-                    id={"type": "mv-file-remove", "index": e.get("id")},
-                    className="mv-file-remove",
-                    n_clicks=0,
-                    title="Remove from import",
-                ),
-            ], className="mv-file-row"))
-        return html.Div([
-            html.Div([
-                html.Span(f"{len(entries)} file(s) selected",
-                          className="mv-file-head-title"),
-                html.Button(
-                    [html.I(className="bi bi-x-circle me-1"), "Clear"],
-                    id={"type": "mv-file-clear", "index": "all"},
-                    className="mv-file-clear",
-                    n_clicks=0,
-                ),
-            ], className="mv-file-head"),
-            html.Div(rows, className="mv-file-list"),
-        ])
+# ── detected-lines summary ─────────────────────────────
 
 
 def _infer_lines(names):
     counts = {}
     for name in names:
-        parts = [p for p in str(name).replace("\\", "/").split("/") if p]
-        if len(parts) >= 3:
-            line = parts[1]
-        elif len(parts) == 2:
-            line = parts[0]
-        else:
-            line = "flat files"
+        line = _line_from_path(name)
         counts[line] = counts.get(line, 0) + 1
     return counts
 
 
-def _register_preflight(app) -> None:
+def _line_from_path(name):
+    parts = [p for p in str(name).replace("\\", "/").split("/") if p]
+    if len(parts) >= 3:
+        return parts[1]
+    if len(parts) == 2:
+        return parts[0]
+    return "flat files"
+
+
+def _entry_line(entry):
+    name = entry.get("original") or entry.get("filename") or ""
+    return _line_from_path(name)
+
+
+def _filtered_entries(entries, selected_lines):
+    entries = list(entries or [])
+    selected = {str(v) for v in (selected_lines or []) if str(v).strip()}
+    if not selected:
+        return entries
+    return [entry for entry in entries if _entry_line(entry) in selected]
+
+
+def _register_line_filter(app) -> None:
     @app.callback(
-        Output(IDs.PREFLIGHT, "children"),
+        Output(IDs.LOAD_LINE_FILTER, "options"),
+        Output(IDs.LOAD_LINE_FILTER, "value"),
+        Output(IDs.LOAD_LINE_FILTER_WRAP, "style"),
+        Input(IDs.UPLOAD_SELECTION, "data"),
+        prevent_initial_call=True,
+    )
+    def populate(entries):
+        entries = list(entries or [])
+        if not entries:
+            return [], [], {"display": "none"}
+        names = [e.get("original") or e.get("filename") for e in entries]
+        counts = _infer_lines(names)
+        if len(counts) <= 1:
+            return [], [], {"display": "none"}
+        options = [
+            {
+                "label": f"{line} ({count} file{'s' if count != 1 else ''})",
+                "value": line,
+            }
+            for line, count in sorted(counts.items())
+        ]
+        return options, [opt["value"] for opt in options], {"display": "block"}
+
+
+def _register_preflight(app) -> None:
+    """Compact one-line summary only — the load panel stays focused;
+    per-site management lives in the Sites settings panel."""
+    @app.callback(
         Output(IDs.DETECTED_SUMMARY, "children"),
         Input(IDs.UPLOAD_SELECTION, "data"),
+        Input(IDs.LOAD_LINE_FILTER, "value"),
         Input(IDs.LOAD_MODE_STORE, "data"),
         prevent_initial_call=True,
     )
-    def preflight(entries, mode):
-        entries = list(entries or [])
+    def preflight(entries, selected_lines, mode):
+        entries = _filtered_entries(entries, selected_lines)
         if not entries:
-            return "", [html.I(className="bi bi-info-circle me-1"),
-                        "No data selected yet."]
+            return [html.I(className="bi bi-info-circle me-1"),
+                    "No files match the selected folders."]
         names = [e.get("original") or e.get("filename") for e in entries]
         line_counts = _infer_lines(names)
-        source = entries[0].get("source", "upload")
-        mode_lbl = "Add lines" if mode == _MODE_APPEND else "Replace survey"
-        stats = html.Div([
-            _stat(str(len(names)), "files"),
-            _stat(str(len(line_counts)), "line groups"),
-            _stat(mode_lbl, f"{source} source"),
-        ], className="mv-preflight-stats")
-        rows = html.Div([
-            html.Div([
-                html.Span(str(line), className="mv-pf-line"),
-                html.Span(f"{cnt} file{'s' if cnt != 1 else ''}",
-                          className="mv-pf-count"),
-            ], className="mv-pf-row")
-            for line, cnt in list(line_counts.items())[:8]
-        ], className="mv-pf-rows")
-        summary = [
+        mode_lbl = "add" if mode == _MODE_APPEND else "replace"
+        return [
             html.I(className="bi bi-check-circle-fill me-1"),
-            f"{len(names)} file(s) · {len(line_counts)} line group(s)",
+            f"{len(names)} file(s) · {len(line_counts)} line group(s) · "
+            f"{mode_lbl}",
         ]
-        return html.Div([stats, rows], className="mv-preflight-ready"), summary
-
-
-def _stat(value, label):
-    return html.Div([
-        html.Div(value, className="mv-stat-value"),
-        html.Div(label, className="mv-stat-label"),
-    ], className="mv-stat")
-
-
-def _register_drop_swap(app) -> None:
-    clientside_callback(
-        """
-        function(manager) {
-            var has = manager && !(Array.isArray(manager) && !manager.length)
-                      && manager !== '';
-            return [has ? {display:'none'} : {display:'block'},
-                    has ? 'Selected files' : 'Or drag & drop files / folders'];
-        }
-        """,
-        Output(IDs.DROP_WRAP, "style"),
-        Output(IDs.DROP_TITLE, "children"),
-        Input(IDs.FILE_MANAGER, "children"),
-        prevent_initial_call=True,
-    )
 
 
 def _register_btn_state(app) -> None:
     clientside_callback(
         """
-        function(entries) {
+        function(entries, selected) {
             var ok = entries && entries.some(function(e){ return e && e.content; });
+            if (ok && selected && selected.length) {
+                function lineOf(name) {
+                    var parts = String(name || '').replace(/\\\\/g, '/')
+                        .split('/').filter(Boolean);
+                    if (parts.length >= 3) return parts[1];
+                    if (parts.length === 2) return parts[0];
+                    return 'flat files';
+                }
+                ok = entries.some(function(e) {
+                    var name = (e && (e.original || e.filename)) || '';
+                    return e && e.content && selected.indexOf(lineOf(name)) >= 0;
+                });
+            }
             return !ok;
         }
         """,
         Output(IDs.BTN_LOAD_CONFIRM, "disabled"),
         Input(IDs.UPLOAD_SELECTION, "data"),
+        Input(IDs.LOAD_LINE_FILTER, "value"),
     )
 
 
@@ -384,15 +342,15 @@ def _register_confirm_load(app) -> None:
         Output(IDs.DATA_BADGE, "className", allow_duplicate=True),
         Input(IDs.BTN_LOAD_CONFIRM, "n_clicks"),
         State(IDs.UPLOAD_SELECTION, "data"),
+        State(IDs.LOAD_LINE_FILTER, "value"),
         State(IDs.SESSION_ID, "data"),
         State(IDs.LOAD_MODE_STORE, "data"),
         State(IDs.STORE_DATA, "data"),
         State(IDs.STORE_THEME, "data"),
         prevent_initial_call=True,
     )
-    def confirm(_n, entries, session_id, mode, existing, theme):
-        from pycsamt.map import MapView
-
+    def confirm(_n, entries, selected_lines, session_id, mode, existing, theme):
+        entries = _filtered_entries(entries, selected_lines)
         usable = [e for e in (entries or []) if e.get("content")]
         if not usable:
             return (no_update, "⚠ Choose a folder or drop files first.",
@@ -409,7 +367,7 @@ def _register_confirm_load(app) -> None:
             if not line_map:
                 return (no_update, "⚠ No recognised EDI/AVG/J files.",
                         no_update, no_update, no_update, no_update)
-            view = MapView.from_lines(line_map, theme=theme)
+            view = _build_view(line_map, theme)
             if view.n_stations == 0:
                 return (no_update, "⚠ No stations could be parsed.",
                         no_update, no_update, no_update, no_update)
@@ -430,6 +388,24 @@ def _register_confirm_load(app) -> None:
         finally:
             if tmpdir:
                 shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def _build_view(line_map, theme, *, attempts=4, delay=0.4):
+    """Build a MapView, retrying transient OS file locks (Windows AV
+    briefly locks freshly-written temp files, which surfaces as
+    PermissionError when many files are loaded at once)."""
+    import time
+
+    from pycsamt.map import MapView
+
+    last_exc = None
+    for _ in range(attempts):
+        try:
+            return MapView.from_lines(line_map, theme=theme)
+        except (PermissionError, OSError) as exc:
+            last_exc = exc
+            time.sleep(delay)
+    raise last_exc
 
 
 def _decode(usable, source):

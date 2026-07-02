@@ -915,9 +915,26 @@ def rpca_offdiag_denoise(
         sites, recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
     )
+    def _sta_name(ed) -> str:
+        """Stable station key that survives the copies made by
+        ``_apply_each(inplace=False)`` (object identity does not)."""
+        for attr in ("station", "name", "sta"):
+            v = getattr(ed, attr, None)
+            if v:
+                return str(v)
+        site = getattr(ed, "site", None)
+        if site is not None:
+            v = (
+                getattr(site, "name", None)
+                or getattr(site, "station", None)
+            )
+            if v:
+                return str(v)
+        return repr(ed)
+
     items = list(_iter_items(S))
     # build matrix M(station, freq) from log |Z_xy| median(|Z_xy|,|Z_yx|)
-    ST, FR, MAG = [], [], []
+    ST, FR, MAG, NAMES = [], [], [], []
     for i, ed in enumerate(items):
         Z, z, fr = _get_z_block(ed)
         if Z is None:
@@ -927,8 +944,10 @@ def rpca_offdiag_denoise(
             axis=1,
         )
         ST.append(i); FR.append(fr); MAG.append(np.log10(m + 1e-24))
+        NAMES.append(_sta_name(ed))
     if not ST:
         return S
+    row_of = {name: k for k, name in enumerate(NAMES)}
     G = np.unique(np.concatenate(FR))
     M = np.full((len(ST), G.size), np.nan, dtype=float)
     for row, (fr, lg) in enumerate(zip(FR, MAG)):
@@ -959,7 +978,9 @@ def rpca_offdiag_denoise(
     # push back magnitudes; keep phase if requested
     def _one(Si):
         ed = next(_iter_items(Si))
-        i = items.index(ed)
+        i = row_of.get(_sta_name(ed))
+        if i is None:
+            return Si
         Z, z, fr = _get_z_block(ed)
         if Z is None:
             return Si

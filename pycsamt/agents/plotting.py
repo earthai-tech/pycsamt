@@ -13,7 +13,11 @@ could not make before:
 * ``phase_psection`` — scalar phase pseudo-section
   (:func:`~pycsamt.emtools.inspect.pseudosection` with ``quantity="phi_*"``),
 * ``pt_psection``    — phase-tensor (Φ) ellipse pseudo-section
-  (:func:`~pycsamt.emtools.tensor.plot_phase_tensor_psection`).
+  (:func:`~pycsamt.emtools.tensor.plot_phase_tensor_psection`),
+* ``pt_strip``       — single-station phase-tensor ellipse strip vs period
+  (:func:`~pycsamt.emtools.tensor.plot_phase_tensor_strip`),
+* ``pt_strip_grid``  — phase-tensor ellipse strips tiled by survey line
+  (:func:`~pycsamt.emtools.tensor.plot_phase_tensor_strip_grid`).
 
 The agent never calls an LLM; it just turns a validated parameter set into
 matplotlib figures, returned under ``AgentResult.data["figures"]`` keyed by a
@@ -32,7 +36,7 @@ __all__ = ["PlotAgent", "PLOT_KINDS"]
 
 PLOT_KINDS = (
     "rhophi", "phase_psection", "pt_psection", "tipper", "pt_map",
-    "station_response", "strike_profile",
+    "station_response", "strike_profile", "pt_strip", "pt_strip_grid",
 )
 
 # Publication-quality rcParams — applied in a context so global state is
@@ -209,6 +213,8 @@ class PlotAgent:
             "pt_psection": self._pt_psection,
             "station_response": self._station_response,
             "strike_profile": self._strike_profile,
+            "pt_strip": self._pt_strip,
+            "pt_strip_grid": self._pt_strip_grid,
         }
         rc = _PUB_RC if pub else {}
         try:
@@ -450,3 +456,48 @@ class PlotAgent:
             **kw,
         )
         return fig, "Phase-tensor (Φ) pseudo-section"
+
+    def _pt_strip(self, plt, sites, stations, d, warnings):
+        from ..emtools.tensor import plot_phase_tensor_strip
+        from ..emtools._core import _iter_items, _name
+
+        station = stations[0] if stations else None
+        if station is None:
+            for i, ed in enumerate(_iter_items(sites)):
+                station = _name(ed, i)
+                break
+            warnings.append(
+                f"No station given; showing the first station ({station})."
+            )
+        pr = _period_range(d)
+        pub = _truthy(d.get("publication"))
+        figsize = (7.5, 1.8) if pub else (7.0, 1.6)
+        fig, ax = plt.subplots(figsize=figsize)
+        plot_phase_tensor_strip(
+            sites, station=station, period_range=pr, ax=ax, verbose=0,
+        )
+        return fig, f"Phase-tensor ellipse strip — {station}"
+
+    def _pt_strip_grid(self, plt, sites, stations, d, warnings):
+        from ..emtools.tensor import plot_phase_tensor_strip_grid
+        from ..emtools._core import _iter_items, _name
+        from ..site.lines import (
+            detect_lines_from_station_ids, pick_representative_stations,
+        )
+
+        names = [_name(ed, i) for i, ed in enumerate(_iter_items(sites))]
+        lines = detect_lines_from_station_ids(names)
+        if not lines:
+            raise ValueError("No survey lines detected for the strip grid.")
+
+        try:
+            per_line = max(1, int(d.get("per_line") or 4))
+        except (TypeError, ValueError):
+            per_line = 4
+
+        profiles = {
+            ln: pick_representative_stations(sts, per_line)
+            for ln, sts in lines.items()
+        }
+        fig = plot_phase_tensor_strip_grid(sites, profiles=profiles, verbose=0)
+        return fig, "Phase-tensor ellipse strip grid (by line)"

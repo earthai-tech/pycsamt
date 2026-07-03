@@ -105,6 +105,7 @@ class OccamBase:
             pass
 
         self.verbose: int = int(verbose)
+        self.path: Path | None = None
         name = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
         self.logger = logger if logger is not None else _get_logger(name)
 

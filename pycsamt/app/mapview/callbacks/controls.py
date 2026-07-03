@@ -15,6 +15,12 @@ _DEPTH_PRESETS = {
     IDs.BTN_DEPTH_500: (0, 500),
     IDs.BTN_DEPTH_1K: (0, 1000),
     IDs.BTN_DEPTH_2K: (0, 2000),
+    # 3-D toolbar duplicates of the same presets (kept in sync — one dict,
+    # one callback — see _register_depth_presets).
+    IDs.TB3D_DEPTH_FULL: (None, None),
+    IDs.TB3D_DEPTH_500: (0, 500),
+    IDs.TB3D_DEPTH_1K: (0, 1000),
+    IDs.TB3D_DEPTH_2K: (0, 2000),
 }
 
 _RHO_PRESETS = {
@@ -41,6 +47,10 @@ def _register_depth_presets(app) -> None:
         Input(IDs.BTN_DEPTH_500, "n_clicks"),
         Input(IDs.BTN_DEPTH_1K, "n_clicks"),
         Input(IDs.BTN_DEPTH_2K, "n_clicks"),
+        Input(IDs.TB3D_DEPTH_FULL, "n_clicks"),
+        Input(IDs.TB3D_DEPTH_500, "n_clicks"),
+        Input(IDs.TB3D_DEPTH_1K, "n_clicks"),
+        Input(IDs.TB3D_DEPTH_2K, "n_clicks"),
         prevent_initial_call=True,
     )
     def apply_preset(*_clicks):

@@ -821,6 +821,7 @@ def _write_iter_flex(obj: OccamBase, path: Path) -> Path:
     with path.open("w") as fh:
         fh.writelines(lines)
 
+    obj.path = path
     return path
 
 

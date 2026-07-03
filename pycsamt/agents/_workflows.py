@@ -81,6 +81,8 @@ WORKFLOW_DESCRIPTIONS: dict[str, str] = {
     "rhophi":             "Apparent-resistivity / phase sounding curves",
     "phase_psection":     "Scalar phase pseudo-section",
     "pt_psection":        "Phase-tensor (Phi) ellipse pseudo-section",
+    "pt_strip":           "Single-station phase-tensor ellipse strip vs period",
+    "pt_strip_grid":      "Phase-tensor ellipse strips tiled by survey line",
     "tipper_plot":        "Tipper components / induction-arrow plot",
     "phase_tensor_map":   "Geographic map of phase-tensor ellipses",
     "station_response":   "Per-station impedance response (Bode) curves",
@@ -106,6 +108,37 @@ WORKFLOW_DESCRIPTIONS: dict[str, str] = {
 WORKFLOW_KEYWORDS: dict[str, list[str]] = {
     # ── plotting tasks (highest priority: the phase-tensor pseudo-section
     # must win over the bare "phase tensor" → phase_analysis match) ──────────
+    # pt_strip_grid / pt_strip come before pt_psection: "phase tensor ellipse
+    # strip" would otherwise be swallowed by pt_psection's "phase tensor
+    # ellipse" substring (first-match-wins over dict insertion order).
+    "pt_strip_grid": [
+        "phase tensor strip grid",
+        "phase-tensor strip grid",
+        "pt strip grid",
+        "ellipse strip grid",
+        "phase tensor by line",
+        "phase tensor per line",
+        "phase tensor across lines",
+        "multi-profile phase tensor",
+        "multi profile phase tensor",
+        "phase tensor grid",
+        "strip grid",
+    ],
+    "pt_strip": [
+        "phase tensor strip",
+        "phase-tensor strip",
+        "pt strip",
+        "ellipse strip",
+        "ellipse timeseries",
+        "ellipse time series",
+        "phase tensor ellipse strip",
+        "phase tensor for one station",
+        "phase tensor for station",
+        "single station phase tensor",
+        "single-station phase tensor",
+        "ellipse vs period",
+        "ellipse versus period",
+    ],
     "pt_psection": [
         "phase tensor pseudosection",
         "phase tensor pseudo-section",

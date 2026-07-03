@@ -552,6 +552,7 @@ def plot_phase_tensor_psection(
     scale          = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.scale
     normalise_by   = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.normalise_by
     s1_ref: Optional[float] = None,
+    min_aspect     = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.min_aspect
     # ── colour ────────────────────────────────────────────────────────────
     c_by           = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.c_by
     cmap           = _UNSET,   # default: auto from c_by via resolve_cmap()
@@ -566,6 +567,7 @@ def plot_phase_tensor_psection(
     skew_threshold = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
     mark_3d        = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.mark_3d
     ref_ellipse    = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.show_ref
+    legend_fontsize: float = 8.0,
     # ── labels & layout ───────────────────────────────────────────────────
     title: str = "",
     xlabel: str = "",
@@ -622,6 +624,11 @@ def plot_phase_tensor_psection(
             (legacy behaviour).
     s1_ref : float or None
         Override the reference s1 for ``"cell"`` and ``"unity"`` modes.
+    min_aspect : float, default ``0.18``
+        Minimum height/width ratio enforced on every ellipse so that
+        near-degenerate (φ_min ≈ 0) cells stay visible as ovals instead
+        of collapsing into an invisible hairline.  Set to ``0`` to plot
+        raw ellipticity.
     c_by : str, default ``"skew"``
         Column name or derived quantity to map to fill colour.  Supported
         values: ``"skew"``, ``"beta"``, ``"alpha"``, ``"theta"``,
@@ -650,7 +657,10 @@ def plot_phase_tensor_psection(
         Draw a thicker border on ellipses where |β| > *skew_threshold*.
     ref_ellipse : bool, default ``True``
         Draw a labelled reference circle (φ_max = φ_min = s1_ref, β = 0°)
-        in the upper-right corner as a scale indicator.
+        in a reserved legend strip above the data, as a scale indicator.
+    legend_fontsize : float, default ``8.0``
+        Font size for the reference-circle label and the 1-D/2-D vs 3-D
+        annotation shown when *ref_ellipse* / *skew_threshold* are active.
     title, xlabel, ylabel : str
         Axes title and axis labels.  Sensible defaults are used when empty.
     tick_label_rotation : float, default ``45.0``
@@ -688,6 +698,7 @@ def plot_phase_tensor_psection(
     _es = PYCSAMT_STYLE.pt_ellipse
     if scale          is _UNSET: scale          = _es.scale
     if normalise_by   is _UNSET: normalise_by   = _es.normalise_by
+    if min_aspect     is _UNSET: min_aspect     = _es.min_aspect
     if c_by           is _UNSET: c_by           = _es.c_by
     if cmap           is _UNSET: cmap           = _es.copy(c_by=c_by).resolve_cmap()
     if clim_pct       is _UNSET: clim_pct       = _es.clim_pct
@@ -788,6 +799,8 @@ def plot_phase_tensor_psection(
         else:
             w = scale * s1i
             h = scale * s2i
+        if min_aspect > 0:
+            h = max(h, min_aspect * w)
 
         is_3d = (skew_threshold is not None and mark_3d
                  and np.isfinite(beti) and abs(beti) > skew_threshold)
@@ -811,10 +824,19 @@ def plot_phase_tensor_psection(
     y_hi   = float(np.nanmax(y_all)) if len(y_all) else 1.0
     margin = max(0.5 * cell_y, 0.02 * (y_hi - y_lo + 1e-9))
 
+    # Reserve a dedicated legend strip beyond the data so the reference
+    # ellipse and 1-D/2-D vs 3-D annotation never overlap real ellipses.
+    want_legend = bool(ref_ellipse) or (
+        skew_threshold is not None and c_by in ("skew", "beta")
+    )
+    legend_depth = 3.2 * cell_y if want_legend else 0.0
+
     if period_up:
-        ax.set_ylim(y_lo - margin, y_hi + margin)  # long period at top ✓
+        top_edge, top_sign = y_hi, 1.0
+        ax.set_ylim(y_lo - margin, y_hi + margin + legend_depth)
     else:
-        ax.set_ylim(y_hi + margin, y_lo - margin)  # short period at top
+        top_edge, top_sign = y_lo, -1.0
+        ax.set_ylim(y_hi + margin, y_lo - margin - legend_depth)
 
     PYCSAMT_STATION_RENDERING.apply(
         ax,
@@ -839,30 +861,50 @@ def plot_phase_tensor_psection(
     sm.set_array([])
     _attach_cbar(ax, sm, cbar_label)
 
-    # ── optional overlays ─────────────────────────────────────────────────
-    # Annotation boxes: 1-D/2-D vs 3-D text
-    if skew_threshold is not None and c_by in ("skew", "beta"):
-        ax.text(0.02, 0.98, f"|β| < {skew_threshold:.0f}° → 1-D/2-D",
-                transform=ax.transAxes, fontsize=7.5, va="top",
-                color="#2166ac",
-                bbox=dict(fc="white", ec="none", alpha=0.75))
-        ax.text(0.02, 0.91, f"|β| ≥ {skew_threshold:.0f}° → 3-D",
-                transform=ax.transAxes, fontsize=7.5, va="top",
-                color="#b2182b",
-                bbox=dict(fc="white", ec="none", alpha=0.75))
+    # ── optional overlays: dedicated legend strip beyond the data ─────────
+    if want_legend:
+        # boundary rule separating data from the legend strip
+        bound = top_edge + top_sign * margin
+        ax.plot([-0.6, n_st - 0.4], [bound, bound],
+                color="0.82", lw=0.7, zorder=1)
 
-    # Reference ellipse (circle with s1 = s1_ref = "45° 1-D response")
-    if ref_ellipse and ref is not None:
-        rx = n_st - 1 - 0.05 * (n_st - 1)   # near right edge
-        ry = y_hi - 1.5 * cell_y             # near top
-        rw = scale * cell_x                  # reference circle width
-        rh = scale * cell_y                  # reference circle height
-        ax.add_patch(Ellipse(
-            (rx, ry), width=rw, height=rh, angle=0.0,
-            fill=False, edgecolor="k", linewidth=0.8, zorder=5,
-        ))
-        ax.text(rx, ry - rh * 0.6,
-                f"φ = s₁_ref", ha="center", va="top", fontsize=6.5)
+        va_out = "bottom" if top_sign > 0 else "top"
+
+        if skew_threshold is not None and c_by in ("skew", "beta"):
+            y_near = bound + top_sign * 0.32 * legend_depth
+            y_far  = bound + top_sign * 0.75 * legend_depth
+            ax.text(-0.45, y_far, f"|β| < {skew_threshold:.0f}° → 1-D/2-D",
+                    fontsize=legend_fontsize, va="center", ha="left",
+                    color="#2166ac",
+                    bbox=dict(fc="white", ec="0.75", lw=0.5,
+                              alpha=0.9, pad=2.0))
+            ax.text(-0.45, y_near, f"|β| ≥ {skew_threshold:.0f}° → 3-D",
+                    fontsize=legend_fontsize, va="center", ha="left",
+                    color="#b2182b",
+                    bbox=dict(fc="white", ec="0.75", lw=0.5,
+                              alpha=0.9, pad=2.0))
+
+        # Reference ellipse: the "1-D" size/shape used to normalise every
+        # data ellipse (φ_max = φ_min = ref), drawn at full data size so
+        # it is directly comparable to the ellipses in the plot.
+        if ref_ellipse and ref is not None:
+            rx = n_st - 1
+            ry = bound + top_sign * 0.38 * legend_depth
+            rw = min(scale * cell_x, 0.99 * cell_x)
+            rh = max(min(scale * cell_y, 0.99 * cell_y), min_aspect * rw)
+            ax.add_patch(Ellipse(
+                (rx, ry), width=rw, height=rh, angle=0.0,
+                facecolor="0.9", edgecolor="k", linewidth=0.9, zorder=5,
+            ))
+            ref_label = {
+                "unity": "1-D reference\n(Φ=45°)",
+                "cell": "size reference\n(90th-pct Φ_max)",
+            }.get(normalise_by, "size reference")
+            ax.text(rx, ry + top_sign * (0.5 * rh + 0.10 * legend_depth),
+                    ref_label, ha="center", va=va_out,
+                    fontsize=legend_fontsize, linespacing=1.3,
+                    bbox=dict(fc="white", ec="0.75", lw=0.5,
+                              alpha=0.9, pad=2.0))
 
     return ax
 
@@ -1589,6 +1631,7 @@ def plot_phase_tensor_map(
     scale          = _UNSET,
     normalise_by   = _UNSET,
     s1_ref         = _UNSET,
+    min_aspect     = _UNSET,
     c_by           = _UNSET,
     cmap           = _UNSET,
     clim: Optional[Tuple[float, float]]            = None,
@@ -1655,6 +1698,10 @@ def plot_phase_tensor_map(
         :class:`~pycsamt.api.style.PhaseTensorEllipseStyle`.
     s1_ref : float or None
         Manual reference s1 used with ``normalise_by="cell"``/``"unity"``.
+    min_aspect : float or _UNSET
+        Minimum height/width ratio enforced on every ellipse; see
+        :func:`plot_phase_tensor_psection`. Default:
+        ``PYCSAMT_STYLE.pt_ellipse.min_aspect``.
     c_by : str
         Scalar quantity to map to fill colour.  Recognised values:
         ``"skew"``, ``"beta"``, ``"|skew|"``, ``"theta"``,
@@ -1770,6 +1817,7 @@ def plot_phase_tensor_map(
     def _sv(v, attr): return getattr(_es, attr) if v is _UNSET else v
     normalise_by   = _sv(normalise_by,   "normalise_by")
     s1_ref_        = _sv(s1_ref,         "s1_ref")
+    min_aspect_    = _sv(min_aspect,     "min_aspect")
     c_by           = _sv(c_by,           "c_by")
     cmap_          = _sv(cmap,           "cmap")
     clim_pct       = _sv(clim_pct,       "clim_pct")
@@ -1920,6 +1968,8 @@ def plot_phase_tensor_map(
         # clamp to 2×scale_ so outlier sites don't swamp the map
         w = min(2.0 * scale_ * (s1 / _s1ref), 2.0 * scale_)
         h = min(2.0 * scale_ * (s2 / _s1ref), 2.0 * scale_)
+        if min_aspect_ > 0:
+            h = max(h, min_aspect_ * w)
         cv = float(row.get(c_by, np.nan))
         fc = cm_obj(norm_c(cv)) if np.isfinite(cv) else (0.8, 0.8, 0.8, 0.8)
         # 3-D flagging
@@ -2816,5 +2866,531 @@ def plot_theta_rose_grid(
             fontsize=panel_title_fontsize,
             pad=8,
         )
+
+    return fig
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Per-station ellipse strip + multi-profile small-multiples grid
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _pt_size_reference(
+    s1_vals: np.ndarray,
+    normalise_by: str,
+    s1_ref: Optional[float],
+) -> Optional[float]:
+    """Resolve the ellipse-size reference for ``"cell"``/``"unity"``/``"abs"``.
+
+    Mirrors the sizing rule used by :func:`plot_phase_tensor_psection` so
+    that all phase-tensor ellipse views scale identically for a given
+    *normalise_by* / *s1_ref* combination.
+    """
+    if normalise_by == "cell":
+        if s1_ref is not None:
+            return max(float(s1_ref), 1e-9)
+        finite_s1 = s1_vals[np.isfinite(s1_vals)]
+        ref = float(np.nanpercentile(finite_s1, 90)) if len(finite_s1) else 1.0
+        return max(ref, 1e-9)
+    if normalise_by == "unity":
+        return max(float(s1_ref) if s1_ref is not None else 1.0, 1e-9)
+    return None  # "abs" — raw data units
+
+
+def plot_phase_tensor_strip(
+    sites: Any,
+    *,
+    # ── data selection ────────────────────────────────────────────────────
+    station: Optional[str] = None,
+    period_range: Optional[Tuple[float, float]] = None,
+    # ── ellipse sizing ────────────────────────────────────────────────────
+    scale          = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.scale
+    normalise_by   = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.normalise_by
+    s1_ref: Optional[float] = None,
+    min_aspect     = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.min_aspect
+    cells_per_decade: float = 7.0,
+    # ── colour ────────────────────────────────────────────────────────────
+    c_by           = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.c_by
+    cmap           = _UNSET,   # default: auto from c_by via resolve_cmap()
+    clim: Optional[Tuple[float, float]] = None,
+    clim_pct       = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.clim_pct
+    symmetric_clim = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.resolve_symmetric_clim()
+    # ── aesthetics ────────────────────────────────────────────────────────
+    edgecolor      = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.edgecolor
+    linewidth      = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.linewidth
+    alpha          = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.alpha
+    # ── overlays ─────────────────────────────────────────────────────────
+    skew_threshold = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
+    mark_3d        = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.mark_3d
+    # ── decorative phase scale (y-axis) ───────────────────────────────────
+    phase_ticks: Optional[Tuple[float, float, float]] = (0.0, 45.0, 90.0),
+    ylabel: str = "",
+    # ── station corner label ──────────────────────────────────────────────
+    station_label: bool = True,
+    station_label_fontsize: float = 8.0,
+    # ── labels & layout ───────────────────────────────────────────────────
+    title: str = "",
+    xlabel: str = "",
+    figsize: Tuple[float, float] = (6.0, 1.4),
+    show_colorbar: bool = True,
+    colorbar_label: Optional[str] = None,
+    # ── standard emtools ──────────────────────────────────────────────────
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    ax: Optional[plt.Axes] = None,
+) -> plt.Axes:
+    """Single-station phase-tensor ellipse strip vs period.
+
+    Draws one horizontal row of phase-tensor ellipses for a single
+    station, one ellipse per period, in the classic "ellipse timeseries"
+    style used e.g. by WinGLink / mtpy single-station PT plots.  The
+    y-axis carries no per-point data — it is a schematic 0°–90° phase
+    scale (*phase_ticks*) used only to calibrate ellipse size by eye; the
+    physical information (φ_max, φ_min, θ, fill colour) is identical to
+    :func:`plot_phase_tensor_psection`.
+
+    Combine several stations/profiles into the small-multiples layout
+    (columns = profiles, rows = stations, one shared colorbar) with
+    :func:`plot_phase_tensor_strip_grid`.
+
+    Parameters
+    ----------
+    sites : any
+        EDI paths, glob pattern, :class:`~pycsamt.site.base.Sites`, any
+        input accepted by :func:`~pycsamt.emtools.ensure_sites`, or a
+        pre-built :class:`pandas.DataFrame` from
+        :func:`build_phase_tensor_table` (already filtered to one
+        station — in that case *station* may be left ``None``).
+    station : str or None
+        Station to plot.  Required when *sites* resolves to more than
+        one station.
+    period_range : (T_min, T_max) in seconds or None
+        Restrict the period range plotted.
+    scale, normalise_by, s1_ref, min_aspect : see
+        :func:`plot_phase_tensor_psection`. Sizing controls;
+        ``normalise_by="unity"`` (φ=45° 1-D reference fills *scale* of the
+        row) makes *phase_ticks* an exact scale. *min_aspect* floors the
+        ellipse height so near-degenerate cells stay visible.
+    cells_per_decade : float, default ``7.0``
+        Visual ellipse pitch along the period axis, expressed as the
+        number of ellipse-widths per log10 decade.  Unlike
+        :func:`plot_phase_tensor_psection` (one ellipse per station
+        column), a period axis is typically sampled far more densely
+        than is useful for ellipse width — sizing each ellipse to its
+        *local* sample spacing would shrink it to an invisible sliver
+        wherever sampling is dense.  This value is independent of how
+        many periods were actually measured, so ellipses overlap
+        (by design — the classic single-station "ellipse timeseries"
+        look) rather than shrinking as sampling gets denser.
+    c_by, cmap, clim, clim_pct, symmetric_clim :
+        Fill-colour controls; see :func:`plot_phase_tensor_psection`.
+    edgecolor, linewidth, alpha : ellipse border/opacity controls.
+    skew_threshold, mark_3d : 3-D cell highlighting, see
+        :func:`plot_phase_tensor_psection`.
+    phase_ticks : (lo, mid, hi) or None, default ``(0.0, 45.0, 90.0)``
+        Tick values drawn on the schematic y-scale.  ``None`` hides the
+        y-axis entirely.
+    ylabel : str
+        Y-axis label; defaults to ``"Phase (°)"`` when *phase_ticks* is
+        not ``None``.
+    station_label : bool, default ``True``
+        Annotate the station name in the upper-left corner of the axes.
+    station_label_fontsize : float, default ``8.0``
+    title, xlabel : str
+        Axes title / x-label.  *xlabel* defaults to ``"Period (s)"``.
+    figsize : (float, float), default ``(6.0, 1.4)``
+        Figure size (ignored when *ax* is provided).
+    show_colorbar : bool, default ``True``
+        Attach a right-side colorbar.  Set ``False`` when composing a
+        grid with a single shared colorbar (see
+        :func:`plot_phase_tensor_strip_grid`).
+    colorbar_label : str or None
+        Override the automatic colorbar label derived from *c_by*.
+    recursive, on_dup, strict, verbose : see :func:`ensure_sites`.
+    ax : :class:`~matplotlib.axes.Axes` or None
+        If provided, draw into this axes and return it; otherwise create
+        a new figure.
+
+    Returns
+    -------
+    ax : :class:`~matplotlib.axes.Axes`
+
+    Examples
+    --------
+    >>> from pycsamt.emtools import plot_phase_tensor_strip
+    >>> ax = plot_phase_tensor_strip(sites, station="S1")
+
+    Fixed colour scale (for visual consistency across several calls):
+
+    >>> ax = plot_phase_tensor_strip(
+    ...     sites, station="S1", c_by="skew", clim=(-9.0, 9.0),
+    ... )
+
+    See Also
+    --------
+    plot_phase_tensor_strip_grid : Multi-station / multi-profile facet grid.
+    plot_phase_tensor_psection : Station × period pseudo-section.
+    """
+    if isinstance(sites, pd.DataFrame):
+        df = sites.copy()
+    else:
+        df = build_phase_tensor_table(
+            sites,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
+
+    # ── resolve visual style from PYCSAMT_STYLE.pt_ellipse ──────────────
+    _es = PYCSAMT_STYLE.pt_ellipse
+    if scale          is _UNSET: scale          = _es.scale
+    if normalise_by   is _UNSET: normalise_by   = _es.normalise_by
+    if min_aspect     is _UNSET: min_aspect     = _es.min_aspect
+    if c_by           is _UNSET: c_by           = _es.c_by
+    if cmap           is _UNSET: cmap           = _es.copy(c_by=c_by).resolve_cmap()
+    if clim_pct       is _UNSET: clim_pct       = _es.clim_pct
+    if symmetric_clim is _UNSET: symmetric_clim = _es.copy(c_by=c_by).resolve_symmetric_clim()
+    if edgecolor      is _UNSET: edgecolor      = _es.edgecolor
+    if linewidth      is _UNSET: linewidth      = _es.linewidth
+    if alpha          is _UNSET: alpha          = _es.alpha
+    if skew_threshold is _UNSET: skew_threshold = _es.skew_threshold
+    if mark_3d        is _UNSET: mark_3d        = _es.mark_3d
+
+    # ── data selection ────────────────────────────────────────────────────
+    if not df.empty and period_range is not None:
+        lo, hi = float(period_range[0]), float(period_range[1])
+        df = df[(df["period"] >= lo) & (df["period"] <= hi)]
+
+    if not df.empty:
+        stations_present = list(dict.fromkeys(df["station"].tolist()))
+        if station is not None:
+            df = df[df["station"] == station]
+        elif len(stations_present) > 1:
+            raise ValueError(
+                "plot_phase_tensor_strip() needs a single station; "
+                f"got {len(stations_present)} — pass station=... "
+                "(or use plot_phase_tensor_strip_grid for many stations)."
+            )
+        else:
+            station = stations_present[0] if stations_present else station
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+
+    if df.empty:
+        ax.text(0.5, 0.5, "no phase tensor data", ha="center", va="center",
+                transform=ax.transAxes)
+        return ax
+
+    df = df.sort_values("period")
+
+    # ── x-axis: log10(period); y-axis: single schematic row ──────────────
+    # cell_x is a *visual* pitch (ellipse-widths per decade), not the raw
+    # sample spacing — see `cells_per_decade` docstring for why.
+    x_all = np.log10(df["period"].to_numpy(float))
+    cell_x = 1.0 / max(cells_per_decade, 1e-6)
+    cell_y = 1.0
+
+    s1_vals = df["s1"].to_numpy(float)
+    ref = _pt_size_reference(s1_vals, normalise_by, s1_ref)
+
+    cvals, cbar_label = _resolve_cvals(df, c_by)
+    if colorbar_label:
+        cbar_label = colorbar_label
+    finite_c = cvals[np.isfinite(cvals)]
+
+    if clim is not None:
+        vmin, vmax = float(clim[0]), float(clim[1])
+    elif skew_threshold is not None and c_by in ("skew", "beta"):
+        vmin, vmax = -float(skew_threshold), float(skew_threshold)
+    else:
+        lo_pct, hi_pct = clim_pct
+        vmin = float(np.nanpercentile(finite_c, lo_pct)) if len(finite_c) else -1.0
+        vmax = float(np.nanpercentile(finite_c, hi_pct)) if len(finite_c) else  1.0
+        if symmetric_clim and c_by in _SYMMETRIC_C:
+            vlim = max(abs(vmin), abs(vmax))
+            vmin, vmax = -vlim, vlim
+
+    norm = Normalize(vmin=vmin, vmax=vmax)
+    cm   = plt.get_cmap(cmap)
+
+    s1_arr = df["s1"].to_numpy(float)
+    s2_arr = df["s2"].to_numpy(float)
+    th_arr = df["theta"].to_numpy(float)
+    skew_arr = df["skew"].to_numpy(float) if "skew" in df.columns else np.zeros(len(df))
+
+    for xi, s1i, s2i, thi, ci, beti in zip(
+            x_all, s1_arr, s2_arr, th_arr, cvals, skew_arr):
+        if not np.all(np.isfinite([xi, s1i, s2i, thi, ci])):
+            continue
+
+        if ref is not None:
+            w = min(scale * cell_x * s1i / ref, 0.99 * cell_x)
+            h = min(scale * cell_y * s2i / ref, 0.99 * cell_y)
+        else:
+            w = scale * s1i
+            h = scale * s2i
+        if min_aspect > 0:
+            h = max(h, min_aspect * w)
+
+        is_3d = (skew_threshold is not None and mark_3d
+                 and np.isfinite(beti) and abs(beti) > skew_threshold)
+        lw_i = linewidth * 3.0 if is_3d else linewidth
+
+        ax.add_patch(Ellipse(
+            (xi, 0.0),
+            width=w, height=h, angle=thi,
+            facecolor=cm(norm(ci)),
+            edgecolor=edgecolor,
+            linewidth=lw_i,
+            alpha=alpha,
+            zorder=3,
+        ))
+
+    # ── x-axis limits & ticks (log10 period, "10^n" labels) ───────────────
+    x_lo = float(np.nanmin(x_all)) if len(x_all) else 0.0
+    x_hi = float(np.nanmax(x_all)) if len(x_all) else 1.0
+    margin = max(0.5 * cell_x, 0.02 * (x_hi - x_lo + 1e-9))
+    ax.set_xlim(x_lo - margin, x_hi + margin)
+    x_int = np.arange(int(np.floor(x_lo)), int(np.ceil(x_hi)) + 1)
+    ax.set_xticks(x_int)
+    ax.set_xticklabels([f"$10^{{{int(v)}}}$" for v in x_int], fontsize=8)
+    ax.set_xlabel(xlabel or "Period (s)", fontsize=9)
+
+    # ── y-axis: schematic phase scale, no real data ───────────────────────
+    ax.set_ylim(-0.62, 0.62)
+    if phase_ticks is not None:
+        lo_t, mid_t, hi_t = phase_ticks
+        ax.set_yticks([-0.5, 0.0, 0.5])
+        ax.set_yticklabels([f"{lo_t:g}", f"{mid_t:g}", f"{hi_t:g}"], fontsize=8)
+        ax.set_ylabel(ylabel or "Phase (°)", fontsize=9)
+    else:
+        ax.set_yticks([])
+        ax.set_ylabel(ylabel, fontsize=9)
+
+    if title:
+        ax.set_title(title, fontsize=9)
+    if station_label and station:
+        ax.text(0.015, 0.92, str(station), transform=ax.transAxes,
+                fontsize=station_label_fontsize, fontweight="bold",
+                ha="left", va="top",
+                bbox=dict(fc="white", ec="none", alpha=0.65, pad=1.0))
+    ax.grid(True, ls=":", lw=0.4, color="#cccccc", alpha=0.7, zorder=0)
+
+    if show_colorbar:
+        sm = ScalarMappable(cmap=cm, norm=norm)
+        sm.set_array([])
+        _attach_cbar(ax, sm, cbar_label)
+
+    return ax
+
+
+def plot_phase_tensor_strip_grid(
+    sites: Any,
+    profiles: Dict[str, List[str]],
+    *,
+    period_range: Optional[Tuple[float, float]] = None,
+    scale          = _UNSET,
+    normalise_by   = _UNSET,
+    s1_ref: Optional[float] = None,
+    min_aspect     = _UNSET,
+    cells_per_decade: float = 7.0,
+    c_by           = _UNSET,
+    cmap           = _UNSET,
+    clim: Optional[Tuple[float, float]] = None,
+    clim_pct       = _UNSET,
+    symmetric_clim = _UNSET,
+    edgecolor      = _UNSET,
+    linewidth      = _UNSET,
+    alpha          = _UNSET,
+    skew_threshold = _UNSET,
+    mark_3d        = _UNSET,
+    phase_ticks: Optional[Tuple[float, float, float]] = (0.0, 45.0, 90.0),
+    col_titles: Optional[Dict[str, str]] = None,
+    xlabel: str = "Period (s)",
+    suptitle: str = "",
+    colorbar_label: Optional[str] = None,
+    panel_size: Tuple[float, float] = (4.4, 1.05),
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    axes: Optional[Any] = None,
+) -> plt.Figure:
+    """Phase-tensor ellipse strips for several stations, grouped by profile.
+
+    Reproduces the classic multi-panel figure — one
+    :func:`plot_phase_tensor_strip` row per selected station, tiled in a
+    grid where each *column* is a profile/line and each *row* is one of
+    the stations picked for that profile — with a **single shared
+    colorbar** for the whole figure (so fill colours are comparable
+    across every panel).
+
+    Parameters
+    ----------
+    sites : any
+        Input accepted by :func:`~pycsamt.emtools._core.ensure_sites`
+        covering every station referenced in *profiles*.
+    profiles : dict[str, list[str]]
+        Mapping ``{profile_label: [station, ...]}``, e.g.::
+
+            {"Profile L1": ["S1", "S15", "S30", "S45"],
+             "Profile L3": ["S1", "S4", "S7", "S11"]}
+
+        Each list becomes one column; rows are aligned by position, not
+        by station identity (profiles may list a different number of
+        stations — empty cells are left blank).
+    period_range : (T_min, T_max) or None
+        Restrict the period range plotted in every panel.
+    scale, normalise_by, s1_ref, min_aspect, cells_per_decade, c_by, cmap,
+    clim, clim_pct, symmetric_clim, edgecolor, linewidth, alpha,
+    skew_threshold, mark_3d :
+        Forwarded to every :func:`plot_phase_tensor_strip` call; see its
+        docstring (and :func:`plot_phase_tensor_psection`) for details.
+        When *clim* is ``None`` it is derived once from the pooled data
+        of every listed station, so all panels share one colour scale.
+    phase_ticks : (lo, mid, hi) or None, default ``(0.0, 45.0, 90.0)``
+        Schematic y-scale ticks drawn on every panel.
+    col_titles : dict[str, str] or None
+        Override the column title text; defaults to the *profiles* keys.
+    xlabel : str, default ``"Period (s)"``
+        Shown once under the bottom-most panel of each column.
+    suptitle : str
+        Figure-level title.
+    colorbar_label : str or None
+        Override the automatic colorbar label derived from *c_by*.
+    panel_size : (width, height), default ``(4.4, 1.05)``
+        Per-panel size in inches; the figure size is
+        ``(n_cols * width, n_rows * height)``.
+    recursive, on_dup, strict, verbose : see :func:`ensure_sites`.
+    axes : 2-D array of :class:`~matplotlib.axes.Axes` or None
+        Pre-existing ``(n_rows, n_cols)`` axes grid to draw into
+        (``n_rows = max(len(v) for v in profiles.values())``,
+        ``n_cols = len(profiles)``).  A new figure is created when
+        ``None``.
+
+    Returns
+    -------
+    fig : :class:`~matplotlib.figure.Figure`
+
+    Examples
+    --------
+    >>> from pycsamt.emtools import plot_phase_tensor_strip_grid
+    >>> fig = plot_phase_tensor_strip_grid(
+    ...     sites,
+    ...     profiles={
+    ...         "Profile L1": ["S1", "S15", "S30", "S45"],
+    ...         "Profile L3": ["S1", "S4", "S7", "S11"],
+    ...     },
+    ...     c_by="skew", cmap="RdBu_r",
+    ... )
+
+    See Also
+    --------
+    plot_phase_tensor_strip : Single-station ellipse strip (one panel).
+    plot_phase_tensor_psection : Station × period pseudo-section.
+    """
+    # ── resolve visual style from PYCSAMT_STYLE.pt_ellipse ──────────────
+    _es = PYCSAMT_STYLE.pt_ellipse
+    if scale          is _UNSET: scale          = _es.scale
+    if normalise_by   is _UNSET: normalise_by   = _es.normalise_by
+    if min_aspect     is _UNSET: min_aspect     = _es.min_aspect
+    if c_by           is _UNSET: c_by           = _es.c_by
+    if cmap           is _UNSET: cmap           = _es.copy(c_by=c_by).resolve_cmap()
+    if clim_pct       is _UNSET: clim_pct       = _es.clim_pct
+    if symmetric_clim is _UNSET: symmetric_clim = _es.copy(c_by=c_by).resolve_symmetric_clim()
+    if edgecolor      is _UNSET: edgecolor      = _es.edgecolor
+    if linewidth      is _UNSET: linewidth      = _es.linewidth
+    if alpha          is _UNSET: alpha          = _es.alpha
+    if skew_threshold is _UNSET: skew_threshold = _es.skew_threshold
+    if mark_3d        is _UNSET: mark_3d        = _es.mark_3d
+
+    all_stations = list(dict.fromkeys(
+        st for st_list in profiles.values() for st in st_list
+    ))
+    df_all = build_phase_tensor_table(
+        sites, recursive=recursive, on_dup=on_dup, strict=strict, verbose=verbose,
+    )
+    if not df_all.empty:
+        df_all = df_all[df_all["station"].isin(all_stations)]
+        if period_range is not None:
+            lo, hi = float(period_range[0]), float(period_range[1])
+            df_all = df_all[(df_all["period"] >= lo) & (df_all["period"] <= hi)]
+
+    # ── shared colour scale across every panel ────────────────────────────
+    if clim is not None:
+        clim_shared = clim
+    elif not df_all.empty:
+        cvals_all, _ = _resolve_cvals(df_all, c_by)
+        finite_all = cvals_all[np.isfinite(cvals_all)]
+        if skew_threshold is not None and c_by in ("skew", "beta"):
+            clim_shared = (-float(skew_threshold), float(skew_threshold))
+        else:
+            lo_pct, hi_pct = clim_pct
+            vmin = float(np.nanpercentile(finite_all, lo_pct)) if len(finite_all) else -1.0
+            vmax = float(np.nanpercentile(finite_all, hi_pct)) if len(finite_all) else  1.0
+            if symmetric_clim and c_by in _SYMMETRIC_C:
+                vlim = max(abs(vmin), abs(vmax))
+                vmin, vmax = -vlim, vlim
+            clim_shared = (vmin, vmax)
+    else:
+        clim_shared = (-1.0, 1.0)
+
+    n_cols = len(profiles)
+    n_rows = max((len(v) for v in profiles.values()), default=1)
+
+    if axes is None:
+        fig, axes = plt.subplots(
+            n_rows, n_cols, squeeze=False, sharex="col",
+            figsize=(panel_size[0] * n_cols, panel_size[1] * n_rows),
+            constrained_layout=True,
+        )
+    else:
+        axes = np.atleast_2d(axes)
+        fig = axes[0, 0].figure
+
+    col_titles = col_titles or {}
+    _, cbar_label = _resolve_cvals(df_all, c_by) if not df_all.empty else (None, c_by)
+    if colorbar_label:
+        cbar_label = colorbar_label
+
+    for j, (prof_name, st_list) in enumerate(profiles.items()):
+        for i in range(n_rows):
+            ax = axes[i, j]
+            if i >= len(st_list):
+                ax.axis("off")
+                continue
+            st = st_list[i]
+            plot_phase_tensor_strip(
+                df_all,
+                station=st,
+                scale=scale, normalise_by=normalise_by, s1_ref=s1_ref,
+                min_aspect=min_aspect, cells_per_decade=cells_per_decade,
+                c_by=c_by, cmap=cmap, clim=clim_shared,
+                clim_pct=clim_pct, symmetric_clim=symmetric_clim,
+                edgecolor=edgecolor, linewidth=linewidth, alpha=alpha,
+                skew_threshold=skew_threshold, mark_3d=mark_3d,
+                phase_ticks=phase_ticks,
+                show_colorbar=False,
+                xlabel=xlabel if i == len(st_list) - 1 else "",
+                ax=ax,
+            )
+            if i != len(st_list) - 1:
+                ax.tick_params(labelbottom=False)
+                ax.set_xlabel("")
+        axes[0, j].set_title(col_titles.get(prof_name, prof_name), fontsize=10)
+
+    cm = plt.get_cmap(cmap)
+    norm = Normalize(vmin=clim_shared[0], vmax=clim_shared[1])
+    sm = ScalarMappable(cmap=cm, norm=norm)
+    sm.set_array([])
+    cb = fig.colorbar(sm, ax=axes, shrink=0.9, pad=0.015, aspect=30)
+    cb.set_label(cbar_label, fontsize=9)
+    cb.ax.tick_params(labelsize=8)
+
+    if suptitle:
+        fig.suptitle(suptitle, fontsize=11)
 
     return fig

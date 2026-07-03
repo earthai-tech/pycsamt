@@ -58,12 +58,14 @@ _DATALESS_KINDS = ("layered_model",)
 # Plot bundles offered by the batch_export tool. Values are PlotAgent kinds.
 _EXPORT_BUNDLES: dict[str, tuple[str, ...]] = {
     "overview":     ("rhophi", "phase_psection", "pt_psection"),
-    "phase_tensor": ("pt_psection", "pt_map"),
-    "all":          ("rhophi", "phase_psection", "pt_psection", "pt_map"),
+    "phase_tensor": ("pt_psection", "pt_map", "pt_strip_grid"),
+    "all":          ("rhophi", "phase_psection", "pt_psection", "pt_map",
+                      "pt_strip_grid"),
     "rhophi":       ("rhophi",),
     "phase_psection": ("phase_psection",),
     "pt_psection":  ("pt_psection",),
     "pt_map":       ("pt_map",),
+    "pt_strip_grid": ("pt_strip_grid",),
 }
 
 

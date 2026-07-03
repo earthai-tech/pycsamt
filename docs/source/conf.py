@@ -152,7 +152,7 @@ html_theme_options = {
     "navbar_center": ["navbar-nav"],
     "navbar_end": ["navbar-icon-links", "theme-switcher"],
     "navbar_persistent": ["search-button"],
-    "header_links_before_dropdown": 6,
+    "header_links_before_dropdown": 7,
     # Icon links (fill in real URLs when repo is public)
     "icon_links": [
         {
@@ -170,9 +170,11 @@ html_theme_options = {
     "show_toc_level": 2,
     "secondary_sidebar_items": ["page-toc", "edit-this-page"],
     "primary_sidebar_end": [],
-    # Code highlighting
-    "pygments_light_style": "tango",
-    "pygments_dark_style":  "monokai",
+    # Code highlighting — NOTE: pydata-sphinx-theme spells these
+    # "pygment_*" (no "s"); the "pygments_*" spelling is ignored and
+    # dark mode falls back to black-on-dark unreadable tokens.
+    "pygment_light_style": "tango",
+    "pygment_dark_style":  "monokai",
     # Footer
     "footer_start": ["copyright"],
     "footer_end":   ["sphinx-version", "theme-version"],
@@ -196,7 +198,10 @@ html_static_path      = ["_static"]
 # Static assets are organised by kind: _static/css/, _static/js/, _static/logo/
 # (paths below are relative to the _static output root).
 html_css_files        = ["css/custom.css", "css/pycsamt-home.css"]
-html_js_files         = [("js/pycsamt-home.js", {"defer": "defer"})]
+html_js_files         = [
+    ("js/pycsamt-home.js", {"defer": "defer"}),
+    ("js/mega-menu.js",    {"defer": "defer"}),
+]
 # The landing page is a full-width, hand-designed layout: no primary sidebar
 # (the secondary one is removed via file metadata in index.rst).
 html_sidebars         = {"index": []}

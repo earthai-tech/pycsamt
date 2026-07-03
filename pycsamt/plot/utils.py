@@ -5,7 +5,7 @@
 pycsamt.plot.utils
 ==================
 Generic 2-D pseudosection plotter used by emtools functions
-(plot_skew_2d, plot_sensitivity_depth_section, …).
+(plot_sensitivity_depth_section, …).
 """
 from __future__ import annotations
 

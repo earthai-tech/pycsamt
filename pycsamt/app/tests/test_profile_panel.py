@@ -37,7 +37,7 @@ def test_has_tab_widget(panel):
 
 
 def test_tab_count(panel):
-    assert panel._tabs.count() == 6
+    assert panel._tabs.count() == 7
 
 
 def test_tab_labels(panel):
@@ -46,6 +46,7 @@ def test_tab_labels(panel):
     assert "Pseudosection ρₐ" in labels
     assert "Tipper" in labels
     assert "Phase Tensor" in labels
+    assert "PT Strip" in labels
     assert "2D Section" in labels
 
 
@@ -69,6 +70,10 @@ def test_tipper_canvas_exists(panel):
 
 def test_phase_tensor_canvas_exists(panel):
     assert panel._canvas_pt is not None
+
+
+def test_phase_tensor_strip_canvas_exists(panel):
+    assert panel._canvas_pt_strip is not None
 
 
 # ── PlotController linkage ────────────────────────────────────────────────
@@ -116,6 +121,10 @@ def test_redraw_phase_tensor_does_not_raise(panel):
     panel._redraw_phase_tensor()
 
 
+def test_redraw_phase_tensor_strip_does_not_raise(panel):
+    panel._redraw_phase_tensor_strip()
+
+
 # ── Freq range signal ─────────────────────────────────────────────────────
 
 def test_freq_range_change_updates_controller(panel):
@@ -130,6 +139,6 @@ def test_freq_range_change_updates_controller(panel):
 # ── Tab switching ─────────────────────────────────────────────────────────
 
 def test_tab_switch_does_not_raise(panel):
-    for i in range(5):
+    for i in range(6):
         panel._tabs.setCurrentIndex(i)
         panel._on_tab_changed(i)

@@ -617,6 +617,14 @@ class PhaseTensorEllipseStyle:
     s1_ref : float or None
         Manual reference s1.  Overrides the automatic reference
         computed from the data under ``"cell"`` and ``"unity"`` modes.
+    min_aspect : float, default ``0.18``
+        Minimum height/width ratio enforced on every drawn ellipse.
+        Real (noisy) EDI data frequently has φ_min ≈ 0 at some
+        stations/periods, which collapses the ellipse to a near-invisible
+        sliver.  Flooring the height at ``min_aspect × width`` keeps every
+        cell visible as a proper oval while leaving φ_max, θ and fill
+        colour untouched.  Set to ``0`` to recover the raw (possibly
+        degenerate) ellipticity.
     c_by : str, default ``"skew"``
         Quantity mapped to fill colour.  Supported values:
         ``"skew"``, ``"beta"``, ``"|skew|"``, ``"|beta|"``,
@@ -687,6 +695,7 @@ class PhaseTensorEllipseStyle:
     normalise_by:  str             = "cell"
     scale:         float           = 0.85
     s1_ref:        Optional[float] = None
+    min_aspect:    float           = 0.18
 
     # ── fill colour ───────────────────────────────────────────────────────────
     c_by:           str                            = "skew"
@@ -752,6 +761,7 @@ class PhaseTensorEllipseStyle:
             normalise_by   = self.normalise_by,
             scale          = self.scale,
             s1_ref         = self.s1_ref,
+            min_aspect     = self.min_aspect,
             c_by           = self.c_by,
             cmap           = self.resolve_cmap(),
             clim           = self.clim,

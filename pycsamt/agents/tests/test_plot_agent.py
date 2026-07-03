@@ -101,7 +101,8 @@ class TestPlotAgentFigures(unittest.TestCase):
         self.assertEqual(
             set(PLOT_KINDS),
             {"rhophi", "phase_psection", "pt_psection", "tipper", "pt_map",
-             "station_response", "strike_profile"},
+             "station_response", "strike_profile", "pt_strip",
+             "pt_strip_grid"},
         )
 
     def test_pt_map(self):
@@ -129,6 +130,16 @@ class TestPlotAgentFigures(unittest.TestCase):
 
     def test_pt_psection(self):
         self._run("pt_psection", color_by="skew")
+
+    def test_pt_strip_default_station(self):
+        r = self._run("pt_strip")
+        self.assertTrue(r.warnings, "expected a 'no station given' warning")
+
+    def test_pt_strip_explicit_station(self):
+        self._run("pt_strip", stations="new_E1_1")
+
+    def test_pt_strip_grid(self):
+        self._run("pt_strip_grid", per_line="2")
 
 
 @unittest.skipUnless(_HAS_TIP, "no EDI dataset with tipper available")

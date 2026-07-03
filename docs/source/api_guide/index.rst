@@ -143,3 +143,4 @@ In This Section
 
    views
    configuration
+   ../api/index

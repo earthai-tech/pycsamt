@@ -513,6 +513,7 @@ class OccamMesh(OccamBase):
 
         with p.open("w") as fh:
             fh.writelines(lines)
+        self.path = p
         return p
 
     # ------------------------------------------------------------------

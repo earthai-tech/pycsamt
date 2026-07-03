@@ -18,6 +18,7 @@ def register_all(app) -> None:
     from .topo import register_topo
     from .toolbar import register_toolbar
     from .settings import register_settings
+    from .session import register_session
 
     register_chrome(app)
     register_load(app)
@@ -29,3 +30,4 @@ def register_all(app) -> None:
     register_topo(app)
     register_toolbar(app)
     register_settings(app)
+    register_session(app)

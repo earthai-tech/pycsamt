@@ -24,6 +24,14 @@ _BM_BTN_STYLE = {
 }
 
 
+_MODE3D_BTN = {
+    IDs.TB3D_MODE_FENCE: "fence",
+    IDs.TB3D_MODE_BLOCK: "block",
+    IDs.TB3D_MODE_DEPTH: "depth",
+    IDs.TB3D_MODE_SURFACE: "surface",
+}
+
+
 def register_toolbar(app) -> None:
     _register_info(app)
     _register_fit(app)
@@ -32,6 +40,31 @@ def register_toolbar(app) -> None:
     _register_basemap_quickswitch(app)
     _register_markers(app)
     _register_crs(app)
+    _register_view_visibility(app)
+    _register_mode3d_quick(app)
+    _register_topo_quick(app)
+
+
+def _register_view_visibility(app) -> None:
+    """Show the 2-D toolbar in map mode, the 3-D toolbar in map3d mode —
+    the two are mutually exclusive (mirrors
+    ``controls._register_group_visibility`` for the inspector panels)."""
+    app.clientside_callback(
+        """
+        function(view) {
+            var v = view || 'map';
+            var show = {display:'flex'}, hide = {display:'none'};
+            return [
+                v === 'map'   ? show : hide,
+                v === 'map3d' ? show : hide
+            ];
+        }
+        """,
+        Output(IDs.TOOLBAR_2D, "style"),
+        Output(IDs.TOOLBAR_3D, "style"),
+        Input(IDs.STORE_VIEW, "data"),
+        prevent_initial_call=False,
+    )
 
 
 def _register_info(app) -> None:
@@ -49,9 +82,10 @@ def _register_info(app) -> None:
 
 def _register_fit(app) -> None:
     app.clientside_callback(
-        "function(n){ return n || 0; }",
+        "function(n1, n2){ return (n1 || 0) + (n2 || 0); }",
         Output(IDs.STORE_FIT, "data"),
         Input(IDs.TB_FIT, "n_clicks"),
+        Input(IDs.TB3D_RESET, "n_clicks"),
         prevent_initial_call=True,
     )
 
@@ -125,6 +159,68 @@ def _register_markers(app) -> None:
         "function(v){ return String(v || 10); }",
         Output(IDs.TB_MARK_VAL, "children"),
         Input(IDs.CTL_MARKER_SIZE, "value"),
+        prevent_initial_call=False,
+    )
+
+
+def _register_mode3d_quick(app) -> None:
+    """3-D toolbar mode buttons write CTL_MODE3D (same select the Inspector's
+    'Mode & quantity' accordion section uses) and reflect the active mode
+    via className."""
+    @app.callback(
+        Output(IDs.CTL_MODE3D, "value"),
+        Input(IDs.TB3D_MODE_FENCE, "n_clicks"),
+        Input(IDs.TB3D_MODE_BLOCK, "n_clicks"),
+        Input(IDs.TB3D_MODE_DEPTH, "n_clicks"),
+        Input(IDs.TB3D_MODE_SURFACE, "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def quickswitch(*_clicks):
+        return _MODE3D_BTN.get(ctx.triggered_id, no_update)
+
+    app.clientside_callback(
+        """
+        function(mode, fence_id, block_id, depth_id, surface_id) {
+            var m = mode || 'fence';
+            var map = {};
+            map[fence_id] = 'fence';
+            map[block_id] = 'block';
+            map[depth_id] = 'depth';
+            map[surface_id] = 'surface';
+            var ids = [fence_id, block_id, depth_id, surface_id];
+            return ids.map(function(id){
+                return map[id] === m ? 'mv-tb-btn active' : 'mv-tb-btn';
+            });
+        }
+        """,
+        Output(IDs.TB3D_MODE_FENCE, "className"),
+        Output(IDs.TB3D_MODE_BLOCK, "className"),
+        Output(IDs.TB3D_MODE_DEPTH, "className"),
+        Output(IDs.TB3D_MODE_SURFACE, "className"),
+        Input(IDs.CTL_MODE3D, "value"),
+        State(IDs.TB3D_MODE_FENCE, "id"),
+        State(IDs.TB3D_MODE_BLOCK, "id"),
+        State(IDs.TB3D_MODE_DEPTH, "id"),
+        State(IDs.TB3D_MODE_SURFACE, "id"),
+        prevent_initial_call=False,
+    )
+
+
+def _register_topo_quick(app) -> None:
+    """3-D toolbar Topo button flips CTL_TOPO (same switch the Inspector's
+    'Topography' accordion section uses)."""
+    app.clientside_callback(
+        "function(n, cur){ if(!n) return window.dash_clientside.no_update;"
+        " return !cur; }",
+        Output(IDs.CTL_TOPO, "value", allow_duplicate=True),
+        Input(IDs.TB3D_TOPO, "n_clicks"),
+        State(IDs.CTL_TOPO, "value"),
+        prevent_initial_call=True,
+    )
+    app.clientside_callback(
+        "function(v){ return v ? 'mv-tb-btn active' : 'mv-tb-btn'; }",
+        Output(IDs.TB3D_TOPO, "className"),
+        Input(IDs.CTL_TOPO, "value"),
         prevent_initial_call=False,
     )
 

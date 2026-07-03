@@ -734,6 +734,47 @@ class PlotController:
         style_axes(ax, self.dark)
         _style_figure_full(ax, self.dark)
 
+    def draw_phase_tensor_strip(self, ax) -> None:
+        """Draw the single-station phase-tensor ellipse strip for the
+        currently selected station (see the Station selector at the top
+        of the Profile Viewer).
+
+        Reuses the same cached phase-tensor DataFrame as
+        :meth:`draw_phase_tensor` (built once per Sites object).
+        """
+        import pycsamt.emtools as et
+        if self._sites is None:
+            _annotate_empty(ax, "Load survey data first")
+            style_axes(ax, self.dark)
+            return
+        if self._station_id is None:
+            _annotate_empty(ax, "Select a station to view its ellipse strip")
+            style_axes(ax, self.dark)
+            return
+        try:
+            pt_df = self._get_or_build_pt_df()
+            edge_kw = dict(
+                edgecolor="#cccccc" if self.dark else "k",
+                linewidth=0.35,
+            )
+            et.plot_phase_tensor_strip(
+                pt_df,             # pre-built DataFrame → skips build step
+                station=self._station_id,
+                period_range=self._active_period_range(),
+                ax=ax,
+                verbose=0,
+                **edge_kw,
+            )
+            ax.set_title(
+                f"Phase-tensor ellipse strip — {self._station_id}",
+                fontsize=10, pad=3,
+            )
+        except Exception as exc:
+            _annotate_empty(ax, f"Phase tensor strip error:\n{exc}")
+
+        style_axes(ax, self.dark)
+        _style_figure_full(ax, self.dark)
+
     # ── Publication-quality multi-panel view ──────────────────────────
 
     def draw_publication_view(self, fig) -> None:

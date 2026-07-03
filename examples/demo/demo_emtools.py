@@ -28,6 +28,7 @@ import matplotlib
 matplotlib.use("Agg")           # headless — no display required
 import matplotlib.pyplot as plt
 import matplotlib.cm as mcm
+import numpy as np
 
 warnings.filterwarnings("ignore")
 
@@ -71,6 +72,9 @@ from pycsamt.emtools.tensor      import (
     plot_phase_tensor_psection,
     plot_phase_tensor_summary,
     plot_phase_tensor_rose,
+    plot_phase_tensor_map,
+    plot_phase_tensor_strip,
+    plot_phase_tensor_strip_grid,
     plot_theta_vs_period,
     plot_dimensionality_psection,
     plot_skew_ellipt_density,
@@ -486,6 +490,54 @@ save(
     plot_theta_vs_period(L22, figsize=(9, 4.2)),
     "fig11_theta_vs_period.png",
     "Fig 11 — Strike angle θ vs period  (L22PLT, all stations)",
+)
+
+# 11b — full L18PLT pseudo-section (28 stations): the field-data case that
+# motivated the min_aspect floor + reserved-legend-strip fixes (real EDI
+# data has many near-degenerate φ_min cells that used to render invisible).
+L18 = ensure_sites(os.path.join(DATA_ROOT, "L18PLT"))
+save(
+    plot_phase_tensor_psection(L18, figsize=(14, 5.5)),
+    "fig11b_pt_psection_L18.png",
+    "Fig 11b — Phase-tensor ellipse pseudo-section  (L18PLT, 28 stations)",
+)
+
+# 11c — geographic phase-tensor map at a representative short period
+save(
+    plot_phase_tensor_map(L22, period=0.01, figsize=(8, 7)),
+    "fig11c_pt_map.png",
+    "Fig 11c — Phase-tensor map at T=0.01 s  (L22PLT)",
+)
+
+# 11d — single-station ellipse strip (period on x, one row)
+save(
+    plot_phase_tensor_strip(L22, station="22-14BF", figsize=(7, 1.6)),
+    "fig11d_pt_strip_single.png",
+    "Fig 11d — Phase-tensor ellipse strip  (22-14BF)",
+)
+
+# 11e — multi-profile ellipse-strip grid: 4 representative (evenly spaced)
+# stations per line, across all 5 WILLY_DATA profiles, one shared colorbar
+def _pick_representative(names, k=4):
+    names = sorted(names)
+    if len(names) <= k:
+        return names
+    idx = sorted(set(np.linspace(0, len(names) - 1, k).round().astype(int)))
+    return [names[i] for i in idx]
+
+strip_profiles = {
+    f"Profile {ln}": _pick_representative(names)
+    for ln, names in groups_by_line.items()
+}
+save(
+    plot_phase_tensor_strip_grid(
+        S_all,
+        profiles=strip_profiles,
+        c_by="skew", cmap="RdBu_r",
+        panel_size=(3.4, 1.05),
+        suptitle="Fig 11e — Phase-tensor ellipse strips by profile  (WILLY_DATA)",
+    ),
+    "fig11e_pt_strip_grid.png",
 )
 
 # ────────────────────────────────────────────────────────────────────────────

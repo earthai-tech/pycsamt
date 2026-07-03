@@ -17,3 +17,4 @@ User guide
    inversion
    ai_inversion
    interpretation
+   ../tutorials/index

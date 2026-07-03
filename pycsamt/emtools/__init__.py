@@ -240,6 +240,8 @@ from .tensor import (
     plot_theta_stability_stripe,
     plot_skew_ellipt_density,
     plot_theta_rose_grid,
+    plot_phase_tensor_strip,
+    plot_phase_tensor_strip_grid,
 )
 
 # ─── Impedance diagnostics ────────────────────────────────────────────────────
@@ -349,13 +351,10 @@ from .legacy import (
     align_tensor,
     export_edis,
     plot_confidence,
-    plot_skew_1d,
-    plot_skew_2d,
     plot_strike,
     plot_tensors,
     plot_station_tensors,
     wrap_phase,
-    plot_skew,
 )
 
 __all__ = [
@@ -550,6 +549,8 @@ __all__ = [
     "plot_theta_stability_stripe",
     "plot_skew_ellipt_density",
     "plot_theta_rose_grid",
+    "plot_phase_tensor_strip",
+    "plot_phase_tensor_strip_grid",
     # impedance diagnostics
     "plot_phasor_wheel",
     "plot_offdiag_antisym_residual",
@@ -614,11 +615,8 @@ __all__ = [
     "align_tensor",
     "export_edis",
     "plot_confidence",
-    "plot_skew_1d",
-    "plot_skew_2d",
     "plot_strike",
     "plot_tensors",
     "plot_station_tensors",
     "wrap_phase",
-    "plot_skew",
 ]

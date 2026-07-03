@@ -41,7 +41,20 @@ _POLAR_FNS = {
 # Functions that require extra positional arguments beyond (sites, …, verbose=)
 # and are NOT handled by special dispatch logic below.  Extend this dict for
 # any future catalogue additions in the same situation.
-_EXTRA_ARGS_FUNS: dict[str, str] = {}
+#
+# The desktop generic "Advanced Tools" window shows this message instead of
+# crashing; each has a dedicated, fully-functional tool elsewhere in the app
+# (desktop: Profile Viewer "PT Strip" tab / Tools menu; web: the Advanced
+# Plots "pt" tab special-cases these two directly — see callbacks/advanced.py).
+_EXTRA_ARGS_FUNS: dict[str, str] = {
+    "plot_phase_tensor_strip": (
+        "Needs a station= pick — use the Profile Viewer's 'PT Strip' tab."
+    ),
+    "plot_phase_tensor_strip_grid": (
+        "Needs a profiles= grouping — use "
+        "Tools → Phase Tensor Strip Grid…"
+    ),
+}
 
 # ── Plot catalogue ─────────────────────────────────────────────────────────────
 # Each entry: (display_label, fn_name, has_ax_param)
@@ -59,7 +72,10 @@ STRIKE_PLOTS: list = [
 ]
 
 PHASE_TENSOR_PLOTS: list = [
+    ("Phase tensor pseudosection", "plot_phase_tensor_psection",   True),
     ("Phase tensor map",           "plot_phase_tensor_map",        True),
+    ("Phase tensor ellipse strip", "plot_phase_tensor_strip",      True),
+    ("Phase tensor strip grid (by line)", "plot_phase_tensor_strip_grid", False),
     ("Phase tensor rose",          "plot_phase_tensor_rose",       True),
     ("Phase tensor summary",       "plot_phase_tensor_summary",    False),
     ("Phasor wheel",               "plot_phasor_wheel",            True),
@@ -166,9 +182,22 @@ ADVANCED_PLOT_DESCRIPTIONS: dict[str, str] = {
     "plot_strike_stability_bands": (
         "Period-band stability summary for strike directions."
     ),
+    "plot_phase_tensor_psection": (
+        "Station × period ellipse pseudo-section — φ_max/φ_min shape, θ "
+        "orientation, and a colour-coded scalar (default: skew)."
+    ),
     "plot_phase_tensor_map": (
         "Phase-tensor ellipses drawn on the station map at the selected "
         "period."
+    ),
+    "plot_phase_tensor_strip": (
+        "Single-station phase-tensor ellipse strip vs. period — the "
+        "classic 'ellipse timeseries' view. Needs a station= pick "
+        "(see the note below)."
+    ),
+    "plot_phase_tensor_strip_grid": (
+        "Phase-tensor ellipse strips tiled by survey line, one shared "
+        "colour scale. Needs a profiles= grouping (see the note below)."
     ),
     "plot_phase_tensor_rose": (
         "Rose diagram summarizing phase-tensor principal directions."

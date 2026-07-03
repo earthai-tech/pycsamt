@@ -192,6 +192,40 @@ def layout() -> html.Div:
                             ),
                             html.Div(
                                 [
+                                    html.Div("Station", className="adv-param-label"),
+                                    dcc.Dropdown(
+                                        id=IDs.ADV_PT_STATION,
+                                        options=[], value=None,
+                                        placeholder="Pick station...",
+                                        className="adv-filter-drop",
+                                        optionHeight=26,
+                                    ),
+                                    html.Div(
+                                        "Ellipse strip vs. period for this station",
+                                        className="adv-param-hint",
+                                    ),
+                                ],
+                                id="adv-pt-station-section",
+                                style={"display": "none"},
+                            ),
+                            html.Div(
+                                [
+                                    html.Div("Stations / line", className="adv-param-label"),
+                                    dbc.Input(
+                                        id=IDs.ADV_PT_PER_LINE,
+                                        type="number", value=4, min=1, max=20, step=1,
+                                        size="sm", className="adv-param-input",
+                                    ),
+                                    html.Div(
+                                        "Evenly spaced stations drawn per active line",
+                                        className="adv-param-hint",
+                                    ),
+                                ],
+                                id="adv-pt-grid-section",
+                                style={"display": "none"},
+                            ),
+                            html.Div(
+                                [
                                     html.Div("Figure size", className="adv-param-label"),
                                     dbc.Select(
                                         id="adv-figsize",

@@ -461,15 +461,17 @@ class OccamModel(OccamBase):
                 "mesh too narrow for boundary columns"
             )
 
-        # Build per-layer code array: [7, 2, 2, ..., 2, 7]
-        n_interior = (n_xcells - 14) // 2
-        remainder  = (n_xcells - 14) - 2 * n_interior
-        interior   = [2] * n_interior
-        if remainder and n_interior > 0:
-            # Absorb remainder into the last interior column (keep it even)
-            interior[-1] += remainder
-        elif remainder:
-            interior = [2 + remainder]
+        # Build per-layer code array: [7, 2, 2, ..., 2, 7].
+        # Generated meshes normally have an even interior width, but accepting
+        # an odd-width existing mesh makes preparation robust when users bring
+        # in older or hand-edited Occam2DMesh files.
+        interior_width = n_xcells - 14
+        interior = [2] * (interior_width // 2)
+        if interior_width % 2:
+            if interior:
+                interior[-1] += 1
+            else:
+                interior = [1]
         codes = np.array([7] + interior + [7], dtype=np.int32)
 
         assert int(codes.sum()) == n_xcells, (
@@ -634,6 +636,7 @@ class OccamModel(OccamBase):
 
         with p.open("w") as fh:
             fh.writelines(lines)
+        self.path = p
         return p
 
     # ------------------------------------------------------------------

@@ -184,6 +184,9 @@ class IDs:
     ADV_BTN_TRAIN    = "adv-btn-train"
     ADV_TRAIN_SPINNER= "adv-train-spinner"
     ADV_TRAIN_STATUS = "adv-train-status"
+    # PT Strip / PT Strip Grid parameters (plot_phase_tensor_strip[_grid])
+    ADV_PT_STATION   = "adv-pt-station"    # single-station dropdown
+    ADV_PT_PER_LINE  = "adv-pt-per-line"   # stations-per-line count (grid)
 
     # ── TDEM page ────────────────────────────────────────────────────────
     TDEM_CAT          = "tdem-cat"        # kept for backwards compat

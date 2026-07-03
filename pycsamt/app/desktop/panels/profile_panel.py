@@ -4,13 +4,14 @@
 """
 ProfilePanel — tabbed scientific plot panel.
 
-Six tabs driven by PlotController:
+Seven tabs driven by PlotController:
 
   [ρₐ / φ]           Single-station apparent-resistivity + phase curves
   [Pseudosection ρₐ]  ρₐ pseudosection (full profile)
   [Pseudosection φ]   φ pseudosection (full profile)
   [Tipper]            Tipper components
   [Phase Tensor]      Phase-tensor pseudosection (Caldwell 2004 style)
+  [PT Strip]          Single-station phase-tensor ellipse strip vs period
   [2D Section]        SectionPanel — inversion result viewer
 
 Public API:
@@ -87,7 +88,11 @@ class ProfilePanel(QWidget):
         self._canvas_pt = MplCanvas(self, toolbar=True)
         self._tabs.addTab(self._canvas_pt, "Phase Tensor")
 
-        # Tab 5: 2D section — SectionPanel
+        # Tab 5: Phase-tensor ellipse strip (single selected station)
+        self._canvas_pt_strip = MplCanvas(self, toolbar=True)
+        self._tabs.addTab(self._canvas_pt_strip, "PT Strip")
+
+        # Tab 6: 2D section — SectionPanel
         self._section_panel = SectionPanel(self)
         self._tabs.addTab(self._section_panel, "2D Section")
 
@@ -130,6 +135,8 @@ class ProfilePanel(QWidget):
             self._redraw_phase_pseudosection()
         elif tab == 3:
             self._redraw_tipper()
+        elif tab == 5:
+            self._redraw_phase_tensor_strip()
 
     def set_dark_mode(self, dark: bool) -> None:
         self._ctrl.dark = dark
@@ -169,6 +176,7 @@ class ProfilePanel(QWidget):
             self._redraw_phase_pseudosection,
             self._redraw_tipper,
             self._redraw_phase_tensor,
+            self._redraw_phase_tensor_strip,
         ]
         if index < len(_redraw):
             _redraw[index]()
@@ -180,11 +188,12 @@ class ProfilePanel(QWidget):
             style_axes, _annotate_empty,
         )
         for canvas, msg in (
-            (self._canvas_rho_phi, "Select a station to view ρₐ / φ curves"),
-            (self._canvas_rho_ps,  "Load survey data"),
-            (self._canvas_ph_ps,   "Load survey data"),
-            (self._canvas_tipper,  "Load survey data"),
-            (self._canvas_pt,      "Load survey data"),
+            (self._canvas_rho_phi,  "Select a station to view ρₐ / φ curves"),
+            (self._canvas_rho_ps,   "Load survey data"),
+            (self._canvas_ph_ps,    "Load survey data"),
+            (self._canvas_tipper,   "Load survey data"),
+            (self._canvas_pt,       "Load survey data"),
+            (self._canvas_pt_strip, "Select a station to view its ellipse strip"),
         ):
             canvas.figure.clear()
             ax = canvas.figure.add_subplot(111)
@@ -198,6 +207,7 @@ class ProfilePanel(QWidget):
         self._redraw_phase_pseudosection()
         self._redraw_tipper()
         self._redraw_phase_tensor()
+        self._redraw_phase_tensor_strip()
 
     def _redraw_current_tab(self) -> None:
         tab = self._tabs.currentIndex()
@@ -207,6 +217,7 @@ class ProfilePanel(QWidget):
             self._redraw_phase_pseudosection,
             self._redraw_tipper,
             self._redraw_phase_tensor,
+            self._redraw_phase_tensor_strip,
         ]
         if tab < len(_redraw):
             _redraw[tab]()
@@ -262,3 +273,11 @@ class ProfilePanel(QWidget):
         self._canvas_pt.draw()
         # Record the key so the next identical tab visit is free.
         self._pt_last_key = current_key
+
+    def _redraw_phase_tensor_strip(self) -> None:
+        fig = self._canvas_pt_strip.figure
+        fig.clear()
+        ax = fig.add_subplot(111)
+        self._canvas_pt_strip.axes = ax
+        self._ctrl.draw_phase_tensor_strip(ax)
+        self._canvas_pt_strip.draw()

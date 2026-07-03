@@ -12,14 +12,11 @@ from ..utils.em import (
     align_tensor,
     export_edis,
     plot_confidence,
-    plot_skew_1d,
-    plot_skew_2d,
     plot_strike,
     plot_tensors,
     plot_station_tensors,
     wrap_phase,
     plot_lcurve,
-    plot_skew,
 )
 
 __all__ = [
@@ -32,30 +29,23 @@ __all__ = [
     "align_tensor",
     "export_edis",
     "plot_confidence",
-    "plot_skew_1d",
-    "plot_skew_2d",
     "plot_strike",
     "plot_tensors",
     "plot_station_tensors",
     "wrap_phase",
     "plot_lcurve",
-    "plot_skew",
 ]
 
 _ALIAS_MAP = {
     "get_full_frequency": full_freq,
     "qc": compute_qc,
     "plot_tensors2": plot_station_tensors,
-    "plot_skew1d": plot_skew_1d,
-    "plot_skew2d": plot_skew_2d,
     "plot_l_curve": plot_lcurve,
     "get2dtensor": tensor2d
 }
 
 _EXTRAS = {
     "plot_tensors2": "Use 'plot_station_tensors'.",
-    "plot_skew1d": "Use 'plot_skew_1d'.",
-    "plot_skew2d": "Use 'plot_skew_2d'.",
     "get_full_frequency": "Use 'full_freq'.",
     "plot_l_curve": "Use 'plot_lcurve'.",
     "get2dtensor": "Use 'tensor2d'."

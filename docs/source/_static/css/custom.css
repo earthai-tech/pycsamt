@@ -40,14 +40,18 @@ dt code.sig-name {
   --pycsamt-ink: #24324b;
   --pycsamt-muted: #5c677d;
   --pycsamt-surface: #ffffff;
+  --pycsamt-surface-2: #f6f8fc;
   --pycsamt-soft-gold: #fff7e8;
+  --pycsamt-border: color-mix(in srgb, var(--pycsamt-blue) 16%, transparent);
 }
 
 html[data-theme="dark"] {
   --pycsamt-ink: #f4f7fb;
   --pycsamt-muted: #c6d0df;
   --pycsamt-surface: #141922;
+  --pycsamt-surface-2: #1a2130;
   --pycsamt-soft-gold: #2b2418;
+  --pycsamt-border: color-mix(in srgb, var(--pycsamt-blue) 36%, transparent);
 }
 
 .navbar-brand img {
@@ -93,6 +97,153 @@ html[data-theme="dark"] {
 
 html[data-theme="dark"] .bd-header .version-switcher__button {
   color: #9db8ea;
+}
+
+/* "More" dropdown: show ~7 items, scroll the rest — instead of one
+   very long list. Thin branded scrollbar + a bottom fade as a scroll
+   hint. */
+.bd-header .navbar-nav .dropdown-menu {
+  max-height: 16rem;               /* ≈ 7 items */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.4rem 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--pycsamt-blue) 22%, transparent);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(31, 68, 144, 0.16);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--pycsamt-blue) 55%, transparent) transparent;
+}
+
+.bd-header .navbar-nav .dropdown-menu::-webkit-scrollbar {
+  width: 0.5rem;
+}
+
+.bd-header .navbar-nav .dropdown-menu::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--pycsamt-blue);
+  background-clip: padding-box;
+}
+
+.bd-header .navbar-nav .dropdown-menu li a {
+  border-radius: 7px;
+  padding-block: 0.42rem;
+}
+
+.bd-header .navbar-nav .dropdown-menu li a:hover {
+  background: color-mix(in srgb, var(--pycsamt-orange) 10%, transparent);
+  color: var(--pycsamt-orange);
+}
+
+/* --------------------------------------------------------------------------
+   Mega-menu navigation cards (site-wide — every page shares the navbar).
+   JS (mega-menu.js) converts a matched top-level nav link into a toggle
+   and builds this panel from a small config object; see that file to add
+   more menus later.
+   -------------------------------------------------------------------------- */
+.pyc-mega-trigger {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.pyc-mega-caret {
+  font-size: 0.6em;
+  transition: transform 150ms ease;
+}
+
+.pyc-mega-trigger[aria-expanded="true"] .pyc-mega-caret {
+  transform: rotate(180deg);
+}
+
+.pyc-mega {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 1030;
+  background: var(--pycsamt-surface);
+  border-bottom: 1px solid var(--pycsamt-border);
+  box-shadow: 0 18px 38px rgba(31, 68, 144, 0.16);
+}
+
+.pyc-mega[hidden] {
+  display: none !important;
+}
+
+.pyc-mega-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 1.4rem clamp(1.1rem, 4vw, 2.4rem);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.pyc-mega-card {
+  display: flex;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid var(--pycsamt-border);
+  border-radius: 12px;
+  background: var(--pycsamt-surface-2);
+  text-decoration: none !important;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.pyc-mega-card:hover,
+.pyc-mega-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--pycsamt-orange) 45%, transparent);
+  box-shadow: 0 10px 24px rgba(31, 68, 144, 0.14);
+  outline: none;
+}
+
+.pyc-mega-card-icon {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--pycsamt-blue) 12%, transparent);
+  color: var(--pycsamt-blue);
+  font-size: 1.05rem;
+}
+
+html[data-theme="dark"] .pyc-mega-card-icon {
+  color: #9db8ea;
+}
+
+.pyc-mega-card-body {
+  min-width: 0;
+}
+
+.pyc-mega-card-title {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--pycsamt-ink);
+  font-weight: 750;
+  font-size: 0.98rem;
+}
+
+.pyc-mega-card-desc {
+  display: block;
+  color: var(--pycsamt-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.pyc-mega-card:hover .pyc-mega-card-title,
+.pyc-mega-card:focus-visible .pyc-mega-card-title {
+  color: var(--pycsamt-orange);
+}
+
+@media (max-width: 960px) {
+  .pyc-mega-inner {
+    grid-template-columns: 1fr;
+  }
 }
 
 .bd-header {

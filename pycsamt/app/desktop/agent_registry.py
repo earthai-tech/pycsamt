@@ -1044,14 +1044,6 @@ AGENT_REGISTRY: Dict[str, AgentEntry] = {
         },
         "result_plot": "plot_rho_phase_bode",
     },
-
-    "Skew Analysis": {
-        "type": "processing",
-        "fn_name": "plot_skew_2d",
-        "description": "Swift skew pseudosection coloured by dimensionality.",
-        "params": {},
-        "result_plot": "plot_skew_2d",
-    },
 }
 
 # ──────────────────────────────────────────────────────────────────────────────

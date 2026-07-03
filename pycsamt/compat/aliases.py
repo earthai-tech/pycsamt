@@ -37,12 +37,12 @@ Single alias:
 .. code-block:: python
 
    from pycsamt.compat.aliases import make_compat_alias
-   from pycsamt.utils.em import plot_skew_1d
+   from pycsamt.utils.em import plot_lcurve
 
-   plot_skew1d = make_compat_alias(
-       plot_skew_1d,
-       old_name="plot_skew1d",
-       new_name="plot_skew_1d",
+   plot_l_curve = make_compat_alias(
+       plot_lcurve,
+       old_name="plot_l_curve",
+       new_name="plot_lcurve",
        since="2.0.0",
        remove_in="3.0.0",
    )
@@ -53,7 +53,7 @@ Bulk install in a module:
 
    from pycsamt.compat.aliases import install_compat_aliases
 
-   _MAP = {"plot_skew1d": plot_skew_1d}
+   _MAP = {"plot_l_curve": plot_lcurve}
    install_compat_aliases(_MAP, g=globals())
 
 Decorator at definition:
@@ -62,8 +62,8 @@ Decorator at definition:
 
    from pycsamt.compat.aliases import compat_alias
 
-   @compat_alias("plot_skew1d", remove_in="3.0.0")
-   def plot_skew_1d(...):
+   @compat_alias("plot_l_curve", remove_in="3.0.0")
+   def plot_lcurve(...):
        ...
 
 Notes
@@ -160,27 +160,27 @@ def make_compat_alias(
 
     .. code-block:: python
 
-        def plot_skew_1d(...):
+        def plot_lcurve(...):
             ...
 
-        plot_skew1d = make_compat_alias(
-            plot_skew_1d,
-            old_name="plot_skew1d",
-            new_name="plot_skew_1d",
+        plot_l_curve = make_compat_alias(
+            plot_lcurve,
+            old_name="plot_l_curve",
+            new_name="plot_lcurve",
             since="2.0.0",
             remove_in="2.1.0",
         )
 
         # Emits FutureWarning, then forwards:
-        plot_skew1d(data)
+        plot_l_curve(data)
 
     Add extra migration tips:
 
     .. code-block:: python
 
-        plot_skew1d = make_compat_alias(
-            plot_skew_1d,
-            old_name="plot_skew1d",
+        plot_l_curve = make_compat_alias(
+            plot_lcurve,
+            old_name="plot_l_curve",
             extra="API gained 'style' and 'ax'.",
         )
 
@@ -283,15 +283,15 @@ def install_compat_aliases(
     .. code-block:: python
 
         from pycsamt.compat.aliases import install_compat_aliases
-        from .utils.em import plot_skew_1d, plot_skew_2d
+        from .utils.em import full_freq, tensor2d
 
         _ALIAS_MAP = {
-            "plot_skew1d": plot_skew_1d,
-            "plot_skew2d": plot_skew_2d,
+            "get_full_frequency": full_freq,
+            "get2dtensor": tensor2d,
         }
 
         _EXTRAS = {
-            "plot_skew2d": "Use 'plot_skew_2d'.",
+            "get2dtensor": "Use 'tensor2d'.",
         }
 
         install_compat_aliases(
@@ -406,28 +406,28 @@ def compat_alias(
 
         from pycsamt.compat.aliases import compat_alias
 
-        __all__ = ["plot_skew_1d"]
+        __all__ = ["plot_lcurve"]
 
         @compat_alias(
-            "plot_skew1d",
+            "plot_l_curve",
             since="2.0.0",
             remove_in="3.0.0",
             extra="Use 'style' and 'ax' kwargs.",
             export=True,
         )
-        def plot_skew_1d(...):
+        def plot_lcurve(...):
             ...
 
         # Available names in the module:
-        # - plot_skew_1d (no warning)
-        # - plot_skew1d  (warns, then forwards)
+        # - plot_lcurve  (no warning)
+        # - plot_l_curve (warns, then forwards)
 
     Interaction with bulk maps:
 
     .. code-block:: python
 
         # If install_compat_aliases(...) later tries to install
-        # 'plot_skew1d', it will detect the existing alias via
+        # 'plot_l_curve', it will detect the existing alias via
         # '__is_compat_alias__' and skip re-installation.
 
     See Also

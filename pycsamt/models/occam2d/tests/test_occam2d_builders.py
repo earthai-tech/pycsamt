@@ -314,6 +314,15 @@ def test_model_from_mesh_code_sum():
         assert sum(layer["params"]) == m.n_xcells
 
 
+def test_model_from_mesh_odd_interior_width_absorbs_remainder():
+    from pycsamt.models.occam2d.model import OccamModel
+    m = _simple_mesh(17, 8, 2)
+    mod = OccamModel.from_mesh(m)
+    for layer in mod.layers:
+        assert sum(layer["params"]) == m.n_xcells
+        assert layer["params"].tolist() == [7, 3, 7]
+
+
 def test_model_from_mesh_boundary_codes():
     """First and last code in each layer must be 7."""
     from pycsamt.models.occam2d.model import OccamModel
@@ -475,6 +484,26 @@ def test_input_builder_integration(tmp_path):
 
     # Mesh and model are self-consistent
     assert sum(mod.layers[0]["params"]) == mesh.n_xcells
+
+
+def test_input_builder_build_writes_all_required_files(tmp_path):
+    from pycsamt.models.occam2d.builder import InputBuilder
+    from pycsamt.models.occam2d.config import OccamConfig
+
+    cfg = OccamConfig(n_layers=5, n_airlayers=2,
+                      cell_size_horizontal=200.0, depth_scale=1.3)
+    builder = InputBuilder(_make_sites(3, 4), workdir=tmp_path, config=cfg)
+
+    builder.build()
+
+    for fname in [cfg.data_file, cfg.mesh_file, cfg.model_file, cfg.startup_file]:
+        assert (tmp_path / fname).exists(), f"missing {fname}"
+    assert builder.is_ready
+    assert builder.startup.n_params == builder.model.n_params
+    assert builder.data.path == tmp_path / cfg.data_file
+    assert builder.mesh.path == tmp_path / cfg.mesh_file
+    assert builder.model.path == tmp_path / cfg.model_file
+    assert builder.startup.path == tmp_path / cfg.startup_file
 
 
 def test_input_builder_summary(tmp_path):

@@ -133,6 +133,27 @@ def _filter_sites(sites, station_filter, store_data, active_lines_store):
         return sites
 
 
+def _pt_grid_profiles(store_data, active_lines_store, per_line: int) -> dict:
+    """Group ``station_records`` by ``Line`` (active lines only) into
+    ``{line_name: [representative_station, ...]}`` for
+    ``plot_phase_tensor_strip_grid``."""
+    from pycsamt.site.lines import pick_representative_stations
+
+    records      = (store_data or {}).get("station_records", [])
+    active_lines = (active_lines_store or {}).get("active", [])
+    active_set   = set(active_lines) if active_lines else None
+    lines: dict[str, list] = {}
+    for r in records:
+        ln = r.get("Line", "")
+        if not ln or (active_set is not None and ln not in active_set):
+            continue
+        lines.setdefault(ln, []).append(r["ID"])
+    return {
+        ln: pick_representative_stations(names, per_line)
+        for ln, names in lines.items()
+    }
+
+
 def register_advanced(app) -> None:
 
     # ── 1. Tab button clicks → ADV_ACTIVE_TAB store ───────────────────────────
@@ -192,22 +213,26 @@ def register_advanced(app) -> None:
         opts  = [{"label": lbl, "value": fn} for lbl, fn, _ in plots]
         return opts, (opts[0]["value"] if opts else None)
 
-    # ── 4. Plot selection → description + period-section + ATOM visibility ────
+    # ── 4. Plot selection → description + period/ATOM/PT-strip visibility ────
     @app.callback(
         Output(IDs.ADV_DESCRIPTION,   "children"),
         Output("adv-period-section",  "style"),
         Output("adv-atom-section",    "style"),
+        Output("adv-pt-station-section", "style"),
+        Output("adv-pt-grid-section",    "style"),
         Input(IDs.ADV_PLOT,           "value"),
     )
     def update_param_panel(fn_name):
+        _hidden, _shown = {"display": "none"}, {"display": "block"}
         if not fn_name:
-            return "", {"display": "none"}, {"display": "none"}
+            return "", _hidden, _hidden, _hidden, _hidden
         desc         = ADVANCED_PLOT_DESCRIPTIONS.get(fn_name, "")
-        period_style = ({"display": "block"} if fn_name in _PERIOD_FNS
-                        else {"display": "none"})
-        atom_style   = ({"display": "block"} if fn_name == "plot_atom_psection"
-                        else {"display": "none"})
-        return desc, period_style, atom_style
+        period_style = _shown if fn_name in _PERIOD_FNS else _hidden
+        atom_style   = _shown if fn_name == "plot_atom_psection" else _hidden
+        pt_sta_style = _shown if fn_name == "plot_phase_tensor_strip" else _hidden
+        pt_grid_style = (_shown if fn_name == "plot_phase_tensor_strip_grid"
+                         else _hidden)
+        return desc, period_style, atom_style, pt_sta_style, pt_grid_style
 
     # ── 5. Context info bar ───────────────────────────────────────────────────
     @app.callback(
@@ -320,6 +345,26 @@ def register_advanced(app) -> None:
         selected = [r["ID"] for r in records if r.get("Line", "") in sel_set]
         return selected or None, stn_opts
 
+    # ── 7b. STORE_DATA / active lines → PT-strip single-station options ──────
+    @app.callback(
+        Output(IDs.ADV_PT_STATION, "options"),
+        Input(IDs.STORE_DATA,         "data"),
+        Input(IDs.STORE_ACTIVE_LINES, "data"),
+        prevent_initial_call=False,
+    )
+    def update_pt_station_options(store_data, active_lines_store):
+        if not store_data:
+            return []
+        records      = store_data.get("station_records", [])
+        active_lines = (active_lines_store or {}).get("active", [])
+        active_set   = set(active_lines) if active_lines else None
+        return [
+            {"label": r["ID"], "value": r["ID"]}
+            for r in records
+            if active_set is None or r.get("Line", "") in active_set
+            or not r.get("Line")
+        ]
+
     # ── 8. Station All / None buttons ─────────────────────────────────────────
     @app.callback(
         Output(IDs.ADV_STN_FILTER, "value", allow_duplicate=True),
@@ -395,35 +440,60 @@ def register_advanced(app) -> None:
         State(IDs.ADV_STN_FILTER,     "value"),
         State("adv-period-idx",       "value"),
         State("adv-figsize",          "value"),
+        State(IDs.ADV_PT_STATION,     "value"),
+        State(IDs.ADV_PT_PER_LINE,    "value"),
         prevent_initial_call=True,
     )
     def run_advanced(n_clicks, active_tab, fn_name, session_id,
                      store_data, active_lines_store, station_filter,
-                     period_idx, figsize):
+                     period_idx, figsize, pt_station, pt_per_line):
         if not n_clicks or not fn_name:
             raise PreventUpdate
-
-        # Build no_update tuple: 6 imgs + spinner + toast (open + body)
-        _empty = [no_update] * 6
 
         try:
             sites    = cache_get(session_id)
             filtered = _filter_sites(sites, station_filter, store_data,
                                      active_lines_store)
-            _CTRL.set_sites(filtered)
-
-            kwargs = {}
-            if fn_name in _PERIOD_FNS and period_idx is not None:
-                kwargs["ip"] = max(0, int(period_idx))
 
             apply_web_dark_theme()
-            w, h    = _FIGSIZE_MAP.get(figsize or "10x6", (10, 6))
-            has_ax  = _HAS_AX.get(fn_name, True)
+            w, h = _FIGSIZE_MAP.get(figsize or "10x6", (10, 6))
 
-            fig    = plt.figure(figsize=(w, h))
-            result = _CTRL.draw(fn_name, has_ax=has_ax, fig=fig, **kwargs)
-            render_fig = result if result is not None else fig
-            src    = fig_to_src(render_fig)
+            # ── Special-case the two PT functions needing extra required
+            # kwargs (station= / profiles=) that the generic catalogue
+            # dispatch (AdvancedController.draw) cannot supply.
+            if fn_name == "plot_phase_tensor_strip":
+                if not pt_station:
+                    return (*([no_update] * 6), "", True,
+                            "Pick a station for the ellipse strip.")
+                from pycsamt.emtools.tensor import plot_phase_tensor_strip
+                fig = plt.figure(figsize=(w, h))
+                ax  = fig.add_subplot(111)
+                plot_phase_tensor_strip(
+                    sites, station=pt_station, ax=ax, verbose=0,
+                )
+                render_fig = fig
+            elif fn_name == "plot_phase_tensor_strip_grid":
+                profiles = _pt_grid_profiles(
+                    store_data, active_lines_store, int(pt_per_line or 4),
+                )
+                if not profiles:
+                    return (*([no_update] * 6), "", True,
+                            "No survey lines detected for the strip grid.")
+                from pycsamt.emtools.tensor import plot_phase_tensor_strip_grid
+                render_fig = plot_phase_tensor_strip_grid(
+                    sites, profiles=profiles, verbose=0,
+                )
+            else:
+                _CTRL.set_sites(filtered)
+                kwargs = {}
+                if fn_name in _PERIOD_FNS and period_idx is not None:
+                    kwargs["ip"] = max(0, int(period_idx))
+                has_ax = _HAS_AX.get(fn_name, True)
+                fig    = plt.figure(figsize=(w, h))
+                result = _CTRL.draw(fn_name, has_ax=has_ax, fig=fig, **kwargs)
+                render_fig = result if result is not None else fig
+
+            src = fig_to_src(render_fig)
             plt.close("all")
 
             # Write src only to the active tab's image; leave others unchanged

@@ -115,5 +115,6 @@ Documentation Contents
    editing
    recompute
    computed_diagnostics
+   ../map/index
    export_reporting
    utilities

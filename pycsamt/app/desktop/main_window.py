@@ -505,6 +505,14 @@ class MainWindow(QMainWindow):
         act_pt_map.triggered.connect(self._open_phase_tensor_map)
         tools_menu.addAction(act_pt_map)
 
+        act_pt_strip_grid = QAction(_icon("phase-tensor"), "Phase Tensor Strip &Grid…", self)
+        act_pt_strip_grid.setShortcut("Ctrl+Shift+N")
+        act_pt_strip_grid.setStatusTip(
+            "Ellipse-strip vs. period, tiled by survey line (multi-profile view)"
+        )
+        act_pt_strip_grid.triggered.connect(self._open_phase_tensor_strip_grid)
+        tools_menu.addAction(act_pt_strip_grid)
+
         tools_menu.addSeparator()
 
         act_dim = QAction(_icon("dimensionnality"), "&Dimensionality Classifier…", self)
@@ -543,6 +551,7 @@ class MainWindow(QMainWindow):
             (act_station_resp,   "station-response"),
             (act_strike_profile, "strike-profile"),
             (act_pt_map,         "phase-tensor"),
+            (act_pt_strip_grid,  "phase-tensor"),
             (act_dim,            "dimensionnality"),
             (act_freq_ed,        "frequency-editor"),
             (act_lm,             "layered-model"),
@@ -1215,6 +1224,14 @@ class MainWindow(QMainWindow):
             return
         from pycsamt.app.desktop.tools.phase_tensor_map_tool import PhaseTensorMapDialog
         PhaseTensorMapDialog(getattr(self._controller, "sites", None), parent=self).exec()
+
+    def _open_phase_tensor_strip_grid(self) -> None:
+        if not self._require_sites("Phase Tensor Strip Grid"):
+            return
+        from pycsamt.app.desktop.tools.phase_tensor_strip_grid_tool import (
+            PhaseTensorStripGridDialog,
+        )
+        PhaseTensorStripGridDialog(getattr(self._controller, "sites", None), parent=self).exec()
 
     def _open_dimensionality(self) -> None:
         if not self._require_sites("Dimensionality Classifier"):

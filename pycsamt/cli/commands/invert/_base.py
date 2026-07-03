@@ -28,7 +28,15 @@ import click
 # Solver fingerprints
 # ---------------------------------------------------------------------------
 
-_OCCAM_SIGNATURES = frozenset({"Occam2DMesh", "Occam2DStartup", "OccamData.dat"})
+_OCCAM_SIGNATURES = frozenset({
+    "OccamDataFile.dat",
+    "Occam2DMesh",
+    "Occam2DModel",
+    "Startup",
+    # Backward-compatible aliases from early CLI fixtures and examples.
+    "OccamData.dat",
+    "Occam2DStartup",
+})
 _MODEM_SIGNATURES  = frozenset({"ModEMData.dat", "ModEM.inv", "Modular_NLCG.log"})
 
 

@@ -240,6 +240,12 @@ def _build_options(options: dict[str, Any]) -> dict[str, Any]:
 
 def _builder_files(builder: Any) -> dict[str, str]:
     files: dict[str, str] = {}
+    defaults = {
+        "data": builder.config.data_file,
+        "mesh": builder.config.mesh_file,
+        "model": builder.config.model_file,
+        "startup": builder.config.startup_file,
+    }
     for key, obj in {
         "data": builder.data,
         "mesh": builder.mesh,
@@ -247,8 +253,9 @@ def _builder_files(builder: Any) -> dict[str, str]:
         "startup": builder.startup,
     }.items():
         path = getattr(obj, "path", None)
-        if path is not None:
-            files[key] = str(path)
+        if path is None:
+            path = builder.workdir / defaults[key]
+        files[key] = str(path)
     return files
 
 

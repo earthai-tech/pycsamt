@@ -174,3 +174,4 @@ Contents
    occam2d
    modem
    mare2dem
+   ../forward/index

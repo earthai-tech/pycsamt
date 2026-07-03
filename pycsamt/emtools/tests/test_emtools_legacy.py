@@ -55,20 +55,17 @@ def test_all_symbols_importable():
         align_tensor,
         export_edis,
         plot_confidence,
-        plot_skew_1d,
-        plot_skew_2d,
         plot_strike,
         plot_tensors,
         plot_station_tensors,
         wrap_phase,
         plot_lcurve,
-        plot_skew,
     )
     for fn in (
         check_em_kind, extract_z_list, parse_tensor, compute_qc,
         full_freq, tensor2d, align_tensor, export_edis, plot_confidence,
-        plot_skew_1d, plot_skew_2d, plot_strike, plot_tensors,
-        plot_station_tensors, wrap_phase, plot_lcurve, plot_skew,
+        plot_strike, plot_tensors,
+        plot_station_tensors, wrap_phase, plot_lcurve,
     ):
         assert callable(fn)
 
@@ -77,7 +74,7 @@ def test_deprecated_aliases_importable():
     """Aliases installed by install_compat_aliases must exist."""
     import pycsamt.emtools.legacy as leg
     for name in ("get_full_frequency", "qc", "plot_tensors2",
-                 "plot_skew1d", "plot_skew2d", "plot_l_curve", "get2dtensor"):
+                 "plot_l_curve", "get2dtensor"):
         assert hasattr(leg, name), f"missing alias: {name!r}"
 
 
@@ -465,9 +462,9 @@ def test_legacy_functions_in_emtools_namespace():
     for name in (
         "check_em_kind", "extract_z_list", "parse_tensor", "compute_qc",
         "full_freq", "tensor2d", "align_tensor", "export_edis",
-        "plot_confidence", "plot_skew_1d", "plot_skew_2d", "plot_strike",
+        "plot_confidence", "plot_strike",
         "plot_tensors", "plot_station_tensors", "wrap_phase",
-        "plot_lcurve", "plot_skew",
+        "plot_lcurve",
     ):
         assert hasattr(em, name), f"pycsamt.emtools missing: {name!r}"
         assert callable(getattr(em, name))

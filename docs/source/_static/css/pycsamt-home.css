@@ -113,7 +113,7 @@ body.pycsamt-home-page .bd-content,
 .pyc-hero {
   position: relative;
   overflow: hidden;
-  padding: clamp(3rem, 7vw, 5.2rem) 0 0;
+  padding: clamp(1.1rem, 2.2vw, 1.8rem) 0 0;
   background: var(--pyc-hero-grad);
   border-bottom: 1px solid var(--pyc-border);
 }
@@ -154,22 +154,51 @@ body.pycsamt-home-page .bd-content,
   color: var(--pyc-orange);
 }
 
-.pyc-hero-title {
-  margin: 0 0 0.35rem;
-  font-size: clamp(2.9rem, 7vw, 4.6rem);
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  line-height: 1.0;
-  background: linear-gradient(92deg, var(--pyc-blue-dark) 8%, var(--pyc-blue) 46%, var(--pyc-orange) 96%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.pyc-hero-logo {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 0.9rem;
 }
 
-html[data-theme="dark"] .pyc-hero-title {
-  background: linear-gradient(92deg, #9db8ea 4%, #6f92d8 44%, var(--pyc-orange-soft) 96%);
-  -webkit-background-clip: text;
-  background-clip: text;
+.pyc-wm {
+  width: 300px;
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.pyc-wm .cls-1 { fill: var(--pyc-blue); }
+html[data-theme="dark"] .pyc-wm .cls-1 { fill: #9db8ea; }
+
+/* Staggered letter-by-letter entrance. Transform lives on the wrapper
+   <g>, not the <path> itself — the paths already carry their own
+   translate() attribute, and animating that directly would clobber it. */
+.pyc-wm .wm-l {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: pyc-wm-in 550ms ease forwards;
+}
+
+.pyc-wm .wm-l2 { animation-delay: 60ms; }
+.pyc-wm .wm-l3 { animation-delay: 120ms; }
+.pyc-wm .wm-l4 { animation-delay: 180ms; }
+.pyc-wm .wm-l5 { animation-delay: 240ms; }
+.pyc-wm .wm-l6 { animation-delay: 300ms; }
+.pyc-wm .wm-l7 { animation-delay: 360ms; }
+
+@keyframes pyc-wm-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pyc-wm .wm-l {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+  .pyc-wm .wm-sheen {
+    display: none;
+  }
 }
 
 .pyc-hero-sub {

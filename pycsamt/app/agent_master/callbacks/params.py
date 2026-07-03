@@ -107,6 +107,7 @@ _FID_PLOT_METHOD    = {"type": "am-pf", "key": "method"}
 _FID_PLOT_SORTBY    = {"type": "am-pf", "key": "sort_by"}
 _FID_SKEW_TH        = {"type": "am-pf", "key": "skew_th"}
 _FID_ELLIPT_TH      = {"type": "am-pf", "key": "ellipt_th"}
+_FID_PLOT_PERLINE   = {"type": "am-pf", "key": "per_line"}
 # ── Data / IO tool fields (Wave C) ──────────────────────────────
 _FID_DATUM          = {"type": "am-pf", "key": "datum"}
 _FID_ZONE           = {"type": "am-pf", "key": "zone"}
@@ -1498,9 +1499,9 @@ _SCHEMAS["pt_psection"] = {
             "label": "Colour by", "type": "select",
             "options": [
                 {"label": "Skew (β)", "value": "skew"},
-                {"label": "φ max", "value": "phimax"},
-                {"label": "φ min", "value": "phimin"},
-                {"label": "Ellipticity", "value": "ellipticity"},
+                {"label": "φ max", "value": "phi_max"},
+                {"label": "φ min", "value": "phi_min"},
+                {"label": "Ellipticity", "value": "ellipt"},
             ],
             "default": "skew",
             "help": "Phase-tensor invariant used for the fill colour.",
@@ -1514,6 +1515,45 @@ _SCHEMAS["pt_psection"] = {
         _PLOT_FIELD_PMIN,
         _PLOT_FIELD_PMAX,
         _PLOT_FIELD_PUB,
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["pt_strip"] = {
+    "title": "Phase-tensor Ellipse Strip",
+    "icon": "bi-rulers",
+    "color": "var(--green)",
+    "desc": (
+        "Single-station phase-tensor ellipse strip vs. period — the "
+        "classic 'ellipse timeseries' view. Pick one station."
+    ),
+    "fields": [
+        dict(_PLOT_FIELD_STATIONS,
+             label="Station",
+             help="Station to plot. Blank = first station."),
+        _PLOT_FIELD_PMIN,
+        _PLOT_FIELD_PMAX,
+        _PLOT_FIELD_PUB,
+    ],
+    "steps": [],
+}
+
+_SCHEMAS["pt_strip_grid"] = {
+    "title": "Phase-tensor Strip Grid",
+    "icon": "bi-grid-1x2",
+    "color": "var(--green)",
+    "desc": (
+        "Phase-tensor ellipse strips tiled by survey line (one shared "
+        "colour scale). Lines are auto-detected from station IDs; a few "
+        "evenly spaced stations are drawn per line."
+    ),
+    "fields": [
+        {
+            "id": _FID_PLOT_PERLINE, "key": "per_line",
+            "label": "Stations / line", "type": "number",
+            "min": 1, "max": 20, "step": 1, "default": 4,
+            "help": "Evenly spaced representative stations drawn per line.",
+        },
     ],
     "steps": [],
 }
@@ -1699,7 +1739,7 @@ _SCHEMAS["batch_export"] = {
             "options": [
                 {"label": "Overview (ρ/φ + phase + Φ section)",
                  "value": "overview"},
-                {"label": "Phase tensor (Φ section + map)",
+                {"label": "Phase tensor (Φ section + map + strip grid)",
                  "value": "phase_tensor"},
                 {"label": "All of the above", "value": "all"},
                 {"label": "ρ/φ sounding curves", "value": "rhophi"},
@@ -1707,6 +1747,8 @@ _SCHEMAS["batch_export"] = {
                 {"label": "Phase-tensor (Φ) pseudo-section",
                  "value": "pt_psection"},
                 {"label": "Phase-tensor map", "value": "pt_map"},
+                {"label": "Phase-tensor strip grid (by line)",
+                 "value": "pt_strip_grid"},
             ],
             "default": "overview",
             "help": "Which standard plots to render and save.",
@@ -1956,9 +1998,9 @@ _SCHEMAS["phase_tensor_map"] = {
             "label": "Colour by", "type": "select",
             "options": [
                 {"label": "Skew (β)", "value": "skew"},
-                {"label": "φ max", "value": "phimax"},
-                {"label": "φ min", "value": "phimin"},
-                {"label": "Ellipticity", "value": "ellipticity"},
+                {"label": "φ max", "value": "s1"},
+                {"label": "φ min", "value": "s2"},
+                {"label": "Ellipticity", "value": "ellipt"},
             ],
             "default": "skew",
             "help": "Phase-tensor invariant used for the fill colour.",

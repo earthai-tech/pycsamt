@@ -101,6 +101,13 @@ def _topbar() -> html.Div:
             ),
             html.Div(className="mv-topbar-spacer"),
             html.Button(
+                [html.I(className="bi bi-floppy me-1"), "Session"],
+                id=IDs.BTN_SESSION,
+                className="mv-tbtn",
+                title="Save / restore this workbench session",
+                n_clicks=0,
+            ),
+            html.Button(
                 [html.I(className="bi bi-download me-1"), "Export"],
                 id=IDs.BTN_EXPORT,
                 className="mv-tbtn",
@@ -763,6 +770,9 @@ def _tb_btn(icon, label, btn_id, title=""):
 
 
 def _canvas_toolbar() -> html.Div:
+    """2-D map-view toolbar — Fit / labels / profiles / contour / basemap /
+    markers. Hidden in 3-D mode (see ``_canvas_toolbar_3d`` and
+    ``callbacks.toolbar._register_view_visibility``)."""
     return html.Div(
         [
             html.Span("Map view", id=IDs.CANVAS_TITLE,
@@ -793,7 +803,50 @@ def _canvas_toolbar() -> html.Div:
             html.Span("10", id=IDs.TB_MARK_VAL, className="mv-tb-markval"),
             _tb_btn("bi-plus-lg", "", IDs.TB_MARK_INC, "Larger markers"),
         ],
+        id=IDs.TOOLBAR_2D,
         className="mv-toolbar",
+    )
+
+
+def _canvas_toolbar_3d() -> html.Div:
+    """3-D map-view toolbar — reset view / render mode / depth window /
+    topography. Hidden by default; shown only in 3-D mode (see
+    ``callbacks.toolbar._register_view_visibility``). Mirrors, and writes
+    into, the same stores as the Inspector's "3-D options" accordion, so
+    the two never drift out of sync."""
+    return html.Div(
+        [
+            html.Span("3-D view", className="mv-canvas-title"),
+            html.Div(className="mv-tb-sep"),
+            _tb_btn("bi-arrows-fullscreen", "Reset view", IDs.TB3D_RESET,
+                    "Reset camera to fit the data"),
+            html.Div(className="mv-tb-sep"),
+            html.Span("Mode", className="mv-tb-grp"),
+            _tb_btn("bi-bezier", "Fence", IDs.TB3D_MODE_FENCE,
+                    "Vertical fence sections"),
+            _tb_btn("bi-box", "Block", IDs.TB3D_MODE_BLOCK,
+                    "Solid block volume"),
+            _tb_btn("bi-layers-half", "Depth", IDs.TB3D_MODE_DEPTH,
+                    "Horizontal depth slices"),
+            _tb_btn("bi-circle-half", "Iso", IDs.TB3D_MODE_SURFACE,
+                    "Iso-resistivity surfaces"),
+            html.Div(className="mv-tb-sep"),
+            html.Span("Depth", className="mv-tb-grp"),
+            _tb_btn("bi-arrows-vertical", "Full", IDs.TB3D_DEPTH_FULL,
+                    "Full depth range"),
+            _tb_btn("bi-arrows-vertical", "500 m", IDs.TB3D_DEPTH_500,
+                    "0 - 500 m"),
+            _tb_btn("bi-arrows-vertical", "1 km", IDs.TB3D_DEPTH_1K,
+                    "0 - 1000 m"),
+            _tb_btn("bi-arrows-vertical", "2 km", IDs.TB3D_DEPTH_2K,
+                    "0 - 2000 m"),
+            html.Div(className="mv-tb-sep"),
+            _tb_btn("bi-geo-alt", "Topo", IDs.TB3D_TOPO,
+                    "Toggle topography drape"),
+        ],
+        id=IDs.TOOLBAR_3D,
+        className="mv-toolbar",
+        style={"display": "none"},
     )
 
 
@@ -915,6 +968,7 @@ def _canvas() -> html.Div:
         className="mv-canvas-wrap",
         children=[
             _canvas_toolbar(),
+            _canvas_toolbar_3d(),
             dcc.Loading(
                 html.Div(
                     [
@@ -1351,6 +1405,108 @@ def _settings_canvas() -> dbc.Offcanvas:
     )
 
 
+def _session_canvas() -> dbc.Offcanvas:
+    """Save / restore this workbench session.
+
+    A session captures the current *view state* — active view (map /
+    3-D), inspector controls, active lines, masked stations and theme —
+    plus the loaded survey's station metadata for display. It does
+    **not** capture the raw EDI bytes (they only ever live in the
+    server-side view cache for this browser tab), so restoring a
+    session always needs a "Load lines" reload afterwards to get the
+    map/3-D canvas working again.
+    """
+    return dbc.Offcanvas(
+        [
+            html.Div(
+                [
+                    html.I(className="bi bi-info-circle me-1"),
+                    "Sessions are auto-saved to your browser on every "
+                    "change. Use Download / Upload to move a session to "
+                    "another machine.",
+                ],
+                className="mv-crs-info mb-2",
+            ),
+            html.Div("Note", className="mv-panel-lbl"),
+            dbc.Input(
+                id=IDs.SESSION_NOTE,
+                placeholder="e.g. WILLY AMT 2024 — pre-inversion",
+                size="sm",
+                className="mb-2",
+            ),
+            html.Hr(className="mv-hr"),
+            html.Div("Save", className="mv-panel-lbl"),
+            html.Div(
+                [
+                    dbc.Button(
+                        [html.I(className="bi bi-download me-1"),
+                         "Download JSON"],
+                        id=IDs.BTN_SESSION_SAVE,
+                        color="primary", size="sm", n_clicks=0,
+                    ),
+                    html.Div(id=IDs.SESSION_AUTOSAVE,
+                             className="mv-topo-status"),
+                ],
+                className="d-flex align-items-center gap-2 mb-2",
+            ),
+            html.Details(
+                [
+                    html.Summary("What is included?"),
+                    html.Ul(
+                        [
+                            html.Li("Active view (map / 3-D)"),
+                            html.Li("Inspector controls (colours, mode, "
+                                    "depth/ρ range, topo, basemap, …)"),
+                            html.Li("Active lines & masked stations"),
+                            html.Li("Theme"),
+                            html.Li("Loaded station metadata (for display "
+                                    "only — reload EDI files to re-enable "
+                                    "the map/3-D canvas)"),
+                        ],
+                        className="mv-crs-info",
+                        style={"paddingLeft": "16px"},
+                    ),
+                ],
+                className="mb-2",
+            ),
+            html.Hr(className="mv-hr"),
+            html.Div("Restore", className="mv-panel-lbl"),
+            dcc.Upload(
+                id=IDs.SESSION_UL,
+                children=html.Div(
+                    [
+                        html.I(className="bi bi-file-earmark-arrow-up me-2"),
+                        "Drop session JSON here or ",
+                        html.A("browse"),
+                    ],
+                ),
+                accept=".json",
+                className="mv-upload-drop mv-topo-drop mb-2",
+            ),
+            dbc.Button(
+                [html.I(className="bi bi-arrow-counterclockwise me-1"),
+                 "Restore browser snapshot"],
+                id=IDs.BTN_SESSION_RESTORE,
+                color="secondary", outline=True, size="sm",
+                className="w-100 mb-1", n_clicks=0,
+            ),
+            dbc.Button(
+                [html.I(className="bi bi-trash me-1"), "Clear snapshot"],
+                id=IDs.BTN_SESSION_CLEAR,
+                color="danger", outline=True, size="sm",
+                className="w-100", n_clicks=0,
+            ),
+            html.Div(id=IDs.SESSION_FEEDBACK, className="mv-topo-status mt-2"),
+        ],
+        id=IDs.CANVAS_SESSION,
+        title="Workbench Session",
+        placement="end",
+        is_open=False,
+        style={"width": "360px"},
+        className="mv-panel",
+    )
+
+
 def _help_modal() -> dbc.Modal:
     try:
         from importlib.metadata import version as _v
@@ -1483,6 +1639,8 @@ def _stores() -> list:
         dcc.Store(id=IDs.TOPO_UPLOAD_STORE, data={}),
         dcc.Store(id=IDs.STORE_FIT, data=0),
         dcc.Download(id=IDs.EXPORT_DL),
+        dcc.Store(id=IDs.SESSION_SNAPSHOT, storage_type="local", data=None),
+        dcc.Download(id=IDs.SESSION_DL),
     ]
 
 
@@ -1498,6 +1656,7 @@ def create_layout() -> html.Div:
             _load_modal(),
             _help_modal(),
             _settings_canvas(),
+            _session_canvas(),
             _topbar(),
             _welcome(),
             html.Div(

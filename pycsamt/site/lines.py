@@ -18,6 +18,7 @@ __all__ = [
     "detect_lines_from_filenames",
     "apply_line_renames",
     "resolve_display_name",
+    "pick_representative_stations",
 ]
 
 _SEP = re.compile(r"[-_]")
@@ -186,3 +187,36 @@ def resolve_display_name(
     if renames and line_name in renames:
         return renames[line_name]
     return line_name
+
+
+def pick_representative_stations(
+    station_ids: Sequence[str],
+    k: int,
+) -> List[str]:
+    """Return up to *k* evenly spaced station IDs from a sorted line.
+
+    Used to build a compact ``profiles={line: [stations]}`` grouping for
+    multi-profile ellipse-strip plots (see
+    :func:`~pycsamt.emtools.tensor.plot_phase_tensor_strip_grid`) without
+    drawing every single station in a long line.
+
+    Parameters
+    ----------
+    station_ids : sequence of str
+        Station IDs belonging to one survey line.
+    k : int
+        Maximum number of stations to keep.  The full (sorted) list is
+        returned unchanged when it already has ``k`` or fewer entries.
+
+    Examples
+    --------
+    >>> pick_representative_stations(
+    ...     ["18-001A", "18-010U", "18-019U", "18-025A", "18-005U"], 3)
+    ['18-001A', '18-010U', '18-025A']
+    """
+    names = sorted(station_ids)
+    if len(names) <= k:
+        return names
+    step = (len(names) - 1) / (k - 1) if k > 1 else 0
+    idx = sorted({round(i * step) for i in range(k)})
+    return [names[i] for i in idx]

@@ -74,6 +74,8 @@ _PLOT_KIND = {
     "phase_tensor_map": "pt_map",
     "station_response": "station_response",
     "strike_profile":  "strike_profile",
+    "pt_strip":       "pt_strip",
+    "pt_strip_grid":  "pt_strip_grid",
 }
 _PLOT_WORKFLOWS = frozenset(_PLOT_KIND)
 
@@ -1031,6 +1033,7 @@ _NEEDS_PARAMS: frozenset[str] = frozenset({
     # Plotting tasks (station / component / period / publication)
     "rhophi", "phase_psection", "pt_psection", "tipper_plot",
     "phase_tensor_map", "station_response", "strike_profile",
+    "pt_strip", "pt_strip_grid",
     "strike", "dimensionality", "validator",
     # Data / IO tools
     "coords", "elevation", "converter", "batch_export",
@@ -1075,6 +1078,8 @@ _WF_LABELS: dict[str, str] = {
     "rhophi":             "rho/phi sounding curves",
     "phase_psection":     "phase pseudo-section",
     "pt_psection":        "phase-tensor pseudo-section",
+    "pt_strip":           "phase-tensor ellipse strip",
+    "pt_strip_grid":      "phase-tensor strip grid (by line)",
     "tipper_plot":        "tipper plot",
     "phase_tensor_map":   "phase-tensor map",
     "station_response":   "station response",
@@ -1723,6 +1728,8 @@ def _capability_text() -> str:
         "- phase pseudo-section\n"
         "- phase-tensor (Φ) ellipse pseudo-section\n"
         "- phase-tensor map (ellipses at a chosen period)\n"
+        "- phase-tensor ellipse strip (single station vs period)\n"
+        "- phase-tensor strip grid (ellipse strips tiled by survey line)\n"
         "- station response inspector (Bode ρa/φ curves)\n"
         "- strike profile (strike vs station position)\n"
         "- tipper components / induction arrows (when tipper data exists)\n\n"
@@ -1802,6 +1809,8 @@ _PLOT_MENU: tuple[tuple[str, str], ...] = (
     ("phase pseudo-section", "plot the phase pseudosection"),
     ("phase-tensor ellipse section", "plot the phase tensor section"),
     ("phase-tensor map", "plot the phase tensor map"),
+    ("phase-tensor ellipse strip", "plot the phase tensor ellipse strip"),
+    ("phase-tensor strip grid (by line)", "plot the phase tensor strip grid"),
     ("station response (Bode)", "plot the station response"),
     ("strike profile", "plot the strike profile"),
     ("tipper / induction arrows", "plot the tipper"),
@@ -1956,6 +1965,8 @@ def _dispatch_plot(
         "phase_psection": "phase pseudo-section",
         "pt_psection": "phase-tensor pseudo-section",
         "tipper": "tipper plot",
+        "pt_strip": "phase-tensor ellipse strip",
+        "pt_strip_grid": "phase-tensor strip grid",
     }
     where = f" for {label}" if label else ""
     step(f"Rendering {_labels.get(kind, kind)}...", "running")
@@ -3615,6 +3626,7 @@ def _run_agent(
             "freq_decimation",
             "rhophi", "phase_psection", "pt_psection", "tipper_plot",
             "phase_tensor_map", "station_response", "strike_profile",
+            "pt_strip", "pt_strip_grid",
             "strike", "dimensionality", "validator",
             "coords", "elevation", "converter", "batch_export",
             "freq_editor",  # layered_model is synthetic → no data needed

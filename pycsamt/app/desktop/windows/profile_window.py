@@ -14,9 +14,9 @@ Left params panel
 
 Right content
 ─────────────
-  6-tab ProfilePanel:
+  7-tab ProfilePanel:
     ρₐ / φ  |  Pseudosection ρₐ  |  Pseudosection φ  |
-    Tipper  |  Phase Tensor       |  2D Section
+    Tipper  |  Phase Tensor       |  PT Strip  |  2D Section
 """
 
 from __future__ import annotations
@@ -251,7 +251,7 @@ class ProfileViewerWindow(PanelWindow):
         tab = self._profile_panel._tabs.currentIndex()
         if tab in (1, 2):
             self._profile_panel._redraw_current_tab()
-        elif tab == 5:
+        elif tab == 6:
             self._profile_panel._section_panel._redraw()
 
     def _on_exag_changed(self, value: float) -> None:
@@ -333,6 +333,7 @@ class ProfileViewerWindow(PanelWindow):
             self._profile_panel._canvas_ph_ps,
             self._profile_panel._canvas_tipper,
             self._profile_panel._canvas_pt,
+            self._profile_panel._canvas_pt_strip,
         ]
         fig = canvases[tab].figure if tab < len(canvases) else None
         if fig:

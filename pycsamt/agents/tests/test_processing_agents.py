@@ -8,7 +8,6 @@ AgentWorker (no LLM, no API key required).
   * QC Quicklook       → plot_qc_quicklook
   * Dimensionality     → classify_dimensionality  +  plot_dimensionality_psection
   * Static Shift (fast)→ correct_static_shift     +  plot_rho_phase_bode
-  * Skew Analysis      → plot_skew_2d
 
 Each test loads real EDI data from:
   • TIPPER  (2 stations)  — data/AMT/TIPPER/
@@ -218,63 +217,6 @@ class TestStaticShift:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 4. Skew Analysis
-# ══════════════════════════════════════════════════════════════════════════════
-
-class TestSkewAnalysis:
-    """plot_skew_2d — must not crash with frequency-misaligned WILLY data."""
-
-    def test_returns_axes_willy(self, willy_sites):
-        import pycsamt.emtools as et
-        ax = et.plot_skew_2d(willy_sites, verbose=0)
-        assert ax is not None
-        assert hasattr(ax, "get_figure")
-
-    def test_returns_axes_tipper(self, tipper_sites):
-        import pycsamt.emtools as et
-        ax = et.plot_skew_2d(tipper_sites, verbose=0)
-        assert ax is not None
-
-    def test_no_value_error_no_points(self, willy_sites):
-        """Regression: frequency misalignment → all-NaN rows must not crash."""
-        import pycsamt.emtools as et
-        # Must not raise ValueError("No points given")
-        et.plot_skew_2d(willy_sites, verbose=0)
-
-    def test_accepts_verbose_param(self, tipper_sites):
-        """Regression: plot_skew_2d must accept verbose= keyword."""
-        import pycsamt.emtools as et
-        ax = et.plot_skew_2d(tipper_sites, verbose=0)
-        assert ax is not None
-
-    def test_interpolate_false_does_not_crash(self, willy_sites):
-        import pycsamt.emtools as et
-        ax = et.plot_skew_2d(willy_sites, interpolate=False, verbose=0)
-        assert ax is not None
-
-    def test_method_swift(self, willy_sites):
-        import pycsamt.emtools as et
-        ax = et.plot_skew_2d(willy_sites, method="Swift", verbose=0)
-        assert ax is not None
-
-    def test_sensitivity_mu(self, willy_sites):
-        import pycsamt.emtools as et
-        ax = et.plot_skew_2d(willy_sites, sensitivity="mu", verbose=0)
-        assert ax is not None
-
-    def test_mode_period(self, willy_sites):
-        import pycsamt.emtools as et
-        ax = et.plot_skew_2d(willy_sites, mode="period", verbose=0)
-        assert ax is not None
-
-    def test_parent_figure_exists(self, willy_sites):
-        import pycsamt.emtools as et
-        ax = et.plot_skew_2d(willy_sites, verbose=0)
-        fig = ax.get_figure()
-        assert fig is not None
-
-
-# ══════════════════════════════════════════════════════════════════════════════
 # 5. interpolate_grid guard (unit test for the fix)
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -393,20 +335,6 @@ class TestAgentWorkerProcessing:
         res = results[0]
         assert hasattr(res, "savefig") or hasattr(res, "get_figure"), (
             f"Static Shift result must be Figure/Axes, got {type(res)}"
-        )
-
-    def test_skew_analysis_worker_no_error(self, qapp, willy_sites):
-        """Regression: Skew Analysis must not crash with WILLY frequency mismatch."""
-        results, errors, _ = _run_worker("Skew Analysis", willy_sites)
-        assert not errors, f"Skew Analysis worker emitted errors: {errors}"
-        assert results
-
-    def test_skew_analysis_worker_returns_axes(self, qapp, willy_sites):
-        results, errors, _ = _run_worker("Skew Analysis", willy_sites)
-        assert not errors
-        res = results[0]
-        assert hasattr(res, "get_figure") or hasattr(res, "savefig"), (
-            f"Expected Figure/Axes from Skew Analysis, got {type(res)}"
         )
 
     def test_worker_logs_function_name(self, qapp, tipper_sites):

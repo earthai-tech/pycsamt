@@ -2,81 +2,72 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
-PhaseTensorMapDialog — geographic map of phase-tensor ellipses at one period.
+PhaseTensorStripGridDialog — multi-profile phase-tensor ellipse-strip grid.
 
-Calls ``pycsamt.emtools.tensor.plot_phase_tensor_map`` which positions each
-station as a tensor ellipse (shape = φ_max/φ_min, orientation = θ, colour =
-chosen scalar).  Induction arrows are overlaid when tipper data are available.
+Calls ``pycsamt.emtools.tensor.plot_phase_tensor_strip_grid``, which tiles one
+single-station ellipse strip (:func:`~pycsamt.emtools.tensor.plot_phase_tensor_strip`)
+per selected station (rows) across survey lines/profiles (columns), sharing a
+single colour scale and one colorbar for the whole figure.
+
+Survey lines are auto-detected from station IDs using the same detector the
+web app's Lines panel uses (:func:`pycsamt.site.lines.detect_lines_from_station_ids`),
+so this works out of the box for any loaded survey without extra metadata.
 
 Usage
 -----
-    from pycsamt.app.desktop.tools.phase_tensor_map_tool import PhaseTensorMapDialog
-    dlg = PhaseTensorMapDialog(sites, parent=self)
+    from pycsamt.app.desktop.tools.phase_tensor_strip_grid_tool import (
+        PhaseTensorStripGridDialog,
+    )
+    dlg = PhaseTensorStripGridDialog(sites, parent=self)
     dlg.exec()
 """
 from __future__ import annotations
 
 import matplotlib
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
     QLabel,
     QPushButton,
-    QSizePolicy,
+    QSpinBox,
     QSplitter,
     QVBoxLayout,
     QWidget,
 )
 
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
+from pycsamt.site.lines import pick_representative_stations
 
-_COLOR_BY = ["skew", "ellipt", "theta", "alpha", "s1", "s2"]
-_TIPPER_CONV = ["parkinson", "wiese"]
-_TIPPER_COMP = ["real", "imag", "amplitude"]
+_COLOR_BY = ["skew", "ellipt", "theta", "alpha", "phi_min", "phi_max"]
 
 
 # ── Worker ────────────────────────────────────────────────────────────────────
 
-class _MapWorker(QThread):
+class _StripGridWorker(QThread):
     done  = Signal(object)   # Figure
     error = Signal(str)
 
-    def __init__(self, sites, period: float, c_by: str,
-                 show_tipper: bool, tipper_conv: str, tipper_comp: str,
-                 station_labels: bool):
+    def __init__(self, sites, profiles: dict, c_by: str):
         super().__init__()
-        self._sites         = sites
-        self._period        = period
-        self._c_by          = c_by
-        self._show_tipper   = show_tipper
-        self._tipper_conv   = tipper_conv
-        self._tipper_comp   = tipper_comp
-        self._station_labels = station_labels
+        self._sites    = sites
+        self._profiles = profiles
+        self._c_by     = c_by
 
     def run(self):
         try:
-            from pycsamt.emtools.tensor import plot_phase_tensor_map
-            before = set(plt.get_fignums())
-            ax = plot_phase_tensor_map(
+            from pycsamt.emtools.tensor import plot_phase_tensor_strip_grid
+            fig = plot_phase_tensor_strip_grid(
                 self._sites,
-                period=self._period,
+                profiles=self._profiles,
                 c_by=self._c_by,
-                show_tipper=self._show_tipper,
-                tipper_convention=self._tipper_conv,
-                tipper_component=self._tipper_comp,
-                station_labels=self._station_labels,
                 verbose=0,
             )
-            fig = ax.figure
             self.done.emit(fig)
         except Exception as exc:
             self.error.emit(str(exc))
@@ -84,9 +75,9 @@ class _MapWorker(QThread):
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
 
-class PhaseTensorMapDialog(QDialog):
+class PhaseTensorStripGridDialog(QDialog):
     """
-    Geographic phase-tensor ellipse map at a single period.
+    Multi-profile phase-tensor ellipse-strip grid.
 
     Parameters
     ----------
@@ -97,11 +88,13 @@ class PhaseTensorMapDialog(QDialog):
 
     def __init__(self, sites=None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Phase Tensor Map")
-        self.setMinimumSize(920, 640)
+        self.setWindowTitle("Phase Tensor Strip Grid")
+        self.setMinimumSize(1000, 640)
         self._sites  = sites
         self._worker = None
+        self._lines: dict[str, list] = {}
         self._build_ui()
+        self._detect_lines()
 
     # ── Build ─────────────────────────────────────────────────────────────────
 
@@ -118,16 +111,20 @@ class PhaseTensorMapDialog(QDialog):
         ctrl_lay.setContentsMargins(6, 6, 6, 6)
         ctrl_lay.setSpacing(10)
 
-        grp_period = QGroupBox("Period")
-        form_p = QFormLayout(grp_period)
-        self._period_spin = QDoubleSpinBox()
-        self._period_spin.setRange(1e-5, 1e5)
-        self._period_spin.setDecimals(4)
-        self._period_spin.setValue(10.0)
-        self._period_spin.setSuffix(" s")
-        self._period_spin.setSingleStep(1.0)
-        form_p.addRow("T:", self._period_spin)
-        ctrl_lay.addWidget(grp_period)
+        grp_lines = QGroupBox("Survey lines (auto-detected)")
+        lay_lines = QVBoxLayout(grp_lines)
+        self._lines_lbl = QLabel("—")
+        self._lines_lbl.setWordWrap(True)
+        lay_lines.addWidget(self._lines_lbl)
+        ctrl_lay.addWidget(grp_lines)
+
+        grp_sel = QGroupBox("Selection")
+        form_sel = QFormLayout(grp_sel)
+        self._per_line_spin = QSpinBox()
+        self._per_line_spin.setRange(1, 20)
+        self._per_line_spin.setValue(4)
+        form_sel.addRow("Stations / line:", self._per_line_spin)
+        ctrl_lay.addWidget(grp_sel)
 
         grp_style = QGroupBox("Ellipse style")
         form_s = QFormLayout(grp_style)
@@ -136,27 +133,7 @@ class PhaseTensorMapDialog(QDialog):
         form_s.addRow("Colour by:", self._cby_combo)
         ctrl_lay.addWidget(grp_style)
 
-        grp_tip = QGroupBox("Tipper arrows")
-        form_t = QFormLayout(grp_tip)
-        self._show_tipper_cb = QCheckBox("Show tipper")
-        self._show_tipper_cb.setChecked(True)
-        form_t.addRow(self._show_tipper_cb)
-        self._tipper_conv_combo = QComboBox()
-        self._tipper_conv_combo.addItems(_TIPPER_CONV)
-        form_t.addRow("Convention:", self._tipper_conv_combo)
-        self._tipper_comp_combo = QComboBox()
-        self._tipper_comp_combo.addItems(_TIPPER_COMP)
-        form_t.addRow("Component:", self._tipper_comp_combo)
-        ctrl_lay.addWidget(grp_tip)
-
-        grp_map = QGroupBox("Map")
-        form_map = QFormLayout(grp_map)
-        self._labels_cb = QCheckBox("Station labels")
-        self._labels_cb.setChecked(True)
-        form_map.addRow(self._labels_cb)
-        ctrl_lay.addWidget(grp_map)
-
-        self._run_btn = QPushButton("Draw Map")
+        self._run_btn = QPushButton("Draw Grid")
         self._run_btn.clicked.connect(self._on_plot)
         ctrl_lay.addWidget(self._run_btn)
 
@@ -182,21 +159,48 @@ class PhaseTensorMapDialog(QDialog):
         box.rejected.connect(self.reject)
         root.addWidget(box)
 
+    # ── Line detection ────────────────────────────────────────────────────────
+
+    def _detect_lines(self) -> None:
+        if self._sites is None:
+            return
+        try:
+            from pycsamt.emtools._core import _iter_items, _unwrap
+            from pycsamt.site.lines import detect_lines_from_station_ids
+            names = []
+            for ed in _iter_items(self._sites):
+                try:
+                    ed = _unwrap(ed)
+                except Exception:
+                    pass
+                nm = getattr(ed, "station", None) or getattr(ed, "id", None) or "?"
+                names.append(str(nm))
+            self._lines = detect_lines_from_station_ids(names)
+            summary = ", ".join(f"{k} ({len(v)})" for k, v in self._lines.items())
+            self._lines_lbl.setText(summary or "No stations found.")
+        except Exception as exc:
+            self._lines_lbl.setText(f"Line detection failed: {exc}")
+            self._lines = {}
+
     # ── Plot ──────────────────────────────────────────────────────────────────
 
     def _on_plot(self) -> None:
-        self._run_btn.setEnabled(False)
-        T = self._period_spin.value()
-        self._status_lbl.setText(f"Drawing map at T = {T:.4g} s…")
+        if not self._lines:
+            self._status_lbl.setText("No survey lines detected.")
+            return
+        k = self._per_line_spin.value()
+        profiles = {
+            ln: pick_representative_stations(names, k)
+            for ln, names in self._lines.items()
+        }
 
-        self._worker = _MapWorker(
+        self._run_btn.setEnabled(False)
+        self._status_lbl.setText("Drawing ellipse-strip grid…")
+
+        self._worker = _StripGridWorker(
             self._sites,
-            period=T,
+            profiles=profiles,
             c_by=self._cby_combo.currentText(),
-            show_tipper=self._show_tipper_cb.isChecked(),
-            tipper_conv=self._tipper_conv_combo.currentText(),
-            tipper_comp=self._tipper_comp_combo.currentText(),
-            station_labels=self._labels_cb.isChecked(),
         )
         self._worker.done.connect(self._on_done)
         self._worker.error.connect(self._on_error)

@@ -332,6 +332,10 @@ def figure_for(
             station_color=c.get("station_color", "#1f2937"),
             show_labels=bool(c.get("labels", True)),
         )
+        # uirevision keeps the user's camera orbit/zoom across control
+        # changes; the 3-D toolbar's "Reset view" bumps the token to
+        # snap the camera back to fit the data (mirrors the 2-D "Fit").
+        fig.update_layout(uirevision=f"fit-{fit}")
     else:
         return empty_figure(theme, f"Unknown view: {view_name}")
     return _transparent(fig)

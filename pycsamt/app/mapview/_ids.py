@@ -32,8 +32,21 @@ class IDs:
     DATA_BADGE       = "mv-data-badge"
     DATA_BADGE_TEXT  = "mv-data-badge-text"
     BTN_THEME        = "mv-btn-theme"
+    BTN_SESSION      = "mv-btn-session"
     BTN_EXPORT       = "mv-btn-export"
     BTN_HELP         = "mv-btn-help"
+
+    # ── session save / restore ────────────────
+    CANVAS_SESSION      = "mv-canvas-session"
+    SESSION_NOTE        = "mv-session-note"
+    BTN_SESSION_SAVE    = "mv-btn-session-save"
+    SESSION_DL          = "mv-session-dl"
+    SESSION_SNAPSHOT    = "mv-session-snapshot"      # localStorage auto-save
+    SESSION_AUTOSAVE    = "mv-session-autosave"
+    BTN_SESSION_RESTORE = "mv-btn-session-restore"
+    SESSION_UL          = "mv-session-upload"
+    BTN_SESSION_CLEAR   = "mv-btn-session-clear"
+    SESSION_FEEDBACK    = "mv-session-feedback"
 
     # ── view rail ─────────────────────────────
     RAIL_MAP         = "mv-rail-map"
@@ -52,7 +65,8 @@ class IDs:
     WELCOME          = "mv-welcome"
     WELCOME_CTA      = "mv-welcome-cta"
 
-    # ── canvas toolbar ────────────────────────
+    # ── canvas toolbar (2-D map view) ─────────
+    TOOLBAR_2D       = "mv-toolbar-2d"
     TB_INFO          = "mv-tb-info"
     TB_FIT           = "mv-tb-fit"
     TB_LABELS        = "mv-tb-labels"
@@ -67,6 +81,19 @@ class IDs:
     TB_MARK_INC      = "mv-tb-mark-inc"
     TB_MARK_VAL      = "mv-tb-mark-val"
     STORE_FIT        = "mv-store-fit"
+
+    # ── canvas toolbar (3-D map view) ─────────
+    TOOLBAR_3D       = "mv-toolbar-3d"
+    TB3D_RESET       = "mv-tb3d-reset"
+    TB3D_MODE_FENCE  = "mv-tb3d-mode-fence"
+    TB3D_MODE_BLOCK  = "mv-tb3d-mode-block"
+    TB3D_MODE_DEPTH  = "mv-tb3d-mode-depth"
+    TB3D_MODE_SURFACE = "mv-tb3d-mode-surface"
+    TB3D_DEPTH_FULL  = "mv-tb3d-depth-full"
+    TB3D_DEPTH_500   = "mv-tb3d-depth-500"
+    TB3D_DEPTH_1K    = "mv-tb3d-depth-1k"
+    TB3D_DEPTH_2K    = "mv-tb3d-depth-2k"
+    TB3D_TOPO        = "mv-tb3d-topo"
 
     # ── coordinate system ─────────────────────
     CTL_CRS_MODE     = "mv-ctl-crs-mode"

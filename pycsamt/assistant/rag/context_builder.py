@@ -173,12 +173,18 @@ class AssembledContext:
         if lead is not None:
             label = _chunk_label(lead)
             seen.add(label)
-            first, rest = _first_sentence(_snippet(lead, 460))
-            opening = f"**`{label}`**"
-            if first:
-                opening += f" — {first}"
-            if rest:
-                opening += f"\n\n{rest}"
+            body = _snippet(lead, 460)
+            if body.lstrip().startswith(("-", "*", "1.")):
+                # A list-shaped chunk (e.g. a recipe's step list) reads
+                # best kept as markdown, not flattened to one line.
+                opening = f"**`{label}`**\n\n{body}"
+            else:
+                first, rest = _first_sentence(body)
+                opening = f"**`{label}`**"
+                if first:
+                    opening += f" — {first}"
+                if rest:
+                    opening += f"\n\n{rest}"
             parts.append(opening)
 
         # Supporting chunks become one-line bullets instead of

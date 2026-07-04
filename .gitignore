@@ -224,6 +224,13 @@ data/MT/*
 !data/MT/kap03lmt_edis
 !data/MT/README.md
 
+# Exception: one sample inversion-plots run, used to test MapView/webapp
+# rendering. Only 27-frequ-watex-data-02 is tracked — the other runs and
+# the zip archive stay local-only (usable locally, never committed).
+!data/willy_inversion_plots
+data/willy_inversion_plots/*
+!data/willy_inversion_plots/27-frequ-watex-data-02
+
 # Demo scripts and generated figures — committed separately when stable
 examples/
 !docs/source/examples/

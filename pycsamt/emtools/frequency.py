@@ -271,13 +271,14 @@ def _set_bad_rows_to_nan(obj: Any,
 
 
 def _set_array_field(obj: Any, field: str, value: np.ndarray) -> None:
-    """Set an array field while tolerating strict container validators."""
-    if (
-        hasattr(obj, "compute_resistivity_phase")
-        and field in {"z", "z_err"}
-        and not np.isfinite(value).all()
-    ):
-        return
+    """Set an array field, tolerating NaN-containing values.
+
+    ``Z``-like containers with ``compute_resistivity_phase`` accept
+    NaN-containing ``z``/``z_err`` writes fine (the setter applies the
+    array first, then logs internally if the derived resistivity/phase
+    recompute can't handle the NaNs) — masking and recovery both rely on
+    writing NaN rows here, so this must not refuse the write.
+    """
     try:
         setattr(obj, field, value)
     except Exception:
@@ -454,8 +455,9 @@ def select_band(
         strict=strict,
         verbose=verbose,
     )
-    # delegate to existing editor for robustness
-    return _edit.select_freq(
+    # delegate to existing editor for robustness (broadcast variant --
+    # `S` is a multi-site Sites container, not a single EDI-like object)
+    return _edit.select_freq_all(
         S,
         fmin=fmin,
         fmax=fmax,

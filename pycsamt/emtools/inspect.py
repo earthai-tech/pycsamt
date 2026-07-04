@@ -31,6 +31,14 @@ def _name(ed: Any, idx: int) -> str:
 
 
 def _coords(ed: Any) -> Tuple[Optional[float], Optional[float]]:
+    coords = getattr(ed, "coords", None)
+    if coords is not None:
+        try:
+            lat, lon = float(coords[0]), float(coords[1])
+            if np.isfinite(lat) and np.isfinite(lon):
+                return lat, lon
+        except Exception:
+            pass
     lat = getattr(ed, "lat", None)
     lon = getattr(ed, "lon", None)
     if lat is None:
@@ -46,6 +54,17 @@ def _coords(ed: Any) -> Tuple[Optional[float], Optional[float]]:
 
 
 def _has(ed: Any, sect: str) -> bool:
+    sect_l = str(sect).lower()
+    # Real Site/EDIFile objects always expose a .tipper/.Tipper (and
+    # .Z) attribute even when no such data was ever parsed, so plain
+    # hasattr() below is not a reliable presence check for these -- use
+    # the same block extraction the rest of emtools relies on instead.
+    if sect_l in ("tipper", "t"):
+        T, t, _ = _get_t_block(ed)
+        return T is not None and t is not None
+    if sect_l in ("mt", "z", "impedance"):
+        Z, z, _ = _get_z_block(ed)
+        return Z is not None and z is not None
     f = getattr(ed, "has_section", None)
     if callable(f):
         try:
@@ -859,6 +878,15 @@ def plot_station_response(
     z_err_obs = getattr(Z_obs,  "z_err", None) if Z_obs else None
     T_obs, t_obs, _ = _get_t_block(ed_obs)
     tip_err_obs = getattr(T_obs, "tipper_err", None) if T_obs else None
+    if (
+        isinstance(tip_err_obs, np.ndarray)
+        and tip_err_obs.ndim == 3
+        and tip_err_obs.shape[1] == 1
+    ):
+        # .tipper is squeezed to (n_freq, 2) by _get_t_block, but the
+        # raw .tipper_err attribute keeps its native (n_freq, 1, 2)
+        # shape -- match it so downstream indexing stays aligned.
+        tip_err_obs = tip_err_obs[:, 0, :]
 
     axes_given = _axes_list(axes, 1) if axes is not None else None
     if rho_obs is None or phase_obs is None or z_obs is None:

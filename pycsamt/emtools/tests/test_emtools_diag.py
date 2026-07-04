@@ -21,9 +21,6 @@ from pycsamt.emtools.diag import (
 # Fixtures / helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-_MU0 = 4.0 * np.pi * 1e-7
-
-
 class _FakeZ:
     def __init__(self, z, freq):
         self.z    = np.asarray(z, dtype=complex)
@@ -56,8 +53,7 @@ def _make_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
 def _rho_obs_from_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
     """Compute expected rho_a (xy) matching the Cagniard formula used in diag."""
     z_abs_sq = 5.0 * freqs * rho   # |Z_xy|²
-    omega = 2.0 * np.pi * freqs
-    return z_abs_sq / (omega * _MU0)
+    return 0.2 * z_abs_sq / freqs
 
 
 def _site(station: str, rho: float = 100.0, n: int = 10) -> _FakeSite:

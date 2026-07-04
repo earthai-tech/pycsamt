@@ -143,7 +143,11 @@ docs/gh-pages
 docs/_build*
 docs/_themes
 docs/_static
-docs/_templates 
+docs/_templates
+
+# sphinx-gallery output — regenerated on every docs build
+docs/source/emtools/auto_examples/
+docs/source/sg_execution_times.rst
 
 # PyBuilder
 target/
@@ -173,7 +177,7 @@ pme.en.csv.csv
 mt/
 !pycsamt/inversion/mt/
 !pycsamt/inversion/mt/*.py
-data/
+data/*
 data/edis
 
 
@@ -199,12 +203,38 @@ data/ModEM_inversion_files/
 /AGENTS.md
 
 # All field / survey data — may contain confidential site information
-data/
+data/*
+
+# Exception: small AMT/MT lines used as bundled sample data for the
+# pycsamt.emtools sphinx-gallery examples (docs/source/emtools/examples/).
+# Only L18PLT and L22PLT of WILLY_DATA are tracked — L26PLT/L30PLT/L34PLT
+# stay ignored (usable locally, never committed) to keep the repo small.
+# (Re-excluding each level with "dir/*" — not a bare "dir/" — is required so
+# git still descends far enough to see the nested "!" re-includes below.)
+!data/AMT
+data/AMT/*
+!data/AMT/WILLY_DATA
+data/AMT/WILLY_DATA/*
+!data/AMT/WILLY_DATA/L18PLT
+!data/AMT/WILLY_DATA/L22PLT
+!data/AMT/WILLY_DATA/README.md
+
+!data/MT
+data/MT/*
+!data/MT/kap03lmt_edis
+!data/MT/README.md
 
 # Demo scripts and generated figures — committed separately when stable
 examples/
 !docs/source/examples/
 !docs/source/examples/index.rst
+
+# Exception: pycsamt.emtools sphinx-gallery example *source* scripts —
+# these are hand-written, not generated, and must be tracked so the
+# gallery can be rebuilt from a checkout. auto_examples/ (the actual
+# sphinx-gallery build output) stays ignored via the rule above.
+!docs/source/emtools/examples/
+!docs/source/emtools/examples/*.py
 
 # C&G paper submission files — not for public distribution
 /cag-paper/

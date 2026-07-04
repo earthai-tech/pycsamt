@@ -55,13 +55,16 @@ from pycsamt.emtools.qc import (
 # Shared fake-site infrastructure
 # ─────────────────────────────────────────────────────────────────────────────
 
-_MU0 = 4.0 * np.pi * 1e-7
-
-
 class _FakeZ:
     def __init__(self, z, freq):
         self.z    = np.array(z, dtype=complex)
         self.freq = np.array(freq, dtype=float)
+
+    def compute_resistivity_phase(self):
+        """Mimics the real Z class's marker attribute so tests exercise
+        the same "strict container" code path as production (see the
+        _set_array_field NaN-write bug this fixture previously masked)."""
+        return None
 
 
 class _FakeSite:
@@ -93,7 +96,7 @@ def _make_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
 def _rho_from_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
     """True ρ_a (det) from the synthetic Z above."""
     z_abs_sq = 5.0 * freqs * rho
-    return z_abs_sq / (2.0 * np.pi * freqs * _MU0)
+    return 0.2 * z_abs_sq / freqs
 
 
 def _site(station: str, rho: float = 100.0, n: int = 10,

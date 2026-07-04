@@ -25,6 +25,14 @@ os.environ.setdefault(
     "MPLCONFIGDIR",
     os.path.abspath("../_build/matplotlib"),
 )
+# Repo root, so gallery example scripts can find bundled sample data
+# (e.g. data/AMT/WILLY_DATA/) without guessing their own cwd.
+os.environ.setdefault("PYCSAMT_DOCS_REPO_ROOT", os.path.abspath("../../"))
+
+# sphinx-gallery executes example scripts at build time; force a headless
+# backend before anything else has a chance to pick an interactive one.
+import matplotlib
+matplotlib.use("Agg")
 
 # -- Path setup ----------------------------------------------------------------
 # Make the package importable from the source tree without installation.
@@ -61,6 +69,7 @@ extensions = [
     "sphinx_copybutton",    # copy-button on code blocks
     "sphinx_design",        # grid / tab / card directives
     "sphinx_toggleprompt",  # show/hide >>> prompts on doctest blocks
+    "sphinx_gallery.gen_gallery",  # execute example scripts, embed output
 ]
 
 # -- sphinx-copybutton -----------------------------------------------------
@@ -71,6 +80,26 @@ copybutton_prompt_is_regexp = True
 # -- sphinx-toggleprompt ---------------------------------------------------
 # Shift the toggle left so it does not overlap the copy button.
 toggleprompt_offset_right = 40
+
+# -- sphinx-gallery ---------------------------------------------------------
+# Each subpackage that wants runnable, image-producing examples gets its own
+# ``<subpackage>/examples`` source dir and a matching ``<subpackage>/auto_examples``
+# generated dir. Add new pairs here as more subpackages grow a gallery.
+sphinx_gallery_conf = {
+    "examples_dirs":  ["emtools/examples"],
+    "gallery_dirs":   ["emtools/auto_examples"],
+    # Match "plot_*" regardless of path separator — the sphinx-gallery
+    # default (r"/plot_") only matches POSIX paths and silently executes
+    # zero files on Windows.
+    "filename_pattern": r"[\\/]plot_",
+    "download_all_examples": False,
+    "plot_gallery": True,
+    "remove_config_comments": True,
+    "backreferences_dir": None,
+    # Skip shared helper modules (_datasets.py, _synthetic.py) — they are
+    # imported by plot_*.py scripts, not standalone examples.
+    "ignore_pattern": r"(__init__|_datasets|_synthetic)\.py",
+}
 
 templates_path    = ["_templates"]
 exclude_patterns  = ["_build", "Thumbs.db", ".DS_Store"]

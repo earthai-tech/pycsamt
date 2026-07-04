@@ -4,6 +4,11 @@ pycsamt.emtools
 Electromagnetic processing, diagnostics, tensor analysis, quality control,
 static-shift correction, source-effect tools, and plotting helpers.
 
+.. seealso::
+
+   :doc:`../emtools/index` for narrative, runnable examples built module
+   by module (currently: :doc:`../emtools/tf`).
+
 .. automodule:: pycsamt.emtools
    :members:
    :show-inheritance:

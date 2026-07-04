@@ -9,16 +9,17 @@ from matplotlib.lines import Line2D
 import numpy as np
 import pandas as pd
 
-from ..site import edit as _edit
 from ._core import (
     ensure_sites,
     _apply_each,
     _iter_items,
     _name,
-    _get_t_block, 
-    _get_z_block, 
+    _get_t_block,
+    _get_z_block,
 )
 from .tensor import build_phase_tensor_table
+from .tensor import rotate as _tensor_rotate
+from .tensor import rotate_to_strike as _tensor_rotate_to_strike
 from ..api.labels import LOG10_PERIOD_LABEL
 from ..api.station import PYCSAMT_STATION_RENDERING
 from ..api.view import maybe_wrap_frame
@@ -252,15 +253,15 @@ def project_to_2d(
     )
     # rotate
     if strike is None:
-        S = _edit.rotate_to_strike(  # type: ignore
+        S = _tensor_rotate_to_strike(
             S,
             method=method,
             inplace=inplace,
         )
     else:
-        S = _edit.rotate(  # type: ignore
+        S = _tensor_rotate(
             S,
-            angle=float(strike),
+            float(strike),
             inplace=inplace,
         )
     # antisymmetrize off-diagonals
@@ -358,7 +359,7 @@ def learn_dim_dictionary(
         for i in range(n):
             A[:, i] = _ista(D, Z[i], lam, code_iter)
         # dict step
-        D = _mod_update(Z.T, A).T
+        D = _mod_update(Z.T, A)
     meta = dict(
         samples=n,
         stations=df["station"].tolist(),
@@ -861,14 +862,16 @@ def plot_dim_map(
     coords = {}
     for i, ed in enumerate(_iter_items(S)):
         st = _name(ed, i)
-        lat = getattr(ed, "lat", None) or getattr(ed, "latitude", None)
-        lon = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
         try:
-            if lat is None or lon is None:
-                continue
-            coords[st] = (float(lat), float(lon))
+            lat, lon, _elev = ed.coords
         except Exception:
             continue
+        if lat is None or lon is None:
+            continue
+        lat, lon = float(lat), float(lon)
+        if not (np.isfinite(lat) and np.isfinite(lon)):
+            continue
+        coords[st] = (lat, lon)
     if not coords:
         ax.text(0.5, 0.5, "no coords", ha="center", va="center")
         return ax

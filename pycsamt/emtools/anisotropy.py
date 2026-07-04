@@ -49,7 +49,6 @@ __all__ = [
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
 
-_MU0: float = 4.0 * np.pi * 1e-7   # H/m
 ANISO_RATIO_THRESH: float = 0.1    # |log10(Λ)| above which flag is raised
 SWIFT_SKEW_THRESH:  float = 0.2    # Swift skew above which 3-D is suspected
 
@@ -88,14 +87,20 @@ def _rho_and_phase(
     """
     Cagniard ρ_xy, ρ_yx, φ_xy, φ_yx from Z tensor (eqs 17–18, wang2017).
 
-    ρ_pq = (1/ωμ₀)|Z_pq|²,  φ_pq = arctan(Im(Z_pq)/Re(Z_pq)).
+    ρ_pq = 0.2|Z_pq|²/f,  φ_pq = arctan(Im(Z_pq)/Re(Z_pq)), for Z in
+    practical units (mV/km per nT) — matches the convention used by
+    :mod:`pycsamt.emtools.csumt`'s ``_rho_a_det``. This used to divide
+    by ``ωμ₀`` instead, which assumes Z is in SI ohms and is wrong by a
+    ~10^5-10^6 factor for the practical-unit Z stored in EDI files;
+    ``ratio_log10 = log10(ρ_xy/ρ_yx)`` was unaffected since the missing
+    factor cancels in the ratio, but the absolute ``rho_xy_ohmm`` /
+    ``rho_yx_ohmm`` columns were wrong.
     """
     Zxy = z_block[:, 0, 1]
     Zyx = z_block[:, 1, 0]
-    omega = 2.0 * np.pi * np.maximum(freq, 1e-24)
 
-    rho_xy = np.abs(Zxy) ** 2 / (omega * _MU0)
-    rho_yx = np.abs(Zyx) ** 2 / (omega * _MU0)
+    rho_xy = 0.2 * np.abs(Zxy) ** 2 / np.maximum(freq, 1e-24)
+    rho_yx = 0.2 * np.abs(Zyx) ** 2 / np.maximum(freq, 1e-24)
     phi_xy = np.angle(Zxy, deg=True)
     phi_yx = np.angle(Zyx, deg=True)
     return rho_xy, rho_yx, phi_xy, phi_yx

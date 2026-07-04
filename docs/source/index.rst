@@ -541,6 +541,7 @@
    :caption: Examples
 
    examples/index
+   emtools/index
 
 .. toctree::
    :maxdepth: 2

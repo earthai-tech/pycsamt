@@ -19,8 +19,6 @@ from ._core import (
     _station_positions,
 )
 
-_MU0: float = 4.0 * np.pi * 1e-7   # H/m
-
 
 @dataclass
 class EMAPFilterResult:
@@ -1332,14 +1330,19 @@ def correct_static_shift(
         if Z is None:
             rho_data.append((None, None))
             continue
-        omega = 2.0 * np.pi * np.maximum(fr, 1e-24)
+        fr_safe = np.maximum(fr, 1e-24)
         if comp == "xy":
             mag2 = np.abs(z[:, 0, 1]) ** 2
         elif comp == "yx":
             mag2 = np.abs(z[:, 1, 0]) ** 2
         else:   # det
             mag2 = 0.5 * (np.abs(z[:, 0, 1]) ** 2 + np.abs(z[:, 1, 0]) ** 2)
-        rho = mag2 / (omega * _MU0)
+        # 0.2*|Z|^2/f, for Z in practical units (mV/km per nT) — matches
+        # pycsamt.emtools.csumt's convention. The correction factor below
+        # is a same-frequency ratio, so this was numerically safe even
+        # before this fix (any constant scale factor cancels), but the
+        # correct formula is used regardless for consistency.
+        rho = 0.2 * mag2 / fr_safe
         lr  = np.where(rho > 0.0, np.log(rho), np.nan)
         rho_data.append((fr, lr))
         all_freqs.append(fr)

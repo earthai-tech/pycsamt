@@ -49,7 +49,6 @@ __all__ = [
     "plot_width_drift",
 ]
 
-_MU0: float = 4.0 * np.pi * 1e-7       # H/m
 COVERAGE_THRESH: float = 0.9            # default nominal probability level
 
 
@@ -69,15 +68,20 @@ def _rho_a_from_z(
     freqs: np.ndarray,
     comp: str,
 ) -> np.ndarray:
-    """Cagniard ρ_a = |Z_pq|² / (ωμ₀)."""
+    """Cagniard ρ_a = 0.2 |Z_pq|² / f, for Z in practical units (mV/km per nT).
+
+    Matches the convention used by :mod:`pycsamt.emtools.csumt`'s
+    ``_rho_a_det`` — this used to divide by ``ωμ₀`` instead, which
+    assumes Z is in SI ohms and is wrong by a ~10^5-10^6 factor for the
+    practical-unit Z stored in EDI files.
+    """
     if comp == "xy":
         Z = z_block[:, 0, 1]
     elif comp == "yx":
         Z = z_block[:, 1, 0]
     else:
         raise ValueError(f"rho_comp must be 'xy' or 'yx', got {comp!r}")
-    omega = 2.0 * np.pi * np.maximum(freqs, 1e-24)
-    return np.abs(Z) ** 2 / (omega * _MU0)
+    return 0.2 * np.abs(Z) ** 2 / np.maximum(freqs, 1e-24)
 
 
 def _resolve_bounds(

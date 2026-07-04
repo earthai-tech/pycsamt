@@ -19,6 +19,7 @@ _DATASETS = {
     "amt_l18plt": ("AMT", "WILLY_DATA", "L18PLT"),
     "amt_l22plt": ("AMT", "WILLY_DATA", "L22PLT"),
     "mt_kap03": ("MT", "kap03lmt_edis"),
+    "mt_spectra": ("MT", "SPECTRA"),
 }
 
 

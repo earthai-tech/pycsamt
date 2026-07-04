@@ -1634,7 +1634,10 @@ def plot_coverage_psection(
         i = np.searchsorted(yall, lp)
         i = np.clip(i, 0, yall.size - 1)
         vv = np.nan_to_num(m, nan=np.nan)
-        aa = np.nan_to_num(al, nan=0.0)
+        # RGBA alpha must be in [0, 1]; alpha_by="snr" feeds raw SNR
+        # ratios (routinely > 1), so clip rather than pass them straight
+        # through (imshow silently clips anyway, with a warning).
+        aa = np.clip(np.nan_to_num(al, nan=0.0), 0.0, 1.0)
         v.append(vv); a.append(aa)
         # map metric to color
         if metric == "presence":
@@ -1656,7 +1659,7 @@ def plot_coverage_psection(
             sc = np.clip(sc, 0.0, 1.0)
             rgb = plt.cm.viridis(sc)
             Zm[i, j, :3] = rgb[:, :3]
-            Zm[i, j, 3] = al
+            Zm[i, j, 3] = np.clip(np.nan_to_num(al, nan=0.0), 0.0, 1.0)
     if ax is None:
         _, ax = plt.subplots(
             figsize=figsize or section_style.figsize_for(

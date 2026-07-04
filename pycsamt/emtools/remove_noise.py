@@ -821,6 +821,11 @@ def spatial_median_filter(
     )
     items = list(_iter_items(S))
     n = len(items)
+    # Name-based index, not object identity: _apply_each(inplace=False)
+    # hands _one() a *copy* of each site, so `items.index(ed)` never
+    # matches (same failure mode already fixed in rpca_offdiag_denoise
+    # via _sta_name()).
+    name_to_index = {_name(ed, i): i for i, ed in enumerate(items)}
 
     def _nbrs(i: int) -> List[int]:
         lo = max(0, i - half_window)
@@ -837,8 +842,15 @@ def spatial_median_filter(
 
     def _one(Si):
         ed = next(_iter_items(Si))
-        i = items.index(ed)
-        Z, z, fr = ZB[i]
+        i = name_to_index.get(_name(ed, 0))
+        if i is None:
+            return Si
+        # Read neighbor values from the prefetched ZB (numeric read-only,
+        # any object works), but write through _get_z_block(ed) — ed is
+        # this call's own copy under _apply_each(inplace=False); writing
+        # to ZB[i]'s Z instead would silently mutate the pre-iteration
+        # original site and leave the returned copy unchanged.
+        Z, z, fr = _get_z_block(ed)
         if Z is not None:
             z2 = z.copy()
             for k in range(z.shape[0]):

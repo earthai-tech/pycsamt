@@ -32,14 +32,37 @@ def _rho_det_from_z(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
     return np.sqrt(rx * ry)
 
 
+def _site_coords(ed: Any) -> Optional[Tuple[float, float]]:
+    """Return (lat, lon) from a Site's ``.coords``, if available.
+
+    Real ``Site`` objects expose coordinates only via ``.coords``
+    (returning ``(lat, lon, elev)``), not flat ``.lat``/``.lon``
+    attributes — checking the latter alone silently falls back to
+    "no coordinates" for every real station.
+    """
+    coords = getattr(ed, "coords", None)
+    if coords is None or len(coords) < 2:
+        return None
+    try:
+        return float(coords[0]), float(coords[1])
+    except (TypeError, ValueError):
+        return None
+
+
 def _site_order_key(ed: Any, key: str) -> Tuple[int, float, str]:
     # sorting key for along-line order
     st = _name(ed, 0)
     if key == "lon":
         x = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
+        if x is None:
+            coords = _site_coords(ed)
+            x = coords[1] if coords is not None else None
         return (0, float(x)) if x is not None else (1, np.inf, st)
     if key == "lat":
         y = getattr(ed, "lat", None) or getattr(ed, "latitude", None)
+        if y is None:
+            coords = _site_coords(ed)
+            y = coords[0] if coords is not None else None
         return (0, float(y)) if y is not None else (1, np.inf, st)
     return (0, 0.0, st)  # by name later
 
@@ -2602,10 +2625,11 @@ def plot_ss_radar(
     hide_polar_radius_labels(ax)
 
     # plot
+    suffix = " (rot)" if rotate != "none" else ""
     ax.plot(th, r1, ls=ls, lw=lw, marker=marker,
-            ms=ms, color=colors[0], label="ρa_xy (rot)")
+            ms=ms, color=colors[0], label=f"ρa_xy{suffix}")
     ax.plot(th, r2, ls=ls, lw=lw, marker=marker,
-            ms=ms, color=colors[1], label="ρa_yx (rot)")
+            ms=ms, color=colors[1], label=f"ρa_yx{suffix}")
     if fill_between:
         lo = np.minimum(r1, r2); hi = np.maximum(r1, r2)
         ax.fill_between(th, lo, hi, color="0.5", alpha=0.10)
@@ -2614,7 +2638,10 @@ def plot_ss_radar(
     hide_polar_radius_labels(ax)
     ax.set_title(str(station), pad=10)
     ax.set_ylabel("")
-    ax.legend(loc="lower left", bbox_to_anchor=(0.02, 0.02),
+    # Outside the polar axes entirely: bbox_to_anchor=(0.02, 0.02) used
+    # to sit right on top of the 225-degree angular tick label, which
+    # always lands near that same lower-left corner of the bounding box.
+    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1.05),
               frameon=False, fontsize=8)
     return ax
 

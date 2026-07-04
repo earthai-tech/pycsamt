@@ -192,17 +192,23 @@ print(f"mean empirical coverage: {table['empirical_cov'].mean():.3f}  "
 # :func:`plot_polar_coverage` is the module's headline view: angle
 # encodes log-frequency, radius encodes observed ρ_a, and colour marks
 # covered (green) vs. not (red), for every station and frequency at
-# once.
+# once. Every station shares (almost) the same frequency grid, so each
+# angular position is really one frequency shared across all 28
+# stations — the ring is labelled with the actual frequency at each
+# position rather than plain, otherwise-uninterpretable degrees.
 
 plot_polar_coverage(survey, q_lo, q_hi)
 
 # %%
 # **Reading this figure.** Red points appear across most of the ring
-# rather than in one narrow wedge, with a somewhat denser patch around
-# 270-330° — consistent with coverage failures coming mostly from
-# point-to-point noise at scattered frequencies (as in step 3), with
-# perhaps a mild concentration in part of the band rather than a single
-# dominant systematic problem.
+# rather than in one narrow wedge — consistent with coverage failures
+# coming mostly from point-to-point noise at scattered frequencies (as
+# in step 3) rather than one dominant systematic problem. They are not
+# perfectly uniform, though: the median miss sits at 1.13 kHz, with the
+# middle 50% of misses spanning roughly 200 Hz-2.5 kHz — visible here
+# as a denser smear of red between the "102 Hz" and "1.03 kHz" labels,
+# now readable directly from the ring instead of an uninterpretable
+# degree range.
 
 # %%
 # 6. Does interval width really grow with period?

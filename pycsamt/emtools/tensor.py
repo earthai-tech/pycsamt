@@ -56,9 +56,19 @@ def rotate_to_strike(
     )
 
     def _one(Si: Sites) -> Sites:
+        # _compute.strike_estimate only recognises objects exposing a
+        # ``.Z`` section (its own is_edi_file() duck-type check); a
+        # Site wrapper only exposes ``.z`` and is silently skipped,
+        # which made this always fall through to ang=0.0 regardless of
+        # data. Passing the raw EDI item makes it return a real float
+        # (per its own documented single-site contract) instead of an
+        # empty per-station DataFrame with no ``.angle`` column.
+        ed = next(_iter_items(Si))
+        edi = getattr(ed, "edi", None)
+        edi = edi if edi is not None else ed
         ang = 0.0
         try:
-            r = _compute.strike_estimate(Si, method=method)
+            r = _compute.strike_estimate(edi, method=method)
             if isinstance(r, (int, float)):
                 ang = float(r)
             elif isinstance(r, dict):
@@ -67,11 +77,16 @@ def rotate_to_strike(
                 ang = float(getattr(r, "angle", 0.0))
         except Exception:
             ang = 0.0
-        return _edit.rotate(
-            Si,
-            ang,
-            inplace=inplace,
-        )
+        # _edit.rotate looks for a ``.Z`` section (the raw EDI layout);
+        # a Site wrapper only exposes ``.z`` directly, so calling it on
+        # `Si` (a Sites collection) is a silent no-op for every real
+        # station. Site.z reads through to edi.Z.z, so rotating the
+        # underlying EDI in place also updates the Site wrapper.
+        # _apply_each already handles inplace-vs-copy at the collection
+        # level, so this always mutates in place here regardless of
+        # the outer *inplace* flag.
+        _edit.rotate(edi, ang, inplace=True)
+        return Si
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 
@@ -96,7 +111,11 @@ def rotate(
         strict=strict,
         verbose=verbose,
     )
-    return _edit.rotate(S, angle, inplace=inplace)
+    # _edit.rotate expects a single EDI-like object with a ``.Z``
+    # section; passing the whole Sites collection silently rotates
+    # nothing. rotate_all() is the broadcast variant that correctly
+    # unwraps each item to its raw EDI first.
+    return _edit.rotate_all(S, angle, inplace=inplace)
 
 
 def rotate_by_map(
@@ -122,7 +141,12 @@ def rotate_by_map(
         ed = next(_iter_items(Si))
         name = getattr(ed, "station", None) or getattr(ed, "name", None)
         ang = float(angle_by_station.get(name, 0.0))
-        return _edit.rotate(Si, ang, inplace=inplace)
+        # See rotate_to_strike._one above: rotate the raw EDI item,
+        # not the Sites wrapper, and always in place (_apply_each
+        # handles the outer inplace-vs-copy semantics).
+        edi = getattr(ed, "edi", None)
+        _edit.rotate(edi if edi is not None else ed, ang, inplace=True)
+        return Si
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 
@@ -229,6 +253,16 @@ def orient_from_sensors(
         verbose=verbose,
     )
 
+    # zutils.correct_for_sensor_orientation always expects degrees and
+    # has no ``degrees=``/``z_err=`` keywords (it takes ``z_prime_err``);
+    # calling it with those names raised TypeError unconditionally, so
+    # this function could never succeed. Convert here when the caller
+    # passed radians instead.
+    if not degrees:
+        ex_, ey_, bx_, by_ = (float(np.degrees(v)) for v in (ex, ey, bx, by))
+    else:
+        ex_, ey_, bx_, by_ = float(ex), float(ey), float(bx), float(by)
+
     def _one(Si: Sites) -> Sites:
         ed = next(_iter_items(Si))
         Z, z, _ = _get_z_block(ed)
@@ -237,9 +271,8 @@ def orient_from_sensors(
         ze = getattr(Z, "z_err", None)
         z2, ze2 = zutils.correct_for_sensor_orientation(
             z,
-            ex=ex, ey=ey, bx=bx, by=by,
-            degrees=degrees,
-            z_err=ze,
+            ex=ex_, ey=ey_, bx=bx_, by=by_,
+            z_prime_err=ze,
         )
         try:
             Z.z = z2
@@ -1856,15 +1889,24 @@ def plot_phase_tensor_map(
         for i, ed in enumerate(_iter_items(S)):
             st = _name(ed, i)
             # preferred: ed.coords → (lat, lon, elev)
+            # A missing EDI ``>HEAD`` LAT/LONG (e.g. KAP03, which only
+            # carries REFLAT/REFLONG in >=DEFINEMEAS) surfaces as
+            # ``.coords`` returning NaN, not None; the "is not None"
+            # checks alone let NaN through into `coords`, and NaN then
+            # crashes ax.set_xlim() below instead of reaching the
+            # intended "no geographic coordinates" message.
             c = getattr(ed, "coords", None)
-            if c is not None and len(c) >= 2 and c[0] is not None and c[1] is not None:
+            if (c is not None and len(c) >= 2
+                    and c[0] is not None and c[1] is not None
+                    and np.isfinite(c[0]) and np.isfinite(c[1])):
                 coords[st] = (float(c[0]), float(c[1]))
                 continue
             # fallback: ed.meta
             meta = getattr(ed, "meta", {}) or {}
             lat = meta.get("lat") or meta.get("latitude")
             lon = meta.get("lon") or meta.get("longitude") or meta.get("long")
-            if lat is not None and lon is not None:
+            if (lat is not None and lon is not None
+                    and np.isfinite(float(lat)) and np.isfinite(float(lon))):
                 coords[st] = (float(lat), float(lon))
 
     if not coords:

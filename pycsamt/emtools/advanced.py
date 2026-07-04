@@ -1335,7 +1335,11 @@ def plot_tf_coherence_network(
     for i, ed in enumerate(_iter_items(S)):
         nm   = _name(ed, i)
         c    = getattr(ed, "coords", None)
-        if c is None or c[0] is None:
+        # A missing EDI >HEAD LAT/LONG (e.g. KAP03) surfaces as NaN, not
+        # None; "is None" alone lets NaN through and eventually crashes
+        # ax.set_aspect() below.
+        if (c is None or c[0] is None or c[1] is None
+                or not np.isfinite(c[0]) or not np.isfinite(c[1])):
             continue
         lat, lon = float(c[0]), float(c[1])
         Z_o, z, fr = _get_z_block(ed)
@@ -2252,6 +2256,37 @@ def plot_apparent_anisotropy_section(
     cb = fig.colorbar(sm, ax=ax, fraction=0.025, pad=0.02)
     cb.set_label("$\\log_{10}(\\rho_{XY}/\\rho_{YX})$", fontsize=8)
     cb.ax.tick_params(labelsize=7)
+
+    if show_pt_arrows:
+        df_pt = build_phase_tensor_table(S, recursive=False, on_dup=on_dup,
+                                         strict=False, verbose=0)
+        if not df_pt.empty:
+            arrow_len = 0.55 * (lp[0] - lp[-1]) / max(n_grid - 1, 1) \
+                if n_grid > 1 else 0.3
+            for si in range(0, n_st, max(1, int(arrow_every))):
+                sub = df_pt[df_pt["station"] == all_st[si]]
+                if sub.empty:
+                    continue
+                p_pt = sub["period"].to_numpy(float)
+                th_pt = sub["theta"].to_numpy(float)
+                for gi, pg in enumerate(per_grid):
+                    j = int(np.nanargmin(np.abs(np.log10(p_pt + 1e-30) -
+                                                np.log10(pg + 1e-30))))
+                    if abs(np.log10(p_pt[j] + 1e-30) -
+                           np.log10(pg + 1e-30)) >= 0.3:
+                        continue
+                    th = th_pt[j]
+                    if not np.isfinite(th):
+                        continue
+                    rad = np.radians(90.0 - th)  # geoelectric N-CW -> plot CCW-from-E
+                    dx = arrow_len * np.cos(rad) * 0.6
+                    dy = arrow_len * np.sin(rad)
+                    ax.plot(
+                        [si - dx, si + dx], [lp[gi] - dy, lp[gi] + dy],
+                        color="k", lw=0.9, alpha=0.75, solid_capstyle="round",
+                        zorder=5,
+                    )
+
     ax.set_title(title or "Apparent anisotropy pseudosection",
                  fontsize=10, fontweight="bold", pad=8)
     fig.tight_layout()
@@ -2815,7 +2850,8 @@ def plot_z_invariants_section(
     1. **Swift ν** = |Zxx + Zyy| / |Zxy − Zyx|  (0 = ideal 2-D)
     2. **Bahr μ** = |Zxy + Zyx| / |Zxy − Zyx|  (0 = no galvanic mixing)
     3. **|det Z|^½** = √|ZxxZyy − ZxyZyx|  (distortion-invariant ρa proxy)
-    4. **|tr Z| / ΔZ** where ΔZ = |Zxy − Zyx|  (anisotropy proxy)
+    4. **|tr Z| / ||Zxy| − |Zyx||**  (anisotropy proxy: small when the two
+       off-diagonal magnitudes are close, large as they diverge)
 
     Parameters
     ----------
@@ -2841,7 +2877,8 @@ def plot_z_invariants_section(
         dict(label="Swift ν",         cmap="Reds",     pct=(5, 95), sym=False),
         dict(label="Bahr μ",           cmap="Oranges",  pct=(5, 95), sym=False),
         dict(label=r"$|\det Z|^{1/2}$", cmap="viridis", pct=(5, 95), sym=False),
-        dict(label=r"$|\mathrm{tr}\,Z| / \Delta Z$", cmap="plasma", pct=(5, 95), sym=False),
+        dict(label=r"$|\mathrm{tr}\,Z| / |{|Z_{xy}|-|Z_{yx}|}|$",
+             cmap="plasma", pct=(5, 95), sym=False),
     ]
 
     def _extract_all(ed, fr, per):
@@ -2871,11 +2908,18 @@ def plot_z_invariants_section(
         a, b = z[:, 0, 0], z[:, 0, 1]
         c, d_t = z[:, 1, 0], z[:, 1, 1]
         dz = np.abs(b - c) + 1e-30
+        # |tr Z| / dmag: dmag = ||Zxy| - |Zyx|| (difference of off-diagonal
+        # *magnitudes*), not |Zxy - Zyx| (dz, the complex difference used
+        # by Swift/Bahr above) -- using dz here made this column an exact
+        # duplicate of the Swift-nu column. dmag makes this a genuine
+        # anisotropy proxy: it is small when |Zxy| and |Zyx| are close
+        # (near-isotropic response) and grows as they diverge.
+        dmag = np.abs(np.abs(b) - np.abs(c)) + 1e-30
         inv4 = np.column_stack([
             np.abs(a + d_t) / dz,
             np.abs(b + c) / dz,
             np.sqrt(np.abs(a * d_t - b * c)),
-            np.abs(a + d_t) / dz,
+            np.abs(a + d_t) / dmag,
         ])
         mask = np.isfinite(per)
         if period_range is not None:

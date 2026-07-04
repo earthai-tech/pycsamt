@@ -456,12 +456,12 @@ def plot_sites_panels(
                 ymag = np.abs(zz)
                 y = np.log10(ymag)
                 yerr = _err_log10_mag(zz, ee)
-                ylab = "Log10|Z|"
+                ylab = r"$\log_{10}|Z|$"
             else:
                 rho = _rhoa_from(zz, fr)
                 y = np.log10(rho)
                 yerr = _err_log10_rhoa(zz, ee)
-                ylab = "Log10Rhoa (Ω·m)"
+                ylab = r"$\log_{10}\rho_a$ ($\Omega\,\mathrm{m}$)"
             plot_errorbar(
                 axR, x, y, y_err=yerr, color=col,
                 marker=marker, ms=ms, ls=ls, lw=lw,
@@ -773,7 +773,11 @@ def plot_raw_sites_1d(
             loc="lower center",
             ncol=len(labels),
             frameon=False,
-            bbox_to_anchor=(0.5, -0.015),
+            # Far enough below the figure bottom edge to clear the
+            # shared-group x-axis label text: with an odd ncols_groups
+            # (e.g. 3), one group's label sits at the same horizontal
+            # center as this legend, and -0.015 used to overlap it.
+            bbox_to_anchor=(0.5, -0.14),
             fontsize=8,
         )
     return fig
@@ -1545,12 +1549,12 @@ def plot_sites_compare(
                 if quantity == "impedance":
                     y = np.log10(np.abs(zz))
                     yerr = _err_log10_mag(zz, ee)
-                    ylab = "Log10|Z|"
+                    ylab = r"$\log_{10}|Z|$"
                 else:
                     rho = _rhoa_from(zz, fr)
                     y = np.log10(rho)
                     yerr = _err_log10_rhoa(zz, ee)
-                    ylab = "Log10Rhoa (Ω·m)"
+                    ylab = r"$\log_{10}\rho_a$ ($\Omega\,\mathrm{m}$)"
                 plot_errorbar(
                     axR, x, y, y_err=yerr, color=col,
                     marker=marker, ms=ms, ls=ls, lw=lw,
@@ -1583,7 +1587,13 @@ def plot_sites_compare(
                 )
             else:
                 axP.set_xlabel("")
-            axR.set_ylabel(ylab); axP.set_ylabel("Phase (°)")
+            # Only the leftmost column of each raw/after pair gets a
+            # ylabel — every column used to get one, and with y-tick
+            # labels hidden on the inner column (below) the rotated
+            # text had nothing to visually separate it from the
+            # adjacent axis, so it rendered on top of the plotted data.
+            if j == 0:
+                axR.set_ylabel(ylab); axP.set_ylabel("Phase (°)")
 
     # shared ticks/legend
     for g in range(n):
@@ -1633,8 +1643,14 @@ def _nearest_idx(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
 def _align_pred(fr_m: np.ndarray, fr_p: np.ndarray,
                 z_p: np.ndarray) -> np.ndarray:
-    j = _nearest_idx(fr_p, fr_m)
-    return z_p[j]
+    # _nearest_idx requires its reference array ascending; EDI frequency
+    # arrays are typically stored descending (high frequency first), so
+    # sort fr_p (and z_p with it) before searching.
+    order = np.argsort(fr_p)
+    fr_sorted = fr_p[order]
+    z_sorted = z_p[order]
+    j = _nearest_idx(fr_sorted, fr_m)
+    return z_sorted[j]
 
 
 def _rms_from(
@@ -1767,7 +1783,7 @@ def plot_sites_fit_grid(
     for g, (st, edm, edp) in enumerate(pairs):
         axR, axP = AX[g]
         # station title centered over the row of components
-        axR[0].set_title(title_group_fmt.format(station=st), pad=6)
+        axR[0].set_title(title_group_fmt.format(station=st), pad=18)
         Zm = _zblk_flex(edm)
         if len(Zm) == 4:
             _, zm, frm, zem = Zm
@@ -1798,12 +1814,12 @@ def plot_sites_fit_grid(
             if quantity == "impedance":
                 ym = np.log10(np.abs(zm_c))
                 yerr = _err_log10_mag(zm_c, ze_c)
-                ylab = "Log10|Z|"
+                ylab = r"$\log_{10}|Z|$"
             else:
                 rm = _rhoa_from(zm_c, frm)
                 ym = np.log10(rm)
                 yerr = _err_log10_rhoa(zm_c, ze_c)
-                ylab = "Log10Rhoa (Ω·m)"
+                ylab = r"$\log_{10}\rho_a$ ($\Omega\,\mathrm{m}$)"
             plot_errorbar(
                 aR, x, ym, y_err=yerr, color=colm,
                 marker=marker, ms=ms, ls=ls_meas, lw=lw,
@@ -1832,16 +1848,13 @@ def plot_sites_fit_grid(
             if phase_range is not None:
                 php = _wrap_phase(php, phase_range)
             aP.plot(x, php, ls_fit, color=colf, lw=lw_fit)
-            # per-component header + RMS
+            # per-component header + RMS (one combined label; two
+            # separate texts at the same height used to overlap on
+            # narrow panels)
             rmsc = _rms_from(zm_c, zp_c, ze_c, frm, quantity=quantity)
             aR.text(
-                0.50, 1.02, f"Z{comp.upper()}",
+                0.50, 1.02, f"Z{comp.upper()}  rms={rmsc:.2f}",
                 ha="center", va="bottom", transform=aR.transAxes,
-                fontsize=9,
-            )
-            aR.text(
-                0.02, 1.02, f"rms = {rmsc:.2f}",
-                ha="left", va="bottom", transform=aR.transAxes,
                 fontsize=8,
             )
             # axes cosmetics
@@ -1858,8 +1871,8 @@ def plot_sites_fit_grid(
                 aR.set_yticklabels([]); aP.set_yticklabels([])
             if (g // ncols_groups) == (nrows - 1):
                 aP.set_xlabel(
-                    "Log10Period (s)" if x_axis == "period"
-                    else "Log10Freq (Hz)"
+                    "Period (s)" if x_axis == "period"
+                    else "Freq (Hz)"
                 )
             else:
                 aP.set_xlabel("")

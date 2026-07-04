@@ -84,6 +84,13 @@ def _rho_a_from_z(
     return 0.2 * np.abs(Z) ** 2 / np.maximum(freqs, 1e-24)
 
 
+def _fmt_hz(f: float) -> str:
+    """Format a frequency compactly, avoiding scientific notation."""
+    if f >= 1000.0:
+        return f"{f / 1000.0:.3g} kHz"
+    return f"{f:.3g} Hz"
+
+
 def _resolve_bounds(
     bounds: Union[Dict, np.ndarray, float],
     station: str,
@@ -378,8 +385,9 @@ def plot_polar_coverage(
     *,
     rho_comp: str = "xy",
     log_radius: bool = True,
+    n_freq_ticks: int = 8,
     figsize: tuple = (7, 7),
-    title: str = "Coverage evaluation (kouadio2025)",
+    title: str = "Coverage evaluation",
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -391,6 +399,17 @@ def plot_polar_coverage(
 
     Green markers = observed ρ_a within predicted interval (covered);
     red = outside.  Thin radial segments show each [q_lo, q_hi] range.
+    Every station shares (almost) the same frequency grid, so each
+    angular position is really one frequency shared by every station —
+    the angle axis is labelled with that frequency directly (rather
+    than the otherwise-meaningless default degree ticks) so a reader
+    can tell which part of the band a cluster of misses falls in.
+
+    Parameters
+    ----------
+    n_freq_ticks : int, default 8
+        Number of evenly (log-)spaced frequency labels drawn around the
+        ring. Set to 0 to fall back to the default degree ticks.
 
     Returns
     -------
@@ -414,8 +433,9 @@ def plot_polar_coverage(
     f_min, f_max = f_vals.min(), f_vals.max()
     if f_max <= f_min:
         f_max = f_min + 1.0
+    log_f_min, log_f_max = np.log10(f_min), np.log10(f_max)
     log_f = np.log10(f_vals)
-    theta = 2.0 * np.pi * (log_f - np.log10(f_min)) / (np.log10(f_max) - np.log10(f_min))
+    theta = 2.0 * np.pi * (log_f - log_f_min) / (log_f_max - log_f_min)
 
     def _r(v):
         return np.log10(np.maximum(v, 1e-30)) if log_radius else v
@@ -433,6 +453,14 @@ def plot_polar_coverage(
     for t, lo, hi in zip(theta, r_lo, r_hi):
         ax.plot([t, t], [lo, hi], color="gray", lw=0.5, alpha=0.35, zorder=1)
 
+    if n_freq_ticks > 0:
+        tick_theta = np.linspace(0.0, 2.0 * np.pi, n_freq_ticks, endpoint=False)
+        tick_freq = 10.0 ** (
+            log_f_min + (tick_theta / (2.0 * np.pi)) * (log_f_max - log_f_min)
+        )
+        ax.set_xticks(tick_theta)
+        ax.set_xticklabels([_fmt_hz(f) for f in tick_freq], fontsize=8)
+
     emp_cov = float(covered.mean())
     hide_polar_radius_labels(ax)
     ax.set_title(f"{title}\ncoverage = {emp_cov:.3f}", pad=15)
@@ -447,7 +475,7 @@ def plot_polar_errors(
     rho_comp: str = "xy",
     n_bins: int = 18,
     figsize: tuple = (7, 7),
-    title: str = "Error distribution (kouadio2025)",
+    title: str = "Error distribution",
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -515,7 +543,7 @@ def plot_width_drift(
     n_bands: int = 8,
     polar: bool = False,
     figsize: tuple = (8, 4),
-    title: str = "Frequency-width drift (kouadio2025)",
+    title: str = "Frequency-width drift",
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,

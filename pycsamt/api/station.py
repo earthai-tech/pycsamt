@@ -201,7 +201,15 @@ class StationAxisStyle:
             ax.tick_params(axis="x", which="minor", length=self.tick_length)
         ax.set_xticks(x[idx])
         if self.show_labels:
-            ha = "right" if abs(float(self.rotation)) > 20.0 else "center"
+            # "right" anchoring makes a *diagonal* label hang naturally
+            # from its tick (the classic ha="right" + rotation idiom),
+            # but at rotation~90 (fully vertical) that same anchor,
+            # combined with matplotlib's own top-axis default va
+            # ("bottom"), drags the whole label a few pixels left of
+            # its tick instead of centering it. Only use "right" in the
+            # genuinely diagonal band; center it at 0 and at ~90.
+            rot_mod = abs(float(self.rotation)) % 180.0
+            ha = "right" if 20.0 < rot_mod < 70.0 else "center"
             ax.set_xticklabels(
                 [raw_labels[i] for i in idx],
                 rotation=self.rotation,

@@ -349,13 +349,26 @@ def _spine_style(ax) -> None:
     ax.set_axisbelow(True)
 
 
-def _set_map_aspect(ax, ys: np.ndarray, scale: float) -> None:
+def _set_map_aspect(ax, y_values: np.ndarray, scale: float) -> None:
     """Set aspect ratio without wasteful whitespace.
 
     For a true 2-D map (stations spread in both x and y) use equal
     scaling.  For a profile (all stations on a near-horizontal line)
-    switch to *auto* and enforce a tight y-window around the arrow
-    extent so the arrow panel fills the axes without blank borders.
+    switch to *auto* and size the y-window tightly around the actual
+    plotted data instead of guessing from *scale* alone.
+
+    Parameters
+    ----------
+    y_values : array
+        Every y-coordinate that must stay visible: station positions
+        *and* arrow-tip positions (real + imaginary, whichever are
+        actually drawn). Sizing the margin from *scale* alone (as a
+        worst-case "arrow could be this long") overshoots badly
+        whenever *scale* is turned up to make small arrows more
+        visible — the window grows in lock-step with the arrows, so
+        they end up no bigger on screen, and the colorbar (whose
+        height matches the axes) is stretched into a long, unreadable
+        sliver.
     """
     ax.autoscale(True)
     xlim = ax.get_xlim(); ylim = ax.get_ylim()
@@ -363,13 +376,39 @@ def _set_map_aspect(ax, ys: np.ndarray, scale: float) -> None:
     yspan = ylim[1] - ylim[0] + 1e-12
 
     if yspan < 0.25 * xspan:
-        # Profile case: force a visible y-window ≈ 2× max arrow length
-        margin = max(scale * 1.4, yspan * 0.5, xspan * 0.08)
-        y_ctr  = 0.5 * (ylim[0] + ylim[1])
+        # Profile case: fit a tight y-window around the real data.
+        y_values = np.asarray(y_values, dtype=float)
+        y_values = y_values[np.isfinite(y_values)]
+        y_ctr = 0.5 * (ylim[0] + ylim[1])
+        data_half = float(np.max(np.abs(y_values - y_ctr))) if y_values.size else 0.0
+        margin = max(data_half * 1.25, xspan * 0.04, scale * 0.1, 1e-6)
         ax.set_ylim(y_ctr - margin, y_ctr + margin)
         ax.set_aspect("auto")
     else:
         ax.set_aspect("equal", adjustable="box")
+
+
+def _thin_label_indices(
+    n: int, max_labels: int = 15, width_in: float = 8.0,
+) -> np.ndarray:
+    """Indices of station labels to draw so they stay legible.
+
+    Map-view station labels are drawn at a fixed pixel offset from
+    each marker; with many closely-spaced stations that offset is not
+    enough to keep them from overlapping into an unreadable smear, so
+    only a thinned subset is labelled (always including the last
+    station). *max_labels* is scaled by *width_in* (the actual axes
+    width in inches) so a narrow panel -- e.g. one quadrant of a 2x2
+    comparison figure -- thins more aggressively than a full-width map.
+    """
+    max_labels = max(3, int(round(max_labels * width_in / 8.0)))
+    if n <= max_labels:
+        return np.arange(n)
+    step = int(np.ceil(n / max_labels))
+    idx = np.arange(0, n, step)
+    if idx[-1] != n - 1:
+        idx = np.append(idx, n - 1)
+    return idx
 
 
 def _collect_tipper_spectrum(
@@ -508,9 +547,19 @@ def plot_induction_map(
     cm   = plt.get_cmap(cmap)
 
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+        # NOTE: constrained_layout=True silently drops the colorbar's
+        # tick labels and axis label when the colorbar axes is created
+        # via make_axes_locatable (as add_colorbar does below) -- the
+        # two layout mechanisms don't compose. Use tight_layout() at
+        # the end instead.
+        fig, ax = plt.subplots(figsize=figsize)
     else:
         fig = ax.get_figure()
+
+    label_idx = (
+        set(_thin_label_indices(len(names), width_in=fig.get_figwidth()).tolist())
+        if station_labels else set()
+    )
 
     for k in range(len(names)):
         c = cm(norm(mag[k]))
@@ -527,7 +576,7 @@ def plot_induction_map(
                 arrowprops=dict(arrowstyle="-|>", color=c, lw=1.2,
                                 linestyle="dashed", mutation_scale=8))
         ax.plot(xs[k], ys[k], "v", ms=5, color="0.3", zorder=5)
-        if station_labels:
+        if k in label_idx:
             ax.annotate(names[k], (xs[k], ys[k]),
                         xytext=(3, 4), textcoords="offset points",
                         fontsize=6.5, color="0.4")
@@ -559,13 +608,19 @@ def plot_induction_map(
     if handles:
         ax.legend(handles=handles, fontsize=8, framealpha=0.8, loc="upper right")
 
-    _set_map_aspect(ax, ys, scale)
+    y_extent = [ys, [y0]]
+    if show_real:
+        y_extent.append(ys + re[:, 1] * scale)
+    if show_imag:
+        y_extent.append(ys + im[:, 1] * scale)
+    _set_map_aspect(ax, np.concatenate(y_extent), scale)
     ax.set_xlabel("x / Easting  (m)", fontsize=9)
     ax.set_ylabel("y / Northing  (m)", fontsize=9)
     ax.set_title(
         title or f"Induction arrows  —  T = {period:g} s  [{convention}]",
         fontsize=10, pad=6)
     _spine_style(ax)
+    fig.tight_layout()
     return ax
 
 
@@ -748,6 +803,13 @@ def plot_induction_convention(
     wies_re = np.vstack([-park_re[:,1],   park_re[:,0]]).T
     wies_im = np.vstack([-park_im[:,1],   park_im[:,0]]).T
 
+    # 2x2 grid: each panel is roughly half the figure width, so thin
+    # more aggressively than a single full-width map would.
+    label_idx = (
+        set(_thin_label_indices(len(names), width_in=figsize[0] / 2.0).tolist())
+        if station_labels else set()
+    )
+
     def _panel(ax, vecs, label):
         u, v = vecs[:,0]*scale, vecs[:,1]*scale
         mag  = np.hypot(u, v) / (scale+1e-24)
@@ -760,11 +822,15 @@ def plot_induction_convention(
                 arrowprops=dict(arrowstyle="-|>", color=c,
                                 lw=1.6, mutation_scale=10))
             ax.plot(xs[k], ys[k], "v", ms=5, color="0.3", zorder=5)
-            if station_labels:
+            if k in label_idx:
                 ax.annotate(names[k], (xs[k], ys[k]),
                             xytext=(3,4), textcoords="offset points",
                             fontsize=6, color="0.4")
-        ax.set_aspect("equal", adjustable="datalim")
+        # A forced equal aspect makes sense for a true 2-D map, but for
+        # a near-linear profile (yspan << xspan) it stretches the axes
+        # into a mostly-blank tall strip with the arrows squeezed into
+        # a thin band -- switch to a tight, non-equal window in that case.
+        _set_map_aspect(ax, ys + v, scale)
         ax.set_title(label, fontsize=9, pad=5)
         ax.set_xlabel("x  (m)", fontsize=8); ax.set_ylabel("y  (m)", fontsize=8)
         _spine_style(ax)
@@ -1043,9 +1109,19 @@ def plot_induction_map_from_spectra(
     cm   = plt.get_cmap(cmap)
 
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+        # NOTE: constrained_layout=True silently drops the colorbar's
+        # tick labels and axis label when the colorbar axes is created
+        # via make_axes_locatable (as add_colorbar does below) -- the
+        # two layout mechanisms don't compose. Use tight_layout() at
+        # the end instead.
+        fig, ax = plt.subplots(figsize=figsize)
     else:
         fig = ax.get_figure()
+
+    label_idx = (
+        set(_thin_label_indices(len(names), width_in=fig.get_figwidth()).tolist())
+        if station_labels else set()
+    )
 
     for k, name in enumerate(names):
         c = cm(norm(mag[k]))
@@ -1062,7 +1138,7 @@ def plot_induction_map_from_spectra(
                 arrowprops=dict(arrowstyle="-|>", color=c, lw=1.2,
                                 linestyle="dashed", mutation_scale=8))
         ax.plot(xs[k], ys[k], "v", ms=5, color="0.3", zorder=5)
-        if station_labels:
+        if k in label_idx:
             ax.annotate(name, (xs[k], ys[k]),
                         xytext=(3,4), textcoords="offset points",
                         fontsize=6.5, color="0.4")
@@ -1074,11 +1150,17 @@ def plot_induction_map_from_spectra(
     if show_real: handles.append(Line2D([],[],color="0.4",lw=1.8,label="Real"))
     if show_imag: handles.append(Line2D([],[],color="0.4",lw=1.2,ls="--",label="Imaginary"))
     if handles: ax.legend(handles=handles, fontsize=8, framealpha=0.8)
-    _set_map_aspect(ax, ys, scale)
+    y_extent = [ys]
+    if show_real:
+        y_extent.append(ys + re[:, 1] * scale)
+    if show_imag:
+        y_extent.append(ys + im[:, 1] * scale)
+    _set_map_aspect(ax, np.concatenate(y_extent), scale)
     ax.set_xlabel("Station", fontsize=9)
     ax.set_title(title or f"Induction arrows from spectra  —  T={period:g} s",
                  fontsize=10, pad=6)
     _spine_style(ax)
+    fig.tight_layout()
     return ax
 
 

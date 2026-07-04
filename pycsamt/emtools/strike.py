@@ -88,6 +88,33 @@ def _band_edges(p: np.ndarray, band: Optional[Tuple[float, float]]):
     return float(band[0]), float(band[1])
 
 
+def _site_lonlat(ed: Any) -> Tuple[Optional[float], Optional[float]]:
+    """Return ``(lon, lat)`` for a Site/EDI object, or ``(None, None)``.
+
+    Real ``Site`` objects expose coordinates only via ``.coords``
+    (returning ``(lat, lon, elev)``), not flat ``.lon``/``.lat``
+    attributes — checking the latter alone silently treats every real
+    station as having no coordinates.
+    """
+    x = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
+    y = getattr(ed, "lat", None) or getattr(ed, "latitude", None)
+    if x is None or y is None:
+        coords = getattr(ed, "coords", None)
+        if coords is not None and len(coords) >= 2:
+            y = y if y is not None else coords[0]
+            x = x if x is not None else coords[1]
+    if x is None or y is None:
+        _head = getattr(getattr(ed, "edi", None), "sections", {}).get("head")
+        if _head is not None:
+            y = y if y is not None else getattr(_head, "lat", None)
+            x = x if x is not None else (
+                getattr(_head, "long", None) or getattr(_head, "lon", None)
+            )
+    x = float(x) if x is not None else None
+    y = float(y) if y is not None else None
+    return x, y
+
+
 # ----------------------- strike by sweep (Z) ----------------------------- #
 
 def estimate_strike_sweep(
@@ -313,7 +340,20 @@ def rotate_to_strike(
         ed = next(_iter_items(Si))
         st = getattr(ed, "station", None) or getattr(ed, "name", None)
         ang = float(amap.get(st, 0.0))
-        return _edit.rotate(Si, ang, inplace=inplace)
+        # _edit.rotate looks for a ``.Z`` section (the raw EDI layout);
+        # a Site wrapper only exposes ``.z`` directly, so calling it on
+        # `ed` (or on the `Si` collection) is a silent no-op for every
+        # real station. Site.z reads through to edi.Z.z, so rotating
+        # the underlying EDI in place also updates the Site wrapper.
+        # _apply_each already handles inplace-vs-copy at the collection
+        # level (it deep-copies each item first when inplace=False and
+        # only keeps mutations made in place on that copy); forwarding
+        # the outer *inplace* flag here would make _edit.rotate return a
+        # *new* object whose mutation is then discarded, silently
+        # leaving every station unrotated.
+        edi = getattr(ed, "edi", None)
+        _edit.rotate(edi if edi is not None else ed, ang, inplace=True)
+        return Si
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 
@@ -1174,16 +1214,14 @@ def plot_strike_profile(
         ax.text(0.5, 0.5, "no strikes", ha="center", va="center")
         return ax
     def _key(st, ed):
+        x, y = _site_lonlat(ed)
         if sort_by == "lon":
-            x = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
             return (1, st) if x is None else (0, float(x))
         if sort_by == "lat":
-            y = getattr(ed, "lat", None) or getattr(ed, "latitude", None)
             return (1, st) if y is None else (0, float(y))
         if sort_by == "name":
             return (0, st)
         # auto: lon then name
-        x = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
         return (0, float(x)) if x is not None else (1, st)
     order = []
     for i, ed in enumerate(_iter_items(S)):
@@ -1257,13 +1295,7 @@ def plot_strike_mapsticks(
         row = tb[tb["station"] == st]
         if row.empty:
             continue
-        lat = getattr(ed, "lat", None) or getattr(ed, "latitude", None)
-        lon = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
-        if (lat is None or lon is None):
-            _head = getattr(getattr(ed, "edi", None), "sections", {}).get("head")
-            if _head is not None:
-                lat = lat or getattr(_head, "lat", None)
-                lon = lon or getattr(_head, "long", None) or getattr(_head, "lon", None)
+        lon, lat = _site_lonlat(ed)
         if lat is None or lon is None:
             continue
         a = float(row["ang"].iloc[0]) % 180.0

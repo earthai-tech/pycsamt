@@ -188,6 +188,11 @@ def plot_lcurve(
 
     # store corners for legend text
     leg = []
+    # Shared inset axes: created once and reused across curves, rather
+    # than once per curve at the identical `inset_loc` (which used to
+    # silently stack N insets on top of each other, leaving only the
+    # last curve's score visible).
+    axins = None
 
     for i, (m, r, la) in enumerate(zip(Ms, Rs, Ls)):
         x, y, l = _prep_curve(m, r, la, sort="auto")
@@ -235,18 +240,19 @@ def plot_lcurve(
         else:
             leg.append(labs[i])
 
-        # inset curvature / distance
+        # inset curvature / distance -- one shared inset for all curves
         if show_inset:
-            axins = fig.add_axes(inset_loc)
+            if axins is None:
+                axins = fig.add_axes(inset_loc)
+                axins.set_xticks([])
+                axins.set_yticks([])
+                axins.set_title(
+                    "curv" if method == "curvature" else "knee",
+                    fontsize=8,
+                )
             idx = np.arange(score.size)
             axins.plot(idx, score, "-", color=c, lw=1.0)
             axins.axvline(j, color=c, ls="--", lw=1.0)
-            axins.set_xticks([])
-            axins.set_yticks([])
-            axins.set_title(
-                "curv" if method == "curvature" else "knee",
-                fontsize=8,
-            )
 
     ax.grid(True, alpha=0.25, which="both")
     ax.set_xlabel("||Lm|| (model roughness)")

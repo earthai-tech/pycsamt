@@ -224,6 +224,16 @@ data/MT/*
 !data/MT/kap03lmt_edis
 !data/MT/README.md
 
+# Exception: de-identified copies of two real cross-power-spectra EDI
+# files, used as bundled sample data for the emtools.spectra gallery.
+# The originals (HBH03.edi, ZBR02.edi) are real private field data and
+# must never be tracked — only these sanitized, renamed copies are.
+!data/MT/SPECTRA
+data/MT/SPECTRA/*
+!data/MT/SPECTRA/spectra01.edi
+!data/MT/SPECTRA/spectra02.edi
+!data/MT/SPECTRA/README.md
+
 # Exception: one sample inversion-plots run, used to test MapView/webapp
 # rendering. Only 27-frequ-watex-data-02 is tracked — the other runs and
 # the zip archive stay local-only (usable locally, never committed).

@@ -1,70 +1,524 @@
 .. _emtools_gb:
 
-pycsamt.emtools.gb — Groom-Bailey Galvanic Distortion
-======================================================
+Groom-Bailey Galvanic Distortion
+================================
 
-:mod:`pycsamt.emtools.gb` estimates and removes frequency-independent
-galvanic distortion from MT/AMT/CSAMT impedance tensors using a
-Groom-Bailey-style model.  For each station, pyCSAMT fits a real 2x2
-distortion matrix :math:`D` over a selected period band:
+``pycsamt.emtools.gb`` estimates and optionally removes
+frequency-independent galvanic distortion from MT/AMT/CSAMT impedance
+tensors. It is designed as an auditable preprocessing step before 2-D
+interpretation and inversion.
+
+The fitted model is:
 
 .. math::
 
-   Z_\mathrm{obs}(f) \approx D\,Z_{2D}(f),
+   Z_{obs}(f) \approx D Z_{2D}(f)
 
-where :math:`Z_{2D}` is anti-diagonal at each frequency.  The fitted
-matrix is decomposed into gain, twist, shear, and anisotropy-style
-parameters, and can then be removed as :math:`Z_0 = D^{-1} Z_\mathrm{obs}`.
+where:
 
-Functions
----------
+- ``Z_obs`` is the observed impedance tensor;
+- ``D`` is a real, frequency-independent 2 x 2 distortion matrix;
+- ``Z_2D`` is the best anti-diagonal regional tensor at each frequency.
 
-- :func:`~pycsamt.emtools.gb.groom_bailey_table`
-- :func:`~pycsamt.emtools.gb.apply_groom_bailey`
-- :func:`~pycsamt.emtools.gb.groom_bailey_decomposition`
-- :class:`~pycsamt.emtools.gb.GroomBaileyResult`
+Full callable signatures live in the :doc:`API reference <../../api/emtools>`.
+This page explains how to fit the table, read the distortion parameters,
+apply the correction, and record the result in a pre-2D workflow.
 
-Usage
------
+When To Use Groom-Bailey
+------------------------
 
-Estimate distortion parameters without changing the data:
+Use this workflow when the data appear close enough to 2-D for galvanic
+distortion correction to be meaningful, but the impedance tensor has
+diagonal leakage or station-dependent distortion that should be
+documented before inversion.
+
+Good use cases include:
+
+- preparing a 2-D inversion input after dimensionality and strike checks;
+- testing whether diagonal tensor leakage is reduced after correction;
+- documenting twist, shear, and anisotropy-style distortion parameters;
+- comparing corrected and uncorrected impedance curves at the same
+  station.
+
+Poor use cases include:
+
+- strongly 3-D data with no stable strike or 2-D period band;
+- too few valid frequencies in the selected band;
+- using the fitted gain as a unique static-shift solution;
+- applying correction without saving the fit diagnostics.
+
+Core Assumptions
+----------------
+
+The implementation fits a real distortion matrix that is constant over
+the selected period band. That is the galvanic assumption: the
+distortion is local and frequency-independent, while the regional tensor
+varies with frequency.
+
+The regional tensor is forced to be anti-diagonal:
+
+.. math::
+
+   Z_{2D}(f) =
+   \begin{bmatrix}
+   0 & u(f) \\
+   v(f) & 0
+   \end{bmatrix}
+
+The observed tensor is then approximated by multiplying this 2-D tensor
+by ``D``. The fit alternates between estimating the anti-diagonal
+regional tensor and solving for the rows of the real distortion matrix.
+
+The fitted matrix is normalized by determinant scale, then summarized
+as gain, twist, shear, and anisotropy-style parameters.
+
+Fit A Distortion Table
+----------------------
+
+Start by estimating parameters without changing the data.
 
 .. code-block:: python
+   :linenos:
 
-   from pycsamt.emtools import groom_bailey_table
+   from pycsamt.emtools.gb import groom_bailey_table
 
-   gb = groom_bailey_table(
-       sites,
+   survey = "data/AMT/WILLY_DATA/L18PLT"
+
+   table = groom_bailey_table(
+       survey,
+       band=(1e-3, 10.0),
+       rotate_deg=None,
+       min_freq=4,
+       max_iter=30,
+       tol=1e-6,
+       robust=True,
+   )
+
+   print(
+       table[
+           [
+               "station",
+               "status",
+               "n_freq",
+               "twist_deg",
+               "shear",
+               "anisotropy",
+               "rms_fit",
+               "diagonal_ratio_before",
+               "diagonal_ratio_after",
+           ]
+       ].head()
+   )
+
+The ``band`` argument is in period seconds, not hertz. Choose a band
+that is justified by dimensionality, strike stability, and data quality.
+
+Table Columns
+-------------
+
+Successful rows have ``status == "ok"`` and include:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Column
+     - Meaning
+   * - ``station``
+     - Station name.
+   * - ``n_freq``
+     - Number of valid frequencies used in the fit.
+   * - ``period_min_s`` / ``period_max_s``
+     - Period range actually used after band selection.
+   * - ``rotate_deg``
+     - Rotation angle applied before fitting, or ``NaN``.
+   * - ``distortion_xx`` ... ``distortion_yy``
+     - Entries of the fitted real 2 x 2 distortion matrix.
+   * - ``gain``
+     - Matrix scale from the determinant normalization.
+   * - ``twist_deg``
+     - Twist angle inferred from the normalized matrix.
+   * - ``shear``
+     - Dimensionless shear-style parameter, clipped to ``[-0.99, 0.99]``.
+   * - ``shear_angle_deg``
+     - ``atan(shear)`` in degrees.
+   * - ``anisotropy``
+     - Dimensionless anisotropy-style parameter, clipped to
+       ``[-0.99, 0.99]``.
+   * - ``rms_fit``
+     - Relative fit residual.
+   * - ``diagonal_ratio_before``
+     - Median diagonal/off-diagonal tensor ratio before correction.
+   * - ``diagonal_ratio_after``
+     - Median diagonal/off-diagonal tensor ratio after applying the
+       fitted inverse matrix to the fitted band.
+   * - ``robust``
+     - Whether robust residual weighting was used.
+   * - ``method``
+     - Current method label, ``gb_real_distortion_2d``.
+
+Rows with too few valid frequencies have
+``status == "insufficient_frequencies"`` and include the available
+``n_freq``. Increase the band, lower ``min_freq`` only with care, or
+exclude that station from correction.
+
+Reading The Parameters
+----------------------
+
+The most useful diagnostic columns are usually:
+
+- ``rms_fit``: lower values indicate that the fitted model describes the
+  selected band better.
+- ``diagonal_ratio_before`` and ``diagonal_ratio_after``: correction is
+  behaving sensibly when the after value is lower.
+- ``twist_deg``: large twist can imply strong galvanic distortion or a
+  poor 2-D assumption.
+- ``shear`` and ``anisotropy``: large absolute values deserve station
+  inspection.
+- ``n_freq``: low values make the fit less stable.
+
+Do not over-interpret ``gain`` as a unique static-shift estimate. The
+scalar gain ambiguity is not uniquely resolved by this decomposition.
+
+Rank Stations For Review
+------------------------
+
+Use the table to find stations with poor fits or strong residual
+diagonal leakage.
+
+.. code-block:: python
+   :linenos:
+
+   from pycsamt.emtools.gb import groom_bailey_table
+
+   table = groom_bailey_table(
+       "data/AMT/WILLY_DATA/L18PLT",
        band=(1e-3, 10.0),
        robust=True,
    )
-   print(gb[[
-       "station", "twist_deg", "shear", "anisotropy",
-       "rms_fit", "diagonal_ratio_before", "diagonal_ratio_after",
-   ]])
 
-Estimate and apply the correction:
+   ok = table.loc[table["status"] == "ok"].copy()
+   ok["diag_reduction"] = (
+       ok["diagonal_ratio_before"] - ok["diagonal_ratio_after"]
+   )
+
+   ranked = ok.sort_values(
+       ["rms_fit", "diagonal_ratio_after"],
+       ascending=[False, False],
+   )
+
+   print(
+       ranked[
+           [
+               "station",
+               "n_freq",
+               "rms_fit",
+               "diag_reduction",
+               "twist_deg",
+               "shear",
+               "anisotropy",
+           ]
+       ].head(10)
+   )
+
+Stations with high ``rms_fit`` or little diagonal reduction should be
+reviewed before applying correction automatically.
+
+Use A Strike Rotation
+---------------------
+
+If you have selected a strike angle, pass it as ``rotate_deg`` before
+fitting.
 
 .. code-block:: python
+   :linenos:
 
-   from pycsamt.emtools import groom_bailey_decomposition
+   from pycsamt.emtools.gb import groom_bailey_table
+
+   strike_deg = 35.0
+
+   table = groom_bailey_table(
+       "data/AMT/WILLY_DATA/L18PLT",
+       band=(1e-3, 10.0),
+       rotate_deg=strike_deg,
+       robust=True,
+   )
+
+The rotation is applied to the tensor before fitting the distortion
+matrix. Use a strike that has been justified by the strike and
+dimensionality workflows, not one chosen to improve the GB fit alone.
+
+Apply A Precomputed Table
+-------------------------
+
+Use ``apply_groom_bailey`` when you have already inspected and accepted
+a table.
+
+.. code-block:: python
+   :linenos:
+
+   from pycsamt.emtools.gb import apply_groom_bailey, groom_bailey_table
+
+   survey = "data/AMT/WILLY_DATA/L18PLT"
+
+   table = groom_bailey_table(
+       survey,
+       band=(1e-3, 10.0),
+       robust=True,
+   )
+
+   accepted = table.loc[
+       (table["status"] == "ok")
+       & (table["rms_fit"] < 0.25)
+       & (table["diagonal_ratio_after"] < table["diagonal_ratio_before"])
+   ].copy()
+
+   corrected = apply_groom_bailey(
+       survey,
+       table=accepted,
+       inplace=False,
+   )
+
+Only stations present in the accepted table are corrected. Stations
+missing from the table or with invalid matrices are left unchanged.
+
+Estimate And Apply In One Step
+------------------------------
+
+Use ``groom_bailey_decomposition`` when you want a result container with
+the fitted table and optionally corrected sites.
+
+.. code-block:: python
+   :linenos:
+
+   from pycsamt.emtools.gb import groom_bailey_decomposition
 
    result = groom_bailey_decomposition(
-       sites,
-       band=(1e-3, 10.0),
+       "data/AMT/WILLY_DATA/L18PLT",
        apply=True,
+       band=(1e-3, 10.0),
+       rotate_deg=None,
+       robust=True,
+       inplace=False,
    )
+
+   print(result.summary())
    corrected_sites = result.sites
    gb_table = result.table
 
-Notes
------
+The result container records:
 
-The fitted distortion matrix is real and frequency-independent, which is
-the galvanic assumption behind the Groom-Bailey family of decompositions.
-The implementation uses robust alternating least squares and is intended
-as a reproducible preprocessing and audit step before 2-D inversion.  It
-does not resolve the scalar static-shift gain ambiguity uniquely; the
-reported gain is therefore a fitted matrix scale, while interpretation
-should focus mainly on twist, shear, anisotropy, residual fit, and the
-effect of correction on diagonal leakage.
+- ``sites``: corrected sites when ``apply=True``, otherwise loaded sites.
+- ``table``: fitted parameter table.
+- ``applied``: whether correction was applied.
+- ``method``: method label.
+- ``n_station``: number of fitted table rows.
+
+Compare Robust And Non-Robust Fits
+----------------------------------
+
+Robust weighting downweights high-residual frequencies during fitting.
+Compare both modes when outliers are suspected.
+
+.. code-block:: python
+   :linenos:
+
+   import pandas as pd
+
+   from pycsamt.emtools.gb import groom_bailey_table
+
+   survey = "data/AMT/WILLY_DATA/L18PLT"
+
+   robust = groom_bailey_table(survey, band=(1e-3, 10.0), robust=True)
+   plain = groom_bailey_table(survey, band=(1e-3, 10.0), robust=False)
+
+   compare = robust.merge(
+       plain,
+       on="station",
+       suffixes=("_robust", "_plain"),
+   )
+
+   print(
+       compare[
+           [
+               "station",
+               "rms_fit_robust",
+               "rms_fit_plain",
+               "twist_deg_robust",
+               "twist_deg_plain",
+           ]
+       ].head()
+   )
+
+If robust and non-robust parameters differ strongly, inspect the station
+for outlier frequencies, poor dimensionality, or unstable strike.
+
+Synthetic Sanity Check
+----------------------
+
+For development and training, it is useful to test the decomposition on
+a known distorted 2-D tensor. This example constructs a small synthetic
+site-like object with a known distortion matrix and checks whether the
+correction reduces diagonal leakage.
+
+.. code-block:: python
+   :linenos:
+
+   import numpy as np
+
+   from pycsamt.emtools.gb import apply_groom_bailey, groom_bailey_table
+
+   class ZBlock:
+       def __init__(self, z, freq):
+           self.z = z
+           self.freq = freq
+           self.z_err = None
+
+   class Site:
+       station = "SYN001"
+
+       def __init__(self, z, freq):
+           self.Z = ZBlock(z, freq)
+
+   freq = np.logspace(0, 3, 12)
+   regional = np.zeros((freq.size, 2, 2), dtype=complex)
+   regional[:, 0, 1] = 1.0 + 0.2j
+   regional[:, 1, 0] = -0.8 + 0.1j
+
+   D = np.array([[1.0, 0.25], [-0.15, 1.1]])
+   observed = D[None, :, :] @ regional
+   site = Site(observed, freq)
+
+   table = groom_bailey_table([site], robust=False)
+   corrected = apply_groom_bailey([site], table=table)
+
+   print(table[["station", "rms_fit", "diagonal_ratio_before", "diagonal_ratio_after"]])
+
+This pattern is useful when you need to verify behavior after changing
+preprocessing code. Real surveys should still be assessed with their
+own dimensionality and strike diagnostics.
+
+Integrate With Pre-2D Assessment
+--------------------------------
+
+The dimensionality guide includes ``pre2d_inversion_assessment``. After
+running Groom-Bailey, record whether it was attempted and applied.
+
+.. code-block:: python
+   :linenos:
+
+   from pycsamt.emtools.dimensionality import pre2d_inversion_assessment
+   from pycsamt.emtools.gb import groom_bailey_decomposition
+
+   survey = "data/AMT/WILLY_DATA/L18PLT"
+   band = (1e-3, 10.0)
+
+   gb = groom_bailey_decomposition(
+       survey,
+       apply=True,
+       band=band,
+       robust=True,
+   )
+
+   assessment = pre2d_inversion_assessment(
+       gb.sites,
+       band=band,
+       rotation_applied=False,
+       groom_bailey_attempted=True,
+       groom_bailey_applied=gb.applied,
+       groom_bailey_reason="Applied pycsamt.emtools.gb real 2-D distortion fit.",
+   )
+
+   print(assessment[["station", "frac_3d", "groom_bailey_applied", "recommendation"]].head())
+
+This makes the correction auditable in reports and manuscripts.
+
+Reading The Results
+-------------------
+
+Use this interpretation order:
+
+1. Confirm that dimensionality and strike are acceptable in the selected
+   period band.
+2. Fit ``groom_bailey_table`` without applying correction.
+3. Inspect ``status``, ``n_freq``, ``rms_fit``, and diagonal ratios.
+4. Compare robust and non-robust fits if outliers are likely.
+5. Apply correction only to stations with acceptable fits.
+6. Save the table and pre-2D assessment with the inversion inputs.
+
+Common Failure Modes
+--------------------
+
+Insufficient frequencies
+   The selected period band has fewer than ``min_freq`` valid tensor
+   rows. Widen the band or skip the station.
+
+High residual fit
+   The station may not be well described by a frequency-independent
+   real distortion matrix times a 2-D regional tensor.
+
+Diagonal ratio does not improve
+   Correction may not be useful for that station. Review strike,
+   dimensionality, and the period band.
+
+Very large twist, shear, or anisotropy
+   Large parameters may indicate strong galvanic distortion, but they
+   can also indicate a poor model assumption.
+
+Treating gain as static shift
+   The scalar gain ambiguity is not uniquely solved here. Use static
+   shift workflows and independent constraints when gain matters.
+
+Applying correction globally
+   Do not apply every fitted row blindly. Filter by status and quality
+   diagnostics first.
+
+Saving A Reproducible Bundle
+----------------------------
+
+Save the fitted table, accepted subset, and pre-2D assessment.
+
+.. code-block:: python
+   :linenos:
+
+   from pathlib import Path
+
+   from pycsamt.emtools.dimensionality import pre2d_inversion_assessment
+   from pycsamt.emtools.gb import apply_groom_bailey, groom_bailey_table
+
+   survey = "data/AMT/WILLY_DATA/L18PLT"
+   band = (1e-3, 10.0)
+   out = Path("outputs/gb_l18plt")
+   out.mkdir(parents=True, exist_ok=True)
+
+   table = groom_bailey_table(survey, band=band, robust=True)
+   accepted = table.loc[
+       (table["status"] == "ok")
+       & (table["rms_fit"] < 0.25)
+       & (table["diagonal_ratio_after"] < table["diagonal_ratio_before"])
+   ].copy()
+
+   corrected = apply_groom_bailey(survey, table=accepted, inplace=False)
+   assessment = pre2d_inversion_assessment(
+       corrected,
+       band=band,
+       groom_bailey_attempted=True,
+       groom_bailey_applied=True,
+       groom_bailey_reason="Applied accepted Groom-Bailey station fits.",
+   )
+
+   table.to_csv(out / "groom_bailey_table.csv", index=False)
+   accepted.to_csv(out / "groom_bailey_accepted.csv", index=False)
+   assessment.to_csv(out / "pre2d_assessment_after_gb.csv", index=False)
+
+Worked Workflow
+---------------
+
+There is currently no dedicated Sphinx-Gallery ``plot_gb.py`` example in
+``docs/examples/emtools``. Until one is added, use the examples in this
+page as the worked workflow:
+
+- estimate the table without applying correction;
+- filter stations by fit quality;
+- apply correction to accepted stations;
+- record the result in the pre-2D assessment.

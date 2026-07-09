@@ -25,7 +25,14 @@ import json
 import time
 from pathlib import Path
 
-from .ingest import build_chunks, corpus_stats, load_chunks, repo_root, save_chunks
+from .ingest import (
+    build_chunks,
+    corpus_stats,
+    load_chunks,
+    repo_root,
+    save_chunks,
+    source_fingerprint,
+)
 from .schemas import RAGChunk
 
 __all__ = [
@@ -34,6 +41,7 @@ __all__ = [
     "build_index",
     "load_index",
     "index_exists",
+    "index_is_stale",
     "read_manifest",
 ]
 
@@ -67,15 +75,40 @@ def read_manifest(out_dir: Path | str | None = None,
         return None
 
 
+def index_is_stale(out_dir: Path | str | None = None,
+                   root: Path | str | None = None) -> bool:
+    """True when the persisted index no longer matches the source tree.
+
+    Compares the manifest's stored :func:`~pycsamt.assistant.rag.ingest.
+    source_fingerprint` against a freshly-computed one. A missing manifest
+    or fingerprint (e.g. an index built before this field existed) counts
+    as stale, so callers rebuild rather than trust an unknown state.
+    """
+    mf = read_manifest(out_dir, root)
+    if not mf or "source_fingerprint" not in mf:
+        return True
+    return mf["source_fingerprint"] != source_fingerprint(root)
+
+
 def build_index(
     root: Path | str | None = None,
     out_dir: Path | str | None = None,
     *,
     save: bool = True,
+    embed: bool = False,
+    embed_api_key: str | None = None,
+    embed_provider: str | None = None,
+    embed_model: str | None = None,
 ) -> dict:
     """Ingest the repo and (optionally) persist chunks + manifest.
 
-    Returns the manifest dict (with ``out_dir`` and ``stats``).
+    When *embed* is true and an embedding backend resolves (an API key is
+    supplied and its client imports), every chunk is embedded and the
+    vectors are saved next to ``chunks.jsonl`` for dense retrieval. This
+    is strictly opt-in — the default build is text-only and offline.
+
+    Returns the manifest dict (with ``out_dir``, ``stats`` and, when
+    embedded, ``embedded``/``embed_model``/``embed_dim``).
     """
     root = Path(root) if root is not None else repo_root()
     out_dir = Path(out_dir) if out_dir is not None else default_index_dir(root)
@@ -88,11 +121,40 @@ def build_index(
         "root": str(root),
         "n_chunks": len(chunks),
         "stats": stats,
+        "source_fingerprint": source_fingerprint(root),
+        "embedded": False,
         "out_dir": str(out_dir),
     }
+
+    vectors = None
+    if embed:
+        from .embeddings import resolve_embedding_backend
+
+        backend = resolve_embedding_backend(
+            api_key=embed_api_key,
+            provider=embed_provider,
+            model=embed_model,
+        )
+        if backend is None:
+            raise RuntimeError(
+                "Embedding requested but no backend resolved — pass an "
+                "embed_api_key (and ensure the provider client is "
+                "installed)."
+            )
+        vectors = backend.embed([c.text for c in chunks])
+        manifest["embedded"] = True
+        manifest["embed_model"] = backend.name
+        manifest["embed_dim"] = int(vectors.shape[1])
+
     if save:
         out_dir.mkdir(parents=True, exist_ok=True)
         save_chunks(chunks, out_dir / "chunks.jsonl")
+        if vectors is not None:
+            from .embeddings import VECTOR_FILENAME, save_vectors
+
+            save_vectors(
+                out_dir / VECTOR_FILENAME, [c.id for c in chunks], vectors
+            )
         (out_dir / "manifest.json").write_text(
             json.dumps(manifest, indent=2), encoding="utf-8"
         )

@@ -30,6 +30,11 @@ _MIN_INTENT = 0.85
 _MIN_WORKFLOW = 0.85
 _MIN_LINE = 0.90
 _MIN_SYMBOL_RECALL = 0.80
+# Retrieval-quality guards (Tier 2). Observed over all suites incl. the
+# adversarial paraphrases: no_test 100 / wf_in_topk 100 / nonempty ~96
+# (only the "what can you do?" META probes retrieve nothing, by design).
+_MIN_WF_IN_TOPK = 0.90
+_MIN_NONEMPTY = 0.85
 
 
 class TestEvalSuiteGate(unittest.TestCase):
@@ -70,6 +75,26 @@ class TestEvalSuiteGate(unittest.TestCase):
     def test_no_hallucination_violations(self):
         self.assertEqual(
             self.report.violations, [], msg=str(self.report.violations)
+        )
+
+    def test_no_test_file_pollution(self):
+        # Tier 0/2 guard: a unit-test module must never be retrieved.
+        self.assertEqual(
+            self.report.test_pollution, [],
+            msg=str(self.report.test_pollution),
+        )
+
+    def test_workflow_in_topk(self):
+        # Tier 1/2 guard: paraphrased queries surface the right workflow.
+        self.assertGreaterEqual(
+            self.report.metrics["workflow_in_topk"], _MIN_WF_IN_TOPK,
+            msg=self.report.summary(),
+        )
+
+    def test_retrieval_nonempty(self):
+        self.assertGreaterEqual(
+            self.report.metrics["retrieval_nonempty"], _MIN_NONEMPTY,
+            msg=self.report.summary(),
         )
 
 
@@ -116,6 +141,32 @@ class TestHarnessHermetic(unittest.TestCase):
         rep = evaluate([], retriever=self._retriever(), registry=None)
         self.assertIsInstance(rep, EvalReport)
         self.assertEqual(rep.n, 0)
+
+    def test_detects_test_file_pollution(self):
+        # A retriever that surfaces a test module must be flagged.
+        retr = Retriever([
+            RAGChunk(
+                id="t", text="estimate_ss_ama static shift unit test",
+                source_path="pycsamt/emtools/tests/test_ss.py",
+                kind="python_symbol", workflow="static_shift",
+                symbol="pycsamt.emtools.tests.test_ss.test_ama",
+            ),
+        ])
+        rep = evaluate(
+            [{"query": "estimate_ss_ama static shift"}],
+            retriever=retr, registry=None,
+        )
+        self.assertEqual(len(rep.test_pollution), 1)
+        self.assertEqual(rep.metrics["no_test_in_topk"], 0.0)
+
+    def test_workflow_in_topk_metric(self):
+        recs = [{
+            "query": "estimate_ss_ama static shift",
+            "expected_retrieval_workflow": "static_shift",
+        }]
+        rep = evaluate(recs, retriever=self._retriever(), registry=None)
+        self.assertEqual(rep.metrics["workflow_in_topk"], 1.0)
+        self.assertEqual(rep.metrics["no_test_in_topk"], 1.0)
 
 
 if __name__ == "__main__":

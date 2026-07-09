@@ -1,0 +1,19 @@
+# Adversarial retrieval suite (RAG Tier 2): paraphrases, synonyms and
+# negations that AVOID the API vocabulary — they exercise query expansion +
+# workflow tagging + the no-test-pollution guard, not surface-word matching.
+# `expected_retrieval_workflow` is a RETRIEVAL target (a top-k chunk should
+# carry that workflow tag); it deliberately does NOT feed the keyword
+# classifier's workflow_accuracy, which these paraphrases are meant to defeat.
+{"query": "clean up spikes and outliers before processing", "expected_retrieval_workflow": "denoise"}
+{"query": "remove noise and glitches from the sounding", "expected_retrieval_workflow": "denoise"}
+{"query": "denoise the time series to get rid of outliers", "expected_retrieval_workflow": "denoise"}
+{"query": "my resistivity curves are shifted up and down between stations", "expected_retrieval_workflow": "static_shift"}
+{"query": "the sounding curves look parallel but offset vertically", "expected_retrieval_workflow": "static_shift"}
+{"query": "correct the vertical offset between adjacent soundings", "expected_retrieval_workflow": "static_shift"}
+{"query": "which direction does the geology run", "expected_retrieval_workflow": "phase_analysis"}
+{"query": "is my data 1D 2D or 3D", "expected_retrieval_workflow": "phase_analysis"}
+{"query": "how far down can I trust my model", "expected_retrieval_workflow": "sensitivity"}
+{"query": "how deep can I actually see with this data", "expected_retrieval_workflow": "sensitivity"}
+{"query": "find bad frequencies and noisy stations", "expected_retrieval_workflow": "qc"}
+{"query": "prepare my data for a third party 2D inversion program", "expected_retrieval_workflow": "pre_inversion"}
+{"query": "estimate the induction arrows", "expected_retrieval_workflow": "tipper"}

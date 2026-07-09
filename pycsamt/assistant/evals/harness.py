@@ -67,6 +67,7 @@ class EvalReport:
     metrics: dict[str, float] = field(default_factory=dict)
     records: list[dict[str, Any]] = field(default_factory=dict)  # type: ignore[assignment]
     violations: list[dict[str, Any]] = field(default_factory=list)
+    test_pollution: list[dict[str, Any]] = field(default_factory=list)
 
     def summary(self) -> str:
         lines = [f"Eval over {self.n} records:"]
@@ -74,7 +75,18 @@ class EvalReport:
             lines.append(f"  {k}: {self.metrics[k]:.1%}")
         if self.violations:
             lines.append(f"  hallucination violations: {len(self.violations)}")
+        if self.test_pollution:
+            lines.append(
+                f"  test-file pollution: {len(self.test_pollution)} record(s)"
+            )
         return "\n".join(lines)
+
+
+def _is_test_path(path: str) -> bool:
+    """True for a unit-test source path (should never be retrieved)."""
+    p = (path or "").replace("\\", "/")
+    base = p.rsplit("/", 1)[-1]
+    return "/tests/" in p or base.startswith("test_") or base == "conftest.py"
 
 
 def _accuracy(pairs: list[tuple[Any, Any]]) -> float | None:
@@ -144,6 +156,9 @@ def evaluate(
     recalls: list[float] = []
     per_records: list[dict[str, Any]] = []
     violations: list[dict[str, Any]] = []
+    test_pollution: list[dict[str, Any]] = []
+    wf_in_topk: list[bool] = []       # retrieval surfaced the right area
+    nonempty: list[bool] = []         # retrieval returned anything
 
     for rec in records:
         q = rec["query"]
@@ -167,6 +182,24 @@ def evaluate(
         if recall is not None:
             recalls.append(recall)
 
+        # ── retrieval-quality guards ────────────────────────────────────
+        nonempty.append(bool(ctx.chunks))
+        polluted = [
+            c.source_path for c in ctx.chunks if _is_test_path(c.source_path)
+        ]
+        if polluted:
+            test_pollution.append({"query": q, "paths": polluted})
+        # Retrieval target: an explicit retrieval expectation (adversarial
+        # paraphrases the keyword classifier can't label) or, failing that,
+        # the classifier's expected_workflow.
+        exp_wf = (
+            rec.get("expected_retrieval_workflow")
+            or rec.get("expected_workflow")
+        )
+        retrieved_wfs = {c.workflow for c in ctx.chunks if c.workflow}
+        if exp_wf:
+            wf_in_topk.append(exp_wf in retrieved_wfs)
+
         blob = "\n".join(c.text for c in ctx.chunks)
         bad = [
             s for s in rec.get("must_not_contain", []) if s in blob
@@ -182,6 +215,8 @@ def evaluate(
                 "got_line": got_line,
                 "symbol_recall": recall,
                 "missing_symbols": sorted(exp_syms - got_syms),
+                "retrieved_workflows": sorted(w for w in retrieved_wfs if w),
+                "test_polluted": bool(polluted),
             }
         )
 
@@ -196,9 +231,15 @@ def evaluate(
             metrics[name] = acc
     if recalls:
         metrics["symbol_recall"] = sum(recalls) / len(recalls)
+    if records:
+        metrics["no_test_in_topk"] = 1.0 - len(test_pollution) / len(records)
+        metrics["retrieval_nonempty"] = sum(nonempty) / len(records)
+    if wf_in_topk:
+        metrics["workflow_in_topk"] = sum(wf_in_topk) / len(wf_in_topk)
 
     report = EvalReport(
-        n=len(records), metrics=metrics, violations=violations
+        n=len(records), metrics=metrics, violations=violations,
+        test_pollution=test_pollution,
     )
     report.records = per_records
     return report

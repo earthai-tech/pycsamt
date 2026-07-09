@@ -19,7 +19,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from .config import infer_workflow, priority_for
+from .config import infer_workflow, priority_for, workflow_for_path
 from .schemas import RAGChunk
 
 __all__ = ["index_python_file", "module_name"]
@@ -102,7 +102,8 @@ def _make_chunk(
         symbol=symbol,
         module=module,
         title=name,
-        workflow=infer_workflow(rel_path, symbol, doc),
+        workflow=infer_workflow(rel_path, symbol, doc)
+        or workflow_for_path(rel_path),
         priority=priority_for(rel_path),
         metadata={
             "name": name,
@@ -144,7 +145,8 @@ def index_python_file(path: Path, root: Path) -> list[RAGChunk]:
                 symbol=module,
                 module=module,
                 title=module,
-                workflow=infer_workflow(rel_path, module, mod_doc),
+                workflow=infer_workflow(rel_path, module, mod_doc)
+                or workflow_for_path(rel_path),
                 priority=priority_for(rel_path),
                 metadata={"has_doc": True},
             )

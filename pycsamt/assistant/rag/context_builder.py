@@ -22,12 +22,13 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .retriever import Retriever, build_retriever
-from .schemas import RAGChunk
+from .schemas import RAGChunk, RetrievedContext
 
 __all__ = [
     "AssembledContext",
     "ContextBuilder",
     "default_context_builder",
+    "needs_clarification",
 ]
 
 _SNIPPET_CHARS = 700
@@ -108,6 +109,12 @@ def _chunk_label(chunk: RAGChunk) -> str:
     return title or src
 
 
+# Boosted-BM25 score below which retrieval is treated as weak. Calibrated
+# on the pyCSAMT corpus: on-topic / paraphrased queries score ~30–80,
+# contentless follow-ups ("the thing", "do that again") score <20.
+_CLARIFY_SCORE_FLOOR = 25.0
+
+
 @dataclass
 class AssembledContext:
     """Everything the answerer needs for one query."""
@@ -118,9 +125,14 @@ class AssembledContext:
     project_context: dict[str, Any] = field(default_factory=dict)
     symbols: list[dict[str, Any]] = field(default_factory=list)
     chunks: list[RAGChunk] = field(default_factory=list)
+    top_score: float = 0.0
 
     def is_empty(self) -> bool:
         return not self.chunks and not self.project_context
+
+    def is_confident(self, floor: float = _CLARIFY_SCORE_FLOOR) -> bool:
+        """True when a project line resolved or retrieval scored well."""
+        return bool(self.project_context) or self.top_score >= floor
 
     def _lead_chunk(self) -> RAGChunk | None:
         """Pick the best 'definition' chunk to open the answer.
@@ -247,13 +259,60 @@ class ContextBuilder:
         *,
         k: int = 6,
         max_chars: int = 6000,
+        rerank_fn: Any | None = None,
+        rerank_top_n: int = 12,
+        session: dict[str, Any] | None = None,
     ) -> AssembledContext:
-        ctx = self.retriever.search(query, k=k)
+        """Assemble context for *query*.
+
+        When *rerank_fn* (a ``(prompt, system) -> str`` LLM callable) is
+        given, retrieval fetches a deeper candidate pool (*rerank_top_n*),
+        an LLM re-ranks it for precision, and the top *k* are kept. Without
+        it, the top *k* from hybrid retrieval are used directly.
+
+        When *session* (``{last_workflow, last_line, recent_turns}``) is
+        given, a subject-less follow-up query is rewritten for *retrieval*
+        so it inherits the conversation's topic — the original *query* is
+        still used for project-line resolution and is echoed back.
+        """
+        retrieval_query = query
+        if session:
+            from .rewrite import rewrite_query
+
+            retrieval_query = rewrite_query(
+                query,
+                last_workflow=session.get("last_workflow"),
+                last_line=session.get("last_line"),
+                recent_turns=session.get("recent_turns"),
+            )
+
+        if rerank_fn is not None:
+            pool = self.retriever.search(retrieval_query, k=max(k, rerank_top_n))
+            from .rerank import llm_rerank
+
+            reranked = llm_rerank(
+                retrieval_query, pool.chunks, rank_fn=rerank_fn,
+                top_n=rerank_top_n,
+            )
+            ctx = RetrievedContext(
+                query=retrieval_query,
+                chunks=reranked[:k],
+                symbols=pool.symbols,
+                top_score=pool.top_score,
+            )
+        else:
+            ctx = self.retriever.search(retrieval_query, k=k)
 
         project_context: dict[str, Any] = {}
         if self.registry is not None:
             try:
                 line = self.registry.find_line_in_text(query)
+                if not line and session and session.get("last_line"):
+                    # A follow-up like "now on that line" inherits the line.
+                    from .rewrite import is_follow_up
+
+                    if is_follow_up(query):
+                        line = session["last_line"]
                 if line:
                     project_context = self.registry.resolve_line(line)
             except Exception:  # noqa: BLE001
@@ -309,7 +368,41 @@ class ContextBuilder:
             project_context=project_context,
             symbols=ctx.symbols,
             chunks=ctx.chunks,
+            top_score=ctx.top_score,
         )
+
+
+# ── retrieval-confidence → clarification ────────────────────────────────────────
+
+_CLARIFY_QUESTION = (
+    "I want to point this at the right thing before I answer. Could you say "
+    "which **dataset or survey line** (e.g. L22PLT) and which **workflow** "
+    "you mean — QC, static shift, phase-tensor analysis, denoising, "
+    "sensitivity, or an inversion?"
+)
+
+
+def needs_clarification(
+    assembled: AssembledContext,
+    *,
+    floor: float = _CLARIFY_SCORE_FLOOR,
+) -> str | None:
+    """Return a clarifying question when answering would be a guess.
+
+    Fires only for an **anaphoric follow-up** ("do that again", "same for
+    this one") that stayed weak — i.e. retrieval is not confident
+    (:meth:`AssembledContext.is_confident`) *and* the query refers back to
+    something the assistant can't identify (no session resolved it). A
+    self-contained question, even a rare low-scoring one ("the Sites
+    class"), is answered best-effort rather than bounced.
+    """
+    if assembled.is_confident(floor):
+        return None
+    from .rewrite import is_follow_up
+
+    if not is_follow_up(assembled.query):
+        return None
+    return _CLARIFY_QUESTION
 
 
 # ── cached default builder (retriever + registry) ───────────────────────────────

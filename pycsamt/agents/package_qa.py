@@ -382,12 +382,14 @@ class PackageQAAgent(BaseAgent):
             llm_provider=llm_provider,
         )
 
-    def _build_rag(self, question: str):
+    def _build_rag(self, question: str, session: dict | None = None):
         """Return an AssembledContext for *question*, or ``None``.
 
         Lazily uses the RAG layer (:mod:`pycsamt.assistant.rag`); any
         failure (assistant not installed, no source tree) degrades
-        silently so QA still works without retrieval.
+        silently so QA still works without retrieval. *session*
+        (``{last_workflow, last_line, recent_turns}``) lets a subject-less
+        follow-up inherit the conversation's topic for retrieval.
         """
         if not self.use_rag:
             return None
@@ -398,7 +400,7 @@ class PackageQAAgent(BaseAgent):
             builder = default_context_builder()
             if builder is None:
                 return None
-            ctx = builder.build(question)
+            ctx = builder.build(question, session=session)
             return None if ctx.is_empty() else ctx
         except Exception:  # noqa: BLE001 — RAG is best-effort
             return None
@@ -423,8 +425,28 @@ class PackageQAAgent(BaseAgent):
             )
 
         extra_ctx = input_data.get("context", "")
-        rag = self._build_rag(question)
+        session = input_data.get("session")
+        rag = self._build_rag(question, session=session)
         citations = rag.citations if rag else []
+
+        # Retrieval too weak + query too thin to answer responsibly → ask a
+        # single clarifying question instead of guessing (or QC-defaulting).
+        if rag is not None:
+            from pycsamt.assistant.rag.context_builder import (
+                needs_clarification,
+            )
+            clar = needs_clarification(rag)
+            if clar:
+                return AgentResult(
+                    status="success",
+                    summary=clar[:120],
+                    data={
+                        "answer": clar,
+                        "source": "rag_clarify",
+                        "citations": [],
+                        "excerpts": [],
+                    },
+                )
 
         # offline path
         if self._caller_key is None:

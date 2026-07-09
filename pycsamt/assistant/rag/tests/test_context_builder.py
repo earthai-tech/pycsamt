@@ -14,6 +14,7 @@ from pycsamt.assistant.rag import context_builder as cb
 from pycsamt.assistant.rag.context_builder import (
     AssembledContext,
     ContextBuilder,
+    needs_clarification,
 )
 from pycsamt.assistant.rag.retriever import Retriever
 from pycsamt.assistant.rag.schemas import RAGChunk
@@ -66,6 +67,42 @@ class TestContextBuilder(unittest.TestCase):
             Retriever(_chunks()), _FakeRegistry()
         )
 
+    def test_rerank_fn_reorders_chunks(self):
+        # A rerank_fn that names candidates "2, 1" reverses the two-chunk
+        # pool, whatever order retrieval produced.
+        default_ids = [c.id for c in self.builder.build("static shift").chunks]
+        self.assertEqual(len(default_ids), 2)
+        reranked = self.builder.build(
+            "static shift", rerank_fn=lambda prompt, system: "2, 1"
+        )
+        self.assertEqual(
+            [c.id for c in reranked.chunks], list(reversed(default_ids))
+        )
+
+    def test_rerank_absent_leaves_default_path(self):
+        # No rerank_fn → identical to a plain build (no crash, same lead).
+        a = self.builder.build("static shift")
+        b = self.builder.build("static shift", rerank_fn=None)
+        self.assertEqual(
+            [c.id for c in a.chunks], [c.id for c in b.chunks]
+        )
+
+    def test_session_rewrites_followup_for_retrieval(self):
+        # A subject-less follow-up retrieves nothing on its own, but with a
+        # session it inherits "static_shift" and finds the recipe/symbol.
+        cold = self.builder.build("run that again")
+        self.assertTrue(cold.is_empty())
+        warm = self.builder.build(
+            "run that again", session={"last_workflow": "static_shift"}
+        )
+        self.assertTrue(warm.chunks)
+        # The user-facing query is preserved (only retrieval was rewritten).
+        self.assertEqual(warm.query, "run that again")
+
+    def test_top_score_populated(self):
+        ac = self.builder.build("static shift correction")
+        self.assertGreater(ac.top_score, 0.0)
+
     def test_build_has_context_and_citations(self):
         ac = self.builder.build("how to correct static shift")
         self.assertFalse(ac.is_empty())
@@ -96,6 +133,32 @@ class TestContextBuilder(unittest.TestCase):
         empty = AssembledContext(query="x")
         self.assertTrue(empty.is_empty())
         self.assertIn("couldn't find", empty.compose_offline_answer())
+
+
+class TestClarification(unittest.TestCase):
+
+    def test_confident_context_needs_no_clarification(self):
+        ac = AssembledContext(query="static shift", top_score=50.0)
+        self.assertIsNone(needs_clarification(ac))
+
+    def test_project_context_is_confident(self):
+        ac = AssembledContext(
+            query="do that again", top_score=1.0,
+            project_context={"line": "L22PLT"},
+        )
+        self.assertIsNone(needs_clarification(ac))
+
+    def test_anaphoric_followup_clarifies(self):
+        ac = AssembledContext(query="do that again", top_score=5.0)
+        msg = needs_clarification(ac)
+        self.assertIsNotNone(msg)
+        self.assertIn("workflow", msg.lower())
+
+    def test_selfcontained_lowscore_query_does_not_clarify(self):
+        # A real (if rare) question is answered best-effort, never bounced —
+        # even at a low score, because it names its own subject.
+        ac = AssembledContext(query="the Sites class", top_score=5.0)
+        self.assertIsNone(needs_clarification(ac))
 
 
 class TestPackageQAWithRAG(unittest.TestCase):

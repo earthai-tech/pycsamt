@@ -38,6 +38,7 @@ __all__ = [
     "save_chunks",
     "load_chunks",
     "corpus_stats",
+    "source_fingerprint",
 ]
 
 
@@ -137,3 +138,33 @@ def corpus_stats(chunks: list[RAGChunk]) -> dict[str, int]:
         if c.workflow:
             stats[f"wf:{c.workflow}"] = stats.get(f"wf:{c.workflow}", 0) + 1
     return stats
+
+
+def source_fingerprint(
+    root: Path | str | None = None,
+    *,
+    files: Iterable[Path] | None = None,
+) -> str:
+    """Cheap content-independent fingerprint of the indexable source tree.
+
+    Hashes each indexable file's ``(relpath, mtime, size)`` — no parsing —
+    so it changes whenever a file is added, removed, or edited. Callers use
+    it to detect a *stale* persisted index without re-ingesting the repo.
+    """
+    import hashlib
+
+    root = Path(root) if root is not None else repo_root()
+    paths = (
+        sorted(files)
+        if files is not None
+        else sorted(iter_index_files(root))
+    )
+    h = hashlib.sha256()
+    for p in paths:
+        try:
+            st = p.stat()
+        except OSError:
+            continue
+        rel = p.relative_to(root).as_posix()
+        h.update(f"{rel}:{int(st.st_mtime)}:{st.st_size}\n".encode("utf-8"))
+    return h.hexdigest()

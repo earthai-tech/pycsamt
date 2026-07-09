@@ -86,9 +86,15 @@ class RetrievedContext:
         Symbol-graph hits (API entries) when available.
     project_context : dict
         Resolved project/line context (from the project registry).
+    top_score : float
+        Highest lexical (boosted BM25) score among the candidates — a
+        corpus-consistent confidence proxy the caller can threshold to
+        decide whether to answer or ask for clarification. ``0.0`` when
+        nothing matched.
     """
 
     query: str
     chunks: list[RAGChunk] = field(default_factory=list)
     symbols: list[dict[str, Any]] = field(default_factory=list)
     project_context: dict[str, Any] = field(default_factory=dict)
+    top_score: float = 0.0

@@ -26,12 +26,27 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Iterable
+from typing import TYPE_CHECKING, Iterable, Sequence
 
 from .config import infer_workflow
+from .expansion import expand_query
 from .schemas import RAGChunk, RetrievedContext
 
+if TYPE_CHECKING:  # pragma: no cover
+    import numpy as np
+
+    from .embeddings import EmbeddingBackend
+
 __all__ = ["tokenize", "BM25", "Retriever", "build_retriever"]
+
+# Expansion terms are supporting evidence, not the user's words — score
+# them at a fraction of a real query term (see expansion.py).
+_EXPANSION_WEIGHT = 0.35
+# Dense fusion tuning (only used when a vector store + backend are present).
+_RRF_K = 60
+_DENSE_WEIGHT = 1.0
+_DENSE_MIN_SIM = 0.20          # ignore near-orthogonal (irrelevant) chunks
+_FUSE_DEPTH_MULT = 5           # fuse the top max(k*mult, 50) of each ranker
 
 _STOPWORDS = frozenset(
     "a an the of to for and or in on at by with from is are be do does did "
@@ -126,9 +141,27 @@ class Retriever:
     _RECIPE_BOOST = 1.25
     _SYMBOL_BOOST = 1.5
 
-    def __init__(self, chunks: list[RAGChunk]) -> None:
+    def __init__(
+        self,
+        chunks: list[RAGChunk],
+        *,
+        vectors: "np.ndarray | None" = None,
+        embed_backend: "EmbeddingBackend | None" = None,
+        use_expansion: bool = True,
+    ) -> None:
         self.chunks = chunks
         self._bm25 = BM25([tokenize(c.text) for c in chunks])
+        self.use_expansion = use_expansion
+        # Dense retrieval is enabled only when both a corpus matrix (one
+        # row per chunk, aligned by index) and a query-embedding backend
+        # are supplied; otherwise the retriever is pure BM25 + expansion.
+        self._vectors = vectors
+        self._embed_backend = embed_backend
+
+    @property
+    def dense_enabled(self) -> bool:
+        """True when a vector store + embedding backend are both present."""
+        return self._vectors is not None and self._embed_backend is not None
 
     def search(
         self,
@@ -140,6 +173,13 @@ class Retriever:
     ) -> RetrievedContext:
         """Return the top-*k* chunks for *query* as a RetrievedContext.
 
+        Ranking is BM25 over the query, plus lower-weighted BM25 over
+        deterministically :func:`~pycsamt.assistant.rag.expansion.
+        expand_query` terms, times structural boosts (priority / workflow
+        / recipe / exact-symbol). When a dense backend + vector store are
+        present, that lexical ranking is fused with cosine-similarity
+        retrieval via Reciprocal Rank Fusion.
+
         Parameters
         ----------
         k : int
@@ -147,11 +187,22 @@ class Retriever:
         kinds : iterable of str, optional
             Hard filter on chunk kind (e.g. ``{"recipe", "python_symbol"}``).
         workflow : str, optional
-            Workflow boost hint; if omitted it is inferred from the query.
+            Workflow boost hint; if omitted it is inferred from the query
+            (and from the expansion terms).
         """
         q_tokens = tokenize(query)
         base = self._bm25.scores(q_tokens)
-        wf = workflow or infer_workflow(query)
+
+        exp_terms = expand_query(query) if self.use_expansion else []
+        if exp_terms:
+            exp = self._bm25.scores(exp_terms)
+            base = [b + _EXPANSION_WEIGHT * e for b, e in zip(base, exp)]
+
+        wf = (
+            workflow
+            or infer_workflow(query)
+            or (infer_workflow(" ".join(exp_terms)) if exp_terms else None)
+        )
         ql = query.lower()
         kinds_set = set(kinds) if kinds else None
 
@@ -174,7 +225,12 @@ class Retriever:
             scored.append((s, i))
 
         scored.sort(key=lambda t: -t[0])
-        top = [self.chunks[i] for _, i in scored[:k]]
+
+        if self.dense_enabled:
+            order = self._fuse_dense(query, scored, k=k, kinds_set=kinds_set)
+        else:
+            order = [i for _, i in scored]
+        top = [self.chunks[i] for i in order[:k]]
 
         symbols = [
             {
@@ -189,8 +245,60 @@ class Retriever:
             and c.kind in ("python_symbol", "python_method", "module_doc")
         ]
         return RetrievedContext(
-            query=query, chunks=top, symbols=symbols
+            query=query,
+            chunks=top,
+            symbols=symbols,
+            top_score=scored[0][0] if scored else 0.0,
         )
+
+    def _fuse_dense(
+        self,
+        query: str,
+        scored: list[tuple[float, int]],
+        *,
+        k: int,
+        kinds_set: set[str] | None,
+    ) -> list[int]:
+        """Fuse the lexical ranking (*scored*) with cosine dense retrieval.
+
+        Embeds the query, ranks the corpus by cosine similarity (respecting
+        the kind filter and a similarity floor so irrelevant chunks are not
+        dragged in), and blends the two rankings with Reciprocal Rank
+        Fusion. Any embedding failure degrades silently to the lexical
+        order — dense retrieval is never allowed to break a query.
+        """
+        depth = max(k * _FUSE_DEPTH_MULT, 50)
+        lex_ranked = [i for _, i in scored[:depth]]
+        try:
+            import numpy as np
+
+            from .embeddings import cosine_scores, rrf_fuse
+
+            qvec = self._embed_backend.embed([query])  # type: ignore[union-attr]
+            cos = cosine_scores(qvec[0], self._vectors)
+        except Exception:  # noqa: BLE001 — best-effort; keep lexical order
+            return [i for _, i in scored]
+
+        dense_ranked: list[int] = []
+        for raw in np.argsort(-cos):
+            i = int(raw)
+            if cos[i] < _DENSE_MIN_SIM:
+                break  # argsort is descending → nothing better remains
+            if kinds_set and self.chunks[i].kind not in kinds_set:
+                continue
+            dense_ranked.append(i)
+            if len(dense_ranked) >= depth:
+                break
+
+        if not dense_ranked:
+            return [i for _, i in scored]
+
+        fused = rrf_fuse(
+            [lex_ranked, dense_ranked],
+            k=_RRF_K,
+            weights=[1.0, _DENSE_WEIGHT],
+        )
+        return sorted(fused, key=lambda i: -fused[i])
 
 
 # ── convenience builder with a tiny cache ───────────────────────────────────────
@@ -203,6 +311,8 @@ def build_retriever(
     chunks: list[RAGChunk] | None = None,
     use_cache: bool = True,
     prefer_persisted: bool = True,
+    embed_api_key: str | None = None,
+    embed_provider: str | None = None,
 ) -> Retriever:
     """Build (or fetch a cached) :class:`Retriever`.
 
@@ -211,6 +321,12 @@ def build_retriever(
     1. process cache (keyed by root);
     2. the persisted ``.pycsamt_rag`` index (fast), if *prefer_persisted*;
     3. a fresh repo ingest (slow) as the fallback.
+
+    Dense retrieval activates only when a persisted vector store exists
+    *and* an embedding backend resolves from *embed_api_key* /
+    *embed_provider* (see :func:`~pycsamt.assistant.rag.embeddings.
+    resolve_embedding_backend`); otherwise the retriever is BM25 +
+    expansion, exactly as before.
     """
     if chunks is not None:
         return Retriever(chunks)
@@ -223,10 +339,63 @@ def build_retriever(
 
     loaded = None
     if prefer_persisted:
-        from .index_store import load_index
+        from .index_store import default_index_dir, index_is_stale, load_index
         loaded = load_index(root=root)
+        if loaded is not None and index_is_stale(root=root):
+            import logging
+            logging.getLogger(__name__).warning(
+                "pycsamt RAG: persisted index at %s is stale (source tree "
+                "changed since it was built); serving it anyway. Rebuild "
+                "with `python -m pycsamt.assistant.rag build`.",
+                default_index_dir(root),
+            )
 
-    retr = Retriever(loaded if loaded else build_chunks(root))
+    corpus = loaded if loaded else build_chunks(root)
+    vectors, backend = _resolve_dense(
+        corpus, root=root, api_key=embed_api_key, provider=embed_provider
+    )
+    retr = Retriever(corpus, vectors=vectors, embed_backend=backend)
     if use_cache:
         _CACHE[key] = retr
     return retr
+
+
+def _resolve_dense(corpus, *, root, api_key, provider):
+    """Return ``(vectors_aligned_to_corpus, backend)`` or ``(None, None)``.
+
+    Dense retrieval needs both halves; if either the persisted vector
+    store or an embedding backend is missing we return ``(None, None)`` and
+    the retriever stays lexical. Vectors are re-aligned to *corpus* order
+    by chunk id, so a vector store built from the same index lines up even
+    if row order ever differs.
+    """
+    try:
+        from .embeddings import (
+            VECTOR_FILENAME,
+            load_vectors,
+            resolve_embedding_backend,
+        )
+        from .index_store import default_index_dir
+
+        store = load_vectors(default_index_dir(root) / VECTOR_FILENAME)
+        if store is None:
+            return None, None
+        backend = resolve_embedding_backend(
+            api_key=api_key, provider=provider
+        )
+        if backend is None:
+            return None, None
+
+        import numpy as np
+
+        ids, mat = store
+        row_of = {cid: r for r, cid in enumerate(ids)}
+        dim = mat.shape[1]
+        aligned = np.zeros((len(corpus), dim), dtype=np.float32)
+        for i, c in enumerate(corpus):
+            r = row_of.get(c.id)
+            if r is not None:
+                aligned[i] = mat[r]
+        return aligned, backend
+    except Exception:  # noqa: BLE001 — dense is optional; never block startup
+        return None, None

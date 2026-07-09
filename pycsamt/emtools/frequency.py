@@ -15,7 +15,6 @@ from ._core import (
 )
 
 # re-use package editors when it saves code
-from ..site import edit as _edit
 from ..api.station import PYCSAMT_STATION_RENDERING
 from ..api.view import PYCSAMT_API_VIEW, maybe_wrap_frame, wrap_result
 
@@ -129,7 +128,12 @@ def _interp_rows_by_freq(
     method: str = "linear",
 ) -> np.ndarray:
     """Recover selected rows by interpolating finite trusted rows."""
-    out = values.copy()
+    out_dtype = (
+        np.result_type(values.dtype, np.complex128)
+        if np.iscomplexobj(values)
+        else values.dtype
+    )
+    out = values.astype(out_dtype, copy=True)
     fr = np.asarray(fr, dtype=float)
     fill = np.asarray(fill, dtype=bool)
     good = np.asarray(good, dtype=bool)
@@ -150,12 +154,13 @@ def _interp_rows_by_freq(
         if np.count_nonzero(valid) < 2:
             flat_out[fill, j] = np.nan
             continue
-        flat_out[fill, j] = _interp_complex(
+        interp = _interp_complex(
             np.log10(np.maximum(fr[valid], 1e-24)),
             y[valid],
             x_fill,
             method=method,
         )
+        flat_out[fill, j] = interp if np.iscomplexobj(flat_out) else interp.real
     return flat_out.reshape(values.shape)
 
 
@@ -309,9 +314,7 @@ def _set_masked_strict_block(obj: Any,
             and isinstance(z_err, np.ndarray)
             and z_err.shape[0] == fr.size
         ):
-            z_err_new = z_err[keep]
-            if np.isfinite(z_err_new).all():
-                obj._z_err = z_err_new.astype(float, copy=False)
+            obj._z_err = z_err[keep].astype(float, copy=False)
         obj.compute_resistivity_phase()
     except Exception:
         return False
@@ -378,6 +381,15 @@ def _apply_grid_one(
             Z.z = z2
         except Exception:
             pass
+        z_err = getattr(Z, "z_err", None)
+        if isinstance(z_err, np.ndarray) and z_err.shape[0] == frz.size:
+            try:
+                Z.z_err = _regrid_z(z_err, frz, fnew, method=method).real
+            except Exception:
+                try:
+                    Z._z_err = _regrid_z(z_err, frz, fnew, method=method).real
+                except Exception:
+                    pass
         _set_block_freq(Z, fnew)
     T, t, frt = _get_t_block(ed)
     if T is not None:
@@ -386,6 +398,17 @@ def _apply_grid_one(
             T.tipper = t2
         except Exception:
             pass
+        tipper_err = getattr(T, "tipper_err", None)
+        if isinstance(tipper_err, np.ndarray) and tipper_err.shape[0] == frt.size:
+            try:
+                T.tipper_err = _regrid_t(tipper_err, frt, fnew, method=method).real
+            except Exception:
+                try:
+                    T._tipper_err = _regrid_t(
+                        tipper_err, frt, fnew, method=method
+                    ).real
+                except Exception:
+                    pass
         _set_block_freq(T, fnew)
 
 
@@ -455,15 +478,35 @@ def select_band(
         strict=strict,
         verbose=verbose,
     )
-    # delegate to existing editor for robustness (broadcast variant --
-    # `S` is a multi-site Sites container, not a single EDI-like object)
-    return _edit.select_freq_all(
-        S,
-        fmin=fmin,
-        fmax=fmax,
-        keep=keep,
-        inplace=inplace,
-    )
+    keep_values = None if keep is None else np.asarray(keep, dtype=float)
+
+    def _keep_mask(fr: np.ndarray) -> np.ndarray:
+        fr = np.asarray(fr, dtype=float)
+        if keep_values is not None:
+            mask = np.zeros(fr.size, dtype=bool)
+            for value in keep_values[np.isfinite(keep_values)]:
+                mask |= np.isclose(fr, value, rtol=1e-6, atol=1e-12)
+            return mask
+        mask = np.ones(fr.size, dtype=bool)
+        if fmin is not None:
+            mask &= fr >= float(fmin)
+        if fmax is not None:
+            mask &= fr <= float(fmax)
+        return mask
+
+    def _one(Si):
+        ed = next(_iter_items(Si))
+        Z, z, fr = _get_z_block(ed)
+        if Z is not None:
+            _apply_row_mask_to_block(Z, ("z", "z_err"), _keep_mask(fr), fr)
+        T, t, fr = _get_t_block(ed)
+        if T is not None:
+            _apply_row_mask_to_block(
+                T, ("tipper", "tipper_err"), _keep_mask(fr), fr
+            )
+        return Si
+
+    return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 
 
 def drop_duplicates(

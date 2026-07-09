@@ -1425,13 +1425,26 @@ def plot_tf_coherence_network(
 
     lats = np.array([sta_data[nm]["lat"] for nm in names], float)
     lons = np.array([sta_data[nm]["lon"] for nm in names], float)
+    lat_r = float(lats.max() - lats.min())
+    lon_r = float(lons.max() - lons.min())
+    # Ratio of the two spans. A near-linear survey (one span tiny
+    # relative to the other -- a north-south AMT line, or a regional
+    # profile spanning tens of degrees at depressive angle) is treated
+    # as a "profile": true geographic aspect is skipped (it would
+    # collapse the plot into an unreadable sliver) and the figsize
+    # ratio is capped at 4x so the canvas stays a sane, allocatable
+    # size regardless of whether stations are metres or hundreds of
+    # kilometres apart.
+    raw_ratio = lat_r / lon_r if lon_r > 1e-12 else np.inf
+    is_profile = not (0.25 <= raw_ratio <= 4.0)
+    geo_ratio = min(max(raw_ratio, 0.25), 4.0) if np.isfinite(raw_ratio) else 4.0
 
     if figsize is None:
-        lat_r = lats.max() - lats.min()
-        lon_r = lons.max() - lons.min()
-        w = max(7, lon_r * 1200)
-        h = max(6, lat_r * 1200)
-        figsize = (w, h)
+        base = 8.0
+        if geo_ratio >= 1.0:
+            figsize = (base, base * geo_ratio)
+        else:
+            figsize = (base / geo_ratio, base)
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
@@ -1472,7 +1485,16 @@ def plot_tf_coherence_network(
     ax.set_xlabel("Longitude", fontsize=9)
     ax.set_ylabel("Latitude",  fontsize=9)
     lat_mid = float(lats.mean())
-    ax.set_aspect(1.0 / max(np.cos(np.radians(lat_mid)), 1e-6))
+    # A true geographic aspect ratio is right for a 2-D-spread survey,
+    # but forcing it on a near-linear profile (one of lat_r/lon_r tiny
+    # relative to the other, e.g. a north-south line where longitude
+    # barely varies) shrinks the axes box down to an unreadable sliver
+    # regardless of the requested figsize -- fall back to "auto" there
+    # so the plot actually fills the figure.
+    if is_profile:
+        ax.set_aspect("auto")
+    else:
+        ax.set_aspect(1.0 / max(np.cos(np.radians(lat_mid)), 1e-6))
     ax.tick_params(labelsize=8)
     ax.grid(True, alpha=0.15, lw=0.5)
     ax.set_title(

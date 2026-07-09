@@ -382,12 +382,32 @@ class Mare2DEMAgent(BaseAgent):
                 from ..models.mare2dem.edi import make_mt_data_from_edi
                 err_floor = float(input_data.get("error_floor", 0.05))
                 out_modes = str(input_data.get("output_modes", "all"))
+                cr_value = input_data.get(
+                    "confidence_weighting",
+                    input_data.get("cr_weighting", False),
+                )
+                confidence_weighting = (
+                    cr_value.strip().lower() in {"1", "true", "yes", "on"}
+                    if isinstance(cr_value, str)
+                    else bool(cr_value)
+                )
                 data_file = Path(output_dir) / cfg.data_file
                 make_mt_data_from_edi(
                     sites_src, data_file,
                     output_modes=out_modes,
                     error_floor_te=err_floor,
                     error_floor_tm=err_floor,
+                    confidence_weighting=confidence_weighting,
+                    confidence_method=str(
+                        input_data.get("confidence_method", "composite")
+                    ),
+                    confidence_weights=input_data.get("confidence_weights"),
+                    confidence_min=float(
+                        input_data.get("confidence_min", 0.05)
+                    ),
+                    confidence_power=float(
+                        input_data.get("confidence_power", 1.0)
+                    ),
                     topo=topo,
                 )
                 files = {

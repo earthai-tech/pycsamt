@@ -1,4 +1,18 @@
 
+"""Quality-control confidence ratios for EM transfer functions.
+
+The composite confidence ratio (CR) used by this module is a bounded,
+weighted score:
+
+    CR = sum_k w_k s_k / sum_k w_k,  for finite component scores s_k.
+
+The default components are data coverage, tensor uncertainty,
+off-diagonal consistency, diagonal leakage, phase smoothness, and spatial
+coherence. Each score is clipped to [0, 1], where 1 is most trustworthy.
+The default manuscript classes are CR >= 0.95 (safe), 0.85 <= CR < 0.95
+(recoverable/marginal), and CR < 0.85 (reject/review).
+"""
+
 from __future__ import annotations
 
 import copy
@@ -29,6 +43,7 @@ from .tensor import build_phase_tensor_table
 
 __all__ = [
     "build_qc_table",
+    "confidence_ratio",
     "frequency_confidence_table",
     "plot_confidence_band_summary",
     "plot_confidence_profile",
@@ -38,6 +53,18 @@ __all__ = [
     "qc_flags",
     "station_confidence_table",
 ]
+
+DEFAULT_CONFIDENCE_WEIGHTS: Dict[str, float] = {
+    "coverage": 0.35,
+    "uncertainty": 0.20,
+    "offdiag": 0.15,
+    "diagonal": 0.10,
+    "phase": 0.10,
+    "spatial": 0.10,
+}
+
+DEFAULT_CI_HI = 0.95
+DEFAULT_CI_LO = 0.85
 
 
 # ------------------------------ helpers --------------------------------- #
@@ -124,6 +151,40 @@ def _confidence_error(values: Dict[str, float],
         return np.nan
     n_freq = max(1, int(n_freq))
     return float(np.sqrt(confidence * (1.0 - confidence) / n_freq))
+
+
+def confidence_ratio(
+    scores: Dict[str, float],
+    *,
+    weights: Optional[Dict[str, float]] = None,
+    n_freq: int = 1,
+    return_error: bool = False,
+) -> float | Tuple[float, float]:
+    r"""Compute the composite confidence ratio from diagnostic scores.
+
+    The confidence ratio is a weighted finite-score mean:
+
+    .. math::
+
+        \mathrm{CR} =
+        \frac{\sum_k w_k s_k \mathbf{1}_{s_k\ finite}}
+             {\sum_k w_k \mathbf{1}_{s_k\ finite}},
+        \qquad 0 \leq s_k \leq 1.
+
+    The default score vector is
+    ``coverage, uncertainty, offdiag, diagonal, phase, spatial`` with
+    weights ``0.35, 0.20, 0.15, 0.10, 0.10, 0.10``. Missing scores are
+    ignored and all finite scores are clipped to ``[0, 1]``.
+
+    The optional error is the population spread of available component
+    scores; when only one score is available it falls back to the binomial
+    standard error ``sqrt(CR * (1 - CR) / n_freq)``.
+    """
+    use_weights = {**DEFAULT_CONFIDENCE_WEIGHTS, **(weights or {})}
+    cr = _weighted_nanmean(scores, use_weights)
+    if return_error:
+        return cr, _confidence_error(scores, n_freq, cr)
+    return cr
 
 
 def _relerr_score(z: np.ndarray, ze: Optional[np.ndarray],
@@ -458,15 +519,7 @@ def station_confidence_table(
     if method not in {"presence", "composite"}:
         msg = "method must be 'presence' or 'composite'."
         raise ValueError(msg)
-    default_weights = {
-        "coverage": 0.35,
-        "uncertainty": 0.20,
-        "offdiag": 0.15,
-        "diagonal": 0.10,
-        "phase": 0.10,
-        "spatial": 0.10,
-    }
-    weights = {**default_weights, **(weights or {})}
+    weights = {**DEFAULT_CONFIDENCE_WEIGHTS, **(weights or {})}
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -508,7 +561,7 @@ def station_confidence_table(
         }
         confidence = coverage
         if method == "composite":
-            confidence = _weighted_nanmean(score_parts, weights)
+            confidence = confidence_ratio(score_parts, weights=weights)
             error_parts = score_parts
         else:
             error_parts = {"coverage": coverage}
@@ -569,7 +622,7 @@ def station_confidence_table(
                     "diagonal", "phase", "spatial",
                 )
             }
-            row["confidence"] = _weighted_nanmean(parts, weights)
+            row["confidence"] = confidence_ratio(parts, weights=weights)
             row["confidence_err"] = _confidence_error(
                 parts,
                 row["n_freq"],
@@ -599,8 +652,8 @@ def frequency_confidence_table(
     *,
     method: str = "composite",
     weights: Optional[Dict[str, float]] = None,
-    ci_hi: float = 0.95,
-    ci_lo: float = 0.50,
+    ci_hi: float = DEFAULT_CI_HI,
+    ci_lo: float = DEFAULT_CI_LO,
     relerr_threshold: float = 0.20,
     offdiag_tolerance_log10: float = 0.35,
     diagonal_leakage_max: float = 0.35,
@@ -626,15 +679,7 @@ def frequency_confidence_table(
     if method not in {"presence", "composite"}:
         msg = "method must be 'presence' or 'composite'."
         raise ValueError(msg)
-    default_weights = {
-        "coverage": 0.35,
-        "uncertainty": 0.20,
-        "offdiag": 0.15,
-        "diagonal": 0.10,
-        "phase": 0.10,
-        "spatial": 0.10,
-    }
-    weights = {**default_weights, **(weights or {})}
+    weights = {**DEFAULT_CONFIDENCE_WEIGHTS, **(weights or {})}
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -708,7 +753,7 @@ def frequency_confidence_table(
             }
             confidence = parts["coverage"]
             if method == "composite":
-                confidence = _weighted_nanmean(parts, weights)
+                confidence = confidence_ratio(parts, weights=weights)
             error_parts = parts if method == "composite" else {
                 "coverage": parts["coverage"],
             }
@@ -769,7 +814,7 @@ def frequency_confidence_table(
                     "diagonal", "phase", "spatial",
                 )
             }
-            confidence = _weighted_nanmean(parts, weights)
+            confidence = confidence_ratio(parts, weights=weights)
             table.at[index, "confidence"] = confidence
             table.at[index, "confidence_err"] = _confidence_error(
                 parts,
@@ -797,8 +842,8 @@ def plot_confidence_profile(
     sites: Any,
     *,
     method: str = "presence",
-    ci_hi: float = 0.95,
-    ci_lo: float = 0.50,
+    ci_hi: float = DEFAULT_CI_HI,
+    ci_lo: float = DEFAULT_CI_LO,
     shade_recoverable: bool = True,
     shade_mode: str = "score",
     annotate_low: bool = True,
@@ -817,15 +862,15 @@ def plot_confidence_profile(
     ax: Optional[plt.Axes] = None,
 ) -> plt.Axes:
     """
-    Profile confidence-index (CI) scatter plot along the survey line.
+    Profile confidence-ratio (CR) scatter plot along the survey line.
 
     Reproduces the Fig. 3 style from Kouadio et al. (2024): one dot per
-    station coloured green (CI ≥ ``ci_hi``), pink
-    (``ci_lo`` ≤ CI < ``ci_hi``), or red (CI < ``ci_lo``), with
+    station coloured green (CR >= ``ci_hi``), pink
+    (``ci_lo`` <= CR < ``ci_hi``), or red (CR < ``ci_lo``), with
     dashed threshold lines.
 
-    With ``method="presence"``, CI is the fraction of frequencies with a
-    valid finite Z tensor. With ``method="composite"``, CI combines
+    With ``method="presence"``, CR is the fraction of frequencies with a
+    valid finite Z tensor. With ``method="composite"``, CR combines
     coverage, tensor uncertainty, off-diagonal consistency, diagonal
     leakage, phase smoothness, and neighbor coherence.
 
@@ -834,9 +879,9 @@ def plot_confidence_profile(
     sites : path, EDI-like, Sites, or iterable
         Input sites.
     ci_hi : float
-        Upper CI threshold (default 0.95 — "safe", green).
+        Upper CR threshold (default 0.95, "safe", green).
     ci_lo : float
-        Lower CI threshold (default 0.50 — "recoverable", pink).
+        Lower CR threshold (default 0.85, "recoverable", pink).
     shade_recoverable : bool
         If ``True``, draw an interval cue for stations below ``ci_hi``.
     shade_mode : {"score", "full", "none"}
@@ -1092,8 +1137,8 @@ def plot_frequency_confidence_psection(
     sites: Any,
     *,
     method: str = "composite",
-    ci_hi: float = 0.95,
-    ci_lo: float = 0.50,
+    ci_hi: float = DEFAULT_CI_HI,
+    ci_lo: float = DEFAULT_CI_LO,
     metric: str = "confidence",
     cmap: str = "RdYlGn",
     section: str | SectionStyle = "dynamic",
@@ -1199,8 +1244,8 @@ def plot_station_confidence_spectrum(
     *,
     station: Optional[str] = None,
     method: str = "composite",
-    ci_hi: float = 0.95,
-    ci_lo: float = 0.50,
+    ci_hi: float = DEFAULT_CI_HI,
+    ci_lo: float = DEFAULT_CI_LO,
     figsize: Tuple[float, float] = (7.0, 4.0),
     spacing_m: float = 200.0,
     recursive: bool = True,
@@ -1339,8 +1384,8 @@ def plot_station_confidence_dashboard(
     *,
     station: Optional[str] = None,
     method: str = "composite",
-    ci_hi: float = 0.95,
-    ci_lo: float = 0.50,
+    ci_hi: float = DEFAULT_CI_HI,
+    ci_lo: float = DEFAULT_CI_LO,
     axes=None,
     figsize: Tuple[float, float] = (10.5, 6.0),
     spacing_m: float = 200.0,
@@ -1470,8 +1515,8 @@ def plot_confidence_band_summary(
     sites: Any,
     *,
     method: str = "composite",
-    ci_hi: float = 0.95,
-    ci_lo: float = 0.50,
+    ci_hi: float = DEFAULT_CI_HI,
+    ci_lo: float = DEFAULT_CI_LO,
     figsize: Tuple[float, float] = (8.0, 4.0),
     spacing_m: float = 200.0,
     recursive: bool = True,

@@ -1061,6 +1061,244 @@ def plot_theta_vs_period(
     return ax
 
 
+def _strike_streamlines(ax, x, y, th, w, n_stations):
+    """Overlay smoothed geoelectric-strike streamlines.
+
+    Strike is axial (mod 180 deg), so it is averaged through the
+    double-angle ``(cos 2theta, sin 2theta)`` (weighted by ``w``, the 2-D
+    strength) onto a regular grid, then halved back before integrating the
+    flow. Silently degrades to a no-op when SciPy is unavailable or the
+    grid is too sparse to integrate.
+    """
+    if n_stations < 3 or y.size < 12:
+        return
+    try:
+        from scipy.interpolate import griddata
+    except Exception:
+        return
+    # Restrict the flow to the *populated* period band so it never
+    # extrapolates into empty short/long-period regions (e.g. long-period
+    # MT lines with no high-frequency data).
+    y_lo, y_hi = np.nanpercentile(y, [2.0, 98.0])
+    if not np.isfinite(y_lo) or y_hi - y_lo < 1e-6:
+        return
+    gx = np.arange(n_stations, dtype=float)
+    gy = np.linspace(y_lo, y_hi, 44)
+    GX, GY = np.meshgrid(gx, gy)
+
+    def _fill(val):
+        g = griddata((x, y), val, (GX, GY), method="linear")
+        nn = griddata((x, y), val, (GX, GY), method="nearest")
+        bad = ~np.isfinite(g)
+        g[bad] = nn[bad]
+        return g
+
+    c2 = _fill(w * np.cos(2.0 * th))
+    s2 = _fill(w * np.sin(2.0 * th))
+    if not (np.isfinite(c2).any() and np.isfinite(s2).any()):
+        return
+    thg = 0.5 * np.arctan2(s2, c2)
+    try:
+        ax.streamplot(
+            GX, GY, np.sin(thg), np.cos(thg),
+            density=1.1, color="0.2", linewidth=0.7, arrowstyle="-",
+        )
+    except Exception:
+        pass
+
+
+def plot_strike_director_field(
+    sites: Any,
+    *,
+    color_by: str = "skew",
+    length_by: Optional[str] = "ellipt",
+    streamlines: bool = True,
+    skew_max: float = 6.0,
+    cmap: Optional[str] = None,
+    period_subsample: Optional[int] = None,
+    bar_scale: float = 26.0,
+    show_legend: bool = True,
+    title: Optional[str] = None,
+    figsize: Tuple[float, float] = (12.0, 5.2),
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    ax: Optional[plt.Axes] = None,
+) -> plt.Axes:
+    r"""Geoelectric-strike **director field** over station and period.
+
+    A supplement to :func:`plot_theta_vs_period`. Because the phase-tensor
+    strike ``theta`` is an *axial* angle (defined mod 180 deg), the correct
+    glyph is not a point on a linear axis but a **head-less bar** pointing
+    along the strike. This draws one director per ``(station, period)`` cell
+    on a station x log-period grid, encoding three more channels at once:
+
+    * **orientation** -- the strike ``theta``;
+    * **length** -- ``length_by`` (default ellipticity), the 2-D strength:
+      near-1-D cells get a short bar because there strike is ill-defined;
+    * **colour** -- ``color_by`` (default ``|skew|``), the departure from
+      2-D: green = low-skew / reliable, red = high-skew / 3-D or galvanic
+      distortion where the strike should not be trusted.
+
+    An optional smoothed **streamline** overlay (``streamlines=True``)
+    integrates the director field into a strike "flow", so lateral and
+    vertical coherence read at a glance.
+
+    Interpretation
+    --------------
+    * long, aligned, green bars flowing in a laminar bundle -> robust,
+      depth-consistent 2-D strike; read the azimuth with confidence;
+    * bars rotating smoothly with depth -> strike varies with depth
+      (dipping structure or layered anisotropy);
+    * short and/or red, swirling bars -> 1-D, 3-D, or noise: do not
+      over-interpret the direction there.
+
+    Parameters
+    ----------
+    sites : path, EDI object, APISurvey, Sites, or iterable of sites
+        Anything accepted by :func:`build_phase_tensor_table`.
+    color_by : {'skew', 'ellipt', 's1', 's2', ...}, default 'skew'
+        Table column mapped to bar colour (its absolute value is used).
+    length_by : str or None, default 'ellipt'
+        Table column mapped to bar length (absolute value, 95th-percentile
+        normalised). ``None`` draws uniform-length bars.
+    streamlines : bool, default True
+        Overlay smoothed strike streamlines (needs SciPy).
+    skew_max : float, default 6.0
+        Upper clip of the ``|skew|`` colour scale, in degrees (only used
+        when ``color_by='skew'``). Skew above a few degrees already flags
+        3-D behaviour.
+    cmap : str, optional
+        Override the colour map (default ``'RdYlGn_r'`` for skew, else
+        ``'viridis'``).
+    period_subsample : int, optional
+        Keep at most this many periods (evenly along the log axis) to thin
+        a very dense grid.
+    bar_scale : float, default 26.0
+        Matplotlib quiver ``scale`` -- larger makes shorter bars.
+    show_legend : bool, default True
+        Draw the director / streamline legend.
+    title : str, optional
+        Axes title.
+    figsize, recursive, on_dup, strict, verbose, ax
+        Standard ``emtools`` plotting arguments.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+
+    See Also
+    --------
+    plot_theta_vs_period : the linear scatter this supplements.
+    plot_phase_tensor_psection : per-cell ellipses (magnitudes as well).
+    """
+    df = build_phase_tensor_table(
+        sites, recursive=recursive, on_dup=on_dup, strict=strict,
+        verbose=verbose,
+    )
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+    fig = ax.get_figure()
+    if df.empty:
+        ax.text(0.5, 0.5, "no phase tensor", ha="center", va="center")
+        return ax
+
+    df = df.copy()
+    df["logp"] = np.log10(df["period"].to_numpy())
+    stations = list(dict.fromkeys(df["station"]))
+    sidx = {s: i for i, s in enumerate(stations)}
+    df["xi"] = df["station"].map(sidx).astype(float)
+
+    if period_subsample and period_subsample > 0:
+        periods = np.sort(df["period"].unique())
+        step = max(1, len(periods) // period_subsample)
+        keep = set(periods[::step])
+        df = df[df["period"].isin(keep)]
+
+    x = df["xi"].to_numpy(float)
+    y = df["logp"].to_numpy(float)
+    th = np.radians(df["theta"].to_numpy(float))
+
+    if length_by and length_by in df.columns:
+        lv = np.abs(df[length_by].to_numpy(float))
+        denom = np.nanpercentile(lv, 95)
+        denom = denom if np.isfinite(denom) and denom > 0 else 1.0
+        length = np.clip(lv / denom, 0.12, 1.0)
+    else:
+        length = np.ones(len(df))
+
+    if color_by == "skew":
+        cval = np.abs(df["skew"].to_numpy(float))
+        vmin, vmax = 0.0, float(skew_max)
+        cmap_name = cmap or "RdYlGn_r"
+        clabel = "|skew| (deg)  -  green: 2-D / reliable, red: 3-D / distorted"
+    elif color_by in df.columns:
+        cval = np.abs(df[color_by].to_numpy(float))
+        vmin = float(np.nanmin(cval))
+        vmax = float(np.nanpercentile(cval, 95))
+        cmap_name = cmap or "viridis"
+        clabel = str(color_by)
+    else:
+        cval = np.zeros(len(df))
+        vmin, vmax, cmap_name, clabel = 0.0, 1.0, cmap or "viridis", ""
+
+    ok = (np.isfinite(x) & np.isfinite(y) & np.isfinite(th)
+          & np.isfinite(length))
+    x, y, th, length, cval = x[ok], y[ok], th[ok], length[ok], cval[ok]
+    if x.size == 0:
+        ax.text(0.5, 0.5, "no finite strike", ha="center", va="center")
+        return ax
+
+    # north-up director components (east = sin, north = cos); axial, so
+    # (theta) and (theta+180) give the same head-less bar under pivot='mid'.
+    U = np.sin(th) * length
+    V = np.cos(th) * length
+    q = ax.quiver(
+        x, y, U, V, np.clip(cval, vmin, vmax),
+        cmap=cmap_name, angles="uv", pivot="mid",
+        headlength=0, headaxislength=0, headwidth=1,
+        scale=bar_scale, width=0.0032, alpha=0.9, clim=(vmin, vmax),
+    )
+    if clabel:
+        cb = fig.colorbar(q, ax=ax, pad=0.01, shrink=0.9)
+        cb.set_label(clabel, fontsize=8)
+
+    if streamlines:
+        _strike_streamlines(ax, x, y, th, length, len(stations))
+
+    ax.set_ylabel(LOG10_PERIOD_LABEL)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(len(stations)),
+        stations,
+        preset="pseudosection",
+        xlim=(-0.8, len(stations) - 0.2),
+    )
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
+    ax.set_title(
+        title if title is not None
+        else "Geoelectric strike director field",
+        fontsize=10,
+    )
+
+    if show_legend:
+        from matplotlib.lines import Line2D
+        handles = [
+            Line2D([0], [0], color="#4a7a1f", lw=3,
+                   label="strike director (length = 2-D strength)"),
+        ]
+        if streamlines:
+            handles.append(
+                Line2D([0], [0], color="0.2", lw=1.2,
+                       label="smoothed strike flow"),
+            )
+        ax.legend(handles=handles, loc="upper right", fontsize=7,
+                  framealpha=0.85)
+    return ax
+
+
 def plot_ellipticity_psection(
     sites: Any,
     *,

@@ -283,3 +283,65 @@ class TestBalanceOffdiag:
         from pycsamt.site.base import Sites
         result = balance_offdiag([])
         assert isinstance(result, Sites)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# plot_strike_director_field
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestPlotStrikeDirectorField:
+
+    def _sites(self, n_sta: int = 5, n_freq: int = 12):
+        return [_site(f"S{i:02d}", _3d_z(_freqs(n_freq)), n_freq)
+                for i in range(n_sta)]
+
+    def test_returns_axes(self):
+        from pycsamt.emtools.tensor import plot_strike_director_field
+        ax = plot_strike_director_field(self._sites())
+        assert isinstance(ax, plt.Axes)
+        plt.close("all")
+
+    def test_exported_from_package(self):
+        from pycsamt.emtools import plot_strike_director_field
+        assert callable(plot_strike_director_field)
+
+    def test_empty_input_no_crash(self):
+        from pycsamt.emtools.tensor import plot_strike_director_field
+        ax = plot_strike_director_field([])
+        assert isinstance(ax, plt.Axes)
+        plt.close("all")
+
+    def test_draws_one_director_per_cell(self):
+        from pycsamt.emtools.tensor import plot_strike_director_field
+        n_sta, n_freq = 4, 10
+        ax = plot_strike_director_field(self._sites(n_sta, n_freq),
+                                        streamlines=False)
+        # exactly one quiver collection holding n_sta * n_freq directors
+        quivers = [c for c in ax.collections
+                   if c.__class__.__name__ == "Quiver"]
+        assert len(quivers) == 1
+        assert quivers[0].N == n_sta * n_freq
+        plt.close("all")
+
+    def test_streamlines_toggle(self):
+        from pycsamt.emtools.tensor import plot_strike_director_field
+        ax = plot_strike_director_field(self._sites(), streamlines=True)
+        assert isinstance(ax, plt.Axes)
+        plt.close("all")
+
+    def test_color_and_length_options(self):
+        from pycsamt.emtools.tensor import plot_strike_director_field
+        ax = plot_strike_director_field(
+            self._sites(), color_by="ellipt", length_by=None,
+            streamlines=False, show_legend=False,
+        )
+        assert isinstance(ax, plt.Axes)
+        plt.close("all")
+
+    def test_accepts_external_axes(self):
+        from pycsamt.emtools.tensor import plot_strike_director_field
+        fig, ax0 = plt.subplots()
+        ax = plot_strike_director_field(self._sites(), ax=ax0,
+                                        streamlines=False)
+        assert ax is ax0
+        plt.close("all")

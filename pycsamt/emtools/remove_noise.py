@@ -100,6 +100,106 @@ def snr_table(
     return pd.DataFrame.from_records(rows)
 
 
+def emi_mitigation_report(
+    sites: Any,
+    *,
+    remote_reference_attempted: bool = False,
+    remote_reference_reason: Optional[str] = None,
+    mains_hz: float = 50.0,
+    n_harm: int = 30,
+    tol_hz: float = 0.08,
+    notch_mode: str = "interp",
+    coherent_noise_subtraction: bool = False,
+    applied_measures: Optional[Sequence[str]] = None,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> pd.DataFrame:
+    """Summarise remote-reference status and EMI mitigation per station.
+
+    This report is intentionally conservative: pyCSAMT's ``emtools``
+    operates on estimated transfer functions and does not perform
+    time-series remote-reference processing itself.  If a project used
+    externally remote-referenced EDIs, record that with
+    ``remote_reference_attempted=True`` and station metadata; otherwise
+    the table documents the post-estimation mitigation path, such as
+    power-line notching, masking/interpolation, coherence masking, Hampel,
+    spatial median, RPCA, or EMAP filtering.
+    """
+    S = ensure_sites(
+        sites, recursive=recursive, on_dup=on_dup,
+        strict=strict, verbose=verbose,
+    )
+    measures = list(applied_measures or [])
+    if not measures:
+        measures = [
+            f"notch_powerline(mode={notch_mode}, mains_hz={mains_hz:g}, "
+            f"n_harm={int(n_harm)}, tol_hz={tol_hz:g})",
+            "mask_incoherent_freqs / frequency_confidence_table as needed",
+            "hampel_filter_freq / spatial_median_filter / "
+            "rpca_offdiag_denoise as needed",
+        ]
+    reason = remote_reference_reason
+    if reason is None:
+        reason = (
+            "remote-reference time series not available in pyCSAMT input; "
+            "processed transfer functions were mitigated after estimation"
+        )
+    rows: List[Dict[str, Any]] = []
+    for i, ed in enumerate(_iter_items(S)):
+        station = _name(ed, i)
+        Z, z, fr = _get_z_block(ed)
+        T, t, ft = _get_t_block(ed)
+        rr_fields = (
+            "remote_reference",
+            "remote_reference_station",
+            "remote_station",
+            "rr_station",
+            "rr_processed",
+        )
+        rr_available = any(
+            getattr(ed, key, None) not in (None, "", False)
+            for key in rr_fields
+        )
+        if not rr_available:
+            edi = getattr(ed, "edi", None)
+            rr_available = edi is not None and any(
+                getattr(edi, key, None) not in (None, "", False)
+                for key in rr_fields
+            )
+        harm_z = 0
+        n_freq = 0
+        if Z is not None and fr is not None:
+            fr = np.asarray(fr, dtype=float).ravel()
+            n_freq = int(fr.size)
+            harm_z = int(np.count_nonzero(
+                _harm_mask(fr, mains_hz, n_harm, tol_hz)
+            ))
+        harm_tipper = 0
+        if T is not None and ft is not None:
+            ft = np.asarray(ft, dtype=float).ravel()
+            harm_tipper = int(np.count_nonzero(
+                _harm_mask(ft, mains_hz, n_harm, tol_hz)
+            ))
+        rows.append(dict(
+            station=station,
+            remote_reference_attempted=bool(remote_reference_attempted),
+            remote_reference_available=bool(rr_available),
+            remote_reference_reason=str(reason),
+            coherent_noise_subtraction=bool(coherent_noise_subtraction),
+            mains_hz=float(mains_hz),
+            n_harm=int(n_harm),
+            tol_hz=float(tol_hz),
+            notch_mode=str(notch_mode),
+            n_frequency=int(n_freq),
+            harmonic_z_samples=int(harm_z),
+            harmonic_tipper_samples=int(harm_tipper),
+            applied_measures="; ".join(str(m) for m in measures),
+        ))
+    return pd.DataFrame.from_records(rows)
+
+
 # --------------------------- power-line notching ------------------------- #
 
 def _harm_mask(fr: np.ndarray, mains: float, n_harm: int,
@@ -1191,6 +1291,16 @@ def drop_freqs_manual(
 
     def _trim_z_block(Z, z, fr, keep):
         _assign(Z, "freq", "_freq", np.asarray(fr, dtype=float)[keep].copy())
+        # Keep the backing error tensor in step before assigning ``z``.
+        # Some Z implementations recompute rho/phase in the z setter and
+        # validate the already-attached error tensor shape during that call.
+        z_err_value = getattr(Z, "z_err", None)
+        z_err_sliced = _slice_first_axis(z_err_value, keep)
+        if z_err_sliced is not None:
+            try:
+                setattr(Z, "_z_err", z_err_sliced)
+            except Exception:
+                pass
         _assign(Z, "z", "_z", np.asarray(z, dtype=np.complex128)[keep].copy())
         for public_name, private_name in (
             ("z_err", "_z_err"),

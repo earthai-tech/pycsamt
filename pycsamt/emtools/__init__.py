@@ -70,6 +70,7 @@ from .diag import (
 )
 from .qc import (
     build_qc_table,
+    confidence_ratio,
     frequency_confidence_table,
     qc_flags,
     station_confidence_table,
@@ -90,6 +91,7 @@ from .qc import (
 # ─── Noise removal ────────────────────────────────────────────────────────────
 from .remove_noise import (
     snr_table,
+    emi_mitigation_report,
     notch_powerline,
     smooth_logfreq,
     smooth_rho_phase,
@@ -189,6 +191,7 @@ from .anisotropy import (
 from .dimensionality import (
     phase_features_table,
     classify_dimensionality,
+    pre2d_inversion_assessment,
     mask_by_dimensionality,
     project_to_2d,
     learn_dim_dictionary,
@@ -198,6 +201,13 @@ from .dimensionality import (
     plot_dim_confidence_grid,
     plot_dim_occupancy_area,
     plot_dim_map,
+)
+
+from .gb import (
+    GroomBaileyResult,
+    apply_groom_bailey,
+    groom_bailey_decomposition,
+    groom_bailey_table,
 )
 
 # ─── Strike estimation ────────────────────────────────────────────────────────
@@ -230,6 +240,7 @@ from .tensor import (
     plot_phase_tensor_psection,
     plot_phase_tensor_skewmap,
     plot_theta_vs_period,
+    plot_strike_director_field,
     plot_ellipticity_psection,
     plot_dimensionality_psection,
     plot_phase_tensor_rose,
@@ -405,6 +416,7 @@ __all__ = [
     "plot_polar_errors",
     "plot_width_drift",
     "build_qc_table",
+    "confidence_ratio",
     "frequency_confidence_table",
     "qc_flags",
     "station_confidence_table",
@@ -506,6 +518,7 @@ __all__ = [
     # dimensionality
     "phase_features_table",
     "classify_dimensionality",
+    "pre2d_inversion_assessment",
     "mask_by_dimensionality",
     "project_to_2d",
     "learn_dim_dictionary",
@@ -515,6 +528,10 @@ __all__ = [
     "plot_dim_confidence_grid",
     "plot_dim_occupancy_area",
     "plot_dim_map",
+    "GroomBaileyResult",
+    "apply_groom_bailey",
+    "groom_bailey_decomposition",
+    "groom_bailey_table",
     # strike
     "estimate_strike_sweep",
     "estimate_strike_phase_tensor",
@@ -540,6 +557,7 @@ __all__ = [
     "plot_phase_tensor_psection",
     "plot_phase_tensor_skewmap",
     "plot_theta_vs_period",
+    "plot_strike_director_field",
     "plot_ellipticity_psection",
     "plot_dimensionality_psection",
     "plot_phase_tensor_rose",

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -22,6 +23,61 @@ from pycsamt.models.mare2dem import (
     grid_to_mare2dem,
 )
 from pycsamt.models.mare2dem.iotools.emdata import MTConfig, CSEMConfig
+
+
+def test_edi_confidence_weighting_inflates_export_errors(monkeypatch):
+    """Low CR should down-weight inversion data via larger data errors."""
+    from pycsamt.emtools import _core
+    from pycsamt.models.mare2dem import edi as edi_mod
+
+    z = np.zeros((2, 2, 2), dtype=np.complex128)
+    z[:, 0, 1] = [1.0 + 1.0j, 2.0 + 2.0j]
+    z[:, 1, 0] = [1.0 - 1.0j, 2.0 - 2.0j]
+    z_err = np.ones_like(z) * 0.1
+    station = SimpleNamespace(
+        station="S1",
+        latitude=1.0,
+        longitude=2.0,
+        Z=SimpleNamespace(
+            z=z,
+            freq=np.array([10.0, 1.0]),
+            z_err=z_err,
+        ),
+    )
+
+    monkeypatch.setattr(_core, "ensure_sites", lambda source, **_: source)
+    monkeypatch.setattr(edi_mod, "_latlon", lambda _: (1.0, 2.0))
+    monkeypatch.setattr(
+        edi_mod,
+        "_frequency_confidence_lookup",
+        lambda *_, **__: {
+            "S1": (
+                np.array([10.0, 1.0]),
+                np.array([0.5, 1.0]),
+            )
+        },
+    )
+
+    base = edi_mod.stations_from_edi([station])
+    weighted = edi_mod.stations_from_edi(
+        [station],
+        confidence_weighting=True,
+        confidence_min=0.05,
+        confidence_power=1.0,
+    )
+
+    np.testing.assert_allclose(
+        weighted[0].phase_te_se[0],
+        2.0 * base[0].phase_te_se[0],
+    )
+    np.testing.assert_allclose(
+        weighted[0].apres_te_se[0],
+        2.0 * base[0].apres_te_se[0],
+    )
+    np.testing.assert_allclose(
+        weighted[0].phase_te_se[1],
+        base[0].phase_te_se[1],
+    )
 
 
 # ==========================================================================

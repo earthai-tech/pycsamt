@@ -397,8 +397,14 @@ def strike_curve_sweep(
             u = np.convolve(best, w, mode="same")
             best = u
         for f, ang in zip(fr, _wrap90(best)):
-            rows.append(dict(station=st, freq=float(f), ang=float(ang)))
-    return pd.DataFrame.from_records(rows, columns=["station", "freq", "ang"])
+            period = np.nan if not np.isfinite(f) or f == 0 else 1.0 / float(f)
+            rows.append(
+                dict(station=st, freq=float(f), period=float(period), ang=float(ang))
+            )
+    return pd.DataFrame.from_records(
+        rows,
+        columns=["station", "freq", "period", "ang"],
+    )
 
 
 def _auto_line(st: str) -> str:

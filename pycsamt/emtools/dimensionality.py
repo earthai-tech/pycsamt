@@ -20,6 +20,12 @@ from ._core import (
 from .tensor import build_phase_tensor_table
 from .tensor import rotate as _tensor_rotate
 from .tensor import rotate_to_strike as _tensor_rotate_to_strike
+from .strike import (
+    estimate_strike_consensus,
+    estimate_strike_phase_tensor,
+    estimate_strike_sweep,
+    strike_curve_sweep,
+)
 from ..api.labels import LOG10_PERIOD_LABEL
 from ..api.station import PYCSAMT_STATION_RENDERING
 from ..api.view import maybe_wrap_frame
@@ -172,6 +178,184 @@ def classify_dimensionality(
         kind="emtools.dimensionality.classification",
         source=sites,
         description="Rule-based dimensionality labels from phase features.",
+    )
+
+# -------------------- pre-2D inversion assessment ----------------------- #
+
+def pre2d_inversion_assessment(
+    sites: Any,
+    *,
+    band: Optional[Tuple[float, float]] = None,
+    skew_th: float = 3.0,
+    ellipt_th: float = 0.2,
+    rotation_applied: bool = False,
+    rotation_method: str = "consensus",
+    groom_bailey_attempted: bool = False,
+    groom_bailey_applied: bool = False,
+    groom_bailey_reason: Optional[str] = None,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    api: bool | None = None,
+) -> Any:
+    """Summarise dimensionality and strike checks before 2-D inversion.
+
+    The table is designed for audit trails and manuscript responses.  It
+    combines phase-tensor skew/ellipticity dimensionality labels, impedance
+    sweep strike, phase-tensor strike, consensus strike, and
+    frequency-dependent strike variability.  It also records whether data
+    were rotated to strike and whether Groom-Bailey decomposition was
+    attempted/applied.
+    """
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    dim = classify_dimensionality(
+        S,
+        skew_th=skew_th,
+        ellipt_th=ellipt_th,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
+        api=False,
+    )
+    if band is not None and not dim.empty:
+        lo, hi = float(band[0]), float(band[1])
+        dim = dim[(dim["period"] >= lo) & (dim["period"] <= hi)].copy()
+    sweep = estimate_strike_sweep(
+        S,
+        band=band,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
+    )
+    pt = estimate_strike_phase_tensor(
+        S,
+        band=band,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
+    )
+    consensus = estimate_strike_consensus(
+        S,
+        band=band,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
+    )
+    curve = strike_curve_sweep(
+        S,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
+    )
+    if band is not None and not curve.empty:
+        lo, hi = float(band[0]), float(band[1])
+        curve = curve[
+            (curve["period"] >= lo) & (curve["period"] <= hi)
+        ].copy()
+
+    def _by_station(table: pd.DataFrame, station: str, col: str) -> float:
+        if table.empty or col not in table.columns:
+            return np.nan
+        sub = table[table["station"].astype(str) == str(station)]
+        if sub.empty:
+            return np.nan
+        vals = sub[col].to_numpy(dtype=float)
+        return float(np.nanmedian(vals)) if np.isfinite(vals).any() else np.nan
+
+    stations = []
+    for i, ed in enumerate(_iter_items(S)):
+        stations.append(_name(ed, i))
+    if not stations and not dim.empty:
+        stations = sorted(dim["station"].astype(str).unique())
+
+    gb_reason = groom_bailey_reason
+    if gb_reason is None:
+        gb_reason = (
+            "Groom-Bailey decomposition was not requested for this "
+            "pre-2D assessment. Run pycsamt.emtools.groom_bailey_table "
+            "or groom_bailey_decomposition to estimate and document it."
+        )
+
+    rows: List[Dict[str, Any]] = []
+    for station in stations:
+        sdf = dim[dim["station"].astype(str) == str(station)]
+        n = int(len(sdf))
+        if n:
+            dim_vals = sdf["dim"].to_numpy(dtype=int)
+            frac_1d = float(np.mean(dim_vals == 0))
+            frac_2d = float(np.mean(dim_vals == 1))
+            frac_3d = float(np.mean(dim_vals == 2))
+            beta_med = float(np.nanmedian(sdf["beta_abs"]))
+            beta_p95 = float(np.nanpercentile(sdf["beta_abs"], 95))
+            ellipt_med = float(np.nanmedian(sdf["ellipt_abs"]))
+        else:
+            frac_1d = frac_2d = frac_3d = np.nan
+            beta_med = beta_p95 = ellipt_med = np.nan
+        cdf = curve[curve["station"].astype(str) == str(station)]
+        if cdf.empty or "ang" not in cdf.columns:
+            strike_curve_iqr = np.nan
+        else:
+            ang = cdf["ang"].to_numpy(dtype=float)
+            strike_curve_iqr = (
+                float(np.nanpercentile(ang, 75) - np.nanpercentile(ang, 25))
+                if np.isfinite(ang).any() else np.nan
+            )
+        cons_ang = _by_station(consensus, station, "ang")
+        cons_iqr = _by_station(consensus, station, "iqr")
+        if np.isfinite(frac_3d) and frac_3d > 0.5:
+            recommendation = "review_3d_effects_before_2d"
+        elif np.isfinite(cons_iqr) and cons_iqr > 20.0:
+            recommendation = "unstable_strike_review_band"
+        else:
+            recommendation = "acceptable_for_2d_with_documented_rotation"
+        rows.append(dict(
+            station=station,
+            period_min_s=float(band[0]) if band is not None else np.nan,
+            period_max_s=float(band[1]) if band is not None else np.nan,
+            n_samples=n,
+            frac_1d=frac_1d,
+            frac_2d=frac_2d,
+            frac_3d=frac_3d,
+            beta_abs_median=beta_med,
+            beta_abs_p95=beta_p95,
+            ellipt_abs_median=ellipt_med,
+            strike_sweep_deg=_by_station(sweep, station, "ang"),
+            strike_pt_deg=_by_station(pt, station, "ang"),
+            strike_consensus_deg=cons_ang,
+            strike_consensus_iqr_deg=cons_iqr,
+            strike_curve_iqr_deg=strike_curve_iqr,
+            rotated_to_strike=bool(rotation_applied),
+            rotation_method=str(rotation_method),
+            rotation_angle_deg=cons_ang if rotation_applied else np.nan,
+            groom_bailey_attempted=bool(groom_bailey_attempted),
+            groom_bailey_applied=bool(groom_bailey_applied),
+            groom_bailey_reason=str(gb_reason),
+            recommendation=recommendation,
+        ))
+    df = pd.DataFrame.from_records(rows)
+
+    return maybe_wrap_frame(
+        df,
+        api=api,
+        name="pre2d_inversion_assessment",
+        kind="emtools.dimensionality.pre2d_assessment",
+        source=sites,
+        description=(
+            "Dimensionality, strike, rotation, and Groom-Bailey status "
+            "before 2-D inversion."
+        ),
     )
 
 # ---------------------- site-level masking/projection -------------------- #

@@ -23,6 +23,7 @@ from pycsamt.emtools.remove_noise import (
     confidence_gated_emap_filter,
     correct_static_shift,
     drop_freqs_manual,
+    emi_mitigation_report,
     EMAPFilterResult,
     emap_filter_report,
     fixed_length_moving_average,
@@ -42,6 +43,7 @@ from pycsamt.emtools.frequency import (
     recover_low_confidence_frequencies,
 )
 from pycsamt.emtools.qc import (
+    confidence_ratio,
     frequency_confidence_table,
     plot_confidence_band_summary,
     plot_confidence_profile,
@@ -50,6 +52,7 @@ from pycsamt.emtools.qc import (
     plot_station_confidence_spectrum,
     station_confidence_table,
 )
+from pycsamt.emtools.dimensionality import pre2d_inversion_assessment
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared fake-site infrastructure
@@ -123,9 +126,124 @@ def _line_sites(n: int = 5, rho: float = 100.0,
     ]
 
 
+def test_confidence_ratio_weighted_formula_and_error():
+    scores = {
+        "coverage": 1.0,
+        "uncertainty": 0.8,
+        "offdiag": np.nan,
+        "diagonal": 0.6,
+    }
+    weights = {
+        "coverage": 0.5,
+        "uncertainty": 0.25,
+        "diagonal": 0.25,
+    }
+
+    cr, err = confidence_ratio(
+        scores,
+        weights=weights,
+        n_freq=12,
+        return_error=True,
+    )
+
+    assert cr == pytest.approx(0.85)
+    assert err == pytest.approx(np.std([1.0, 0.8, 0.6]))
+
+
+def test_confidence_ratio_single_score_binomial_error():
+    cr, err = confidence_ratio(
+        {"coverage": 0.75},
+        weights={"coverage": 1.0},
+        n_freq=12,
+        return_error=True,
+    )
+
+    assert cr == pytest.approx(0.75)
+    assert err == pytest.approx(np.sqrt(0.75 * 0.25 / 12.0))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # correct_static_shift — basic contract
 # ─────────────────────────────────────────────────────────────────────────────
+
+def test_emi_mitigation_report_records_remote_reference_and_harmonics():
+    fr = np.array([10.0, 50.0, 100.0, 250.0])
+    site = _FakeSite("S0", _make_z(fr), fr)
+    report = emi_mitigation_report(
+        [site],
+        remote_reference_attempted=False,
+        remote_reference_reason="no independent remote site was acquired",
+        mains_hz=50.0,
+        n_harm=3,
+        tol_hz=0.01,
+        notch_mode="interp",
+    )
+
+    assert list(report["station"]) == ["S0"]
+    assert bool(report.loc[0, "remote_reference_attempted"]) is False
+    assert bool(report.loc[0, "remote_reference_available"]) is False
+    assert report.loc[0, "harmonic_z_samples"] == 2
+    assert "notch_powerline" in report.loc[0, "applied_measures"]
+
+
+def test_pre2d_inversion_assessment_records_strike_and_gb_status(monkeypatch):
+    import pandas as pd
+    from pycsamt.emtools import dimensionality as dim_mod
+
+    site = _site("S0")
+    dim = pd.DataFrame({
+        "station": ["S0", "S0", "S0", "S0"],
+        "period": [0.1, 1.0, 10.0, 100.0],
+        "dim": [0, 1, 2, 2],
+        "beta_abs": [1.0, 2.0, 8.0, 10.0],
+        "ellipt_abs": [0.05, 0.3, 0.4, 0.5],
+    })
+    strike = pd.DataFrame({
+        "station": ["S0"],
+        "ang": [35.0],
+        "iqr": [12.0],
+        "lo": [0.1],
+        "hi": [100.0],
+        "n": [4],
+    })
+    curve = pd.DataFrame({
+        "station": ["S0", "S0", "S0", "S0"],
+        "period": [0.1, 1.0, 10.0, 100.0],
+        "ang": [30.0, 33.0, 40.0, 42.0],
+    })
+
+    monkeypatch.setattr(dim_mod, "ensure_sites", lambda sites, **_: sites)
+    monkeypatch.setattr(
+        dim_mod, "classify_dimensionality", lambda *_, **__: dim
+    )
+    monkeypatch.setattr(
+        dim_mod, "estimate_strike_sweep", lambda *_, **__: strike
+    )
+    monkeypatch.setattr(
+        dim_mod, "estimate_strike_phase_tensor", lambda *_, **__: strike
+    )
+    monkeypatch.setattr(
+        dim_mod, "estimate_strike_consensus", lambda *_, **__: strike
+    )
+    monkeypatch.setattr(
+        dim_mod, "strike_curve_sweep", lambda *_, **__: curve
+    )
+
+    report = pre2d_inversion_assessment(
+        [site],
+        band=(0.1, 100.0),
+        rotation_applied=True,
+        groom_bailey_attempted=False,
+    )
+
+    assert list(report["station"]) == ["S0"]
+    assert report.loc[0, "frac_3d"] == pytest.approx(0.5)
+    assert report.loc[0, "strike_consensus_deg"] == pytest.approx(35.0)
+    assert report.loc[0, "rotation_angle_deg"] == pytest.approx(35.0)
+    assert bool(report.loc[0, "rotated_to_strike"]) is True
+    assert bool(report.loc[0, "groom_bailey_applied"]) is False
+    assert "Groom-Bailey" in report.loc[0, "groom_bailey_reason"]
+
 
 class TestCorrectStaticShiftContract:
 
@@ -616,7 +734,7 @@ class TestPlotConfidenceProfile:
         sites = self._sites_all_good()
         ax = plot_confidence_profile(sites)
         ylo, yhi = ax.get_ylim()
-        assert ylo <= 0.50
+        assert ylo <= 0.85
         assert yhi >= 1.0
         plt.close("all")
 
@@ -745,7 +863,12 @@ class TestPlotConfidenceProfile:
 
     def test_plot_confidence_profile_full_shade_mode(self):
         sites = self._sites_mixed()
-        ax = plot_confidence_profile(sites, shade_mode="full")
+        ax = plot_confidence_profile(
+            sites,
+            ci_hi=0.95,
+            ci_lo=0.50,
+            shade_mode="full",
+        )
 
         assert len(ax.patches) > 0
         plt.close("all")

@@ -17,7 +17,7 @@ of the package (see :mod:`pycsamt.emtools`).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import numpy as np
 
@@ -63,6 +63,11 @@ def stations_from_edi(
     source: Any,
     *,
     default_rel_error: float = 0.05,
+    confidence_weighting: bool = False,
+    confidence_method: str = "composite",
+    confidence_weights: Mapping[str, float] | None = None,
+    confidence_min: float = 0.05,
+    confidence_power: float = 1.0,
 ) -> list[ZMMStation]:
     """Convert an EDI source into :class:`ZMMStation` objects.
 
@@ -73,6 +78,18 @@ def stations_from_edi(
     default_rel_error : float, default 0.05
         Relative impedance error assumed when the EDIs carry no error
         block (5 %).  Error floors applied later can only raise it.
+    confidence_weighting : bool, default False
+        If ``True``, inflate the relative impedance errors by the
+        frequency-level confidence ratio (CR) before apparent-resistivity
+        and phase standard errors are computed.
+    confidence_method, confidence_weights
+        Passed to :func:`pycsamt.emtools.qc.frequency_confidence_table`.
+    confidence_min : float, default 0.05
+        Lower bound applied to CR before inverting it.  This prevents one
+        severely degraded datum from producing infinite uncertainty.
+    confidence_power : float, default 1.0
+        Exponent in the uncertainty multiplier
+        ``(1 / max(CR, confidence_min)) ** confidence_power``.
 
     Returns
     -------
@@ -93,6 +110,11 @@ def stations_from_edi(
     )
 
     sites = ensure_sites(source, verbose=0)
+    confidence_lookup = _frequency_confidence_lookup(
+        sites,
+        method=confidence_method,
+        weights=confidence_weights,
+    ) if confidence_weighting else {}
     out: list[ZMMStation] = []
     skipped: list[str] = []
     n_ref: int | None = None
@@ -158,6 +180,19 @@ def stations_from_edi(
                 np.isfinite(rel_tm) & (rel_tm > 0),
                 rel_tm, default_rel_error,
             )
+            if confidence_weighting:
+                cr = _station_confidence_values(
+                    confidence_lookup,
+                    name,
+                    fr_s,
+                )
+                factor = _confidence_error_factor(
+                    cr,
+                    confidence_min=confidence_min,
+                    confidence_power=confidence_power,
+                )
+                rel_te = rel_te * factor
+                rel_tm = rel_tm * factor
 
         st = ZMMStation(
             name=name,
@@ -184,6 +219,69 @@ def stations_from_edi(
     return out
 
 
+def _frequency_confidence_lookup(
+    sites: Any,
+    *,
+    method: str,
+    weights: Mapping[str, float] | None,
+) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Return station -> (frequency, confidence) lookup for CR weighting."""
+    from ...emtools.qc import frequency_confidence_table
+
+    table = frequency_confidence_table(
+        sites,
+        method=method,
+        weights=dict(weights or {}),
+        recursive=False,
+        verbose=0,
+    )
+    if table is None or getattr(table, "empty", True):
+        return {}
+    lookup: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+    for station, group in table.groupby("station", sort=False):
+        freq = group["frequency_hz"].to_numpy(dtype=float)
+        conf = group["confidence"].to_numpy(dtype=float)
+        ok = np.isfinite(freq) & np.isfinite(conf) & (freq > 0)
+        if ok.any():
+            lookup[str(station)] = (freq[ok], np.clip(conf[ok], 0.0, 1.0))
+    return lookup
+
+
+def _station_confidence_values(
+    lookup: Mapping[str, tuple[np.ndarray, np.ndarray]],
+    station: str,
+    frequencies: np.ndarray,
+) -> np.ndarray:
+    """Match station-frequency confidence values; missing values stay 1."""
+    out = np.ones(np.asarray(frequencies, dtype=float).shape, dtype=float)
+    freq_conf = lookup.get(str(station))
+    if freq_conf is None:
+        return out
+    ref_freq, ref_conf = freq_conf
+    for i, freq in enumerate(np.asarray(frequencies, dtype=float)):
+        if not np.isfinite(freq) or freq <= 0:
+            continue
+        idx = int(np.nanargmin(np.abs(ref_freq - freq)))
+        if np.isclose(ref_freq[idx], freq, rtol=1e-6, atol=1e-12):
+            out[i] = float(ref_conf[idx])
+    return out
+
+
+def _confidence_error_factor(
+    confidence: np.ndarray,
+    *,
+    confidence_min: float,
+    confidence_power: float,
+) -> np.ndarray:
+    """Convert CR to an uncertainty multiplier for inversion weights."""
+    floor = float(np.clip(confidence_min, 1e-6, 1.0))
+    power = max(float(confidence_power), 0.0)
+    cr = np.asarray(confidence, dtype=float)
+    cr = np.where(np.isfinite(cr), cr, 1.0)
+    cr = np.clip(cr, floor, 1.0)
+    return (1.0 / cr) ** power
+
+
 def make_mt_data_from_edi(
     source: Any,
     out_file: str | Path,
@@ -193,6 +291,11 @@ def make_mt_data_from_edi(
     error_floor_tm: float = 0.05,
     error_floor_tipper: float = 0.0,
     default_rel_error: float = 0.05,
+    confidence_weighting: bool = False,
+    confidence_method: str = "composite",
+    confidence_weights: Mapping[str, float] | None = None,
+    confidence_min: float = 0.05,
+    confidence_power: float = 1.0,
     **kwargs: Any,
 ) -> EMDataFile:
     """Create a MARE2DEM MT ``.emdata`` file from EDI data.
@@ -207,6 +310,13 @@ def make_mt_data_from_edi(
         See :func:`~.zmm.make_mt_data_from_zmm`.
     default_rel_error : float, default 0.05
         Assumed relative impedance error when the EDIs carry none.
+    confidence_weighting : bool, default False
+        If enabled, CR-derived uncertainty inflation is applied before
+        MARE2DEM data weights are written.  The propagated errors are
+        ``sigma_rho = 2 rho sigma_Z/|Z|`` and
+        ``sigma_phi = degrees(sigma_Z/|Z|)`` after multiplying the
+        relative impedance error by
+        ``(1 / max(CR, confidence_min)) ** confidence_power``.
     **kwargs :
         Remaining keyword arguments of
         :func:`~.zmm.make_mt_data_from_stations` (``omit_periods``,
@@ -230,7 +340,13 @@ def make_mt_data_from_edi(
     25
     """
     stations = stations_from_edi(
-        source, default_rel_error=default_rel_error,
+        source,
+        default_rel_error=default_rel_error,
+        confidence_weighting=confidence_weighting,
+        confidence_method=confidence_method,
+        confidence_weights=confidence_weights,
+        confidence_min=confidence_min,
+        confidence_power=confidence_power,
     )
     return make_mt_data_from_stations(
         stations, out_file,

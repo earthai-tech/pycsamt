@@ -146,7 +146,7 @@ docs/_static
 docs/_templates
 
 # sphinx-gallery output — regenerated on every docs build
-docs/source/emtools/auto_examples/
+docs/source/examples/
 docs/source/sg_execution_times.rst
 
 # PyBuilder
@@ -243,15 +243,13 @@ data/willy_inversion_plots/*
 
 # Demo scripts and generated figures — committed separately when stable
 examples/
-!docs/source/examples/
-!docs/source/examples/index.rst
 
-# Exception: pycsamt.emtools sphinx-gallery example *source* scripts —
-# these are hand-written, not generated, and must be tracked so the
-# gallery can be rebuilt from a checkout. auto_examples/ (the actual
-# sphinx-gallery build output) stays ignored via the rule above.
-!docs/source/emtools/examples/
-!docs/source/emtools/examples/*.py
+# Exception: sphinx-gallery example *source* scripts under
+# docs/examples/<section>/ — hand-written, not generated, and must be
+# tracked so the gallery can be rebuilt from a checkout. The generated
+# gallery (docs/source/examples/) stays ignored via the rule above.
+!docs/examples/
+!docs/examples/**
 
 # C&G paper submission files — not for public distribution
 /cag-paper/

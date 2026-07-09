@@ -411,15 +411,16 @@
             print(plan["workflow_type"], plan["reasoning"])
 
          .. code-block:: python
-            :caption: Execute the plan
+            :caption: One line, whole workflow
 
-            result = agent.execute({
-                "request": "flag stations with RMS > 2, build an "
-                           "Occam2D input for L22, and write a report",
-                "data_path": "data/edi/",
-                "output_dir": "runs/L22/",
-            })
-            print(result.status)
+            from pycsamt.agents import AgentMaster
+
+            master = AgentMaster(provider="anthropic")
+            report = master.run(
+                "Load data/edi/, flag stations with RMS > 2, "
+                "build an Occam2D input for profile L22, launch "
+                "inversion, and produce a PDF report."
+            )
 
       .. tab-item:: CLI
 

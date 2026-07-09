@@ -39,6 +39,9 @@ Agent catalogue
     Emit a standalone reproducible Python script from the workflow config.
 :class:`WorkflowOrchestratorAgent`
     NL → classify workflow → build and run the correct agent chain.
+:class:`AgentMaster`
+    One-line front door over the orchestrator:
+    ``AgentMaster(provider="anthropic").run("...")``.
 :class:`DenoisingAgent`
     RPCA / Hampel / EMAP / AI-CAE denoising.
 :class:`AnomalyDetectionAgent`
@@ -134,6 +137,7 @@ from ..api.agents import (
 
 # ── lazy agent map ────────────────────────────────────────────────────────────
 _LAZY: dict[str, str] = {
+    "AgentMaster":                ".master",
     "ContextInputAgent":          ".context",
     "IntentRouter":               ".router",
     "PackageQAAgent":             ".package_qa",
@@ -185,6 +189,7 @@ def __getattr__(name: str):
 
 
 if TYPE_CHECKING:
+    from .master           import AgentMaster
     from .context          import ContextInputAgent
     from .router           import IntentRouter, RouterDecision
     from .package_qa       import PackageQAAgent
@@ -248,6 +253,7 @@ __all__ = [
     "validate_workflow_plan",
     "VALID_WORKFLOWS",
     # agents — alphabetical within logical groups
+    "AgentMaster",
     "ContextInputAgent",
     "IntentRouter",
     "PackageQAAgent",

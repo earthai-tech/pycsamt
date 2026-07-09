@@ -1909,6 +1909,15 @@ def _dispatch_question(
         ]
         ctx_str = "\n".join(recent)
 
+    # Conversational context so a subject-less follow-up ("now do that",
+    # "same for line 3") inherits the active workflow / line for retrieval.
+    sess = _session()
+    session_ctx = {
+        "last_workflow": getattr(sess, "last_workflow", None) if sess else None,
+        "last_line": getattr(sess, "line", None) if sess else None,
+        "recent_turns": history[-6:] if history else None,
+    }
+
     with (
         AGENT_CONFIG.offline() if offline else _nullctx()
     ):
@@ -1918,7 +1927,7 @@ def _dispatch_question(
             model=sel_model,
         )
         res = qa.execute(
-            {"question": text, "context": ctx_str}
+            {"question": text, "context": ctx_str, "session": session_ctx}
         )
 
     answer = (
@@ -1928,7 +1937,10 @@ def _dispatch_question(
     )
     # When running without a key, the answer is the deterministic offline
     # composition — nudge the user that an API key unlocks a fluent reply.
-    if offline or (res.get("source") == "rag_offline"):
+    # (A clarify prompt is already complete — don't tack the nudge on.)
+    if res.get("source") != "rag_clarify" and (
+        offline or (res.get("source") == "rag_offline")
+    ):
         answer = (
             answer
             + "\n\n---\n*Offline answer composed from the pyCSAMT reference."

@@ -143,9 +143,6 @@ Theory pages connect directly to the applied documentation:
   inversion workflows are organized.
 * :doc:`../tutorials/index` gives worked examples that apply these concepts.
 
-Contents
---------
-
 .. toctree::
    :maxdepth: 1
    :hidden:

@@ -35,7 +35,7 @@ _SUBPACKAGES = frozenset({
     "ai", "agents", "backends", "emtools", "forward", "gis",
     "interp", "inversion", "io", "jones", "log", "map",
     "models",
-    "pipeline", "seg", "site", "tdem", "z", "zonge",
+    "pipeline", "seg", "site", "tdem", "ts", "z", "zonge",
 })
 
 _LAZY_SYMBOLS: dict[str, str] = {
@@ -96,7 +96,7 @@ __all__ = [
     # subpackages
     "ai", "agents", "backends", "emtools", "forward", "gis",
     "interp", "inversion", "io", "jones", "map", "models",
-    "pipeline", "seg", "site", "tdem", "z", "zonge",
+    "pipeline", "seg", "site", "tdem", "ts", "z", "zonge",
     # pipeline shortcuts
     "Pipeline", "Step", "configure_pipe", "reset_pipe", "PYCSAMT_PIPE",
     # backend helpers

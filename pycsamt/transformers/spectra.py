@@ -481,8 +481,10 @@ class SpectraToEDI(TransformerMixin):
         """Write *ed* to *out_dir* and return the output path."""
         try:
             out = ed.write(savepath=str(out_dir))
+            # ASCII arrow: cp1252 console handlers on Windows
+            # cannot encode u2192 and drop the log record.
             if verbose >= 1:
-                _log.info("  → wrote %s", Path(out).name if out else out_dir)
+                _log.info("  -> wrote %s", Path(out).name if out else out_dir)
             return Path(out) if out else out_dir
         except Exception as exc:  # noqa: BLE001
             _log.warning("write failed for %s: %s", getattr(ed, "station", "?"), exc)

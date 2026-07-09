@@ -63,7 +63,16 @@ def _install_stubs(monkeypatch):
         def add_section(self, name, obj):
             self.sections[name] = obj
 
-    seg_edi.EDIFile = EDIFile
+        def get_section(self, name):
+            # mirror the real EDIFile API: None when absent
+            return self.sections.get(name)
+
+    # NOTE: always inject via monkeypatch so the *real*
+    # modules are restored after each test — plain
+    # assignment here leaks fakes into every later test.
+    monkeypatch.setattr(
+        seg_edi, "EDIFile", EDIFile, raising=False
+    )
 
     seg_coll = sys.modules["pycsamt.seg.collection"]
 
@@ -77,7 +86,10 @@ def _install_stubs(monkeypatch):
         def __len__(self):
             return len(self.items)
 
-    seg_coll.EDICollection = EDICollection
+    monkeypatch.setattr(
+        seg_coll, "EDICollection", EDICollection,
+        raising=False,
+    )
 
     # ---- zonge AVG stub --------------------------------------------------
     zonge_avg = sys.modules["pycsamt.zonge.avg"]
@@ -104,7 +116,9 @@ def _install_stubs(monkeypatch):
                 return None, None, None
             raise KeyError(var)
 
-    zonge_avg.AVG = AVG
+    monkeypatch.setattr(
+        zonge_avg, "AVG", AVG, raising=False
+    )
 
     # ---- Jones stubs -----------------------------------------------------
     j_mod = sys.modules["pycsamt.jones.j"]
@@ -133,23 +147,37 @@ def _install_stubs(monkeypatch):
         def from_file(cls, path):
             return cls()
 
-    j_mod.JFile = JFile
+    monkeypatch.setattr(
+        j_mod, "JFile", JFile, raising=False
+    )
 
     jc_mod = sys.modules["pycsamt.jones.collection"]
 
     class JCollection(list):
         pass
 
-    jc_mod.JCollection = JCollection
-
+    monkeypatch.setattr(
+        jc_mod, "JCollection", JCollection, raising=False
+    )
 
     importlib.reload(tr)
     return tr, seg_coll, seg_edi, zonge_avg, j_mod, jc_mod
 
 
 @pytest.fixture()
-def tr_env(monkeypatch):
-    return _install_stubs(monkeypatch)
+def tr_env():
+    # Own MonkeyPatch so teardown order is explicit: first
+    # restore the real module attributes, then reload the
+    # transformer module so it re-binds to the real symbols.
+    # (importlib.reload during the test made `tr` capture the
+    # stubs; without the final reload every test running
+    # afterwards would keep using them.)
+    mp = pytest.MonkeyPatch()
+    try:
+        yield _install_stubs(mp)
+    finally:
+        mp.undo()
+        importlib.reload(tr)
 
 
 def test_public_api_all(tr_env):

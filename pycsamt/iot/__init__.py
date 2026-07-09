@@ -1,0 +1,275 @@
+"""IoT helpers for pyCSAMT field telemetry and edge workflows.
+
+This subpackage supports IoT-enabled AMT/CSAMT field acquisition:
+
+* device/station configuration (:mod:`~pycsamt.iot.core`,
+  :mod:`~pycsamt.iot.station`),
+* a stateful acquisition hub (:class:`~pycsamt.iot.session.FieldSession`),
+* canonical telemetry schemas (:mod:`~pycsamt.iot.schemas`),
+* generic and AMT-specific edge QC (:mod:`~pycsamt.iot.edge`,
+  :mod:`~pycsamt.iot.edge_amt`),
+* stream monitoring, power budgeting, and clock-sync audit
+  (:mod:`~pycsamt.iot.monitoring`, :mod:`~pycsamt.iot.power`,
+  :mod:`~pycsamt.iot.sync`),
+* real telemetry transports (:mod:`~pycsamt.iot.protocols`),
+* acquisition provenance (:mod:`~pycsamt.iot.provenance`),
+* a field-network simulator (:mod:`~pycsamt.iot.sim`), and
+* transport security configuration (:mod:`~pycsamt.iot.security`).
+"""
+
+from __future__ import annotations
+
+from .core import (
+    DeploymentConfig,
+    DeviceConfig,
+    DeviceRole,
+    IoTCapability,
+    PacketKind,
+    TelemetryPacket,
+    deployment_report,
+)
+from .station import (
+    StationConfig,
+    station_table,
+)
+from .schemas import (
+    PAYLOAD_SCHEMAS,
+    AcquisitionPayload,
+    EventPayload,
+    EventSeverity,
+    HealthPayload,
+    PowerPayload,
+    QCPayload,
+    SyncPayload,
+    TelemetryPayload,
+    parse_payload,
+    schema_for,
+    validate_payload,
+)
+from .edge import (
+    EdgeChannelSummary,
+    EdgeDecision,
+    EdgeProcessingConfig,
+    EdgeProcessingResult,
+    EdgeProcessor,
+    edge_summary_table,
+)
+from .edge_amt import (
+    FrequencyCoverage,
+    HarmonicPeak,
+    ImpedanceStability,
+    PowerlineHarmonics,
+    amt_edge_report,
+    amt_edge_table,
+    assess_impedance_stability,
+    check_channel_saturation,
+    check_contact_resistance,
+    compute_live_spectra,
+    detect_powerline_harmonics,
+    detect_sensor_dropout,
+    estimate_channel_snr,
+    estimate_frequency_coverage,
+)
+from .monitoring import (
+    EMMethod,
+    MonitoringConfig,
+    MonitoringLevel,
+    MonitoringStatus,
+    TelemetryMonitor,
+    assess_telemetry,
+    monitoring_status_table,
+    packet_table,
+    telemetry_summary,
+)
+from .power import (
+    DevicePowerProfile,
+    EnergyConfig,
+    EnergyEstimate,
+    PowerState,
+    estimate_deployment_energy,
+    estimate_energy_budget,
+    power_summary_table,
+)
+from .plot import (
+    plot_edge_qc_summary,
+    plot_field_dashboard,
+    plot_power_budget,
+    plot_sync_quality,
+)
+from .protocols import (
+    BaseTelemetryClient,
+    FileTelemetryClient,
+    HTTPTelemetryClient,
+    IoTProtocol,
+    MQTTTelemetryClient,
+    SerialTelemetryClient,
+    TelemetryAck,
+    TelemetryClient,
+    TelemetryError,
+    WebSocketTelemetryClient,
+    build_telemetry_client,
+)
+from .sync import (
+    ClockSynchronizer,
+    SyncConfig,
+    SyncQuality,
+    SyncStatus,
+    assess_sync_quality,
+    batch_assess_sync,
+    detect_gps_dropout,
+    estimate_clock_drift_ppm,
+    estimate_clock_jitter_ms,
+    estimate_clock_offset_ms,
+    sync_status_table,
+)
+from .provenance import (
+    AcquisitionManifest,
+    ProvenanceRecord,
+    build_acquisition_manifest,
+    export_acquisition_manifest,
+    export_reproducibility_bundle,
+    export_station_audit,
+    hash_bytes,
+    hash_mapping,
+    hash_raw_file,
+    log_qc_decision,
+)
+from .security import (
+    AuthScheme,
+    Credential,
+    SecurityConfig,
+    TLSConfig,
+    redact_secret,
+)
+from .sim import (
+    simulate_amt_channel,
+    simulate_amt_station,
+    simulate_battery_decay,
+    simulate_gps_drift,
+    simulate_iot_network,
+    simulate_packet_loss,
+    simulate_powerline_noise,
+)
+from .session import FieldSession
+
+__all__ = [
+    # core
+    "DeploymentConfig",
+    "DeviceConfig",
+    "DeviceRole",
+    "IoTCapability",
+    "PacketKind",
+    "TelemetryPacket",
+    "deployment_report",
+    # station
+    "StationConfig",
+    "station_table",
+    # session
+    "FieldSession",
+    # schemas
+    "PAYLOAD_SCHEMAS",
+    "AcquisitionPayload",
+    "EventPayload",
+    "EventSeverity",
+    "HealthPayload",
+    "PowerPayload",
+    "QCPayload",
+    "SyncPayload",
+    "TelemetryPayload",
+    "parse_payload",
+    "schema_for",
+    "validate_payload",
+    # edge
+    "EdgeChannelSummary",
+    "EdgeDecision",
+    "EdgeProcessingConfig",
+    "EdgeProcessingResult",
+    "EdgeProcessor",
+    "edge_summary_table",
+    # edge_amt
+    "FrequencyCoverage",
+    "HarmonicPeak",
+    "ImpedanceStability",
+    "PowerlineHarmonics",
+    "amt_edge_report",
+    "amt_edge_table",
+    "assess_impedance_stability",
+    "check_channel_saturation",
+    "check_contact_resistance",
+    "compute_live_spectra",
+    "detect_powerline_harmonics",
+    "detect_sensor_dropout",
+    "estimate_channel_snr",
+    "estimate_frequency_coverage",
+    # monitoring
+    "EMMethod",
+    "MonitoringConfig",
+    "MonitoringLevel",
+    "MonitoringStatus",
+    "TelemetryMonitor",
+    "assess_telemetry",
+    "monitoring_status_table",
+    "packet_table",
+    "telemetry_summary",
+    # power
+    "DevicePowerProfile",
+    "EnergyConfig",
+    "EnergyEstimate",
+    "PowerState",
+    "estimate_deployment_energy",
+    "estimate_energy_budget",
+    "power_summary_table",
+    "plot_edge_qc_summary",
+    "plot_field_dashboard",
+    "plot_power_budget",
+    "plot_sync_quality",
+    # protocols
+    "BaseTelemetryClient",
+    "FileTelemetryClient",
+    "HTTPTelemetryClient",
+    "IoTProtocol",
+    "MQTTTelemetryClient",
+    "SerialTelemetryClient",
+    "TelemetryAck",
+    "TelemetryClient",
+    "TelemetryError",
+    "WebSocketTelemetryClient",
+    "build_telemetry_client",
+    # sync
+    "ClockSynchronizer",
+    "SyncConfig",
+    "SyncQuality",
+    "SyncStatus",
+    "assess_sync_quality",
+    "batch_assess_sync",
+    "detect_gps_dropout",
+    "estimate_clock_drift_ppm",
+    "estimate_clock_jitter_ms",
+    "estimate_clock_offset_ms",
+    "sync_status_table",
+    # provenance
+    "AcquisitionManifest",
+    "ProvenanceRecord",
+    "build_acquisition_manifest",
+    "export_acquisition_manifest",
+    "export_reproducibility_bundle",
+    "export_station_audit",
+    "hash_bytes",
+    "hash_mapping",
+    "hash_raw_file",
+    "log_qc_decision",
+    # security
+    "AuthScheme",
+    "Credential",
+    "SecurityConfig",
+    "TLSConfig",
+    "redact_secret",
+    # sim
+    "simulate_amt_channel",
+    "simulate_amt_station",
+    "simulate_battery_decay",
+    "simulate_gps_drift",
+    "simulate_iot_network",
+    "simulate_packet_loss",
+    "simulate_powerline_noise",
+]

@@ -2,6 +2,7 @@
 from ._base import TransformerMixin
 from .jedi import AVGtoEDI, JtoEDI
 from .spectra import SpectraToEDI, TransformResult
+from .ts import TStoEDI
 
 __all__ = [
     'TransformerMixin',
@@ -9,4 +10,5 @@ __all__ = [
     'JtoEDI',
     'SpectraToEDI',
     'TransformResult',
+    'TStoEDI',
 ]

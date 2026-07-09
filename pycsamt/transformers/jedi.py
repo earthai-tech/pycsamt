@@ -14,7 +14,7 @@ from ..seg.collection import EDICollection
 from ..jones.collection import JCollection
 from ..seg.edi import EDIFile
 from ..jones.j import JFile
-from ..zonge.avg import AVG
+from ..zonge.avg import AVG, BaseAVG
 from ..seg.heads import Head, Info
 from ..seg.mtemap import MTEMAP
 from ..seg.meas import (
@@ -122,7 +122,10 @@ class AVGtoEDI(TransformerMixin):
     
     def _as_avg(self, src: Any) -> Any:
 
-        if isinstance(src, AVG):
+        # BaseAVG is the documented extension point; AVG is kept
+        # in the tuple because tests may rebind it to a stub that
+        # does not inherit BaseAVG.
+        if isinstance(src, (AVG, BaseAVG)):
             return src
         if isinstance(src, (str, Path)):
             return AVG.from_file(src)

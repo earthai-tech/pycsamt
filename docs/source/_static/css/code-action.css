@@ -1,0 +1,113 @@
+/* pyCSAMT — "Code in action" live-session player on the home page
+ * (built by js/code-action.js from the captioned code-blocks inside the
+ * .pyc-code-panel tab-set). One fixed stage per tab; examples type
+ * themselves out in place. Uses pydata-sphinx-theme variables so
+ * light/dark themes both work.
+ */
+
+/* Header line: status triangle + running subtitle + numbered dots. */
+.pyc-ca-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 1.9rem;
+  margin: 0.1rem 0 0.65rem;
+}
+
+.pyc-ca-status {
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--pst-color-primary);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.pyc-ca-head.pyc-ca-running .pyc-ca-status {
+  opacity: 1;
+  animation: pyc-ca-pulse 1.1s ease-in-out infinite;
+}
+
+/* The example subtitle: bright while its code is typing, dimmed after. */
+.pyc-ca-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--pst-color-text-muted);
+  opacity: 0.6;
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+.pyc-ca-head.pyc-ca-running .pyc-ca-title {
+  color: var(--pst-color-primary);
+  opacity: 1;
+}
+
+.pyc-ca-dots {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.pyc-ca-dot {
+  width: 1.55rem;
+  height: 1.55rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--pst-color-border);
+  background: var(--pst-color-background);
+  color: var(--pst-color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease,
+    background 0.18s ease;
+}
+
+.pyc-ca-dot:hover {
+  border-color: var(--pst-color-primary);
+  color: var(--pst-color-primary);
+}
+
+.pyc-ca-dot-on {
+  background: var(--pst-color-primary);
+  border-color: var(--pst-color-primary);
+  color: #fff;
+}
+
+/* The stage: one example at a time, height locked to the tallest one. */
+.pyc-ca-stage {
+  position: relative;
+}
+
+.pyc-ca-stage .pyc-ca-block {
+  margin: 0;
+}
+
+/* Typing caret. */
+.pyc-ca-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 1px;
+  vertical-align: -0.18em;
+  background: var(--pst-color-primary);
+  animation: pyc-ca-blink 0.9s step-end infinite;
+}
+
+@keyframes pyc-ca-blink {
+  50% { opacity: 0; }
+}
+
+@keyframes pyc-ca-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.6; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pyc-ca-caret,
+  .pyc-ca-head.pyc-ca-running .pyc-ca-status {
+    animation: none;
+  }
+}

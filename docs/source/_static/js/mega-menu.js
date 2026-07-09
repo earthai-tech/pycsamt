@@ -11,34 +11,6 @@
   "use strict";
 
   var MENUS = {
-    Install: [
-      {
-        icon: "fa-solid fa-flag-checkered",
-        title: "Getting Started",
-        desc: "A guided first run: install, load a survey, and produce your first result.",
-        href: "getting_started/index.html"
-      },
-      {
-        icon: "fa-solid fa-download",
-        title: "Installation",
-        desc: "pip/conda matrix, optional extras, and backend requirements.",
-        href: "installation.html"
-      }
-    ],
-    API: [
-      {
-        icon: "fa-solid fa-sliders",
-        title: "Configure",
-        desc: "Set up the 11 configure_* families that drive every pipeline stage.",
-        href: "api_guide/index.html"
-      },
-      {
-        icon: "fa-solid fa-book",
-        title: "Reference",
-        desc: "Full autodoc-generated API reference, organised by subpackage.",
-        href: "api/index.html"
-      }
-    ],
     "User guide": [
       {
         icon: "fa-solid fa-compass",
@@ -51,62 +23,24 @@
         title: "Tutorials",
         desc: "Worked, end-to-end notebooks and scripts you can adapt directly.",
         href: "tutorials/index.html"
-      }
-    ],
-    "AI Agents": [
-      {
-        icon: "fa-solid fa-robot",
-        title: "Agent Master",
-        desc: "The orchestrating chat agent — plans and runs multi-step workflows end to end, grounded by our RAG assistant.",
-        href: "agents/orchestrator.html"
       },
       {
-        icon: "fa-solid fa-users-gear",
-        title: "Agents",
-        desc: "Browse every specialised agent: foundation, processing, inversion, and more.",
-        href: "agents/agent_catalogue.html"
+        icon: "fa-solid fa-bolt",
+        title: "EM tools",
+        desc: "Module-by-module guide to pycsamt.emtools: QC, dimensionality, strike, corrections.",
+        href: "user_guide/emtools/index.html"
       },
-      {
-        icon: "fa-solid fa-gear",
-        title: "Configure",
-        desc: "Point pyCSAMT at your LLM provider and tune agent behaviour.",
-        href: "agents/llm_configuration.html"
-      }
-    ],
-    Modeling: [
-      {
-        icon: "fa-solid fa-layer-group",
-        title: "Models",
-        desc: "Classical solvers — Occam2D, ModEM, and MARE2DEM — end to end.",
-        href: "models/index.html"
-      },
-      {
-        icon: "fa-solid fa-brain",
-        title: "AI Inversion",
-        desc: "Physics-informed neural networks and hybrid deep-learning inverters.",
-        href: "user_guide/ai_inversion.html"
-      },
-      {
-        icon: "fa-solid fa-wave-square",
-        title: "Forward Model",
-        desc: "Build synthetic models and simulate forward responses for survey design.",
-        href: "forward/index.html"
-      }
-    ],
-    // TODO: add an "EM" card (icon fa-solid fa-bolt, href "emtools/index.html")
-    // once emtools/index.rst exists for pycsamt/emtools/.
-    Tools: [
       {
         icon: "fa-solid fa-location-dot",
-        title: "Site",
+        title: "Site tools",
         desc: "Station-centric tools: EDI sites, survey-line collections, diagnostics.",
-        href: "site/index.html"
+        href: "user_guide/site/index.html"
       },
       {
         icon: "fa-solid fa-map",
-        title: "Maps",
+        title: "Map tools",
         desc: "Station maps, pseudosections, 3-D quick-look views, and overlays.",
-        href: "map/index.html"
+        href: "user_guide/map/index.html"
       }
     ]
   };

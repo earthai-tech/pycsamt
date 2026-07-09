@@ -1,0 +1,209 @@
+/* pyCSAMT — examples hub cards (rendered by js/gallery-hub.js from the
+ * manifest embedded by docs/source/_ext/gallery_hub.py).
+ *
+ * Uses pydata-sphinx-theme CSS variables (like css/gallery.css) so
+ * light/dark themes both work without extra rules.
+ */
+
+.pgh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 1.4rem;
+  margin: 1.5rem 0 2.5rem 0;
+}
+
+.pgh-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--pst-color-background);
+  border: 1px solid var(--pst-color-border);
+  border-radius: 0.6rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.pgh-card:hover {
+  border-color: var(--pst-color-primary);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.15);
+}
+
+/* Header: section title + blurb on the left, count pill on the right. */
+.pgh-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.85rem 0.95rem 0.65rem;
+  text-decoration: none;
+}
+
+.pgh-head:hover {
+  text-decoration: none;
+}
+
+.pgh-titles {
+  min-width: 0;
+}
+
+.pgh-title {
+  display: block;
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.3;
+  color: var(--pst-color-text-base);
+}
+
+.pgh-head:hover .pgh-title {
+  color: var(--pst-color-primary);
+}
+
+/* Two-line clamped section description. */
+.pgh-blurb {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--pst-color-text-muted);
+}
+
+.pgh-count {
+  flex: none;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--pst-color-primary-bg, var(--pst-color-surface));
+  color: var(--pst-color-primary);
+}
+
+/* Carousel viewport. Plot thumbnails are white matplotlib canvases, so
+ * the strip stays white in dark mode too — reads as a figure, not a hole. */
+.pgh-view {
+  display: block;
+  overflow: hidden;
+  height: 178px;
+  background: #ffffff;
+  border-top: 1px solid var(--pst-color-border);
+  border-bottom: 1px solid var(--pst-color-border);
+}
+
+.pgh-track {
+  display: flex;
+  height: 100%;
+  transition: transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.pgh-slide {
+  flex: 0 0 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem;
+}
+
+.pgh-slide img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Typewriter caption for the current slide. Fixed height so the card
+ * does not jump while text is being typed. */
+.pgh-cap {
+  padding: 0.6rem 0.95rem 0.1rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  min-height: 2.35em;
+  color: var(--pst-color-text-muted);
+}
+
+.pgh-cap-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.pgh-cap-link:hover {
+  color: var(--pst-color-primary);
+  text-decoration: none;
+}
+
+.pgh-caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.85em;
+  margin-left: 2px;
+  vertical-align: -0.08em;
+  background: currentColor;
+  animation: pgh-blink 1s step-end infinite;
+}
+
+@keyframes pgh-blink {
+  50% { opacity: 0; }
+}
+
+/* Footer: slide dots (or "3 / 22" counter) + section link. */
+.pgh-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.3rem 0.95rem 0.85rem;
+  margin-top: auto;
+}
+
+.pgh-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.32rem;
+}
+
+.pgh-dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--pst-color-border);
+  cursor: pointer;
+}
+
+.pgh-dot.pgh-on {
+  background: var(--pst-color-primary);
+}
+
+.pgh-counter {
+  font-size: 0.72rem;
+  color: var(--pst-color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pgh-open {
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--pst-color-primary);
+  text-decoration: none;
+}
+
+.pgh-open:hover {
+  text-decoration: underline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pgh-card,
+  .pgh-track {
+    transition: none;
+  }
+  .pgh-caret {
+    display: none;
+  }
+}

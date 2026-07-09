@@ -1,0 +1,58 @@
+/* pyCSAMT — sphinx-gallery card polish (scikit-learn-style).
+ *
+ * Overrides sphinx-gallery's own sg_gallery.css (loaded before this
+ * file). Uses pydata-sphinx-theme CSS variables so light/dark themes
+ * both work without extra rules.
+ */
+
+/* Wider cards than the 160px sphinx-gallery default. */
+.sphx-glr-thumbnails {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.25rem;
+  margin: 1rem 0 2rem 0;
+}
+
+/* Card body: real surface + border instead of a bare drop shadow. */
+.sphx-glr-thumbcontainer {
+  background: var(--pst-color-background);
+  border: 1px solid var(--pst-color-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+  padding: 12px;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.sphx-glr-thumbcontainer:hover {
+  border: 1px solid var(--pst-color-primary);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.15);
+}
+
+/* Larger thumbnail image, softly rounded. */
+.sphx-glr-thumbcontainer img {
+  max-height: 140px;
+  max-width: 100%;
+  border-radius: 0.25rem;
+}
+
+/* Example title under the thumbnail. */
+.sphx-glr-thumbnail-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--pst-color-text-base);
+}
+
+.sphx-glr-thumbcontainer:hover .sphx-glr-thumbnail-title {
+  color: var(--pst-color-primary);
+}
+
+/* Section headers on the Examples landing page (one per sub-gallery
+ * README): scikit-learn-style rule under the heading. */
+section:has(.sphx-glr-thumbnails) > h2 {
+  border-bottom: 1px solid var(--pst-color-border);
+  padding-bottom: 0.35rem;
+}

@@ -12,6 +12,13 @@ catalogue page :doc:`orchestration_output_agents` lists the orchestrator
 alongside related output agents such as ``PipelineAgent``, ``ReportAgent``,
 ``BatchSurveyAgent``, and ``CodeGenerationAgent``.
 
+.. seealso::
+
+   :doc:`/applications/agent_master/index`
+       The Agent Master application — the chat surface that puts this
+       orchestrator in front of users, with installation and launch
+       instructions.
+
 When To Use It
 --------------
 

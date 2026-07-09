@@ -146,6 +146,17 @@ Start with the raw feature table before interpreting any labels.
    ]
    print(features[cols].head())
 
+.. code-block:: text
+
+      station     freq    period  ...  logrho_det    phi_det  tip_amp
+   0  18-001A  10400.0  0.000096  ...    1.886481  63.023441      NaN
+   1  18-001A   8707.0  0.000115  ...    1.925638  61.655406      NaN
+   2  18-001A   7289.0  0.000137  ...    1.948138  59.889966      NaN
+   3  18-001A   6102.0  0.000164  ...    2.061820  58.836496      NaN
+   4  18-001A   5108.0  0.000196  ...    2.182395  51.323119      NaN
+
+   [5 rows x 8 columns]
+
 Line 7 loads the EDI directory through the shared ``ensure_sites``
 machinery. Lines 15-24 show the columns most often used in downstream
 checks.
@@ -188,6 +199,9 @@ A single-station view makes the thresholds tangible.
    fig.suptitle(f"{station} dimensionality features")
    fig.tight_layout()
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-dimensionality-02.png
+   :width: 100%
+
 If ``beta_abs`` stays above the skew threshold over most periods, the
 station will be classified mostly 3-D regardless of ellipticity. If
 ``beta_abs`` is low, ellipticity separates 1-D from 2-D behavior.
@@ -221,6 +235,22 @@ table.
    label = {0: "1D", 1: "2D", 2: "3D"}
    counts["label"] = counts["dim"].map(label)
    print(counts.head(12))
+
+.. code-block:: text
+
+       station  dim  fraction label
+   0   18-001A    2  0.981132    3D
+   1   18-001A    1  0.018868    2D
+   2   18-002U    2  0.981132    3D
+   3   18-002U    1  0.018868    2D
+   4   18-003A    2  0.981132    3D
+   5   18-003A    1  0.018868    2D
+   6   18-004A    2  0.981132    3D
+   7   18-004A    1  0.018868    2D
+   8   18-005U    2  0.943396    3D
+   9   18-005U    1  0.056604    2D
+   10  18-006A    2  0.962264    3D
+   11  18-006A    1  0.037736    2D
 
 Line 5 uses the default rule. Lines 11-15 compute station-level
 fractions so you can see whether a station is mostly 1-D/2-D or mostly
@@ -269,6 +299,9 @@ The clearest way to understand the rule is to plot ``beta_abs`` against
    ax.legend()
    fig.tight_layout()
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-dimensionality-04.png
+   :width: 100%
+
 The vertical line is the 3-D boundary. The horizontal line separates
 1-D and 2-D only on the low-skew side of the plot.
 
@@ -311,6 +344,20 @@ dimensionality fractions change.
    sensitivity = pd.DataFrame(rows)
    print(sensitivity)
 
+.. code-block:: text
+
+      skew_th   frac_1d   frac_2d   frac_3d
+   0        1  0.001348  0.005391  0.993261
+   1        2  0.002022  0.012803  0.985175
+   2        3  0.002022  0.018868  0.979111
+   3        5  0.004717  0.028302  0.966981
+   4        8  0.008086  0.053235  0.938679
+   5       12  0.013477  0.079515  0.907008
+   6       18  0.018868  0.148922  0.832210
+   7       25  0.022237  0.249326  0.728437
+   8       35  0.033693  0.395553  0.570755
+   9       50  0.044474  0.537736  0.417790
+
 If the 3-D fraction stays high over a wide threshold range, the result
 is probably a property of the data. If the fractions flip abruptly near
 one threshold, report that sensitivity with the interpretation.
@@ -338,6 +385,9 @@ threshold rule.
    )
    fig.tight_layout()
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-dimensionality-06.png
+   :width: 100%
+
 This plot is best for pattern recognition. Look for coherent regions by
 station and period, not isolated cells.
 
@@ -364,6 +414,9 @@ fractions.
    )
    fig.tight_layout()
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-dimensionality-07.png
+   :width: 100%
+
 Use this when you need to say whether 3-D behavior is concentrated at
 short periods, long periods, or spread across the whole band.
 
@@ -389,6 +442,9 @@ and maps the dimensionality class in station coordinates.
        ax=ax,
    )
    fig.tight_layout()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-dimensionality-08.png
+   :width: 100%
 
 Use this for spatial checks. A line-wide class change is different from
 one station acting anomalously.
@@ -431,6 +487,17 @@ strike stability, rotation status, and Groom-Bailey status.
            ]
        ].head()
    )
+
+.. code-block:: text
+
+      station  frac_1d  ...  strike_curve_iqr_deg               recommendation
+   0  18-001A      0.0  ...                  66.9  review_3d_effects_before_2d
+   1  18-002U      0.0  ...                  96.0  review_3d_effects_before_2d
+   2  18-003A      0.0  ...                  65.0  review_3d_effects_before_2d
+   3  18-004A      0.0  ...                  89.5  review_3d_effects_before_2d
+   4  18-005U      0.0  ...                  72.1  review_3d_effects_before_2d
+
+   [5 rows x 8 columns]
 
 Important columns include:
 
@@ -538,6 +605,15 @@ coefficients, and assigns a dimensionality class from the dominant atom.
 
    print(encoded.filter(regex="station|period|dim_pred|^a").head())
 
+.. code-block:: text
+
+      station    period   a0        a1        a2   a3        a4       a5  dim_pred
+   0  18-001A  0.000096  0.0 -1.327892  0.896831  0.0  0.016784 -0.00000         1
+   1  18-001A  0.000115  0.0 -1.317513  0.798761  0.0  0.000000 -0.00000         1
+   2  18-001A  0.000137  0.0 -1.361449  0.662154  0.0  0.000000 -0.02091         1
+   3  18-001A  0.000164 -0.0 -1.086200  0.800304 -0.0  0.350492  0.00000         1
+   4  18-001A  0.000196 -0.0 -0.336239  0.791009 -0.0  0.194019  0.00000         2
+
 The model dictionary contains:
 
 - ``D``: learned atom matrix.
@@ -581,6 +657,10 @@ replacement for the rule.
    agreement = (compare["dim"] == compare["dim_pred"]).mean()
    print(f"rule/dictionary agreement = {agreement:.2%}")
 
+.. code-block:: text
+
+   rule/dictionary agreement = 68.13%
+
 Agreement near 100 percent means the learned atoms reproduce the rule.
 Lower agreement means the data-driven features are separating samples
 differently. That can be useful, but it needs interpretation.
@@ -616,6 +696,9 @@ shows which learned atom dominates each station-period cell.
    fig, ax = plt.subplots(figsize=(9, 4.8))
    plot_atom_psection(survey, model, energy="l2", ax=ax)
    fig.tight_layout()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-dimensionality-14.png
+   :width: 100%
 
 Use the atom pseudo-section to check whether one learned pattern is
 localized in a period band or station group. A model that produces
@@ -704,6 +787,9 @@ and dictionary encoding.
    plot_dim_confidence_grid(survey, ax=ax)
    fig.tight_layout()
    fig.savefig(out / "dimensionality_confidence_grid.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-dimensionality-15.png
+   :width: 100%
 
 Worked Example
 --------------

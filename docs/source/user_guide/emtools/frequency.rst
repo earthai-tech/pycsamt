@@ -149,6 +149,29 @@ you should inspect it before editing.
    ax.legend()
    fig.tight_layout()
 
+.. code-block:: text
+
+      station  ...                                              flags
+   0  18-001A  ...  recoverable,high_error,offdiag_mismatch,diagon...
+   1  18-001A  ...  reject,high_error,offdiag_mismatch,diagonal_le...
+   2  18-001A  ...  reject,high_error,offdiag_mismatch,diagonal_le...
+   3  18-001A  ...  reject,high_error,offdiag_mismatch,diagonal_le...
+   4  18-001A  ...  reject,high_error,offdiag_mismatch,diagonal_le...
+
+   [5 rows x 4 columns]
+   count    1484.000000
+   mean        0.658116
+   std         0.096143
+   min         0.417464
+   25%         0.586675
+   50%         0.654938
+   75%         0.736039
+   max         0.863041
+   Name: confidence, dtype: float64
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-04.png
+   :width: 100%
+
 The key lesson is simple: do not choose ``ci_hi`` or ``threshold`` before
 looking at the confidence distribution. If no row reaches ``ci_hi``,
 recovery has no trusted rows to interpolate from.
@@ -270,6 +293,26 @@ a station-level report, and a row-level decision table in one object.
    print(result.report.head())
    print(result.decisions.head())
 
+.. code-block:: text
+
+   FrequencyEditResult(mode='recover', method='composite', dropped=73, masked=102, recovered=867)
+      station  n_freq_before  ...  n_masked_or_unfinite  confidence_delta
+   0  18-001A             53  ...                     0          0.027413
+   1  18-002U             53  ...                     0         -0.038885
+   2  18-003A             53  ...                     3          0.061644
+   3  18-004A             53  ...                     3         -0.026442
+   4  18-005U             53  ...                     1          0.026781
+
+   [5 rows x 18 columns]
+      station  frequency_hz  period_s  ...  present_after  finite_after action
+   0  18-001A       10400.0  0.000096  ...           True          True   kept
+   1  18-001A        8707.0  0.000115  ...           True          True   kept
+   2  18-001A        7289.0  0.000137  ...           True          True   kept
+   3  18-001A        6102.0  0.000164  ...           True          True   kept
+   4  18-001A        5108.0  0.000196  ...           True          True   kept
+
+   [5 rows x 10 columns]
+
 ``result`` is a ``FrequencyEditResult`` with:
 
 - ``sites``: edited sites.
@@ -326,6 +369,17 @@ Station-Level Report
        ].head()
    )
 
+.. code-block:: text
+
+      station  n_freq_before  ...  confidence_median_before  confidence_median_after
+   0  18-001A             53  ...                  0.711753                 0.711753
+   1  18-002U             53  ...                  0.749480                 0.749480
+   2  18-003A             53  ...                  0.666613                 0.671639
+   3  18-004A             53  ...                  0.735994                 0.743510
+   4  18-005U             53  ...                  0.728841                 0.733250
+
+   [5 rows x 8 columns]
+
 Important report columns include:
 
 - ``n_freq_before`` and ``n_freq_after``: grid size change.
@@ -371,6 +425,15 @@ station-frequency sample.
 
    print(decisions["action"].value_counts())
 
+.. code-block:: text
+
+   action
+   recovered    867
+   kept         442
+   masked       102
+   dropped       73
+   Name: count, dtype: int64
+
 Actions are:
 
 - ``kept``: row survived unchanged.
@@ -409,6 +472,9 @@ row-level actions.
    plot_frequency_edit_summary(survey, result.sites, ci_hi=0.72, ci_lo=0.50, ax=ax_summary)
    plot_frequency_edit_decisions(survey, result.sites, ci_hi=0.72, ci_lo=0.50, ax=ax_decisions)
    fig.tight_layout()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-10.png
+   :width: 100%
 
 If the decision plot is dominated by ``recovered`` or ``masked`` colors,
 the edit is not conservative and should be justified.
@@ -558,6 +624,9 @@ exist and how reliable they are according to relative impedance error.
    )
    fig.tight_layout()
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-15.png
+   :width: 100%
+
 The color is ``1 / (1 + relative_error)``. Values closer to ``1`` are
 higher quality. Missing cells indicate no frequency row on the union
 grid for that station.
@@ -588,6 +657,9 @@ resistivity and frequency into a skin-depth-style apparent depth:
        ax=ax,
    )
    fig.tight_layout()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-16.png
+   :width: 100%
 
 This is a diagnostic visualization, not an inversion result. Use it to
 see how apparent depth varies across stations and periods.
@@ -623,6 +695,9 @@ summary metrics per station and band:
        ax=ax,
    )
    fig.tight_layout()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-17.png
+   :width: 100%
 
 Use microstrips for compact survey summaries. They are not a substitute
 for full curves when a band contains strong internal variation.
@@ -681,6 +756,19 @@ A conservative frequency workflow looks like this:
    fig2, ax2 = plt.subplots(figsize=(9, 4.5))
    plot_apparent_depth_psection(regular, ax=ax2)
    fig2.savefig(out / "apparent_depth_psection.png", dpi=200)
+
+.. grid:: 1 1 2 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-18-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-18-02.png
+         :width: 100%
 
 Common Failure Modes
 --------------------

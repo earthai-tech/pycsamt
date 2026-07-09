@@ -9,3 +9,7 @@ sphinx-design>=0.5
 sphinx-gallery>=0.16
 sphinx-autodoc-typehints>=2.0
 sphinx-autobuild>=2024.2
+# Interactive map gallery (docs/examples/map_3d): Plotly figures are scraped
+# into the gallery as HTML embeds + PNG thumbnails (kaleido renders the PNG).
+plotly>=5.20
+kaleido

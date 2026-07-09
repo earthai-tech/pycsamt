@@ -1,7 +1,7 @@
 .. _api-guide:
 
-API
-===
+API configuration
+=================
 
 :mod:`pycsamt.api` is the front door of the package.  It is a single import
 point that gathers three things every workflow needs:
@@ -143,4 +143,3 @@ In This Section
 
    views
    configuration
-   ../api/index

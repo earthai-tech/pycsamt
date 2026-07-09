@@ -107,6 +107,17 @@ frequency.
    print(spatial.head())
    spatial.to_csv("l18plt_spatial_gradient.csv", index=False)
 
+.. code-block:: text
+
+     station_a station_b    x_m  ...       depth_m   rho_a_ohmm  delta_rho_x
+   0   18-001A   18-002U  100.0  ...  16441.550076  1076.986058  -789.812389
+   1   18-001A   18-002U  100.0  ...  23164.458570  2553.493898   633.104370
+   2   18-001A   18-002U  100.0  ...  15708.445184  1402.456235  -407.796992
+   3   18-001A   18-002U  100.0  ...  16229.672127  1788.573047    68.027386
+   4   18-001A   18-002U  100.0  ...  22026.195330  3934.779127 -5968.395877
+
+   [5 rows x 9 columns]
+
 The output columns are:
 
 - ``station_a`` and ``station_b``: adjacent station pair.
@@ -145,6 +156,15 @@ station.
 
    one = vertical.loc[vertical["station"] == "18-001A"].sort_values("period_s")
    print(one[["period_s", "rho_a_ohmm", "delta_rho_z"]].head())
+
+.. code-block:: text
+
+       period_s  rho_a_ohmm  delta_rho_z
+   51  0.000096   80.630809    -7.264990
+   50  0.000115   86.503532    -4.480456
+   49  0.000137  102.020596   -26.553673
+   48  0.000164  133.745279   -36.895692
+   47  0.000196  154.026762    -3.667275
 
 The output columns are:
 
@@ -196,6 +216,17 @@ Expanded:
    print(joint.head())
    joint.to_csv("l18plt_joint_gradient.csv", index=False)
 
+.. code-block:: text
+
+     station_a station_b    x_m  ...  period_s       depth_m  delta_rho_zx
+   0   18-001A   18-002U  100.0  ...  0.830565  19740.513225   1422.916759
+   1   18-001A   18-002U  100.0  ...  0.695410  18387.618571  -1040.901362
+   2   18-001A   18-002U  100.0  ...  0.582072  15731.499213    475.824378
+   3   18-001A   18-002U  100.0  ...  0.487329  14850.211800  -6036.423263
+   4   18-001A   18-002U  100.0  ...  0.407997  16531.998598   3783.198291
+
+   [5 rows x 8 columns]
+
 The output columns are:
 
 - ``station_a`` and ``station_b``: adjacent station pair.
@@ -237,6 +268,9 @@ Plot Gradient Sections
 
    fig.tight_layout()
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-04.png
+   :width: 100%
+
 The color map is centered at zero by default. Positive and negative
 gradients are both meaningful: they indicate opposite directions of
 apparent-resistivity change.
@@ -255,6 +289,9 @@ scale is consistent.
        comp="det",
        vlim=(-3000.0, 3000.0),
    )
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-05.png
+   :width: 100%
 
 Choosing The Impedance Component
 --------------------------------
@@ -301,6 +338,13 @@ the two modes disagree.
    component_sensitivity = pd.DataFrame(rows)
    print(component_sensitivity)
 
+.. code-block:: text
+
+     component          std        max_abs
+   0       det  1319.337312   11797.378008
+   1        xy  2582.458888   32488.264297
+   2        yx  9287.900947  175431.466235
+
 Report the component whenever you show a gradient section.
 
 Single-Pair And Single-Station Curves
@@ -339,6 +383,9 @@ station curve.
 
    fig.tight_layout()
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-07.png
+   :width: 100%
+
 This makes it easier to tell whether a pseudo-section hotspot comes
 from one extreme station pair, one frequency jump, or a coherent region.
 
@@ -370,6 +417,12 @@ values.
    print(f"joint std   = {joint_std:.1f} ohm.m")
    print(f"ratio       = {joint_std / spatial_std:.2f}")
 
+.. code-block:: text
+
+   spatial std = 2659.9 ohm.m
+   joint std   = 1319.3 ohm.m
+   ratio       = 0.50
+
 This is not a proof of geological correctness, but it is a useful
 sanity check before relying on the joint image.
 
@@ -396,6 +449,9 @@ Use the same ``quantity``, ``comp``, and ``vlim`` when comparing lines.
    ax22.set_title("L22PLT")
 
    fig.tight_layout()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-09.png
+   :width: 100%
 
 Line-to-line similarity is a useful processing sanity check. Differences
 can still be geological, but first confirm the same band, component, and
@@ -474,6 +530,9 @@ Save the three gradient tables and the main pseudo-section.
    plot_gradient_section(survey, quantity="joint", comp="det", ax=ax)
    fig.tight_layout()
    fig.savefig(out / "joint_gradient_section.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-10.png
+   :width: 100%
 
 Worked Example
 --------------

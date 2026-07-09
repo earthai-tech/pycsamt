@@ -112,6 +112,9 @@ background resistivities.
    ax.legend()
    fig.tight_layout()
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-csumt-01.png
+   :width: 100%
+
 Lines 5-9 import only the pure planning pieces. Line 16 evaluates the
 Bostick depth for each resistivity. Line 19 shades the default CSUMT
 band so you can see which depths are reachable by the instrument band.
@@ -146,6 +149,15 @@ inverts the Bostick formula:
    for depth, freq, keep in zip(targets_m, freq_hz, in_band):
        status = "inside CSUMT band" if keep else "outside CSUMT band"
        print(f"{depth:5.1f} m -> {freq:9.1f} Hz  {status}")
+
+.. code-block:: text
+
+     5.0 m -> 1520832.0 Hz  outside CSUMT band
+    10.0 m ->  380208.0 Hz  inside CSUMT band
+    20.0 m ->   95052.0 Hz  inside CSUMT band
+    35.0 m ->   31037.4 Hz  inside CSUMT band
+    50.0 m ->   15208.3 Hz  inside CSUMT band
+    75.0 m ->    6759.3 Hz  outside CSUMT band
 
 Line 12 is the key conversion. Lines 13-17 force the practical check:
 does the requested target depth actually map into the transmitter band?
@@ -184,6 +196,15 @@ optionally add intermediate frequencies.
    print("kept frequencies:", len(schedule_hz))
    print("padded frequencies:", len(padded_hz))
    print("padded schedule in kHz:", schedule_khz)
+
+.. code-block:: text
+
+   requested targets: 5
+   kept frequencies: 4
+   padded frequencies: 11
+   padded schedule in kHz: [ 15.20832     19.29075455  24.46905452  31.03738776  41.05860467
+     54.31542857  71.85255818  95.052      150.88564479 239.51603127
+    380.208     ]
 
 The important behavior is line 8: targets outside ``f_min`` and
 ``f_max`` are dropped from the result. The function returns the schedule;
@@ -226,6 +247,12 @@ where ``f_lo`` is the lower frequency and therefore the deeper point.
    for f_lo, f_hi in adjacent_pairs:
        delta_m = vertical_resolution_pair(rho_estimate, f_lo, f_hi)
        print(f"{f_lo:8.0f}-{f_hi:8.0f} Hz: {delta_m:6.2f} m")
+
+.. code-block:: text
+
+       9600-   19200 Hz:  18.43 m
+      19200-   38400 Hz:  13.03 m
+      38400-   76800 Hz:   9.22 m
 
 This is a planning calculation. It assumes the same background
 resistivity for both frequencies. Use it to design spacing before
@@ -272,6 +299,9 @@ The measured workflow is:
    coverage = depth_coverage_table(edi_dir)
    ax = plot_depth_section(edi_dir)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-csumt-05.png
+   :width: 100%
+
 Lines 11-14 are the measured-data workflow. The same input path is
 accepted by each function.
 
@@ -295,6 +325,15 @@ Use ``bostick_depth`` when you want the raw station-frequency transform.
 
    print(depth.head())
    depth.to_csv("l18plt_bostick_depth.csv", index=False)
+
+.. code-block:: text
+
+      station  freq_hz  period_s  rho_a_ohmm    depth_m
+   0  18-001A  10400.0  0.000096   76.998314  30.631900
+   1  18-001A   8707.0  0.000115   84.263304  35.021518
+   2  18-001A   7289.0  0.000137   88.743760  39.281217
+   3  18-001A   6102.0  0.000164  115.297433  48.935465
+   4  18-001A   5108.0  0.000196  152.193125  61.450026
 
 The output columns are:
 
@@ -331,6 +370,9 @@ before reading the full section.
    ax.grid(True, which="both", alpha=0.3)
    fig.tight_layout()
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-csumt-07.png
+   :width: 100%
+
 Depth should generally increase with period, but it does not need to be
 perfectly smooth. Each point uses the apparent resistivity measured at
 that frequency. A noisy resistivity value can move one depth estimate
@@ -355,6 +397,25 @@ frequencies at each station.
 
    print(measured.head())
    print(fixed_rho.head())
+
+.. code-block:: text
+
+      station  freq_lo_hz  freq_hi_hz  ...    depth_hi_m  delta_depth_m   rho_a_ohmm
+   0  18-001A       1.008       1.204  ...  15344.900917   -1741.179129  1814.534975
+   1  18-001A       1.204       1.438  ...  11898.474477    3446.426441  1895.605946
+   2  18-001A       1.438       1.718  ...  11376.860958     521.613519  1678.822421
+   3  18-001A       1.718       2.052  ...  20671.989002   -9295.128044  3484.215253
+   4  18-001A       2.052       2.451  ...  13906.815678    6765.173324  5087.100314
+
+   [5 rows x 7 columns]
+      station  freq_lo_hz  freq_hi_hz  ...   depth_hi_m  delta_depth_m  rho_a_ohmm
+   0  18-001A       1.008       1.204  ...  5619.496200     522.087278       300.0
+   1  18-001A       1.204       1.438  ...  5141.989463     477.506737       300.0
+   2  18-001A       1.438       1.718  ...  4704.343719     437.645744       300.0
+   3  18-001A       1.718       2.052  ...  4304.492417     399.851302       300.0
+   4  18-001A       2.052       2.451  ...  3938.573638     365.918779       300.0
+
+   [5 rows x 7 columns]
 
 The measured output columns are:
 
@@ -398,6 +459,22 @@ Use ``depth_coverage_table`` when you want one row per station.
        ].head(10)
    )
 
+.. code-block:: text
+
+       station  n_freq  ...   depth_max_m  median_resolution_m
+   12  18-013U      53  ...  36009.355793            64.592879
+   19  18-020A      53  ...  32408.420051            75.994660
+   21  18-021U      53  ...  30301.925460            79.090618
+   0   18-001A      53  ...  25738.828561            48.506018
+   20  18-021B      53  ...  22190.349906            52.988073
+   8   18-009A      53  ...  21357.805389            67.062557
+   26  18-024U      53  ...  20271.948048            12.972740
+   6   18-007U      53  ...  19380.271567            50.198288
+   7   18-008U      53  ...  19024.796081            50.476517
+   16  18-017U      53  ...  17389.552044            48.953237
+
+   [10 rows x 7 columns]
+
 The output columns are:
 
 - ``n_freq``: number of measured frequencies.
@@ -436,6 +513,9 @@ Depth Pseudo-Section
    )
    fig.tight_layout()
    fig.savefig("l18plt_bostick_depth_section.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-csumt-10.png
+   :width: 100%
 
 Useful plotting options:
 
@@ -478,6 +558,14 @@ color scale logic.
    print("L22 mean max depth:", c22["depth_max_m"].mean())
 
    fig.tight_layout()
+
+.. code-block:: text
+
+   L18 mean max depth: 16171.310165020153
+   L22 mean max depth: 18017.08253563618
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-csumt-11.png
+   :width: 100%
 
 Neighboring lines should not be identical, but a severe mismatch is a
 reason to check station ordering, coordinate metadata, outlier
@@ -558,6 +646,9 @@ figure together.
    plot_depth_section(survey, ax=ax)
    fig.tight_layout()
    fig.savefig(out / "bostick_depth_section.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-csumt-12.png
+   :width: 100%
 
 Lines 19-21 preserve the design assumptions. Lines 22-24 save the
 measured data products. Lines 26-29 save the figure used in the report.

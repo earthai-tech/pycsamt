@@ -138,6 +138,9 @@ The usual workflow is:
    summary = anisotropy_table(edi_dir)
    ax = plot_anisotropy(edi_dir, metric="ratio_log10")
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-anisotropy-01.png
+   :width: 100%
+
 Lines 8-12 are the complete workflow. The same ``edi_dir`` is accepted
 by all three functions because each function delegates loading to the
 shared site loader.
@@ -180,6 +183,17 @@ diagnostics. It returns one row for each station and frequency.
 
    print(detail[cols].head())
    detail.to_csv("l18plt_anisotropy_detail.csv", index=False)
+
+.. code-block:: text
+
+      station  freq_hz  period_s  ...  ratio_log10  swift_skew  strike_deg
+   0  18-001A  10400.0  0.000096  ...    -0.107418    4.293444  -77.840209
+   1  18-001A   8707.0  0.000115  ...    -0.124451    4.021890  -76.385301
+   2  18-001A   7289.0  0.000137  ...    -0.145718    3.846208  -75.453650
+   3  18-001A   6102.0  0.000164  ...    -0.247039    2.369018  -67.350131
+   4  18-001A   5108.0  0.000196  ...    -0.397532    1.729795  -60.108794
+
+   [5 rows x 8 columns]
 
 The important output columns are:
 
@@ -241,6 +255,9 @@ from isolated spikes.
    fig.suptitle(f"{station} anisotropy diagnostics")
    fig.tight_layout()
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-anisotropy-03.png
+   :width: 100%
+
 Line 12 selects one station. Lines 21-23 draw the ratio threshold band,
 and line 26 draws the Swift skew threshold. If both curves stay above
 their thresholds over many neighboring periods, the station deserves
@@ -284,6 +301,22 @@ Use ``anisotropy_table`` when you want one row per station. It calls
            ]
        ].head(10)
    )
+
+.. code-block:: text
+
+       station  n_freq  ...  median_strike_deg  anisotropy_flag
+   15  18-016A      53  ...          -7.682709             True
+   16  18-017U      53  ...          -3.811541             True
+   14  18-015U      53  ...           8.230015             True
+   17  18-018A      53  ...          13.908826             True
+   13  18-014A      53  ...          27.482707             True
+   9   18-010U      53  ...          24.372200             True
+   24  18-023A      53  ...          21.460012             True
+   8   18-009A      53  ...          24.360106             True
+   26  18-024U      53  ...         -29.242651             True
+   27  18-025A      53  ...         -20.822334             True
+
+   [10 rows x 7 columns]
 
 The summary columns are:
 
@@ -334,6 +367,9 @@ is spatially and spectrally coherent.
 
    fig.tight_layout()
    fig.savefig("l18plt_anisotropy_metrics.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-anisotropy-05.png
+   :width: 100%
 
 Available plot metrics are:
 
@@ -390,6 +426,14 @@ easy to compare neighboring survey lines with the same metric.
 
    fig.tight_layout()
 
+.. code-block:: text
+
+   L18 mean |ratio|: 0.5836353106929171
+   L22 mean |ratio|: 0.5153467627986273
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-anisotropy-06.png
+   :width: 100%
+
 This comparison is useful for sanity checking. Neighboring lines do not
 need to match exactly, but a line with a completely different pattern
 should be checked for loading, station ordering, coordinate, or tensor
@@ -431,6 +475,9 @@ two lines.
    ax.set_title(f"Ratio vs. skew, Pearson r = {corr:.2f}")
    ax.legend()
    fig.tight_layout()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-anisotropy-07.png
+   :width: 100%
 
 If the two metrics correlate strongly, they are telling a similar story.
 If they do not, inspect both views. A station can have a strong
@@ -516,6 +563,9 @@ the plot.
    plot_anisotropy(survey, metric="ratio_log10", ax=ax)
    fig.tight_layout()
    fig.savefig(out / "ratio_log10_pseudosection.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-anisotropy-08.png
+   :width: 100%
 
 Line 15 preserves the detailed station-frequency data. Line 16
 preserves the station summary. Lines 21-23 save the main pseudo-section

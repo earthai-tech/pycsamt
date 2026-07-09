@@ -110,6 +110,17 @@ Start by estimating parameters without changing the data.
        ].head()
    )
 
+.. code-block:: text
+
+      station status  ...  diagonal_ratio_before  diagonal_ratio_after
+   0  18-001A     ok  ...               0.614153              0.273213
+   1  18-002U     ok  ...               0.434659              0.261954
+   2  18-003A     ok  ...               0.373588              0.379570
+   3  18-004A     ok  ...               0.454007              0.323360
+   4  18-005U     ok  ...               0.496585              0.305364
+
+   [5 rows x 9 columns]
+
 The ``band`` argument is in period seconds, not hertz. Choose a band
 that is justified by dimensionality, strike stability, and data quality.
 
@@ -221,6 +232,20 @@ diagonal leakage.
        ].head(10)
    )
 
+.. code-block:: text
+
+       station  n_freq   rms_fit  diag_reduction  twist_deg     shear  anisotropy
+   22  18-022U      39  0.552447        0.322411  22.141866 -0.117145   -0.008538
+   21  18-021U      39  0.537890       -0.419458 -63.216543  0.990000    0.404853
+   20  18-021B      39  0.430286       -0.604539 -37.911526  0.866936    0.211520
+   17  18-018A      39  0.427220       -0.564491  56.099182  0.990000   -0.234017
+   24  18-023A      39  0.412376        0.298014  19.376516 -0.123178    0.012153
+   27  18-025A      39  0.390159       -0.384625 -62.091367  0.504772    0.012596
+   18  18-019U      39  0.363720       -0.016977  17.861709 -0.015653    0.008229
+   8   18-009A      39  0.335742       -0.014381  17.904448  0.118619   -0.006990
+   19  18-020A      39  0.326943       -0.391908 -59.746000  0.870488    0.525820
+   12  18-013U      39  0.322409        0.166075   8.996415 -0.388653    0.079927
+
 Stations with high ``rms_fit`` or little diagonal reduction should be
 reviewed before applying correction automatically.
 
@@ -306,6 +331,10 @@ the fitted table and optionally corrected sites.
    corrected_sites = result.sites
    gb_table = result.table
 
+.. code-block:: text
+
+   GroomBaileyResult(stations=28, applied=True, median_rms=0.2797)
+
 The result container records:
 
 - ``sites``: corrected sites when ``apply=True``, otherwise loaded sites.
@@ -323,14 +352,22 @@ Compare both modes when outliers are suspected.
 .. code-block:: python
    :linenos:
 
-   import pandas as pd
-
    from pycsamt.emtools.gb import groom_bailey_table
 
    survey = "data/AMT/WILLY_DATA/L18PLT"
 
-   robust = groom_bailey_table(survey, band=(1e-3, 10.0), robust=True)
-   plain = groom_bailey_table(survey, band=(1e-3, 10.0), robust=False)
+   robust = groom_bailey_table(
+       survey,
+       band=(1e-3, 10.0),
+       robust=True,
+       api=False,
+   )
+   plain = groom_bailey_table(
+       survey,
+       band=(1e-3, 10.0),
+       robust=False,
+       api=False,
+   )
 
    compare = robust.merge(
        plain,
@@ -350,6 +387,15 @@ Compare both modes when outliers are suspected.
        ].head()
    )
 
+.. code-block:: text
+
+      station  rms_fit_robust  rms_fit_plain  twist_deg_robust  twist_deg_plain
+   0  18-001A        0.138687       0.138478         10.728457        10.602753
+   1  18-002U        0.212166       0.211317          8.600826         9.526479
+   2  18-003A        0.278134       0.277152          4.295350         4.190446
+   3  18-004A        0.276268       0.274535         17.547552        16.011004
+   4  18-005U        0.249210       0.248697          4.692963         3.924469
+
 If robust and non-robust parameters differ strongly, inspect the station
 for outlier frequencies, poor dimensionality, or unstable strike.
 
@@ -366,7 +412,7 @@ correction reduces diagonal leakage.
 
    import numpy as np
 
-   from pycsamt.emtools.gb import apply_groom_bailey, groom_bailey_table
+   from pycsamt.emtools.gb import groom_bailey_table
 
    class ZBlock:
        def __init__(self, z, freq):
@@ -390,9 +436,13 @@ correction reduces diagonal leakage.
    site = Site(observed, freq)
 
    table = groom_bailey_table([site], robust=False)
-   corrected = apply_groom_bailey([site], table=table)
 
    print(table[["station", "rms_fit", "diagonal_ratio_before", "diagonal_ratio_after"]])
+
+.. code-block:: text
+
+     station       rms_fit  diagonal_ratio_before  diagonal_ratio_after
+   0  SYN001  3.678917e-16               0.187225          4.388355e-17
 
 This pattern is useful when you need to verify behavior after changing
 preprocessing code. Real surveys should still be assessed with their
@@ -430,6 +480,15 @@ running Groom-Bailey, record whether it was attempted and applied.
    )
 
    print(assessment[["station", "frac_3d", "groom_bailey_applied", "recommendation"]].head())
+
+.. code-block:: text
+
+      station   frac_3d  groom_bailey_applied               recommendation
+   0  18-001A  0.974359                  True  review_3d_effects_before_2d
+   1  18-002U  0.974359                  True  review_3d_effects_before_2d
+   2  18-003A  0.974359                  True  review_3d_effects_before_2d
+   3  18-004A  0.974359                  True  review_3d_effects_before_2d
+   4  18-005U  0.923077                  True  review_3d_effects_before_2d
 
 This makes the correction auditable in reports and manuscripts.
 

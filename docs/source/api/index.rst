@@ -32,6 +32,7 @@ API reference
    ai
    agents
    pipeline
+   iot
    app
    metadata
    gis

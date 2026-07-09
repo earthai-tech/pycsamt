@@ -131,6 +131,9 @@ trajectory.
    ax.figure.savefig("phasor_wheel_18-001A.png", dpi=200)
    plt.close(ax.figure)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-02.png
+   :width: 100%
+
 Read this plot as a direct complex-plane diagnostic. If ``Zxy`` and
 ``Zyx`` are close to a clean 1-D/2-D off-diagonal pair, their phasors
 should be broadly opposite in phase, because the ideal relation is
@@ -183,6 +186,9 @@ different tensor behaviour.
    fig.savefig("phasor_period_bands_18-001A.png", dpi=200)
    plt.close(fig)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-03.png
+   :width: 100%
+
 If the short-period and long-period arcs have the same shape but
 different radii, the main change is magnitude. If they rotate into
 different angular sectors or the ``xy`` and ``yx`` relation changes,
@@ -215,6 +221,9 @@ informative.
    )
 
    ax.figure.savefig("phasor_all_components_18-001A.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-04.png
+   :width: 100%
 
 ``radius="norm"`` scales each component radius by a robust component
 magnitude, which helps when one component would otherwise dominate the
@@ -256,6 +265,14 @@ and frequency arrays used by the plotting functions.
 
    for row in rows[:5]:
        print(row)
+
+.. code-block:: text
+
+   {'station': '18-001A', 'mean_abs_zxx': 446.87532535812795, 'mean_abs_zxy': 808.4345401982367, 'mean_abs_zyx': 1145.0965447882752, 'mean_abs_zyy': 557.6049786167763}
+   {'station': '18-002U', 'mean_abs_zxx': 133.0926461161051, 'mean_abs_zxy': 620.1474584088546, 'mean_abs_zyx': 859.6134726088661, 'mean_abs_zyy': 257.84731425866534}
+   {'station': '18-003A', 'mean_abs_zxx': 109.30601909208245, 'mean_abs_zxy': 610.4449839811526, 'mean_abs_zyx': 388.2097256381032, 'mean_abs_zyy': 106.6560768811014}
+   {'station': '18-004A', 'mean_abs_zxx': 252.91269027986166, 'mean_abs_zxy': 839.1242870947025, 'mean_abs_zyx': 681.5954183841726, 'mean_abs_zyy': 300.46444606989644}
+   {'station': '18-005U', 'mean_abs_zxx': 202.61429236412803, 'mean_abs_zxy': 811.4948595592589, 'mean_abs_zyx': 563.3054411247073, 'mean_abs_zyy': 261.3767440473993}
 
 This is not meant to replace phase-tensor dimensionality or skew
 analysis. It is a quick tensor sanity check: if the diagonal terms are
@@ -300,6 +317,9 @@ two off-diagonal terms are less antisymmetric.
    fig.tight_layout()
    fig.savefig("offdiag_antisymmetry_l18plt.png", dpi=200)
    plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-06.png
+   :width: 100%
 
 The horizontal axis is station order. The vertical axis is
 ``log10(period)``. Warm columns mark stations or period bands where
@@ -354,6 +374,20 @@ The pseudo-section shows the pattern. A table names the stations.
    print(ranking.head(10))
    ranking.to_csv("impedance_antisymmetry_ranking.csv", index=False)
 
+.. code-block:: text
+
+      station  mean_residual  p90_residual  max_residual  n_frequency
+   0  18-016A       0.786452      0.942456      0.958245           53
+   1  18-018A       0.749186      0.961107      0.998407           53
+   2  18-017U       0.715415      0.877221      0.920305           53
+   3  18-023A       0.640977      0.860594      0.957943           53
+   4  18-021B       0.623736      0.964924      0.990659           53
+   5  18-021U       0.556974      0.968757      0.980216           53
+   6  18-022U       0.538863      0.873291      0.963180           53
+   7  18-024U       0.526460      0.811147      0.961759           53
+   8  18-015U       0.500570      0.984507      0.999133           53
+   9  18-025A       0.498164      0.782128      0.842395           53
+
 Use ``mean_residual`` for a broad station ranking. Use
 ``p90_residual`` when you want to highlight stations with a persistent
 high-residual tail. Use ``max_residual`` only as a trigger for manual
@@ -404,6 +438,16 @@ metrics instead of assuming they flag the same stations.
 
    print(merged.corr(numeric_only=True))
 
+.. code-block:: text
+
+                     antisym_mean  ...  abs_ratio_log10
+   antisym_mean          1.000000  ...         0.719606
+   mean_swift_skew      -0.592220  ...        -0.613406
+   mean_ratio_log10      0.631375  ...         0.886388
+   abs_ratio_log10       0.719606  ...         1.000000
+
+   [4 rows x 4 columns]
+
 When correlations are strong, the diagnostics are probably responding
 to a shared tensor feature. When they disagree, inspect the stations
 manually. A station can have a high skew because of diagonal terms but
@@ -444,6 +488,9 @@ Monte Carlo uncertainty band for the determinant magnitude.
 
    fig.savefig("determinant_track_18-016A.png", dpi=200)
    plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-09.png
+   :width: 100%
 
 The default percentile band is the 10th to 90th percentile interval.
 Increase ``n_draws`` when you need a smoother band. Keep ``seed`` fixed
@@ -486,6 +533,9 @@ contrasting tensor diagnostics.
 
    fig.savefig("determinant_station_comparison.png", dpi=200)
    plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-10.png
+   :width: 100%
 
 Look for differences in curve smoothness, phase wrapping, band width,
 and period-local instability. A wide uncertainty band does not
@@ -547,6 +597,20 @@ judging the shaded region by eye.
    print(det_quality.head(10))
    det_quality.to_csv("determinant_band_width.csv", index=False)
 
+.. code-block:: text
+
+      station  median_det_abs  median_relative_band_width  max_relative_band_width
+   0  18-021U   138059.459579                    1.244798                 1.558835
+   1  18-020A    58591.215698                    0.981629                 1.719329
+   2  18-021B   304870.766789                    0.675971                 1.572428
+   3  18-022V    54687.185702                    0.414231                 1.390426
+   4  18-018A    12533.221781                    0.286987                 1.416562
+   5  18-022U    59346.090486                    0.272911                 1.511982
+   6  18-025A    22893.891856                    0.259362                 1.010240
+   7  18-013U   409823.995492                    0.242223                 1.320911
+   8  18-024U    37132.445937                    0.241634                 0.978317
+   9  18-023A    57853.829945                    0.223259                 1.416815
+
 The private helper ``_det_ci`` is used here because it exposes the
 computed arrays behind the public plot. For stable production code,
 prefer the public plotting function unless you need these exact numbers.
@@ -580,6 +644,9 @@ known geology. Use the same colour limit when comparing lines.
    fig.tight_layout()
    fig.savefig("antisymmetry_line_comparison.png", dpi=200)
    plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-12.png
+   :width: 100%
 
 If one line is uniformly warmer, check acquisition quality, processing
 settings, coordinate orientation, and frequency coverage before making
@@ -691,6 +758,24 @@ one determinant track.
    fig = plot_determinant_track(survey, station=station, n_draws=300)
    fig.savefig(out / f"determinant_{station}.png", dpi=200)
    plt.close(fig)
+
+.. grid:: 1 1 2 3
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-13-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-13-02.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-13-03.png
+         :width: 100%
 
 Worked Example
 --------------

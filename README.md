@@ -44,6 +44,12 @@ publication-ready results.
 
 - 📥 **Data I/O & QC** — EDI, Zonge AVG, Jones J, TDEM, and MARE2DEM files in
   one site model; frequency audits and noisy-station flagging.
+- 📡 **IoT-enabled field acquisition** — station telemetry with edge QC
+  (powerline harmonics, SNR, contact resistance, frequency coverage),
+  clock-synchronisation audit, power monitoring, pluggable transports
+  (file/HTTP built in; MQTT/serial/WebSocket optional), acquisition
+  provenance, a field-network simulator, and dashboards — feeding directly
+  into the processing pipeline.
 - 🎚️ **Processing & corrections** — a catalogue of 25 methods in six
   categories: notch filtering, static-shift removal, tensor rotation,
   phase-tensor analysis, and more.
@@ -121,7 +127,7 @@ report = master.run(
 ```
 
 <details>
-<summary><b>More examples — inversion results, PINN, CLI</b></summary>
+<summary><b>More examples — inversion results, PINN, IoT, CLI</b></summary>
 
 Load a MARE2DEM run directory and plot responses or the resistivity section:
 
@@ -141,6 +147,23 @@ from pycsamt.ai.inversion import PINN2D
 inv = PINN2D(n_layers=64, epochs=3000, backend="torch")
 model = inv.fit(sites, frequencies=freqs)
 model.plot_section()
+```
+
+Ingest IoT field telemetry, quality-control it at the edge, and hand it
+straight to processing — with a reproducible provenance manifest:
+
+```python
+from pycsamt.iot import FieldSession, simulate_iot_network, plot_field_dashboard
+
+# real edge telemetry, or a simulated network for demos/tests
+packets = simulate_iot_network(n_stations=24, profiles=["L1", "L3"])
+session = FieldSession("SSL2026")
+session.add_packets(packets)
+
+session.assess()                                 # stream QC -> MonitoringStatus
+session.to_pipeline_input()                      # hand-off for processing
+session.export_manifest("field_manifest.json")   # reproducible provenance
+plot_field_dashboard(session, output_path="dashboard.png")
 ```
 
 The full workflow is also scriptable from the terminal:

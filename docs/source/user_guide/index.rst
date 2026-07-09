@@ -24,8 +24,8 @@ Different users usually arrive here with different goals:
   through :doc:`processing`, :doc:`mapping`, and :doc:`interpretation`.
 - **Processing and QC users** should pair :doc:`processing` with
   :doc:`emtools/index` and :doc:`site/index`.
-- **Inversion users** should read :doc:`inversion`, then move into
-  :doc:`forward/index`, :doc:`models/index`, and :doc:`pipeline/index`.
+- **Inversion users** should read :doc:`inversion`, then move into the
+  :doc:`modeling` guides and :doc:`pipeline/index`.
 - **AI and agent users** should combine :doc:`ai_inversion` with
   :doc:`agents/index`.
 - **Mapping users** can start with :doc:`mapping` for workflow guidance and
@@ -74,15 +74,6 @@ Core Workflow Guides
       Prepare data, model settings, exports, and review steps for 1-D, 2-D,
       and external-engine inversion workflows.
 
-   .. grid-item-card:: AI inversion
-      :link: ai_inversion
-      :link-type: doc
-      :img-top: ../_static/icons/user-guide-ai.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Use AI-assisted inversion tools, training-data concepts, prediction
-      outputs, and safeguards for model-assisted interpretation.
-
    .. grid-item-card:: Interpretation
       :link: interpretation
       :link-type: doc
@@ -95,7 +86,7 @@ Core Workflow Guides
    .. grid-item-card:: IoT workflows
       :link: iot
       :link-type: doc
-      :img-top: ../_static/icons/user-guide-docs.svg
+      :img-top: ../_static/icons/iot.svg
       :class-card: pycsamt-card sd-text-center
 
       Work with sensor-oriented or streaming workflows when survey data arrive
@@ -104,7 +95,7 @@ Core Workflow Guides
 Domain And Package Guides
 -------------------------
 
-.. grid:: 1 1 2 4
+.. grid:: 1 1 2 3
    :gutter: 3
    :class-container: cta-tiles
 
@@ -126,23 +117,14 @@ Domain And Package Guides
       Understand station wrappers, ``Sites`` containers, selection, editing,
       coordinates, exports, reports, and recomputation helpers.
 
-   .. grid-item-card:: Forward modelling
-      :link: forward/index
-      :link-type: doc
-      :img-top: ../_static/icons/user-guide-forward.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Build controlled synthetic responses, solver configurations, model
-      grids, noise models, and forward-to-inversion experiments.
-
-   .. grid-item-card:: Model integrations
-      :link: models/index
+   .. grid-item-card:: Modeling
+      :link: modeling
       :link-type: doc
       :img-top: ../_static/icons/user-guide-models.svg
       :class-card: pycsamt-card sd-text-center
 
-      Prepare and inspect Occam2D, ModEM, MARE2DEM, and related external
-      modelling or inversion engine workflows.
+      Forward modelling, external engine integrations (Occam2D, ModEM,
+      MARE2DEM), and AI inversion — the whole model side in one section.
 
    .. grid-item-card:: Pipeline system
       :link: pipeline/index
@@ -152,15 +134,6 @@ Domain And Package Guides
 
       Run preset and configured processing chains, compare outputs, preserve
       manifests, and move between Python and CLI execution.
-
-   .. grid-item-card:: Agents
-      :link: agents/index
-      :link-type: doc
-      :img-top: ../_static/icons/user-guide-agents.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Use loader, QC, static-shift, phase-analysis, inversion, plotting, and
-      orchestration agents for assisted workflows.
 
    .. grid-item-card:: Map tools
       :link: map/index
@@ -207,7 +180,6 @@ Section Contents
    processing
    mapping
    inversion
-   ai_inversion
    interpretation
    iot
 
@@ -217,10 +189,8 @@ Section Contents
 
    emtools/index
    site/index
-   forward/index
-   models/index
+   modeling
    pipeline/index
-   agents/index
    map/index
 
 .. toctree::

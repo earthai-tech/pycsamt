@@ -56,6 +56,9 @@ not write files by default, so scripts can save the result explicitly.
    Path("results").mkdir(exist_ok=True)
    fig.savefig("results/l18_survey_fingerprint.png", dpi=200)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-01.png
+   :width: 100%
+
 Line 4 imports one advanced plotting function. Lines 6-12 normalize a
 real survey-line directory into ``Sites``. Line 14 passes the already
 loaded object into the plotting function, so the survey is not parsed a
@@ -158,6 +161,34 @@ before interpreting a full profile.
    fig = plot_apparent_resistivity_polar(sites, station="18-001A")
    fig = plot_pt_period_clock(sites, n_rings=6)
 
+.. grid:: 1 1 2 3
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-02-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-02-02.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-02-03.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-02-04.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-02-05.png
+         :width: 100%
+
 Mohr circles rotate the impedance tensor through all angles and show
 whether the rotated trajectories collapse to points, pass through the
 origin, or remain offset. Argand trajectories keep the complex
@@ -194,6 +225,19 @@ across many station-period cells.
        period_range=(1e-3, 10.0),
    )
 
+.. grid:: 1 1 2 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-03-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-03-02.png
+         :width: 100%
+
 The ternary plot maps each station-period cell into continuous 1-D,
 2-D, and 3-D memberships, rather than forcing a hard class too early.
 The radar plot compares several distortion proxies per station, making
@@ -225,7 +269,45 @@ processing report or deciding whether a line is ready for inversion.
    fig = plot_z_invariants_section(sites)
    fig = plot_survey_fingerprint(sites)
    fig = plot_mt_composite_section(sites, component="xy")
-   fig = plot_snr_section(sites, component="xy")
+   fig = plot_snr_section(sites, components=("xy",))
+
+.. grid:: 1 1 2 3
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-04-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-04-02.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-04-03.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-04-04.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-04-05.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-04-06.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-04-07.png
+         :width: 100%
 
 These plots are profile-oriented. They place station along the
 horizontal axis and period, pseudo-depth, or metric rows along the
@@ -260,6 +342,19 @@ enough to justify downstream modelling decisions.
        threshold=0.90,
        max_edges=100,
    )
+
+.. grid:: 1 1 2 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-05-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-05-02.png
+         :width: 100%
 
 ``plot_strike_stability_bands`` compares strike estimates across
 methods and periods. ``plot_tf_coherence_network`` places stations at
@@ -310,6 +405,9 @@ Key parameters
    )
    fig.savefig(out / "mohr_circles_18-001A.png", dpi=200)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-06.png
+   :width: 100%
+
 Interpretation
     A 1-D response collapses toward points. A 2-D response produces circles
     that pass through the origin. A 3-D response produces circles offset from
@@ -350,6 +448,9 @@ Key parameters
        recursive=False,
    )
    fig.savefig(out / "argand_18-001A.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-07.png
+   :width: 100%
 
 Interpretation
     Smooth, simple trajectories are easier to reconcile with layered
@@ -395,6 +496,9 @@ Key parameters
    )
    fig.savefig(out / "bode_consistency_18-001A.png", dpi=200)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-08.png
+   :width: 100%
+
 Interpretation
     If observed and predicted phase track one another, the response is more
     consistent with minimum-phase behaviour. Persistent separation can indicate
@@ -434,6 +538,9 @@ Key parameters
    )
    fig.savefig(out / "rho_polar_18-001A.png", dpi=200)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-09.png
+   :width: 100%
+
 Interpretation
     Circular petals indicate weak directional dependence. Elongated petals
     indicate anisotropy or 2-D behaviour. Petals whose orientation rotates
@@ -472,6 +579,9 @@ Key parameters
        recursive=False,
    )
    fig.savefig(out / "pt_clock_18-001A.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-10.png
+   :width: 100%
 
 Interpretation
     Stable ellipse orientation suggests a persistent structural direction.
@@ -513,6 +623,9 @@ Key parameters
    )
    fig.savefig(out / "dimensionality_ternary.png", dpi=200)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-11.png
+   :width: 100%
+
 Interpretation
     A cloud near the 1-D corner supports simple layered assumptions. A cloud
     along the 2-D edge suggests strike analysis may be meaningful. A cloud near
@@ -549,6 +662,9 @@ Key parameters
        recursive=False,
    )
    fig.savefig(out / "distortion_radar.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-12.png
+   :width: 100%
 
 Interpretation
     Compact polygons suggest lower distortion. Large polygons or stations
@@ -595,6 +711,9 @@ Key parameters
    )
    fig.savefig(out / "sensitivity_depth_xy.png", dpi=200)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-13.png
+   :width: 100%
+
 Interpretation
     Dense overlapping bars indicate stronger depth coverage. Gaps indicate
     weak coverage. Very broad windows mean lower vertical resolution.
@@ -630,6 +749,9 @@ Key parameters
        recursive=False,
    )
    fig.savefig(out / "apparent_anisotropy.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-14.png
+   :width: 100%
 
 Interpretation
     Coherent warm or cool bands can indicate profile-scale anisotropy or
@@ -670,6 +792,9 @@ Key parameters
    )
    fig.savefig(out / "dimensionality_depth.png", dpi=200)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-15.png
+   :width: 100%
+
 Interpretation
     High 3-D membership at depth warns against simple inversion assumptions in
     that interval. Shallow isolated anomalies should be compared with
@@ -705,6 +830,9 @@ Key parameters
        recursive=False,
    )
    fig.savefig(out / "z_invariants.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-16.png
+   :width: 100%
 
 Interpretation
     Low Swift and Bahr values are more compatible with 2-D assumptions. High
@@ -743,6 +871,9 @@ Key parameters
    )
    fig.savefig(out / "survey_fingerprint.png", dpi=200)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-17.png
+   :width: 100%
+
 Interpretation
     Use this as a review dashboard. Look for bands that align across metrics:
     high skew with high ellipticity, abrupt strike changes, or stations that
@@ -778,6 +909,9 @@ Key parameters
        recursive=False,
    )
    fig.savefig(out / "mt_composite_xy.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-18.png
+   :width: 100%
 
 Interpretation
     This is a compact report figure. It helps catch suspicious interpretations
@@ -816,6 +950,9 @@ Key parameters
    )
    fig.savefig(out / "snr_section.png", dpi=200)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-19.png
+   :width: 100%
+
 Interpretation
     Cells below the threshold contour should be treated cautiously. If an
     entire frequency band has poor SNR, avoid over-interpreting that band.
@@ -850,6 +987,9 @@ Key parameters
        recursive=False,
    )
    fig.savefig(out / "strike_stability.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-20.png
+   :width: 100%
 
 Interpretation
     Stable overlapping bands support a consistent strike direction. Wide bands
@@ -892,6 +1032,9 @@ Key parameters
    )
    fig.savefig(out / "tf_coherence_network.png", dpi=200)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-21.png
+   :width: 100%
+
 Interpretation
     Connected stations have similar response curves in the selected band.
     Isolated stations may be outliers, locally distorted, poorly located, or
@@ -928,6 +1071,9 @@ figures.
    )
 
    fig.savefig(out / "advanced_report_panel.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-advanced-22.png
+   :width: 100%
 
 If you supply axes, the count must match the function. For example,
 ``plot_rho_phase_bode`` needs two axes, and

@@ -111,6 +111,9 @@ phase below. The default components are ``"xy"`` and ``"yx"``.
    fig.savefig("l18plt_station_panels.png", dpi=200)
    plt.close(fig)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-02.png
+   :width: 100%
+
 Use this when you want a quick visual sweep of several stations. It is
 not meant to show every tensor component or tipper row. For that, use
 ``plot_raw_sites_1d`` or ``plot_response_tipper``.
@@ -139,6 +142,9 @@ plot ``log10(abs(Z))`` instead of ``log10(rho_a)``.
 
    fig.savefig("impedance_magnitude_panels.png", dpi=200)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-03.png
+   :width: 100%
+
 Use ``quantity="impedance"`` for tensor debugging, instrument checks,
 or comparison with diagnostics that work directly with ``Z``. Use
 ``quantity="rhoa"`` for ordinary geophysical response plots.
@@ -165,6 +171,9 @@ The high-level panel function has explicit ``x_axis`` and
    )
 
    fig.savefig("frequency_axis_phase_0_360.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-04.png
+   :width: 100%
 
 Use ``phase_range=None`` when you want to show the raw phase values
 without wrapping. Use an explicit range when comparing stations whose
@@ -200,6 +209,9 @@ component column contains rho above phase.
    fig.savefig("raw_full_tensor_panels.png", dpi=200)
    plt.close(fig)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-05.png
+   :width: 100%
+
 With ``raw=True`` the function uses the package raw-data style, which
 is deliberately plain. In tests this style is black by default. That is
 useful for first QC because the display does not imply interpretation
@@ -227,6 +239,9 @@ usual component colours while keeping the same layout.
 
    fig.savefig("raw_panels_component_colours.png", dpi=200)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-06.png
+   :width: 100%
+
 This is a good second view: first look for obvious raw-data problems in
 plain black, then re-render with component colours when you want to
 compare modes quickly.
@@ -249,7 +264,10 @@ are sometimes easier during debugging.
        components=("xx", "xy", "yx", "yy"),
        label_mode="shared",
        show_component_legend=False,
+       ncols_groups=1,
+       figsize_scale=(8.0, 4.0),
    )
+   fig_shared.subplots_adjust(left=0.20)
    fig_shared.savefig("raw_shared_labels.png", dpi=200)
 
    fig_axis = plot_raw_sites_1d(
@@ -258,8 +276,23 @@ are sometimes easier during debugging.
        components=("xx", "xy"),
        label_mode="axis",
        show_component_legend=False,
+       ncols_groups=1,
+       figsize_scale=(6.0, 4.0),
    )
    fig_axis.savefig("raw_axis_labels.png", dpi=200)
+
+.. grid:: 1 1 2 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-07-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-07-02.png
+         :width: 100%
 
 ``label_mode="shared"`` puts station and axis labels at the group
 level. ``label_mode="axis"`` repeats labels on axes and rotates bottom
@@ -290,12 +323,18 @@ consistently.
            "data/AMT/WILLY_DATA/L18PLT",
            stations=["18-001A"],
            components=("xy", "yx"),
+           label_mode="axis",
            force_style=True,
            show_component_legend=False,
+           ncols_groups=1,
+           figsize_scale=(6.0, 4.0),
        )
 
    fig.savefig("raw_panels_frequency_linear_rho.png", dpi=200)
    plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-08.png
+   :width: 100%
 
 Use this pattern when one report needs a consistent non-default display
 style. It is better than editing labels or axes after the fact.
@@ -330,6 +369,9 @@ tipper.
    fig.savefig("kap03_response_tipper.png", dpi=200)
    plt.close(fig)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-09.png
+   :width: 100%
+
 When ``tipper_span_group=True``, each tipper row spans the station
 group. This is often the clearest layout when you have only two
 impedance components and want tipper to read as a station-level
@@ -353,10 +395,16 @@ layout where the tipper rows sit under each component column.
        tipper_components=("tx", "ty"),
        tipper_span_group=False,
        show_tipper_error_bars=False,
+       show_component_legend=False,
        ncols_groups=1,
+       figsize_scale=(7.2, 5.6),
+       shared_x_label_pad=0.11,
    )
 
-   fig.savefig("kap151_response_tipper_compact.png", dpi=200)
+   fig.savefig("kap151_response_tipper_compact.png", dpi=200, bbox_inches="tight")
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-10.png
+   :width: 100%
 
 Use the compact layout for one or two stations. Use the spanning layout
 when comparing several stations and you want fewer small axes.
@@ -393,6 +441,9 @@ original versus smoothed.
    fig.savefig("raw_vs_smoothed_compare.png", dpi=200)
    plt.close(fig)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-11.png
+   :width: 100%
+
 The function pairs stations by station name. If the second dataset is
 missing a station, the corresponding after-column is blank.
 
@@ -424,6 +475,9 @@ conversion.
    )
 
    fig.savefig("impedance_before_after.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-12.png
+   :width: 100%
 
 Use fixed ``ylim_rhoa`` and ``ylim_phase`` when the before/after
 comparison needs exact visual scale matching across multiple figures.
@@ -463,6 +517,9 @@ component panel.
    fig.savefig("measured_vs_predicted_fit_grid.png", dpi=200)
    plt.close(fig)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-13.png
+   :width: 100%
+
 The RMS is computed from the measured-predicted residual. When measured
 errors are available, the residual is weighted by the display-space
 error estimate. That means an apparently small visual difference can
@@ -494,9 +551,15 @@ components:
        color_fit_tm="#d62728",
        lw_fit=2.2,
        ls_fit="-",
+       ncols_groups=1,
+       figsize_scale=(8.0, 4.0),
+       show_mode_legend=False,
    )
 
-   fig.savefig("fit_grid_custom_fit_colours.png", dpi=200)
+   fig.savefig("fit_grid_custom_fit_colours.png", dpi=200, bbox_inches="tight")
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-14.png
+   :width: 100%
 
 Use custom fit colours when assembling figures for publication or when
 the default colours conflict with another report convention.
@@ -617,6 +680,29 @@ The following script writes the core report figures for one line.
    )
    fig.savefig(out / "fit_grid_smoothed_standin.png", dpi=200)
    plt.close(fig)
+
+.. grid:: 1 1 2 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-15-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-15-02.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-15-03.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-15-04.png
+         :width: 100%
 
 Worked Example
 --------------

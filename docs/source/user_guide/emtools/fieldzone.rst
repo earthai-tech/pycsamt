@@ -142,6 +142,17 @@ table.
    print(zones.head())
    zones.to_csv("l18plt_field_zones.csv", index=False)
 
+.. code-block:: text
+
+      station  freq_hz  period_s  ...  delta_bostick_m         kr  zone
+   0  18-001A  10400.0  0.000096  ...        30.631900  65.291412   far
+   1  18-001A   8707.0  0.000115  ...        35.021518  57.107747   far
+   2  18-001A   7289.0  0.000137  ...        39.281217  50.914919   far
+   3  18-001A   6102.0  0.000164  ...        48.935465  40.870155   far
+   4  18-001A   5108.0  0.000196  ...        61.450026  32.546772   far
+
+   [5 rows x 8 columns]
+
 The output columns are:
 
 - ``station``: station name.
@@ -184,6 +195,9 @@ Inspecting ``kr`` against period makes the classification easy to see.
    ax.set_title(f"{station} field-zone parameter")
    fig.tight_layout()
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-fieldzone-02.png
+   :width: 100%
+
 The shaded regions show the far, transition, and near zones. Long
 periods often move toward smaller ``kr`` because Bostick depth increases
 as frequency decreases.
@@ -225,6 +239,14 @@ approximately with ``abs(F)^2``.
        .agg(["count", "mean", "median", "max"])
    )
 
+.. code-block:: text
+
+               count        mean      median           max
+   zone
+   far           785    0.994097    0.998870      0.999999
+   near          220  960.277733  350.731935  16818.234683
+   transition    479   13.091904    2.114809     86.107095
+
 This cross-check is useful because ``zone`` is threshold-based, while
 ``nf_factor`` is continuous. In a good classification, far-zone samples
 should cluster near ``nf_factor = 1`` and near-zone samples should show
@@ -257,6 +279,9 @@ can overlay ``|k r|`` contours.
    )
    fig.tight_layout()
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-fieldzone-04.png
+   :width: 100%
+
 Use this as the main survey view. A broad red or orange band at long
 periods means those periods should be excluded, corrected, or treated
 with caution before plane-wave inversion.
@@ -285,6 +310,10 @@ each station has its own source-receiver distance.
    )
 
    print(zones["station"].unique())
+
+.. code-block:: text
+
+   ['18-001A' '18-002U' '18-003A']
 
 Only stations with offsets are classified. With ``verbose=1``, missing
 offsets produce warnings from the classifier. In production workflows,
@@ -323,6 +352,13 @@ the assumed offset changes.
    sensitivity = pd.DataFrame(rows)
    print(sensitivity)
 
+.. code-block:: text
+
+      offset_m       far  transition      near
+   0     500.0  0.258760    0.386792  0.354447
+   1    2000.0  0.528976    0.322776  0.148248
+   2    8000.0  0.714286    0.283019  0.002695
+
 Report this table when offset is assumed rather than measured. It makes
 the geometry dependence visible instead of hiding it inside one plot.
 
@@ -349,6 +385,9 @@ compared in one figure.
    ax_far.set_title("Offset = 8000 m")
 
    fig.tight_layout()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-fieldzone-07.png
+   :width: 100%
 
 This comparison is especially useful for design studies: if the target
 period band is near or transition at the planned offset, move the
@@ -391,6 +430,9 @@ convention and survey geometry before applying this in production.
    ax.set_ylabel("Apparent resistivity (ohm.m)")
    ax.legend()
    fig.tight_layout()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-fieldzone-08.png
+   :width: 100%
 
 Where ``nf_factor`` is near ``1``, the curves overlap. Where
 ``nf_factor`` is large, the plane-wave apparent resistivity is strongly
@@ -484,6 +526,9 @@ offset-sensitivity summary, and field-zone pseudo-section.
    plot_field_zones(survey, offset_m, ax=ax)
    fig.tight_layout()
    fig.savefig(out / "field_zone_pseudosection.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-fieldzone-09.png
+   :width: 100%
 
 Worked Example
 --------------

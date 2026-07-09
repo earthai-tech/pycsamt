@@ -166,7 +166,7 @@
            </p>
            <div class="pyc-feature-tags">
              <a href="getting_started/data_formats.html">Formats</a>
-             <a href="site/index.html">Site tools</a>
+             <a href="user_guide/site/index.html">Site tools</a>
              <span>EDI</span><span>AVG</span><span>J</span><span>emdata</span>
            </div>
            <a class="pyc-feature-more" href="user_guide/data_loading.html">
@@ -196,7 +196,7 @@
          <div class="pyc-feature pyc-feature--gold pyc-reveal">
            <div class="pyc-feature-head">
              <span class="pyc-feature-icon"><i class="fa-solid fa-layer-group"></i></span>
-             <h3><a href="forward/index.html">Forward modelling</a></h3>
+             <h3><a href="user_guide/forward/index.html">Forward modelling</a></h3>
            </div>
            <p>
              Build synthetic layered-earth and 2-D models, compute forward
@@ -204,11 +204,11 @@
              design or inverter training.
            </p>
            <div class="pyc-feature-tags">
-             <a href="forward/index.html">Synthetics</a>
+             <a href="user_guide/forward/index.html">Synthetics</a>
              <a href="theory/index.html">Theory</a>
              <span>MT</span><span>CSAMT</span><span>TDEM</span>
            </div>
-           <a class="pyc-feature-more" href="forward/index.html">
+           <a class="pyc-feature-more" href="user_guide/forward/index.html">
              Learn more <i class="fa-solid fa-arrow-right"></i>
            </a>
          </div>
@@ -224,7 +224,7 @@
              networks and hybrid deep-learning inverters in 1-D to 3-D.
            </p>
            <div class="pyc-feature-tags">
-             <a href="models/index.html">Solvers</a>
+             <a href="user_guide/models/index.html">Solvers</a>
              <a href="user_guide/ai_inversion.html">PINN</a>
              <span>Occam2D</span><span>ModEM</span><span>MARE2DEM</span>
            </div>
@@ -244,7 +244,7 @@
              with the code-first MapView platform.
            </p>
            <div class="pyc-feature-tags">
-             <a href="map/index.html">Map tools</a>
+             <a href="user_guide/map/index.html">Map tools</a>
              <a href="user_guide/mapping.html">Mapping guide</a>
              <span>Pseudosection</span><span>3-D</span>
            </div>
@@ -256,7 +256,7 @@
          <div class="pyc-feature pyc-feature--gold pyc-reveal">
            <div class="pyc-feature-head">
              <span class="pyc-feature-icon"><i class="fa-solid fa-robot"></i></span>
-             <h3><a href="pipeline/index.html">Pipelines, agents &amp; apps</a></h3>
+             <h3><a href="user_guide/pipeline/index.html">Pipelines, agents &amp; apps</a></h3>
            </div>
            <p>
              Define reproducible workflows in YAML, JSON, or Python; let
@@ -264,11 +264,11 @@
              or work interactively in the web dashboard and desktop GUI.
            </p>
            <div class="pyc-feature-tags">
-             <a href="pipeline/index.html">Pipeline</a>
-             <a href="agents/index.html">AI agents</a>
+             <a href="user_guide/pipeline/index.html">Pipeline</a>
+             <a href="user_guide/agents/index.html">AI agents</a>
              <a href="applications/index.html">Apps</a>
            </div>
-           <a class="pyc-feature-more" href="pipeline/index.html">
+           <a class="pyc-feature-more" href="user_guide/pipeline/index.html">
              Learn more <i class="fa-solid fa-arrow-right"></i>
            </a>
          </div>
@@ -296,6 +296,17 @@
       .. tab-item:: Processing pipeline
 
          .. code-block:: python
+            :caption: Load and QC
+
+            from pycsamt.api import read_edis
+            from pycsamt.emtools import build_qc_table
+
+            sites = read_edis("data/edi/")
+            qc = build_qc_table(sites)     # station coverage, SNR, skew
+            print(qc[["station", "n_freq", "snr_med"]])
+
+         .. code-block:: python
+            :caption: Named pipeline steps
 
             from pycsamt.pipeline import Pipeline, Step
 
@@ -308,9 +319,32 @@
             result = pipe.run(sites, outdir="outputs/run01/")
             print(result.summary())
 
+         .. code-block:: python
+            :caption: Reproducible reruns
+
+            pipe.to_yaml("pipeline.yaml")       # share the exact chain
+
+            from pycsamt.pipeline import Pipeline
+
+            rerun = Pipeline.from_yaml("pipeline.yaml")
+            result = rerun.run(sites, outdir="outputs/run02/")
+            print(result.ok, f"{result.elapsed_sec:.1f}s")
+
       .. tab-item:: Inversion results
 
          .. code-block:: python
+            :caption: EDIs to solver input
+
+            from pycsamt.models.mare2dem import make_mt_data_from_edi
+
+            make_mt_data_from_edi(
+                "data/edi/L22/", "runs/demo_mt/L22.emdata",
+                output_modes="all",
+                error_floor_te=0.05, error_floor_tm=0.05,
+            )
+
+         .. code-block:: python
+            :caption: Response and model plots
 
             from pycsamt.models.mare2dem import (
                 InversionResult, PlotResponse, PlotModel,
@@ -320,9 +354,20 @@
             PlotResponse(result).plot(max_rx=6, savefig="response.pdf")
             PlotModel(result).plot(cmap="turbo_r", savefig="section.pdf")
 
-      .. tab-item:: PINN inversion
+      .. tab-item:: AI inversion
 
          .. code-block:: python
+            :caption: Train a 1-D inverter
+
+            from pycsamt.forward.batch import generate_dataset
+            from pycsamt.ai.inversion import EMInverter1D
+
+            ds = generate_dataset(n_samples=2_000, n_layers=5, seed=0)
+            inv = EMInverter1D(arch="resnet", n_layers=5)
+            inv.fit(ds, epochs=30)
+
+         .. code-block:: python
+            :caption: PINN 2-D inversion
 
             from pycsamt.ai.inversion import PINN2D
 
@@ -330,27 +375,106 @@
             model = inv.fit(sites, frequencies=freqs)
             model.plot_section()
 
-      .. tab-item:: AI agent
+         .. code-block:: python
+            :caption: Uncertainty bands
+
+            from pycsamt.ai import EnsembleInverter
+
+            ens = EnsembleInverter(inv, n_estimators=8)
+            mean, std = ens.predict_with_uncertainty(ds.X)
+
+      .. tab-item:: AI agents
 
          .. code-block:: python
+            :caption: One agent, one job
 
-            from pycsamt.agents import AgentMaster
+            from pycsamt.agents import MTLoaderAgent, DataQCAgent
 
-            master = AgentMaster(provider="anthropic")
-            report = master.run(
-                "Load data/edi/, flag stations with RMS > 2, "
-                "build an Occam2D input for profile L22, "
-                "launch inversion, and produce a PDF report."
-            )
+            loaded = MTLoaderAgent().execute({"path": "data/edi/"})
+            qc = DataQCAgent().execute({
+                "sites": loaded["sites"],
+                "output_dir": "outputs/qc/",
+            })
+            print(qc.summary)
+
+         .. code-block:: python
+            :caption: Plan from plain text
+
+            from pycsamt.agents import WorkflowOrchestratorAgent
+
+            agent = WorkflowOrchestratorAgent()
+            plan = agent.execute({
+                "request": "QC the EDI files and prepare a short report",
+                "data_path": "data/edi/",
+                "dry_run": True,        # preview the chain first
+            })
+            print(plan["workflow_type"], plan["reasoning"])
+
+         .. code-block:: python
+            :caption: Execute the plan
+
+            result = agent.execute({
+                "request": "flag stations with RMS > 2, build an "
+                           "Occam2D input for L22, and write a report",
+                "data_path": "data/edi/",
+                "output_dir": "runs/L22/",
+            })
+            print(result.status)
 
       .. tab-item:: CLI
 
          .. code-block:: bash
+            :caption: Inspect a survey
 
             pycsamt survey set data/edi/
             pycsamt edi info data/edi/
+
+         .. code-block:: bash
+            :caption: Invert and pipeline
+
             pycsamt invert build data/edi/ --solver occam2d --workdir runs/occam2d/
             pycsamt pipe run --config pipeline.yaml --survey data/edi/ --out outputs/run01/
+
+      .. tab-item:: IoT telemetry
+
+         .. code-block:: python
+            :caption: Edge QC on the recorder
+
+            import numpy as np
+            from pycsamt.iot import EdgeProcessor, simulate_amt_station
+
+            station = simulate_amt_station("S01", n_samples=1024, seed=7)
+            block = np.column_stack(list(station["data"].values()))
+            edge = EdgeProcessor().process(
+                block, channel_names=["ex", "ey", "hx", "hy"],
+            )
+            print(edge.decision, edge.reasons)
+
+         .. code-block:: python
+            :caption: Field-session dashboard
+
+            from pycsamt.iot import (
+                FieldSession, plot_field_dashboard, simulate_iot_network,
+            )
+
+            session = FieldSession("survey-2026", method="amt")
+            session.add_packets(simulate_iot_network(n_stations=12, seed=7))
+
+            status = session.assess()             # edge-QC + health roll-up
+            plot_field_dashboard(session)         # live acquisition dashboard
+            inputs = session.to_pipeline_input()  # hand off to processing
+
+         .. code-block:: python
+            :caption: Power budget
+
+            from pycsamt.iot import EnergyConfig, estimate_energy_budget
+
+            budget = estimate_energy_budget(EnergyConfig(
+                battery_wh=84.0, active_power_w=1.2, duty_cycle=0.5,
+                solar_wh_per_day=20.0, telemetry_power_w=2.5,
+                telemetry_seconds_per_day=300.0,
+            ))
+            print(budget.state, budget.runtime_days)
 
 .. raw:: html
 
@@ -490,12 +614,12 @@
          <div>
            <h3>Systems</h3>
            <ul>
-             <li><a href="pipeline/index.html">Pipeline system</a></li>
-             <li><a href="agents/index.html">AI agents</a></li>
-             <li><a href="forward/index.html">Forward modelling</a></li>
-             <li><a href="models/index.html">Model integrations</a></li>
-             <li><a href="site/index.html">Site tools</a></li>
-             <li><a href="map/index.html">Map tools</a></li>
+             <li><a href="user_guide/pipeline/index.html">Pipeline system</a></li>
+             <li><a href="user_guide/agents/index.html">AI agents</a></li>
+             <li><a href="user_guide/forward/index.html">Forward modelling</a></li>
+             <li><a href="user_guide/models/index.html">Model integrations</a></li>
+             <li><a href="user_guide/site/index.html">Site tools</a></li>
+             <li><a href="user_guide/map/index.html">Map tools</a></li>
              <li><a href="applications/index.html">Applications</a></li>
            </ul>
          </div>
@@ -519,14 +643,14 @@
    :hidden:
    :caption: Install
 
-   Install <installation>
+   Install <install/index>
 
 .. toctree::
    :maxdepth: 2
    :hidden:
    :caption: API
 
-   api_guide/index
+   API <api_landing>
 
 .. toctree::
    :maxdepth: 2
@@ -540,29 +664,14 @@
    :hidden:
    :caption: Examples
 
-   examples/index
-   emtools/index
+   Examples <examples/index>
 
 .. toctree::
    :maxdepth: 2
    :hidden:
    :caption: AI agents
 
-   agents/index
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: Modeling
-
-   Modeling <models/index>
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: Tools
-
-   Tools <site/index>
+   user_guide/agents/index
 
 .. toctree::
    :maxdepth: 2
@@ -570,7 +679,6 @@
    :caption: Interfaces
 
    cli/index
-   pipeline/index
    applications/index
 
 .. toctree::

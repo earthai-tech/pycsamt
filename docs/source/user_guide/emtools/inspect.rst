@@ -124,6 +124,21 @@ present, period range, and coordinates.
    }
    print(pd.Series(overview))
 
+.. code-block:: text
+
+      station  n_freq  has_tipper  period_min  period_max        lat         lon
+   0  18-001A      53       False    0.000096    0.992063  32.120300  119.128833
+   1  18-002U      53       False    0.000096    0.992063  32.121133  119.128900
+   2  18-003A      53       False    0.000096    0.992063  32.122083  119.128850
+   3  18-004A      53       False    0.000096    0.992063  32.123333  119.128833
+   4  18-005U      53       False    0.000096    0.992063  32.123900  119.128833
+   n_sites                 28
+   has_any_tipper       False
+   n_freq_values         [53]
+   period_min        0.000096
+   period_max        0.992063
+   dtype: object
+
 Read this table before plotting anything. A survey with mixed
 ``n_freq`` values needs frequency-grid attention. A survey with
 ``has_tipper=False`` everywhere should not be sent into tipper or
@@ -154,6 +169,38 @@ printing reports or comparing several lines.
 
    print(compact.to_string(index=False))
 
+.. code-block:: text
+
+   station  n_freq  period_min  period_max  has_tipper
+   18-001A      53    0.000096    0.992063       False
+   18-002U      53    0.000096    0.992063       False
+   18-003A      53    0.000096    0.992063       False
+   18-004A      53    0.000096    0.992063       False
+   18-005U      53    0.000096    0.992063       False
+   18-006A      53    0.000096    0.992063       False
+   18-007U      53    0.000096    0.992063       False
+   18-008U      53    0.000096    0.992063       False
+   18-009A      53    0.000096    0.992063       False
+   18-010U      53    0.000096    0.992063       False
+   18-011A      53    0.000096    0.992063       False
+   18-012A      53    0.000096    0.992063       False
+   18-013U      53    0.000096    0.992063       False
+   18-014A      53    0.000096    0.992063       False
+   18-015U      53    0.000096    0.992063       False
+   18-016A      53    0.000096    0.992063       False
+   18-017U      53    0.000096    0.992063       False
+   18-018A      53    0.000096    0.992063       False
+   18-019U      53    0.000096    0.992063       False
+   18-020A      53    0.000096    0.992063       False
+   18-021B      53    0.000096    0.992063       False
+   18-021U      53    0.000096    0.992063       False
+   18-022U      53    0.000096    0.992063       False
+   18-022V      53    0.000096    0.992063       False
+   18-023A      53    0.000096    0.992063       False
+   18-023V      53    0.000096    0.992063       False
+   18-024U      53    0.000096    0.992063       False
+   18-025A      53    0.000096    0.992063       False
+
 The returned object may be an API-aware frame when the package API-view
 mode is enabled. Passing ``api=False`` gives a plain pandas
 ``DataFrame`` for ordinary scripts.
@@ -179,6 +226,37 @@ sections. The most common checks are ``"mt"`` for impedance and
 
    for station, sections in missing.items():
        print(f"{station}: missing {', '.join(sections)}")
+
+.. code-block:: text
+
+   18-001A: missing tipper
+   18-002U: missing tipper
+   18-003A: missing tipper
+   18-004A: missing tipper
+   18-005U: missing tipper
+   18-006A: missing tipper
+   18-007U: missing tipper
+   18-008U: missing tipper
+   18-009A: missing tipper
+   18-010U: missing tipper
+   18-011A: missing tipper
+   18-012A: missing tipper
+   18-013U: missing tipper
+   18-014A: missing tipper
+   18-015U: missing tipper
+   18-016A: missing tipper
+   18-017U: missing tipper
+   18-018A: missing tipper
+   18-019U: missing tipper
+   18-020A: missing tipper
+   18-021B: missing tipper
+   18-021U: missing tipper
+   18-022U: missing tipper
+   18-022V: missing tipper
+   18-023A: missing tipper
+   18-023V: missing tipper
+   18-024U: missing tipper
+   18-025A: missing tipper
 
 This function uses the same internal extraction helpers as the plotting
 tools. That matters because real EDI/Site objects can expose placeholder
@@ -206,6 +284,11 @@ difference explicit before writing code that assumes tipper exists.
 
    print(f"L18PLT stations missing tipper: {len(amt_missing)}")
    print(f"KAP03 stations missing tipper: {len(mt_missing)}")
+
+.. code-block:: text
+
+   L18PLT stations missing tipper: 28
+   KAP03 stations missing tipper: 0
 
 If every station is missing tipper, that is not necessarily a failure.
 It simply means you should stay with impedance-based inspection and use
@@ -239,6 +322,38 @@ Frequency Coverage Tables
        if missing_from_union.size:
            print(station, "missing", missing_from_union.size, "samples")
 
+.. code-block:: text
+
+   stations: 26
+   union frequency count: 37
+   common frequency count: 0
+   kap103 missing 17 samples
+   kap106 missing 17 samples
+   kap109 missing 20 samples
+   kap112 missing 17 samples
+   kap115 missing 17 samples
+   kap118 missing 17 samples
+   kap121 missing 17 samples
+   kap123 missing 17 samples
+   kap125 missing 17 samples
+   kap127 missing 17 samples
+   kap130 missing 17 samples
+   kap133 missing 17 samples
+   kap136 missing 17 samples
+   kap139 missing 17 samples
+   kap142 missing 17 samples
+   kap145 missing 19 samples
+   kap148 missing 17 samples
+   kap151 missing 17 samples
+   kap152 missing 17 samples
+   kap155 missing 17 samples
+   kap157 missing 17 samples
+   kap160 missing 17 samples
+   kap163 missing 17 samples
+   kap169 missing 17 samples
+   kap172 missing 17 samples
+   kap175 missing 17 samples
+
 Use ``mode="per-site"`` when you need station names. Use ``"union"``
 to know the full survey frequency grid. Use ``"intersection"`` to know
 which frequencies are shared by every station.
@@ -270,6 +385,9 @@ frequency presence mask.
    fig.savefig("kap03_frequency_coverage.png", dpi=200)
    plt.close(fig)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-07.png
+   :width: 100%
+
 The colour value is presence, not data quality. A fully covered cell
 only means the sample exists. Use QC, error, confidence, and frequency
 editing tools to decide whether the sample is reliable.
@@ -287,11 +405,12 @@ and ``"yy"`` when those columns exist in the station dataframe.
    import matplotlib.pyplot as plt
 
    from pycsamt.emtools import ensure_sites, plot_rhoa_phi
+   from pycsamt.emtools._core import _iter_items
 
    survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
 
-   station_names = survey.stations[:4]
-   subset = [survey.get_site(name) for name in station_names]
+   subset_paths = [site.edi.path for site in list(_iter_items(survey))[:4]]
+   subset = ensure_sites(subset_paths, strict=True)
 
    ax_rho, ax_phase = plot_rhoa_phi(
        subset,
@@ -303,6 +422,9 @@ and ``"yy"`` when those columns exist in the station dataframe.
 
    ax_rho.figure.savefig("l18plt_rho_phase_subset.png", dpi=200)
    plt.close(ax_rho.figure)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-08.png
+   :width: 100%
 
 Do not plot every station at once unless the survey is tiny. The
 function will draw the data, but the legend can become unreadable. Use
@@ -340,6 +462,9 @@ aggregation for duplicate cells.
    fig.savefig("l18plt_rho_xy_pseudosection.png", dpi=200)
    plt.close(fig)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-09.png
+   :width: 100%
+
 The x-axis is station order. The y-axis is period. Short periods are
 drawn at the top because the image uses the common MT pseudo-section
 convention: shallow-sensitive samples above deeper-sensitive samples.
@@ -373,6 +498,9 @@ much stronger anomaly.
    fig.savefig("rho_xy_line_comparison.png", dpi=200)
    plt.close(fig)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-10.png
+   :width: 100%
+
 If topography is configured globally, ``pseudosection`` can draw an
 optional topography strip. Pass ``topo=False`` when you want a compact
 data-only panel.
@@ -390,11 +518,17 @@ the survey actually contains tipper data.
    import matplotlib.pyplot as plt
 
    from pycsamt.emtools import ensure_sites, plot_tipper_components
+   from pycsamt.emtools._core import _iter_items, _name
 
    survey = ensure_sites("data/MT/kap03lmt_edis", strict=True)
 
    station_names = ["kap103", "kap121", "kap142", "kap151"]
-   subset = [survey.get_site(name) for name in station_names]
+   subset_paths = [
+       site.edi.path
+       for index, site in enumerate(_iter_items(survey))
+       if _name(site, index) in station_names
+   ]
+   subset = ensure_sites(subset_paths, strict=True)
 
    fig, ax = plt.subplots(figsize=(8.5, 4.8))
    plot_tipper_components(
@@ -408,6 +542,9 @@ the survey actually contains tipper data.
    fig.tight_layout()
    fig.savefig("kap03_tipper_components.png", dpi=200)
    plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-11.png
+   :width: 100%
 
 The horizontal zero line is important. Sign changes, isolated spikes,
 or one station separating strongly from the others are good reasons to
@@ -445,6 +582,9 @@ sub-panels for one station.
    fig.savefig("kap151_station_response.png", dpi=200)
    plt.close(fig)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-12.png
+   :width: 100%
+
 The first row is apparent resistivity on log-log axes. The second row
 is phase on a log-period x-axis. The optional third row shows
 ``Re(Tx)``, ``Im(Tx)``, ``Re(Ty)``, and ``Im(Ty)``. If no tipper exists
@@ -478,11 +618,16 @@ The RMS is computed in ``log10(rho)`` space.
        components=("xy", "yx"),
        period_range=(1e-2, 2e4),
        show_rms=True,
+       show_tipper=False,
+       figsize=(8.5, 5.2),
        title="kap151 observed vs model-like response",
    )
 
-   fig.savefig("kap151_response_with_model_overlay.png", dpi=200)
+   fig.savefig("kap151_response_with_model_overlay.png", dpi=200, bbox_inches="tight")
    plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-13.png
+   :width: 100%
 
 Use this view after inversion or forward modelling to check whether the
 model misses a whole component, a period band, or only local points. A
@@ -514,6 +659,7 @@ response.
        pseudosection,
        sites_summary,
    )
+   from pycsamt.emtools._core import _iter_items, _name
 
    out = Path("inspect_report_l18plt")
    out.mkdir(parents=True, exist_ok=True)
@@ -537,7 +683,12 @@ response.
    plt.close(fig)
 
    subset_names = list(summary["station"].head(4))
-   subset = [survey.get_site(name) for name in subset_names]
+   subset_paths = [
+       site.edi.path
+       for index, site in enumerate(_iter_items(survey))
+       if _name(site, index) in subset_names
+   ]
+   subset = ensure_sites(subset_paths, strict=True)
 
    ax_rho, ax_phase = plot_rhoa_phi(subset, components=("xy", "yx"))
    ax_rho.figure.savefig(out / "rho_phase_subset.png", dpi=200)
@@ -556,8 +707,31 @@ response.
        components=("xy", "yx"),
        show_tipper=False,
    )
-   fig.savefig(out / f"station_response_{first_station}.png", dpi=200)
+   fig.savefig(out / f"station_response_{first_station}.png", dpi=200, bbox_inches="tight")
    plt.close(fig)
+
+.. grid:: 1 1 2 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-14-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-14-02.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-14-03.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-14-04.png
+         :width: 100%
 
 Reading The Inspection Results
 ------------------------------

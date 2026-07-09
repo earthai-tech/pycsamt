@@ -37,6 +37,7 @@ Tensor and Dimensionality
    pycsamt.emtools.impedance
    pycsamt.emtools.tensor
    pycsamt.emtools.tf
+   pycsamt.emtools.gb
    pycsamt.emtools.skew
    pycsamt.emtools.strike
    pycsamt.emtools.dimensionality

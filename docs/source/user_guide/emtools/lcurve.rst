@@ -93,6 +93,19 @@ output.
    ax = plot_lcurve(misfit, roughness, lambdas)
    ax.figure.savefig("synthetic_lcurve.png", dpi=200)
 
+.. code-block:: text
+
+   rough     0.412354
+   misfit    0.587646
+   lam       1.193777
+   curv      1.333709
+   slope    -0.711581
+   Name: 20, dtype: float64
+   lambda* = 1.1937766417144369
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-02.png
+   :width: 100%
+
 The returned table has columns ``rough``, ``misfit``, ``lam``, ``curv``,
 and ``slope``. The selected row is stored separately as
 ``table.attrs["corner_idx"]`` so the table itself remains ordinary
@@ -128,6 +141,15 @@ corner selection numerically.
    print(f"corner score: {row['curv']:.4g}")
    print(f"local slope: {row['slope']:.4g}")
 
+.. code-block:: text
+
+   corner index: 20
+   lambda*: 1.194
+   misfit: 0.5876
+   roughness: 0.4124
+   corner score: 1.334
+   local slope: -0.7116
+
 ``curv`` is the corner score. With ``method="curvature"``, it is the
 numerical curvature of the log-log curve. With ``method="maxdist"``, it
 is the perpendicular distance from the line connecting the first and
@@ -156,6 +178,10 @@ arrays plus the selected corner index.
    lambda_star = result["lam"][corner]
 
    print(lambda_star)
+
+.. code-block:: text
+
+   0.8376776400682924
 
 The dictionary keys are ``rough``, ``misfit``, ``lam``, ``curv``,
 ``slope``, and ``corner``.
@@ -236,6 +262,11 @@ Two corner-picking methods are available.
    print("curvature lambda*:", curvature["lam"].iloc[j_curv])
    print("maxdist lambda*:", maxdist["lam"].iloc[j_dist])
 
+.. code-block:: text
+
+   curvature lambda*: 1.1937766417144369
+   maxdist lambda*: 0.8376776400682924
+
 If the two methods choose similar values, the corner is probably stable.
 If they disagree strongly, inspect the curve and consider widening the
 lambda sweep.
@@ -264,6 +295,13 @@ corner.
        )
        j = table.attrs["corner_idx"]
        print(f"smooth={smooth}: lambda*={table['lam'].iloc[j]:.4g}")
+
+.. code-block:: text
+
+   smooth=1: lambda*=1.194
+   smooth=3: lambda*=1.194
+   smooth=5: lambda*=0.8377
+   smooth=7: lambda*=0.8377
 
 Be cautious with heavy smoothing. It can move the curvature maximum
 away from the visual corner, especially for short curves. ``maxdist`` is
@@ -302,6 +340,9 @@ default.
    fig.savefig("lcurve_18-001A.png", dpi=200)
    plt.close(fig)
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-08.png
+   :width: 100%
+
 The inset shows the corner score. For ``method="curvature"`` the inset
 title is ``curv``. For ``method="maxdist"`` it is ``knee``.
 
@@ -318,9 +359,17 @@ stations, inversion targets, or model parameterizations.
 
    from pycsamt.emtools import plot_lcurve
 
-   curves_misfit = [misfit_a, misfit_b, misfit_c]
-   curves_roughness = [rough_a, rough_b, rough_c]
-   curves_lambda = [lambdas_a, lambdas_b, lambdas_c]
+   curves_misfit = [
+       misfit,
+       misfit * 1.25 + 0.03,
+       misfit * 0.85 + 0.08,
+   ]
+   curves_roughness = [
+       roughness,
+       roughness * 0.75 + 0.02,
+       roughness * 1.35 + 0.05,
+   ]
+   curves_lambda = [lambdas, lambdas, lambdas]
 
    fig, ax = plt.subplots(figsize=(7.0, 5.0))
    plot_lcurve(
@@ -334,6 +383,9 @@ stations, inversion targets, or model parameterizations.
    )
    fig.savefig("lcurve_multi_run.png", dpi=200)
    plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-09.png
+   :width: 100%
 
 The plot uses one shared inset for all curves, so the corner scores can
 be compared in the same small panel. The legend reports the selected
@@ -359,6 +411,9 @@ want readers to see how increasing lambda moves through the trade-off.
        show_inset=False,
    )
    ax.figure.savefig("lcurve_with_lambda_direction.png", dpi=200)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-10.png
+   :width: 100%
 
 Use arrows when teaching or reviewing a sweep. For compact reports,
 points plus the corner marker are usually enough.
@@ -429,6 +484,13 @@ transparent way to produce real misfit and roughness arrays.
    ax = plot_lcurve(misfit, roughness, lambdas, labels=["18-001A"])
    ax.figure.savefig("lcurve_real_station.png", dpi=200)
 
+.. code-block:: text
+
+   lambda* = 0.34863652276780877
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-11.png
+   :width: 100%
+
 This code makes the L-curve inputs explicit. ``misfit`` measures how far
 the smoothed model is from the observed log-resistivity curve.
 ``roughness`` measures how curved the smoothed model remains after
@@ -478,6 +540,9 @@ under- and over-regularized choices. This is the best sanity check.
    ax.legend(fontsize=8)
    fig.savefig("regularization_levels.png", dpi=200)
    plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-12.png
+   :width: 100%
 
 The under-regularized model should usually track too much local noise.
 The over-regularized model should usually be too smooth. The corner
@@ -561,6 +626,9 @@ summary for one sweep.
    fig.tight_layout()
    fig.savefig(out / "lcurve.png", dpi=200)
    plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-13.png
+   :width: 100%
 
 Worked Example
 --------------

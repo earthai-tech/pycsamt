@@ -1,5 +1,85 @@
-pyCSAMT 2.0.0
-=============
+.. _release_v2_0_0:
 
-This page will collect the pyCSAMT v2.0.0 release notes, migration notes, and
-known limitations.
+-------------
+Version 2.0.0
+-------------
+*(Development line — pre-stable)*
+
+pyCSAMT 2.0.0 |Feature| |API Change| |Docs|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+pyCSAMT 2.0.0 is a ground-up rework of the 1.x package: one consistent
+API from raw field data to inversion and interpretation, four
+applications on top of the same engine, and a fully rebuilt
+documentation site. The v2 line is under active development — APIs may
+still change before the stable release, and these notes are updated as
+the line evolves.
+
+Highlights
+~~~~~~~~~~
+
+* |Feature| **One front door:** ``pycsamt.api`` gathers the readers
+  (``read_edis``, ``read_sites``), tabular ``APIFrame`` views, and the
+  ``configure_*`` / ``reset_*`` runtime-settings families every
+  workflow uses.
+
+* |Feature| **Named-step processing pipeline:** ``pycsamt.pipeline``
+  chains catalogued steps (QC, notch, band selection, static shift,
+  rotation, ...) into reproducible runs with reports, presets, and YAML
+  round-tripping.
+
+* |Feature| **EM analytics toolbox:** ``pycsamt.emtools`` — QC tables,
+  dimensionality, skew, strike, phase-tensor diagnostics, corrections,
+  and one-call plotting for every view.
+
+* |Feature| **Modeling stack:** synthetic forward modelling
+  (``pycsamt.forward``), external engine integrations — Occam2D, ModEM,
+  MARE2DEM — under ``pycsamt.models``, and deep-learning inversion in
+  ``pycsamt.ai`` (1-D/2-D/3-D nets, ensembles, uncertainty).
+
+* |Feature| **AI agents:** specialised loader/QC/processing/inversion
+  agents plus a workflow orchestrator that turns a plain-text request
+  into a previewable agent chain (``pycsamt.agents``).
+
+* |Feature| **IoT field telemetry:** ``pycsamt.iot`` — edge QC on the
+  recorder, telemetry schemas and transports, power budgeting,
+  GPS-sync audit, and a live field-session dashboard.
+
+* |New| **Four applications**, one engine: the desktop GUI, the web
+  app, the Agent Master chat surface, and the MapView map workbench
+  (see :doc:`/applications/index`).
+
+Changed
+~~~~~~~
+
+* |Breaking| |API Change| **New package layout.** The v1 module tree
+  (``pycsamt.ff``, ``pycsamt.viewer``, ``pycsamt.geodrill``, ...) is
+  replaced by the subsystem packages listed above. v1 scripts do not
+  run unchanged against v2 — start from the
+  :doc:`user guide </user_guide/index>` equivalents of your workflow.
+
+* |API Change| **Configuration is explicit.** Runtime behaviour
+  (output directories, plot styles, axis conventions, agent budgets)
+  is set through the documented ``configure_*`` families instead of
+  scattered keyword arguments; see the
+  :doc:`API configuration guide </api_guide/index>`.
+
+* |Docs| **Documentation rebuilt.** Executed example galleries for
+  every tool family (:doc:`/examples/index`), task-based user guides,
+  application manuals, and a full autodoc reference.
+
+Upgrade notes
+~~~~~~~~~~~~~
+
+The v2 line installs alongside your data unchanged — EDI/AVG/J field
+files, Occam2D and ModEM run folders all load through the new readers:
+
+.. code-block:: bash
+
+   pip install pycsamt
+
+   # application surfaces (desktop, web, Agent Master, MapView)
+   pip install "pycsamt[app]"
+
+Until the stable 2.0.0 tag, pin exact versions in reproducible
+environments and treat minor updates as potentially API-changing.

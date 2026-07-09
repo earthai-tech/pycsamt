@@ -114,6 +114,10 @@ files. Use it when you already have observed values and interval bounds.
    score = coverage_score(rho_obs, q_lo, q_hi)
    print(f"empirical coverage = {score:.2f}")
 
+.. code-block:: text
+
+   empirical coverage = 0.60
+
 Line 9 computes the fraction of observations that fall inside their
 interval. In this toy example, values below ``q_lo`` or above ``q_hi``
 count as misses.
@@ -196,6 +200,17 @@ Use ``rho_coverage`` when you need one row per station and frequency.
    print(detail.head())
    detail.to_csv("l18plt_coverage_detail.csv", index=False)
 
+.. code-block:: text
+
+      station  freq_hz  period_s  ...        q_hi  covered  width_pct
+   0  18-001A  10400.0  0.000096  ...   83.967382     True  32.193022
+   1  18-001A   8707.0  0.000115  ...   85.549285     True  31.582076
+   2  18-001A   7289.0  0.000137  ...   87.159020     True  32.307651
+   3  18-001A   6102.0  0.000164  ...  101.271129     True  33.461671
+   4  18-001A   5108.0  0.000196  ...  112.968367     True  34.616073
+
+   [5 rows x 8 columns]
+
 The output columns are:
 
 - ``station``: station name.
@@ -245,6 +260,9 @@ curve against its bounds.
    ax.legend()
    fig.tight_layout()
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-04.png
+   :width: 100%
+
 Red points are misses. A few isolated misses may be acceptable. A whole
 frequency band outside the interval usually means the model is biased or
 the interval width is too narrow in that part of the spectrum.
@@ -269,6 +287,20 @@ Use ``coverage_table`` to summarize each station.
 
    ranked = table.sort_values("empirical_cov")
    print(ranked.head(10))
+
+.. code-block:: text
+
+       station  n_freq  empirical_cov  mean_width_pct  calibrated_flag
+   20  18-021B      53       0.754717       61.136034            False
+   23  18-022V      53       0.811321       61.889193            False
+   26  18-024U      53       0.830189       62.828105            False
+   22  18-022U      53       0.830189       61.305808            False
+   13  18-014A      53       0.867925       66.977547            False
+   18  18-019U      53       0.867925       62.615552            False
+   14  18-015U      53       0.886792       62.958395            False
+   0   18-001A      53       0.886792       63.019031            False
+   24  18-023A      53       0.886792       61.066131            False
+   1   18-002U      53       0.886792       63.691545            False
 
 The output columns are:
 
@@ -310,6 +342,9 @@ Thin radial segments show the prediction interval.
        ax=ax,
    )
    fig.tight_layout()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-06.png
+   :width: 100%
 
 This plot is useful when you want to know whether misses cluster in a
 specific part of the frequency band. A red wedge suggests a systematic
@@ -353,6 +388,19 @@ coverage in interval width?
        ax=ax2,
    )
 
+.. grid:: 1 1 2 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-07-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-07-02.png
+         :width: 100%
+
 If widths grow toward lower frequencies, uncertainty is increasing with
 longer periods and, approximately, with greater investigation depth. If
 widths are huge everywhere, high coverage may not be very informative.
@@ -382,6 +430,18 @@ prediction, not only interval bounds.
        rho_comp="xy",
        n_bins=18,
    )
+
+.. code-block:: text
+
+      station  freq_hz   rel_err_pct   abs_err_pct
+   0  18-001A  10400.0  7.310073e+00  7.310073e+00
+   1  18-001A   8707.0  1.375503e+00  1.375503e+00
+   2  18-001A   7289.0 -1.893832e-14  1.893832e-14
+   3  18-001A   6102.0  1.638024e-14  1.638024e-14
+   4  18-001A   5108.0  0.000000e+00  0.000000e+00
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-08.png
+   :width: 100%
 
 The output columns are:
 
@@ -437,6 +497,13 @@ underconfident intervals.
 
    comparison = pd.DataFrame(rows)
    print(comparison)
+
+.. code-block:: text
+
+            scenario  mean_coverage  mean_width_pct  n_calibrated
+   0        sensible       0.908356       62.287196            18
+   1   overconfident       0.766846       24.914878             0
+   2  underconfident       0.986523      186.861587            28
 
 Read this table as a trade-off. Overconfident intervals should have low
 coverage and narrow width. Underconfident intervals should have high
@@ -527,6 +594,19 @@ figures together.
    fig2, ax2 = plt.subplots(figsize=(8, 4))
    plot_width_drift(survey, q_lo=q_lo, q_hi=q_hi, ax=ax2)
    fig2.savefig(out / "width_drift.png", dpi=200)
+
+.. grid:: 1 1 2 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-10-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-10-02.png
+         :width: 100%
 
 Worked Example
 --------------

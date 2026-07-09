@@ -386,6 +386,18 @@
       .. tab-item:: AI agents
 
          .. code-block:: python
+            :caption: One line, whole workflow
+
+            from pycsamt.agents import AgentMaster
+
+            master = AgentMaster(provider="anthropic")
+            report = master.run(
+                "Load data/edi/, flag stations with RMS > 2, "
+                "build an Occam2D input for profile L22, launch "
+                "inversion, and produce a PDF report."
+            )
+
+         .. code-block:: python
             :caption: One agent, one job
 
             from pycsamt.agents import MTLoaderAgent, DataQCAgent
@@ -409,18 +421,6 @@
                 "dry_run": True,        # preview the chain first
             })
             print(plan["workflow_type"], plan["reasoning"])
-
-         .. code-block:: python
-            :caption: One line, whole workflow
-
-            from pycsamt.agents import AgentMaster
-
-            master = AgentMaster(provider="anthropic")
-            report = master.run(
-                "Load data/edi/, flag stations with RMS > 2, "
-                "build an Occam2D input for profile L22, launch "
-                "inversion, and produce a PDF report."
-            )
 
       .. tab-item:: CLI
 

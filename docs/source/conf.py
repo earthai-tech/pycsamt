@@ -217,7 +217,7 @@ html_theme_options = {
     "navbar_center": ["navbar-nav"],
     "navbar_end": ["navbar-icon-links", "theme-switcher"],
     "navbar_persistent": ["search-button"],
-    "header_links_before_dropdown": 7,
+    "header_links_before_dropdown": 6,
     # Icon links (fill in real URLs when repo is public)
     "icon_links": [
         {

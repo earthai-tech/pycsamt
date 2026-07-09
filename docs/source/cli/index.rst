@@ -1,7 +1,7 @@
 .. _cli:
 
-CLI Reference
-=============
+CLI
+===
 
 The pyCSAMT command-line interface is the shell entry point for the same
 survey workflows exposed by the Python API: data inspection, format
@@ -45,73 +45,152 @@ The active survey is a convenience, not a hidden requirement. Commands
 that accept a survey path can still be called with an explicit path, and
 explicit paths should be preferred in scripts, reports, and CI jobs.
 
-Command Families
+Start Here
+----------
+
+.. grid:: 1 1 2 3
+   :gutter: 3
+   :class-container: cta-tiles
+
+   .. grid-item-card:: CLI overview
+      :link: overview
+      :link-type: doc
+      :img-top: ../_static/icons/cli-icon-terminal.svg
+      :class-card: pycsamt-card sd-text-center
+
+      High-level orientation to the CLI structure and the command
+      patterns every family shares.
+
+   .. grid-item-card:: Configuration
+      :link: config
+      :link-type: doc
+      :img-top: ../_static/icons/developer-notes-icon-tools.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Inspect runtime configuration, paths, defaults, and environment
+      information.
+
+   .. grid-item-card:: Survey registry
+      :link: survey
+      :link-type: doc
+      :img-top: ../_static/icons/quickstart-cli.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Manage active survey paths and registry-backed line defaults for
+      repeated work on one dataset.
+
+Data And Formats
 ----------------
 
-.. list-table::
-   :header-rows: 1
-   :widths: 18 26 56
+.. grid:: 1 1 2 3
+   :gutter: 3
+   :class-container: cta-tiles
 
-   * - Family
-     - Page
-     - Use it for
-   * - Overview
-     - ``overview``
-     - High-level orientation to the CLI structure and common command
-       patterns.
-   * - Configuration
-     - ``config``
-     - Inspecting runtime configuration, paths, defaults, and environment
-       information.
-   * - EDI
-     - ``edi``
-     - Validating, inventorying, rotating, selecting, and profiling EDI
-       survey files.
-   * - AVG
-     - ``avg``
-     - Inspecting Zonge AVG files, validating components, applying AVG
-       corrections, and exporting cleaned products.
-   * - Jones J
-     - ``jones``
-     - Inspecting, validating, selecting, and reading Jones ``.j`` files
-       before conversion or analysis.
-   * - Site
-     - ``site``
-     - Loading station collections, checking usable impedance data,
-       computing summaries, selecting stations, and preparing site-level
-       products.
-   * - Transform
-     - ``transform``
-     - Converting spectra, AVG, and Jones data into impedance EDI-style
-       products.
-   * - Forward
-     - ``forward``
-     - Running synthetic forward responses and generating training or
-       benchmark datasets.
-   * - Invert
-     - ``invert``
-     - Building inversion workdirs, launching solver runs, checking
-       status, reading results, and plotting inversion products.
-   * - Map
-     - ``map``
-     - Listing station coordinates and creating station map figures from
-       survey directories or the active survey.
-   * - Interpretation
-     - ``interp``
-     - Classifying inversion results, exporting interpreted products, and
-       mapping resistivity ranges to practical rock or hydrogeologic
-       labels.
-   * - Pipeline
-     - ``pipe``
-     - Listing processing steps, generating workflow files, expanding
-       presets, dry-running pipelines, and executing reproducible chains.
-   * - TDEM
-     - ``tdem``
-     - Working with transient electromagnetic survey files and conversion
-       workflows.
-   * - Survey
-     - ``survey``
-     - Managing active survey paths and registry-backed line defaults.
+   .. grid-item-card:: EDI commands
+      :link: edi
+      :link-type: doc
+      :img-top: ../_static/icons/impedance.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Validate, inventory, rotate, select, and profile EDI survey
+      files.
+
+   .. grid-item-card:: AVG commands
+      :link: avg
+      :link-type: doc
+      :img-top: ../_static/icons/user-guide-data-loading.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Inspect Zonge AVG files, validate components, apply corrections,
+      and export cleaned products.
+
+   .. grid-item-card:: Jones commands
+      :link: jones
+      :link-type: doc
+      :img-top: ../_static/icons/glossary-icon-book.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Inspect, validate, select, and read Jones ``.j`` files before
+      conversion or analysis.
+
+   .. grid-item-card:: Site commands
+      :link: site
+      :link-type: doc
+      :img-top: ../_static/icons/user-guide-site.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Load station collections, check usable impedance, compute
+      summaries, and prepare site-level products.
+
+   .. grid-item-card:: Transform commands
+      :link: transform
+      :link-type: doc
+      :img-top: ../_static/icons/external-validation.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Convert spectra, AVG, and Jones data into impedance EDI-style
+      products.
+
+   .. grid-item-card:: TDEM commands
+      :link: tdem
+      :link-type: doc
+      :img-top: ../_static/icons/tdem.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Work with transient electromagnetic survey files and conversion
+      workflows.
+
+Processing And Modelling
+------------------------
+
+.. grid:: 1 1 2 3
+   :gutter: 3
+   :class-container: cta-tiles
+
+   .. grid-item-card:: Pipeline commands
+      :link: pipe
+      :link-type: doc
+      :img-top: ../_static/icons/user-guide-pipeline.svg
+      :class-card: pycsamt-card sd-text-center
+
+      List steps, expand presets, dry-run pipelines, and execute
+      reproducible processing chains.
+
+   .. grid-item-card:: Forward commands
+      :link: forward
+      :link-type: doc
+      :img-top: ../_static/icons/user-guide-forward.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Run synthetic forward responses and generate training or
+      benchmark datasets.
+
+   .. grid-item-card:: Inversion commands
+      :link: invert
+      :link-type: doc
+      :img-top: ../_static/icons/user-guide-inversion.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Build inversion workdirs, launch solver runs, check status, read
+      results, and plot products.
+
+   .. grid-item-card:: Interpretation commands
+      :link: interp
+      :link-type: doc
+      :img-top: ../_static/icons/user-guide-interpretation.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Classify inversion results, export interpreted products, and map
+      resistivity to rock or hydrogeologic labels.
+
+   .. grid-item-card:: Map commands
+      :link: map
+      :link-type: doc
+      :img-top: ../_static/icons/user-guide-mapping.svg
+      :class-card: pycsamt-card sd-text-center
+
+      List station coordinates and create station map figures from
+      survey directories or the active survey.
 
 Core Concepts
 -------------
@@ -378,13 +457,9 @@ Need machine-readable output
    ``--format csv``. If neither format is available for the exact output
    you need, use the Python API rather than parsing terminal tables.
 
-Reference Pages
----------------
-
-The sections below contain the detailed command documentation.
-
 .. toctree::
    :maxdepth: 1
+   :hidden:
 
    overview
    config

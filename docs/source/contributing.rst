@@ -94,6 +94,10 @@ Code Style
   conventions documented in :doc:`development/docstring_style`.
 * What counts as public API — and what a change to it requires — is
   defined in :doc:`development/api_policy`.
+* New classes inherit from the package base objects
+  (``PyCSAMTObject``, ``CoreObject``, ``MTBase``) rather than plain
+  ``object`` — :doc:`development/extending` explains what each base
+  provides.
 * Match the style of the file you are editing: naming, comment density,
   and import grouping are kept locally consistent.
 

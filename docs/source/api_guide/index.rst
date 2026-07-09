@@ -115,6 +115,8 @@ Besides the families above, ``pycsamt.api`` also exposes shared axis-label
 constants (``STATION_LABEL``, ``FREQUENCY_LABEL``, ``PERIOD_LABEL``, ...) and
 the base objects (:class:`~pycsamt.api.PyCSAMTObject`,
 :class:`~pycsamt.api.MetadataMixin`) that carry metadata through workflows.
+To build your own classes on these bases — and inherit the MT math and
+EDI interop that come with them — see :doc:`/development/extending`.
 
 In This Section
 ---------------

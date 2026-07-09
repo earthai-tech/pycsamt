@@ -6,7 +6,7 @@ Development
 This section documents contribution workflows, documentation rules, testing,
 public API policy, and release practices.
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 2 3
    :gutter: 3
    :class-container: cta-tiles
 
@@ -46,6 +46,15 @@ public API policy, and release practices.
       What counts as public API, deprecation rules, and the stability
       promises across the v2 line.
 
+   .. grid-item-card:: Extending pyCSAMT
+      :link: extending
+      :link-type: doc
+      :img-top: ../_static/icons/api-reference-icon-braces.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Inherit from PyCSAMTObject, CoreObject, or MTBase to get repr,
+      serialization, MT math, and EDI interop in your own classes.
+
 .. toctree::
    :maxdepth: 1
    :hidden:
@@ -54,4 +63,5 @@ public API policy, and release practices.
    docstring_style
    ci
    api_policy
+   extending
 

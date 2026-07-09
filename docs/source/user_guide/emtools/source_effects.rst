@@ -123,6 +123,12 @@ and returns :math:`\beta_{Ey}` in percent.
                f"up to {contaminated.max():.3g} Hz"
            )
 
+.. code-block:: text
+
+   offset=500 m: beta>3% up to 1e+03 Hz
+   offset=2000 m: beta>3% up to 392 Hz
+   offset=8000 m: beta>3% up to 27.6 Hz
+
 ``BETA_THRESH_PCT`` is ``3.0``. Values above that threshold indicate
 potential source overprint under the Yan and Fu criterion. The threshold
 is useful, but the exact result depends strongly on ``rho``, frequency,
@@ -151,6 +157,30 @@ observed impedance tensor.
    print(detail.head())
    print(detail["beta_pct"].describe())
    print(detail["overprint_flag"].value_counts())
+
+.. code-block:: text
+
+      station  freq_hz  period_s  ...         kr      beta_pct  overprint_flag
+   0  18-001A  10400.0  0.000096  ...  65.313194  2.893811e-17           False
+   1  18-001A   8707.0  0.000115  ...  57.126799  8.278746e-15           False
+   2  18-001A   7289.0  0.000137  ...  50.931906  5.904384e-13           False
+   3  18-001A   6102.0  0.000164  ...  40.883790  5.793214e-10           False
+   4  18-001A   5108.0  0.000196  ...  32.557630  1.670487e-07           False
+
+   [5 rows x 8 columns]
+   count    1.484000e+03
+   mean     2.321404e+01
+   std      2.174905e+01
+   min      1.008563e-38
+   25%      7.988633e-02
+   50%      1.701784e+01
+   75%      4.876054e+01
+   max      4.999804e+01
+   Name: beta_pct, dtype: float64
+   overprint_flag
+   True     944
+   False    540
+   Name: count, dtype: int64
 
 The returned table has one row per station and frequency:
 
@@ -197,6 +227,17 @@ rows, and a low-/high-frequency slope comparison inspired by Da et al.
    ]
    print(summary[cols].sort_values("overprint_frac", ascending=False).head())
 
+.. code-block:: text
+
+       station  beta_max_pct  beta_mean_pct  ...  hf_slope  slope_delta  overprint_flag
+   20  18-021B     49.992100      29.888614  ...  0.071821    -0.115000            True
+   21  18-021U     49.996806      30.257094  ...  0.268957    -0.598151            True
+   14  18-015U     49.902471      29.096502  ... -0.443341     1.169621            True
+   0   18-001A     49.994860      26.105160  ... -0.319272     0.165193            True
+   19  18-020A     49.997356      27.507910  ...  0.334994    -1.132669            True
+
+   [5 rows x 9 columns]
+
 ``f_split`` separates low- and high-frequency bands for slope analysis.
 Choose it from the actual survey frequency range. If the split falls
 outside the sampled range, one of the slope columns will be ``NaN``.
@@ -227,6 +268,12 @@ threshold.
        log_y=True,
        ax=ax,
    )
+   fig.tight_layout()
+   fig.savefig("source_overprint_section_l18plt.png", dpi=200)
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-source-effects-06.png
+   :width: 100%
 
 Use this plot to see whether source contamination is localized to
 specific stations, periods, or broad regions of the line. If most of the
@@ -273,6 +320,28 @@ It also classifies each row using the skin-depth relation
    print(norm["zone"].value_counts(dropna=False))
    print(norm[["station", "freq_hz", "rho_n", "phi_diff_deg", "zone", "kr"]].head())
 
+.. code-block:: text
+
+      station  freq_hz  period_s  ...  phi_diff_deg  zone         kr
+   0  18-001A  10400.0  0.000096  ...   -104.871322   far  46.210224
+   1  18-001A   8707.0  0.000115  ...   -105.705417   far  40.418207
+   2  18-001A   7289.0  0.000137  ...   -106.709024   far  36.035211
+   3  18-001A   6102.0  0.000164  ...   -107.090701   far  28.925994
+   4  18-001A   5108.0  0.000196  ...   -112.671464   far  23.035091
+
+   [5 rows x 11 columns]
+   zone
+   far           603
+   transition    468
+   near          413
+   Name: count, dtype: int64
+      station  freq_hz     rho_n  phi_diff_deg zone         kr
+   0  18-001A  10400.0  0.256661   -104.871322  far  46.210224
+   1  18-001A   8707.0  0.280878   -105.705417  far  40.418207
+   2  18-001A   7289.0  0.295813   -106.709024  far  36.035211
+   3  18-001A   6102.0  0.384325   -107.090701  far  28.925994
+   4  18-001A   5108.0  0.507310   -112.671464  far  23.035091
+
 Use ``comp="det"`` for a determinant-style response, or ``"xy"`` /
 ``"yx"`` when a specific off-diagonal component is the interpretation
 target.
@@ -302,6 +371,11 @@ subtracted phase as two side-by-side pseudo-sections.
        axes=axes,
    )
    fig.tight_layout()
+   fig.savefig("source_normalized_response_l18plt.png", dpi=200)
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-source-effects-08.png
+   :width: 100%
 
 The left panel answers whether apparent resistivity is high or low
 relative to the reference half-space. The right panel answers whether
@@ -379,6 +453,15 @@ response tables:
        ].head()
    )
 
+.. code-block:: text
+
+      station  freq_hz zone_raw  rho_n_raw  rho_n_corrected  rho_n_ratio
+   0  18-001A  10400.0      far   0.256661         0.256665     1.000015
+   1  18-001A   8707.0      far   0.280878         0.280884     1.000022
+   2  18-001A   7289.0      far   0.295813         0.295822     1.000031
+   3  18-001A   6102.0      far   0.384325         0.384347     1.000059
+   4  18-001A   5108.0      far   0.507310         0.507369     1.000115
+
 This style keeps the comparison in public tables and is easier to
 document than extracting impedance arrays directly.
 
@@ -411,6 +494,21 @@ source geometry is controlling part of the response.
 
    print(merged.groupby("zone")["overprint_flag"].mean())
    print(merged.groupby("zone")["beta_pct"].describe())
+
+.. code-block:: text
+
+   zone
+   far           0.104478
+   near          1.000000
+   transition    1.000000
+   Name: overprint_flag, dtype: float64
+               count       mean        std  ...        50%        75%        max
+   zone                                     ...
+   far         603.0   0.763099   1.397676  ...   0.003908   0.796716   5.785135
+   near        413.0  49.569662   0.497681  ...  49.797164  49.934040  49.998036
+   transition  468.0  28.882940  14.214307  ...  30.364481  43.199542  47.934809
+
+   [3 rows x 8 columns]
 
 If ``near`` and ``transition`` rows are usually overprint-flagged while
 ``far`` rows are mostly unflagged, the two methods are telling a
@@ -469,6 +567,23 @@ Use this sequence before applying a correction:
    print(summary.sort_values("overprint_frac", ascending=False).head())
    print(norm["zone"].value_counts(dropna=False))
 
+.. code-block:: text
+
+   0.6361185983827493
+       station  n_freq  offset_m  ...  hf_slope  slope_delta  overprint_flag
+   20  18-021B      53    2000.0  ...  0.071821    -0.115000            True
+   21  18-021U      53    2000.0  ...  0.268957    -0.598151            True
+   14  18-015U      53    2000.0  ... -0.443341     1.169621            True
+   0   18-001A      53    2000.0  ... -0.319272     0.165193            True
+   19  18-020A      53    2000.0  ...  0.334994    -1.132669            True
+
+   [5 rows x 11 columns]
+   zone
+   far           603
+   transition    468
+   near          413
+   Name: count, dtype: int64
+
 Then plot:
 
 .. code-block:: python
@@ -480,6 +595,9 @@ Then plot:
 
    fig, ax = plt.subplots(figsize=(10, 5))
    plot_overprint_section(sites, source_offset=2000.0, ax=ax)
+   fig.tight_layout()
+   fig.savefig("source_review_overprint_section_l18plt.png", dpi=200)
+   plt.close(fig)
 
    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
    plot_normalized_response(
@@ -488,6 +606,22 @@ Then plot:
        source_offset=2000.0,
        axes=axes,
    )
+   fig.tight_layout()
+   fig.savefig("source_review_normalized_response_l18plt.png", dpi=200)
+   plt.close(fig)
+
+.. grid:: 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-source-effects-14-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-source-effects-14-02.png
+         :width: 100%
 
 Correct only after the diagnostics show that correction is scientifically
 justified and after the offset geometry has been checked.

@@ -108,6 +108,12 @@ container, not an ``emtools`` function.
    print(sp1.freq.min(), sp1.freq.max())
    print(sp1.id_to_chtype)
 
+.. code-block:: text
+
+   SPECTRA01 51 7
+   1.72 10400.0
+   {'31.003': 'HX', '32.003': 'HY', '33.003': 'HZ', '34.003': 'EX', '35.003': 'EY', '36.003': 'HX', '37.003': 'HY'}
+
 A ``Spectra`` object exposes the core arrays used by this module:
 
 .. code-block:: python
@@ -118,6 +124,14 @@ A ``Spectra`` object exposes the core arrays used by this module:
    print(sp1.bw.shape)         # bandwidth metadata
    print(sp1.avgt.shape)       # averaging-time metadata
    print(sp1.chan_ids)         # channel identifiers
+
+.. code-block:: text
+
+   (51,)
+   (51, 7, 7)
+   (51,)
+   (51,)
+   ['31.003', '32.003', '33.003', '34.003', '35.003', '36.003', '37.003']
 
 The matrix ``sp1.S[k]`` is the full channel-by-channel cross-power
 matrix at one frequency.
@@ -148,6 +162,12 @@ The result is real-valued and bounded between 0 and 1.
    print(np.nanmin(coh), np.nanmax(coh))
    print(np.diagonal(coh, axis1=1, axis2=2)[0])
 
+.. code-block:: text
+
+   (51, 7, 7)
+   3.26311824218168e-06 1.0
+   [1. 1. 1. 1. 1. 1. 1.]
+
 The diagonal is 1 because each channel is perfectly coherent with
 itself. The off-diagonal values are the useful ones for judging whether
 two channels carry a stable relationship at a given frequency.
@@ -169,6 +189,22 @@ dictionary of station names to spectra.
 
    psd_norm = psd_table({"spectra01": sp1, "spectra02": sp2}, normalize=True)
    print(psd_norm.groupby(["station", "channel"])["psd"].max().head())
+
+.. code-block:: text
+
+      station     freq    period     channel           psd
+   0  SPECTRA01  10400.0  0.000096  HX(31.003)  1.561000e-09
+   1  SPECTRA01   8800.0  0.000114  HX(31.003)  2.342000e-09
+   2  SPECTRA01   7200.0  0.000139  HX(31.003)  4.808000e-09
+   3  SPECTRA01   6000.0  0.000167  HX(31.003)  3.892000e-09
+   4  SPECTRA01   5200.0  0.000192  HX(31.003)  2.224000e-09
+   station    channel
+   spectra01  EX(34.003)    1.0
+              EY(35.003)    1.0
+              HX(31.003)    1.0
+              HX(36.003)    1.0
+              HY(32.003)    1.0
+   Name: psd, dtype: float64
 
 Expected columns:
 
@@ -199,6 +235,23 @@ focus on physically meaningful pairs.
    coherence = coherence_table(sp1, pairs=mt_pairs)
    print(coherence.head())
    print(coherence.groupby("pair")["coherence"].describe())
+
+.. code-block:: text
+
+      station     freq    period  ...        ch_j                   pair coherence
+   0  SPECTRA01  10400.0  0.000096  ...  HY(32.003)  EX(34.003)-HY(32.003)  0.956060
+   1  SPECTRA01   8800.0  0.000114  ...  HY(32.003)  EX(34.003)-HY(32.003)  0.976360
+   2  SPECTRA01   7200.0  0.000139  ...  HY(32.003)  EX(34.003)-HY(32.003)  0.986516
+   3  SPECTRA01   6000.0  0.000167  ...  HY(32.003)  EX(34.003)-HY(32.003)  0.985696
+   4  SPECTRA01   5200.0  0.000192  ...  HY(32.003)  EX(34.003)-HY(32.003)  0.997629
+
+   [5 rows x 7 columns]
+                          count      mean       std  ...       50%       75%       max
+   pair                                              ...
+   EX(34.003)-HY(32.003)   51.0  0.797033  0.270587  ...  0.900658  0.959647  0.998137
+   EY(35.003)-HX(31.003)   51.0  0.728161  0.244365  ...  0.798813  0.938283  0.996734
+
+   [2 rows x 8 columns]
 
 Expected columns:
 
@@ -233,6 +286,19 @@ Coherence-Derived SNR
    print(snr[["station", "freq", "pair", "coherence", "snr", "snr_db"]].head())
    print(snr.groupby("pair")["snr_db"].mean())
 
+.. code-block:: text
+
+      station     freq                   pair  coherence         snr     snr_db
+   0  SPECTRA01  10400.0  EX(34.003)-HY(32.003)   0.956060   21.758405  13.376271
+   1  SPECTRA01   8800.0  EX(34.003)-HY(32.003)   0.976360   41.301034  16.159609
+   2  SPECTRA01   7200.0  EX(34.003)-HY(32.003)   0.986516   73.161532  18.642828
+   3  SPECTRA01   6000.0  EX(34.003)-HY(32.003)   0.985696   68.909149  18.382769
+   4  SPECTRA01   5200.0  EX(34.003)-HY(32.003)   0.997629  420.809415  26.240854
+   pair
+   EX(34.003)-HY(32.003)    9.044718
+   EY(35.003)-HX(31.003)    6.879817
+   Name: snr_db, dtype: float64
+
 This is not the same table as the impedance-error SNR used in
 ``remove_noise``. In this spectra workflow, SNR is derived from channel
 coherence before transfer functions are estimated.
@@ -252,6 +318,11 @@ frequency interval. It slices all spectra arrays and metadata together.
 
    print(sp1.n_freq, high_band.n_freq)
    print(high_band.freq.min(), high_band.freq.max())
+
+.. code-block:: text
+
+   51 27
+   115.0 10400.0
 
 Use band selection when a frequency range is known to be more reliable
 or when you need a common band across stations.
@@ -287,6 +358,11 @@ passes the coherence criterion.
    print(f"any pair passes: {pass_any.sum()} / {pass_any.size}")
    print(f"all pairs pass: {pass_all.sum()} / {pass_all.size}")
 
+.. code-block:: text
+
+   any pair passes: 44 / 51
+   all pairs pass: 42 / 51
+
 Use ``require_all=True`` when every requested channel pair must be
 coherent before a frequency is accepted. Use ``False`` for a looser
 screen where at least one pair is enough.
@@ -305,6 +381,23 @@ frequency metadata, channel PSD values, and mean off-diagonal coherence.
    summary = spectra_summary(sp1)
    print(summary.head())
    print(summary[["freq", "period", "mean_coherence"]].head())
+
+.. code-block:: text
+
+         freq    period      bw  ...  psd_HX(36.003)  psd_HY(37.003)  mean_coherence
+   0  10400.0  0.000096  2600.0  ...    1.561000e-09    5.204000e-09        0.399433
+   1   8800.0  0.000114  2904.0  ...    2.342000e-09    7.303000e-09        0.530258
+   2   7200.0  0.000139  1800.0  ...    4.808000e-09    1.702000e-08        0.666576
+   3   6000.0  0.000167  1980.0  ...    3.892000e-09    1.619000e-08        0.690481
+   4   5200.0  0.000192  1300.0  ...    2.224000e-09    9.476000e-09        0.695167
+
+   [5 rows x 13 columns]
+         freq    period  mean_coherence
+   0  10400.0  0.000096        0.399433
+   1   8800.0  0.000114        0.530258
+   2   7200.0  0.000139        0.666576
+   3   6000.0  0.000167        0.690481
+   4   5200.0  0.000192        0.695167
 
 Use this table for quick reporting and for finding frequency ranges
 where average coherence collapses.
@@ -329,13 +422,26 @@ PSD Plot
        title=f"{sp1.name} PSD",
        ax=ax,
    )
+   fig.tight_layout()
+   fig.savefig("spectra_psd_spectra01.png", dpi=200)
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-spectra-10.png
+   :width: 100%
 
 Pass a channel list when you want only a subset:
 
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    plot_psd(sp1, channels=[0, 1, 3, 4], log_psd=True)
+   plt.gcf().savefig("spectra_psd_subset_spectra01.png", dpi=200)
+   plt.close(plt.gcf())
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-spectra-11.png
+   :width: 100%
 
 The x-axis follows the global pyCSAMT plotting control, which is usually
 period-oriented for MT-style figures.
@@ -349,6 +455,8 @@ threshold line.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_coherence
 
    mt_pairs = [(3, 1), (4, 0)]
@@ -360,6 +468,12 @@ threshold line.
        show_threshold=True,
        title=f"{sp1.name} MT-pair coherence",
    )
+   axes[0].figure.tight_layout()
+   axes[0].figure.savefig("spectra_coherence_spectra01.png", dpi=200)
+   plt.close(axes[0].figure)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-spectra-12.png
+   :width: 100%
 
 Use this plot before deciding on a band cut. A single mean coherence
 number can hide whether failures are isolated, broad-band, or confined
@@ -375,6 +489,8 @@ are cross-spectra.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_spectra_matrix
 
    fig = plot_spectra_matrix(
@@ -384,6 +500,11 @@ are cross-spectra.
        log_scale=True,
        title="Cross-power matrix",
    )
+   fig.savefig("spectra_cross_power_matrix.png", dpi=200, bbox_inches="tight")
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-spectra-13.png
+   :width: 100%
 
 Available ``quantity`` values are ``"abs"``, ``"real"``, ``"imag"``, and
 ``"phase"``. The log absolute view is usually the best first look because
@@ -398,6 +519,8 @@ apparent resistivity and phase from the spectra-derived impedance.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_z_from_spectra
 
    fig = plot_z_from_spectra(
@@ -408,6 +531,11 @@ apparent resistivity and phase from the spectra-derived impedance.
        estimate_error=False,
        show_error=True,
    )
+   fig.savefig("spectra_impedance_spectra01.png", dpi=200, bbox_inches="tight")
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-spectra-14.png
+   :width: 100%
 
 For programmatic access, call ``to_Z`` on the ``Spectra`` object:
 
@@ -423,6 +551,11 @@ For programmatic access, call ``to_Z`` on the ``Spectra`` object:
    print(z_obj.z.shape)
    print(z_obj.resistivity[:, 0, 1].min(), z_obj.resistivity[:, 0, 1].max())
 
+.. code-block:: text
+
+   (51, 2, 2)
+   3.9104053794314146 119.75913187624168
+
 Use ``ridge`` when the magnetic cross-power block is poorly conditioned.
 Keep ``estimate_error=False`` if degrees-of-freedom metadata is
 incomplete and you do not need uncertainty envelopes.
@@ -436,6 +569,8 @@ the same spectra object when an ``HZ`` channel is available.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_tipper_from_spectra
 
    axes = plot_tipper_from_spectra(
@@ -445,6 +580,11 @@ the same spectra object when an ``HZ`` channel is available.
        estimate_error=False,
        show_error=True,
    )
+   axes[0].figure.savefig("spectra_tipper_spectra01.png", dpi=200, bbox_inches="tight")
+   plt.close(axes[0].figure)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-spectra-16.png
+   :width: 100%
 
 If no vertical magnetic channel is available, the function returns axes
 with a no-tipper message rather than failing.
@@ -460,6 +600,8 @@ that grid.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_coherence_section, plot_psd_section
 
    spectra_sites = {
@@ -473,6 +615,8 @@ that grid.
        log_psd=True,
        title="EX PSD section",
    )
+   ax_psd.figure.savefig("spectra_psd_section.png", dpi=200, bbox_inches="tight")
+   plt.close(ax_psd.figure)
 
    ax_coh = plot_coherence_section(
        spectra_sites,
@@ -481,6 +625,21 @@ that grid.
        show_threshold=True,
        title="EX-HY coherence section",
    )
+   ax_coh.figure.savefig("spectra_coherence_section.png", dpi=200, bbox_inches="tight")
+   plt.close(ax_coh.figure)
+
+.. grid:: 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-spectra-17-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-spectra-17-02.png
+         :width: 100%
 
 The section functions use only the shared frequency overlap. They do not
 extrapolate outside a station's spectra band.
@@ -524,6 +683,23 @@ A compact spectra QC sequence is:
 
    print(coh.groupby("pair")["coherence"].describe())
    print(summary[["freq", "mean_coherence"]].head())
+
+.. code-block:: text
+
+   full band pass: 42 / 51
+   selected band pass: 27 / 27
+                          count      mean       std  ...       50%       75%       max
+   pair                                              ...
+   EX(34.003)-HY(32.003)   27.0  0.947011  0.045600  ...  0.956582  0.986106  0.998137
+   EY(35.003)-HX(31.003)   27.0  0.858419  0.153881  ...  0.925313  0.988420  0.996734
+
+   [2 rows x 8 columns]
+         freq  mean_coherence
+   0  10400.0        0.399433
+   1   8800.0        0.530258
+   2   7200.0        0.666576
+   3   6000.0        0.690481
+   4   5200.0        0.695167
 
 This sequence turns a visual coherence problem into a reproducible band
 selection: define pairs, apply threshold, slice the spectra, and verify

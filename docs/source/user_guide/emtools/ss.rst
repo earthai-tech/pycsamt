@@ -103,6 +103,38 @@ residuals to one static-shift value.
 
    print(factors[["station", "delta_log10_rho", "fac_rho", "fac_z", "n_used"]])
 
+.. code-block:: text
+
+       station  delta_log10_rho    fac_rho     fac_z  n_used
+   0   18-001A         1.315686   0.048341  0.219865      22
+   1   18-002U         0.199660   0.631451  0.794639      32
+   2   18-003A        -0.429163   2.686355  1.639010      38
+   3   18-004A         0.829915   0.147940  0.384630      34
+   4   18-005U         1.204691   0.062418  0.249836      31
+   5   18-006A        -0.134703   1.363652  1.167755      35
+   6   18-007U         1.090404   0.081207  0.284969      31
+   7   18-008U         0.842759   0.143629  0.378984      30
+   8   18-009A         0.311615   0.487960  0.698542      43
+   9   18-010U         0.531531   0.294082  0.542293      40
+   10  18-011A         0.429333   0.372107  0.610005      39
+   11  18-012A         0.716283   0.192184  0.438388      32
+   12  18-013U         0.971147   0.106869  0.326909      37
+   13  18-014A         0.077767   0.836051  0.914358      35
+   14  18-015U        -0.008743   1.020336  1.010117      41
+   15  18-016A         0.553432   0.279620  0.528791      39
+   16  18-017U         0.243962   0.570214  0.755125      40
+   17  18-018A         0.570181   0.269041  0.518692       8
+   18  18-019U        -0.231489   1.704076  1.305403      11
+   19  18-020A         0.611525   0.244610  0.494581      25
+   20  18-021B         0.714440   0.193001  0.439319      22
+   21  18-021U         1.176125   0.066661  0.258189      23
+   22  18-022U        -0.415305   2.601986  1.613067      18
+   23  18-022V         0.211366   0.614659  0.784002      21
+   24  18-023A        -0.261413   1.825629  1.351158      16
+   25  18-023V         0.342848   0.454101  0.673870      11
+   26  18-024U         0.003641   0.991652  0.995817       9
+   27  18-025A        -1.909562  81.201150  9.011168      17
+
 The returned table has one row per station with these columns:
 
 .. list-table::
@@ -154,6 +186,12 @@ usually better than accepting the first number silently:
    print("survey stations:", len(survey_factors))
    print("median samples:", survey_factors["n_used"].median())
 
+.. code-block:: text
+
+   strict stations: 26
+   survey stations: 28
+   median samples: 31.5
+
 If ``n_used`` is low for many stations, the result may be technically
 valid but weakly constrained.  In that case, inspect the skew page,
 restrict ``pband`` to the useful period range, or compare several
@@ -181,6 +219,38 @@ so the correction factor is greater than one.
            ["station", "delta_log10_rho", "fac_z", "n_used", "direction"]
        ].sort_values("delta_log10_rho")
    )
+
+.. code-block:: text
+
+       station  delta_log10_rho     fac_z  n_used direction
+   27  18-025A        -1.909562  9.011168      17   raise Z
+   2   18-003A        -0.429163  1.639010      38   raise Z
+   22  18-022U        -0.415305  1.613067      18   raise Z
+   24  18-023A        -0.261413  1.351158      16   raise Z
+   18  18-019U        -0.231489  1.305403      11   raise Z
+   5   18-006A        -0.134703  1.167755      35   raise Z
+   14  18-015U        -0.008743  1.010117      41   raise Z
+   26  18-024U         0.003641  0.995817       9   lower Z
+   13  18-014A         0.077767  0.914358      35   lower Z
+   1   18-002U         0.199660  0.794639      32   lower Z
+   23  18-022V         0.211366  0.784002      21   lower Z
+   16  18-017U         0.243962  0.755125      40   lower Z
+   8   18-009A         0.311615  0.698542      43   lower Z
+   25  18-023V         0.342848  0.673870      11   lower Z
+   10  18-011A         0.429333  0.610005      39   lower Z
+   9   18-010U         0.531531  0.542293      40   lower Z
+   15  18-016A         0.553432  0.528791      39   lower Z
+   17  18-018A         0.570181  0.518692       8   lower Z
+   19  18-020A         0.611525  0.494581      25   lower Z
+   20  18-021B         0.714440  0.439319      22   lower Z
+   11  18-012A         0.716283  0.438388      32   lower Z
+   3   18-004A         0.829915  0.384630      34   lower Z
+   7   18-008U         0.842759  0.378984      30   lower Z
+   12  18-013U         0.971147  0.326909      37   lower Z
+   6   18-007U         1.090404  0.284969      31   lower Z
+   21  18-021U         1.176125  0.258189      23   lower Z
+   4   18-005U         1.204691  0.249836      31   lower Z
+   0   18-001A         1.315686  0.219865      22   lower Z
 
 ``fac_z`` must be finite and positive.  ``apply_ss_factors`` guards the
 impedance tensor against non-finite, zero, and negative factors by
@@ -322,6 +392,43 @@ stronger signal than a single factor table.
    print(comparison)
    print(comparison.drop(columns="station").corr().round(2))
 
+.. code-block:: text
+
+       station       ama     loess  bilateral  refmedian
+   0   18-001A  1.332021  1.159768   0.404790   1.147046
+   1   18-002U  0.204137  0.027926  -0.024785   0.344798
+   2   18-003A -0.423116 -0.228044  -0.056300  -0.013361
+   3   18-004A  0.845136  0.544652   0.027856   0.593522
+   4   18-005U  1.212859  1.208384   0.350171   1.008823
+   5   18-006A -0.023122 -0.111229  -0.094693   0.382904
+   6   18-007U  1.108909  1.196616   0.022501   0.870229
+   7   18-008U  0.826022  0.576419   0.101546   0.799377
+   8   18-009A  0.308615  0.164553   0.064798   0.466872
+   9   18-010U  0.387382  0.575710   0.001690   0.436586
+   10  18-011A  0.316431  0.272670  -0.071976   0.329512
+   11  18-012A  0.709257  0.750474   0.524762   0.782521
+   12  18-013U  0.987698  0.823783   0.408062   0.983713
+   13  18-014A  0.060567  0.085557  -0.001016   0.328062
+   14  18-015U -0.027194  0.148288   0.011463   0.437894
+   15  18-016A  0.548499  0.682097   0.222652   0.387643
+   16  18-017U  0.207717 -0.072589   0.175048  -0.020784
+   17  18-018A  0.559294  0.622097   0.204397   0.442325
+   18  18-019U -0.787610 -0.750317  -0.310667  -0.562525
+   19  18-020A  0.724057  0.577375   0.219258   0.793404
+   20  18-021B  0.454139  0.194675   0.176764   0.632271
+   21  18-021U  1.304396  1.190724   0.551496   1.188714
+   22  18-022U -0.404453 -0.554035  -0.135679  -0.246598
+   23  18-022V  0.276068  0.284507   0.184105   0.341684
+   24  18-023A -0.261413 -0.354546  -0.189863  -0.345754
+   25  18-023V  0.258398 -0.256520   0.058670  -0.092407
+   26  18-024U  0.015435  0.353124  -0.039578   0.014523
+   27  18-025A -1.910982 -2.802634   1.019139  -1.579179
+               ama  loess  bilateral  refmedian
+   ama        1.00   0.96       0.08       0.95
+   loess      0.96   1.00      -0.08       0.95
+   bilateral  0.08  -0.08       1.00       0.05
+   refmedian  0.95   0.95       0.05       1.00
+
 Look for sign disagreements, not only large absolute differences.  If
 AMA says a station should be lowered while bilateral filtering says it
 should be raised, that station deserves a manual plot before correction.
@@ -334,6 +441,8 @@ good first-look tools when you do not need to reuse the corrected object.
 
 .. code-block:: python
    :linenos:
+
+   import matplotlib.pyplot as plt
 
    from pycsamt.emtools import (
        ss_qc_profile,
@@ -368,6 +477,29 @@ good first-look tools when you do not need to reuse the corrected object.
        max_skew=45.0,
    )
 
+   for i, num in enumerate(plt.get_fignums(), start=1):
+       fig = plt.figure(num)
+       fig.savefig(f"ss_qc_plots_{i:02d}.png", dpi=200, bbox_inches="tight")
+       plt.close(fig)
+
+.. grid:: 3
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-ss-09-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-ss-09-02.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-ss-09-03.png
+         :width: 100%
+
 ``ss_qc_psection`` shows the pointwise
 ``log10(rho_after) - log10(rho_before)`` correction as a pseudosection.
 For a true static-shift correction, each station tends to show a nearly
@@ -389,6 +521,8 @@ they compare the two data sets you pass in.
 
 .. code-block:: python
    :linenos:
+
+   import matplotlib.pyplot as plt
 
    from pycsamt.emtools import (
        plot_ss_delta_profile,
@@ -417,6 +551,29 @@ they compare the two data sets you pass in.
        pband=(1e-4, 10.0),
    )
 
+   for i, num in enumerate(plt.get_fignums(), start=1):
+       fig = plt.figure(num)
+       fig.savefig(f"ss_before_after_{i:02d}.png", dpi=200, bbox_inches="tight")
+       plt.close(fig)
+
+.. grid:: 3
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-ss-10-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-ss-10-02.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-ss-10-03.png
+         :width: 100%
+
 These calls are useful in reports because they make the provenance clear:
 ``sites`` is the uncorrected input and ``corrected`` is the accepted
 corrected output.
@@ -432,6 +589,8 @@ pseudosection comparison.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import ss_comparison_psection
 
    fig = ss_comparison_psection(
@@ -443,6 +602,11 @@ pseudosection comparison.
        show_delta=True,
        suptitle="Static-shift correction: AMA",
    )
+   fig.savefig("ss_comparison_psection_ama.png", dpi=200, bbox_inches="tight")
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-ss-11.png
+   :width: 100%
 
 Use ``show_delta=True`` when the figure must show both the corrected
 resistivity field and the actual correction amplitude.  The before and
@@ -467,6 +631,8 @@ represents period or frequency, and the radius represents resistivity or
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_ss_radar
 
    plot_ss_radar(
@@ -485,6 +651,24 @@ represents period or frequency, and the radius represents resistivity or
        rotate_stat="median",
        radial="log10rho",
    )
+
+   for i, num in enumerate(plt.get_fignums(), start=1):
+       fig = plt.figure(num)
+       fig.savefig(f"ss_radar_18-016A_{i:02d}.png", dpi=200, bbox_inches="tight")
+       plt.close(fig)
+
+.. grid:: 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-ss-12-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-ss-12-02.png
+         :width: 100%
 
 Use ``rotate="none"`` for a raw component view, ``rotate="deg"`` with
 ``rotate_deg=...`` for a fixed rotation, and ``rotate="pt"`` for
@@ -522,6 +706,8 @@ low frequency part.  A single static multiplier cannot fix that behavior.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import detect_near_surface, plot_ns_detection
 
    ns = detect_near_surface(
@@ -553,6 +739,47 @@ low frequency part.  A single static multiplier cannot fix that behavior.
        max_skew=45.0,
        show_ss=True,
    )
+   plt.gcf().savefig("ss_near_surface_detection.png", dpi=200, bbox_inches="tight")
+   plt.close(plt.gcf())
+
+.. code-block:: text
+
+       station  ns_index  gradient_delta  ss_delta_log10 distortion_type
+   0   18-001A       NaN             NaN        1.332021          static
+   1   18-002U       NaN             NaN        0.204137          static
+   2   18-003A       NaN             NaN       -0.423116          static
+   3   18-004A       NaN             NaN        0.845136          static
+   4   18-005U       NaN             NaN        1.212859          static
+   5   18-006A       NaN             NaN       -0.023122           clean
+   6   18-007U       NaN             NaN        1.108909          static
+   7   18-008U       NaN             NaN        0.826022          static
+   8   18-009A       NaN             NaN        0.308615          static
+   9   18-010U       NaN             NaN        0.387382          static
+   10  18-011A       NaN             NaN        0.316431          static
+   11  18-012A       NaN             NaN        0.709257          static
+   12  18-013U       NaN             NaN        0.987698          static
+   13  18-014A       NaN             NaN        0.060567           clean
+   14  18-015U       NaN             NaN       -0.027194           clean
+   15  18-016A       NaN             NaN        0.548499          static
+   16  18-017U       NaN             NaN        0.207717          static
+   17  18-018A       NaN             NaN        0.559294          static
+   18  18-019U       NaN             NaN       -0.787610          static
+   19  18-020A       NaN             NaN        0.724057          static
+   20  18-021B       NaN             NaN        0.454139          static
+   21  18-021U       NaN             NaN        1.304396          static
+   22  18-022U       NaN             NaN       -0.404453          static
+   23  18-022V       NaN             NaN        0.276068          static
+   24  18-023A       NaN             NaN       -0.261413          static
+   25  18-023V       NaN             NaN        0.258398          static
+   26  18-024U       NaN             NaN        0.015435           clean
+   27  18-025A       NaN             NaN       -1.910982          static
+   distortion_type
+   static    24
+   clean      4
+   Name: count, dtype: int64
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-ss-13.png
+   :width: 100%
 
 The ``distortion_type`` column has four possible values:
 
@@ -583,6 +810,8 @@ For a survey report, keep the static-shift workflow explicit:
 
 .. code-block:: python
    :linenos:
+
+   import matplotlib.pyplot as plt
 
    from pathlib import Path
 
@@ -645,6 +874,18 @@ For a survey report, keep the static-shift workflow explicit:
        max_skew=45.0,
        show_delta=True,
    )
+   fig.savefig("ss_recommended_comparison.png", dpi=200, bbox_inches="tight")
+   plt.close(fig)
+
+.. code-block:: text
+
+   distortion_type
+   clean      4
+   static    24
+   Name: n_stations, dtype: int64
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-ss-14.png
+   :width: 100%
 
 The important decisions are visible in that script: loader, station
 ordering, period band, skew threshold, accepted estimator, saved factor

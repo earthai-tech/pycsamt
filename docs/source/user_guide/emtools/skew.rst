@@ -137,6 +137,39 @@ station-frequency row.
    print(station_summary.head())
    print(station_summary.tail())
 
+.. code-block:: text
+
+   Index(['station', 'freq', 'period', 's1', 's2', 'theta', 'alpha', 'beta',
+          'skew', 'ellipt'],
+         dtype='object')
+      station     freq    period       beta       skew
+   0  18-001A  10400.0  0.000096 -56.700714 -56.700714
+   1  18-001A   8707.0  0.000115 -54.693184 -54.693184
+   2  18-001A   7289.0  0.000137 -51.452210 -51.452210
+   3  18-001A   6102.0  0.000164 -61.983725 -61.983725
+   4  18-001A   5108.0  0.000196 -60.874439 -60.874439
+   count    1484.000000
+   mean       44.536824
+   std        25.198206
+   min         0.353578
+   25%        23.593647
+   50%        40.992429
+   75%        66.994007
+   max        89.910303
+   Name: skew, dtype: float64
+       station  n_freq  median_abs_skew  max_abs_skew
+   14  18-015U      53        22.459269     73.709036
+   16  18-017U      53        22.912833     88.315919
+   15  18-016A      53        23.525350     87.383364
+   8   18-009A      53        25.288856     77.805353
+   9   18-010U      53        26.006304     88.810111
+       station  n_freq  median_abs_skew  max_abs_skew
+   26  18-024U      53        63.853268     89.878126
+   22  18-022U      53        65.349813     89.438099
+   17  18-018A      53        66.547818     89.385210
+   23  18-022V      53        66.787861     89.910303
+   24  18-023A      53        67.022970     89.760407
+
 Interpret ``skew`` and ``beta`` as angles in degrees. A common strict
 phase-tensor threshold is around ``3`` to ``6`` degrees. Real CSAMT
 survey lines can be much larger. When every station is above a strict
@@ -161,14 +194,20 @@ directly from impedance.
 
    # Example: use the first station in the loaded Sites collection.
    station = next(iter(sites))
-   z = station.Z.z
-   freq = station.Z.freq
+   z = station.z
+   freq = station.freq
 
    eta = bahr_skewness(z)
    period = 1.0 / freq
 
    print(np.nanmin(eta), np.nanmedian(eta), np.nanmax(eta))
    print(period[:5], eta[:5])
+
+.. code-block:: text
+
+   0.8461749951030751 1.5856487464775848 2.9879890035270154
+   [9.61538462e-05 1.14850121e-04 1.37193031e-04 1.63880695e-04
+    1.95771339e-04] [2.97741225 2.987989   2.86896122 2.57559637 2.18481788]
 
 The classic Bahr threshold often used as a 2-D/3-D guide is
 ``eta = 0.4``. Treat that as a diagnostic boundary, not an automatic
@@ -193,12 +232,18 @@ the threshold line.
 
    fig, ax = plt.subplots(figsize=(7, 4))
    plot_skewness(
-       station.Z.freq,
-       station.Z.z,
+       station.freq,
+       station.z,
        threshold=0.4,
        ax=ax,
-       title=str(getattr(station, "station", "station")),
+       title=str(getattr(station, "name", "station")),
    )
+   fig.tight_layout()
+   fig.savefig("bahr_skewness_18-001A.png", dpi=200)
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-skew-04.png
+   :width: 100%
 
 Use this plot when you need to explain one station concretely. Use the
 survey-wide phase-tensor plots below when the question is line-scale
@@ -272,11 +317,11 @@ A simple count helper is often enough for documentation and QC tables.
 
    rows = []
    for station in masked:
-       z = station.Z.z
+       z = station.z
        good = np.isfinite(z).all(axis=(1, 2))
        rows.append(
            {
-               "station": getattr(station, "station", ""),
+               "station": getattr(station, "name", ""),
                "n_total": int(z.shape[0]),
                "n_kept": int(good.sum()),
                "kept_fraction": float(good.mean()),
@@ -284,6 +329,10 @@ A simple count helper is often enough for documentation and QC tables.
        )
 
    print(rows[:5])
+
+.. code-block:: text
+
+   [{'station': '18-001A', 'n_total': 53, 'n_kept': 2, 'kept_fraction': 0.03773584905660377}, {'station': '18-002U', 'n_total': 53, 'n_kept': 1, 'kept_fraction': 0.018867924528301886}, {'station': '18-003A', 'n_total': 53, 'n_kept': 1, 'kept_fraction': 0.018867924528301886}, {'station': '18-004A', 'n_total': 53, 'n_kept': 2, 'kept_fraction': 0.03773584905660377}, {'station': '18-005U', 'n_total': 53, 'n_kept': 3, 'kept_fraction': 0.05660377358490566}]
 
 This count is the sanity check that prevents a silent all-``NaN`` result
 from moving downstream. If strict thresholds keep too little data, return
@@ -412,6 +461,12 @@ absolute phase-tensor skew:
        axis_y="logperiod",
        ax=ax,
    )
+   fig.tight_layout()
+   fig.savefig("skew_traffic_psection_l18plt.png", dpi=200)
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-skew-11.png
+   :width: 100%
 
 For highly skewed surveys, strict ``t1=3`` and ``t2=6`` may make the
 whole line red. That is still useful: it tells you the textbook
@@ -443,6 +498,12 @@ plots median absolute skew and percentile bands through the period axis.
        extra=(10.0, 90.0),
        ax=ax,
    )
+   fig.tight_layout()
+   fig.savefig("skew_percentile_ribbon_l18plt.png", dpi=200)
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-skew-12.png
+   :width: 100%
 
 Use this plot to answer: "Is there any period range where the line as a
 whole becomes less skewed?" A consistently high ribbon means the line
@@ -470,6 +531,12 @@ Vote-Band Plot
        n_bins=40,
        ax=ax,
    )
+   fig.tight_layout()
+   fig.savefig("skew_vote_band_l18plt.png", dpi=200)
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-skew-13.png
+   :width: 100%
 
 This plot is diagnostic only. It counts pointwise low-skew rows in each
 period bin. ``select_low_skew_band`` is stricter because it also requires
@@ -503,6 +570,24 @@ A robust skew review usually follows this sequence:
    plot_skew_traffic_psection(sites, t1=3.0, t2=6.0, ax=axes[0])
    plot_skew_percentile_ribbon(sites, ax=axes[1])
    plot_skew_vote_band(sites, thresh=6.0, ax=axes[2])
+   fig.tight_layout()
+   fig.savefig("skew_review_panels_l18plt.png", dpi=200)
+   plt.close(fig)
+
+.. code-block:: text
+
+   count    1484.000000
+   mean       44.536824
+   std        25.198206
+   min         0.353578
+   25%        23.593647
+   50%        40.992429
+   75%        66.994007
+   max        89.910303
+   Name: skew, dtype: float64
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-skew-14.png
+   :width: 100%
 
 Read the outputs together:
 

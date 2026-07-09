@@ -125,6 +125,11 @@ wrong scale for CSAMT array geometry.
    print(f"earth wavelength: {wavelength_earth:,.0f} m")
    print(f"free-space wavelength: {wavelength_free:,.0f} m")
 
+.. code-block:: text
+
+   earth wavelength: 19,365 m
+   free-space wavelength: 37,474,057 m
+
 Use the earth wavelength to judge whether the chosen element spacing is
 small, moderate, or large in wavelengths:
 
@@ -133,6 +138,10 @@ small, moderate, or large in wavelengths:
 
    d = 2000.0
    print(f"d / earth wavelength = {d / wavelength_earth:.3f}")
+
+.. code-block:: text
+
+   d / earth wavelength = 0.103
 
 A physical spacing that is small at low frequency can become larger than
 one wavelength at a high CSAMT frequency. That is when side lobes and
@@ -178,6 +187,16 @@ is usually the maximum.
    ax.set_xlabel("Angle from dipole axis (deg)")
    ax.set_ylabel("Normalized amplitude")
    ax.grid(True, alpha=0.3)
+   fig.tight_layout()
+   fig.savefig("sdas_element_pattern.png", dpi=200)
+   plt.close(fig)
+
+.. code-block:: text
+
+   0.0 1.0 0.0
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-source-array-03.png
+   :width: 100%
 
 Set ``normalize=False`` when you need the unnormalized formula value,
 for example before computing directivity or comparing absolute pattern
@@ -228,6 +247,11 @@ main lobe is broadside at ``theta_b = 0``.
        labels=["N=1", "N=2", "N=4", "N=8"],
        title="Array factor at 8 Hz",
    )
+   plt.gcf().savefig("array_factor_8hz.png", dpi=200)
+   plt.close(plt.gcf())
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-source-array-04.png
+   :width: 100%
 
 At low frequency, a kilometer-scale array may be much smaller than one
 earth wavelength. It can still narrow the beam, but it may not form
@@ -266,6 +290,15 @@ frequency.
        log_scale=True,
        title="Array factor at 1024 Hz",
    )
+   plt.gcf().savefig("array_factor_1024hz.png", dpi=200)
+   plt.close(plt.gcf())
+
+.. code-block:: text
+
+   d / wavelength = 1.168
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-source-array-05.png
+   :width: 100%
 
 When ``d / wavelength`` approaches or exceeds ``1``, grating lobes are
 likely. A design that looks clean at low frequency can radiate strongly
@@ -315,6 +348,12 @@ additional main-lobe solutions.
    print(f"peak angle = {peak_angle:.2f} deg")
    print(f"all steering-angle solutions = {all_lobes}")
 
+.. code-block:: text
+
+   beta = -2.5110 rad
+   peak angle = 20.00 deg
+   all steering-angle solutions = [-30.917035  20.      ]
+
 The peak angle should match the target angle on a fine angular grid. If
 ``steering_angles`` returns multiple values, the design has grating-lobe
 directions that deserve explicit review.
@@ -357,6 +396,11 @@ array.
        labels=["broadside", "steered to 20 deg"],
        title="Combined PAS pattern",
    )
+   plt.gcf().savefig("combined_pas_pattern.png", dpi=200)
+   plt.close(plt.gcf())
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-source-array-07.png
+   :width: 100%
 
 Use ``pas_pattern`` for design figures. Use ``array_factor`` alone when
 you want to isolate what the array geometry contributes independently of
@@ -383,6 +427,13 @@ concentrated radiation.
        directivity = sdas_directivity(length, k=k, n_theta=2000)
        print(f"length={length:7.0f} m  directivity={directivity:.3f}")
 
+.. code-block:: text
+
+   length=    500 m  directivity=1.544
+   length=   1000 m  directivity=1.703
+   length=   2000 m  directivity=3.039
+   length=   5000 m  directivity=2.985
+
 Do not assume that a longer dipole is always better. Once length becomes
 a significant fraction of wavelength, directivity can change
 non-monotonically with frequency and length.
@@ -403,6 +454,14 @@ SNR Gain
 
    for n_elem in (1, 2, 4, 8, 16):
        print(f"N={n_elem:2d}: {snr_gain_db(n_elem):5.2f} dB")
+
+.. code-block:: text
+
+   N= 1:  0.00 dB
+   N= 2:  6.02 dB
+   N= 4: 12.04 dB
+   N= 8: 18.06 dB
+   N=16: 24.08 dB
 
 This is the ideal coherent-array gain. It does not guarantee that all
 extra energy reaches the intended area. If grating lobes are present, a
@@ -450,6 +509,12 @@ dB plots for side-lobe inspection.
        ax=axes[1],
        title="dB view",
    )
+   fig.tight_layout()
+   fig.savefig("source_array_pattern_views.png", dpi=200)
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-source-array-10.png
+   :width: 100%
 
 Use the dB view when side lobes matter. A weak-looking side lobe on a
 linear-amplitude plot may still be too strong for a field design.
@@ -500,6 +565,19 @@ For a concrete PAS design, keep the calculation explicit:
        log_scale=True,
        title="Final PAS design check",
    )
+   plt.gcf().savefig("final_pas_design_check.png", dpi=200)
+   plt.close(plt.gcf())
+
+.. code-block:: text
+
+   earth wavelength = 1711.6 m
+   d / wavelength = 1.168
+   beta = -3.1028 rad
+   steering-angle solutions = [-25.6707  25.    ]
+   ideal coherent SNR gain = 18.06 dB
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-source-array-11.png
+   :width: 100%
 
 Review the output in this order:
 

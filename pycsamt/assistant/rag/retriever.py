@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import math
 import re
-from typing import TYPE_CHECKING, Iterable, Sequence
+from typing import TYPE_CHECKING, Callable, Iterable, Sequence
 
 from .config import infer_workflow
 from .expansion import expand_query
@@ -47,6 +47,9 @@ _RRF_K = 60
 _DENSE_WEIGHT = 1.0
 _DENSE_MIN_SIM = 0.20          # ignore near-orthogonal (irrelevant) chunks
 _FUSE_DEPTH_MULT = 5           # fuse the top max(k*mult, 50) of each ranker
+# A rejected ("hard negative") symbol is demoted, never erased — user
+# feedback should reorder results, not silently hide a correct answer.
+_FEEDBACK_FLOOR = 0.15
 
 _STOPWORDS = frozenset(
     "a an the of to for and or in on at by with from is are be do does did "
@@ -148,6 +151,7 @@ class Retriever:
         vectors: "np.ndarray | None" = None,
         embed_backend: "EmbeddingBackend | None" = None,
         use_expansion: bool = True,
+        feedback_adjust: "Callable[[str], dict[str, float]] | None" = None,
     ) -> None:
         self.chunks = chunks
         self._bm25 = BM25([tokenize(c.text) for c in chunks])
@@ -157,6 +161,9 @@ class Retriever:
         # are supplied; otherwise the retriever is pure BM25 + expansion.
         self._vectors = vectors
         self._embed_backend = embed_backend
+        # Optional learned signal: query -> {symbol: score delta} from user
+        # thumbs up/down (see rag.feedback). None = no personalisation.
+        self._feedback_adjust = feedback_adjust
 
     @property
     def dense_enabled(self) -> bool:
@@ -206,6 +213,14 @@ class Retriever:
         ql = query.lower()
         kinds_set = set(kinds) if kinds else None
 
+        # Learned per-symbol deltas from thumbs up/down on similar queries.
+        fb: dict[str, float] = {}
+        if self._feedback_adjust is not None:
+            try:
+                fb = self._feedback_adjust(query) or {}
+            except Exception:  # noqa: BLE001 — feedback is best-effort
+                fb = {}
+
         scored: list[tuple[float, int]] = []
         for i, chunk in enumerate(self.chunks):
             s = base[i]
@@ -222,6 +237,13 @@ class Retriever:
                 leaf = chunk.symbol.rsplit(".", 1)[-1].lower()
                 if len(leaf) >= 3 and leaf in ql:
                     s *= self._SYMBOL_BOOST
+            if fb:
+                # Keyed by symbol when present, else chunk id — so doc and
+                # recipe hits can be voted on too, not just code symbols.
+                delta = fb.get(chunk.symbol or chunk.id)
+                if delta:
+                    # Clamped so a hard negative demotes but never annihilates.
+                    s *= max(_FEEDBACK_FLOOR, 1.0 + delta)
             scored.append((s, i))
 
         scored.sort(key=lambda t: -t[0])
@@ -313,6 +335,7 @@ def build_retriever(
     prefer_persisted: bool = True,
     embed_api_key: str | None = None,
     embed_provider: str | None = None,
+    use_feedback: bool = True,
 ) -> Retriever:
     """Build (or fetch a cached) :class:`Retriever`.
 
@@ -327,6 +350,10 @@ def build_retriever(
     *embed_provider* (see :func:`~pycsamt.assistant.rag.embeddings.
     resolve_embedding_backend`); otherwise the retriever is BM25 +
     expansion, exactly as before.
+
+    When *use_feedback* (default), thumbs up/down history from
+    :class:`~pycsamt.assistant.rag.feedback.FeedbackStore` re-weights
+    symbols on similar queries. It is a no-op until a verdict is recorded.
     """
     if chunks is not None:
         return Retriever(chunks)
@@ -354,7 +381,20 @@ def build_retriever(
     vectors, backend = _resolve_dense(
         corpus, root=root, api_key=embed_api_key, provider=embed_provider
     )
-    retr = Retriever(corpus, vectors=vectors, embed_backend=backend)
+    adjust = None
+    if use_feedback:
+        try:
+            from .feedback import FeedbackStore
+
+            adjust = FeedbackStore(root=root).adjustments
+        except Exception:  # noqa: BLE001 — feedback is optional
+            adjust = None
+    retr = Retriever(
+        corpus,
+        vectors=vectors,
+        embed_backend=backend,
+        feedback_adjust=adjust,
+    )
     if use_cache:
         _CACHE[key] = retr
     return retr

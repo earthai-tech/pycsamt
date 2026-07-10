@@ -46,7 +46,8 @@ __all__ = [
 ]
 
 DEFAULT_INDEX_DIRNAME = ".pycsamt_rag"
-_MANIFEST_VERSION = 1
+# v2: source_fingerprint switched from (mtime, size) to a content hash.
+_MANIFEST_VERSION = 2
 
 
 def default_index_dir(root: Path | str | None = None) -> Path:
@@ -87,6 +88,8 @@ def index_is_stale(out_dir: Path | str | None = None,
     mf = read_manifest(out_dir, root)
     if not mf or "source_fingerprint" not in mf:
         return True
+    if mf.get("version") != _MANIFEST_VERSION:
+        return True  # fingerprint scheme changed → not comparable
     return mf["source_fingerprint"] != source_fingerprint(root)
 
 

@@ -258,6 +258,11 @@ examples/
 # gallery (docs/source/examples/) stays ignored via the rule above.
 !docs/examples/
 !docs/examples/**
+# ...but the "!" above re-includes everything, so re-exclude the compiled
+# caches it would otherwise track (the global __pycache__ rule is overridden
+# inside a force-included tree).
+docs/examples/**/__pycache__/
+docs/examples/**/*.py[cod]
 
 # C&G paper submission files — not for public distribution
 /cag-paper/

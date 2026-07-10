@@ -214,7 +214,9 @@ style_axis(ax)
 # minimum battery per line. Status colour is reserved and thresholds are
 # drawn, so a weak line (L26) is obvious without reading the numbers.
 
-lines = LINES
+# Only lines that actually have station data (some WILLY profiles are not
+# bundled with the repository, so their manifest is empty in a clean build).
+lines = [ln for ln in LINES if per_line[ln]["total"] > 0]
 accept_rate = np.array([
     per_line[ln]["accepted"] / per_line[ln]["total"] for ln in lines
 ])

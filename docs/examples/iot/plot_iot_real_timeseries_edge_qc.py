@@ -28,12 +28,12 @@ telemetry packet and given a reproducible provenance record.
 
 from __future__ import annotations
 
-import os
 import tempfile
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from _ts_sample import load_ts_sample, real_ts_path
 
 from pycsamt.iot import (
     DeviceConfig,
@@ -48,8 +48,6 @@ from pycsamt.iot import (
     estimate_frequency_coverage,
     export_reproducibility_bundle,
 )
-from pycsamt.ts import read_ts
-
 # Okabe-Ito, a colour-blind-safe categorical palette. Magnetic channels get
 # cool hues, electric channels warm ones, assigned in a fixed order.
 CH_COLORS = {
@@ -57,14 +55,6 @@ CH_COLORS = {
     "ex": "#D55E00", "ey": "#E69F00",
 }
 STATUS = {"ok": "#009E73", "warn": "#E69F00", "bad": "#D55E00"}
-
-
-def repo_root() -> Path:
-    """Repository root during docs builds and local runs."""
-    env_root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT")
-    if env_root:
-        return Path(env_root)
-    return Path(__file__).resolve().parents[3]
 
 
 def style_axis(ax: plt.Axes) -> None:
@@ -75,8 +65,10 @@ def style_axis(ax: plt.Axes) -> None:
     ax.set_axisbelow(True)
 
 
-ts_path = repo_root() / "data" / "MT" / "TS" / "kap103as.ts" / "kap103as.ts"
-record = read_ts(str(ts_path))
+ts_path = real_ts_path()
+record, ts_is_real = load_ts_sample()
+if not ts_is_real:
+    print("NOTE: bundled TS recording absent — using a synthetic sample.")
 
 channels = [c.lower() for c in record.channels()]
 sample_rate = 1.0 / float(record.dt)
@@ -238,15 +230,20 @@ provenance = ProvenanceRecord(
     lon=record.lon,
     field_notes="Bundled SAMTEX/LiMS long-period MT test series.",
 )
-file_record = provenance.add_raw_file(str(ts_path))
+file_record = (
+    provenance.add_raw_file(str(ts_path)) if ts_is_real else None
+)
 manifest = build_acquisition_manifest(
     "KAP103-LP-MT", records=[provenance], method="mt"
 )
 bundle = export_reproducibility_bundle(
     manifest, str(Path(tempfile.gettempdir()) / "kap103_repro")
 )
-print(f"hashed {file_record['name']} "
-      f"({file_record['bytes']:,} bytes) -> {file_record['digest'][:16]}...")
+if file_record is not None:
+    print(f"hashed {file_record['name']} "
+          f"({file_record['bytes']:,} bytes) -> {file_record['digest'][:16]}...")
+else:
+    print("raw TS file not bundled — provenance hash skipped (synthetic sample).")
 print(f"manifest content hash: {manifest.as_dict()['content_hash'][:16]}...")
 print(f"bundle: {Path(bundle['manifest']).name} "
       f"+ {len(bundle['audits'])} station audit(s)")

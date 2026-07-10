@@ -500,7 +500,9 @@ def _mod_update(X: np.ndarray, A: np.ndarray) -> np.ndarray:
 
 def _feature_matrix(df: pd.DataFrame) -> Tuple[np.ndarray, List[str]]:
     cols = ["beta_abs", "ellipt_abs", "logrho_det", "tip_amp"]
-    X = df[cols].to_numpy(dtype=float)
+    # copy=True: recent pandas can hand back a read-only view for a
+    # single-dtype frame, which the in-place NaN fill below cannot write to.
+    X = df[cols].to_numpy(dtype=float, copy=True)
     X[np.isnan(X)] = 0.0
     return X, cols
 

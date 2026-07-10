@@ -26,14 +26,13 @@ little code the raw arrays need.
 # ``phase__range`` of ±180°, this is the unfiltered instrument view —
 # useful for spotting bad components before any processing.
 
+import matplotlib.pyplot as plt
 from _datasets import load_sites
 
-import matplotlib.pyplot as plt
-import matplotlib.cm as mcm
-
+from pycsamt.api.control import PYCSAMT_CONTROL
+from pycsamt.compat.matplotlib import get_cmap
 from pycsamt.emtools._core import _iter_items, _name
 from pycsamt.emtools.plot import plot_raw_sites_1d
-from pycsamt.api.control import PYCSAMT_CONTROL
 
 L22 = load_sites("amt_l22plt")
 panel_stations = ["22-1BF", "22-14BF", "22-24BF"]
@@ -76,7 +75,7 @@ with PYCSAMT_CONTROL.context(
 # consistency in a single figure.
 
 sites = list(_iter_items(L22))
-cmap = mcm.get_cmap("tab20", len(sites))
+cmap = get_cmap("tab20", lut=len(sites))
 
 fig, (ax_r, ax_p) = plt.subplots(2, 1, figsize=(12, 6), sharex=True)
 for k, ed in enumerate(sites):

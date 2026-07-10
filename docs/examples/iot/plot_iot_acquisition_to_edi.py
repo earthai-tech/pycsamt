@@ -36,6 +36,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from _ts_sample import load_ts_sample, real_ts_path
 
 from pycsamt.iot import (
     EdgeProcessingConfig,
@@ -46,17 +47,10 @@ from pycsamt.iot import (
     estimate_frequency_coverage,
     export_reproducibility_bundle,
 )
-from pycsamt.ts import read_ts, ts_to_edi, ts_to_z
+from pycsamt.ts import ts_to_edi, ts_to_z
 
 C_XY, C_YX = "#0072B2", "#D55E00"  # Okabe-Ito: two components, two hues
 BAND_FILL = "#009E73"
-
-
-def repo_root() -> Path:
-    env_root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT")
-    if env_root:
-        return Path(env_root)
-    return Path(__file__).resolve().parents[3]
 
 
 def style_axis(ax: plt.Axes) -> None:
@@ -66,8 +60,10 @@ def style_axis(ax: plt.Axes) -> None:
     ax.set_axisbelow(True)
 
 
-ts_path = repo_root() / "data" / "MT" / "TS" / "kap103as.ts" / "kap103as.ts"
-record = read_ts(str(ts_path))
+ts_path = real_ts_path()
+record, ts_is_real = load_ts_sample()
+if not ts_is_real:
+    print("NOTE: bundled TS recording absent — using a synthetic sample.")
 sample_rate = 1.0 / float(record.dt)
 channels = [c.lower() for c in record.channels()]
 
@@ -177,7 +173,8 @@ provenance = ProvenanceRecord(
     ],
     field_notes="Real SAMTEX/LiMS long-period MT series.",
 )
-provenance.add_raw_file(str(ts_path))
+if ts_is_real:
+    provenance.add_raw_file(str(ts_path))
 manifest = build_acquisition_manifest(
     record.station, records=[provenance], method="mt",
 )

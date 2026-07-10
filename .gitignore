@@ -38,6 +38,7 @@ pycsamt_user_guide/
 *.pyo
 
 __pycache__
+__pycache__/
 dist
 sdist
 *.so
@@ -45,6 +46,14 @@ pip-log.txt
 .DS_Store
 *.egg
 *.egg-info
+
+# Local scratch, test-scratch and run-output dirs — never meaningful to track
+.pytest_tmp_codex_*/
+pycsamt_inversion_prep/
+pycsamt_report/
+pycsamt_workflow_output/
+results/
+/edi_new_out/
 
 # Unit test / coverage reports
 .coverage
@@ -234,12 +243,11 @@ data/MT/SPECTRA/*
 !data/MT/SPECTRA/spectra02.edi
 !data/MT/SPECTRA/README.md
 
-# Exception: one sample inversion-plots run, used to test MapView/webapp
-# rendering. Only 27-frequ-watex-data-02 is tracked — the other runs and
-# the zip archive stay local-only (usable locally, never committed).
-!data/willy_inversion_plots
-data/willy_inversion_plots/*
-!data/willy_inversion_plots/27-frequ-watex-data-02
+# Inversion-plot runs (rendered PNGs, ~18 MB) are local-only outputs and
+# must never be committed — GitHub repo-size hygiene. ``data/*`` already
+# ignores them; the previous "!" exception that tracked 27-frequ-watex-
+# data-02 was removed and the folder untracked (kept locally for testing).
+# Likewise data/iter2dat (Occam iteration exports) is a local-only output.
 
 # Demo scripts and generated figures — committed separately when stable
 examples/

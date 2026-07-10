@@ -1,10 +1,15 @@
-# File: kdiagram/compat/sklearn.py
+# File: pycsamt/compat/matplotlib.py
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 """
 A compatibility module to handle API changes across different
 versions of Matplotlib.
+
+Notably, ``matplotlib.cm.get_cmap`` was deprecated in Matplotlib 3.7 and
+removed in 3.11. :func:`get_cmap` here is a version-agnostic replacement
+that also accepts the old ``lut`` argument (number of discrete colours),
+so ``matplotlib.cm.get_cmap(name, N)`` call sites can migrate unchanged.
 """
 
 import warnings
@@ -17,7 +22,7 @@ _MPL_VERSION = parse(matplotlib.__version__)
 
 __all__ = ["get_cmap", "is_valid_cmap"]
 
-def is_valid_cmap(cmap, allow_none=False, **kw):  
+def is_valid_cmap(cmap, allow_none=False, **kw):
     r"""Check if a colormap identifier is valid.
 
     This function purely validates whether a given identifier can be
@@ -65,8 +70,8 @@ def is_valid_cmap(cmap, allow_none=False, **kw):
 
 
 def get_cmap(
-    name, default="viridis", allow_none=False, error=None, 
-    failsafe="continuous", **kw
+    name, default="viridis", allow_none=False, error=None,
+    failsafe="continuous", lut=None, **kw
 ):
     r"""Robustly retrieve a Matplotlib colormap with fallbacks.
 
@@ -89,6 +94,10 @@ def get_cmap(
         both `name` and `default` are invalid.
         - 'continuous': Use 'viridis' (default).
         - 'discrete': Use 'tab10'.
+    lut : int, optional
+        Number of discrete colours to resample the colormap to — the
+        drop-in for the removed ``matplotlib.cm.get_cmap(name, lut)``
+        second argument. ``None`` (default) returns the full colormap.
 
     Returns
     -------
@@ -111,11 +120,17 @@ def get_cmap(
         # but does nothing
     # Private helper to prevent repeating the retrieval code
     def _retrieve(cmap_name):
-        """Retrieves the colormap object using the correct API."""
+        """Retrieve the colormap object using the correct API, resampled
+        to ``lut`` discrete colours when requested."""
         if _MPL_VERSION >= parse("3.6"):
-            return matplotlib.colormaps.get(cmap_name)
-        else:
-            return matplotlib.cm.get_cmap(cmap_name)
+            cmap = matplotlib.colormaps.get(cmap_name)
+            if cmap is not None and lut is not None:
+                cmap = cmap.resampled(int(lut))
+            return cmap
+        # Legacy (<3.6): cm.get_cmap accepts the lut directly.
+        if lut is not None:
+            return matplotlib.cm.get_cmap(cmap_name, int(lut))
+        return matplotlib.cm.get_cmap(cmap_name)
 
     # 1. Handle explicit `None` input first.
     if name is None:
